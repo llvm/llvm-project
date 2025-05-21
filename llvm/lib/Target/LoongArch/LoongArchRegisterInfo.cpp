@@ -140,7 +140,44 @@ bool LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   bool FrameRegIsKill = false;
 
-  if (!isInt<12>(Offset.getFixed())) {
+  int FixedOffset = Offset.getFixed();
+  bool OffsetLegal = true;
+
+  // Handle offsets that exceed the immediate range of the instruction.
+  switch (MIOpc) {
+  case LoongArch::VSTELM_B:
+  case LoongArch::XVSTELM_B:
+    OffsetLegal = isInt<8>(FixedOffset);
+    break;
+  case LoongArch::VSTELM_H:
+  case LoongArch::XVSTELM_H:
+    OffsetLegal = isShiftedInt<8, 1>(FixedOffset);
+    break;
+  case LoongArch::VSTELM_W:
+  case LoongArch::XVSTELM_W:
+    OffsetLegal = isShiftedInt<8, 2>(FixedOffset);
+    break;
+  case LoongArch::VSTELM_D:
+  case LoongArch::XVSTELM_D:
+    OffsetLegal = isShiftedInt<8, 3>(FixedOffset);
+    break;
+  }
+
+  if (!OffsetLegal && isInt<12>(FixedOffset)) {
+    unsigned Addi = IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+
+    // The offset fits in si12 but is not legal for the instruction,
+    // so use only one scratch register instead.
+    Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(Addi), ScratchReg)
+        .addReg(FrameReg)
+        .addImm(FixedOffset);
+    Offset = StackOffset::getFixed(0);
+    FrameReg = ScratchReg;
+    FrameRegIsKill = true;
+  }
+
+  if (!isInt<12>(FixedOffset)) {
     unsigned Addi = IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W;
     unsigned Add = IsLA64 ? LoongArch::ADD_D : LoongArch::ADD_W;
 

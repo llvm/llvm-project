@@ -342,8 +342,8 @@ public:
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
                                    const override;
 
-  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                             EVT NewVT) const override;
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                      SDNode *Node) const override;
@@ -362,6 +362,7 @@ public:
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override {
     return AtomicExpansionKind::LLSC;
   }
+  bool softPromoteHalfType() const override { return true; }
 
 private:
   void initializeHVXLowering();

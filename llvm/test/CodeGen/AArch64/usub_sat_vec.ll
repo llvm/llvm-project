@@ -197,23 +197,20 @@ define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    mov v0.s[1], w10
 ; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    uqsub v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x2]
-; CHECK-SD-NEXT:    strb w8, [x2, #1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str b0, [x2]
+; CHECK-SD-NEXT:    stur b1, [x2, #1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr b0, [x0]
 ; CHECK-GI-NEXT:    ldr b1, [x1]
+; CHECK-GI-NEXT:    add x8, x0, #1
+; CHECK-GI-NEXT:    add x9, x1, #1
+; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x8]
+; CHECK-GI-NEXT:    ld1 { v1.b }[1], [x9]
 ; CHECK-GI-NEXT:    add x8, x2, #1
-; CHECK-GI-NEXT:    ldr b2, [x0, #1]
-; CHECK-GI-NEXT:    ldr b3, [x1, #1]
-; CHECK-GI-NEXT:    mov v0.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov v1.b[0], v1.b[0]
-; CHECK-GI-NEXT:    mov v0.b[1], v2.b[0]
-; CHECK-GI-NEXT:    mov v1.b[1], v3.b[0]
 ; CHECK-GI-NEXT:    uqsub v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x2]
 ; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]
@@ -252,10 +249,9 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    mov v0.s[1], w10
 ; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    uqsub v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [x2]
-; CHECK-SD-NEXT:    strh w8, [x2, #2]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str h0, [x2]
+; CHECK-SD-NEXT:    str h1, [x2, #2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:
@@ -322,7 +318,7 @@ define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    ldr b0, [x0]
 ; CHECK-SD-NEXT:    ldr b1, [x1]
 ; CHECK-SD-NEXT:    uqsub v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    st1 { v0.b }[0], [x2]
+; CHECK-SD-NEXT:    str b0, [x2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v1i8:

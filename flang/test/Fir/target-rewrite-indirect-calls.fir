@@ -16,7 +16,7 @@ func.func @test(%arg0: () -> (), %arg1: !fir.ref<!fir.type<t{a:!fir.array<5xf64>
 // CHECK:           %[[VAL_5:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.type<t{a:!fir.array<5xf64>}>
 // CHECK:           fir.store %[[VAL_3]] to %[[VAL_6]] : !fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>
-// CHECK:           fir.call %[[VAL_4]](%[[VAL_6]], %[[VAL_2]]) : (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>> {llvm.byval = !fir.type<t{a:!fir.array<5xf64>}>}, f64) -> ()
+// CHECK:           fir.call %[[VAL_4]](%[[VAL_6]], %[[VAL_2]]) : (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>> {llvm.align = 8 : i32, llvm.byval = !fir.type<t{a:!fir.array<5xf64>}>}, f64) -> ()
 // CHECK:           llvm.intr.stackrestore %[[VAL_5]] : !llvm.ptr
 // CHECK:           return
 // CHECK:         }

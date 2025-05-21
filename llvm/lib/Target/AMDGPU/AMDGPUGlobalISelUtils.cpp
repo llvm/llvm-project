@@ -10,7 +10,7 @@
 #include "AMDGPURegisterBankInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -24,7 +24,8 @@ using namespace MIPatternMatch;
 
 std::pair<Register, unsigned>
 AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
-                                  GISelKnownBits *KnownBits, bool CheckNUW) {
+                                  GISelValueTracking *ValueTracking,
+                                  bool CheckNUW) {
   MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
   if (Def->getOpcode() == TargetOpcode::G_CONSTANT) {
     unsigned Offset;
@@ -55,8 +56,9 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   Register Base;
-  if (KnownBits && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
-      KnownBits->maskedValueIsZero(Base, APInt(32, Offset, /*isSigned=*/true)))
+  if (ValueTracking && mi_match(Reg, MRI, m_GOr(m_Reg(Base), m_ICst(Offset))) &&
+      ValueTracking->maskedValueIsZero(Base,
+                                       APInt(32, Offset, /*isSigned=*/true)))
     return std::pair(Base, Offset);
 
   // Handle G_PTRTOINT (G_PTR_ADD base, const) case
@@ -91,22 +93,14 @@ void IntrinsicLaneMaskAnalyzer::initLaneMaskIntrinsics(MachineFunction &MF) {
       GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI);
       if (GI && GI->is(Intrinsic::amdgcn_if_break)) {
         S32S64LaneMask.insert(MI.getOperand(3).getReg());
-        findLCSSAPhi(MI.getOperand(0).getReg());
+        S32S64LaneMask.insert(MI.getOperand(0).getReg());
       }
 
       if (MI.getOpcode() == AMDGPU::SI_IF ||
           MI.getOpcode() == AMDGPU::SI_ELSE) {
-        findLCSSAPhi(MI.getOperand(0).getReg());
+        S32S64LaneMask.insert(MI.getOperand(0).getReg());
       }
     }
-  }
-}
-
-void IntrinsicLaneMaskAnalyzer::findLCSSAPhi(Register Reg) {
-  S32S64LaneMask.insert(Reg);
-  for (const MachineInstr &LCSSAPhi : MRI.use_instructions(Reg)) {
-    if (LCSSAPhi.isPHI())
-      S32S64LaneMask.insert(LCSSAPhi.getOperand(0).getReg());
   }
 }
 

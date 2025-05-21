@@ -212,7 +212,6 @@ private:
   void parseMerge(StringRef);
   void parsePDBPageSize(StringRef);
   void parseSection(StringRef);
-  void parseAligncomm(StringRef);
 
   // Parses a MS-DOS stub file
   void parseDosStub(StringRef path);

@@ -169,7 +169,7 @@ namespace addr_of_obj_or_func {
 
     struct Local { static int f() {} }; // precxx17-note {{here}}
     X1<&Local::f> x1_no_linkage; // precxx17-error {{non-type template argument refers to function 'f' that does not have linkage}} cxx17-error {{value of type 'int (*)()' is not implicitly convertible to 'int (*)(int)'}}
-    X0<&S::NonStaticMember> x0_non_static; // precxx17-error {{non-static data member}} cxx17-error {{value of type 'int addr_of_obj_or_func::S::*' is not implicitly convertible to 'int *'}}
+    X0<&S::NonStaticMember> x0_non_static; // precxx17-error {{non-static data member}} cxx17-error {{value of type 'int S::*' is not implicitly convertible to 'int *'}}
   }
 }
 

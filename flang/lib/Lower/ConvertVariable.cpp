@@ -19,6 +19,7 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
+#include "flang/Lower/Cuda.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -144,11 +145,10 @@ static bool isConstant(const Fortran::semantics::Symbol &sym) {
          sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
 }
 
-static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
-                                  const Fortran::lower::pft::Variable &var,
-                                  llvm::StringRef globalName,
-                                  mlir::StringAttr linkage,
-                                  cuf::DataAttributeAttr dataAttr = {});
+/// Call \p genInit to generate code inside \p global initializer region.
+static void
+createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
+                           std::function<void(fir::FirOpBuilder &)> genInit);
 
 static mlir::Location genLocation(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::semantics::Symbol &sym) {
@@ -466,9 +466,9 @@ static bool globalIsInitialized(fir::GlobalOp global) {
 }
 
 /// Call \p genInit to generate code inside \p global initializer region.
-void Fortran::lower::createGlobalInitialization(
-    fir::FirOpBuilder &builder, fir::GlobalOp global,
-    std::function<void(fir::FirOpBuilder &)> genInit) {
+static void
+createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
+                           std::function<void(fir::FirOpBuilder &)> genInit) {
   mlir::Region &region = global.getRegion();
   region.push_back(new mlir::Block);
   mlir::Block &block = region.back();
@@ -478,7 +478,7 @@ void Fortran::lower::createGlobalInitialization(
   builder.restoreInsertionPoint(insertPt);
 }
 
-static unsigned getAllocatorIdx(cuf::DataAttributeAttr dataAttr) {
+static unsigned getAllocatorIdxFromDataAttr(cuf::DataAttributeAttr dataAttr) {
   if (dataAttr) {
     if (dataAttr.getValue() == cuf::DataAttribute::Pinned)
       return kPinnedAllocatorPos;
@@ -493,11 +493,10 @@ static unsigned getAllocatorIdx(cuf::DataAttributeAttr dataAttr) {
 }
 
 /// Create the global op and its init if it has one
-static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
-                                  const Fortran::lower::pft::Variable &var,
-                                  llvm::StringRef globalName,
-                                  mlir::StringAttr linkage,
-                                  cuf::DataAttributeAttr dataAttr) {
+fir::GlobalOp Fortran::lower::defineGlobal(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::pft::Variable &var, llvm::StringRef globalName,
+    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   mlir::Location loc = genLocation(converter, sym);
@@ -544,27 +543,25 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
     if (details && details->init()) {
       auto expr = *details->init();
-      Fortran::lower::createGlobalInitialization(
-          builder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value box = Fortran::lower::genInitialDataTarget(
-                converter, loc, symTy, expr);
-            b.create<fir::HasValueOp>(loc, box);
-          });
+      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+        mlir::Value box =
+            Fortran::lower::genInitialDataTarget(converter, loc, symTy, expr);
+        b.create<fir::HasValueOp>(loc, box);
+      });
     } else {
       // Create unallocated/disassociated descriptor if no explicit init
-      Fortran::lower::createGlobalInitialization(
-          builder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value box = fir::factory::createUnallocatedBox(
-                b, loc, symTy,
-                /*nonDeferredParams=*/std::nullopt,
-                /*typeSourceBox=*/{}, getAllocatorIdx(dataAttr));
-            b.create<fir::HasValueOp>(loc, box);
-          });
+      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+        mlir::Value box = fir::factory::createUnallocatedBox(
+            b, loc, symTy,
+            /*nonDeferredParams=*/std::nullopt,
+            /*typeSourceBox=*/{}, getAllocatorIdxFromDataAttr(dataAttr));
+        b.create<fir::HasValueOp>(loc, box);
+      });
     }
   } else if (const auto *details =
                  sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
     if (details->init()) {
-      Fortran::lower::createGlobalInitialization(
+      createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &builder) {
             Fortran::lower::StatementContext stmtCtx(
                 /*cleanupProhibited=*/true);
@@ -575,7 +572,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             builder.create<fir::HasValueOp>(loc, castTo);
           });
     } else if (Fortran::lower::hasDefaultInitialization(sym)) {
-      Fortran::lower::createGlobalInitialization(
+      createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &builder) {
             Fortran::lower::StatementContext stmtCtx(
                 /*cleanupProhibited=*/true);
@@ -590,7 +587,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     if (details && details->init()) {
       auto sym{*details->init()};
       if (sym) // Has a procedure target.
-        Fortran::lower::createGlobalInitialization(
+        createGlobalInitialization(
             builder, global, [&](fir::FirOpBuilder &b) {
               Fortran::lower::StatementContext stmtCtx(
                   /*cleanupProhibited=*/true);
@@ -600,19 +597,17 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
               b.create<fir::HasValueOp>(loc, castTo);
             });
       else { // Has NULL() target.
-        Fortran::lower::createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &b) {
-              auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
-              b.create<fir::HasValueOp>(loc, box);
-            });
+        createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+          auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
+          b.create<fir::HasValueOp>(loc, box);
+        });
       }
     } else {
       // No initialization.
-      Fortran::lower::createGlobalInitialization(
-          builder, global, [&](fir::FirOpBuilder &b) {
-            auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
-            b.create<fir::HasValueOp>(loc, box);
-          });
+      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+        auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
+        b.create<fir::HasValueOp>(loc, box);
+      });
     }
   } else if (sym.has<Fortran::semantics::CommonBlockDetails>()) {
     mlir::emitError(loc, "COMMON symbol processed elsewhere");
@@ -633,7 +628,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     // file.
     if (sym.attrs().test(Fortran::semantics::Attr::BIND_C))
       global.setLinkName(builder.createCommonLinkage());
-    Fortran::lower::createGlobalInitialization(
+    createGlobalInitialization(
         builder, global, [&](fir::FirOpBuilder &builder) {
           mlir::Value initValue;
           if (converter.getLoweringOptions().getInitGlobalZero())
@@ -737,9 +732,11 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     auto idxTy = builder.getIndexType();
     for (mlir::Value sh : elidedShape)
       indices.push_back(builder.createConvert(loc, idxTy, sh));
-    mlir::Value alloc = builder.create<cuf::AllocOp>(
-        loc, ty, nm, symNm, dataAttr, lenParams, indices);
-    return alloc;
+    if (dataAttr.getValue() == cuf::DataAttribute::Shared)
+      return builder.create<cuf::SharedMemoryOp>(loc, ty, nm, symNm, lenParams,
+                                                 indices);
+    return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr, lenParams,
+                                        indices);
   }
 
   // Let the builder do all the heavy lifting.
@@ -797,8 +794,66 @@ void Fortran::lower::defaultInitializeAtRuntime(
         })
         .end();
   } else {
-    mlir::Value box = builder.createBox(loc, exv);
-    fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+    /// For "simpler" types, relying on "_FortranAInitialize"
+    /// leads to poor runtime performance. Hence optimize
+    /// the same.
+    const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType();
+    mlir::Type symTy = converter.genType(sym);
+    const auto *details =
+        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    if (details && !Fortran::semantics::IsPolymorphic(sym) &&
+        declTy->category() ==
+            Fortran::semantics::DeclTypeSpec::Category::TypeDerived &&
+        !mlir::isa<fir::SequenceType>(symTy) &&
+        !sym.test(Fortran::semantics::Symbol::Flag::OmpPrivate) &&
+        !sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
+      std::string globalName = fir::NameUniquer::doGenerated(
+          (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
+           fir::kDerivedTypeInitSuffix)
+              .str());
+      mlir::Location loc = genLocation(converter, sym);
+      mlir::StringAttr linkage = builder.createInternalLinkage();
+      fir::GlobalOp global = builder.getNamedGlobal(globalName);
+      if (!global && details->init()) {
+        global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                      mlir::Attribute{},
+                                      /*isConst=*/true,
+                                      /*isTarget=*/false,
+                                      /*dataAttr=*/{});
+        createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &builder) {
+              Fortran::lower::StatementContext stmtCtx(
+                  /*cleanupProhibited=*/true);
+              fir::ExtendedValue initVal = genInitializerExprValue(
+                  converter, loc, details->init().value(), stmtCtx);
+              mlir::Value castTo =
+                  builder.createConvert(loc, symTy, fir::getBase(initVal));
+              builder.create<fir::HasValueOp>(loc, castTo);
+            });
+      } else if (!global) {
+        global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                      mlir::Attribute{},
+                                      /*isConst=*/true,
+                                      /*isTarget=*/false,
+                                      /*dataAttr=*/{});
+        createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &builder) {
+              Fortran::lower::StatementContext stmtCtx(
+                  /*cleanupProhibited=*/true);
+              mlir::Value initVal = genDefaultInitializerValue(
+                  converter, loc, sym, symTy, stmtCtx);
+              mlir::Value castTo = builder.createConvert(loc, symTy, initVal);
+              builder.create<fir::HasValueOp>(loc, castTo);
+            });
+      }
+      auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                                  global.getSymbol());
+      builder.create<fir::CopyOp>(loc, addrOf, fir::getBase(exv),
+                                  /*noOverlap=*/true);
+    } else {
+      mlir::Value box = builder.createBox(loc, exv);
+      fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+    }
   }
 }
 
@@ -855,10 +910,7 @@ needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var) {
 /// point 7.
 /// Must be nonpointer, nonallocatable, INTENT (OUT) dummy argument.
 static bool
-needDummyIntentoutFinalization(const Fortran::lower::pft::Variable &var) {
-  if (!var.hasSymbol())
-    return false;
-  const Fortran::semantics::Symbol &sym = var.getSymbol();
+needDummyIntentoutFinalization(const Fortran::semantics::Symbol &sym) {
   if (!Fortran::semantics::IsDummy(sym) ||
       !Fortran::semantics::IsIntentOut(sym) ||
       Fortran::semantics::IsAllocatable(sym) ||
@@ -875,6 +927,16 @@ needDummyIntentoutFinalization(const Fortran::lower::pft::Variable &var) {
   // p6). Calling finalization runtime for this works even if the components
   // have no final procedures.
   return hasFinalization(sym) || hasAllocatableDirectComponent(sym);
+}
+
+/// Check whether a variable needs the be finalized according to clause 7.5.6.3
+/// point 7.
+/// Must be nonpointer, nonallocatable, INTENT (OUT) dummy argument.
+static bool
+needDummyIntentoutFinalization(const Fortran::lower::pft::Variable &var) {
+  if (!var.hasSymbol())
+    return false;
+  return needDummyIntentoutFinalization(var.getSymbol());
 }
 
 /// Call default initialization runtime routine to initialize \p var.
@@ -948,6 +1010,45 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+/// Return true iff the given symbol represents a dummy array
+/// that needs to be repacked when -frepack-arrays is set.
+/// In general, the repacking is done for assumed-shape
+/// dummy arguments, but there are limitations.
+static bool needsRepack(Fortran::lower::AbstractConverter &converter,
+                        const Fortran::semantics::Symbol &sym) {
+  const auto &attrs = sym.attrs();
+  if (!converter.getLoweringOptions().getRepackArrays() ||
+      !converter.isRegisteredDummySymbol(sym) ||
+      !Fortran::semantics::IsAssumedShape(sym) ||
+      Fortran::evaluate::IsSimplyContiguous(sym,
+                                            converter.getFoldingContext()) ||
+      // TARGET dummy may be accessed indirectly, so it is unsafe
+      // to repack it. Some compilers provide options to override
+      // this.
+      // Repacking of VOLATILE and ASYNCHRONOUS is also unsafe.
+      attrs.HasAny({Fortran::semantics::Attr::ASYNCHRONOUS,
+                    Fortran::semantics::Attr::TARGET,
+                    Fortran::semantics::Attr::VOLATILE}))
+    return false;
+
+  return true;
+}
+
+static mlir::ArrayAttr
+getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
+  llvm::SmallVector<mlir::Attribute> attrs;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const auto &langFeatures = converter.getFoldingContext().languageFeatures();
+  if (langFeatures.IsEnabled(Fortran::common::LanguageFeature::OpenACC))
+    attrs.push_back(
+        fir::OpenACCSafeTempArrayCopyAttr::get(builder.getContext()));
+  if (langFeatures.IsEnabled(Fortran::common::LanguageFeature::OpenMP))
+    attrs.push_back(
+        fir::OpenMPSafeTempArrayCopyAttr::get(builder.getContext()));
+
+  return attrs.empty() ? mlir::ArrayAttr{} : builder.getArrayAttr(attrs);
+}
+
 /// Instantiate a local variable. Precondition: Each variable will be visited
 /// such that if its properties depend on other variables, the variables upon
 /// which its properties depend will already have been visited.
@@ -973,12 +1074,16 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                                                symMap);
   if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
     auto *builder = &converter.getFirOpBuilder();
+    cuf::DataAttributeAttr dataAttr =
+        Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
+                                                        var.getSymbol());
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
         converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
     auto *sym = &var.getSymbol();
     const Fortran::semantics::Scope &owner = sym->owner();
-    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram) {
+    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram &&
+        dataAttr.getValue() != cuf::DataAttribute::Shared) {
       converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
@@ -1012,6 +1117,17 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                                                  loc, sym);
       });
     }
+  } else if (var.hasSymbol() && needsRepack(converter, var.getSymbol())) {
+    auto *converterPtr = &converter;
+    mlir::Location loc = converter.getCurrentLocation();
+    auto *sym = &var.getSymbol();
+    std::optional<fir::FortranVariableOpInterface> varDef =
+        symMap.lookupVariableDefinition(*sym);
+    assert(varDef && "cannot find defining operation for an array that needs "
+                     "to be repacked");
+    converter.getFctCtx().attachCleanup([converterPtr, loc, varDef, sym]() {
+      Fortran::lower::genUnpackArray(*converterPtr, loc, *varDef, *sym);
+    });
   }
 }
 
@@ -1085,7 +1201,7 @@ static fir::GlobalOp defineGlobalAggregateStore(
     if (const auto *objectDetails =
             initSym->detailsIf<Fortran::semantics::ObjectEntityDetails>())
       if (objectDetails->init()) {
-        Fortran::lower::createGlobalInitialization(
+        createGlobalInitialization(
             builder, global, [&](fir::FirOpBuilder &builder) {
               Fortran::lower::StatementContext stmtCtx;
               mlir::Value initVal = fir::getBase(genInitializerExprValue(
@@ -1097,12 +1213,11 @@ static fir::GlobalOp defineGlobalAggregateStore(
   // Equivalence has no Fortran initial value. Create an undefined FIR initial
   // value to ensure this is consider an object definition in the IR regardless
   // of the linkage.
-  Fortran::lower::createGlobalInitialization(
-      builder, global, [&](fir::FirOpBuilder &builder) {
-        Fortran::lower::StatementContext stmtCtx;
-        mlir::Value initVal = builder.create<fir::ZeroOp>(loc, aggTy);
-        builder.create<fir::HasValueOp>(loc, initVal);
-      });
+  createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &builder) {
+    Fortran::lower::StatementContext stmtCtx;
+    mlir::Value initVal = builder.create<fir::ZeroOp>(loc, aggTy);
+    builder.create<fir::HasValueOp>(loc, initVal);
+  });
   return global;
 }
 
@@ -1421,7 +1536,7 @@ static void finalizeCommonBlockDefinition(
     LLVM_DEBUG(llvm::dbgs() << "}\n");
     builder.create<fir::HasValueOp>(loc, cb);
   };
-  Fortran::lower::createGlobalInitialization(builder, global, initFunc);
+  createGlobalInitialization(builder, global, initFunc);
 }
 
 void Fortran::lower::defineCommonBlocks(
@@ -1518,17 +1633,6 @@ static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
   return false;
 }
 
-/// Compute extent from lower and upper bound.
-static mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Value lb, mlir::Value ub) {
-  mlir::IndexType idxTy = builder.getIndexType();
-  // Let the folder deal with the common `ub - <const> + 1` case.
-  auto diff = builder.create<mlir::arith::SubIOp>(loc, idxTy, ub, lb);
-  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  auto rawExtent = builder.create<mlir::arith::AddIOp>(loc, idxTy, diff, one);
-  return fir::factory::genMaxWithZero(builder, loc, rawExtent);
-}
-
 /// Lower explicit lower bounds into \p result. Does nothing if this is not an
 /// array, or if the lower bounds are deferred, or all implicit or one.
 static void lowerExplicitLowerBounds(
@@ -1592,8 +1696,8 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
       if (lowerBounds.empty())
         result.emplace_back(fir::factory::genMaxWithZero(builder, loc, ub));
       else
-        result.emplace_back(
-            computeExtent(builder, loc, lowerBounds[spec.index()], ub));
+        result.emplace_back(fir::factory::computeExtent(
+            builder, loc, lowerBounds[spec.index()], ub));
     } else if (spec.value()->ubound().isStar()) {
       result.emplace_back(getAssumedSizeExtent(loc, builder));
     }
@@ -1842,7 +1946,7 @@ void Fortran::lower::genDeclareSymbol(
     bool force) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       (!Fortran::semantics::IsProcedure(sym) ||
-       Fortran::semantics::IsPointer(sym)) &&
+       Fortran::semantics::IsPointer(sym.GetUltimate())) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
@@ -1860,10 +1964,13 @@ void Fortran::lower::genDeclareSymbol(
                                                         sym.GetUltimate());
     auto name = converter.mangleName(sym);
     mlir::Value dummyScope;
-    if (converter.isRegisteredDummySymbol(sym))
+    fir::ExtendedValue base = exv;
+    if (converter.isRegisteredDummySymbol(sym)) {
+      base = genPackArray(converter, sym, exv);
       dummyScope = converter.dummyArgsScopeValue();
+    }
     hlfir::EntityWithAttributes declare = hlfir::genDeclare(
-        loc, builder, exv, name, attributes, dummyScope, dataAttr);
+        loc, builder, base, name, attributes, dummyScope, dataAttr);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }
@@ -1924,22 +2031,6 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
   }
   symMap.addBoxSymbol(sym, box, lbounds, explicitParams, explicitExtents,
                       replace);
-}
-
-static unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
-  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
-      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
-  if (cudaAttr) {
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Pinned)
-      return kPinnedAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
-      return kDeviceAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
-      return kManagedAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
-      return kUnifiedAllocatorPos;
-  }
-  return kDefaultAllocator;
 }
 
 /// Lower specification expressions and attributes of variable \p var and
@@ -2032,7 +2123,7 @@ void Fortran::lower::mapSymbolAttributes(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
         /*alwaysUseBox=*/
         converter.getLoweringOptions().getLowerToHighLevelFIR(),
-        getAllocatorIdx(var.getSymbol()));
+        Fortran::lower::getAllocatorIdx(var.getSymbol()));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;
@@ -2229,7 +2320,8 @@ void Fortran::lower::mapSymbolAttributes(
         if (auto high = spec->ubound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*high};
           ub = builder.createConvert(loc, idxTy, genValue(expr));
-          extents.emplace_back(computeExtent(builder, loc, lb, ub));
+          extents.emplace_back(
+              fir::factory::computeExtent(builder, loc, lb, ub));
         } else {
           // An assumed size array. The extent is not computed.
           assert(spec->ubound().isStar() && "expected assumed size");
@@ -2522,4 +2614,82 @@ mlir::Type Fortran::lower::getCrayPointeeBoxType(mlir::Type fortranType) {
     baseType = fir::SequenceType::get(shape, seqType.getEleTy());
   }
   return fir::BoxType::get(fir::PointerType::get(baseType));
+}
+
+fir::ExtendedValue
+Fortran::lower::genPackArray(Fortran::lower::AbstractConverter &converter,
+                             const Fortran::semantics::Symbol &sym,
+                             fir::ExtendedValue exv) {
+  if (!needsRepack(converter, sym))
+    return exv;
+
+  auto &opts = converter.getLoweringOptions();
+  llvm::SmallVector<mlir::Value> lenParams;
+  exv.match(
+      [&](const fir::CharArrayBoxValue &box) {
+        lenParams.emplace_back(box.getLen());
+      },
+      [&](const fir::BoxValue &box) {
+        lenParams.append(box.getExplicitParameters().begin(),
+                         box.getExplicitParameters().end());
+      },
+      [](const auto &) {
+        llvm_unreachable("unexpected lowering for assumed-shape dummy");
+      });
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const mlir::Location loc = genLocation(converter, sym);
+  bool stackAlloc = opts.getStackRepackArrays();
+  // 1D arrays must always use 'whole' mode.
+  bool isInnermostMode = !opts.getRepackArraysWhole() && sym.Rank() > 1;
+  // Avoid copy-in for 'intent(out)' variable, unless this is a dummy
+  // argument with INTENT(OUT) that needs finalization on entry
+  // to the subprogram. The finalization routine may read the initial
+  // value of the array.
+  bool noCopy = Fortran::semantics::IsIntentOut(sym) &&
+                !needDummyIntentoutFinalization(sym);
+  auto boxType = mlir::cast<fir::BaseBoxType>(fir::getBase(exv).getType());
+  mlir::Type elementType = boxType.unwrapInnerType();
+  llvm::SmallVector<mlir::Value> elidedLenParams =
+      fir::factory::elideLengthsAlreadyInType(elementType, lenParams);
+  auto packOp = builder.create<fir::PackArrayOp>(
+      loc, fir::getBase(exv), stackAlloc, isInnermostMode, noCopy,
+      /*max_size=*/mlir::IntegerAttr{},
+      /*max_element_size=*/mlir::IntegerAttr{},
+      /*min_stride=*/mlir::IntegerAttr{}, fir::PackArrayHeuristics::None,
+      elidedLenParams, getSafeRepackAttrs(converter));
+
+  mlir::Value newBase = packOp.getResult();
+  return exv.match(
+      [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
+        return box.clone(newBase);
+      },
+      [&](const fir::BoxValue &box) -> fir::ExtendedValue {
+        return box.clone(newBase);
+      },
+      [](const auto &) -> fir::ExtendedValue {
+        llvm_unreachable("unexpected lowering for assumed-shape dummy");
+      });
+}
+
+void Fortran::lower::genUnpackArray(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    fir::FortranVariableOpInterface def,
+    const Fortran::semantics::Symbol &sym) {
+  // Subtle: rely on the fact that the memref of the defining
+  // hlfir.declare is a result of fir.pack_array.
+  // Alternatively, we can track the pack operation for a symbol
+  // via SymMap.
+  auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(def.getOperation());
+  assert(declareOp &&
+         "cannot find hlfir.declare for an array that needs to be repacked");
+  auto packOp = declareOp.getMemref().getDefiningOp<fir::PackArrayOp>();
+  assert(packOp && "cannot find fir.pack_array");
+  mlir::Value temp = packOp.getResult();
+  mlir::Value original = packOp.getArray();
+  bool stackAlloc = packOp.getStack();
+  // Avoid copy-out for 'intent(in)' variables.
+  bool noCopy = Fortran::semantics::IsIntentIn(sym);
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  builder.create<fir::UnpackArrayOp>(loc, temp, original, stackAlloc, noCopy,
+                                     getSafeRepackAttrs(converter));
 }

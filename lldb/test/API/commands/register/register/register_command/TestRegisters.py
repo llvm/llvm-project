@@ -662,14 +662,14 @@ class RegisterCommandsTestCase(TestBase):
         # N/Z/C/V bits will always be present, so check only for those.
         self.expect(
             "register read cpsr",
-            patterns=["= \(N = [0|1], Z = [0|1], C = [0|1], V = [0|1]"],
+            patterns=[r"= \(N = [0|1], Z = [0|1], C = [0|1], V = [0|1]"],
         )
         self.expect(
-            "register read fpsr", patterns=["= \(QC = [0|1], IDC = [0|1], IXC = [0|1]"]
+            "register read fpsr", patterns=[r"= \(QC = [0|1], IDC = [0|1], IXC = [0|1]"]
         )
         # AHP/DN/FZ always present, others may vary.
         self.expect(
-            "register read fpcr", patterns=["= \(AHP = [0|1], DN = [0|1], FZ = [0|1]"]
+            "register read fpcr", patterns=[r"= \(AHP = [0|1], DN = [0|1], FZ = [0|1]"]
         )
 
         # Should get enumerator descriptions for RMode.

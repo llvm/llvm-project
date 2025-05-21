@@ -51,15 +51,15 @@ namespace llvm {
 
   /// An individual mapping from virtual register number to SUnit.
   struct VReg2SUnit {
-    unsigned VirtReg;
+    Register VirtReg;
     LaneBitmask LaneMask;
     SUnit *SU;
 
-    VReg2SUnit(unsigned VReg, LaneBitmask LaneMask, SUnit *SU)
+    VReg2SUnit(Register VReg, LaneBitmask LaneMask, SUnit *SU)
       : VirtReg(VReg), LaneMask(LaneMask), SU(SU) {}
 
     unsigned getSparseSetIndex() const {
-      return Register(VirtReg).virtRegIndex();
+      return VirtReg.virtRegIndex();
     }
   };
 
@@ -67,7 +67,7 @@ namespace llvm {
   struct VReg2SUnitOperIdx : public VReg2SUnit {
     unsigned OperandIndex;
 
-    VReg2SUnitOperIdx(unsigned VReg, LaneBitmask LaneMask,
+    VReg2SUnitOperIdx(Register VReg, LaneBitmask LaneMask,
                       unsigned OperandIndex, SUnit *SU)
       : VReg2SUnit(VReg, LaneMask, SU), OperandIndex(OperandIndex) {}
   };
@@ -123,6 +123,9 @@ namespace llvm {
     /// True if the DAG builder should remove kill flags (in preparation for
     /// rescheduling).
     bool RemoveKillFlags;
+
+    /// True if regions with a single MI should be scheduled.
+    bool ScheduleSingleMIRegions = false;
 
     /// The standard DAG builder does not normally include terminators as DAG
     /// nodes because it does not create the necessary dependencies to prevent
@@ -286,6 +289,11 @@ namespace llvm {
     /// IsReachable - Checks if SU is reachable from TargetSU.
     bool IsReachable(SUnit *SU, SUnit *TargetSU) {
       return Topo.IsReachable(SU, TargetSU);
+    }
+
+    /// Whether regions with a single MI should be scheduled.
+    bool shouldScheduleSingleMIRegions() const {
+      return ScheduleSingleMIRegions;
     }
 
     /// Returns an iterator to the top of the current scheduling region.

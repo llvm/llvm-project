@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86MCExpr.h"
 #include "X86MCTargetDesc.h"
 #include "X86TargetStreamer.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -30,6 +31,10 @@ public:
   X86WinCOFFAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
                               MCInstPrinter &InstPrinter)
       : X86TargetStreamer(S), OS(OS), InstPrinter(InstPrinter) {}
+
+  void emitCode16() override;
+  void emitCode32() override;
+  void emitCode64() override;
 
   bool emitFPOProc(const MCSymbol *ProcSym, unsigned ParamsSize,
                    SMLoc L) override;
@@ -80,8 +85,6 @@ class X86WinCOFFTargetStreamer : public X86TargetStreamer {
 
   MCSymbol *emitFPOLabel();
 
-  MCContext &getContext() { return getStreamer().getContext(); }
-
 public:
   X86WinCOFFTargetStreamer(MCStreamer &S) : X86TargetStreamer(S) {}
 
@@ -97,10 +100,16 @@ public:
 };
 } // end namespace
 
+void X86WinCOFFAsmTargetStreamer::emitCode16() { OS << "\t.code16\n"; }
+
+void X86WinCOFFAsmTargetStreamer::emitCode32() { OS << "\t.code32\n"; }
+
+void X86WinCOFFAsmTargetStreamer::emitCode64() { OS << "\t.code64\n"; }
+
 bool X86WinCOFFAsmTargetStreamer::emitFPOProc(const MCSymbol *ProcSym,
                                               unsigned ParamsSize, SMLoc L) {
   OS << "\t.cv_fpo_proc\t";
-  ProcSym->print(OS, getStreamer().getContext().getAsmInfo());
+  ProcSym->print(OS, getContext().getAsmInfo());
   OS << ' ' << ParamsSize << '\n';
   return false;
 }
@@ -453,9 +462,9 @@ MCTargetStreamer *llvm::createX86AsmTargetStreamer(MCStreamer &S,
 
 MCTargetStreamer *
 llvm::createX86ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
-  // No need to register a target streamer.
+  // No need for a special target streamer.
   if (!STI.getTargetTriple().isOSBinFormatCOFF())
-    return nullptr;
+    return new X86TargetStreamer(S);
   // Registers itself to the MCStreamer.
   return new X86WinCOFFTargetStreamer(S);
 }

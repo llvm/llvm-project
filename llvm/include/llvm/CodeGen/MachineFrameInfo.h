@@ -55,18 +55,19 @@ class CalleeSavedInfo {
   bool SpilledToReg = false;
 
 public:
-  explicit CalleeSavedInfo(unsigned R, int FI = 0) : Reg(R), FrameIdx(FI) {}
+  explicit CalleeSavedInfo(MCRegister R, int FI = 0) : Reg(R), FrameIdx(FI) {}
 
   // Accessors.
   MCRegister getReg()                      const { return Reg; }
   int getFrameIdx()                        const { return FrameIdx; }
-  unsigned getDstReg()                     const { return DstReg; }
+  MCRegister getDstReg()                   const { return DstReg; }
+  void setReg(MCRegister R) { Reg = R; }
   void setFrameIdx(int FI) {
     FrameIdx = FI;
     SpilledToReg = false;
   }
-  void setDstReg(Register SpillReg) {
-    DstReg = SpillReg;
+  void setDstReg(MCRegister SpillReg) {
+    DstReg = SpillReg.id();
     SpilledToReg = true;
   }
   bool isRestored()                        const { return Restored; }

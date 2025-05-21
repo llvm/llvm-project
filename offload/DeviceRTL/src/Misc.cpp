@@ -20,41 +20,6 @@
 namespace ompx {
 namespace impl {
 
-/// AMDGCN Implementation
-///
-///{
-#ifdef __AMDGPU__
-
-double getWTick() {
-  // The number of ticks per second for the AMDGPU clock varies by card and can
-  // only be retrieved by querying the driver. We rely on the device environment
-  // to inform us what the proper frequency is.
-  return 1.0 / config::getClockFrequency();
-}
-
-double getWTime() {
-  return static_cast<double>(__builtin_readsteadycounter()) * getWTick();
-}
-
-#endif
-
-/// NVPTX Implementation
-///
-///{
-#ifdef __NVPTX__
-
-double getWTick() {
-  // Timer precision is 1ns
-  return ((double)1E-9);
-}
-
-double getWTime() {
-  uint64_t nsecs = __nvvm_read_ptx_sreg_globaltimer();
-  return static_cast<double>(nsecs) * getWTick();
-}
-
-#endif
-
 /// Lookup a device-side function using a host pointer /p HstPtr using the table
 /// provided by the device plugin. The table is an ordered pair of host and
 /// device pointers sorted on the value of the host pointer.
@@ -112,9 +77,17 @@ int32_t __kmpc_cancellationpoint(IdentTy *, int32_t, int32_t) { return 0; }
 
 int32_t __kmpc_cancel(IdentTy *, int32_t, int32_t) { return 0; }
 
-double omp_get_wtick(void) { return ompx::impl::getWTick(); }
+double omp_get_wtick(void) {
+  // The number of ticks per second for the AMDGPU clock varies by card and can
+  // only be retrieved by querying the driver. We rely on the device environment
+  // to inform us what the proper frequency is. NVPTX uses a nanosecond
+  // resolution, we could omit the global read but this makes it consistent.
+  return 1.0 / ompx::config::getClockFrequency();
+}
 
-double omp_get_wtime(void) { return ompx::impl::getWTime(); }
+double omp_get_wtime(void) {
+  return static_cast<double>(__builtin_readsteadycounter()) * omp_get_wtick();
+}
 
 void *__llvm_omp_indirect_call_lookup(void *HstPtr) {
   return ompx::impl::indirectCallLookup(HstPtr);

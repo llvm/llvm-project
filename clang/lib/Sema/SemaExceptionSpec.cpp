@@ -89,7 +89,7 @@ ExprResult Sema::ActOnNoexceptSpec(Expr *NoexceptExpr,
 
   llvm::APSInt Result;
   ExprResult Converted = CheckConvertedConstantExpression(
-      NoexceptExpr, Context.BoolTy, Result, CCEK_Noexcept);
+      NoexceptExpr, Context.BoolTy, Result, CCEKind::Noexcept);
 
   if (Converted.isInvalid()) {
     EST = EST_NoexceptFalse;
@@ -700,12 +700,11 @@ bool Sema::handlerCanCatch(QualType HandlerType, QualType ExceptionType) {
     //    -- a qualification conversion
     //    -- a function pointer conversion
     bool LifetimeConv;
-    QualType Result;
     // FIXME: Should we treat the exception as catchable if a lifetime
     // conversion is required?
     if (IsQualificationConversion(ExceptionType, HandlerType, false,
                                   LifetimeConv) ||
-        IsFunctionConversion(ExceptionType, HandlerType, Result))
+        IsFunctionConversion(ExceptionType, HandlerType))
       return true;
 
     //    -- a standard pointer conversion [...]
@@ -1407,6 +1406,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OpenACCEnterDataConstructClass:
   case Stmt::OpenACCExitDataConstructClass:
   case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCCacheConstructClass:
   case Stmt::OpenACCInitConstructClass:
   case Stmt::OpenACCShutdownConstructClass:
   case Stmt::OpenACCSetConstructClass:

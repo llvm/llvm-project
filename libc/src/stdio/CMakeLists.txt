@@ -21,10 +21,7 @@ endfunction(add_stdio_entrypoint_object)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
-
-if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
-endif()
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   list(APPEND use_system_file "COMPILE_OPTIONS" "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
@@ -95,20 +92,6 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-list(APPEND scanf_deps
-      libc.src.__support.arg_list
-      libc.src.stdio.scanf_core.vfscanf_internal
-      libc.hdr.types.FILE
-)
-
-if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
-  list(APPEND scanf_deps
-      libc.src.__support.File.file
-      libc.src.__support.File.platform_file
-      libc.src.__support.File.platform_stdin
-  )
-endif()
-
 add_entrypoint_object(
   sscanf
   SRCS
@@ -117,8 +100,8 @@ add_entrypoint_object(
     sscanf.h
   DEPENDS
     libc.src.__support.arg_list
-    libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.scanf_main
+    libc.src.stdio.scanf_core.string_reader
 )
 
 add_entrypoint_object(
@@ -129,48 +112,8 @@ add_entrypoint_object(
     vsscanf.h
   DEPENDS
     libc.src.__support.arg_list
-    libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.scanf_main
-)
-
-add_entrypoint_object(
-  fscanf
-  SRCS
-    fscanf.cpp
-  HDRS
-    fscanf.h
-  DEPENDS
-    ${scanf_deps}
-)
-
-add_entrypoint_object(
-  vfscanf
-  SRCS
-    vfscanf.cpp
-  HDRS
-    vfscanf.h
-  DEPENDS
-    ${scanf_deps}
-)
-
-add_entrypoint_object(
-  scanf
-  SRCS
-    scanf.cpp
-  HDRS
-    scanf.h
-  DEPENDS
-    ${scanf_deps}
-)
-
-add_entrypoint_object(
-  vscanf
-  SRCS
-    vscanf.cpp
-  HDRS
-    vscanf.h
-  DEPENDS
-    ${scanf_deps}
+    libc.src.stdio.scanf_core.string_reader
 )
 
 add_entrypoint_object(
@@ -295,8 +238,12 @@ add_stdio_entrypoint_object(getchar)
 add_stdio_entrypoint_object(getchar_unlocked)
 add_stdio_entrypoint_object(fgets)
 add_stdio_entrypoint_object(ungetc)
+add_stdio_entrypoint_object(scanf)
+add_stdio_entrypoint_object(fscanf)
 add_stdio_entrypoint_object(stdin)
 add_stdio_entrypoint_object(stdout)
 add_stdio_entrypoint_object(stderr)
 add_stdio_entrypoint_object(vprintf)
 add_stdio_entrypoint_object(vfprintf)
+add_stdio_entrypoint_object(vscanf)
+add_stdio_entrypoint_object(vfscanf)

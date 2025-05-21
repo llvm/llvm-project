@@ -12,25 +12,34 @@
 #include "DAPForward.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <utility>
 
 namespace lldb_dap {
 
-struct ExceptionBreakpoint {
-  DAP &dap;
-  std::string filter;
-  std::string label;
-  lldb::LanguageType language;
-  bool default_value = false;
-  lldb::SBBreakpoint bp;
+class ExceptionBreakpoint {
+public:
   ExceptionBreakpoint(DAP &d, std::string f, std::string l,
                       lldb::LanguageType lang)
-      : dap(d), filter(std::move(f)), label(std::move(l)), language(lang),
-        bp() {}
+      : m_dap(d), m_filter(std::move(f)), m_label(std::move(l)),
+        m_language(lang), m_bp() {}
 
   void SetBreakpoint();
   void ClearBreakpoint();
+
+  lldb::break_id_t GetID() const { return m_bp.GetID(); }
+  llvm::StringRef GetFilter() const { return m_filter; }
+  llvm::StringRef GetLabel() const { return m_label; }
+
+  static constexpr bool kDefaultValue = false;
+
+protected:
+  DAP &m_dap;
+  std::string m_filter;
+  std::string m_label;
+  lldb::LanguageType m_language;
+  lldb::SBBreakpoint m_bp;
 };
 
 } // namespace lldb_dap

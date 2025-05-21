@@ -202,13 +202,13 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Variadic friends</td>
   <td><a href="https://wg21.link/P2893R3">P2893R3</a></td>
-  <td class="unreleased" align="center">Clang 20</td>
+  <td class="full" align="center">Clang 20</td>
  </tr>
  <!-- Summer 2024 papers (St Louis) -->
  <tr>
   <td><tt>constexpr</tt> placement new</td>
   <td><a href="https://wg21.link/P2747R2">P2747R2</a></td>
-  <td class="unreleased" align="center">Clang 20</td>
+  <td class="full" align="center">Clang 20</td>
  </tr>
  <tr>
   <td>Deleting a Pointer to an Incomplete Type Should be Ill-formed</td>
@@ -223,7 +223,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Structured binding declaration as a condition</td>
   <td><a href="https://wg21.link/P0963R3">P0963R3</a></td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 21</td>
  </tr>
  <!--Poland, Fall 2024-->
  <tr>
@@ -239,7 +239,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Remove Deprecated Array Comparisons from C++26</td>
   <td><a href="https://wg21.link/P2865R6">P2865R6</a></td>
-  <td class="unreleased" align="center">Clang 20</td>
+  <td class="full" align="center">Clang 20</td>
  </tr>
  <tr>
   <td>Structured Bindings can introduce a Pack</td>
@@ -249,7 +249,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>The Oxford variadic comma</td>
   <td><a href="https://wg21.link/P3176R1">P3176R1</a></td>
-  <td class="unreleased" align="center">Clang 20</td>
+  <td class="full" align="center">Clang 20</td>
  </tr>
  <!-- Austria, Winter 2025 -->
  <tr>
@@ -280,7 +280,12 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Trivial Relocatability</pre></td>
   <td><a href="https://wg21.link/P2786">P2786R13</a></td>
-  <td class="none" align="center">No</td>
+  <td class="partial" align="center">
+    <details>
+      <summary>Clang 21 (Partial)</summary>
+      The feature test macro (<code>__cpp_trivial_relocatability</code>) has not yet been set.
+    </details>
+  </td>
  </tr>
  <tr>
   <td><pre>#embed</pre></td>
@@ -475,8 +480,8 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <tr>
       <td>Using unknown pointers and references in constant expressions</td>
-      <td><a href="https://wg21.link/P2280R4">P2280R4</a></td>
-      <td class="unreleased" align="center">Clang 20</td>
+      <td><a href="https://wg21.link/P2280R4">P2280R4</a> (<a href="#dr">DR</a>)</td>
+      <td class="full" align="center">Clang 20</td>
     </tr>
     <tr>
       <td>static <code>operator()</code></td>

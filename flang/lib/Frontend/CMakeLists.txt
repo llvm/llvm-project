@@ -5,6 +5,7 @@ add_flang_library(flangFrontend
   CompilerInstance.cpp
   CompilerInvocation.cpp
   CodeGenOptions.cpp
+  ParserActions.cpp
   FrontendAction.cpp
   FrontendActions.cpp
   FrontendOptions.cpp
@@ -32,11 +33,13 @@ add_flang_library(flangFrontend
   FIRSupport
   FIRBuilder
   FIRCodeGen
+  FIRCodeGenDialect
   FIRTransforms
   HLFIRDialect
   HLFIRTransforms
   flangPasses
   FIROpenACCSupport
+  FIROpenMPSupport
   FlangOpenMPTransforms
 
   LINK_COMPONENTS
@@ -70,4 +73,12 @@ add_flang_library(flangFrontend
   CLANG_LIBS
   clangBasic
   clangDriver
+)
+
+target_precompile_headers(flangFrontend PRIVATE
+  [["flang/Parser/parsing.h"]]
+  [["flang/Parser/parse-tree.h"]]
+  [["flang/Parser/dump-parse-tree.h"]]
+  [["flang/Lower/PFTBuilder.h"]]
+  [["flang/Lower/Bridge.h"]]
 )

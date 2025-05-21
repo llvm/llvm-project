@@ -16,7 +16,6 @@ add_flang_library(FortranLower
   ConvertType.cpp
   ConvertVariable.cpp
   CustomIntrinsicCall.cpp
-  DumpEvaluateExpr.cpp
   HlfirIntrinsics.cpp
   HostAssociations.cpp
   IO.cpp
@@ -73,4 +72,15 @@ add_flang_library(FortranLower
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRSCFToControlFlow
+)
+
+target_precompile_headers(FortranLower PRIVATE
+  [["flang/Lower/ConvertExpr.h"]]
+  [["flang/Lower/SymbolMap.h"]]
+  [["flang/Lower/AbstractConverter.h"]]
+  [["flang/Lower/IterationSpace.h"]]
+  [["flang/Lower/CallInterface.h"]]
+  [["flang/Lower/BoxAnalyzer.h"]]
+  [["flang/Lower/PFTBuilder.h"]]
+  [["flang/Lower/DirectivesCommon.h"]]
 )

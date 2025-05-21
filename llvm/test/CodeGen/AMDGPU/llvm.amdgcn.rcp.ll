@@ -13,7 +13,7 @@ declare float @llvm.sqrt.f32(float) #0
 ; SI-NOT: [[NAN]]
 ; SI: buffer_store_dword [[NAN]]
 define amdgpu_kernel void @rcp_undef_f32(ptr addrspace(1) %out) #1 {
-  %rcp = call float @llvm.amdgcn.rcp.f32(float undef)
+  %rcp = call float @llvm.amdgcn.rcp.f32(float poison)
   store float %rcp, ptr addrspace(1) %out, align 4
   ret void
 }

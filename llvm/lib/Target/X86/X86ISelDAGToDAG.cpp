@@ -184,8 +184,6 @@ namespace {
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
       OptForMinSize = MF.getFunction().hasMinSize();
-      assert((!OptForMinSize || MF.getFunction().hasOptSize()) &&
-             "OptForMinSize implies OptForSize");
       return SelectionDAGISel::runOnMachineFunction(MF);
     }
 
@@ -226,9 +224,8 @@ namespace {
     bool selectLEAAddr(SDValue N, SDValue &Base,
                        SDValue &Scale, SDValue &Index, SDValue &Disp,
                        SDValue &Segment);
-    bool selectLEA64_32Addr(SDValue N, SDValue &Base,
-                            SDValue &Scale, SDValue &Index, SDValue &Disp,
-                            SDValue &Segment);
+    bool selectLEA64_Addr(SDValue N, SDValue &Base, SDValue &Scale,
+                          SDValue &Index, SDValue &Disp, SDValue &Segment);
     bool selectTLSADDRAddr(SDValue N, SDValue &Base,
                            SDValue &Scale, SDValue &Index, SDValue &Disp,
                            SDValue &Segment);
@@ -278,8 +275,23 @@ namespace {
 #define GET_ND_IF_ENABLED(OPC) (Subtarget->hasNDD() ? OPC##_ND : OPC)
       // Negate the index if needed.
       if (AM.NegateIndex) {
-        unsigned NegOpc = VT == MVT::i64 ? GET_ND_IF_ENABLED(X86::NEG64r)
-                                         : GET_ND_IF_ENABLED(X86::NEG32r);
+        unsigned NegOpc;
+        switch (VT.SimpleTy) {
+        default:
+          llvm_unreachable("Unsupported VT!");
+        case MVT::i64:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG64r);
+          break;
+        case MVT::i32:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG32r);
+          break;
+        case MVT::i16:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG16r);
+          break;
+        case MVT::i8:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG8r);
+          break;
+        }
         SDValue Neg = SDValue(CurDAG->getMachineNode(NegOpc, DL, VT, MVT::i32,
                                                      AM.IndexReg), 0);
         AM.IndexReg = Neg;
@@ -2500,7 +2512,6 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
 
 bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                               unsigned Depth) {
-  SDLoc dl(N);
   LLVM_DEBUG({
     dbgs() << "MatchAddress: ";
     AM.dump(CurDAG);
@@ -2891,7 +2902,6 @@ bool X86DAGToDAGISel::matchAddressBase(SDValue N, X86ISelAddressMode &AM) {
 bool X86DAGToDAGISel::matchVectorAddressRecursively(SDValue N,
                                                     X86ISelAddressMode &AM,
                                                     unsigned Depth) {
-  SDLoc dl(N);
   LLVM_DEBUG({
     dbgs() << "MatchVectorAddress: ";
     AM.dump(CurDAG);
@@ -3058,36 +3068,46 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
   return !TM.isLargeGlobalValue(GV);
 }
 
-bool X86DAGToDAGISel::selectLEA64_32Addr(SDValue N, SDValue &Base,
-                                         SDValue &Scale, SDValue &Index,
-                                         SDValue &Disp, SDValue &Segment) {
+bool X86DAGToDAGISel::selectLEA64_Addr(SDValue N, SDValue &Base, SDValue &Scale,
+                                       SDValue &Index, SDValue &Disp,
+                                       SDValue &Segment) {
   // Save the debug loc before calling selectLEAAddr, in case it invalidates N.
   SDLoc DL(N);
 
   if (!selectLEAAddr(N, Base, Scale, Index, Disp, Segment))
     return false;
 
+  EVT BaseType = Base.getValueType();
+  unsigned SubReg;
+  if (BaseType == MVT::i8)
+    SubReg = X86::sub_8bit;
+  else if (BaseType == MVT::i16)
+    SubReg = X86::sub_16bit;
+  else
+    SubReg = X86::sub_32bit;
+
   auto *RN = dyn_cast<RegisterSDNode>(Base);
   if (RN && RN->getReg() == 0)
     Base = CurDAG->getRegister(0, MVT::i64);
-  else if (Base.getValueType() == MVT::i32 && !isa<FrameIndexSDNode>(Base)) {
+  else if ((BaseType == MVT::i8 || BaseType == MVT::i16 ||
+            BaseType == MVT::i32) &&
+           !isa<FrameIndexSDNode>(Base)) {
     // Base could already be %rip, particularly in the x32 ABI.
     SDValue ImplDef = SDValue(CurDAG->getMachineNode(X86::IMPLICIT_DEF, DL,
                                                      MVT::i64), 0);
-    Base = CurDAG->getTargetInsertSubreg(X86::sub_32bit, DL, MVT::i64, ImplDef,
-                                         Base);
+    Base = CurDAG->getTargetInsertSubreg(SubReg, DL, MVT::i64, ImplDef, Base);
   }
 
+  [[maybe_unused]] EVT IndexType = Index.getValueType();
   RN = dyn_cast<RegisterSDNode>(Index);
   if (RN && RN->getReg() == 0)
     Index = CurDAG->getRegister(0, MVT::i64);
   else {
-    assert(Index.getValueType() == MVT::i32 &&
-           "Expect to be extending 32-bit registers for use in LEA");
+    assert((IndexType == BaseType) &&
+           "Expect to be extending 8/16/32-bit registers for use in LEA");
     SDValue ImplDef = SDValue(CurDAG->getMachineNode(X86::IMPLICIT_DEF, DL,
                                                      MVT::i64), 0);
-    Index = CurDAG->getTargetInsertSubreg(X86::sub_32bit, DL, MVT::i64, ImplDef,
-                                          Index);
+    Index = CurDAG->getTargetInsertSubreg(SubReg, DL, MVT::i64, ImplDef, Index);
   }
 
   return true;
@@ -3280,7 +3300,7 @@ bool X86DAGToDAGISel::tryFoldBroadcast(SDNode *Root, SDNode *P, SDValue N,
 /// Output instructions required to initialize the global base register,
 /// if necessary.
 SDNode *X86DAGToDAGISel::getGlobalBaseReg() {
-  unsigned GlobalBaseReg = getInstrInfo()->getGlobalBaseReg(MF);
+  Register GlobalBaseReg = getInstrInfo()->getGlobalBaseReg(MF);
   auto &DL = MF->getDataLayout();
   return CurDAG->getRegister(GlobalBaseReg, TLI->getPointerTy(DL)).getNode();
 }
@@ -6715,6 +6735,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         {Base, Scale, Index, Disp, Segment, Chain, Chain.getValue(1)});
     CurDAG->setNodeMemRefs(Res, cast<MemSDNode>(Node)->getMemOperand());
     ReplaceNode(Node, Res);
+    return;
+  }
+  case X86ISD::POP_FROM_X87_REG: {
+    SDValue Chain = Node->getOperand(0);
+    Register Reg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
+    SDValue Glue;
+    if (Node->getNumValues() == 3)
+      Glue = Node->getOperand(2);
+    SDValue Copy =
+        CurDAG->getCopyFromReg(Chain, dl, Reg, Node->getValueType(0), Glue);
+    ReplaceNode(Node, Copy.getNode());
     return;
   }
   }

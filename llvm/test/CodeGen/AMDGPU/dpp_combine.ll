@@ -1,7 +1,9 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
 
 ; GCN-LABEL: {{^}}dpp_add:
 ; GCN: global_load_{{dword|b32}} [[V:v[0-9]+]],
@@ -60,6 +62,30 @@ define amdgpu_kernel void @dpp_mul(ptr addrspace(1) %arg) {
   %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %load, i32 %load, i32 1, i32 15, i32 15, i1 1)
   %mul = mul i32 %tmp0, %load
   store i32 %mul, ptr addrspace(1) %gep
+  ret void
+}
+
+; It is not expected to see a sequence of v_mov_b32_dpp feeding into a 16 bit instruction
+; GCN-LABEL: {{^}}dpp_fadd_f16:
+; GFX9GFX10: global_load_{{dword|b32}} [[V:v[0-9]+]],
+; GFX9GFX10: v_add_f16_dpp [[V]], [[V]], [[V]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
+; GFX11-TRUE16: v_mov_b32_dpp {{v[0-9]+}}, {{v[0-9]+}} quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX11-TRUE16: v_add_f16_e32
+; GFX11-FAKE16: global_load_{{dword|b32}} [[V:v[0-9]+]],
+; GFX11-FAKE16: v_add_f16_e64_dpp [[V]], [[V]], [[V]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+define amdgpu_kernel void @dpp_fadd_f16(ptr addrspace(1) %arg) {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %id
+  %load = load i32, ptr addrspace(1) %gep
+  %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %load, i32 %load, i32 1, i32 15, i32 15, i1 1) #0
+  %tmp01 = trunc i32 %tmp0 to i16
+  %tmp1 = bitcast i16 %tmp01 to half
+  %tt = trunc i32 %load to i16
+  %t = bitcast i16 %tt to half
+  %add = fadd half %tmp1, %t
+  %tmp2 = bitcast half %add to i16
+  %tmp3 = zext i16 %tmp2 to i32
+  store i32 %tmp3, ptr addrspace(1) %gep
   ret void
 }
 

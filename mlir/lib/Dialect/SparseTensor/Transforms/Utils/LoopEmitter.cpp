@@ -263,7 +263,7 @@ void LoopEmitter::initializeLoopEmit(
         denseTp = bufferization::getMemRefTypeWithFullyDynamicLayout(rtp);
 
       Value denseVal =
-          builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
+          builder.create<bufferization::ToBufferOp>(loc, denseTp, tensor);
       // Dense outputs need special handling.
       if (isOutput && updater)
         denseVal = updater(builder, loc, denseVal, tensor);
@@ -352,8 +352,7 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
     if (depRedOrder.empty())
       continue;
 
-    std::sort(depRedOrder.begin(), depRedOrder.end(),
-              [](auto &l, auto &r) { return std::get<0>(l) < std::get<0>(r); });
+    llvm::sort(depRedOrder, llvm::less_first());
 
     SmallVector<SparseIterator *> lastIter(tensors.size(), nullptr);
     for (auto [loop, t, lvl] : depRedOrder) {
@@ -956,10 +955,6 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
   // Generates loop body.
   builder.setInsertionPointToStart(after);
   ValueRange aArgs = after->getArguments();
-  // Since some LoopCondKind might need extra checks to filter out invalid
-  // iterations, we maintains another array to hold the iteration arguments to
-  // yield if the checks fails.
-  SmallVector<Value> nextArgs(aArgs.begin(), aArgs.end());
 
   for (SparseIterator *it : spIters) {
     aArgs = it->linkNewScope(aArgs);

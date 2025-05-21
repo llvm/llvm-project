@@ -25,19 +25,43 @@
 #endif
 #endif
 
+#include <stdint.h>
+
+#if !defined(__cplusplus)
+_Pragma("push_macro(\"bool\")");
+#define bool _Bool
+#endif
+
+_Pragma("omp begin declare target device_type(nohost)");
+_Pragma("omp begin declare variant match(device = {kind(gpu)})");
+
+// Forward declare a few functions for the implementation header.
+
+// Returns a bitmask marking all lanes that have the same value of __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x);
+
+// Returns a bitmask marking all lanes that have the same value of __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_any_u64_impl(uint64_t __lane_mask, uint64_t __x);
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u32_impl(uint64_t __lane_mask, uint32_t __x);
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u64_impl(uint64_t __lane_mask, uint64_t __x);
+
+_Pragma("omp end declare variant");
+_Pragma("omp end declare target");
+
 #if defined(__NVPTX__)
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
 #include <amdgpuintrin.h>
 #elif !defined(_OPENMP)
 #error "This header is only meant to be used on GPU architectures."
-#endif
-
-#include <stdint.h>
-
-#if !defined(__cplusplus)
-_Pragma("push_macro(\"bool\")");
-#define bool _Bool
 #endif
 
 _Pragma("omp begin declare target device_type(nohost)");
@@ -115,6 +139,16 @@ __gpu_is_first_in_lane(uint64_t __lane_mask) {
   return __gpu_lane_id() == __gpu_first_lane_id(__lane_mask);
 }
 
+// Copies the value from the first active thread to the rest.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
+  uint32_t __hi = (uint32_t)(__x >> 32ull);
+  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFFull);
+  return ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __hi) << 32ull) |
+         ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __lo) &
+          0xFFFFFFFFull);
+}
+
 // Gets the first floating point value from the active lanes.
 _DEFAULT_FN_ATTRS static __inline__ float
 __gpu_read_first_lane_f32(uint64_t __lane_mask, float __x) {
@@ -129,6 +163,18 @@ __gpu_read_first_lane_f64(uint64_t __lane_mask, double __x) {
   return __builtin_bit_cast(
       double, __gpu_read_first_lane_u64(__lane_mask,
                                         __builtin_bit_cast(uint64_t, __x)));
+}
+
+// Shuffles the the lanes according to the given index.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x,
+                      uint32_t __width) {
+  uint32_t __hi = (uint32_t)(__x >> 32ull);
+  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
+  uint32_t __mask = (uint32_t)__lane_mask;
+  return ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __hi, __width)
+          << 32ull) |
+         ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __lo, __width));
 }
 
 // Shuffles the the lanes according to the given index.
@@ -211,6 +257,64 @@ __DO_LANE_SUM(uint64_t, u64); // uint64_t __gpu_lane_sum_u64(m, x)
 __DO_LANE_SUM(float, f32);    // float __gpu_lane_sum_f32(m, x)
 __DO_LANE_SUM(double, f64);   // double __gpu_lane_sum_f64(m, x)
 #undef __DO_LANE_SUM
+
+// Returns a bitmask marking all lanes that have the same value of __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x) {
+  uint64_t __match_mask = 0;
+
+  bool __done = 0;
+  for (uint64_t __active_mask = __lane_mask; __active_mask;
+       __active_mask = __gpu_ballot(__lane_mask, !__done)) {
+    if (!__done) {
+      uint32_t __first = __gpu_read_first_lane_u32(__active_mask, __x);
+      if (__first == __x) {
+        __match_mask = __gpu_lane_mask();
+        __done = 1;
+      }
+    }
+  }
+  __gpu_sync_lane(__lane_mask);
+  return __match_mask;
+}
+
+// Returns a bitmask marking all lanes that have the same value of __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_any_u64_impl(uint64_t __lane_mask, uint64_t __x) {
+  uint64_t __match_mask = 0;
+
+  bool __done = 0;
+  for (uint64_t __active_mask = __lane_mask; __active_mask;
+       __active_mask = __gpu_ballot(__lane_mask, !__done)) {
+    if (!__done) {
+      uint64_t __first = __gpu_read_first_lane_u64(__active_mask, __x);
+      if (__first == __x) {
+        __match_mask = __gpu_lane_mask();
+        __done = 1;
+      }
+    }
+  }
+  __gpu_sync_lane(__lane_mask);
+  return __match_mask;
+}
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u32_impl(uint64_t __lane_mask, uint32_t __x) {
+  uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
+  uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
+  __gpu_sync_lane(__lane_mask);
+  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+}
+
+// Returns the current lane mask if every lane contains __x.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_match_all_u64_impl(uint64_t __lane_mask, uint64_t __x) {
+  uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+  uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
+  __gpu_sync_lane(__lane_mask);
+  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+}
 
 _Pragma("omp end declare variant");
 _Pragma("omp end declare target");

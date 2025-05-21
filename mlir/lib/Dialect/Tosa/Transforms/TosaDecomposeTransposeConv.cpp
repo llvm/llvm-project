@@ -129,35 +129,43 @@ public:
     weightPadding[3] =
         (weightHeight % stride[0]) ? (stride[0] - weightHeight % stride[0]) : 0;
     weightPadding[5] =
-        weightWidth % stride[1] ? stride[1] - weightWidth % stride[1] : 0;
+        (weightWidth % stride[1]) ? (stride[1] - weightWidth % stride[1]) : 0;
 
     Value weightPaddingVal =
         getTosaConstShape(rewriter, op->getLoc(), weightPadding);
 
     // Get and verify zero points.
-    int64_t inputZpVal;
-    int64_t weightZpVal;
-
-    if (op.getInputZeroPoint(inputZpVal).failed() ||
-        op.getWeightZeroPoint(weightZpVal).failed())
+    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+    if (failed(maybeIZp))
       return rewriter.notifyMatchFailure(
-          op, "bail out if zero points cannot statically be determined");
+          op, "input zero point cannot be statically determined");
 
-    if (op.verifyInputZeroPoint(inputZpVal).failed() ||
-        op.verifyWeightZeroPoint(weightZpVal).failed())
+    FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
+    if (failed(maybeWZp))
       return rewriter.notifyMatchFailure(
-          op, "zero point must be zero for non-int8 integer types");
+          op, "weight zero point cannot be statically determined");
 
-    if (weightZpVal != 0) {
-      weight = CreateOpAndInferShape<tosa::PadOp>(
-          rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-          weightPaddingVal, nullptr, rewriter.getI32IntegerAttr(weightZpVal));
+    int64_t inputZpVal = *maybeIZp;
+    int64_t weightZpVal = *maybeWZp;
 
-    } else {
-      weight = CreateOpAndInferShape<tosa::PadOp>(
-          rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-          weightPaddingVal);
-    }
+    if (op.verifyInputZeroPoint(inputZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input zero point must be zero for non-int8 integer types");
+
+    if (op.verifyWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point must be zero for non-int8 integer types");
+
+    // construct pad_const values from zp values
+    ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+    const Value inputPadConst =
+        createPadConstTensor(builder, op->getLoc(), input, inputZpVal);
+    const Value weightPadConst =
+        createPadConstTensor(builder, op->getLoc(), input, weightZpVal);
+
+    weight = CreateOpAndInferShape<tosa::PadOp>(
+        rewriter, loc, UnrankedTensorType::get(weightETy), weight,
+        weightPaddingVal, weightPadConst);
 
     weightTy = cast<ShapedType>(weight.getType());
     weightHeight = weightTy.getDimSize(1);
@@ -169,7 +177,6 @@ public:
         stride[0],      weightWidth / stride[1],
         stride[1],      inputChannels};
 
-    ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
     weight = CreateOpAndInferShape<tosa::ReshapeOp>(
         builder, UnrankedTensorType::get(weightETy), weight,
         getTosaConstShape(rewriter, loc, weightReshapeDims0));
@@ -206,15 +213,9 @@ public:
     Value inputPaddingVal =
         getTosaConstShape(rewriter, op->getLoc(), inputPadding);
 
-    if (inputZpVal != 0) {
-      input = CreateOpAndInferShape<tosa::PadOp>(
-          rewriter, loc, UnrankedTensorType::get(inputETy), input,
-          inputPaddingVal, nullptr, rewriter.getI32IntegerAttr(inputZpVal));
-    } else {
-      input = CreateOpAndInferShape<tosa::PadOp>(
-          rewriter, loc, UnrankedTensorType::get(inputETy), input,
-          inputPaddingVal);
-    }
+    input = CreateOpAndInferShape<tosa::PadOp>(
+        rewriter, loc, UnrankedTensorType::get(inputETy), input,
+        inputPaddingVal, inputPadConst);
 
     // We use a zero bias as we need to broadcast the bias.
     auto zeroBias = rewriter.create<tosa::ConstOp>(

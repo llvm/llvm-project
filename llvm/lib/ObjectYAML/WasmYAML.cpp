@@ -373,6 +373,8 @@ void MappingTraits<WasmYAML::Limits>::mapping(IO &IO,
   IO.mapRequired("Minimum", Limits.Minimum);
   if (!IO.outputting() || Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
     IO.mapOptional("Maximum", Limits.Maximum);
+  if (!IO.outputting() || Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_PAGE_SIZE)
+    IO.mapOptional("PageSize", Limits.PageSize);
 }
 
 void MappingTraits<WasmYAML::ElemSegment>::mapping(
@@ -553,6 +555,7 @@ void ScalarBitSetTraits<WasmYAML::LimitFlags>::bitset(
   BCase(HAS_MAX);
   BCase(IS_SHARED);
   BCase(IS_64);
+  BCase(HAS_PAGE_SIZE);
 #undef BCase
 }
 

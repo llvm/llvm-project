@@ -27,7 +27,7 @@ def AffineDataCopyGeneration : Pass<"affine-data-copy-generate", "func::FuncOp">
            /*default=*/"1",
            "Fast memory space identifier for copy generation (default: 1)">,
     Option<"generateDma", "generate-dma", "bool",
-           /*default=*/"true", "Generate DMA instead of point-wise copy">,
+           /*default=*/"false", "Generate DMA instead of point-wise copy">,
     Option<"minDmaTransferSize", "min-dma-transfer", "int",
            /*default=*/"1024",
            "Minimum DMA transfer size supported by the target in bytes">,
@@ -394,6 +394,18 @@ def LoopCoalescing : Pass<"affine-loop-coalescing", "func::FuncOp"> {
                 "loop";
   let constructor = "mlir::affine::createLoopCoalescingPass()";
   let dependentDialects = ["affine::AffineDialect","arith::ArithDialect"];
+}
+
+def RaiseMemrefDialect : Pass<"affine-raise-from-memref", "func::FuncOp"> {
+  let summary = "Turn some memref operators to affine operators where supported";
+  let description = [{
+    Raise memref.load and memref.store to affine.store and affine.load, inferring
+    the affine map of those operators if needed. This allows passes like --affine-scalrep
+    to optimize those loads and stores (forwarding them or eliminating them).
+    They can be turned back to memref dialect ops with --lower-affine.
+  }];
+  let constructor = "mlir::affine::createRaiseMemrefToAffine()";
+  let dependentDialects = ["affine::AffineDialect"];
 }
 
 def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"> {

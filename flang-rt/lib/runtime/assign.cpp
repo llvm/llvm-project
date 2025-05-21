@@ -79,15 +79,18 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
     to.raw().elem_len = from.ElementBytes();
   }
   const typeInfo::DerivedType *derived{nullptr};
+  DescriptorAddendum *toAddendum{to.Addendum()};
   if (const DescriptorAddendum * fromAddendum{from.Addendum()}) {
     derived = fromAddendum->derivedType();
-    if (DescriptorAddendum * toAddendum{to.Addendum()}) {
+    if (toAddendum) {
       toAddendum->set_derivedType(derived);
       std::size_t lenParms{derived ? derived->LenParameters() : 0};
       for (std::size_t j{0}; j < lenParms; ++j) {
         toAddendum->SetLenParameterValue(j, fromAddendum->LenParameterValue(j));
       }
     }
+  } else if (toAddendum) {
+    toAddendum->set_derivedType(nullptr);
   }
   // subtle: leave bounds in place when "from" is scalar (10.2.1.3(3))
   int rank{from.rank()};
@@ -99,7 +102,7 @@ static RT_API_ATTRS int AllocateAssignmentLHS(
     toDim.SetByteStride(stride);
     stride *= toDim.Extent();
   }
-  int result{ReturnError(terminator, to.Allocate())};
+  int result{ReturnError(terminator, to.Allocate(kNoAsyncObject))};
   if (result == StatOk && derived && !derived->noInitializationNeeded()) {
     result = ReturnError(terminator, Initialize(to, *derived, terminator));
   }
@@ -263,7 +266,8 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
   if (MayAlias(to, from)) {
     if (mustDeallocateLHS) {
       deferDeallocation = &deferredDeallocStatDesc.descriptor();
-      std::memcpy(deferDeallocation, &to, to.SizeInBytes());
+      std::memcpy(
+          reinterpret_cast<void *>(deferDeallocation), &to, to.SizeInBytes());
       to.set_base_addr(nullptr);
     } else if (!isSimpleMemmove()) {
       // Handle LHS/RHS aliasing by copying RHS into a temp, then
@@ -271,12 +275,12 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       auto descBytes{from.SizeInBytes()};
       StaticDescriptor<maxRank, true, 16> staticDesc;
       Descriptor &newFrom{staticDesc.descriptor()};
-      std::memcpy(&newFrom, &from, descBytes);
+      std::memcpy(reinterpret_cast<void *>(&newFrom), &from, descBytes);
       // Pretend the temporary descriptor is for an ALLOCATABLE
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
       newFrom.raw().attribute = CFI_attribute_allocatable;
-      auto stat{ReturnError(terminator, newFrom.Allocate())};
+      auto stat{ReturnError(terminator, newFrom.Allocate(kNoAsyncObject))};
       if (stat == StatOk) {
         if (HasDynamicComponent(from)) {
           // If 'from' has allocatable/automatic component, we cannot

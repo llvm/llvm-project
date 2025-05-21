@@ -284,7 +284,7 @@ TEST_F(SortIncludesTest, SupportClangFormatOffCStyle) {
 }
 
 TEST_F(SortIncludesTest, IncludeSortingCanBeDisabled) {
-  FmtStyle.SortIncludes = FormatStyle::SI_Never;
+  FmtStyle.SortIncludes = {};
   verifyFormat("#include \"a.h\"\n"
                "#include \"c.h\"\n"
                "#include \"b.h\"",
@@ -628,9 +628,7 @@ TEST_F(SortIncludesTest, MainHeaderIsSeparatedWhenRegroupping) {
 }
 
 TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveSorting) {
-  EXPECT_FALSE(FmtStyle.SortIncludes == FormatStyle::SI_CaseInsensitive);
-
-  FmtStyle.SortIncludes = FormatStyle::SI_CaseInsensitive;
+  FmtStyle.SortIncludes.IgnoreCase = true;
 
   verifyFormat("#include \"A/B.h\"\n"
                "#include \"A/b.h\"\n"
@@ -1083,6 +1081,15 @@ TEST_F(SortIncludesTest, DoNotSortLikelyXml) {
                     "#include <a>\n"
                     "-->",
                     "input.h", 0));
+}
+
+TEST_F(SortIncludesTest, DoNotSortCSharp) {
+  constexpr StringRef Code{"const string expectedDataStruct = @\"\n"
+                           "            #include <b.h>\n"
+                           "            #include <a.h>\n"
+                           "        \";"};
+  FmtStyle.Language = FormatStyle::LK_CSharp;
+  EXPECT_TRUE(sortIncludes(FmtStyle, Code, GetCodeRange(Code), "a.cs").empty());
 }
 
 TEST_F(SortIncludesTest, DoNotOutputReplacementsForSortedBlocksWithRegrouping) {

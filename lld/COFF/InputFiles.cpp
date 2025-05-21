@@ -129,17 +129,16 @@ void ArchiveFile::parse() {
   file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
-  if (ctx.symtabEC) {
+  if (ctx.symtab.isEC()) {
     iterator_range<Archive::symbol_iterator> symbols =
         CHECK(file->ec_symbols(), this);
     if (!symbols.empty()) {
       for (const Archive::Symbol &sym : symbols)
-        ctx.symtabEC->addLazyArchive(this, sym);
+        ctx.symtab.addLazyArchive(this, sym);
 
       // Read both EC and native symbols on ARM64X.
-      if (!ctx.hybridSymtab)
-        return;
-    } else if (ctx.hybridSymtab) {
+      archiveSymtab = &*ctx.hybridSymtab;
+    } else {
       // If the ECSYMBOLS section is missing in the archive, the archive could
       // be either a native-only ARM64 or x86_64 archive. Check the machine type
       // of the object containing a symbol to determine which symbol table to
@@ -705,9 +704,9 @@ void ObjFile::handleComdatSelection(
   // seems better though.
   // (This behavior matches ModuleLinker::getComdatResult().)
   if (selection != leaderSelection) {
-    Log(ctx) << "conflicting comdat type for " << leader << ": "
-             << (int)leaderSelection << " in " << leader->getFile() << " and "
-             << (int)selection << " in " << this;
+    Log(ctx) << "conflicting comdat type for " << symtab.printSymbol(leader)
+             << ": " << (int)leaderSelection << " in " << leader->getFile()
+             << " and " << (int)selection << " in " << this;
     symtab.reportDuplicate(leader, this);
     return;
   }

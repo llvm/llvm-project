@@ -1178,8 +1178,11 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
     if (auto It = SlotRemap.find(i); It != SlotRemap.end()) {
       int Target = It->second;
       // As long as our target is mapped to something else, follow it.
-      while (SlotRemap.count(Target)) {
-        Target = SlotRemap[Target];
+      while (true) {
+        auto It = SlotRemap.find(Target);
+        if (It == SlotRemap.end())
+          break;
+        Target = It->second;
         SlotRemap[i] = Target;
       }
     }

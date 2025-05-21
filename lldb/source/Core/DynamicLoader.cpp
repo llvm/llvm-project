@@ -243,14 +243,21 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     // find an executable and symbol file.
     if (!module_sp) {
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+      StatisticsMap symbol_locator_map;
       module_spec.GetSymbolFileSpec() =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths,
+                                                    symbol_locator_map);
       ModuleSpec objfile_module_spec =
-          PluginManager::LocateExecutableObjectFile(module_spec);
+          PluginManager::LocateExecutableObjectFile(module_spec,
+                                                    symbol_locator_map);
       module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
           FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);
+      }
+
+      if (module_sp) {
+        module_sp->GetSymbolLocatorStatistics().merge(symbol_locator_map);
       }
     }
 

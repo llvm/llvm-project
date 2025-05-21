@@ -49,6 +49,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "loop-peel"
 
 STATISTIC(NumPeeled, "Number of loops peeled");
+STATISTIC(NumPeeledEnd, "Number of loops peeled from end");
 
 static cl::opt<unsigned> UnrollPeelCount(
     "unroll-peel-count", cl::Hidden,
@@ -302,11 +303,8 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
       if (I.mayWriteToMemory())
         return 0;
 
-      auto Iter = LoadUsers.find(&I);
-      if (Iter != LoadUsers.end()) {
-        for (Value *U : I.users())
-          LoadUsers.insert(U);
-      }
+      if (LoadUsers.contains(&I))
+        LoadUsers.insert_range(I.users());
       // Do not look for reads in the header; they can already be hoisted
       // without peeling.
       if (BB == Header)
@@ -315,8 +313,7 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
         Value *Ptr = LI->getPointerOperand();
         if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
             !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, AC, &DT))
-          for (Value *U : I.users())
-            LoadUsers.insert(U);
+          LoadUsers.insert_range(I.users());
       }
     }
   }
@@ -329,19 +326,71 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   return 0;
 }
 
-// Return the number of iterations to peel off that make conditions in the
-// body true/false. For example, if we peel 2 iterations off the loop below,
-// the condition i < 2 can be evaluated at compile time.
+bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
+  const SCEV *BTC = SE.getBackedgeTakenCount(&L);
+  Value *Inc;
+  CmpPredicate Pred;
+  BasicBlock *Succ1;
+  BasicBlock *Succ2;
+  // The loop must execute at least 2 iterations to guarantee that peeled
+  // iteration executes.
+  // TODO: Add checks during codegen.
+  if (isa<SCEVCouldNotCompute>(BTC) ||
+      !SE.isKnownPredicate(CmpInst::ICMP_UGT, BTC, SE.getZero(BTC->getType())))
+    return false;
+
+  // Check if the exit condition of the loop can be adjusted by the peeling
+  // codegen. For now, it must
+  // * exit via the latch,
+  // * the exit condition must be a NE/EQ compare of an induction with step
+  // of 1 and must only be used by the exiting branch.
+  BasicBlock *Latch = L.getLoopLatch();
+  return Latch && Latch == L.getExitingBlock() &&
+         match(Latch->getTerminator(),
+               m_Br(m_OneUse(m_ICmp(Pred, m_Value(Inc), m_Value())),
+                    m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
+         ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
+          (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
+         isa<SCEVAddRecExpr>(SE.getSCEV(Inc)) &&
+         cast<SCEVAddRecExpr>(SE.getSCEV(Inc))->getStepRecurrence(SE)->isOne();
+}
+
+/// Returns true if the last iteration can be peeled off and the condition (Pred
+/// LeftAR, RightSCEV) is known at the last iteration and the inverse condition
+/// is known at the second-to-last.
+static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
+                                    const SCEVAddRecExpr *LeftAR,
+                                    const SCEV *RightSCEV,
+                                    ScalarEvolution &SE) {
+  if (!canPeelLastIteration(L, SE))
+    return false;
+
+  const SCEV *BTC = SE.getBackedgeTakenCount(&L);
+  const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(BTC, SE);
+  const SCEV *ValAtSecondToLastIter = LeftAR->evaluateAtIteration(
+      SE.getMinusSCEV(BTC, SE.getOne(BTC->getType())), SE);
+
+  return SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), ValAtLastIter,
+                             RightSCEV) &&
+         SE.isKnownPredicate(Pred, ValAtSecondToLastIter, RightSCEV);
+}
+
+// Return the number of iterations to peel off from the beginning and end of the
+// loop respectively, that make conditions in the body true/false. For example,
+// if we peel 2 iterations off the loop below, the condition i < 2 can be
+// evaluated at compile time.
+//
 //  for (i = 0; i < n; i++)
 //    if (i < 2)
 //      ..
 //    else
 //      ..
 //   }
-static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
-                                         ScalarEvolution &SE) {
+static std::pair<unsigned, unsigned>
+countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE) {
   assert(L.isLoopSimplifyForm() && "Loop needs to be in loop simplify form");
   unsigned DesiredPeelCount = 0;
+  unsigned DesiredPeelCountLast = 0;
 
   // Do not peel the entire loop.
   const SCEV *BE = SE.getConstantMaxBackedgeTakenCount(&L);
@@ -425,8 +474,11 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 
     const SCEV *Step = LeftAR->getStepRecurrence(SE);
     if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, RightSCEV, Step,
-                                   Pred))
+                                   Pred)) {
+      if (shouldPeelLastIteration(L, Pred, LeftAR, RightSCEV, SE))
+        DesiredPeelCountLast = 1;
       return;
+    }
 
     // However, for equality comparisons, that isn't always sufficient to
     // eliminate the comparsion in loop body, we may need to peel one more
@@ -443,6 +495,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     }
 
     DesiredPeelCount = std::max(DesiredPeelCount, NewPeelCount);
+    DesiredPeelCountLast = std::max(DesiredPeelCountLast, NewPeelCount);
   };
 
   auto ComputePeelCountMinMax = [&](MinMaxIntrinsic *MinMax) {
@@ -504,7 +557,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     ComputePeelCount(BI->getCondition(), 0);
   }
 
-  return DesiredPeelCount;
+  return {DesiredPeelCount, DesiredPeelCountLast};
 }
 
 /// This "heuristic" exactly matches implicit behavior which used to exist
@@ -543,6 +596,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // TTI.getPeelingPreferences or by the flag -unroll-peel-count.
   unsigned TargetPeelCount = PP.PeelCount;
   PP.PeelCount = 0;
+  PP.PeelLast = false;
   if (!canPeel(L))
     return;
 
@@ -597,8 +651,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
       DesiredPeelCount = std::max(DesiredPeelCount, *NumPeels);
   }
 
-  DesiredPeelCount = std::max(DesiredPeelCount,
-                              countToEliminateCompares(*L, MaxPeelCount, SE));
+  const auto &[CountToEliminateCmps, CountToEliminateCmpsLast] =
+      countToEliminateCompares(*L, MaxPeelCount, SE);
+  DesiredPeelCount = std::max(DesiredPeelCount, CountToEliminateCmps);
 
   if (DesiredPeelCount == 0)
     DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT, AC);
@@ -613,6 +668,23 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                         << " some Phis into invariants.\n");
       PP.PeelCount = DesiredPeelCount;
       PP.PeelProfiledIterations = false;
+      PP.PeelLast = false;
+      return;
+    }
+  }
+
+  if (CountToEliminateCmpsLast > 0) {
+    unsigned DesiredPeelCountLast =
+        std::min(CountToEliminateCmpsLast, MaxPeelCount);
+    // Consider max peel count limitation.
+    assert(DesiredPeelCountLast > 0 && "Wrong loop size estimation?");
+    if (DesiredPeelCountLast + AlreadyPeeled <= UnrollPeelMaxCount) {
+      LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
+                        << " iteration(s) to turn"
+                        << " some Phis into invariants.\n");
+      PP.PeelCount = DesiredPeelCountLast;
+      PP.PeelProfiledIterations = false;
+      PP.PeelLast = true;
       return;
     }
   }
@@ -640,20 +712,18 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is "
                       << *EstimatedTripCount << "\n");
 
-    if (*EstimatedTripCount) {
-      if (*EstimatedTripCount + AlreadyPeeled <= MaxPeelCount) {
-        unsigned PeelCount = *EstimatedTripCount;
-        LLVM_DEBUG(dbgs() << "Peeling first " << PeelCount << " iterations.\n");
-        PP.PeelCount = PeelCount;
-        return;
-      }
-      LLVM_DEBUG(dbgs() << "Already peel count: " << AlreadyPeeled << "\n");
-      LLVM_DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
-      LLVM_DEBUG(dbgs() << "Loop cost: " << LoopSize << "\n");
-      LLVM_DEBUG(dbgs() << "Max peel cost: " << Threshold << "\n");
-      LLVM_DEBUG(dbgs() << "Max peel count by cost: "
-                        << (Threshold / LoopSize - 1) << "\n");
+    if (*EstimatedTripCount + AlreadyPeeled <= MaxPeelCount) {
+      unsigned PeelCount = *EstimatedTripCount;
+      LLVM_DEBUG(dbgs() << "Peeling first " << PeelCount << " iterations.\n");
+      PP.PeelCount = PeelCount;
+      return;
     }
+    LLVM_DEBUG(dbgs() << "Already peel count: " << AlreadyPeeled << "\n");
+    LLVM_DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
+    LLVM_DEBUG(dbgs() << "Loop cost: " << LoopSize << "\n");
+    LLVM_DEBUG(dbgs() << "Max peel cost: " << Threshold << "\n");
+    LLVM_DEBUG(dbgs() << "Max peel count by cost: "
+                      << (Threshold / LoopSize - 1) << "\n");
   }
 }
 
@@ -739,6 +809,7 @@ static void initBranchWeights(DenseMap<Instruction *, WeightInfo> &WeightInfos,
 /// InsertBot.
 /// \param IterNumber The serial number of the iteration currently being
 /// peeled off.
+/// \param PeelLast Peel off the last iterations from \p L.
 /// \param ExitEdges The exit edges of the original loop.
 /// \param[out] NewBlocks A list of the blocks in the newly created clone
 /// \param[out] VMap The value map between the loop and the new clone.
@@ -746,7 +817,8 @@ static void initBranchWeights(DenseMap<Instruction *, WeightInfo> &WeightInfos,
 /// \param LVMap A value-map that maps instructions from the original loop to
 /// instructions in the last peeled-off iteration.
 static void cloneLoopBlocks(
-    Loop *L, unsigned IterNumber, BasicBlock *InsertTop, BasicBlock *InsertBot,
+    Loop *L, unsigned IterNumber, bool PeelLast, BasicBlock *InsertTop,
+    BasicBlock *InsertBot,
     SmallVectorImpl<std::pair<BasicBlock *, BasicBlock *>> &ExitEdges,
     SmallVectorImpl<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
     ValueToValueMapTy &VMap, ValueToValueMapTy &LVMap, DominatorTree *DT,
@@ -810,16 +882,26 @@ static void cloneLoopBlocks(
 
   // Similarly, for the latch:
   // The original exiting edge is still hooked up to the loop exit.
-  // The backedge now goes to the "bottom", which is either the loop's real
-  // header (for the last peeled iteration) or the copied header of the next
-  // iteration (for every other iteration)
   BasicBlock *NewLatch = cast<BasicBlock>(VMap[Latch]);
-  auto *LatchTerm = cast<Instruction>(NewLatch->getTerminator());
-  for (unsigned idx = 0, e = LatchTerm->getNumSuccessors(); idx < e; ++idx)
-    if (LatchTerm->getSuccessor(idx) == Header) {
-      LatchTerm->setSuccessor(idx, InsertBot);
-      break;
+  if (PeelLast) {
+    // This is the last iteration and we definitely will go to the exit. Just
+    // set both successors to InsertBot and let the branch be simplified later.
+    assert(IterNumber == 0 && "Only peeling a single iteration implemented.");
+    auto *LatchTerm = cast<BranchInst>(NewLatch->getTerminator());
+    LatchTerm->setSuccessor(0, InsertBot);
+    LatchTerm->setSuccessor(1, InsertBot);
+  } else {
+    auto *LatchTerm = cast<Instruction>(NewLatch->getTerminator());
+    // The backedge now goes to the "bottom", which is either the loop's real
+    // header (for the last peeled iteration) or the copied header of the next
+    // iteration (for every other iteration)
+    for (unsigned idx = 0, e = LatchTerm->getNumSuccessors(); idx < e; ++idx) {
+      if (LatchTerm->getSuccessor(idx) == Header) {
+        LatchTerm->setSuccessor(idx, InsertBot);
+        break;
+      }
     }
+  }
   if (DT)
     DT->changeImmediateDominator(InsertBot, NewLatch);
 
@@ -827,23 +909,33 @@ static void cloneLoopBlocks(
   // that pick an incoming value from either the preheader, or the previous
   // loop iteration. Since this copy is no longer part of the loop, we
   // resolve this statically:
-  // For the first iteration, we use the value from the preheader directly.
-  // For any other iteration, we replace the phi with the value generated by
-  // the immediately preceding clone of the loop body (which represents
-  // the previous iteration).
-  for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
-    PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
-    if (IterNumber == 0) {
-      VMap[&*I] = NewPHI->getIncomingValueForBlock(PreHeader);
-    } else {
-      Value *LatchVal = NewPHI->getIncomingValueForBlock(Latch);
-      Instruction *LatchInst = dyn_cast<Instruction>(LatchVal);
-      if (LatchInst && L->contains(LatchInst))
-        VMap[&*I] = LVMap[LatchInst];
-      else
-        VMap[&*I] = LatchVal;
+  if (PeelLast) {
+    // For the last iteration, we use the value from the latch of the original
+    // loop directly.
+    for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
+      PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
+      VMap[&*I] = NewPHI->getIncomingValueForBlock(Latch);
+      NewPHI->eraseFromParent();
     }
-    NewPHI->eraseFromParent();
+  } else {
+    // For the first iteration, we use the value from the preheader directly.
+    // For any other iteration, we replace the phi with the value generated by
+    // the immediately preceding clone of the loop body (which represents
+    // the previous iteration).
+    for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
+      PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
+      if (IterNumber == 0) {
+        VMap[&*I] = NewPHI->getIncomingValueForBlock(PreHeader);
+      } else {
+        Value *LatchVal = NewPHI->getIncomingValueForBlock(Latch);
+        Instruction *LatchInst = dyn_cast<Instruction>(LatchVal);
+        if (LatchInst && L->contains(LatchInst))
+          VMap[&*I] = LVMap[LatchInst];
+        else
+          VMap[&*I] = LatchVal;
+      }
+      NewPHI->eraseFromParent();
+    }
   }
 
   // Fix up the outgoing values - we need to add a value for the iteration
@@ -878,6 +970,7 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
   PP.PeelCount = 0;
   PP.AllowPeeling = true;
   PP.AllowLoopNestsPeeling = false;
+  PP.PeelLast = false;
   PP.PeelProfiledIterations = true;
 
   // Get the target specifc values.
@@ -911,11 +1004,14 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
 /// this provides a benefit, since the peeled off iterations, which account
 /// for the bulk of dynamic execution, can be further simplified by scalar
 /// optimizations.
-bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
+bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
                     ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
                     bool PreserveLCSSA, ValueToValueMapTy &LVMap) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
   assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
+  assert((!PeelLast || (canPeelLastIteration(*L, *SE) && PeelCount == 1)) &&
+         "when peeling the last iteration, the loop must be supported and can "
+         "only peel a single iteration");
 
   LoopBlocksDFS LoopBlocks(L);
   LoopBlocks.perform(LI);
@@ -950,60 +1046,99 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
 
   Function *F = Header->getParent();
 
-  // Set up all the necessary basic blocks. It is convenient to split the
-  // preheader into 3 parts - two blocks to anchor the peeled copy of the loop
-  // body, and a new preheader for the "real" loop.
+  // Set up all the necessary basic blocks.
+  BasicBlock *InsertTop;
+  BasicBlock *InsertBot;
+  BasicBlock *NewPreHeader;
+  DenseMap<Instruction *, Value *> ExitValues;
+  if (PeelLast) {
+    // It is convenient to split the single exit block from the latch the
+    // into 3 parts - two blocks to anchor the peeled copy of the loop body,
+    // and a new final  exit block.
 
-  // Peeling the first iteration transforms.
-  //
-  // PreHeader:
-  // ...
-  // Header:
-  //   LoopBody
-  //   If (cond) goto Header
-  // Exit:
-  //
-  // into
-  //
-  // InsertTop:
-  //   LoopBody
-  //   If (!cond) goto Exit
-  // InsertBot:
-  // NewPreHeader:
-  // ...
-  // Header:
-  //  LoopBody
-  //  If (cond) goto Header
-  // Exit:
-  //
-  // Each following iteration will split the current bottom anchor in two,
-  // and put the new copy of the loop body between these two blocks. That is,
-  // after peeling another iteration from the example above, we'll split
-  // InsertBot, and get:
-  //
-  // InsertTop:
-  //   LoopBody
-  //   If (!cond) goto Exit
-  // InsertBot:
-  //   LoopBody
-  //   If (!cond) goto Exit
-  // InsertBot.next:
-  // NewPreHeader:
-  // ...
-  // Header:
-  //  LoopBody
-  //  If (cond) goto Header
-  // Exit:
+    // Peeling the last iteration transforms.
+    //
+    // PreHeader:
+    // ...
+    // Header:
+    //   LoopBody
+    //   If (cond) goto Header
+    // Exit:
+    //
+    // into
+    //
+    // Header:
+    //  LoopBody
+    //  If (cond) goto Header
+    // InsertTop:
+    //   LoopBody
+    //   If (!cond) goto InsertBot
+    // InsertBot:
+    // Exit:
+    // ...
+    BasicBlock *Exit = L->getExitBlock();
+    for (PHINode &P : Exit->phis())
+      ExitValues[&P] = P.getIncomingValueForBlock(Latch);
 
-  BasicBlock *InsertTop = SplitEdge(PreHeader, Header, &DT, LI);
-  BasicBlock *InsertBot =
-      SplitBlock(InsertTop, InsertTop->getTerminator(), &DT, LI);
-  BasicBlock *NewPreHeader =
-      SplitBlock(InsertBot, InsertBot->getTerminator(), &DT, LI);
+    InsertTop = SplitEdge(Latch, Exit, &DT, LI);
+    InsertBot = SplitBlock(InsertTop, InsertTop->getTerminator(), &DT, LI);
 
-  InsertTop->setName(Header->getName() + ".peel.begin");
-  InsertBot->setName(Header->getName() + ".peel.next");
-  NewPreHeader->setName(PreHeader->getName() + ".peel.newph");
+    InsertTop->setName(Exit->getName() + ".peel.begin");
+    InsertBot->setName(Exit->getName() + ".peel.next");
+  } else {
+    // It is convenient to split the preheader into 3 parts - two blocks to
+    // anchor the peeled copy of the loop body, and a new preheader for the
+    // "real" loop.
+
+    // Peeling the first iteration transforms.
+    //
+    // PreHeader:
+    // ...
+    // Header:
+    //   LoopBody
+    //   If (cond) goto Header
+    // Exit:
+    //
+    // into
+    //
+    // InsertTop:
+    //   LoopBody
+    //   If (!cond) goto Exit
+    // InsertBot:
+    // NewPreHeader:
+    // ...
+    // Header:
+    //  LoopBody
+    //  If (cond) goto Header
+    // Exit:
+    //
+    // Each following iteration will split the current bottom anchor in two,
+    // and put the new copy of the loop body between these two blocks. That
+    // is, after peeling another iteration from the example above, we'll
+    // split InsertBot, and get:
+    //
+    // InsertTop:
+    //   LoopBody
+    //   If (!cond) goto Exit
+    // InsertBot:
+    //   LoopBody
+    //   If (!cond) goto Exit
+    // InsertBot.next:
+    // NewPreHeader:
+    // ...
+    // Header:
+    //  LoopBody
+    //  If (cond) goto Header
+    // Exit:
+    //
+    InsertTop = SplitEdge(PreHeader, Header, &DT, LI);
+    InsertBot = SplitBlock(InsertTop, InsertTop->getTerminator(), &DT, LI);
+    NewPreHeader = SplitBlock(InsertBot, InsertBot->getTerminator(), &DT, LI);
+
+    InsertTop->setName(Header->getName() + ".peel.begin");
+    InsertBot->setName(Header->getName() + ".peel.next");
+    NewPreHeader->setName(PreHeader->getName() + ".peel.newph");
+  }
 
   Instruction *LatchTerm =
       cast<Instruction>(cast<BasicBlock>(Latch)->getTerminator());
@@ -1019,23 +1154,40 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   identifyNoAliasScopesToClone(L->getBlocks(), LoopLocalNoAliasDeclScopes);
 
   // For each peeled-off iteration, make a copy of the loop.
+  ValueToValueMapTy VMap;
   for (unsigned Iter = 0; Iter < PeelCount; ++Iter) {
     SmallVector<BasicBlock *, 8> NewBlocks;
-    ValueToValueMapTy VMap;
 
-    cloneLoopBlocks(L, Iter, InsertTop, InsertBot, ExitEdges, NewBlocks,
-                    LoopBlocks, VMap, LVMap, &DT, LI,
+    cloneLoopBlocks(L, Iter, PeelLast, InsertTop, InsertBot, ExitEdges,
+                    NewBlocks, LoopBlocks, VMap, LVMap, &DT, LI,
                     LoopLocalNoAliasDeclScopes, *SE);
 
     // Remap to use values from the current iteration instead of the
     // previous one.
     remapInstructionsInBlocks(NewBlocks, VMap);
 
-    // Update IDoms of the blocks reachable through exits.
-    if (Iter == 0)
-      for (auto BBIDom : NonLoopBlocksIDom)
-        DT.changeImmediateDominator(BBIDom.first,
-                                     cast<BasicBlock>(LVMap[BBIDom.second]));
+    if (Iter == 0) {
+      if (PeelLast) {
+        // Adjust the exit condition so the loop exits one iteration early.
+        // For now we simply subtract one form the second operand of the
+        // exit condition. This relies on the peel count computation to
+        // check that this is actually legal. In particular, it ensures that
+        // the first operand of the compare is an AddRec with step 1 and we
+        // execute more than one iteration.
+        auto *Cmp =
+            cast<ICmpInst>(L->getLoopLatch()->getTerminator()->getOperand(0));
+        IRBuilder B(Cmp);
+        Cmp->setOperand(
+            1, B.CreateSub(Cmp->getOperand(1),
+                           ConstantInt::get(Cmp->getOperand(1)->getType(), 1)));
+      } else {
+        // Update IDoms of the blocks reachable through exits.
+        for (auto BBIDom : NonLoopBlocksIDom)
+          DT.changeImmediateDominator(BBIDom.first,
+                                      cast<BasicBlock>(LVMap[BBIDom.second]));
+      }
+    }
+
 #ifdef EXPENSIVE_CHECKS
     assert(DT.verify(DominatorTree::VerificationLevel::Fast));
 #endif
@@ -1058,16 +1210,24 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
               F->end());
   }
 
-  // Now adjust the phi nodes in the loop header to get their initial values
-  // from the last peeled-off iteration instead of the preheader.
-  for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
-    PHINode *PHI = cast<PHINode>(I);
-    Value *NewVal = PHI->getIncomingValueForBlock(Latch);
-    Instruction *LatchInst = dyn_cast<Instruction>(NewVal);
-    if (LatchInst && L->contains(LatchInst))
-      NewVal = LVMap[LatchInst];
+  if (PeelLast) {
+    // Now adjust users of the original exit values by replacing them with the
+    // exit value from the peeled iteration.
+    for (const auto &[P, E] : ExitValues)
+      P->replaceAllUsesWith(isa<Constant>(E) ? E : &*VMap.lookup(E));
+    formLCSSA(*L, DT, LI, SE);
+  } else {
+    // Now adjust the phi nodes in the loop header to get their initial values
+    // from the last peeled-off iteration instead of the preheader.
+    for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
+      PHINode *PHI = cast<PHINode>(I);
+      Value *NewVal = PHI->getIncomingValueForBlock(Latch);
+      Instruction *LatchInst = dyn_cast<Instruction>(NewVal);
+      if (LatchInst && L->contains(LatchInst))
+        NewVal = LVMap[LatchInst];
 
-    PHI->setIncomingValueForBlock(NewPreHeader, NewVal);
+      PHI->setIncomingValueForBlock(NewPreHeader, NewVal);
+    }
   }
 
   for (const auto &[Term, Info] : Weights) {
@@ -1096,6 +1256,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   simplifyLoop(L, &DT, LI, SE, AC, nullptr, PreserveLCSSA);
 
   NumPeeled++;
+  NumPeeledEnd += PeelLast;
 
   return true;
 }

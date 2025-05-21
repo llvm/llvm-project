@@ -27,8 +27,9 @@
 #  pragma GCC system_header
 #endif
 
-namespace std { // purposefully not using versioning namespace
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI nested_exception {
   exception_ptr __ptr_;
 
@@ -42,6 +43,7 @@ public:
   [[__noreturn__]] void rethrow_nested() const;
   _LIBCPP_HIDE_FROM_ABI exception_ptr nested_ptr() const _NOEXCEPT { return __ptr_; }
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Tp>
 struct __nested : public _Tp, public nested_exception {
@@ -95,6 +97,6 @@ inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep& __e) {
 template <class _Ep, __enable_if_t<!__can_dynamic_cast<_Ep, nested_exception>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep&) {}
 
-} // namespace std
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___EXCEPTION_NESTED_EXCEPTION_H

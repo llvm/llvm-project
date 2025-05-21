@@ -1606,13 +1606,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      1540
-# CHECK-NEXT: Total Cycles:      24845
+# CHECK-NEXT: Total Cycles:      25109
 # CHECK-NEXT: Total uOps:        1540
 
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    0.06
 # CHECK-NEXT: IPC:               0.06
-# CHECK-NEXT: Block RThroughput: 17896.0
+# CHECK-NEXT: Block RThroughput: 18160.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -2492,27 +2492,27 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      44    44.00   *                   vluxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vluxseg2ei8.v	v8, (a0), v16
+# CHECK-NEXT:  1      76    76.00   *                   vluxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vluxseg2ei8.v	v8, (a0), v16
+# CHECK-NEXT:  1      140   140.00  *                   vluxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      20    20.00   *                   vluxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      16    16.00   *                   vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vluxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      20    20.00   *                   vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      28    28.00   *                   vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vluxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      44    44.00   *                   vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vluxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      76    76.00   *                   vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      20    20.00   *                   vluxseg2ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      16    16.00   *                   vluxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      20    20.00   *                   vluxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      20    20.00   *                   vluxseg2ei32.v	v8, (a0), v16
-# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
 # CHECK-NEXT:  1      28    28.00   *                   vluxseg2ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
+# CHECK-NEXT:  1      44    44.00   *                   vluxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      16    16.00   *                   vluxseg2ei64.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
@@ -2528,21 +2528,21 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      60    60.00   *                   vluxseg3ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      60    60.00   *                   vluxseg3ei8.v	v8, (a0), v16
+# CHECK-NEXT:  1      108   108.00  *                   vluxseg3ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      24    24.00   *                   vluxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      18    18.00   *                   vluxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      36    36.00   *                   vluxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      24    24.00   *                   vluxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      36    36.00   *                   vluxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      36    36.00   *                   vluxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      60    60.00   *                   vluxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      24    24.00   *                   vluxseg3ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      18    18.00   *                   vluxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      24    24.00   *                   vluxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      24    24.00   *                   vluxseg3ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      36    36.00   *                   vluxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      18    18.00   *                   vluxseg3ei64.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
@@ -2556,21 +2556,21 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      76    76.00   *                   vluxseg4ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      76    76.00   *                   vluxseg4ei8.v	v8, (a0), v16
+# CHECK-NEXT:  1      140   140.00  *                   vluxseg4ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vluxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      20    20.00   *                   vluxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vluxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      28    28.00   *                   vluxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      44    44.00   *                   vluxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vluxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      76    76.00   *                   vluxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vluxseg4ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      20    20.00   *                   vluxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      28    28.00   *                   vluxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vluxseg4ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      44    44.00   *                   vluxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      20    20.00   *                   vluxseg4ei64.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
@@ -2584,13 +2584,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      92    92.00   *                   vluxseg5ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      32    32.00   *                   vluxseg5ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      22    22.00   *                   vluxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      52    52.00   *                   vluxseg5ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      32    32.00   *                   vluxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      52    52.00   *                   vluxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      32    32.00   *                   vluxseg5ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      22    22.00   *                   vluxseg5ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      32    32.00   *                   vluxseg5ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -2604,13 +2604,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      108   108.00  *                   vluxseg6ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      36    36.00   *                   vluxseg6ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      24    24.00   *                   vluxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      60    60.00   *                   vluxseg6ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      36    36.00   *                   vluxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      60    60.00   *                   vluxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      36    36.00   *                   vluxseg6ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      24    24.00   *                   vluxseg6ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      36    36.00   *                   vluxseg6ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -2624,13 +2624,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      124   124.00  *                   vluxseg7ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      40    40.00   *                   vluxseg7ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      26    26.00   *                   vluxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      68    68.00   *                   vluxseg7ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      40    40.00   *                   vluxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      68    68.00   *                   vluxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      40    40.00   *                   vluxseg7ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      26    26.00   *                   vluxseg7ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      40    40.00   *                   vluxseg7ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -2644,13 +2644,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      140   140.00  *                   vluxseg8ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vluxseg8ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      28    28.00   *                   vluxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      76    76.00   *                   vluxseg8ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      44    44.00   *                   vluxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      76    76.00   *                   vluxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vluxseg8ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      28    28.00   *                   vluxseg8ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      44    44.00   *                   vluxseg8ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -2664,27 +2664,27 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      44    44.00   *                   vloxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vloxseg2ei8.v	v8, (a0), v16
+# CHECK-NEXT:  1      76    76.00   *                   vloxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vloxseg2ei8.v	v8, (a0), v16
+# CHECK-NEXT:  1      140   140.00  *                   vloxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      20    20.00   *                   vloxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      16    16.00   *                   vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vloxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      20    20.00   *                   vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      28    28.00   *                   vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vloxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      44    44.00   *                   vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vloxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      76    76.00   *                   vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      20    20.00   *                   vloxseg2ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      16    16.00   *                   vloxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      20    20.00   *                   vloxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      20    20.00   *                   vloxseg2ei32.v	v8, (a0), v16
-# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
 # CHECK-NEXT:  1      28    28.00   *                   vloxseg2ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
+# CHECK-NEXT:  1      44    44.00   *                   vloxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      16    16.00   *                   vloxseg2ei64.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
@@ -2700,21 +2700,21 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      60    60.00   *                   vloxseg3ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      60    60.00   *                   vloxseg3ei8.v	v8, (a0), v16
+# CHECK-NEXT:  1      108   108.00  *                   vloxseg3ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      24    24.00   *                   vloxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      18    18.00   *                   vloxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      36    36.00   *                   vloxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      24    24.00   *                   vloxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      36    36.00   *                   vloxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      36    36.00   *                   vloxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      60    60.00   *                   vloxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      24    24.00   *                   vloxseg3ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      18    18.00   *                   vloxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      24    24.00   *                   vloxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      24    24.00   *                   vloxseg3ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      36    36.00   *                   vloxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      18    18.00   *                   vloxseg3ei64.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
@@ -2728,21 +2728,21 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      76    76.00   *                   vloxseg4ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      76    76.00   *                   vloxseg4ei8.v	v8, (a0), v16
+# CHECK-NEXT:  1      140   140.00  *                   vloxseg4ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vloxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      20    20.00   *                   vloxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vloxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      28    28.00   *                   vloxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      44    44.00   *                   vloxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vloxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      76    76.00   *                   vloxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vloxseg4ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      20    20.00   *                   vloxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      28    28.00   *                   vloxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      28    28.00   *                   vloxseg4ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      44    44.00   *                   vloxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      20    20.00   *                   vloxseg4ei64.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
@@ -2756,13 +2756,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      92    92.00   *                   vloxseg5ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      32    32.00   *                   vloxseg5ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      22    22.00   *                   vloxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      52    52.00   *                   vloxseg5ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      32    32.00   *                   vloxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      52    52.00   *                   vloxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      32    32.00   *                   vloxseg5ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      22    22.00   *                   vloxseg5ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      32    32.00   *                   vloxseg5ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -2776,13 +2776,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      108   108.00  *                   vloxseg6ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      36    36.00   *                   vloxseg6ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      24    24.00   *                   vloxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      60    60.00   *                   vloxseg6ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      36    36.00   *                   vloxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      60    60.00   *                   vloxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      36    36.00   *                   vloxseg6ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      24    24.00   *                   vloxseg6ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      36    36.00   *                   vloxseg6ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -2796,13 +2796,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      124   124.00  *                   vloxseg7ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      40    40.00   *                   vloxseg7ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      26    26.00   *                   vloxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      68    68.00   *                   vloxseg7ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      40    40.00   *                   vloxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      68    68.00   *                   vloxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      40    40.00   *                   vloxseg7ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      26    26.00   *                   vloxseg7ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      40    40.00   *                   vloxseg7ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -2816,13 +2816,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  1      140   140.00  *                   vloxseg8ei8.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vloxseg8ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      28    28.00   *                   vloxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      76    76.00   *                   vloxseg8ei16.v	v8, (a0), v16
+# CHECK-NEXT:  1      44    44.00   *                   vloxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  1      76    76.00   *                   vloxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      44    44.00   *                   vloxseg8ei32.v	v8, (a0), v16
+# CHECK-NEXT:  1      28    28.00   *                   vloxseg8ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      44    44.00   *                   vloxseg8ei32.v	v8, (a0), v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -3184,7 +3184,7 @@ vsoxseg8ei64.v  v8, (a0), v16
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -     770.00  -      -      -      -      -      -      -      -      -     17896.00 14240.00
+# CHECK-NEXT:  -      -      -      -     770.00  -      -      -      -      -      -      -      -      -     18160.00 14240.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
@@ -4057,27 +4057,27 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg2ei8.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vluxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg2ei8.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     140.00  -     vluxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vluxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -     vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vluxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vluxseg2ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -     vluxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vluxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vluxseg2ei32.v	v8, (a0), v16
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg2ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -     vluxseg2ei64.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
@@ -4093,21 +4093,21 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vluxseg3ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vluxseg3ei8.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     108.00  -     vluxseg3ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vluxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     18.00   -     vluxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vluxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vluxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vluxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vluxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vluxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vluxseg3ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     18.00   -     vluxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vluxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vluxseg3ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vluxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     18.00   -     vluxseg3ei64.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
@@ -4121,21 +4121,21 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vluxseg4ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vluxseg4ei8.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     140.00  -     vluxseg4ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vluxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vluxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg4ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vluxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg4ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vluxseg4ei64.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
@@ -4149,13 +4149,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     92.00   -     vluxseg5ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -     vluxseg5ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     22.00   -     vluxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     52.00   -     vluxseg5ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -     vluxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     52.00   -     vluxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -     vluxseg5ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     22.00   -     vluxseg5ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -     vluxseg5ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -4169,13 +4169,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     108.00  -     vluxseg6ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vluxseg6ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vluxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vluxseg6ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vluxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vluxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vluxseg6ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vluxseg6ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vluxseg6ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -4189,13 +4189,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     124.00  -     vluxseg7ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     40.00   -     vluxseg7ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     26.00   -     vluxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     68.00   -     vluxseg7ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     40.00   -     vluxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     68.00   -     vluxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     40.00   -     vluxseg7ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     26.00   -     vluxseg7ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     40.00   -     vluxseg7ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -4209,13 +4209,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     140.00  -     vluxseg8ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg8ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vluxseg8ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vluxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg8ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vluxseg8ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vluxseg8ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -4229,27 +4229,27 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg2ei8.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vloxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg2ei8.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     140.00  -     vloxseg2ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vloxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -     vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg2ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vloxseg2ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vloxseg2ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -     vloxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vloxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vloxseg2ei32.v	v8, (a0), v16
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg2ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg2ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -     vloxseg2ei64.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
@@ -4265,21 +4265,21 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vloxseg3ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vloxseg3ei8.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     108.00  -     vloxseg3ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vloxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     18.00   -     vloxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vloxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vloxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vloxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vloxseg3ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vloxseg3ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vloxseg3ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     18.00   -     vloxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vloxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vloxseg3ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vloxseg3ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     18.00   -     vloxseg3ei64.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
@@ -4293,21 +4293,21 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vloxseg4ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vloxseg4ei8.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     140.00  -     vloxseg4ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vloxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg4ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vloxseg4ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg4ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vloxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg4ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg4ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     20.00   -     vloxseg4ei64.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
@@ -4321,13 +4321,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     92.00   -     vloxseg5ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -     vloxseg5ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     22.00   -     vloxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     52.00   -     vloxseg5ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -     vloxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     52.00   -     vloxseg5ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -     vloxseg5ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     22.00   -     vloxseg5ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -     vloxseg5ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -4341,13 +4341,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     108.00  -     vloxseg6ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vloxseg6ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vloxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vloxseg6ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vloxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     60.00   -     vloxseg6ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vloxseg6ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     24.00   -     vloxseg6ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     36.00   -     vloxseg6ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -4361,13 +4361,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     124.00  -     vloxseg7ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     40.00   -     vloxseg7ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     26.00   -     vloxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     68.00   -     vloxseg7ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     40.00   -     vloxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     68.00   -     vloxseg7ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     40.00   -     vloxseg7ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     26.00   -     vloxseg7ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     40.00   -     vloxseg7ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -4381,13 +4381,13 @@ vsoxseg8ei64.v  v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     140.00  -     vloxseg8ei8.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg8ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vloxseg8ei16.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     76.00   -     vloxseg8ei16.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg8ei32.v	v8, (a0), v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     28.00   -     vloxseg8ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     44.00   -     vloxseg8ei32.v	v8, (a0), v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu

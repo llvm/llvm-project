@@ -37,6 +37,7 @@ static WasmYAML::Limits makeLimits(const wasm::WasmLimits &Limits) {
   L.Flags = Limits.Flags;
   L.Minimum = Limits.Minimum;
   L.Maximum = Limits.Maximum;
+  L.PageSize = Limits.PageSize;
   return L;
 }
 

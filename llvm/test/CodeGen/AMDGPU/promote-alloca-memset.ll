@@ -6,6 +6,7 @@
 define amdgpu_kernel void @memset_all_zero(i64 %val) {
 ; CHECK-LABEL: @memset_all_zero(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STACK:%.*]] = freeze <6 x i64> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <6 x i64> zeroinitializer, i64 [[VAL:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x i64> [[TMP0]], i64 [[VAL]], i32 1
 ; CHECK-NEXT:    ret void
@@ -23,6 +24,7 @@ entry:
 define amdgpu_kernel void @memset_all_5(i64 %val) {
 ; CHECK-LABEL: @memset_all_5(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STACK:%.*]] = freeze <4 x i64> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> splat (i64 361700864190383365), i64 [[VAL:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[VAL]], i32 1
 ; CHECK-NEXT:    ret void
@@ -86,6 +88,7 @@ entry:
 
 define amdgpu_kernel void @memset_array_ptr_alloca(ptr %out) {
 ; CHECK-LABEL: @memset_array_ptr_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x ptr> poison
 ; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -98,6 +101,7 @@ define amdgpu_kernel void @memset_array_ptr_alloca(ptr %out) {
 
 define amdgpu_kernel void @memset_vector_ptr_alloca(ptr %out) {
 ; CHECK-LABEL: @memset_vector_ptr_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x ptr> poison
 ; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -110,10 +114,8 @@ define amdgpu_kernel void @memset_vector_ptr_alloca(ptr %out) {
 
 define amdgpu_kernel void @memset_array_of_array_ptr_alloca(ptr %out) {
 ; CHECK-LABEL: @memset_array_of_array_ptr_alloca(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x [3 x ptr]], align 16, addrspace(5)
-; CHECK-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) [[ALLOCA]], i8 0, i64 48, i1 false)
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr addrspace(5) [[ALLOCA]], align 8
-; CHECK-NEXT:    store i64 [[LOAD]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x ptr> poison
+; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [2 x [3 x ptr]], align 16, addrspace(5)
@@ -125,14 +127,12 @@ define amdgpu_kernel void @memset_array_of_array_ptr_alloca(ptr %out) {
 
 define amdgpu_kernel void @memset_array_of_vec_ptr_alloca(ptr %out) {
 ; CHECK-LABEL: @memset_array_of_vec_ptr_alloca(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [2 x <3 x ptr>], align 16, addrspace(5)
-; CHECK-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) [[ALLOCA]], i8 0, i64 48, i1 false)
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr addrspace(5) [[ALLOCA]], align 8
-; CHECK-NEXT:    store i64 [[LOAD]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <8 x ptr> poison
+; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [2 x <3 x ptr>], align 16, addrspace(5)
-  call void @llvm.memset.p5.i64(ptr addrspace(5) %alloca, i8 0, i64 48, i1 false)
+  call void @llvm.memset.p5.i64(ptr addrspace(5) %alloca, i8 0, i64 64, i1 false)
   %load = load i64, ptr addrspace(5) %alloca
   store i64 %load, ptr %out
   ret void

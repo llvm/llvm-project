@@ -21,6 +21,49 @@ mlir::Value fir::runtime::genMapExcept(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, excepts).getResult(0);
 }
 
+void fir::runtime::genFeclearexcept(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value excepts) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(feclearexcept)>(loc, builder)};
+  builder.create<fir::CallOp>(loc, func, excepts);
+}
+
+void fir::runtime::genFeraiseexcept(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value excepts) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(feraiseexcept)>(loc, builder)};
+  builder.create<fir::CallOp>(loc, func, excepts);
+}
+
+mlir::Value fir::runtime::genFetestexcept(fir::FirOpBuilder &builder,
+                                          mlir::Location loc,
+                                          mlir::Value excepts) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(fetestexcept)>(loc, builder)};
+  return builder.create<fir::CallOp>(loc, func, excepts).getResult(0);
+}
+
+void fir::runtime::genFedisableexcept(fir::FirOpBuilder &builder,
+                                      mlir::Location loc, mlir::Value excepts) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(fedisableexcept)>(loc, builder)};
+  builder.create<fir::CallOp>(loc, func, excepts);
+}
+
+void fir::runtime::genFeenableexcept(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value excepts) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(feenableexcept)>(loc, builder)};
+  builder.create<fir::CallOp>(loc, func, excepts);
+}
+
+mlir::Value fir::runtime::genFegetexcept(fir::FirOpBuilder &builder,
+                                         mlir::Location loc) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(fegetexcept)>(loc, builder)};
+  return builder.create<fir::CallOp>(loc, func).getResult(0);
+}
+
 mlir::Value fir::runtime::genSupportHalting(fir::FirOpBuilder &builder,
                                             mlir::Location loc,
                                             mlir::Value excepts) {

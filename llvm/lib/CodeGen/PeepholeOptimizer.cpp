@@ -406,9 +406,7 @@ public:
 
     const MachineOperand &MOInsertedReg = CopyLike.getOperand(CurrentSrcIdx);
     Src.Reg = MOInsertedReg.getReg();
-    // If we have to compose sub-register indices, bail out.
-    if ((Src.SubReg = MOInsertedReg.getSubReg()))
-      return false;
+    Src.SubReg = MOInsertedReg.getSubReg();
 
     // We want to track something that is compatible with the related
     // partial definition.
@@ -523,7 +521,7 @@ private:
   DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
 
   // MachineFunction::Delegate implementation. Used to maintain CopySrcMIs.
-  void MF_HandleInsertion(MachineInstr &MI) override { return; }
+  void MF_HandleInsertion(MachineInstr &MI) override {}
 
   bool getCopySrc(MachineInstr &MI, RegSubRegPair &SrcPair) {
     if (!MI.isCopy())
@@ -1904,11 +1902,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
   assert(Def->getNumOperands() - Def->getNumImplicitOperands() == 2 &&
          "Invalid number of operands");
   assert(!Def->hasImplicitDef() && "Only implicit uses are allowed");
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subregister defs in SSA");
 
-  if (Def->getOperand(DefIdx).getSubReg() != DefSubReg)
-    // If we look for a different subreg, it means we want a subreg of src.
-    // Bails as we do not support composing subregs yet.
-    return ValueTrackerResult();
   // Otherwise, we want the whole source.
   const MachineOperand &Src = Def->getOperand(1);
   if (Src.isUndef())
@@ -1926,11 +1921,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   // Bitcasts with more than one def are not supported.
   if (Def->getDesc().getNumDefs() != 1)
     return ValueTrackerResult();
-  const MachineOperand DefOp = Def->getOperand(DefIdx);
-  if (DefOp.getSubReg() != DefSubReg)
-    // If we look for a different subreg, it means we want a subreg of the src.
-    // Bails as we do not support composing subregs yet.
-    return ValueTrackerResult();
+
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subregister defs in SSA");
 
   unsigned SrcIdx = Def->getNumOperands();
   for (unsigned OpIdx = DefIdx + 1, EndOpIdx = SrcIdx; OpIdx != EndOpIdx;
@@ -1952,6 +1944,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   // getOperand(SrcIdx) will fail below.
   if (SrcIdx >= Def->getNumOperands())
     return ValueTrackerResult();
+
+  const MachineOperand &DefOp = Def->getOperand(DefIdx);
 
   // Stop when any user of the bitcast is a SUBREG_TO_REG, replacing with a COPY
   // will break the assumed guarantees for the upper bits.
@@ -2031,12 +2025,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 ValueTrackerResult ValueTracker::getNextSourceFromInsertSubreg() {
   assert((Def->isInsertSubreg() || Def->isInsertSubregLike()) &&
          "Invalid definition");
-
-  if (Def->getOperand(DefIdx).getSubReg())
-    // If we are composing subreg, bail out.
-    // Same remark as getNextSourceFromRegSequence.
-    // I.e., this may be turned into an assert.
-    return ValueTrackerResult();
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subreg defs in SSA");
 
   RegSubRegPair BaseReg;
   RegSubRegPairAndIdx InsertedReg;

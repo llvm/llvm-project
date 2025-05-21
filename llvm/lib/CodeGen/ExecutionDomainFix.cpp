@@ -16,7 +16,7 @@ using namespace llvm;
 #define DEBUG_TYPE "execution-deps-fix"
 
 iterator_range<SmallVectorImpl<int>::const_iterator>
-ExecutionDomainFix::regIndices(unsigned Reg) const {
+ExecutionDomainFix::regIndices(MCRegister Reg) const {
   assert(Reg < AliasMap.size() && "Invalid register");
   const auto &Entry = AliasMap[Reg];
   return make_range(Entry.begin(), Entry.end());

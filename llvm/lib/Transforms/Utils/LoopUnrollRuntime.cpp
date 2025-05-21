@@ -465,10 +465,6 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
     Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
     bool UseEpilogRemainder) {
 
-  // Priority goes to UnrollRuntimeMultiExit if it's supplied.
-  if (UnrollRuntimeMultiExit.getNumOccurrences())
-    return UnrollRuntimeMultiExit;
-
   // The main pain point with multi-exit loop unrolling is that once unrolled,
   // we will not be able to merge all blocks into a straight line code.
   // There are branches within the unrolled loop that go to the OtherExits.
@@ -633,14 +629,20 @@ bool llvm::UnrollRuntimeLoopRemainder(
     if (!PreserveLCSSA)
       return false;
 
-    if (!RuntimeUnrollMultiExit &&
-        !canProfitablyRuntimeUnrollMultiExitLoop(L, OtherExits, LatchExit,
-                                                 UseEpilogRemainder)) {
-      LLVM_DEBUG(
-          dbgs()
-          << "Multiple exit/exiting blocks in loop and multi-exit unrolling not "
-             "enabled!\n");
-      return false;
+    // Priority goes to UnrollRuntimeMultiExit if it's supplied.
+    if (UnrollRuntimeMultiExit.getNumOccurrences()) {
+      if (!UnrollRuntimeMultiExit)
+        return false;
+    } else {
+      // Otherwise perform multi-exit unrolling, if either the target indicates
+      // it is profitable or the general profitability heuristics apply.
+      if (!RuntimeUnrollMultiExit &&
+          !canProfitablyRuntimeUnrollMultiExitLoop(L, OtherExits, LatchExit,
+                                                   UseEpilogRemainder)) {
+        LLVM_DEBUG(dbgs() << "Multiple exit/exiting blocks in loop and "
+                             "multi-exit unrolling not enabled!\n");
+        return false;
+      }
     }
   }
   // Use Scalar Evolution to compute the trip count. This allows more loops to

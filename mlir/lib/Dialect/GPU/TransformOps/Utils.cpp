@@ -34,6 +34,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -50,10 +51,8 @@ using namespace mlir::transform::gpu;
 template <typename ThreadOrBlockIdOp>
 static Value buildLinearId(RewriterBase &rewriter, Location loc,
                            ArrayRef<OpFoldResult> originalBasisOfr) {
-  LLVM_DEBUG(llvm::interleaveComma(
-                 originalBasisOfr,
-                 DBGS() << "----buildLinearId with originalBasisOfr:  ");
-             llvm::dbgs() << "\n");
+  LLVM_DEBUG(DBGS() << "----buildLinearId with originalBasisOfr:  "
+                    << llvm::interleaved(originalBasisOfr) << "\n");
   assert(originalBasisOfr.size() == 3 && "expected 3 sizes");
   IndexType indexType = rewriter.getIndexType();
   AffineExpr tx, ty, tz, bdx, bdy;
@@ -99,32 +98,25 @@ static GpuIdBuilderFnType commonLinearIdBuilderFn(int64_t multiplicity = 1) {
           affine::makeComposedAffineApply(rewriter, loc, e, {scaledLinearId}));
     }
 
-    // clang-format off
-      LLVM_DEBUG(llvm::interleaveComma(reverseBasisSizes,
-                                       DBGS() << "--delinearization basis: ");
-                 llvm::dbgs() << "\n";
-                 llvm::interleaveComma(strides,
-                                       DBGS() << "--delinearization strides: ");
-                 llvm::dbgs() << "\n";
-                 llvm::interleaveComma(delinearizingExprs,
-                                       DBGS() << "--delinearization exprs: ");
-                 llvm::dbgs() << "\n";
-                 llvm::interleaveComma(ids, DBGS() << "--ids: ");
-                 llvm::dbgs() << "\n";);
-    // clang-format on
+    LLVM_DEBUG(DBGS() << "--delinearization basis: "
+                      << llvm::interleaved(reverseBasisSizes) << "\n";
+               DBGS() << "--delinearization strides: "
+                      << llvm::interleaved(strides) << "\n";
+               DBGS() << "--delinearization exprs: "
+                      << llvm::interleaved(delinearizingExprs) << "\n";
+               DBGS() << "--ids: " << llvm::interleaved(ids) << "\n");
 
     // Return n-D ids for indexing and 1-D size + id for predicate generation.
-      return IdBuilderResult{
-          /*mappingIdOps=*/ids,
-          /*availableMappingSizes=*/
-          SmallVector<int64_t>{computeProduct(originalBasis)},
-          // `forallMappingSizes` iterate in the scaled basis, they need to be
-          // scaled back into the original basis to provide tight
-          // activeMappingSizes quantities for predication.
-          /*activeMappingSizes=*/
-          SmallVector<int64_t>{computeProduct(forallMappingSizes) *
-                               multiplicity},
-          /*activeIdOps=*/SmallVector<Value>{cast<Value>(linearId)}};
+    return IdBuilderResult{
+        /*mappingIdOps=*/ids,
+        /*availableMappingSizes=*/
+        SmallVector<int64_t>{computeProduct(originalBasis)},
+        // `forallMappingSizes` iterate in the scaled basis, they need to be
+        // scaled back into the original basis to provide tight
+        // activeMappingSizes quantities for predication.
+        /*activeMappingSizes=*/
+        SmallVector<int64_t>{computeProduct(forallMappingSizes) * multiplicity},
+        /*activeIdOps=*/SmallVector<Value>{cast<Value>(linearId)}};
   };
 
   return res;

@@ -80,16 +80,10 @@ public:
   void Schedule() override;
 
   /// AddPred - adds a predecessor edge to SUnit SU.
-  /// This returns true if this is a new predecessor.
-  void AddPred(SUnit *SU, const SDep &D) {
-    SU->addPred(D);
-  }
+  void AddPred(SUnit *SU, const SDep &D) { SU->addPred(D); }
 
   /// RemovePred - removes a predecessor edge from SUnit SU.
-  /// This returns true if an edge was removed.
-  void RemovePred(SUnit *SU, const SDep &D) {
-    SU->removePred(D);
-  }
+  void RemovePred(SUnit *SU, const SDep &D) { SU->removePred(D); }
 
 private:
   void ReleasePred(SUnit *SU, SDep *PredEdge);
@@ -360,8 +354,8 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
       DelDeps.push_back(std::make_pair(SuccSU, D));
     }
   }
-  for (unsigned i = 0, e = DelDeps.size(); i != e; ++i)
-    RemovePred(DelDeps[i].first, DelDeps[i].second);
+  for (const auto &[Del, Dep] : DelDeps)
+    RemovePred(Del, Dep);
 
   ++NumDups;
   return NewSU;
@@ -395,9 +389,8 @@ void ScheduleDAGFast::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
       DelDeps.push_back(std::make_pair(SuccSU, Succ));
     }
   }
-  for (unsigned i = 0, e = DelDeps.size(); i != e; ++i) {
-    RemovePred(DelDeps[i].first, DelDeps[i].second);
-  }
+  for (const auto &[Del, Dep] : DelDeps)
+    RemovePred(Del, Dep);
   SDep FromDep(SU, SDep::Data, Reg);
   FromDep.setLatency(SU->Latency);
   AddPred(CopyFromSU, FromDep);
@@ -436,7 +429,7 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
 
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static bool CheckForLiveRegDef(SUnit *SU, unsigned Reg,
+static bool CheckForLiveRegDef(SUnit *SU, MCRegister Reg,
                                std::vector<SUnit *> &LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
@@ -501,8 +494,8 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
             F.isClobberKind()) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
-            unsigned Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
-            if (Register::isPhysicalRegister(Reg))
+            Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
+            if (Reg.isPhysical())
               CheckForLiveRegDef(SU, Reg, LiveRegDefs, RegAdded, LRegs, TRI);
           }
         } else

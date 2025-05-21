@@ -29,6 +29,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -65,11 +66,12 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
       assert(MM.Address % getpagesize() == 0 &&
              "Memory mappings need to be aligned to page boundaries.");
 #endif
+      const MemoryValue &MemVal = Key.MemoryValues.at(MM.MemoryValueName);
       BBF.addInstructions(ET.generateMmap(
-          MM.Address, Key.MemoryValues.at(MM.MemoryValueName).SizeBytes,
+          MM.Address, MemVal.SizeBytes,
           ET.getAuxiliaryMemoryStartAddress() +
-              sizeof(int) * (Key.MemoryValues.at(MM.MemoryValueName).Index +
-                             SubprocessMemory::AuxiliaryMemoryOffset)));
+              sizeof(int) *
+                  (MemVal.Index + SubprocessMemory::AuxiliaryMemoryOffset)));
     }
     BBF.addInstructions(ET.setStackRegisterToAuxMem());
   }
@@ -310,7 +312,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   MCContext &MCContext = MMIWP->getMMI().getContext();
   legacy::PassManager PM;
 
-  TargetLibraryInfoImpl TLII(Triple(Module->getTargetTriple()));
+  TargetLibraryInfoImpl TLII(Module->getTargetTriple());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   TargetPassConfig *TPC = TM->createPassConfig(PM);
@@ -322,10 +324,8 @@ Error assembleToStream(const ExegesisTarget &ET,
   TPC->printAndVerify("After ExegesisTarget::addTargetSpecificPasses");
   // Adding the following passes:
   // - postrapseudos: expands pseudo return instructions used on some targets.
-  // - machineverifier: checks that the MachineFunction is well formed.
   // - prologepilog: saves and restore callee saved registers.
-  for (const char *PassName :
-       {"postrapseudos", "machineverifier", "prologepilog"})
+  for (const char *PassName : {"postrapseudos", "prologepilog"})
     if (addPass(PM, PassName, *TPC))
       return make_error<Failure>("Unable to add a mandatory pass");
   TPC->setInitialized();
@@ -336,6 +336,10 @@ Error assembleToStream(const ExegesisTarget &ET,
     return make_error<Failure>("Cannot add AsmPrinter passes");
 
   PM.run(*Module); // Run all the passes
+  bool MFWellFormed =
+      MF.verify(nullptr, "llvm-exegesis Assembly", &outs(), false);
+  if (!MFWellFormed)
+    return make_error<Failure>("The machine function failed verification.");
   return Error::success();
 }
 

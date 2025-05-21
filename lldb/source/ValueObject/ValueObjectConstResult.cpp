@@ -203,14 +203,18 @@ lldb::ValueType ValueObjectConstResult::GetValueType() const {
   return eValueTypeConstResult;
 }
 
-std::optional<uint64_t> ValueObjectConstResult::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectConstResult::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   if (!m_byte_size) {
-    if (auto size = GetCompilerType().GetByteSize(
-            exe_ctx.GetBestExecutionContextScope()))
-      SetByteSize(*size);
+    auto size_or_err =
+        GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope());
+    if (!size_or_err)
+      return size_or_err;
+    SetByteSize(*size_or_err);
   }
-  return m_byte_size;
+  if (m_byte_size)
+    return *m_byte_size;
+  return llvm::createStringError("unknown size of const result");
 }
 
 void ValueObjectConstResult::SetByteSize(size_t size) { m_byte_size = size; }

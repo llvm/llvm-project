@@ -18,14 +18,14 @@ include( AddLibclc )
 
 include( GNUInstallDirs )
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-  amdgcn-amdhsa/lib/SOURCES;
-  amdgcn/lib/SOURCES;
-  amdgpu/lib/SOURCES;
-  clspv/lib/SOURCES;
-  generic/lib/SOURCES;
-  ptx-nvidiacl/lib/SOURCES;
-  r600/lib/SOURCES;
-  spirv/lib/SOURCES;
+  # OpenCL libraries
+  opencl/lib/amdgcn-amdhsa/SOURCES;
+  opencl/lib/amdgcn/SOURCES;
+  opencl/lib/clspv/SOURCES;
+  opencl/lib/generic/SOURCES;
+  opencl/lib/ptx-nvidiacl/SOURCES;
+  opencl/lib/r600/SOURCES;
+  opencl/lib/spirv/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
   clc/lib/amdgcn/SOURCES;
@@ -212,7 +212,7 @@ set( cayman_aliases aruba )
 set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   mullins tonga tongapro iceland carrizo fiji stoney polaris10 polaris11
   gfx602 gfx705 gfx805
-  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx942
+  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx942 gfx950
   gfx1010 gfx1011 gfx1012 gfx1013
   gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
   gfx1100 gfx1101 gfx1102 gfx1103
@@ -223,13 +223,12 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
-install( DIRECTORY generic/include/clc DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" )
 
 if( ENABLE_RUNTIME_SUBNORMAL )
   foreach( file IN ITEMS subnormal_use_default subnormal_disable )
     link_bc(
        TARGET ${file}
-       INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/${file}.ll
+       INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/${file}.ll
     )
     install(
       FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
@@ -239,7 +238,7 @@ if( ENABLE_RUNTIME_SUBNORMAL )
 endif()
 
 find_package( Python3 REQUIRED COMPONENTS Interpreter )
-file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/gen_convert.py script_loc )
+file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/utils/gen_convert.py script_loc )
 add_custom_command(
   OUTPUT convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
@@ -262,6 +261,45 @@ if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS
   add_custom_target( generate-clspv-convert.cl DEPENDS clspv-convert.cl )
   set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 endif()
+
+set_source_files_properties(
+  # CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_divide.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_powr.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_recip.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_tan.cl
+  # Target-specific CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/r600/math/clc_native_rsqrt.cl
+  # OpenCL builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_divide.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_exp10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_powr.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_recip.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_tan.cl
+  PROPERTIES COMPILE_OPTIONS -fapprox-func
+)
 
 enable_testing()
 
@@ -314,7 +352,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   libclc_configure_lib_source(
     clc_lib_files
-    CLC_INTERNAL
     LIB_ROOT_DIR clc
     DIRS ${clc_dirs}
   )
@@ -328,13 +365,14 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     else()
       list( APPEND opencl_gen_files convert.cl )
       if ( NOT ENABLE_RUNTIME_SUBNORMAL )
-        list( APPEND opencl_lib_files generic/lib/subnormal_use_default.ll )
+        list( APPEND opencl_lib_files opencl/lib/generic/subnormal_use_default.ll )
       endif()
     endif()
   endif()
 
   libclc_configure_lib_source(
     opencl_lib_files
+    LIB_ROOT_DIR opencl
     DIRS ${opencl_dirs}
   )
 
@@ -373,6 +411,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
     file( MAKE_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR} )
 
+    # Build for OpenCL 3.0 independently of the target or device.
+    list( APPEND build_flags -cl-std=CL3.0 )
+
     string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
     list( APPEND build_flags
@@ -399,9 +440,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     )
 
     list( APPEND build_flags
-      -I${CMAKE_CURRENT_SOURCE_DIR}/generic/include
-      # FIXME: Fix libclc to not require disabling this noisy warning
-      -Wno-bitwise-conditional-parentheses
+      -I${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
     )
 
     add_libclc_builtin_set(
@@ -414,7 +453,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       GEN_FILES ${opencl_gen_files}
       ALIASES ${${d}_aliases}
       # Link in the CLC builtins and internalize their symbols
-      INTERNAL_LINK_DEPENDENCIES $<TARGET_PROPERTY:builtins.link.clc-${arch_suffix},TARGET_FILE>
+      INTERNAL_LINK_DEPENDENCIES builtins.link.clc-${arch_suffix}
     )
   endforeach( d )
 endforeach( t )

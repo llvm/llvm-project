@@ -288,4 +288,4 @@ bb:
   ret void
 }
 
-attributes #0 = { "amdgpu-no-agpr" }
+attributes #0 = { "amdgpu-agpr-alloc"="0" }

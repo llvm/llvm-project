@@ -59,14 +59,11 @@ void InterfaceFile::addRPath(StringRef RPath, const Target &InputTarget) {
     return;
   using RPathEntryT = const std::pair<Target, std::string>;
   RPathEntryT Entry(InputTarget, RPath);
-  auto Iter =
-      lower_bound(RPaths, Entry,
-                  [](RPathEntryT &LHS, RPathEntryT &RHS) { return LHS < RHS; });
 
-  if ((Iter != RPaths.end()) && (*Iter == Entry))
+  if (is_contained(RPaths, Entry))
     return;
 
-  RPaths.emplace(Iter, Entry);
+  RPaths.emplace_back(Entry);
 }
 
 void InterfaceFile::addTarget(const Target &Target) {
@@ -105,8 +102,7 @@ void InterfaceFile::inlineLibrary(std::shared_ptr<InterfaceFile> Library,
 
     if (Overwrite && It != Documents.end() &&
         Reexport->getInstallName() == (*It)->getInstallName()) {
-      std::replace(Documents.begin(), Documents.end(), *It,
-                   std::move(Reexport));
+      llvm::replace(Documents, *It, std::move(Reexport));
       return;
     }
 

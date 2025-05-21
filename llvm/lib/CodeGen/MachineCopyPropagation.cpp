@@ -173,8 +173,8 @@ public:
 
       auto Dest = TRI.regunits(CopyOperands->Destination->getReg().asMCReg());
       auto Src = TRI.regunits(CopyOperands->Source->getReg().asMCReg());
-      RegUnitsToInvalidate.insert(Dest.begin(), Dest.end());
-      RegUnitsToInvalidate.insert(Src.begin(), Src.end());
+      RegUnitsToInvalidate.insert_range(Dest);
+      RegUnitsToInvalidate.insert_range(Src);
     };
 
     for (MCRegUnit Unit : TRI.regunits(Reg)) {
@@ -553,9 +553,12 @@ void MachineCopyPropagation::readSuccessorLiveIns(
   // If a copy result is livein to a successor, it is not dead.
   for (const MachineBasicBlock *Succ : MBB.successors()) {
     for (const auto &LI : Succ->liveins()) {
-      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
-        if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
-          MaybeDeadCopies.remove(Copy);
+      for (MCRegUnitMaskIterator U(LI.PhysReg, TRI); U.isValid(); ++U) {
+        auto [Unit, Mask] = *U;
+        if ((Mask & LI.LaneMask).any()) {
+          if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
+            MaybeDeadCopies.remove(Copy);
+        }
       }
     }
   }
@@ -870,6 +873,12 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     ++NumCopyForwards;
     Changed = true;
   }
+  // Attempt to canonicalize/optimize the instruction now its arguments have
+  // been mutated.
+  if (TII->simplifyInstruction(MI)) {
+    Changed = true;
+    LLVM_DEBUG(dbgs() << "MCP: After optimizeInstruction: " << MI);
+  }
 }
 
 void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
@@ -970,6 +979,19 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       }
 
     forwardUses(MI);
+
+    // It's possible that the previous transformation has resulted in a no-op
+    // register move (i.e. one where source and destination registers are the
+    // same and are not referring to a reserved register). If so, delete it.
+    CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);
+    if (CopyOperands &&
+        CopyOperands->Source->getReg() == CopyOperands->Destination->getReg() &&
+        !MRI->isReserved(CopyOperands->Source->getReg())) {
+      MI.eraseFromParent();
+      NumDeletes++;
+      Changed = true;
+      continue;
+    }
 
     // Not a copy.
     SmallVector<Register, 4> Defs;
@@ -1187,7 +1209,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     // Ignore non-trivial COPYs.
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MI, *TII, UseCopyInstr);
-    if (CopyOperands) {
+    if (CopyOperands && MI.getNumImplicitOperands() == 0) {
       Register DefReg = CopyOperands->Destination->getReg();
       Register SrcReg = CopyOperands->Source->getReg();
 

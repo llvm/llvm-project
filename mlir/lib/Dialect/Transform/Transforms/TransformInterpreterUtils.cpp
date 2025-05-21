@@ -210,7 +210,7 @@ LogicalResult transform::applyTransformNamedSequence(
            << "expected one payload to be bound to the first argument, got "
            << bindings.at(0).size();
   }
-  auto *payloadRoot = bindings.at(0).front().dyn_cast<Operation *>();
+  auto *payloadRoot = dyn_cast<Operation *>(bindings.at(0).front());
   if (!payloadRoot) {
     return transformRoot->emitError() << "expected the object bound to the "
                                          "first argument to be an operation";

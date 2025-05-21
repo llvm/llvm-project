@@ -36,11 +36,15 @@ class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
 class LoopVectorizeHints;
+class LoopVersioning;
 class OptimizationRemarkEmitter;
 class TargetTransformInfo;
 class TargetLibraryInfo;
 class VPRecipeBuilder;
 struct VFRange;
+
+extern cl::opt<bool> EnableVPlanNativePath;
+extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
@@ -169,6 +173,17 @@ public:
           new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
     return createInstruction(Opcode, Operands, DL, Name);
   }
+  VPInstruction *createNaryOp(unsigned Opcode,
+                              std::initializer_list<VPValue *> Operands,
+                              Type *ResultTy,
+                              std::optional<FastMathFlags> FMFs = {},
+                              DebugLoc DL = {}, const Twine &Name = "") {
+    if (FMFs)
+      return tryInsertInstruction(new VPInstructionWithType(
+          Opcode, Operands, ResultTy, *FMFs, DL, Name));
+    return tryInsertInstruction(
+        new VPInstructionWithType(Opcode, Operands, ResultTy, DL, Name));
+  }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
@@ -235,6 +250,11 @@ public:
         new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));
   }
 
+  VPInstruction *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
+                                 DebugLoc DL, const Twine &Name = "") {
+    return tryInsertInstruction(new VPPhi(IncomingValues, DL, Name));
+  }
+
   /// Convert the input value \p Current to the corresponding value of an
   /// induction with \p Start and \p Step values, using \p Start + \p Current *
   /// \p Step.
@@ -246,10 +266,10 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
   }
 
-  VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                       Type *ResultTy, DebugLoc DL) {
+  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                                  Type *ResultTy, DebugLoc DL) {
     return tryInsertInstruction(
-        new VPScalarCastRecipe(Opcode, Op, ResultTy, DL));
+        new VPInstructionWithType(Opcode, Op, ResultTy, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -259,10 +279,11 @@ public:
 
   VPScalarIVStepsRecipe *
   createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
-                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step) {
+                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step,
+                      VPValue *VF, DebugLoc DL) {
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
-        IV, Step, InductionOpcode,
-        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
+        IV, Step, VF, InductionOpcode,
+        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
   //===--------------------------------------------------------------------===//
@@ -446,17 +467,15 @@ public:
   /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
   /// epilogue vector loop. It should be removed once the re-use issue has been
   /// fixed.
-  /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
-  /// to re-use expansion results generated during main plan execution.
   ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
   /// epilogue handling.
-  DenseMap<const SCEV *, Value *>
-  executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-              InnerLoopVectorizer &LB, DominatorTree *DT,
-              bool VectorizingEpilogue,
-              const DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
+  DenseMap<const SCEV *, Value *> executePlan(ElementCount VF, unsigned UF,
+                                              VPlan &BestPlan,
+                                              InnerLoopVectorizer &LB,
+                                              DominatorTree *DT,
+                                              bool VectorizingEpilogue);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -494,8 +513,10 @@ protected:
 private:
   /// Build a VPlan according to the information gathered by Legal. \return a
   /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
-  /// exclusive, possibly decreasing \p Range.End.
-  VPlanPtr buildVPlan(VFRange &Range);
+  /// exclusive, possibly decreasing \p Range.End. If no VPlan can be built for
+  /// the input range, set the largest included VF to the maximum VF for which
+  /// no plan could be built.
+  VPlanPtr tryToBuildVPlan(VFRange &Range);
 
   /// Build a VPlan using VPRecipes according to the information gather by
   /// Legal. This method is only used for the legacy inner loop vectorizer.
@@ -503,7 +524,7 @@ private:
   /// returned VPlan is valid for. If no VPlan can be built for the input range,
   /// set the largest included VF to the maximum VF for which no plan could be
   /// built.
-  VPlanPtr tryToBuildVPlanWithVPRecipes(VFRange &Range);
+  VPlanPtr tryToBuildVPlanWithVPRecipes(VFRange &Range, LoopVersioning *LVer);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
@@ -531,13 +552,13 @@ private:
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.
   bool isMoreProfitable(const VectorizationFactor &A,
-                        const VectorizationFactor &B) const;
+                        const VectorizationFactor &B, bool HasTail) const;
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B in the context of vectorizing a loop with known \p MaxTripCount.
   bool isMoreProfitable(const VectorizationFactor &A,
                         const VectorizationFactor &B,
-                        const unsigned MaxTripCount) const;
+                        const unsigned MaxTripCount, bool HasTail) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p VF.

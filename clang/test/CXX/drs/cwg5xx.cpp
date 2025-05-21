@@ -254,9 +254,9 @@ namespace cwg526 { // cwg526: 2.7
     typedef int type;
     X<N>::type v1;
     X<(N)>::type v2;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name X<(N)>::type; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'X<(N)>::type' is a C++20 extension}}
     X<+N>::type v3;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name X<+N>::type; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'X<+N>::type' is a C++20 extension}}
   };
 } // namespace cwg526
 
@@ -783,7 +783,7 @@ struct Outer {
 };
 template <class T>
 Outer<T>::Inner* Outer<T>::Inner::self() { return this; }
-// cxx98-17-error@-1 {{missing 'typename' prior to dependent type name Outer<T>::Inner; implicit 'typename' is a C++20 extension}}
+// cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'Outer<T>::Inner' is a C++20 extension}}
 
 } // namespace cwg560
 

@@ -47,6 +47,14 @@ def HasVIS2 : Predicate<"Subtarget->isVIS2()">,
 def HasVIS3 : Predicate<"Subtarget->isVIS3()">,
              AssemblerPredicate<(all_of FeatureVIS3)>;
 
+// HasUA2005 - This is true when the target processor has UA 2005 extensions.
+def HasUA2005 : Predicate<"Subtarget->isUA2005()">,
+                AssemblerPredicate<(all_of FeatureUA2005)>;
+
+// HasUA2007 - This is true when the target processor has UA 2007 extensions.
+def HasUA2007 : Predicate<"Subtarget->isUA2007()">,
+                AssemblerPredicate<(all_of FeatureUA2007)>;
+
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
@@ -81,6 +89,9 @@ def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 //===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
+
+// FIXME these should have AsmOperandClass.
+def uimm3 : PatLeaf<(imm), [{ return isUInt<3>(N->getZExtValue()); }]>;
 
 def simm10  : PatLeaf<(imm), [{ return isInt<10>(N->getSExtValue()); }]>;
 
@@ -142,6 +153,12 @@ def SparcMEMriAsmOperand : AsmOperandClass {
   let ParserMethod = "parseMEMOperand";
 }
 
+def simm13Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let DecoderMethod = "DecodeSIMM13";
+  let EncoderMethod = "getSImm13OpValue";
+}
+
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_rc, ptr_rc);
@@ -149,7 +166,7 @@ def MEMrr : Operand<iPTR> {
 }
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, i32imm);
+  let MIOperandInfo = (ops ptr_rc, simm13Op);
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
@@ -210,14 +227,23 @@ def PrefetchTag : Operand<i32> {
 // Branch targets have OtherVT type.
 def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetOpValue";
+  let DecoderMethod = "DecodeDisp<22>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def bprtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchPredTargetOpValue";
+  let DecoderMethod = "DecodeDisp<19>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def bprtarget16 : Operand<OtherVT> {
   let EncoderMethod = "getBranchOnRegTargetOpValue";
+  let DecoderMethod = "DecodeDisp<16>";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def SparcCallTargetAsmOperand : AsmOperandClass {
@@ -229,12 +255,8 @@ def calltarget : Operand<i32> {
   let EncoderMethod = "getCallTargetOpValue";
   let DecoderMethod = "DecodeCall";
   let ParserMatchClass = SparcCallTargetAsmOperand;
-}
-
-def simm13Op : Operand<iPTR> {
-  let OperandType = "OPERAND_IMMEDIATE";
-  let DecoderMethod = "DecodeSIMM13";
-  let EncoderMethod = "getSImm13OpValue";
+  let PrintMethod = "printCTILabel";
+  let OperandType = "OPERAND_PCREL";
 }
 
 // Operand for printing out a condition code.
@@ -317,6 +339,9 @@ def tailcall      : SDNode<"SPISD::TAIL_CALL", SDT_SPCall,
 def SDT_SPRet     : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def retglue       : SDNode<"SPISD::RET_GLUE", SDT_SPRet,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+def global_base_reg : SDNode<"SPISD::GLOBAL_BASE_REG",
+                             SDTypeProfile<1, 0, [SDTCisVT<0, iPTR>]>>;
 
 def flushw        : SDNode<"SPISD::FLUSHW", SDTNone,
                            [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
@@ -463,22 +488,6 @@ multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
              Load<OpcStr, Op3Val, OpNode, RC, Ty, itin> {
   defm A   : LoadASI<OpcStr, LoadAOp3Val, RC>;
 }
-
-
-// The LDSTUB instruction is supported for asm only.
-// It is unlikely that general-purpose code could make use of it.
-// CAS is preferred for sparc v9.
-def LDSTUBrr : F3_1<3, 0b001101, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
-                    "ldstub [$addr], $rd", []>;
-def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
-                    "ldstub [$addr], $rd", []>;
-def LDSTUBArr : F3_1_asi<3, 0b011101, (outs IntRegs:$rd),
-                         (ins (MEMrr $rs1, $rs2):$addr, ASITag:$asi),
-                         "ldstuba [$addr] $asi, $rd", []>;
-let Predicates = [HasV9], Uses = [ASR3] in
-def LDSTUBAri : F3_2<3, 0b011101, (outs IntRegs:$rd),
-                         (ins (MEMri $rs1, $simm13):$addr),
-                         "ldstuba [$addr] %asi, $rd", []>;
 
 // Store multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
 multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
@@ -736,6 +745,22 @@ let rd = 1, mayStore = 1, Uses = [FSR] in {
   def STXFSRri : F3_2<3, 0b100101, (outs), (ins (MEMri $rs1, $simm13):$addr),
 		 "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
 }
+
+// B.7. Atomic Load-Store Unsigned Byte Instructions
+// (Atomic test-and-set)
+// TODO look into the possibility to use this to implment `atomic_flag`.
+// If it's possible, then LDSTUB is the preferred way to do it.
+def LDSTUBrr : F3_1<3, 0b001101, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
+                    "ldstub [$addr], $rd", []>;
+def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
+                    "ldstub [$addr], $rd", []>;
+def LDSTUBArr : F3_1_asi<3, 0b011101, (outs IntRegs:$rd),
+                         (ins (MEMrr $rs1, $rs2):$addr, ASITag:$asi),
+                         "ldstuba [$addr] $asi, $rd", []>;
+let Predicates = [HasV9], Uses = [ASR3] in
+def LDSTUBAri : F3_2<3, 0b011101, (outs IntRegs:$rd),
+                         (ins (MEMri $rs1, $simm13):$addr),
+                         "ldstuba [$addr] %asi, $rd", []>;
 
 // Section B.8 - SWAP Register with Memory Instruction
 // (Atomic swap)
@@ -1017,10 +1042,10 @@ class CPBranchSPA<dag ins, string asmstr, list<dag> pattern>
 
 } // let isBranch = 1, isTerminator = 1, hasDelaySlot = 1
 
-def CBCOND  : CPBranchSP<(ins brtarget:$imm22, CCOp:$cond),
+def CPBCOND  : CPBranchSP<(ins brtarget:$imm22, CCOp:$cond),
                           "cb$cond $imm22",
                           [(SPbrfcc bb:$imm22, imm:$cond)]>;
-def CBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
+def CPBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
                            "cb$cond,a $imm22", []>;
 
 // Section B.24 - Call and Link Instruction, p. 125
@@ -1916,12 +1941,12 @@ let Predicates = [HasV9] in
   def : Pat<(atomic_fence timm, timm), (MEMBARi 0xf)>;
 
 // atomic_load addr -> load addr
-def : Pat<(i32 (atomic_load_8 ADDRrr:$src)), (LDUBrr ADDRrr:$src)>;
-def : Pat<(i32 (atomic_load_8 ADDRri:$src)), (LDUBri ADDRri:$src)>;
-def : Pat<(i32 (atomic_load_16 ADDRrr:$src)), (LDUHrr ADDRrr:$src)>;
-def : Pat<(i32 (atomic_load_16 ADDRri:$src)), (LDUHri ADDRri:$src)>;
-def : Pat<(i32 (atomic_load_32 ADDRrr:$src)), (LDrr ADDRrr:$src)>;
-def : Pat<(i32 (atomic_load_32 ADDRri:$src)), (LDri ADDRri:$src)>;
+def : Pat<(i32 (atomic_load_azext_8 ADDRrr:$src)), (LDUBrr ADDRrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_8 ADDRri:$src)), (LDUBri ADDRri:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 ADDRrr:$src)), (LDUHrr ADDRrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 ADDRri:$src)), (LDUHri ADDRri:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 ADDRrr:$src)), (LDrr ADDRrr:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 ADDRri:$src)), (LDri ADDRri:$src)>;
 
 // atomic_store val, addr -> store val, addr
 def : Pat<(atomic_store_8 i32:$val, ADDRrr:$dst), (STBrr ADDRrr:$dst, $val)>;
@@ -1965,4 +1990,5 @@ def : Pat<(build_vector (i32 IntRegs:$a1), (i32 IntRegs:$a2)),
 
 include "SparcInstr64Bit.td"
 include "SparcInstrVIS.td"
+include "SparcInstrUAOSA.td"
 include "SparcInstrAliases.td"

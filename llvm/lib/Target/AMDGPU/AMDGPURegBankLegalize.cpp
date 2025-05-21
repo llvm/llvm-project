@@ -40,9 +40,7 @@ public:
   static char ID;
 
 public:
-  AMDGPURegBankLegalize() : MachineFunctionPass(ID) {
-    initializeAMDGPURegBankLegalizePass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPURegBankLegalize() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -89,13 +87,12 @@ const RegBankLegalizeRules &getRules(const GCNSubtarget &ST,
   static SmallDenseMap<unsigned, std::unique_ptr<RegBankLegalizeRules>>
       CacheForRuleSet;
   std::lock_guard<std::mutex> Lock(GlobalMutex);
-  if (!CacheForRuleSet.contains(ST.getGeneration())) {
-    auto Rules = std::make_unique<RegBankLegalizeRules>(ST, MRI);
-    CacheForRuleSet[ST.getGeneration()] = std::move(Rules);
-  } else {
-    CacheForRuleSet[ST.getGeneration()]->refreshRefs(ST, MRI);
-  }
-  return *CacheForRuleSet[ST.getGeneration()];
+  auto [It, Inserted] = CacheForRuleSet.try_emplace(ST.getGeneration());
+  if (Inserted)
+    It->second = std::make_unique<RegBankLegalizeRules>(ST, MRI);
+  else
+    It->second->refreshRefs(ST, MRI);
+  return *It->second;
 }
 
 class AMDGPURegBankLegalizeCombiner {
@@ -312,6 +309,12 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     }
 
     // Opcodes that also support S1.
+    if (Opc == G_FREEZE &&
+        MRI.getType(MI->getOperand(0).getReg()) != LLT::scalar(1)) {
+      RBLHelper.applyMappingTrivial(*MI);
+      continue;
+    }
+
     if ((Opc == AMDGPU::G_CONSTANT || Opc == AMDGPU::G_FCONSTANT ||
          Opc == AMDGPU::G_IMPLICIT_DEF)) {
       Register Dst = MI->getOperand(0).getReg();

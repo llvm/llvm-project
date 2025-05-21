@@ -61,7 +61,7 @@ const MCExpr *CSKYConstantPool::addEntry(MCStreamer &Streamer,
 
     Value = MCBinaryExpr::createSub(AdjustExpr, SymRef, Context);
     Value = MCBinaryExpr::createSub(CSKYExpr->getSubExpr(), Value, Context);
-    Value = CSKYMCExpr::create(Value, CSKYExpr->getKind(), Context);
+    Value = CSKYMCExpr::create(Value, CSKYExpr->getSpecifier(), Context);
   }
 
   Entries.push_back(ConstantPoolEntry(CPEntryLabel, Value, Size, Loc));
@@ -84,14 +84,14 @@ CSKYTargetStreamer::CSKYTargetStreamer(MCStreamer &S)
 const MCExpr *
 CSKYTargetStreamer::addConstantPoolEntry(const MCExpr *Expr, SMLoc Loc,
                                          const MCExpr *AdjustExpr) {
-  auto ELFRefKind = CSKYMCExpr::VK_CSKY_Invalid;
+  auto ELFRefKind = CSKYMCExpr::VK_Invalid;
   ConstantCounter++;
 
   const MCExpr *OrigExpr = Expr;
 
   if (const CSKYMCExpr *CE = dyn_cast<CSKYMCExpr>(Expr)) {
     Expr = CE->getSubExpr();
-    ELFRefKind = CE->getKind();
+    ELFRefKind = CE->getSpecifier();
   }
 
   if (const MCSymbolRefExpr *SymExpr = dyn_cast<MCSymbolRefExpr>(Expr)) {
