@@ -15,6 +15,7 @@
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Remarks/YAMLRemarkSerializer.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -67,19 +68,18 @@ class FilterMatcher {
   FilterMatcher(StringRef Filter, bool IsRegex)
       : FilterRE(Filter), FilterStr(Filter), IsRegex(IsRegex) {}
 
+  static Expected<FilterMatcher> createRE(StringRef Arg, StringRef Value);
+
 public:
   static FilterMatcher createExact(StringRef Filter) { return {Filter, false}; }
 
-  static Expected<FilterMatcher> createRE(StringRef Filter,
-                                          StringRef Argument) {
-    FilterMatcher FM(Filter, true);
-    std::string Error;
-    if (!FM.FilterRE.isValid(Error))
-      return createStringError(make_error_code(std::errc::invalid_argument),
-                               "invalid argument '--" + Argument + "=" +
-                                   Filter + "': " + Error);
-    return std::move(FM);
-  }
+  static Expected<FilterMatcher>
+  createRE(const llvm::cl::opt<std::string> &Arg);
+
+  static Expected<FilterMatcher>
+  createRE(StringRef Filter, const cl::list<std::string> &Arg);
+
+  static FilterMatcher createAny() { return {".*", true}; }
 
   bool match(StringRef StringToMatch) const {
     if (IsRegex)
