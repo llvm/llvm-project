@@ -17,6 +17,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Regex.h"
 
+#include <cmath>
 #include <numeric>
 
 using namespace llvm;
@@ -117,7 +118,7 @@ static Error tryInstructionMix() {
         Mix.begin(), Mix.end(), 0, [](unsigned MaxValue, const MixEntry &Elt) {
           return std::max(MaxValue, Elt.second);
         });
-    unsigned ValueWidth = log10(MaxValue) + 1;
+    unsigned ValueWidth = std::log10(MaxValue) + 1;
     FOS << "Instruction";
     FOS.PadToColumn(MaxMnemonic + 1) << "Count\n";
     FOS << "-----------";
