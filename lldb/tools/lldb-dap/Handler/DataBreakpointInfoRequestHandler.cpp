@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
-#include "EventHelper.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
@@ -16,12 +15,59 @@
 
 namespace lldb_dap {
 
+static llvm::Expected<protocol::DataBreakpointInfoResponseBody>
+HandleDataBreakpointBytes(DAP &dap,
+                          const protocol::DataBreakpointInfoArguments &args) {
+  llvm::StringRef address = args.name;
+
+  unsigned long long load_addr = LLDB_INVALID_ADDRESS;
+  if (llvm::getAsUnsignedInteger(address, 0, load_addr)) {
+    return llvm::make_error<DAPError>(llvm::formatv("invalid address"),
+                                      llvm::inconvertibleErrorCode(), false);
+  }
+
+  lldb::SBAddress sb_addr(load_addr, dap.target);
+  if (!sb_addr.IsValid()) {
+    return llvm::make_error<DAPError>(
+        llvm::formatv("address {:x} does not exist in the debuggee", load_addr),
+        llvm::inconvertibleErrorCode(), false);
+  }
+
+  const uint32_t byte_size =
+      args.bytes.value_or(dap.target.GetAddressByteSize());
+
+  protocol::DataBreakpointInfoResponseBody response;
+  response.dataId = llvm::formatv("{:x}/{}", load_addr, byte_size);
+
+  lldb::SBMemoryRegionInfo region;
+  lldb::SBError err =
+      dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
+  // Only lldb-server supports "qMemoryRegionInfo". So, don't fail this
+  // request if SBProcess::GetMemoryRegionInfo returns error.
+  if (err.Success() && !(region.IsReadable() || region.IsWritable())) {
+    response.description = llvm::formatv(
+        "memory region for address {} has no read or write permissions",
+        load_addr);
+  } else {
+    response.description = llvm::formatv("{} bytes at {:x}", load_addr);
+    response.accessTypes = {protocol::eDataBreakpointAccessTypeRead,
+                            protocol::eDataBreakpointAccessTypeWrite,
+                            protocol::eDataBreakpointAccessTypeReadWrite};
+  }
+
+  return response;
+}
+
 /// Obtains information on a possible data breakpoint that could be set on an
 /// expression or variable. Clients should only call this request if the
 /// corresponding capability supportsDataBreakpoints is true.
 llvm::Expected<protocol::DataBreakpointInfoResponseBody>
 DataBreakpointInfoRequestHandler::Run(
     const protocol::DataBreakpointInfoArguments &args) const {
+
+  if (args.asAddress.value_or(false))
+    return HandleDataBreakpointBytes(dap, args);
+
   protocol::DataBreakpointInfoResponseBody response;
   lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId.value_or(UINT64_MAX));
   lldb::SBValue variable = dap.variables.FindVariable(
