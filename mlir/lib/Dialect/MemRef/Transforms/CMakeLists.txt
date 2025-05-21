@@ -24,7 +24,6 @@ add_mlir_dialect_library(MLIRMemRefTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineTransforms
-  MLIRAffineDialect
   MLIRAffineUtils
   MLIRArithDialect
   MLIRArithTransforms
