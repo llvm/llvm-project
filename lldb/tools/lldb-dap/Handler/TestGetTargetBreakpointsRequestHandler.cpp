@@ -15,18 +15,12 @@ namespace lldb_dap {
 
 void TestGetTargetBreakpointsRequestHandler::operator()(
     const llvm::json::Object &request) const {
-  const auto *arguments = request.getObject("arguments");
-  bool only_resolved = GetBoolean(arguments, "onlyResolved").value_or(false);
-
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Array response_breakpoints;
   for (uint32_t i = 0; dap.target.GetBreakpointAtIndex(i).IsValid(); ++i) {
-    const auto target_bp = dap.target.GetBreakpointAtIndex(i);
-    if (!only_resolved || target_bp.GetNumResolvedLocations() > 0) {
-      auto bp = Breakpoint(dap, target_bp);
-      response_breakpoints.push_back(bp.ToProtocolBreakpoint());
-    }
+    auto bp = Breakpoint(dap, dap.target.GetBreakpointAtIndex(i));
+    response_breakpoints.push_back(bp.ToProtocolBreakpoint());
   }
   llvm::json::Object body;
   body.try_emplace("breakpoints", std::move(response_breakpoints));

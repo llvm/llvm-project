@@ -166,6 +166,7 @@ class DebugCommunication(object):
         self.initialized = False
         self.frame_scopes = {}
         self.init_commands = init_commands
+        self.resolved_breakpoints = set([])
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -308,6 +309,14 @@ class DebugCommunication(object):
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
+
+    def _update_verified_breakpoints(self, breakpoints):
+        for breakpoint in breakpoints:
+            if "verified" in breakpoint:
+                if breakpoint["verified"]:
+                    self.resolved_breakpoints.add(str(breakpoint["id"]))
+                else:
+                    self.resolved_breakpoints.discard(str(breakpoint["id"]))
 
     def send_packet(self, command_dict: Request, set_sequence=True):
         """Take the "command_dict" python dictionary and encode it as a JSON
@@ -452,7 +461,26 @@ class DebugCommunication(object):
             if not event:
                 break
             breakpoint_events.append(event)
+
+        self._update_verified_breakpoints(
+            [event["body"]["breakpoint"] for event in breakpoint_events]
+        )
         return breakpoint_events
+
+    def wait_for_breakpoints_to_be_verified(
+        self, breakpoint_ids: list[str], timeout: Optional[float] = None
+    ):
+        """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
+        unresolved_breakpoints = set(breakpoint_ids)
+        unresolved_breakpoints -= self.resolved_breakpoints
+        while len(unresolved_breakpoints) > 0:
+            breakpoint_event = self.wait_for_event("breakpoint", timeout=timeout)
+            if breakpoint_event is None:
+                break
+
+            self._update_verified_breakpoints([breakpoint_event["body"]["breakpoint"]])
+            unresolved_breakpoints -= self.resolved_breakpoints
+        return unresolved_breakpoints
 
     def wait_for_exited(self, timeout: Optional[float] = None):
         event_dict = self.wait_for_event("exited", timeout=timeout)
@@ -1013,7 +1041,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+        breakpoints = response["body"]["breakpoints"]
+        self._update_verified_breakpoints(breakpoints)
+        return response
 
     def request_setExceptionBreakpoints(self, filters):
         args_dict = {"filters": filters}
@@ -1216,7 +1247,7 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_testGetTargetBreakpoints(self, only_resolved=False):
+    def request_testGetTargetBreakpoints(self):
         """A request packet used in the LLDB test suite to get all currently
         set breakpoint infos for all breakpoints currently set in the
         target.
@@ -1224,9 +1255,7 @@ class DebugCommunication(object):
         command_dict = {
             "command": "_testGetTargetBreakpoints",
             "type": "request",
-            "arguments": {
-                "onlyResolved": only_resolved,
-            },
+            "arguments": {},
         }
         return self.send_recv(command_dict)
 

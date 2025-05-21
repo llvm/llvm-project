@@ -106,29 +106,11 @@ class DAPTestCaseBase(TestBase):
         return breakpoint_ids
 
     def wait_for_breakpoints_to_resolve(
-        self, breakpoint_ids: list[str], timeout: Optional[float] = None
+        self, breakpoint_ids: list[str], timeout: Optional[float] = DEFAULT_TIMEOUT
     ):
-        unresolved_breakpoints = set(breakpoint_ids)
-
-        # Check already resolved breakpoints
-        resolved_breakpoints = self.dap_server.request_testGetTargetBreakpoints(
-            only_resolved=True
-        )["body"]["breakpoints"]
-        for resolved_breakpoint in resolved_breakpoints:
-            unresolved_breakpoints.discard(str(resolved_breakpoint["id"]))
-
-        while len(unresolved_breakpoints) > 0:
-            breakpoint_event = self.dap_server.wait_for_event(
-                "breakpoint", timeout=timeout
-            )
-            if breakpoint_event is None:
-                break
-
-            if breakpoint_event["body"]["reason"] in ["changed", "new"]:
-                unresolved_breakpoints.discard(
-                    str(breakpoint_event["body"]["breakpoint"]["id"])
-                )
-
+        unresolved_breakpoints = self.dap_server.wait_for_breakpoints_to_be_verified(
+            breakpoint_ids, timeout
+        )
         self.assertEqual(
             len(unresolved_breakpoints),
             0,
