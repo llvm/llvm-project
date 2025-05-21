@@ -407,7 +407,7 @@ static void removeMemSet(Instruction &I,
 
 static void updateFnegToFsub(Instruction &I,
                              SmallVectorImpl<Instruction *> &ToRemove,
-                             DenseMap<Value *, Value *> &ReplacedValues) {
+                             DenseMap<Value *, Value *> &) {
   const Intrinsic::ID ID = I.getOpcode();
   if(ID != Instruction::FNeg)
     return;
