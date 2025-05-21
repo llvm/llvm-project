@@ -74,10 +74,10 @@ Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
 /// memory pointed to by `memRefDesc`, using the layout map of `type`.
 /// The indices are linearized as:
 ///   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
-Value getStridedElementPtr(OpBuilder &builder, Location loc,
-                           const LLVMTypeConverter &converter, MemRefType type,
-                           Value memRefDesc, ValueRange indices,
-                           LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none);
+Value getStridedElementPtr(
+    OpBuilder &builder, Location loc, const LLVMTypeConverter &converter,
+    MemRefType type, Value memRefDesc, ValueRange indices,
+    LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none);
 } // namespace LLVM
 
 /// Base class for operation conversions targeting the LLVM IR dialect. It
