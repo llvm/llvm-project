@@ -150,7 +150,7 @@ void CGDebugInfo::addInstSourceAtomMetadata(llvm::Instruction *I,
       I->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
       DL.getInlinedAt(), DL.isImplicitCode(), Group, Rank);
   I->setDebugLoc(NewDL);
-};
+}
 
 void CGDebugInfo::addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
                                              llvm::Value *Backup) {
