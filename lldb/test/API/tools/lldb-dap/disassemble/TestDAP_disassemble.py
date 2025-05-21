@@ -33,6 +33,7 @@ class TestDAP_disassemble(lldbdap_testcase.DAPTestCaseBase):
         self.assertNotIn("location", qsort_assembly, "Source location not expected.")
         self.assertIn("instruction", pc_assembly, "Assembly instruction missing.")
 
+    @skipIfWindows
     def test_disassemble_backwards(self):
         """
         Tests the 'disassemble' request with a backwards disassembly range.
