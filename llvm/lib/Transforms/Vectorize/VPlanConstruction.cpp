@@ -65,7 +65,7 @@ public:
   PlainCFGBuilder(Loop *Lp, LoopInfo *LI)
       : TheLoop(Lp), LI(LI), Plan(std::make_unique<VPlan>(Lp)) {}
 
-  /// Build plain CFG for TheLoop  and connects it to Plan's entry.
+  /// Build plain CFG for TheLoop and connect it to Plan's entry.
   std::unique_ptr<VPlan> buildPlainCFG();
 };
 } // anonymous namespace

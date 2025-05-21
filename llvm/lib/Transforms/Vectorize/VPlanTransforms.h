@@ -224,14 +224,13 @@ struct VPlanTransforms {
                                      unsigned VectorRegWidth);
 
   /// Predicate and linearize the control-flow in the only loop region of
-  /// \p Plan. If \p FoldTail is true, also create a mask guarding the loop
+  /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
   /// header, otherwise use all-true for the header mask. Masks for blocks are
-  /// added to \p BlockMaskCache, which in turn will temporarily be used later
+  /// added to a block-to-mask map which is returned in order to be used later
   /// for wide recipe construction. This argument is temporary and will be
   /// removed in the future.
-  static void
-  predicateAndLinearize(VPlan &Plan, bool FoldTail,
-                        DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache);
+  static DenseMap<VPBasicBlock *, VPValue *>
+  introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
 };
 
 } // namespace llvm

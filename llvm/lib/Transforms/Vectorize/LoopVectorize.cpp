@@ -9042,12 +9042,12 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  DenseMap<VPBasicBlock *, VPValue *> BlockMaskCache;
-  VPlanTransforms::predicateAndLinearize(*Plan, CM.foldTailByMasking(),
-                                         BlockMaskCache);
+  auto BlockMaskCache = VPlanTransforms::introduceMasksAndLinearize(
+      *Plan, CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
-  // Construct recipes for the instructions in the loop
+  // Construct wide recipes and apply predication for original scalar
+  // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
                                 Builder, BlockMaskCache, LVer);
@@ -9138,7 +9138,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
   // to remove the need to keep a map of masks beyond the predication
   // transform.
   RecipeBuilder.updateBlockMaskCache(Old2New);
-  for (const auto &[Old, New] : Old2New)
+  for (const auto &[Old, _] : Old2New)
     Old->getDefiningRecipe()->eraseFromParent();
 
   assert(isa<VPRegionBlock>(Plan->getVectorLoopRegion()) &&
