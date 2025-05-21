@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+x87,-sse,-sse2 -global-isel=0 | FileCheck %s --check-prefixes X64,SDAG-X64
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes X64,GISEL-X64
 ; RUN: llc < %s -mtriple=i686-- -mattr=+x87,-sse,-sse2 -global-isel=0 | FileCheck %s --check-prefixes X86,SDAG-X86
-; TODO: The last RUN line fails GISEL for f64/double cases and will fallback to DAG due to lack of support for 
+; TODO: The last RUN line fails GISEL for f64/double cases and will fallback to DAG due to lack of support for
 ; loads/stores in X86 mode, support is expected soon enough, for this reason the isel-fp64-to-sint-x86.mir test is added.
 ; RUN: llc < %s -mtriple=i686-- -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes X86,GISEL-X86
 
@@ -280,46 +280,25 @@ define i64 @test_float_to_int64(float %input) nounwind {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 ;
-; SDAG-X86-LABEL: test_float_to_int64:
-; SDAG-X86:       # %bb.0: # %entry
-; SDAG-X86-NEXT:    pushl %ebp
-; SDAG-X86-NEXT:    movl %esp, %ebp
-; SDAG-X86-NEXT:    andl $-8, %esp
-; SDAG-X86-NEXT:    subl $16, %esp
-; SDAG-X86-NEXT:    flds 8(%ebp)
-; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    orl $3072, %eax # imm = 0xC00
-; SDAG-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fistpll {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SDAG-X86-NEXT:    movl %ebp, %esp
-; SDAG-X86-NEXT:    popl %ebp
-; SDAG-X86-NEXT:    retl
-;
-; GISEL-X86-LABEL: test_float_to_int64:
-; GISEL-X86:       # %bb.0: # %entry
-; GISEL-X86-NEXT:    pushl %ebp
-; GISEL-X86-NEXT:    movl %esp, %ebp
-; GISEL-X86-NEXT:    andl $-8, %esp
-; GISEL-X86-NEXT:    subl $16, %esp
-; GISEL-X86-NEXT:    flds 8(%ebp)
-; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    orl $3072, %eax # imm = 0xC00
-; GISEL-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fistpll {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl 4(%ecx), %edx
-; GISEL-X86-NEXT:    movl %ebp, %esp
-; GISEL-X86-NEXT:    popl %ebp
-; GISEL-X86-NEXT:    retl
+; X86-LABEL: test_float_to_int64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    flds 8(%ebp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi float %input to i64
     ret i64 %conv
@@ -339,46 +318,25 @@ define i64 @test_longdouble_to_int64(x86_fp80 %input) nounwind {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 ;
-; SDAG-X86-LABEL: test_longdouble_to_int64:
-; SDAG-X86:       # %bb.0: # %entry
-; SDAG-X86-NEXT:    pushl %ebp
-; SDAG-X86-NEXT:    movl %esp, %ebp
-; SDAG-X86-NEXT:    andl $-8, %esp
-; SDAG-X86-NEXT:    subl $16, %esp
-; SDAG-X86-NEXT:    fldt 8(%ebp)
-; SDAG-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    orl $3072, %eax # imm = 0xC00
-; SDAG-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fistpll {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SDAG-X86-NEXT:    movl %ebp, %esp
-; SDAG-X86-NEXT:    popl %ebp
-; SDAG-X86-NEXT:    retl
-;
-; GISEL-X86-LABEL: test_longdouble_to_int64:
-; GISEL-X86:       # %bb.0: # %entry
-; GISEL-X86-NEXT:    pushl %ebp
-; GISEL-X86-NEXT:    movl %esp, %ebp
-; GISEL-X86-NEXT:    andl $-8, %esp
-; GISEL-X86-NEXT:    subl $16, %esp
-; GISEL-X86-NEXT:    fldt 8(%ebp)
-; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    orl $3072, %eax # imm = 0xC00
-; GISEL-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fistpll {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl 4(%ecx), %edx
-; GISEL-X86-NEXT:    movl %ebp, %esp
-; GISEL-X86-NEXT:    popl %ebp
-; GISEL-X86-NEXT:    retl
+; X86-LABEL: test_longdouble_to_int64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    fldt 8(%ebp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi x86_fp80 %input to i64
     ret i64 %conv
