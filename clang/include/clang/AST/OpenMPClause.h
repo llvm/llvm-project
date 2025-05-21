@@ -1153,82 +1153,73 @@ public:
 ///   for(int j = 0; j < 256; j+=2)
 ///   for(int k = 127; k >= 0; --k)
 /// \endcode
-class OMPLoopRangeClause final : public OMPClause {
+class OMPLoopRangeClause final
+    : public OMPClause,
+      private llvm::TrailingObjects<OMPLoopRangeClause, Expr *> {
   friend class OMPClauseReader;
-
-  explicit OMPLoopRangeClause()
-      : OMPClause(llvm::omp::OMPC_looprange, {}, {}) {}
+  friend class llvm::TrailingObjects<OMPLoopRangeClause, Expr *>;
 
   /// Location of '('
   SourceLocation LParenLoc;
 
-  /// Location of 'first'
-  SourceLocation FirstLoc;
+  /// Location of first and count expressions
+  SourceLocation FirstLoc, CountLoc;
 
-  /// Location of 'count'
-  SourceLocation CountLoc;
+  /// Number of looprange arguments (always 2: first, count)
+  unsigned NumArgs = 2;
 
-  /// Expr associated with 'first' argument
-  Expr *First = nullptr;
+  /// Set the argument expressions.
+  void setArgs(ArrayRef<Expr *> Args) {
+    assert(Args.size() == NumArgs && "Expected exactly 2 looprange arguments");
+    std::copy(Args.begin(), Args.end(), getTrailingObjects<Expr *>());
+  }
 
-  /// Expr associated with 'count' argument
-  Expr *Count = nullptr;
-
-  /// Set 'first'
-  void setFirst(Expr *First) { this->First = First; }
-
-  /// Set 'count'
-  void setCount(Expr *Count) { this->Count = Count; }
-
-  /// Set location of '('.
-  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
-
-  /// Set location of 'first' argument
-  void setFirstLoc(SourceLocation Loc) { FirstLoc = Loc; }
-
-  /// Set location of 'count' argument
-  void setCountLoc(SourceLocation Loc) { CountLoc = Loc; }
+  /// Build an empty clause for deserialization.
+  explicit OMPLoopRangeClause()
+      : OMPClause(llvm::omp::OMPC_looprange, {}, {}), NumArgs(2) {}
 
 public:
-  /// Build an AST node for a 'looprange' clause
-  ///
-  /// \param StartLoc     Starting location of the clause.
-  /// \param LParenLoc    Location of '('.
-  /// \param ModifierLoc  Modifier location.
-  /// \param
+  /// Build a 'looprange' clause AST node.
   static OMPLoopRangeClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation FirstLoc, SourceLocation CountLoc,
-         SourceLocation EndLoc, Expr *First, Expr *Count);
+         SourceLocation EndLoc, ArrayRef<Expr *> Args);
 
-  /// Build an empty 'looprange' node for deserialization
-  ///
-  /// \param C      Context of the AST.
+  /// Build an empty 'looprange' clause node.
   static OMPLoopRangeClause *CreateEmpty(const ASTContext &C);
 
-  /// Returns the location of '('
+  // Location getters/setters
   SourceLocation getLParenLoc() const { return LParenLoc; }
-
-  /// Returns the location of 'first'
   SourceLocation getFirstLoc() const { return FirstLoc; }
-
-  /// Returns the location of 'count'
   SourceLocation getCountLoc() const { return CountLoc; }
 
-  /// Returns the argument 'first' or nullptr if not set
-  Expr *getFirst() const { return cast_or_null<Expr>(First); }
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  void setFirstLoc(SourceLocation Loc) { FirstLoc = Loc; }
+  void setCountLoc(SourceLocation Loc) { CountLoc = Loc; }
 
-  /// Returns the argument 'count' or nullptr if not set
-  Expr *getCount() const { return cast_or_null<Expr>(Count); }
+  /// Get looprange arguments: first and count
+  Expr *getFirst() const { return getArgs()[0]; }
+  Expr *getCount() const { return getArgs()[1]; }
 
-  child_range children() {
-    return child_range(reinterpret_cast<Stmt **>(&First),
-                       reinterpret_cast<Stmt **>(&Count) + 1);
+  /// Set looprange arguments: first and count
+  void setFirst(Expr *E) { getArgs()[0] = E; }
+  void setCount(Expr *E) { getArgs()[1] = E; }
+
+  MutableArrayRef<Expr *> getArgs() {
+    return MutableArrayRef<Expr *>(getTrailingObjects<Expr *>(), NumArgs);
+  }
+  ArrayRef<Expr *> getArgs() const {
+    return ArrayRef<Expr *>(getTrailingObjects<Expr *>(), NumArgs);
   }
 
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(getArgs().begin()),
+                       reinterpret_cast<Stmt **>(getArgs().end()));
+  }
   const_child_range children() const {
-    auto Children = const_cast<OMPLoopRangeClause *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    auto AR = getArgs();
+    return const_child_range(reinterpret_cast<Stmt *const *>(AR.begin()),
+                             reinterpret_cast<Stmt *const *>(AR.end()));
   }
 
   child_range used_children() {

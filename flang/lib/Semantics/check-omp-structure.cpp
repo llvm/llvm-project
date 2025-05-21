@@ -4452,9 +4452,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
       ContextDirectiveAsFortran());
 }
 
-void OmpStructureChecker::Enter(const parser::OmpClause::FreeAgent &x) {
-  context_.Say(GetContext().clauseSource,
-      "FREE_AGENT clause is not implemented yet"_err_en_US,
 // Restrictions specific to each clause are implemented apart from the
 // generalized restrictions.
 

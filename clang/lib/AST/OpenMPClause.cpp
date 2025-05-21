@@ -1026,22 +1026,25 @@ OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
 
 OMPLoopRangeClause *
 OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                           SourceLocation LParenLoc, SourceLocation EndLoc,
-                           SourceLocation FirstLoc, SourceLocation CountLoc,
-                           Expr *First, Expr *Count) {
+                           SourceLocation LParenLoc, SourceLocation FirstLoc,
+                           SourceLocation CountLoc, SourceLocation EndLoc,
+                           ArrayRef<Expr *> Args) {
+
+  assert(Args.size() == 2 &&
+         "looprange clause must have exactly two arguments");
   OMPLoopRangeClause *Clause = CreateEmpty(C);
   Clause->setLocStart(StartLoc);
   Clause->setLParenLoc(LParenLoc);
-  Clause->setLocEnd(EndLoc);
   Clause->setFirstLoc(FirstLoc);
   Clause->setCountLoc(CountLoc);
-  Clause->setFirst(First);
-  Clause->setCount(Count);
+  Clause->setLocEnd(EndLoc);
+  Clause->setArgs(Args);
   return Clause;
 }
 
 OMPLoopRangeClause *OMPLoopRangeClause::CreateEmpty(const ASTContext &C) {
-  return new (C) OMPLoopRangeClause();
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(2));
+  return new (Mem) OMPLoopRangeClause();
 }
 
 OMPAllocateClause *OMPAllocateClause::Create(
