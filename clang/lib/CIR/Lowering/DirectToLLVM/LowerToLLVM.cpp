@@ -530,10 +530,18 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
                                                         llvmSrcVal);
     return mlir::success();
   }
-  case cir::CastKind::bitcast:
+  case cir::CastKind::bitcast: {
+    mlir::Type dstTy = castOp.getType();
+    mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
+
     assert(!MissingFeatures::cxxABI());
     assert(!MissingFeatures::dataMemberType());
-    break;
+
+    mlir::Value llvmSrcVal = adaptor.getOperands().front();
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
+                                                       llvmSrcVal);
+    return mlir::success();
+  }
   case cir::CastKind::ptr_to_bool: {
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
     mlir::Value zeroPtr = rewriter.create<mlir::LLVM::ZeroOp>(
