@@ -236,7 +236,8 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
       } else if (kind != cir::CaseOpKind::Equal && cascadingCases.size() > 1) {
         // If a Default, Anyof or Range case is found and there are previous
         // cascading cases, merge all of them into the last cascading case.
-        // We don't currently fold case range statements with other case statements.
+        // We don't currently fold case range statements with other case
+        // statements.
         assert(!cir::MissingFeatures::foldRangeCase());
         CaseOp lastCascadingCase = cascadingCases.back();
         mergeCascadingInto(lastCascadingCase);
