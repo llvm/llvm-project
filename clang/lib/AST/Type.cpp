@@ -2108,8 +2108,7 @@ bool Type::hasIntegerRepresentation() const {
 /// \returns true if the type is considered an integral type, false otherwise.
 bool Type::isIntegralType(const ASTContext &Ctx) const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Int128;
+    return BT->isInteger();
 
   // Complete enum types are integral in C.
   if (!Ctx.getLangOpts().CPlusPlus)
@@ -2121,8 +2120,7 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
 
 bool Type::isIntegralOrUnscopedEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Int128;
+    return BT->isInteger();
 
   if (isBitIntType())
     return true;
@@ -2211,10 +2209,8 @@ bool Type::isUnicodeCharacterType() const {
 /// signed, according to C99 6.2.5p4 [char, signed char, short, int, long..],
 /// an enum decl which has a signed representation
 bool Type::isSignedIntegerType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
-    return BT->getKind() >= BuiltinType::Char_S &&
-           BT->getKind() <= BuiltinType::Int128;
-  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->isSignedInteger();
 
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
@@ -2232,15 +2228,12 @@ bool Type::isSignedIntegerType() const {
 }
 
 bool Type::isSignedIntegerOrEnumerationType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
-    return BT->getKind() >= BuiltinType::Char_S &&
-           BT->getKind() <= BuiltinType::Int128;
-  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->isSignedInteger();
 
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
-    if (ET->getDecl()->isComplete())
-      return ET->getDecl()->getIntegerType()->isSignedIntegerType();
-  }
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType);
+      ET && ET->getDecl()->isComplete())
+    return ET->getDecl()->getIntegerType()->isSignedIntegerType();
 
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isSigned();
@@ -2261,10 +2254,8 @@ bool Type::hasSignedIntegerRepresentation() const {
 /// unsigned, according to C99 6.2.5p6 [which returns true for _Bool], an enum
 /// decl which has an unsigned representation
 bool Type::isUnsignedIntegerType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::UInt128;
-  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->isUnsignedInteger();
 
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
@@ -2282,15 +2273,12 @@ bool Type::isUnsignedIntegerType() const {
 }
 
 bool Type::isUnsignedIntegerOrEnumerationType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::UInt128;
-  }
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->isUnsignedInteger();
 
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
-    if (ET->getDecl()->isComplete())
-      return ET->getDecl()->getIntegerType()->isUnsignedIntegerType();
-  }
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType);
+      ET && ET->getDecl()->isComplete())
+    return ET->getDecl()->getIntegerType()->isUnsignedIntegerType();
 
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isUnsigned();
