@@ -1,8 +1,8 @@
 
-// RUN: %clang -gkey-instructions -x c++ %s -gmlt -gno-column-info -S -emit-llvm -o - -ftrivial-auto-var-init=pattern \
+// RUN: %clang_cc1 -gkey-instructions -x c++ %s -debug-info-kind=line-tables-only -gno-column-info -emit-llvm -o - -ftrivial-auto-var-init=pattern \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// RUN: %clang -gkey-instructions -x c %s -gmlt -gno-column-info -S -emit-llvm -o - -ftrivial-auto-var-init=pattern \
+// RUN: %clang_cc1 -gkey-instructions -x c %s -debug-info-kind=line-tables-only -gno-column-info -emit-llvm -o - -ftrivial-auto-var-init=pattern \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 // The implicit-check-not is important; we don't want the GEPs created for the
