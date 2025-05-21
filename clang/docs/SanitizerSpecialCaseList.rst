@@ -58,7 +58,7 @@ Usage with UndefinedBehaviorSanitizer
 ability to adjust instrumentation based on type.
 
 By default, supported sanitizers will have their instrumentation disabled for
-entris specified within an ignorelist.
+entries specified within an ignorelist.
 
 .. code-block:: bash
 
@@ -77,8 +77,9 @@ For example, supplying the above ``ignorelist.txt`` to
 ``-fsanitize-ignorelist=ignorelist.txt`` disables overflow sanitizer
 instrumentation for arithmetic operations containing values of type ``int``.
 
-The ``=sanitize`` category is also supported. Any entries assigned to the
-``sanitize`` category will have their sanitizer instrumentation remain.
+The ``=sanitize`` category is also supported. Any ``=sanitize`` category
+entries enable sanitizer instrumentation, even if it was ignored by entries
+before.
 
 With this, one may disable instrumentation for some or all types and
 specifically allow instrumentation for one or many types -- including types
