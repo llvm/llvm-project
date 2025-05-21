@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
@@ -112,6 +113,46 @@ til::SCFG *SExprBuilder::buildCFG(CFGWalker &Walker) {
 static bool isCalleeArrow(const Expr *E) {
   const auto *ME = dyn_cast<MemberExpr>(E->IgnoreParenCasts());
   return ME ? ME->isArrow() : false;
+}
+
+static bool isPointerReassigned(const VarDecl *VD) {
+  class AssignmentFinder : public RecursiveASTVisitor<AssignmentFinder> {
+    const VarDecl *VD;
+
+  public:
+    explicit AssignmentFinder(const VarDecl *VD) : VD(VD) {}
+
+    bool VisitBinaryOperator(BinaryOperator *BO) {
+      if (!BO->isAssignmentOp())
+        return true;
+
+      if (const auto *DRE =
+              dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreParenImpCasts())) {
+        // If target variable appears as LHS of assignment
+        if (DRE->getDecl()->getCanonicalDecl() == VD->getCanonicalDecl()) {
+          // Skip the initializer
+          if (BO->getBeginLoc() != VD->getInit()->getBeginLoc()) {
+            FoundReassignment = true;
+            return false; // stop
+          }
+        }
+      }
+
+      return true;
+    }
+
+    bool FoundReassignment = false;
+  };
+
+  const DeclContext *DC = VD->getDeclContext();
+  if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
+    AssignmentFinder Visitor(VD);
+    Visitor.TraverseDecl(const_cast<FunctionDecl *>(FD));
+    return Visitor.FoundReassignment;
+  }
+
+  // Assume it might be reassigned.
+  return true;
 }
 
 /// Translate a clang expression in an attribute to a til::SExpr.
@@ -241,7 +282,23 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   return CapabilityExpr(E, AttrExp->getType(), Neg);
 }
 
-til::LiteralPtr *SExprBuilder::createVariable(const VarDecl *VD) {
+til::SExpr *SExprBuilder::createVariable(const VarDecl *VD,
+                                         CallingContext *Ctx) {
+  if (VD) {
+    // Substitute local pointer variables with their initializers if they are
+    // explicitly const or never reassigned.
+    QualType Ty = VD->getType();
+    if (VD->isLocalVarDecl() && Ty->isPointerType() && VD->hasInit() &&
+        (Ty.isConstQualified() || !isPointerReassigned(VD))) {
+      const Expr *Init = VD->getInit()->IgnoreParenImpCasts();
+      // Check for self-initialization to prevent infinite recursion.
+      if (const auto *InitDRE = dyn_cast<DeclRefExpr>(Init)) {
+        if (InitDRE->getDecl()->getCanonicalDecl() == VD->getCanonicalDecl())
+          return new (Arena) til::LiteralPtr(VD);
+      }
+      return translate(Init, Ctx);
+    }
+  }
   return new (Arena) til::LiteralPtr(VD);
 }
 
@@ -352,6 +409,9 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
              ? cast<FunctionDecl>(D)->getCanonicalDecl()->getParamDecl(I)
              : cast<ObjCMethodDecl>(D)->getCanonicalDecl()->getParamDecl(I);
   }
+
+  if (const auto *VarD = dyn_cast<VarDecl>(VD))
+    return createVariable(VarD, Ctx);
 
   // For non-local variables, treat it as a reference to a named object.
   return new (Arena) til::LiteralPtr(VD);

@@ -395,7 +395,7 @@ public:
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, CallingContext *Ctx);
 
   // Translate a variable reference.
-  til::LiteralPtr *createVariable(const VarDecl *VD);
+  til::SExpr *createVariable(const VarDecl *VD, CallingContext *Ctx = nullptr);
 
   // Translate a clang statement or expression to a TIL expression.
   // Also performs substitution of variables; Ctx provides the context.
