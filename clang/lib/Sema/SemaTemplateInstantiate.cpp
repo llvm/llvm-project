@@ -4552,6 +4552,9 @@ LocalInstantiationScope::findInstantiationOf(const Decl *D) {
       isa<CXXDeductionGuideDecl>(D->getDeclContext()))
     return nullptr;
 
+  if (D->isInvalidDecl())
+    return nullptr;
+
   // If we didn't find the decl, then we either have a sema bug, or we have a
   // forward reference to a label declaration.  Return null to indicate that
   // we have an uninstantiated label.
