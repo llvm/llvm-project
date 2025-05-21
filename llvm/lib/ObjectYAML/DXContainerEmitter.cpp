@@ -317,6 +317,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
           // for that to be used as a testing tool more effectively.
           RS.ParametersContainer.addInvalidParameter(Header);
+          break;
         }
       }
 
