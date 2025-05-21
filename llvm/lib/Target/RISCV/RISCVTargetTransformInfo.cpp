@@ -294,6 +294,28 @@ RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) const {
              : TTI::PSK_Software;
 }
 
+InstructionCost RISCVTTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend,
+    std::optional<unsigned> BinOp) const {
+
+  // FIXME: Guard zve32x properly here
+  if (!ST->hasStdExtZvqdotq() || Opcode != Instruction::Add || !BinOp ||
+      *BinOp != Instruction::Mul || InputTypeA != InputTypeB ||
+      !InputTypeA->isIntegerTy(8) || OpAExtend != OpBExtend ||
+      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4) ||
+      !VF.isScalable())
+    return InstructionCost::getInvalid();
+
+  Type *Tp = VectorType::get(AccumType, VF);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  // Note: Asuming all vqdot* variants are equal cost
+  // TODO: Thread CostKind through this API
+  return LT.first * getRISCVInstructionCost(RISCV::VQDOT_VV, LT.second,
+                                            TTI::TCK_RecipThroughput);
+}
+
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   // Currently, the ExpandReductions pass can't expand scalable-vector
   // reductions, but we still request expansion as RVV doesn't support certain
