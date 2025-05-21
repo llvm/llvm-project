@@ -47,17 +47,20 @@ inline auto OutputMatcher(const llvm::StringRef output,
 class DAPTestBase : public TransportBase {
 protected:
   std::unique_ptr<lldb_dap::DAP> dap;
+  std::optional<llvm::sys::fs::TempFile> core;
+  std::optional<llvm::sys::fs::TempFile> binary;
 
-  static constexpr llvm::StringLiteral k_linux_binary = "linux-x86_64.out";
-  static constexpr llvm::StringLiteral k_linux_core = "linux-x86_64.core";
+  static constexpr llvm::StringLiteral k_linux_binary = "linux-x86_64.out.yaml";
+  static constexpr llvm::StringLiteral k_linux_core = "linux-x86_64.core.yaml";
 
   static void SetUpTestSuite();
   static void TeatUpTestSuite();
   void SetUp() override;
+  void TearDown() override;
 
   bool GetDebuggerSupportsTarget(llvm::StringRef platform);
   void CreateDebugger();
-  void LoadCore(llvm::StringRef binary, llvm::StringRef core);
+  void LoadCore();
 
   /// Closes the DAP output pipe and returns the remaining protocol messages in
   /// the buffer.

@@ -19,7 +19,7 @@ add_lldb_unittest(DAPTests
   )
 
 set(test_inputs
-  linux-x86_64.out
-  linux-x86_64.core
+  linux-x86_64.out.yaml
+  linux-x86_64.core.yaml
   )
 add_unittest_inputs(DAPTests "${test_inputs}")

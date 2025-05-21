@@ -62,6 +62,13 @@ void DAPTestBase::SetUp() {
       /*transport=*/*to_dap);
 }
 
+void DAPTestBase::TearDown() {
+  if (core)
+    ASSERT_THAT_ERROR(core->discard(), Succeeded());
+  if (binary)
+    ASSERT_THAT_ERROR(binary->discard(), Succeeded());
+}
+
 void DAPTestBase::SetUpTestSuite() {
   lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
   EXPECT_TRUE(error.Success());
@@ -89,13 +96,22 @@ void DAPTestBase::CreateDebugger() {
   ASSERT_TRUE(dap->debugger);
 }
 
-void DAPTestBase::LoadCore(llvm::StringRef binary, llvm::StringRef core) {
+void DAPTestBase::LoadCore() {
   ASSERT_TRUE(dap->debugger);
-  dap->target =
-      dap->debugger.CreateTarget(lldb_private::GetInputFilePath(binary).data());
+  llvm::Expected<lldb_private::TestFile> binary_yaml = lldb_private::TestFile::fromYamlFile(k_linux_binary);
+  ASSERT_THAT_EXPECTED(binary_yaml, Succeeded());
+  llvm::Expected<llvm::sys::fs::TempFile> binary_file = binary_yaml->writeToTemporaryFile();
+  ASSERT_THAT_EXPECTED(binary_file, Succeeded());
+  binary = std::move(*binary_file);
+  dap->target = dap->debugger.CreateTarget(binary->TmpName.data());
   ASSERT_TRUE(dap->target);
+  llvm::Expected<lldb_private::TestFile> core_yaml = lldb_private::TestFile::fromYamlFile(k_linux_core);
+  ASSERT_THAT_EXPECTED(core_yaml, Succeeded());
+  llvm::Expected<llvm::sys::fs::TempFile> core_file = core_yaml->writeToTemporaryFile();
+  ASSERT_THAT_EXPECTED(core_file, Succeeded());
+  this->core = std::move(*core_file);
   SBProcess process =
-      dap->target.LoadCore(lldb_private::GetInputFilePath(core).data());
+      dap->target.LoadCore(this->core->TmpName.data());
   ASSERT_TRUE(process);
 }
 

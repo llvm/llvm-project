@@ -43,7 +43,7 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   if (!GetDebuggerSupportsTarget("X86"))
     GTEST_SKIP() << "Unsupported platform";
 
-  LoadCore(DAPTestBase::k_linux_binary, DAPTestBase::k_linux_core);
+  LoadCore();
 
   DisconnectRequestHandler handler(*dap);
 
