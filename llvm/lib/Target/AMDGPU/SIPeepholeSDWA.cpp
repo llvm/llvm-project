@@ -431,9 +431,17 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
     // Does not support input modifiers: noabs, noneg, nosext.
     return false;
   case AMDGPU::V_CNDMASK_B32_sdwa:
-    // FIXME SISrcMods uses the same bitmask for SEXT and NEG
-    // modifiers and hence each instruction can only support one type
-    // of modifier; SEXT gets turned into NEG for this instruction.
+    // SISrcMods uses the same bitmask for SEXT and NEG modifiers and
+    // hence the compiler can only support one type of modifier for
+    // each SDWA instruction.  For V_CNDMASK_B32_sdwa, this is NEG
+    // since its operands get printed using
+    // AMDGPUInstPrinter::printOperandAndFPInputMods which produces
+    // the output intended for NEG if SEXT is set.
+    //
+    // The ISA does actually support both modifiers on most SDWA
+    // instructions.
+    //
+    // FIXME Accept SEXT here after fixing this issue.
     if (Sext)
       return false;
     break;
