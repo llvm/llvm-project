@@ -204,16 +204,6 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
   }
 };
 
-template <>
-struct ScalarEnumerationTraits<FormatStyle::BreakAfterControlStatementStyle> {
-  static void enumeration(IO &IO,
-                          FormatStyle::BreakAfterControlStatementStyle &Value) {
-    IO.enumCase(Value, "Default", FormatStyle::BACSS_Default);
-    IO.enumCase(Value, "MultiLine", FormatStyle::BACSS_MultiLine);
-    IO.enumCase(Value, "No", FormatStyle::BACSS_No);
-  }
-};
-
 template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
   static void enumeration(IO &IO, FormatStyle::BracketAlignmentStyle &Value) {
     IO.enumCase(Value, "Align", FormatStyle::BAS_Align);
@@ -240,6 +230,67 @@ struct ScalarEnumerationTraits<
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::BWACS_Never);
     IO.enumCase(Value, "true", FormatStyle::BWACS_Always);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakAfterOpenBracketIfStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakAfterOpenBracketIfStyle &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::BAOBIS_Always);
+    IO.enumCase(Value, "MultiLine", FormatStyle::BAOBIS_MultiLine);
+    IO.enumCase(Value, "No", FormatStyle::BAOBIS_No);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakAfterOpenBracketLoopStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakAfterOpenBracketLoopStyle &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::BAOBLS_Always);
+    IO.enumCase(Value, "MultiLine", FormatStyle::BAOBLS_MultiLine);
+    IO.enumCase(Value, "No", FormatStyle::BAOBLS_No);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakAfterOpenBracketSwitchStyle> {
+  static void
+  enumeration(IO &IO, FormatStyle::BreakAfterOpenBracketSwitchStyle &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::BAOBSS_Always);
+    IO.enumCase(Value, "MultiLine", FormatStyle::BAOBSS_MultiLine);
+    IO.enumCase(Value, "No", FormatStyle::BAOBSS_No);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakBeforeCloseBracketIfStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakBeforeCloseBracketIfStyle &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::BBCBIS_Always);
+    IO.enumCase(Value, "MultiLine", FormatStyle::BBCBIS_MultiLine);
+    IO.enumCase(Value, "No", FormatStyle::BBCBIS_No);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakBeforeCloseBracketLoopStyle> {
+  static void
+  enumeration(IO &IO, FormatStyle::BreakBeforeCloseBracketLoopStyle &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::BBCBLS_Always);
+    IO.enumCase(Value, "MultiLine", FormatStyle::BBCBLS_MultiLine);
+    IO.enumCase(Value, "No", FormatStyle::BBCBLS_No);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<
+    FormatStyle::BreakBeforeCloseBracketSwitchStyle> {
+  static void
+  enumeration(IO &IO, FormatStyle::BreakBeforeCloseBracketSwitchStyle &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::BBCBSS_Always);
+    IO.enumCase(Value, "MultiLine", FormatStyle::BBCBSS_MultiLine);
+    IO.enumCase(Value, "No", FormatStyle::BBCBSS_No);
   }
 };
 
@@ -1013,8 +1064,6 @@ template <> struct MappingTraits<FormatStyle> {
 
     IO.mapOptional("AccessModifierOffset", Style.AccessModifierOffset);
     IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
-    IO.mapOptional("AlignAfterControlStatement",
-                   Style.AlignAfterControlStatement);
     IO.mapOptional("AlignArrayOfStructures", Style.AlignArrayOfStructures);
     IO.mapOptional("AlignConsecutiveAssignments",
                    Style.AlignConsecutiveAssignments);
@@ -1077,10 +1126,21 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakAfterAttributes", Style.BreakAfterAttributes);
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
+    IO.mapOptional("BreakAfterOpenBracketIf", Style.BreakAfterOpenBracketIf);
+    IO.mapOptional("BreakAfterOpenBracketLoop",
+                   Style.BreakAfterOpenBracketLoop);
+    IO.mapOptional("BreakAfterOpenBracketSwitch",
+                   Style.BreakAfterOpenBracketSwitch);
     IO.mapOptional("BreakAfterReturnType", Style.BreakAfterReturnType);
     IO.mapOptional("BreakArrays", Style.BreakArrays);
     IO.mapOptional("BreakBeforeBinaryOperators",
                    Style.BreakBeforeBinaryOperators);
+    IO.mapOptional("BreakBeforeCloseBracketIf",
+                   Style.BreakBeforeCloseBracketIf);
+    IO.mapOptional("BreakBeforeCloseBracketLoop",
+                   Style.BreakBeforeCloseBracketLoop);
+    IO.mapOptional("BreakBeforeCloseBracketSwitch",
+                   Style.BreakBeforeCloseBracketSwitch);
     IO.mapOptional("BreakBeforeConceptDeclarations",
                    Style.BreakBeforeConceptDeclarations);
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
@@ -1559,7 +1619,6 @@ static void expandPresetsSpacesInParens(FormatStyle &Expanded) {
 FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
   LLVMStyle.AccessModifierOffset = -2;
-  LLVMStyle.AlignAfterControlStatement = FormatStyle::BACSS_Default;
   LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
   LLVMStyle.AlignArrayOfStructures = FormatStyle::AIAS_None;
   LLVMStyle.AlignConsecutiveAssignments = {};
@@ -1619,10 +1678,16 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakAdjacentStringLiterals = true;
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
+  LLVMStyle.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_No;
+  LLVMStyle.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_No;
+  LLVMStyle.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_No;
   LLVMStyle.BreakAfterReturnType = FormatStyle::RTBS_None;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
+  LLVMStyle.BreakBeforeCloseBracketIf = FormatStyle::BBCBIS_No;
+  LLVMStyle.BreakBeforeCloseBracketLoop = FormatStyle::BBCBLS_No;
+  LLVMStyle.BreakBeforeCloseBracketSwitch = FormatStyle::BBCBSS_No;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTemplateCloser = false;

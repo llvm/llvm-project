@@ -9427,7 +9427,9 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
   FormatStyle Style = getLLVMStyle();
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  Style.AlignAfterControlStatement = FormatStyle::BACSS_MultiLine;
+  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_MultiLine;
+  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_MultiLine;
+  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_MultiLine;
 
   verifyFormat("void foo() {\n"
                "  if constexpr (\n"
@@ -9478,7 +9480,9 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
       Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  Style.AlignAfterControlStatement = FormatStyle::BACSS_MultiLine;
+  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_MultiLine;
+  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_MultiLine;
+  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_MultiLine;
 
   verifyFormat("void foo() {\n"
                "  if constexpr (\n"
@@ -9527,7 +9531,9 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
                Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  Style.AlignAfterControlStatement = FormatStyle::BACSS_MultiLine;
+  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_MultiLine;
+  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_MultiLine;
+  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_MultiLine;
 
   verifyFormat("void foo() {\n"
                "  if constexpr (\n"
@@ -9576,7 +9582,9 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
                Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  Style.AlignAfterControlStatement = FormatStyle::BACSS_No;
+  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_No;
+  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_No;
+  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_No;
 
   verifyFormat("void foo() {\n"
                "  if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"
@@ -9623,7 +9631,12 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
       Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
-  Style.AlignAfterControlStatement = FormatStyle::BACSS_MultiLine;
+  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_MultiLine;
+  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_MultiLine;
+  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_MultiLine;
+  Style.BreakBeforeCloseBracketIf = FormatStyle::BBCBIS_MultiLine;
+  Style.BreakBeforeCloseBracketLoop = FormatStyle::BBCBLS_MultiLine;
+  Style.BreakBeforeCloseBracketSwitch = FormatStyle::BBCBSS_MultiLine;
 
   verifyFormat(
       "void foo() {\n"
@@ -9675,7 +9688,12 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
                Style);
 
   Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
-  Style.AlignAfterControlStatement = FormatStyle::BACSS_No;
+  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_No;
+  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_No;
+  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_No;
+  Style.BreakBeforeCloseBracketIf = FormatStyle::BBCBIS_No;
+  Style.BreakBeforeCloseBracketLoop = FormatStyle::BBCBLS_No;
+  Style.BreakBeforeCloseBracketSwitch = FormatStyle::BBCBSS_No;
 
   verifyFormat("void foo() {\n"
                "  if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |\n"

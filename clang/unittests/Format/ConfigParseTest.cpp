@@ -533,14 +533,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("EnumTrailingComma: Remove", EnumTrailingComma,
               FormatStyle::ETC_Remove);
 
-  Style.AlignAfterControlStatement = FormatStyle::BACSS_Default;
-  CHECK_PARSE("AlignAfterControlStatement: MultiLine",
-              AlignAfterControlStatement, FormatStyle::BACSS_MultiLine);
-  CHECK_PARSE("AlignAfterControlStatement: No", AlignAfterControlStatement,
-              FormatStyle::BACSS_No);
-  CHECK_PARSE("AlignAfterControlStatement: Default", AlignAfterControlStatement,
-              FormatStyle::BACSS_Default);
-
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   CHECK_PARSE("AlignAfterOpenBracket: Align", AlignAfterOpenBracket,
               FormatStyle::BAS_Align);
@@ -776,6 +768,30 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BraceWrapping:\n"
               "  AfterControlStatement: false",
               BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
+
+  Style.BreakAfterOpenBracketIf = FormatStyle::BAOBIS_No;
+  CHECK_PARSE("BreakAfterOpenBracketIf: MultiLine", BreakAfterOpenBracketIf,
+              FormatStyle::BAOBIS_MultiLine);
+  CHECK_PARSE("BreakAfterOpenBracketIf: No", BreakAfterOpenBracketIf,
+              FormatStyle::BAOBIS_No);
+  CHECK_PARSE("BreakAfterOpenBracketIf: Always", BreakAfterOpenBracketIf,
+              FormatStyle::BAOBIS_Always);
+
+  Style.BreakAfterOpenBracketLoop = FormatStyle::BAOBLS_No;
+  CHECK_PARSE("BreakAfterOpenBracketLoop: MultiLine", BreakAfterOpenBracketLoop,
+              FormatStyle::BAOBLS_MultiLine);
+  CHECK_PARSE("BreakAfterOpenBracketLoop: No", BreakAfterOpenBracketLoop,
+              FormatStyle::BAOBLS_No);
+  CHECK_PARSE("BreakAfterOpenBracketLoop: Always", BreakAfterOpenBracketLoop,
+              FormatStyle::BAOBLS_Always);
+
+  Style.BreakAfterOpenBracketSwitch = FormatStyle::BAOBSS_No;
+  CHECK_PARSE("BreakAfterOpenBracketSwitch: MultiLine",
+              BreakAfterOpenBracketSwitch, FormatStyle::BAOBSS_MultiLine);
+  CHECK_PARSE("BreakAfterOpenBracketSwitch: No", BreakAfterOpenBracketSwitch,
+              FormatStyle::BAOBSS_No);
+  CHECK_PARSE("BreakAfterOpenBracketSwitch: Always",
+              BreakAfterOpenBracketSwitch, FormatStyle::BAOBSS_Always);
 
   Style.BreakAfterReturnType = FormatStyle::RTBS_All;
   CHECK_PARSE("BreakAfterReturnType: None", BreakAfterReturnType,
@@ -1090,6 +1106,30 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::RCPS_SingleLine);
   CHECK_PARSE("RequiresClausePosition: OwnLine", RequiresClausePosition,
               FormatStyle::RCPS_OwnLine);
+
+  Style.BreakBeforeCloseBracketIf = FormatStyle::BBCBIS_No;
+  CHECK_PARSE("BreakBeforeCloseBracketIf: MultiLine", BreakBeforeCloseBracketIf,
+              FormatStyle::BBCBIS_MultiLine);
+  CHECK_PARSE("BreakBeforeCloseBracketIf: No", BreakBeforeCloseBracketIf,
+              FormatStyle::BBCBIS_No);
+  CHECK_PARSE("BreakBeforeCloseBracketIf: Always", BreakBeforeCloseBracketIf,
+              FormatStyle::BBCBIS_Always);
+
+  Style.BreakBeforeCloseBracketLoop = FormatStyle::BBCBLS_No;
+  CHECK_PARSE("BreakBeforeCloseBracketLoop: MultiLine",
+              BreakBeforeCloseBracketLoop, FormatStyle::BBCBLS_MultiLine);
+  CHECK_PARSE("BreakBeforeCloseBracketLoop: No", BreakBeforeCloseBracketLoop,
+              FormatStyle::BBCBLS_No);
+  CHECK_PARSE("BreakBeforeCloseBracketLoop: Always",
+              BreakBeforeCloseBracketLoop, FormatStyle::BBCBLS_Always);
+
+  Style.BreakBeforeCloseBracketSwitch = FormatStyle::BBCBSS_No;
+  CHECK_PARSE("BreakBeforeCloseBracketSwitch: MultiLine",
+              BreakBeforeCloseBracketSwitch, FormatStyle::BBCBSS_MultiLine);
+  CHECK_PARSE("BreakBeforeCloseBracketSwitch: No",
+              BreakBeforeCloseBracketSwitch, FormatStyle::BBCBSS_No);
+  CHECK_PARSE("BreakBeforeCloseBracketSwitch: Always",
+              BreakBeforeCloseBracketSwitch, FormatStyle::BBCBSS_Always);
 
   CHECK_PARSE("BreakBeforeConceptDeclarations: Never",
               BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Never);

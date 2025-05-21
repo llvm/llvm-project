@@ -62,21 +62,86 @@ struct FormatStyle {
   /// \version 3.3
   int AccessModifierOffset;
 
-  /// Different styles for breaking the parenthesis after a control statement
-  /// (``if/switch/while/for ...``).
+  /// Different styles for breaking the parenthesis after ``if/else if``.
   /// \version 21
-  enum BreakAfterControlStatementStyle : int8_t {
-    /// Use the default behavior.
-    BACSS_Default,
-    /// Force break after the left parenthesis of a control statement only
-    /// when the expression exceeds the column limit, and align on the
-    /// ``ContinuationIndentWidth``.
-    BACSS_MultiLine,
-    /// Do not force a break after the control statment.
-    BACSS_No,
+  enum BreakAfterOpenBracketIfStyle : int8_t {
+    /// Always break the opening parenthesis of an if statement, e.g.:
+    /// \code
+    ///   if constexpr (
+    ///                 a)
+    /// \endcode
+    BAOBIS_Always,
+    /// Force break after the left parenthesis of an if statement only
+    /// when the expression exceeds the column limit, e.g..:
+    /// \code
+    ///   if constexpr (
+    ///                 a ||
+    ///                 b)
+    /// \endcode
+    BAOBIS_MultiLine,
+    /// Do not force a break after the control statement.
+    /// \code
+    ///   if constexpr (a ||
+    ///                 b
+    /// \endcode
+    BAOBIS_No,
   };
 
-  BreakAfterControlStatementStyle AlignAfterControlStatement;
+  BreakAfterOpenBracketIfStyle BreakAfterOpenBracketIf;
+
+  /// Different styles for breaking the parenthesis after loops ``(for/while)``.
+  /// \version 21
+  enum BreakAfterOpenBracketLoopStyle : int8_t {
+    /// Always break the opening parenthesis of a loop statement, e.g.:
+    /// \code
+    ///   while (
+    ///          a) {
+    /// \endcode
+    BAOBLS_Always,
+    /// Force break after the left parenthesis of a loop only
+    /// when the expression exceeds the column limit, e.g..:
+    /// \code
+    ///   while (
+    ///          a &&
+    ///          b) {
+    /// \endcode
+    BAOBLS_MultiLine,
+    /// Do not force a break after the control statement.
+    /// \code
+    ///   while (a &&
+    ///          b) {
+    /// \endcode
+    BAOBLS_No,
+  };
+
+  BreakAfterOpenBracketLoopStyle BreakAfterOpenBracketLoop;
+
+  /// Different styles for breaking the parenthesis after ``switch``.
+  /// \version 21
+  enum BreakAfterOpenBracketSwitchStyle : int8_t {
+    /// Always break the opening parenthesis of a switch statement, e.g.:
+    /// \code
+    ///   switch (
+    ///           a) {
+    /// \endcode
+    BAOBSS_Always,
+    /// Force break after the left parenthesis of a switch only
+    /// when the expression exceeds the column limit, e.g..:
+    /// \code
+    ///   switch (
+    ///           a &&
+    ///           b) {
+    /// \endcode
+    BAOBSS_MultiLine,
+    /// Do not force a break after the control statement.
+    /// \code
+    ///   switch (a &&
+    ///           b) {
+    /// \endcode
+    BAOBSS_No,
+  };
+
+  BreakAfterOpenBracketSwitchStyle BreakAfterOpenBracketSwitch;
 
   /// Different styles for aligning after open brackets.
   enum BracketAlignmentStyle : int8_t {
@@ -2230,6 +2295,88 @@ struct FormatStyle {
   /// The brace breaking style to use.
   /// \version 3.7
   BraceBreakingStyle BreakBeforeBraces;
+
+  /// Different styles for breaking before ``if/else if`` closing parenthesis.
+  /// \version 21
+  enum BreakBeforeCloseBracketIfStyle : int8_t {
+    /// Always break the closing parenthesis of an if statement, e.g.:
+    /// \code
+    ///   if constexpr (a
+    ///                )
+    /// \endcode
+    BBCBIS_Always,
+    /// Force break before the closing parenthesis of an if statement only
+    /// when the expression exceeds the column limit, e.g..:
+    /// \code
+    ///   if constexpr (a ||
+    ///                 b
+    ///                )
+    /// \endcode
+    BBCBIS_MultiLine,
+    /// Do not force a break before closing the if control statement.
+    /// \code
+    ///   if constexpr (a ||
+    ///                 b)
+    /// \endcode
+    BBCBIS_No,
+  };
+
+  BreakBeforeCloseBracketIfStyle BreakBeforeCloseBracketIf;
+
+  /// Different styles for breaking before loop ``(for/while)`` closing
+  /// parenthesis.
+  /// \version 21
+  enum BreakBeforeCloseBracketLoopStyle : int8_t {
+    /// Always break the closing parenthesis of a loop statement, e.g.:
+    /// \code
+    ///   while (a
+    ///         ) {
+    /// \endcode
+    BBCBLS_Always,
+    /// Force break before the closing parenthesis of a loop only
+    /// when the expression exceeds the column limit, e.g..:
+    /// \code
+    ///   while (a &&
+    ///          b
+    ///         ) {
+    /// \endcode
+    BBCBLS_MultiLine,
+    /// Do not force a break before closing the loop control statement.
+    /// \code
+    ///   while (a &&
+    ///          b) {
+    /// \endcode
+    BBCBLS_No,
+  };
+
+  BreakBeforeCloseBracketLoopStyle BreakBeforeCloseBracketLoop;
+
+  /// Different styles for breaking before ``switch`` closing parenthesis.
+  /// \version 21
+  enum BreakBeforeCloseBracketSwitchStyle : int8_t {
+    /// Always break before the closing parenthesis of a switch statement, e.g.:
+    /// \code
+    ///   switch (a
+    ///          )  {
+    /// \endcode
+    BBCBSS_Always,
+    /// Force break before the closing parenthesis of a switch only
+    /// when the expression exceeds the column limit, e.g..:
+    /// \code
+    ///   switch (a &&
+    ///           b
+    ///           ) {
+    /// \endcode
+    BBCBSS_MultiLine,
+    /// Do not force a break before closing the switch control statement.
+    /// \code
+    ///   switch (a &&
+    ///           b) {
+    /// \endcode
+    BBCBSS_No,
+  };
+
+  BreakBeforeCloseBracketSwitchStyle BreakBeforeCloseBracketSwitch;
 
   /// Different ways to break before concept declarations.
   enum BreakBeforeConceptDeclarationsStyle : int8_t {
@@ -5452,7 +5599,6 @@ struct FormatStyle {
 
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
-           AlignAfterControlStatement == R.AlignAfterControlStatement &&
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
            AlignArrayOfStructures == R.AlignArrayOfStructures &&
            AlignConsecutiveAssignments == R.AlignConsecutiveAssignments &&
@@ -5502,10 +5648,16 @@ struct FormatStyle {
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakAfterOpenBracketIf == R.BreakAfterOpenBracketIf &&
+           BreakAfterOpenBracketLoop == R.BreakAfterOpenBracketLoop &&
+           BreakAfterOpenBracketSwitch == R.BreakAfterOpenBracketSwitch &&
            BreakAfterReturnType == R.BreakAfterReturnType &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
+           BreakBeforeCloseBracketIf == R.BreakBeforeCloseBracketIf &&
+           BreakBeforeCloseBracketLoop == R.BreakBeforeCloseBracketLoop &&
+           BreakBeforeCloseBracketSwitch == R.BreakBeforeCloseBracketSwitch &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&
