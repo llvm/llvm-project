@@ -189,15 +189,13 @@ define {<8 x i64>, <8 x i64>} @vector_deinterleave_v8i64_v16i64(<16 x i64> %vec)
   ret {<8 x i64>, <8 x i64>} %retval
 }
 
-define {<2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v6i32(<6 x i32> %v) {
+define {<2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v6i32(<6 x i32> %v) nounwind {
 ; CHECK-LABEL: vector_deinterleave3_v2i32_v6i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 2
@@ -215,23 +213,19 @@ define {<2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v6i32(<6 x 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 	   %res = call {<2 x i32>, <2 x i32>, <2 x i32>} @llvm.vector.deinterleave3.v6i32(<6 x i32> %v)
 	   ret {<2 x i32>, <2 x i32>, <2 x i32>} %res
 }
 
-define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v8i32(<8 x i32> %v) {
+define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v8i32(<8 x i32> %v) nounwind {
 ; CHECK-LABEL: vector_deinterleave3_v2i32_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 6
@@ -251,23 +245,19 @@ define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 	   %res = call {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @llvm.vector.deinterleave4.v8i32(<8 x i32> %v)
 	   ret {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} %res
 }
 
-define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vector_deinterleave5_v2i16_v10i16(<10 x i16> %v) {
+define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vector_deinterleave5_v2i16_v10i16(<10 x i16> %v) nounwind {
 ; CHECK-LABEL: vector_deinterleave5_v2i16_v10i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 6
@@ -292,23 +282,19 @@ define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vector_deinterle
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 	   %res = call {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @llvm.vector.deinterleave5.v10i16(<10 x i16> %v)
 	   ret {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res
 }
 
-define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vector_deinterleave6_v2i16_v12i16(<12 x i16> %v) {
+define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vector_deinterleave6_v2i16_v12i16(<12 x i16> %v) nounwind {
 ; CHECK-LABEL: vector_deinterleave6_v2i16_v12i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v14, v8, 6
@@ -335,29 +321,22 @@ define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vecto
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 	   %res = call {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @llvm.vector.deinterleave6.v12i16(<12 x i16> %v)
 	   ret {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res
 }
 
-define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @vector_deinterleave7_v14i8_v2i8(<14 x i8> %v) {
+define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @vector_deinterleave7_v14i8_v2i8(<14 x i8> %v) nounwind {
 ; RV32-LABEL: vector_deinterleave7_v14i8_v2i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
-; RV32-NEXT:    .cfi_def_cfa_offset 48
 ; RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    .cfi_offset s1, -12
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 2
 ; RV32-NEXT:    sub sp, sp, a0
-; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 4 * vlenb
 ; RV32-NEXT:    addi a0, sp, 32
 ; RV32-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; RV32-NEXT:    csrr s1, vlenb
@@ -424,31 +403,21 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 2
 ; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    addi sp, sp, 48
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_deinterleave7_v14i8_v2i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -64
-; RV64-NEXT:    .cfi_def_cfa_offset 64
 ; RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    .cfi_offset s1, -24
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 2
 ; RV64-NEXT:    sub sp, sp, a0
-; RV64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 4 * vlenb
 ; RV64-NEXT:    addi a0, sp, 32
 ; RV64-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; RV64-NEXT:    csrr s1, vlenb
@@ -515,31 +484,21 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 2
 ; RV64-NEXT:    add sp, sp, a0
-; RV64-NEXT:    .cfi_def_cfa sp, 64
 ; RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
-; RV64-NEXT:    .cfi_restore s1
 ; RV64-NEXT:    addi sp, sp, 64
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave7_v14i8_v2i8:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -64
-; ZIP-NEXT:    .cfi_def_cfa_offset 64
 ; ZIP-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
-; ZIP-NEXT:    .cfi_offset s1, -24
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 2
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 4 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 32
 ; ZIP-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; ZIP-NEXT:    csrr s1, vlenb
@@ -606,42 +565,29 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 2
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 64
 ; ZIP-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
-; ZIP-NEXT:    .cfi_restore s1
 ; ZIP-NEXT:    addi sp, sp, 64
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @llvm.vector.deinterleave7.v14i8(<14 x i8> %v)
 	   ret {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} %res
 }
 
-define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @vector_deinterleave8_v16i8_v2i8(<16 x i8> %v) {
+define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @vector_deinterleave8_v16i8_v2i8(<16 x i8> %v) nounwind {
 ; RV32-LABEL: vector_deinterleave8_v16i8_v2i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -48
-; RV32-NEXT:    .cfi_def_cfa_offset 48
 ; RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    .cfi_offset s1, -12
-; RV32-NEXT:    .cfi_offset s2, -16
-; RV32-NEXT:    .cfi_offset s3, -20
-; RV32-NEXT:    .cfi_offset s4, -24
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a1, a0, 1
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    sub sp, sp, a0
-; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 3 * vlenb
 ; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; RV32-NEXT:    csrr s1, vlenb
@@ -701,44 +647,28 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2
 ; RV32-NEXT:    slli a1, a0, 1
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    .cfi_restore s1
-; RV32-NEXT:    .cfi_restore s2
-; RV32-NEXT:    .cfi_restore s3
-; RV32-NEXT:    .cfi_restore s4
 ; RV32-NEXT:    addi sp, sp, 48
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_deinterleave8_v16i8_v2i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -64
-; RV64-NEXT:    .cfi_def_cfa_offset 64
 ; RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s4, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    .cfi_offset s1, -24
-; RV64-NEXT:    .cfi_offset s2, -32
-; RV64-NEXT:    .cfi_offset s3, -40
-; RV64-NEXT:    .cfi_offset s4, -48
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a1, a0, 1
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    sub sp, sp, a0
-; RV64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 3 * vlenb
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; RV64-NEXT:    csrr s1, vlenb
@@ -798,44 +728,28 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2
 ; RV64-NEXT:    slli a1, a0, 1
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    add sp, sp, a0
-; RV64-NEXT:    .cfi_def_cfa sp, 64
 ; RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s2, 32(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s3, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s4, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
-; RV64-NEXT:    .cfi_restore s1
-; RV64-NEXT:    .cfi_restore s2
-; RV64-NEXT:    .cfi_restore s3
-; RV64-NEXT:    .cfi_restore s4
 ; RV64-NEXT:    addi sp, sp, 64
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave8_v16i8_v2i8:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -64
-; ZIP-NEXT:    .cfi_def_cfa_offset 64
 ; ZIP-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s4, 16(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
-; ZIP-NEXT:    .cfi_offset s1, -24
-; ZIP-NEXT:    .cfi_offset s2, -32
-; ZIP-NEXT:    .cfi_offset s3, -40
-; ZIP-NEXT:    .cfi_offset s4, -48
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a1, a0, 1
 ; ZIP-NEXT:    add a0, a1, a0
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 3 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; ZIP-NEXT:    csrr s1, vlenb
@@ -895,21 +809,13 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2
 ; ZIP-NEXT:    slli a1, a0, 1
 ; ZIP-NEXT:    add a0, a1, a0
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 64
 ; ZIP-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s2, 32(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s3, 24(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s4, 16(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
-; ZIP-NEXT:    .cfi_restore s1
-; ZIP-NEXT:    .cfi_restore s2
-; ZIP-NEXT:    .cfi_restore s3
-; ZIP-NEXT:    .cfi_restore s4
 ; ZIP-NEXT:    addi sp, sp, 64
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @llvm.vector.deinterleave8.v16i8(<16 x i8> %v)
 	   ret {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} %res

@@ -167,15 +167,13 @@ define <4 x i64> @vector_interleave_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b) {
 	   ret <4 x i64> %res
 }
 
-define <6 x i32> @vector_interleave3_v6i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+define <6 x i32> @vector_interleave3_v6i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) nounwind {
 ; CHECK-LABEL: vector_interleave3_v6i32_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 1
@@ -193,19 +191,15 @@ define <6 x i32> @vector_interleave3_v6i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave3_v6i32_v2i32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 1
@@ -223,19 +217,15 @@ define <6 x i32> @vector_interleave3_v6i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave3_v6i32_v2i32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 1
@@ -253,23 +243,19 @@ define <6 x i32> @vector_interleave3_v6i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <6 x i32> @llvm.vector.interleave3.v6i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
 	   ret <6 x i32> %res
 }
 
-define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
+define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) nounwind {
 ; CHECK-LABEL: vector_interleave4_v8i32_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 1
@@ -290,19 +276,15 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave4_v8i32_v2i32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 1
@@ -323,19 +305,15 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave4_v8i32_v2i32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 1
@@ -356,23 +334,19 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d)
 	   ret <8 x i32> %res
 }
 
-define <10 x i16> @vector_interleave5_v10i16_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 x i16> %e) {
+define <10 x i16> @vector_interleave5_v10i16_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 x i16> %e) nounwind {
 ; CHECK-LABEL: vector_interleave5_v10i16_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
@@ -397,19 +371,15 @@ define <10 x i16> @vector_interleave5_v10i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave5_v10i16_v2i16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 2
@@ -434,19 +404,15 @@ define <10 x i16> @vector_interleave5_v10i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave5_v10i16_v2i16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 2
@@ -471,23 +437,19 @@ define <10 x i16> @vector_interleave5_v10i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <10 x i16> @llvm.vector.interleave5.v10i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 x i16> %e)
 	   ret <10 x i16> %res
 }
 
-define <12 x i16> @vector_interleave6_v12i16_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 x i16> %e, <2 x i16> %f) {
+define <12 x i16> @vector_interleave6_v12i16_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 x i16> %e, <2 x i16> %f) nounwind {
 ; CHECK-LABEL: vector_interleave6_v12i16_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
@@ -515,19 +477,15 @@ define <12 x i16> @vector_interleave6_v12i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave6_v12i16_v2i16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 2
@@ -555,19 +513,15 @@ define <12 x i16> @vector_interleave6_v12i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave6_v12i16_v2i16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 2
@@ -595,22 +549,18 @@ define <12 x i16> @vector_interleave6_v12i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <12 x i16> @llvm.vector.interleave6.v12i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 x i16> %e, <2 x i16> %f)
 	   ret <12 x i16> %res
 }
 
-define <14 x i8> @vector_interleave7_v14i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x i8> %e, <2 x i8> %f, <2 x i8> %g) {
+define <14 x i8> @vector_interleave7_v14i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x i8> %e, <2 x i8> %f, <2 x i8> %g) nounwind {
 ; CHECK-LABEL: vector_interleave7_v14i8_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 3
@@ -641,18 +591,14 @@ define <14 x i8> @vector_interleave7_v14i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; CHECK-NEXT:    vslideup.vi v8, v12, 8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave7_v14i8_v2i8:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 3
@@ -683,18 +629,14 @@ define <14 x i8> @vector_interleave7_v14i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; ZVBB-NEXT:    vslideup.vi v8, v12, 8
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave7_v14i8_v2i8:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 3
@@ -725,22 +667,18 @@ define <14 x i8> @vector_interleave7_v14i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; ZIP-NEXT:    vslideup.vi v8, v12, 8
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <14 x i8> @llvm.vector.interleave7.v14i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x i8> %e, <2 x i8> %f, <2 x i8> %g)
 	   ret <14 x i8> %res
 }
 
-define <16 x i8> @vector_interleave8_v16i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x i8> %e, <2 x i8> %f, <2 x i8> %g, <2 x i8> %h) {
+define <16 x i8> @vector_interleave8_v16i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x i8> %e, <2 x i8> %f, <2 x i8> %g, <2 x i8> %h) nounwind {
 ; CHECK-LABEL: vector_interleave8_v16i8_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 3
@@ -774,18 +712,14 @@ define <16 x i8> @vector_interleave8_v16i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; CHECK-NEXT:    vslideup.vi v8, v10, 8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave8_v16i8_v2i8:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 3
@@ -819,18 +753,14 @@ define <16 x i8> @vector_interleave8_v16i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 8
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave8_v16i8_v2i8:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 1 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 3
@@ -864,9 +794,7 @@ define <16 x i8> @vector_interleave8_v16i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; ZIP-NEXT:    vslideup.vi v8, v10, 8
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <16 x i8> @llvm.vector.interleave8.v16i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x i8> %e, <2 x i8> %f, <2 x i8> %g, <2 x i8> %h)
 	   ret <16 x i8> %res
@@ -1064,15 +992,13 @@ define <4 x double> @vector_interleave_v4f64_v2f64(<2 x double> %a, <2 x double>
 	   ret <4 x double> %res
 }
 
-define <6 x float> @vector_interleave3_v6f32_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
+define <6 x float> @vector_interleave3_v6f32_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c) nounwind {
 ; CHECK-LABEL: vector_interleave3_v6f32_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 1
@@ -1090,19 +1016,15 @@ define <6 x float> @vector_interleave3_v6f32_v2f32(<2 x float> %a, <2 x float> %
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave3_v6f32_v2f32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 1
@@ -1120,19 +1042,15 @@ define <6 x float> @vector_interleave3_v6f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave3_v6f32_v2f32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 1
@@ -1150,23 +1068,19 @@ define <6 x float> @vector_interleave3_v6f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <6 x float> @llvm.vector.interleave3.v6f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
 	   ret <6 x float> %res
 }
 
-define <8 x float> @vector_interleave4_v8f32_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d) {
+define <8 x float> @vector_interleave4_v8f32_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d) nounwind {
 ; CHECK-LABEL: vector_interleave4_v8f32_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 1
@@ -1187,19 +1101,15 @@ define <8 x float> @vector_interleave4_v8f32_v2f32(<2 x float> %a, <2 x float> %
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave4_v8f32_v2f32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 1
@@ -1220,19 +1130,15 @@ define <8 x float> @vector_interleave4_v8f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave4_v8f32_v2f32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 1
@@ -1253,23 +1159,19 @@ define <8 x float> @vector_interleave4_v8f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <8 x float> @llvm.vector.interleave4.v8f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d)
 	   ret <8 x float> %res
 }
 
-define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d, <2 x half> %e) {
+define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d, <2 x half> %e) nounwind {
 ; CHECK-LABEL: vector_interleave5_v10f16_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
@@ -1294,19 +1196,15 @@ define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave5_v10f16_v2f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 2
@@ -1331,19 +1229,15 @@ define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave5_v10f16_v2f16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 2
@@ -1368,23 +1262,19 @@ define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <10 x half> @llvm.vector.interleave5.v10f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d, <2 x half> %e)
 	   ret <10 x half> %res
 }
 
-define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d, <2 x half> %e, <2 x half> %f) {
+define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d, <2 x half> %e, <2 x half> %f) nounwind {
 ; CHECK-LABEL: vector_interleave6_v12f16_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
@@ -1412,19 +1302,15 @@ define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave6_v12f16_v2f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 2
@@ -1452,19 +1338,15 @@ define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave6_v12f16_v2f16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 2
@@ -1492,23 +1374,19 @@ define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <12 x half> @llvm.vector.interleave6.v12f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d, <2 x half> %e, <2 x half> %f)
 	   ret <12 x half> %res
 }
 
-define <7 x half> @vector_interleave7_v7f16_v1f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g) {
+define <7 x half> @vector_interleave7_v7f16_v1f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g) nounwind {
 ; CHECK-LABEL: vector_interleave7_v7f16_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
@@ -1540,19 +1418,15 @@ define <7 x half> @vector_interleave7_v7f16_v1f16(<1 x half> %a, <1 x half> %b, 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave7_v7f16_v1f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 2
@@ -1584,19 +1458,15 @@ define <7 x half> @vector_interleave7_v7f16_v1f16(<1 x half> %a, <1 x half> %b, 
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave7_v7f16_v1f16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 2
@@ -1628,23 +1498,19 @@ define <7 x half> @vector_interleave7_v7f16_v1f16(<1 x half> %a, <1 x half> %b, 
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <7 x half> @llvm.vector.interleave7.v7f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g)
 	   ret <7 x half> %res
 }
 
-define <8 x half> @vector_interleave8_v8f16_v1f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g, <1 x half> %h) {
+define <8 x half> @vector_interleave8_v8f16_v1f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g, <1 x half> %h) nounwind {
 ; CHECK-LABEL: vector_interleave8_v8f16_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
@@ -1679,19 +1545,15 @@ define <8 x half> @vector_interleave8_v8f16_v1f16(<1 x half> %a, <1 x half> %b, 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave8_v8f16_v1f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a1, a1, 2
@@ -1726,19 +1588,15 @@ define <8 x half> @vector_interleave8_v8f16_v1f16(<1 x half> %a, <1 x half> %b, 
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave8_v8f16_v1f16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -16
-; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    srli a1, a1, 2
@@ -1773,9 +1631,7 @@ define <8 x half> @vector_interleave8_v8f16_v1f16(<1 x half> %a, <1 x half> %b, 
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 1
 ; ZIP-NEXT:    add sp, sp, a0
-; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
 	   %res = call <8 x half> @llvm.vector.interleave8.v8f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g, <1 x half> %h)
 	   ret <8 x half> %res
