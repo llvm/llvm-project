@@ -6623,11 +6623,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
     InOp1 = GetWidenedVector(InOp1);
     InOp2 = GetWidenedVector(InOp2);
   } else {
-    SDValue Undef = DAG.getUNDEF(WidenInVT);
+    SDValue Poison = DAG.getPOISON(WidenInVT);
     SDValue ZeroIdx = DAG.getVectorIdxConstant(0, SDLoc(N));
-    InOp1 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Undef,
+    InOp1 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Poison,
                         InOp1, ZeroIdx);
-    InOp2 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Undef,
+    InOp2 = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), WidenInVT, Poison,
                         InOp2, ZeroIdx);
   }
 
