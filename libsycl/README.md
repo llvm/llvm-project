@@ -1,5 +1,20 @@
-This directory and its subdirectories contain source code for llvm-libsycl,
-an implementation of the SYCL runtime library.
+## SYCL runtime library
 
-LLVM is open source software. You may freely distribute it under the terms of
-the license agreement found in LICENSE.txt.
+The libsycl subproject is an implementation of the SYCL runtime library as defined by the
+[SYCL 2020 specification](https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html).
+
+Subproject documentation is available at: [SYCL RT documentation](./docs).
+
+libsycl runtime library and headers require C++17 support or higher.
+
+### How to use DPC++
+
+TBD
+
+#### Build from sources
+
+TBD
+
+# License
+
+See [LICENSE](./LICENSE.TXT) for details.

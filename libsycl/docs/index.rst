@@ -1,16 +1,5 @@
 .. _index:
 
-==============================
-"libsycl" SYCL runtime library
-==============================
-
-Overview
-========
-
-libsycl is an implementation of the SYCL runtime library as defined by the
-`SYCL 2020 specification <https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html>`_.
-
-libsycl runtime library and headers require C++17 support or higher.
 
 Current Status
 ==============
@@ -49,12 +38,12 @@ support for a simple SYCL application with device code using Unified Shared Memo
    }
 
 This requires at least partial support of the following functionality on the libsycl side:
-  * sycl::platform class
-  * sycl::device class
-  * sycl::context class
-  * sycl::queue class
-  * sycl::handler class
-  * sycl::id and sycl::range classes
+  * ``sycl::platform`` class
+  * ``sycl::device`` class
+  * ``sycl::context`` class
+  * ``sycl::queue`` class
+  * ``sycl::handler`` class
+  * ``sycl::id`` and ``sycl::range`` classes
   * Unified shared memory allocation/deallocation
   * Program manager, an internal component for retrieving and using device images from the multi-architectural binaries
   

@@ -24,8 +24,6 @@ option(LIBSYCL_ENABLE_WERROR "Treat all warnings as errors in the libsycl projec
 
 set(LIBSYCL_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}" CACHE STRING
     "Path where libsycl headers should be installed.")
-set(LIBSYCL_INSTALL_LIBRARY_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
-    "Path where built libsycl runtime libraries should be installed.")
 
 set(LIBSYCL_SHARED_OUTPUT_NAME "sycl" CACHE STRING "Output name for the shared libsycl runtime library.")
 

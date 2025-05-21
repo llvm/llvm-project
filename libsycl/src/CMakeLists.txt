@@ -77,13 +77,6 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
   set_target_properties(${LIB_NAME} PROPERTIES
                         VERSION ${LIBSYCL_VERSION_STRING}
                         SOVERSION ${LIBSYCL_VERSION_STRING})
-
-  check_cxx_compiler_flag(-Winstantiation-after-specialization
-    HAS_INST_AFTER_SPEC)
-  if (HAS_INST_AFTER_SPEC)
-    target_compile_options(${LIB_OBJ_NAME} PRIVATE
-      -Winstantiation-after-specialization)
-  endif()
 endfunction(add_sycl_rt_library)
 
 set(LIBSYCL_SOURCES
