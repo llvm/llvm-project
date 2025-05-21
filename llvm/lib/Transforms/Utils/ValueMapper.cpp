@@ -773,7 +773,7 @@ MDNode *MDNodeMapper::visitOperands(UniquedGraph &G, MDNode::op_iterator &I,
     MDNode &OpN = *cast<MDNode>(Op);
     assert(OpN.isUniqued() &&
            "Only uniqued operands cannot be mapped immediately");
-    if (G.Info.insert(std::make_pair(&OpN, Data())).second)
+    if (G.Info.try_emplace(&OpN).second)
       return &OpN; // This is a new one.  Return it.
   }
   return nullptr;
