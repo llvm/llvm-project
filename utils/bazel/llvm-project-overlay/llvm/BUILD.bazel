@@ -608,6 +608,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoBTF",
         ":DebugInfoDWARF",
+        ":DebugInfoGSYM",
         ":DebugInfoPDB",
         ":Demangle",
         ":Object",
@@ -940,6 +941,7 @@ filegroup(
 cc_library(
     name = "Core",
     srcs = glob([
+        "include/llvm/ProfileData/MemProfCommon.h",
         "lib/IR/*.cpp",
         "lib/IR/*.h",
     ]),
@@ -1535,6 +1537,7 @@ cc_library(
         ":Core",
         ":Support",
         ":Target",
+        ":TargetParser",
         ":TransformUtils",
         ":config",
     ],
