@@ -16062,7 +16062,10 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
     case 'v':
       switch (BitWidth) {
       case 16:
-        RC = &AMDGPU::VGPR_32RegClass;
+        if (Subtarget->useRealTrue16Insts())
+          RC = &AMDGPU::VGPR_16RegClass;
+        else
+          RC = &AMDGPU::VGPR_32RegClass;
         break;
       default:
         RC = TRI->getVGPRClassForBitWidth(BitWidth);
