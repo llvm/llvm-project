@@ -59296,7 +59296,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     std::iota(BlendMask.begin(), BlendMask.end(), 0);
     std::iota(BlendMask.begin() + IdxVal,
               BlendMask.begin() + IdxVal + SubVecNumElts, VecNumElts + IdxVal);
-    if (isShuffleEquivalent(Mask, BlendMask, Vec, ExtSrc)) {
+    if (isShuffleEquivalent(Mask, BlendMask, Vec, ExtSrc) &&
+        VecNumElts == (2 * SubVecNumElts)) {
       assert((IdxVal == 0 || IdxVal == SubVecNumElts) &&
              "Unaligned subvector insertion");
       if (OpVT.is256BitVector() && SubVecVT.is128BitVector()) {
