@@ -9,6 +9,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -68,6 +69,13 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
   return interleaveWithError(c.begin(), c.end(), eachFn, [&]() { os << ", "; });
 }
 
+template <typename Container, typename UnaryFunctor>
+inline LogicalResult interleaveWithNewLineWithError(const Container &c,
+                                              raw_ostream &os,
+                                              UnaryFunctor eachFn) {
+  return interleaveWithError(c.begin(), c.end(), eachFn, [&]() { os << "\n"; });
+}
+
 /// Return the precedence of a operator as an integer, higher values
 /// imply higher precedence.
 static FailureOr<int> getOperatorPrecedence(Operation *operation) {
@@ -116,7 +124,7 @@ namespace {
 /// Emitter that uses dialect specific emitters to emit C++ code.
 struct CppEmitter {
   explicit CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
-                      StringRef fileId);
+                      StringRef fileId, StringRef className);
 
   /// Emits attribute or returns failure.
   LogicalResult emitAttribute(Location loc, Attribute attr);
@@ -233,6 +241,9 @@ struct CppEmitter {
   /// be declared at the beginning of a function.
   bool shouldDeclareVariablesAtTop() { return declareVariablesAtTop; };
 
+  // Returns if we should spit out a C++ class
+  std::string shouldSpitClass() { return className; };
+
   /// Returns whether this file op should be emitted
   bool shouldEmitFile(FileOp file) {
     return !fileId.empty() && file.getId() == fileId;
@@ -267,6 +278,9 @@ private:
 
   /// Only emit file ops whos id matches this value.
   std::string fileId;
+
+  /// Name of the C++ class we will spit
+  std::string className;
 
   /// Map from value to name of C++ variable that contain the name.
   ValueMapper valueMapper;
@@ -1025,6 +1039,32 @@ static LogicalResult printFunctionArgs(CppEmitter &emitter,
       }));
 }
 
+static LogicalResult printAttributes(CppEmitter &emitter,
+                                       Operation *functionOp,
+                                       ArrayRef<Type> arguments) {
+  raw_indented_ostream &os = emitter.ostream();
+  for (auto arg : arguments) {
+    os << "  ";
+    if (failed(emitter.emitType(functionOp->getLoc(), arg)))
+      return failure();
+    os << " " << arg << ";\n";
+  }
+  return success();
+}
+
+static LogicalResult printAttributes(CppEmitter &emitter,
+                                       Operation *functionOp,
+                                       Region::BlockArgListType arguments) {
+  raw_indented_ostream &os = emitter.ostream();
+  for (auto arg : arguments) {
+    os << "  ";
+    if (failed(emitter.emitType(functionOp->getLoc(), arg.getType())))
+      return failure();
+    os << " " << emitter.getOrCreateName(arg) << ";\n";
+  }
+  return success();
+}
+
 static LogicalResult printFunctionBody(CppEmitter &emitter,
                                        Operation *functionOp,
                                        Region::BlockListType &blocks) {
@@ -1138,35 +1178,107 @@ static LogicalResult printOperation(CppEmitter &emitter,
         "with multiple blocks needs variables declared at top");
   }
 
-  CppEmitter::Scope scope(emitter);
+  CppEmitter::Scope classScope(emitter);
   raw_indented_ostream &os = emitter.ostream();
-  if (functionOp.getSpecifiers()) {
-    for (Attribute specifier : functionOp.getSpecifiersAttr()) {
-      os << cast<StringAttr>(specifier).str() << " ";
-    }
-  }
-
-  if (failed(emitter.emitTypes(functionOp.getLoc(),
-                               functionOp.getFunctionType().getResults())))
-    return failure();
-  os << " " << functionOp.getName();
-
-  os << "(";
   Operation *operation = functionOp.getOperation();
-  if (functionOp.isExternal()) {
-    if (failed(printFunctionArgs(emitter, operation,
-                                 functionOp.getArgumentTypes())))
-      return failure();
-    os << ");";
-    return success();
-  }
-  if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
-    return failure();
-  os << ") {\n";
-  if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
-    return failure();
-  os << "}\n";
+  if (!emitter.shouldSpitClass().empty()) {
+    os << "class " << emitter.shouldSpitClass() << " final {\n";
+    os << "public: \n";
 
+    if (functionOp.isExternal()) { 
+      if (failed(printAttributes(emitter, operation,
+                                  functionOp.getArgumentTypes())))
+        return failure();
+      return success();
+    }
+    if (failed(printAttributes(emitter, operation, functionOp.getArguments())))
+      return failure();
+    
+    os << "\n";
+    
+    auto argAttrs = functionOp.getArgAttrs();
+    std::map<std::string, Value> fields; 
+    if (argAttrs)
+      for (auto [a,v] : zip(*argAttrs, functionOp.getArguments())) { 
+        if (auto da = dyn_cast<mlir::DictionaryAttr>(a)) {
+          auto nv = da.getNamed("tf_saved_model.index_path")->getValue(); 
+          auto name = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]).str(); 
+          fields[name] = v;
+        }
+      }
+
+    for (auto & r : functionOp->getRegions()) 
+      for (auto &b : r.getBlocks())
+        for (auto &opt : b.getOperations())  
+          if (auto alloc = dyn_cast<memref::AllocOp>(opt)) { 
+            auto name = emitter.getOrCreateName(alloc).str(); 
+            fields[name] = alloc;
+            if (failed(emitter.emitType(alloc.getLoc(), alloc.getType().getElementType())))
+              return failure();
+            os << " [" << alloc.getType().getNumElements() <<"] "; 
+            os << " " << name << ";\n";
+          }
+    os << "  std::map<std::string, char*> _buffer_map {"; 
+    for (auto &[n,v]:fields)
+      os << "{ \"" << n << "\"" << ", reinterpret_cast<char*>(" << emitter.getOrCreateName(v) << ") },";
+    os << "  };\n";
+    os << "  char* getBufferForName(const std::string& name) const {\n";
+    os << "    auto it = _buffer_map.find(name);\n";
+    os << "    return (it == _buffer_map.end()) ? nullptr : it->second;\n";
+    os << "  }\n\n";
+
+    os.indent();
+
+    // Begin defining the main function where we have the actual execution
+    if (functionOp.getSpecifiers()) {
+      for (Attribute specifier : functionOp.getSpecifiersAttr()) {
+        os << cast<StringAttr>(specifier).str() << " ";
+      }
+    }
+
+    if (failed(emitter.emitTypes(functionOp.getLoc(),
+                                functionOp.getFunctionType().getResults())))
+      return failure();
+    os << " " << functionOp.getName();
+
+    //Defining the functionBody
+    os << "() { \n"; // Begin defining the function header (We need the function name and output type to remain without the rest of the function header)
+    os.indent();
+    if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
+      return failure();
+    os.unindent();
+    os << "}\n";
+    os.unindent();
+    os << "};\n";
+  } else {
+    if (functionOp.getSpecifiers()) {
+      for (Attribute specifier : functionOp.getSpecifiersAttr()) {
+        os << cast<StringAttr>(specifier).str() << " ";
+      }
+    }
+
+    if (failed(emitter.emitTypes(functionOp.getLoc(),
+                                functionOp.getFunctionType().getResults())))
+      return failure();
+    os << " " << functionOp.getName();
+
+    os << "(";
+    Operation *operation = functionOp.getOperation();
+    if (functionOp.isExternal()) {
+      if (failed(printFunctionArgs(emitter, operation,
+                                  functionOp.getArgumentTypes())))
+        return failure();
+      os << ");";
+      return success();
+    }
+    if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
+      return failure();
+    os << ") {\n";
+    if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
+      return failure();
+    os << "}\n";
+  }
+  
   return success();
 }
 
@@ -1202,9 +1314,9 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
-                       StringRef fileId)
+                       StringRef fileId, StringRef className)
     : os(os), declareVariablesAtTop(declareVariablesAtTop),
-      fileId(fileId.str()) {
+      fileId(fileId.str()), className(className.str()) {
   valueInScopeCount.push(0);
   labelInScopeCount.push(0);
 }
@@ -1787,7 +1899,7 @@ LogicalResult CppEmitter::emitTupleType(Location loc, ArrayRef<Type> types) {
 
 LogicalResult emitc::translateToCpp(Operation *op, raw_ostream &os,
                                     bool declareVariablesAtTop,
-                                    StringRef fileId) {
-  CppEmitter emitter(os, declareVariablesAtTop, fileId);
+                                    StringRef fileId, StringRef className) {
+  CppEmitter emitter(os, declareVariablesAtTop, fileId, className);
   return emitter.emitOperation(*op, /*trailingSemicolon=*/false);
 }
