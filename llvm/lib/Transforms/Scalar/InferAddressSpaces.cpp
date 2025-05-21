@@ -658,9 +658,6 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
 // Note that we do not necessarily clone `I`, e.g., if it is an addrspacecast
 // from a pointer whose type already matches. Therefore, this function returns a
 // Value* instead of an Instruction*.
-//
-// This may also return nullptr in the case the instruction could not be
-// rewritten.
 Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     Instruction *I, unsigned NewAddrSpace,
     const ValueToValueMapTy &ValueWithNewAddrSpace,
@@ -681,17 +678,24 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     // Technically the intrinsic ID is a pointer typed argument, so specially
     // handle calls early.
     assert(II->getIntrinsicID() == Intrinsic::ptrmask);
+    const Use &PtrArgUse = II->getArgOperandUse(0);
     Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
-        II->getArgOperandUse(0), NewAddrSpace, ValueWithNewAddrSpace,
-        PredicatedAS, PoisonUsesToFix);
+        PtrArgUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS,
+        PoisonUsesToFix);
     Value *Rewrite =
         TTI->rewriteIntrinsicWithAddressSpace(II, II->getArgOperand(0), NewPtr);
     if (Rewrite) {
       assert(Rewrite != II && "cannot modify this pointer operation in place");
       return Rewrite;
     }
-
-    return nullptr;
+    // Leave the ptrmask as-is and insert an addrspacecast after it.
+    Instruction *AddrSpaceCast = new AddrSpaceCastInst(II, NewPtr->getType());
+    AddrSpaceCast->insertAfter(II->getIterator());
+    AddrSpaceCast->setDebugLoc(II->getDebugLoc());
+    // If we generated a poison operand for the ptr argument, remove it.
+    if (!PoisonUsesToFix->empty() && PoisonUsesToFix->back() == &PtrArgUse)
+      PoisonUsesToFix->pop_back();
+    return AddrSpaceCast;
   }
 
   unsigned AS = TTI->getAssumedAddrSpace(I);
@@ -1351,19 +1355,9 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
     unsigned OperandNo = PoisonUse->getOperandNo();
     assert(isa<PoisonValue>(NewV->getOperand(OperandNo)));
     WeakTrackingVH NewOp = ValueWithNewAddrSpace.lookup(PoisonUse->get());
-    if (NewOp) {
-      NewV->setOperand(OperandNo, NewOp);
-    } else {
-      // Something went wrong while converting the instruction defining the new
-      // operand value.  -> Replace the poison value with the previous operand
-      // value combined with an addrspacecast.
-      Value *PoisonOp = NewV->getOperand(OperandNo);
-      Value *OldOp = V->getOperand(OperandNo);
-      Value *AddrSpaceCast =
-          new AddrSpaceCastInst(OldOp, PoisonOp->getType(), "",
-                                cast<Instruction>(NewV)->getIterator());
-      NewV->setOperand(OperandNo, AddrSpaceCast);
-    }
+    assert(NewOp &&
+           "poison replacements in ValueWithNewAddrSpace shouldn't be null");
+    NewV->setOperand(OperandNo, NewOp);
   }
 
   SmallVector<Instruction *, 16> DeadInstructions;
