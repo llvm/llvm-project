@@ -556,6 +556,9 @@ define void @inlineasm2() {
   ; CHECK: {{.*}} = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
   ; CHECK-NEXT: llvm.inline_asm has_side_effects tail_call_kind = <tail> asm_dialect = att operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" {{.*}} : (!llvm.ptr) -> !llvm.void
   tail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %p)
+
+  ; CHECK: llvm.inline_asm has_side_effects tail_call_kind = <notail> asm_dialect = att operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" {{.*}} : (!llvm.ptr) -> !llvm.void
+  notail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %p)
   ret void
 }
 
