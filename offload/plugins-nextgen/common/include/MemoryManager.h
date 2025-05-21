@@ -36,7 +36,11 @@ public:
                          TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
-  virtual int free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
+  virtual int free(void *TgtPtr) = 0;
+
+  /// Delete the pointer \p TgtPtr, of type TARGET_ALLOC_DEVICE_NON_BLOCKING,
+  /// on the device.
+  virtual int free_non_blocking(void *TgtPtr) = 0;
 };
 
 /// Class of memory manager. The memory manager is per-device by using

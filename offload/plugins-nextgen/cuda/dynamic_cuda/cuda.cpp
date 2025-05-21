@@ -84,6 +84,7 @@ DLWRAP(cuEventRecord, 2)
 DLWRAP(cuStreamWaitEvent, 3)
 DLWRAP(cuEventSynchronize, 1)
 DLWRAP(cuEventDestroy, 1)
+DLWRAP(cuPointerGetAttributes, 4)
 
 DLWRAP_FINALIZE()
 

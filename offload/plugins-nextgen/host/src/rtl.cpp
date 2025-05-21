@@ -239,10 +239,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Free the memory. Use std::free in all cases.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  int free(void *TgtPtr) override {
     std::free(TgtPtr);
     return OFFLOAD_SUCCESS;
   }
+
+  int free_non_blocking(void *TgtPtr) override { return free(TgtPtr); }
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
   /// return the same pointer as the device pointer.

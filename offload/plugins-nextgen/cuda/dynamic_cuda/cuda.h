@@ -256,6 +256,11 @@ typedef enum CUdevice_attribute_enum {
   CU_DEVICE_ATTRIBUTE_MAX,
 } CUdevice_attribute;
 
+typedef enum CUpointer_attribute_enum {
+  CU_POINTER_ATTRIBUTE_MEMORY_TYPE = 2,
+  CU_POINTER_ATTRIBUTE_IS_MANAGED = 8,
+} CUpointer_attribute;
+
 typedef enum CUfunction_attribute_enum {
   CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK = 0,
 } CUfunction_attribute;
@@ -283,6 +288,13 @@ typedef enum CUevent_flags_enum {
   CU_EVENT_DISABLE_TIMING = 0x2,
   CU_EVENT_INTERPROCESS = 0x4
 } CUevent_flags;
+
+typedef enum CUmemorytype_enum {
+  CU_MEMORYTYPE_HOST = 0x01,
+  CU_MEMORYTYPE_DEVICE = 0x02,
+  CU_MEMORYTYPE_ARRAY = 0x03,
+  CU_MEMORYTYPE_UNIFIED = 0x04
+} CUmemorytype;
 
 static inline void *CU_LAUNCH_PARAM_END = (void *)0x00;
 static inline void *CU_LAUNCH_PARAM_BUFFER_POINTER = (void *)0x01;
@@ -370,5 +382,8 @@ CUresult cuMemSetAccess(CUdeviceptr ptr, size_t size,
 CUresult cuMemGetAllocationGranularity(size_t *granularity,
                                        const CUmemAllocationProp *prop,
                                        CUmemAllocationGranularity_flags option);
+CUresult cuPointerGetAttributes(unsigned int numAttributes,
+                                CUpointer_attribute *attributes, void **data,
+                                CUdeviceptr ptr);
 
 #endif
