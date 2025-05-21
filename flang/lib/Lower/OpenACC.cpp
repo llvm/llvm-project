@@ -1389,16 +1389,16 @@ mlir::Type getTypeFromBounds(llvm::SmallVector<mlir::Value> &bounds,
 }
 
 template <typename RecipeOp>
-static void
-genPrivatizations(const Fortran::parser::AccObjectList &objectList,
-                  Fortran::lower::AbstractConverter &converter,
-                  Fortran::semantics::SemanticsContext &semanticsContext,
-                  Fortran::lower::StatementContext &stmtCtx,
-                  llvm::SmallVectorImpl<mlir::Value> &dataOperands,
-                  llvm::SmallVector<mlir::Attribute> &privatizations,
-                  llvm::ArrayRef<mlir::Value> async,
-                  llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
-                  llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes) {
+static void genPrivatizationRecipes(
+    const Fortran::parser::AccObjectList &objectList,
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::StatementContext &stmtCtx,
+    llvm::SmallVectorImpl<mlir::Value> &dataOperands,
+    llvm::SmallVector<mlir::Attribute> &privatizationRecipes,
+    llvm::ArrayRef<mlir::Value> async,
+    llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
+    llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objectList.v) {
@@ -1445,7 +1445,7 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
           /*unwrapBoxAddr=*/true);
       dataOperands.push_back(op.getAccVar());
     }
-    privatizations.push_back(mlir::SymbolRefAttr::get(
+    privatizationRecipes.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), recipe.getSymName().str()));
   }
 }
@@ -2083,15 +2083,15 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
   return builder.getIntegerType(ivTypeSize * 8);
 }
 
-static void privatizeIv(Fortran::lower::AbstractConverter &converter,
-                        const Fortran::semantics::Symbol &sym,
-                        mlir::Location loc,
-                        llvm::SmallVector<mlir::Type> &ivTypes,
-                        llvm::SmallVector<mlir::Location> &ivLocs,
-                        llvm::SmallVector<mlir::Value> &privateOperands,
-                        llvm::SmallVector<mlir::Value> &ivPrivate,
-                        llvm::SmallVector<mlir::Attribute> &privatizations,
-                        bool isDoConcurrent = false) {
+static void
+privatizeIv(Fortran::lower::AbstractConverter &converter,
+            const Fortran::semantics::Symbol &sym, mlir::Location loc,
+            llvm::SmallVector<mlir::Type> &ivTypes,
+            llvm::SmallVector<mlir::Location> &ivLocs,
+            llvm::SmallVector<mlir::Value> &privateOperands,
+            llvm::SmallVector<mlir::Value> &ivPrivate,
+            llvm::SmallVector<mlir::Attribute> &privatizationRecipes,
+            bool isDoConcurrent = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   mlir::Type ivTy = getTypeFromIvTypeSize(builder, sym);
@@ -2131,7 +2131,7 @@ static void privatizeIv(Fortran::lower::AbstractConverter &converter,
     privateOp = op.getOperation();
 
     privateOperands.push_back(op.getAccVar());
-    privatizations.push_back(mlir::SymbolRefAttr::get(
+    privatizationRecipes.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), recipe.getSymName().str()));
   }
 
@@ -2161,7 +2161,7 @@ static mlir::acc::LoopOp createLoopOp(
   llvm::SmallVector<mlir::Value> tileOperands, privateOperands, ivPrivate,
       reductionOperands, cacheOperands, vectorOperands, workerNumOperands,
       gangOperands, lowerbounds, upperbounds, steps;
-  llvm::SmallVector<mlir::Attribute> privatizations, reductionRecipes;
+  llvm::SmallVector<mlir::Attribute> privatizationRecipes, reductionRecipes;
   llvm::SmallVector<int32_t> tileOperandsSegments, gangOperandsSegments;
   llvm::SmallVector<int64_t> collapseValues;
 
@@ -2282,9 +2282,9 @@ static mlir::acc::LoopOp createLoopOp(
     } else if (const auto *privateClause =
                    std::get_if<Fortran::parser::AccClause::Private>(
                        &clause.u)) {
-      genPrivatizations<mlir::acc::PrivateRecipeOp>(
+      genPrivatizationRecipes<mlir::acc::PrivateRecipeOp>(
           privateClause->v, converter, semanticsContext, stmtCtx,
-          privateOperands, privatizations, /*async=*/{},
+          privateOperands, privatizationRecipes, /*async=*/{},
           /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
@@ -2368,7 +2368,8 @@ static mlir::acc::LoopOp createLoopOp(
 
       const auto &name = std::get<Fortran::parser::Name>(control.t);
       privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
-                  privateOperands, ivPrivate, privatizations, isDoConcurrent);
+                  privateOperands, ivPrivate, privatizationRecipes,
+                  isDoConcurrent);
 
       inclusiveBounds.push_back(true);
     }
@@ -2405,7 +2406,7 @@ static mlir::acc::LoopOp createLoopOp(
       Fortran::semantics::Symbol &ivSym =
           bounds->name.thing.symbol->GetUltimate();
       privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
-                  privateOperands, ivPrivate, privatizations);
+                  privateOperands, ivPrivate, privatizationRecipes);
 
       inclusiveBounds.push_back(true);
 
@@ -2484,9 +2485,9 @@ static mlir::acc::LoopOp createLoopOp(
   if (!autoDeviceTypes.empty())
     loopOp.setAuto_Attr(builder.getArrayAttr(autoDeviceTypes));
 
-  if (!privatizations.empty())
-    loopOp.setPrivatizationsAttr(
-        mlir::ArrayAttr::get(builder.getContext(), privatizations));
+  if (!privatizationRecipes.empty())
+    loopOp.setPrivatizationRecipesAttr(
+        mlir::ArrayAttr::get(builder.getContext(), privatizationRecipes));
 
   if (!reductionRecipes.empty())
     loopOp.setReductionRecipesAttr(
@@ -2613,8 +2614,8 @@ static Op createComputeOp(
 
   llvm::SmallVector<mlir::Value> reductionOperands, privateOperands,
       firstprivateOperands;
-  llvm::SmallVector<mlir::Attribute> privatizations, firstPrivatizations,
-      reductionRecipes;
+  llvm::SmallVector<mlir::Attribute> privatizationRecipes,
+      firstPrivatizationRecipes, reductionRecipes;
 
   // Self clause has optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -2820,17 +2821,17 @@ static Op createComputeOp(
                    std::get_if<Fortran::parser::AccClause::Private>(
                        &clause.u)) {
       if (!combinedConstructs)
-        genPrivatizations<mlir::acc::PrivateRecipeOp>(
+        genPrivatizationRecipes<mlir::acc::PrivateRecipeOp>(
             privateClause->v, converter, semanticsContext, stmtCtx,
-            privateOperands, privatizations, async, asyncDeviceTypes,
+            privateOperands, privatizationRecipes, async, asyncDeviceTypes,
             asyncOnlyDeviceTypes);
     } else if (const auto *firstprivateClause =
                    std::get_if<Fortran::parser::AccClause::Firstprivate>(
                        &clause.u)) {
-      genPrivatizations<mlir::acc::FirstprivateRecipeOp>(
+      genPrivatizationRecipes<mlir::acc::FirstprivateRecipeOp>(
           firstprivateClause->v, converter, semanticsContext, stmtCtx,
-          firstprivateOperands, firstPrivatizations, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes);
+          firstprivateOperands, firstPrivatizationRecipes, async,
+          asyncDeviceTypes, asyncOnlyDeviceTypes);
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {
@@ -2934,15 +2935,15 @@ static Op createComputeOp(
     computeOp.setWaitOnlyAttr(builder.getArrayAttr(waitOnlyDeviceTypes));
 
   if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>) {
-    if (!privatizations.empty())
-      computeOp.setPrivatizationsAttr(
-          mlir::ArrayAttr::get(builder.getContext(), privatizations));
+    if (!privatizationRecipes.empty())
+      computeOp.setPrivatizationRecipesAttr(
+          mlir::ArrayAttr::get(builder.getContext(), privatizationRecipes));
     if (!reductionRecipes.empty())
       computeOp.setReductionRecipesAttr(
           mlir::ArrayAttr::get(builder.getContext(), reductionRecipes));
-    if (!firstPrivatizations.empty())
-      computeOp.setFirstprivatizationsAttr(
-          mlir::ArrayAttr::get(builder.getContext(), firstPrivatizations));
+    if (!firstPrivatizationRecipes.empty())
+      computeOp.setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(
+          builder.getContext(), firstPrivatizationRecipes));
   }
 
   if (combinedConstructs)
