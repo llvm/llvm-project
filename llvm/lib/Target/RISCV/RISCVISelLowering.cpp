@@ -18644,7 +18644,7 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
 
-  assert(N->getOpcode() == RISCVISD::ADD_VL);
+  assert(N->getOpcode() == RISCVISD::ADD_VL || N->getOpcode() == ISD::ADD);
 
   if (!N->getValueType(0).isVector())
     return SDValue();
@@ -18652,9 +18652,11 @@ static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
   SDValue Addend = N->getOperand(0);
   SDValue DotOp = N->getOperand(1);
 
-  SDValue AddPassthruOp = N->getOperand(2);
-  if (!AddPassthruOp.isUndef())
-    return SDValue();
+  if (N->getOpcode() == RISCVISD::ADD_VL) {
+    SDValue AddPassthruOp = N->getOperand(2);
+    if (!AddPassthruOp.isUndef())
+      return SDValue();
+  }
 
   auto IsVqdotqOpc = [](unsigned Opc) {
     switch (Opc) {
@@ -18673,8 +18675,15 @@ static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
   if (!IsVqdotqOpc(DotOp.getOpcode()))
     return SDValue();
 
-  SDValue AddMask = N->getOperand(3);
-  SDValue AddVL = N->getOperand(4);
+  auto [AddMask, AddVL] = [](SDNode *N, SelectionDAG &DAG,
+                             const RISCVSubtarget &Subtarget) {
+    if (N->getOpcode() == ISD::ADD) {
+      SDLoc DL(N);
+      return getDefaultScalableVLOps(N->getSimpleValueType(0), DL, DAG,
+                                     Subtarget);
+    }
+    return std::make_pair(N->getOperand(3), N->getOperand(4));
+  }(N, DAG, Subtarget);
 
   SDValue MulVL = DotOp.getOperand(4);
   if (AddVL != MulVL)
@@ -19311,6 +19320,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
     if (SDValue V = combineToVWMACC(N, DAG, Subtarget))
+      return V;
+    if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
       return V;
     return performADDCombine(N, DCI, Subtarget);
   }

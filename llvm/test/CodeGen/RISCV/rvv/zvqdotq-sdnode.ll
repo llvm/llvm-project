@@ -314,12 +314,10 @@ define i32 @vqdot_vv_accum(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale
 ; DOT-LABEL: vqdot_vv_accum:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; DOT-NEXT:    vmv.v.i v12, 0
-; DOT-NEXT:    vqdot.vv v12, v8, v10
-; DOT-NEXT:    vadd.vv v16, v12, v16
-; DOT-NEXT:    vmv.s.x v8, zero
+; DOT-NEXT:    vmv.s.x v12, zero
+; DOT-NEXT:    vqdot.vv v16, v8, v10
 ; DOT-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; DOT-NEXT:    vredsum.vs v8, v16, v8
+; DOT-NEXT:    vredsum.vs v8, v16, v12
 ; DOT-NEXT:    vmv.x.s a0, v8
 ; DOT-NEXT:    ret
 entry:
@@ -347,12 +345,10 @@ define i32 @vqdotu_vv_accum(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscal
 ; DOT-LABEL: vqdotu_vv_accum:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; DOT-NEXT:    vmv.v.i v12, 0
-; DOT-NEXT:    vqdotu.vv v12, v8, v10
-; DOT-NEXT:    vadd.vv v16, v12, v16
-; DOT-NEXT:    vmv.s.x v8, zero
+; DOT-NEXT:    vmv.s.x v12, zero
+; DOT-NEXT:    vqdotu.vv v16, v8, v10
 ; DOT-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; DOT-NEXT:    vredsum.vs v8, v16, v8
+; DOT-NEXT:    vredsum.vs v8, v16, v12
 ; DOT-NEXT:    vmv.x.s a0, v8
 ; DOT-NEXT:    ret
 entry:
@@ -380,12 +376,10 @@ define i32 @vqdotsu_vv_accum(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vsca
 ; DOT-LABEL: vqdotsu_vv_accum:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; DOT-NEXT:    vmv.v.i v12, 0
-; DOT-NEXT:    vqdotsu.vv v12, v8, v10
-; DOT-NEXT:    vadd.vv v16, v12, v16
-; DOT-NEXT:    vmv.s.x v8, zero
+; DOT-NEXT:    vmv.s.x v12, zero
+; DOT-NEXT:    vqdotsu.vv v16, v8, v10
 ; DOT-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; DOT-NEXT:    vredsum.vs v8, v16, v8
+; DOT-NEXT:    vredsum.vs v8, v16, v12
 ; DOT-NEXT:    vmv.x.s a0, v8
 ; DOT-NEXT:    ret
 entry:
@@ -510,12 +504,10 @@ define i32 @vqdot_vv_split(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; DOT-NEXT:    vmv.v.i v16, 0
-; DOT-NEXT:    vmv.v.i v18, 0
 ; DOT-NEXT:    vqdot.vv v16, v8, v10
-; DOT-NEXT:    vqdot.vv v18, v12, v14
-; DOT-NEXT:    vadd.vv v8, v16, v18
-; DOT-NEXT:    vmv.s.x v10, zero
-; DOT-NEXT:    vredsum.vs v8, v8, v10
+; DOT-NEXT:    vqdot.vv v16, v12, v14
+; DOT-NEXT:    vmv.s.x v8, zero
+; DOT-NEXT:    vredsum.vs v8, v16, v8
 ; DOT-NEXT:    vmv.x.s a0, v8
 ; DOT-NEXT:    ret
 entry:
