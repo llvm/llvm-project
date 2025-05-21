@@ -149,6 +149,10 @@ static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
+static cl::opt<bool> DisableCombines("combiner-disabled", cl::Hidden,
+                                     cl::init(false),
+                                     cl::desc("Disable the DAG combiner"));
+
 namespace {
 
   class DAGCombiner {
@@ -248,7 +252,8 @@ namespace {
           STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL),
           BatchAA(BatchAA) {
       ForCodeSize = DAG.shouldOptForSize();
-      DisableGenericCombines = STI && STI->disableGenericCombines(OptLevel);
+      DisableGenericCombines =
+          DisableCombines || (STI && STI->disableGenericCombines(OptLevel));
 
       MaximumLegalStoreInBits = 0;
       // We use the minimum store size here, since that's all we can guarantee
@@ -9482,8 +9487,8 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // split into legal sized loads. This enables us to combine i64 load by i8
   // patterns to a couple of i32 loads on 32 bit targets.
   if (LegalOperations &&
-      !TLI.isOperationLegal(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD,
-                            MemVT))
+      !TLI.isLoadExtLegal(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, VT,
+                          MemVT))
     return SDValue();
 
   // Check if the bytes of the OR we are looking at match with either big or
@@ -12156,11 +12161,21 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // (select (ult x, C), x, (add x, -C)) -> (umin x, (add x, -C))
     APInt C;
     if (sd_match(Cond1, m_ConstInt(C)) && hasUMin(VT)) {
-      if ((CC == ISD::SETUGT && Cond0 == N2 &&
-           sd_match(N1, m_Add(m_Specific(N2), m_SpecificInt(~C)))) ||
-          (CC == ISD::SETULT && Cond0 == N1 &&
-           sd_match(N2, m_Add(m_Specific(N1), m_SpecificInt(-C)))))
-        return DAG.getNode(ISD::UMIN, DL, VT, N1, N2);
+      if (CC == ISD::SETUGT && Cond0 == N2 &&
+          sd_match(N1, m_Add(m_Specific(N2), m_SpecificInt(~C)))) {
+        // The resulting code relies on an unsigned wrap in ADD.
+        // Recreating ADD to drop possible nuw/nsw flags.
+        SDValue AddC = DAG.getConstant(~C, DL, VT);
+        SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N2, AddC);
+        return DAG.getNode(ISD::UMIN, DL, VT, Add, N2);
+      }
+      if (CC == ISD::SETULT && Cond0 == N1 &&
+          sd_match(N2, m_Add(m_Specific(N1), m_SpecificInt(-C)))) {
+        // Ditto.
+        SDValue AddC = DAG.getConstant(-C, DL, VT);
+        SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, AddC);
+        return DAG.getNode(ISD::UMIN, DL, VT, N1, Add);
+      }
     }
   }
 
