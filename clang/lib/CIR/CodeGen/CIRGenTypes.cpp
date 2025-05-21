@@ -226,7 +226,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // If converting this type would cause us to infinitely loop, don't do it!
   if (!isSafeToConvert(rd, *this)) {
-    cgm.errorNYI(rd->getSourceRange(), "recursive record layout");
+    deferredRecords.push_back(rd);
     return entry;
   }
 
@@ -259,7 +259,9 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // If we're done converting the outer-most record, then convert any deferred
   // records as well.
-  assert(!cir::MissingFeatures::recursiveRecordLayout());
+  if (recordsBeingLaidOut.empty())
+    while (!deferredRecords.empty())
+      convertRecordDeclType(deferredRecords.pop_back_val());
 
   return entry;
 }
