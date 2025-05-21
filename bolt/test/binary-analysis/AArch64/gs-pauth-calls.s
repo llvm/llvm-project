@@ -591,7 +591,9 @@ obscure_indirect_call_arg_nocfg:
         .globl  safe_lr_at_function_entry_nocfg
         .type   safe_lr_at_function_entry_nocfg,@function
 safe_lr_at_function_entry_nocfg:
-// CHECK-NOT: safe_lr_at_function_entry_nocfg
+// Due to state being reset after a label, paciasp is reported as
+// a signing oracle - this is a known false positive, ignore it.
+// CHECK-NOT: non-protected call{{.*}}safe_lr_at_function_entry_nocfg
         cbz     x0, 1f
         ret                            // LR is safe at the start of the function
 1:
