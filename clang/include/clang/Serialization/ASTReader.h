@@ -654,6 +654,10 @@ private:
   /// Map from the TU to its lexical contents from each module file.
   std::vector<std::pair<ModuleFile*, LexicalContents>> TULexicalDecls;
 
+  unsigned HeaderFileInfoIdx = 0;
+
+  llvm::DenseMap<FileEntryRef, HeaderFileInfo> HeaderFileInfoLookup;
+
   /// Map from a DeclContext to its lookup tables.
   llvm::DenseMap<const DeclContext *,
                  serialization::reader::DeclContextLookupTable> Lookups;

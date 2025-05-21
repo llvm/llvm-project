@@ -4155,6 +4155,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       if (Record[0]) {
         F.HeaderFileInfoTable = HeaderFileInfoLookupTable::Create(
             (const unsigned char *)F.HeaderFileInfoTableData + Record[0],
+            (const unsigned char *)F.HeaderFileInfoTableData + sizeof(uint32_t),
             (const unsigned char *)F.HeaderFileInfoTableData,
             HeaderFileInfoTrait(*this, F));
 
@@ -6831,43 +6832,60 @@ std::optional<bool> ASTReader::isPreprocessedEntityInFileID(unsigned Index,
     return false;
 }
 
-namespace {
+static void mergeHeaderFileInfoModuleBits(HeaderFileInfo &HFI,
+                                          bool isModuleHeader,
+                                          bool isTextualModuleHeader) {
+  HFI.isModuleHeader |= isModuleHeader;
+  if (HFI.isModuleHeader)
+    HFI.isTextualModuleHeader = false;
+  else
+    HFI.isTextualModuleHeader |= isTextualModuleHeader;
+}
 
-  /// Visitor used to search for information about a header file.
-  class HeaderFileInfoVisitor {
-  FileEntryRef FE;
-    std::optional<HeaderFileInfo> HFI;
+/// Merge the header file info provided by \p OtherHFI into the current
+/// header file info (\p HFI)
+static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
+                                const HeaderFileInfo &OtherHFI) {
+  assert(OtherHFI.External && "expected to merge external HFI");
 
-  public:
-    explicit HeaderFileInfoVisitor(FileEntryRef FE) : FE(FE) {}
+  HFI.isImport |= OtherHFI.isImport;
+  HFI.isPragmaOnce |= OtherHFI.isPragmaOnce;
+  mergeHeaderFileInfoModuleBits(HFI, OtherHFI.isModuleHeader,
+                                OtherHFI.isTextualModuleHeader);
 
-    bool operator()(ModuleFile &M) {
-      HeaderFileInfoLookupTable *Table
-        = static_cast<HeaderFileInfoLookupTable *>(M.HeaderFileInfoTable);
-      if (!Table)
-        return false;
+  if (!HFI.LazyControllingMacro.isValid())
+    HFI.LazyControllingMacro = OtherHFI.LazyControllingMacro;
 
-      // Look in the on-disk hash table for an entry for this file name.
-      HeaderFileInfoLookupTable::iterator Pos = Table->find(FE);
-      if (Pos == Table->end())
-        return false;
-
-      HFI = *Pos;
-      return true;
-    }
-
-    std::optional<HeaderFileInfo> getHeaderFileInfo() const { return HFI; }
-  };
-
-} // namespace
+  HFI.DirInfo = OtherHFI.DirInfo;
+  HFI.External = (!HFI.IsValid || HFI.External);
+  HFI.IsValid = true;
+}
 
 HeaderFileInfo ASTReader::GetHeaderFileInfo(FileEntryRef FE) {
-  HeaderFileInfoVisitor Visitor(FE);
-  ModuleMgr.visit(Visitor);
-  if (std::optional<HeaderFileInfo> HFI = Visitor.getHeaderFileInfo())
-      return *HFI;
-
-  return HeaderFileInfo();
+  for (auto Iter = ModuleMgr.begin() + HeaderFileInfoIdx, End = ModuleMgr.end();
+       Iter != End; ++Iter) {
+    if (auto *Table = static_cast<HeaderFileInfoLookupTable *>(
+            Iter->HeaderFileInfoTable)) {
+      auto &Info = Table->getInfoObj();
+      for (auto Iter = Table->data_begin(), End = Table->data_end();
+           Iter != End; ++Iter) {
+        const auto *Item = Iter.getItem();
+        // Determine the length of the key and the data.
+        const auto &[KeyLen, DataLen] =
+            HeaderFileInfoTrait::ReadKeyDataLength(Item);
+        // Read the key.
+        const auto &Key = Info.ReadKey(Item, KeyLen);
+        if (auto EKey = Info.getFile(Key)) {
+          auto Data = Info.ReadData(Key, Item + KeyLen, DataLen);
+          auto [Iter, Inserted] = HeaderFileInfoLookup.try_emplace(*EKey, Data);
+          if (!Inserted)
+            mergeHeaderFileInfo(Iter->second, Data);
+        }
+      }
+    }
+  }
+  HeaderFileInfoIdx = ModuleMgr.size();
+  return HeaderFileInfoLookup.lookup(FE);
 }
 
 void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
