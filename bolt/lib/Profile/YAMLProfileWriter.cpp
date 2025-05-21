@@ -215,7 +215,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
       opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
-  const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
+  const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_BRANCH;
 
   // Prepare function and block hashes
   BF.computeHash(UseDFS);

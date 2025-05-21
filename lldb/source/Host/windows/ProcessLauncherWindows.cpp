@@ -99,7 +99,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   if (startupinfo.hStdOutput)
     inherited_handles.push_back(startupinfo.hStdOutput);
 
-  size_t attributelist_size = 0;
+  SIZE_T attributelist_size = 0;
   InitializeProcThreadAttributeList(/*lpAttributeList=*/nullptr,
                                     /*dwAttributeCount=*/1, /*dwFlags=*/0,
                                     &attributelist_size);

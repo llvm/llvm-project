@@ -233,6 +233,37 @@ int f8(int *p) {
 // OGCG:   %[[P2:.*]] = load ptr, ptr %[[P_PTR]], align 8
 // OGCG:   %[[STAR_P:.*]] = load i32, ptr %[[P2]], align 4
 
+
+void f9() {}
+
+//      CIR: cir.func @f9()
+// CIR-NEXT:   cir.return
+
+//      LLVM: define void @f9()
+// LLVM-NEXT:   ret void
+
+//      OGCG: define{{.*}} void @f9()
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   ret void
+
+void f10(int arg0, ...) {}
+
+//      CIR: cir.func @f10(%[[ARG0:.*]]: !s32i loc({{.*}}), ...)
+// CIR-NEXT:   %[[ARG0_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["arg0", init] {alignment = 4 : i64}
+// CIR-NEXT:   cir.store %[[ARG0]], %[[ARG0_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   cir.return
+
+//      LLVM: define void @f10(i32 %[[ARG0:.*]], ...)
+// LLVM-NEXT:   %[[ARG0_PTR:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   store i32 %[[ARG0]], ptr %[[ARG0_PTR]], align 4
+// LLVM-NEXT:   ret void
+
+//      OGCG: define{{.*}} void @f10(i32 noundef %[[ARG0:.*]], ...)
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   %[[ARG0_PTR:.*]] = alloca i32, align 4
+// OGCG-NEXT:   store i32 %[[ARG0]], ptr %[[ARG0_PTR]], align 4
+// OGCG-NEXT:   ret void
+
 typedef unsigned long size_type;
 typedef unsigned long _Tp;
 
