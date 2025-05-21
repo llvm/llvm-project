@@ -43,6 +43,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:arm_sve_builtins",
     "//clang/include/clang/Basic:arm_sve_typeflags",
     "//clang/include/clang/Basic:diags_tablegen",
+    "//clang/include/clang/Basic:riscv_andes_vector_builtins",
     "//clang/include/clang/Basic:riscv_sifive_vector_builtins",
     "//clang/include/clang/Basic:riscv_vector_builtins",
     "//clang/include/clang/Basic:version",

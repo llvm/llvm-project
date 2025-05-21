@@ -21,6 +21,7 @@
 #include "Utility.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -164,18 +165,18 @@ class NodeArray;
 // traversed by the printLeft/Right functions to produce a demangled string.
 class Node {
 public:
-  enum Kind : unsigned char {
+  enum Kind : uint8_t {
 #define NODE(NodeKind) K##NodeKind,
 #include "ItaniumNodes.def"
   };
 
   /// Three-way bool to track a cached value. Unknown is possible if this node
   /// has an unexpanded parameter pack below it that may affect this cache.
-  enum class Cache : unsigned char { Yes, No, Unknown, };
+  enum class Cache : uint8_t { Yes, No, Unknown, };
 
   /// Operator precedence for expression nodes. Used to determine required
   /// parens in expression emission.
-  enum class Prec {
+  enum class Prec : uint8_t {
     Primary,
     Postfix,
     Unary,
@@ -3421,7 +3422,7 @@ const typename AbstractManglingParser<
     {"or", OperatorInfo::Binary, false, Node::Prec::Ior, "operator|"},
     {"pL", OperatorInfo::Binary, false, Node::Prec::Assign, "operator+="},
     {"pl", OperatorInfo::Binary, false, Node::Prec::Additive, "operator+"},
-    {"pm", OperatorInfo::Member, /*Named*/ false, Node::Prec::PtrMem,
+    {"pm", OperatorInfo::Member, /*Named*/ true, Node::Prec::PtrMem,
      "operator->*"},
     {"pp", OperatorInfo::Postfix, false, Node::Prec::Postfix, "operator++"},
     {"ps", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator+"},

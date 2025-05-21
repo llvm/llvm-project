@@ -909,13 +909,13 @@ interp::Context &ASTContext::getInterpContext() {
   if (!InterpContext) {
     InterpContext.reset(new interp::Context(*this));
   }
-  return *InterpContext.get();
+  return *InterpContext;
 }
 
 ParentMapContext &ASTContext::getParentMapContext() {
   if (!ParentMapCtx)
     ParentMapCtx.reset(new ParentMapContext(*this));
-  return *ParentMapCtx.get();
+  return *ParentMapCtx;
 }
 
 static bool isAddrSpaceMapManglingEnabled(const TargetInfo &TI,
@@ -4577,8 +4577,7 @@ QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
   assert(vecType->isBuiltinType() ||
          (vecType->isBitIntType() &&
           // Only support _BitInt elements with byte-sized power of 2 NumBits.
-          llvm::isPowerOf2_32(vecType->castAs<BitIntType>()->getNumBits()) &&
-          vecType->castAs<BitIntType>()->getNumBits() >= 8));
+          llvm::isPowerOf2_32(vecType->castAs<BitIntType>()->getNumBits())));
 
   // Check if we've already instantiated a vector of this type.
   llvm::FoldingSetNodeID ID;
@@ -4650,8 +4649,7 @@ QualType ASTContext::getExtVectorType(QualType vecType,
   assert(vecType->isBuiltinType() || vecType->isDependentType() ||
          (vecType->isBitIntType() &&
           // Only support _BitInt elements with byte-sized power of 2 NumBits.
-          llvm::isPowerOf2_32(vecType->castAs<BitIntType>()->getNumBits()) &&
-          vecType->castAs<BitIntType>()->getNumBits() >= 8));
+          llvm::isPowerOf2_32(vecType->castAs<BitIntType>()->getNumBits())));
 
   // Check if we've already instantiated a vector of this type.
   llvm::FoldingSetNodeID ID;
@@ -13066,7 +13064,7 @@ bool ASTContext::isNearlyEmpty(const CXXRecordDecl *RD) const {
 }
 
 VTableContextBase *ASTContext::getVTableContext() {
-  if (!VTContext.get()) {
+  if (!VTContext) {
     auto ABI = Target->getCXXABI();
     if (ABI.isMicrosoft())
       VTContext.reset(new MicrosoftVTableContext(*this));

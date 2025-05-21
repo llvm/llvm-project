@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This predicate is true when the rs2 operand of vlse or vsse is x0, false
+// otherwise.
+def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
+
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
     : TIIPredicate<"isSEXT_W",
@@ -45,7 +49,7 @@ def isSelectPseudo
                    MCReturnStatement<
                      CheckOpcode<[
                        Select_GPR_Using_CC_GPR,
-                       Select_GPR_Using_CC_Imm,
+                       Select_GPR_Using_CC_SImm5,
                        Select_FPR16_Using_CC_GPR,
                        Select_FPR16INX_Using_CC_GPR,
                        Select_FPR32_Using_CC_GPR,

@@ -7966,17 +7966,26 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     // On arm64_32, pointers are 32 bits when stored in memory, but
     // zero-extended to 64 bits when in registers.  Thus the mask is 32 bits to
-    // match the index type, but the pointer is 64 bits, so the the mask must be
+    // match the index type, but the pointer is 64 bits, so the mask must be
     // zero-extended up to 64 bits to match the pointer.
     EVT PtrVT =
         TLI.getValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
     EVT MemVT =
         TLI.getMemValueType(DAG.getDataLayout(), I.getOperand(0)->getType());
     assert(PtrVT == Ptr.getValueType());
-    assert(MemVT == Mask.getValueType());
-    if (MemVT != PtrVT)
+    if (Mask.getValueType().getFixedSizeInBits() < MemVT.getFixedSizeInBits()) {
+      // For AMDGPU buffer descriptors the mask is 48 bits, but the pointer is
+      // 128-bit, so we have to pad the mask with ones for unused bits.
+      auto HighOnes = DAG.getNode(
+          ISD::SHL, sdl, PtrVT, DAG.getAllOnesConstant(sdl, PtrVT),
+          DAG.getShiftAmountConstant(Mask.getValueType().getFixedSizeInBits(),
+                                     PtrVT, sdl));
+      Mask = DAG.getNode(ISD::OR, sdl, PtrVT,
+                         DAG.getZExtOrTrunc(Mask, sdl, PtrVT), HighOnes);
+    } else if (Mask.getValueType() != PtrVT)
       Mask = DAG.getPtrExtOrTrunc(Mask, sdl, PtrVT);
 
+    assert(Mask.getValueType() == PtrVT);
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
@@ -7987,14 +7996,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::get_active_lane_mask: {
     EVT CCVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Index = getValue(I.getOperand(0));
+    SDValue TripCount = getValue(I.getOperand(1));
     EVT ElementVT = Index.getValueType();
 
     if (!TLI.shouldExpandGetActiveLaneMask(CCVT, ElementVT)) {
-      visitTargetIntrinsic(I, Intrinsic);
+      setValue(&I, DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, sdl, CCVT, Index,
+                               TripCount));
       return;
     }
 
-    SDValue TripCount = getValue(I.getOperand(1));
     EVT VecTy = EVT::getVectorVT(*DAG.getContext(), ElementVT,
                                  CCVT.getVectorElementCount());
 
@@ -10035,7 +10045,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   std::vector<SDValue> AsmNodeOperands;
   AsmNodeOperands.push_back(SDValue());  // reserve space for input chain
   AsmNodeOperands.push_back(DAG.getTargetExternalSymbol(
-      IA->getAsmString().c_str(), TLI.getProgramPointerTy(DAG.getDataLayout())));
+      IA->getAsmString().data(), TLI.getProgramPointerTy(DAG.getDataLayout())));
 
   // If we have a !srcloc metadata node associated with it, we want to attach
   // this to the ultimately generated inline asm machineinstr.  To do this, we
@@ -11821,9 +11831,18 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
-        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
-                                             PartVT, VT, nullptr, NewRoot,
-                                             F.getCallingConv(), AssertOp));
+        SDValue OutVal =
+            getCopyFromParts(DAG, dl, &InVals[i], NumParts, PartVT, VT, nullptr,
+                             NewRoot, F.getCallingConv(), AssertOp);
+
+        FPClassTest NoFPClass = Arg.getNoFPClass();
+        if (NoFPClass != fcNone) {
+          SDValue SDNoFPClass = DAG.getTargetConstant(
+              static_cast<uint64_t>(NoFPClass), dl, MVT::i32);
+          OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
+                               OutVal, SDNoFPClass);
+        }
+        ArgValues.push_back(OutVal);
       }
 
       i += NumParts;

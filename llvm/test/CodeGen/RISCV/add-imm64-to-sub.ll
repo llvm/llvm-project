@@ -56,6 +56,21 @@ define i64 @add_multiuse(i64 %x) {
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
   %add = add i64 %x, -1099511627775
-  %xor = and i64 %add, -1099511627775
+  %and = and i64 %add, -1099511627775
+  ret i64 %and
+}
+
+define i64 @add_multiuse_const(i64 %x, i64 %y) {
+; CHECK-LABEL: add_multiuse_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, -1
+; CHECK-NEXT:    srli a2, a2, 24
+; CHECK-NEXT:    sub a0, a0, a2
+; CHECK-NEXT:    sub a1, a1, a2
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = add i64 %x, -1099511627775
+  %b = add i64 %y, -1099511627775
+  %xor = xor i64 %a, %b
   ret i64 %xor
 }

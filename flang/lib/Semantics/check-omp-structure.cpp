@@ -2303,9 +2303,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPFlushConstruct &x) {
 void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
   auto &flushList{std::get<std::optional<parser::OmpArgumentList>>(x.v.t)};
 
+  auto isVariableListItemOrCommonBlock{[this](const Symbol &sym) {
+    return IsVariableListItem(sym) ||
+        sym.detailsIf<semantics::CommonBlockDetails>();
+  }};
+
   if (flushList) {
     for (const parser::OmpArgument &arg : flushList->v) {
-      if (auto *sym{GetArgumentSymbol(arg)}; sym && !IsVariableListItem(*sym)) {
+      if (auto *sym{GetArgumentSymbol(arg)};
+          sym && !isVariableListItemOrCommonBlock(*sym)) {
         context_.Say(arg.source,
             "FLUSH argument must be a variable list item"_err_en_US);
       }
@@ -2422,20 +2428,30 @@ void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
 
 void OmpStructureChecker::Enter(
     const parser::OmpClause::CancellationConstructType &x) {
-  // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
-  // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead of
-  // the contained construct name.
+  llvm::omp::Directive dir{GetContext().directive};
   auto &dirName{std::get<parser::OmpDirectiveName>(x.v.t)};
-  switch (dirName.v) {
-  case llvm::omp::Directive::OMPD_do:
-  case llvm::omp::Directive::OMPD_parallel:
-  case llvm::omp::Directive::OMPD_sections:
-  case llvm::omp::Directive::OMPD_taskgroup:
-    break;
-  default:
-    context_.Say(dirName.source, "%s is not a cancellable construct"_err_en_US,
-        parser::ToUpperCaseLetters(getDirectiveName(dirName.v).str()));
-    break;
+
+  if (dir != llvm::omp::Directive::OMPD_cancel &&
+      dir != llvm::omp::Directive::OMPD_cancellation_point) {
+    // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
+    // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead
+    // of the contained construct name.
+    context_.Say(dirName.source, "%s cannot follow %s"_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(dirName.v)),
+        parser::ToUpperCaseLetters(getDirectiveName(dir)));
+  } else {
+    switch (dirName.v) {
+    case llvm::omp::Directive::OMPD_do:
+    case llvm::omp::Directive::OMPD_parallel:
+    case llvm::omp::Directive::OMPD_sections:
+    case llvm::omp::Directive::OMPD_taskgroup:
+      break;
+    default:
+      context_.Say(dirName.source,
+          "%s is not a cancellable construct"_err_en_US,
+          parser::ToUpperCaseLetters(getDirectiveName(dirName.v)));
+      break;
+    }
   }
 }
 
@@ -2559,8 +2575,8 @@ void OmpStructureChecker::CheckCancellationNest(
       }
       break;
     default:
-      // This should have been diagnosed by this point.
-      llvm_unreachable("Unexpected directive");
+      // This is diagnosed later.
+      return;
     }
     if (!eligibleCancellation) {
       context_.Say(source,
@@ -2598,8 +2614,8 @@ void OmpStructureChecker::CheckCancellationNest(
           parser::ToUpperCaseLetters(typeName.str()));
       break;
     default:
-      // This should have been diagnosed by this point.
-      llvm_unreachable("Unexpected directive");
+      // This is diagnosed later.
+      return;
     }
   }
 }
@@ -3545,8 +3561,7 @@ void OmpStructureChecker::CheckReductionObjects(
   // names into the lists of their members.
   for (const parser::OmpObject &object : objects.v) {
     auto *symbol{GetObjectSymbol(object)};
-    assert(symbol && "Expecting a symbol for object");
-    if (IsCommonBlock(*symbol)) {
+    if (symbol && IsCommonBlock(*symbol)) {
       auto source{GetObjectSource(object)};
       context_.Say(source ? *source : GetContext().clauseSource,
           "Common block names are not allowed in %s clause"_err_en_US,
