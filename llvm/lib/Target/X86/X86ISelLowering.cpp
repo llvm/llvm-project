@@ -59299,8 +59299,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
               BlendMask.begin() + IdxVal + SubVecNumElts, VecNumElts + IdxVal);
     if (isShuffleEquivalent(Mask, BlendMask, Vec, ExtSrc) &&
         VecNumElts == (2 * SubVecNumElts)) {
-      assert((IdxVal == 0 || IdxVal == SubVecNumElts) &&
-             "Unaligned subvector insertion");
+      assert((IdxVal % SubVecNumElts) == 0 && "Unaligned subvector insertion");
       if (OpVT.is256BitVector() && SubVecVT.is128BitVector()) {
         SDValue Blend = DAG.getNode(
             X86ISD::BLENDI, dl, MVT::v8f32, DAG.getBitcast(MVT::v8f32, Vec),
