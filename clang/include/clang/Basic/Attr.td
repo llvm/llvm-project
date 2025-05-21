@@ -1354,6 +1354,17 @@ def Cleanup : InheritableAttr {
   let Args = [DeclArgument<Function, "FunctionDecl">];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [CleanupDocs];
+  // FIXME: DeclArgument should be reworked to also store the
+  // Expr instead of adding attr specific hacks like the following.
+  // See the discussion in https://github.com/llvm/llvm-project/pull/14023.
+  let AdditionalMembers = [{
+private:
+    SourceLocation ArgLoc;
+
+public:
+    void setArgLoc(const SourceLocation &Loc) { ArgLoc = Loc; }
+    auto getArgLoc() const { return ArgLoc; }
+  }];
 }
 
 def CmseNSEntry : InheritableAttr, TargetSpecificAttr<TargetARM> {
@@ -4815,7 +4826,7 @@ def HLSLResourceBinding: InheritableAttr {
       void setImplicitBindingOrderID(uint32_t Value) {
         ImplicitBindingOrderID = Value;
       }
-      bool hasImplicitBindingOrderID() const { 
+      bool hasImplicitBindingOrderID() const {
         return ImplicitBindingOrderID.has_value();
       }
       uint32_t getImplicitBindingOrderID() const {
