@@ -476,6 +476,18 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   return fn;
 }
 
+/// Given a value of type T* that may not be to a complete object, construct
+/// an l-vlaue withi the natural pointee alignment of T.
+LValue CIRGenFunction::makeNaturalAlignPointeeAddrLValue(mlir::Value val,
+                                                         QualType ty) {
+  // FIXME(cir): is it safe to assume Op->getResult(0) is valid? Perhaps
+  // assert on the result type first.
+  LValueBaseInfo baseInfo;
+  assert(!cir::MissingFeatures::opTBAA());
+  CharUnits align = cgm.getNaturalTypeAlignment(ty, &baseInfo);
+  return makeAddrLValue(Address(val, align), ty, baseInfo);
+}
+
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
                                                      FunctionArgList &args) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
@@ -519,6 +531,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
+  case Expr::StringLiteralClass:
+    return emitStringLiteralLValue(cast<StringLiteral>(e));
   case Expr::MemberExprClass:
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::BinaryOperatorClass:
@@ -536,10 +550,20 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                  "CompoundAssignOperator with ComplexType");
     return LValue();
   }
+  case Expr::CallExprClass:
+  case Expr::CXXMemberCallExprClass:
+  case Expr::CXXOperatorCallExprClass:
+  case Expr::UserDefinedLiteralClass:
+    return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  case Expr::CStyleCastExprClass:
+  case Expr::CXXStaticCastExprClass:
+  case Expr::CXXDynamicCastExprClass:
+  case Expr::ImplicitCastExprClass:
+    return emitCastLValue(cast<CastExpr>(e));
   }
 }
 

@@ -274,6 +274,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNdi64:
   case X86::TCRETURNdi64cc:
   case X86::TCRETURNri64:
+  case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64: {
     bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64;
     MachineOperand &JumpTarget = MBBI->getOperand(0);
@@ -345,12 +346,14 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
       for (unsigned i = 0; i != X86::AddrNumOperands; ++i)
         MIB.add(MBBI->getOperand(i));
-    } else if (Opcode == X86::TCRETURNri64) {
+    } else if ((Opcode == X86::TCRETURNri64) ||
+               (Opcode == X86::TCRETURNri64_ImpCall)) {
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL,
               TII->get(IsWin64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
           .add(JumpTarget);
     } else {
+      assert(!IsWin64 && "Win64 requires REX for indirect jumps.");
       JumpTarget.setIsKill();
       BuildMI(MBB, MBBI, DL, TII->get(X86::TAILJMPr))
           .add(JumpTarget);
@@ -874,6 +877,9 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::CALL64r_RVMARKER:
   case X86::CALL64m_RVMARKER:
     expandCALL_RVMARKER(MBB, MBBI);
+    return true;
+  case X86::CALL64r_ImpCall:
+    MI.setDesc(TII->get(X86::CALL64r));
     return true;
   case X86::ADD32mi_ND:
   case X86::ADD64mi32_ND:

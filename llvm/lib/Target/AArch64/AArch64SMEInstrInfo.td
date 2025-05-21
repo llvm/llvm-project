@@ -10,12 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 2,
-                             [SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 1,
+                             [SDTCisInt<0>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 2,
-                             [SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 1,
+                             [SDTCisInt<0>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_cond_smstart : SDNode<"AArch64ISD::COND_SMSTART", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_cond_smstop  : SDNode<"AArch64ISD::COND_SMSTOP", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
 def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
@@ -305,15 +313,15 @@ def MSRpstatePseudo :
   let Defs = [VG];
 }
 
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b1, timm0_31:$condition)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b0, timm0_31:$condition)>;
+def : Pat<(AArch64_cond_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b1, timm0_31:$condition, GPR64:$pstatesm)>;
+def : Pat<(AArch64_cond_smstop (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b0, timm0_31:$condition, GPR64:$pstatesm)>;
 
 // Unconditional start/stop
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
 
 

@@ -413,8 +413,7 @@ public:
 
 void
 RegUseTracker::countRegister(const SCEV *Reg, size_t LUIdx) {
-  std::pair<RegUsesTy::iterator, bool> Pair =
-    RegUsesMap.insert(std::make_pair(Reg, RegSortData()));
+  std::pair<RegUsesTy::iterator, bool> Pair = RegUsesMap.try_emplace(Reg);
   RegSortData &RSD = Pair.first->second;
   if (Pair.second)
     RegSequence.push_back(Reg);
@@ -4478,7 +4477,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
   for (const SCEV *Use : RegUses) {
     const SCEV *Reg = Use; // Make a copy for ExtractImmediate to modify.
     Immediate Imm = ExtractImmediate(Reg, SE);
-    auto Pair = Map.insert(std::make_pair(Reg, ImmMapTy()));
+    auto Pair = Map.try_emplace(Reg);
     if (Pair.second)
       Sequence.push_back(Reg);
     Pair.first->second.insert(std::make_pair(Imm, Use));

@@ -18177,17 +18177,20 @@ static SDValue lowerVQDOT(unsigned Opc, SDValue Op0, SDValue Op1,
   assert(VT == Op1.getSimpleValueType() &&
          VT.getVectorElementType() == MVT::i32);
 
-  assert(VT.isFixedLengthVector());
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-  SDValue Passthru = convertToScalableVector(
-      ContainerVT, DAG.getConstant(0, DL, VT), DAG, Subtarget);
-  Op0 = convertToScalableVector(ContainerVT, Op0, DAG, Subtarget);
-  Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
-
+  SDValue Passthru = DAG.getConstant(0, DL, VT);
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+    Passthru = convertToScalableVector(ContainerVT, Passthru, DAG, Subtarget);
+    Op0 = convertToScalableVector(ContainerVT, Op0, DAG, Subtarget);
+    Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
+  }
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
   SDValue LocalAccum = DAG.getNode(Opc, DL, ContainerVT,
                                    {Op0, Op1, Passthru, Mask, VL});
-  return convertFromScalableVector(VT, LocalAccum, DAG, Subtarget);
+  if (VT.isFixedLengthVector())
+    return convertFromScalableVector(VT, LocalAccum, DAG, Subtarget);
+  return LocalAccum;
 }
 
 static MVT getQDOTXResultType(MVT OpVT) {
@@ -18207,7 +18210,7 @@ static SDValue getZeroPaddedAdd(const SDLoc &DL, SDValue A, SDValue B,
   EVT AVT = A.getValueType();
   EVT BVT = B.getValueType();
   assert(AVT.getVectorElementType() == BVT.getVectorElementType());
-  if (AVT.getVectorNumElements() > BVT.getVectorNumElements()) {
+  if (AVT.getVectorMinNumElements() > BVT.getVectorMinNumElements()) {
     std::swap(A, B);
     std::swap(AVT, BVT);
   }
@@ -18641,7 +18644,7 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
 
-  assert(N->getOpcode() == RISCVISD::ADD_VL);
+  assert(N->getOpcode() == RISCVISD::ADD_VL || N->getOpcode() == ISD::ADD);
 
   if (!N->getValueType(0).isVector())
     return SDValue();
@@ -18649,9 +18652,11 @@ static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
   SDValue Addend = N->getOperand(0);
   SDValue DotOp = N->getOperand(1);
 
-  SDValue AddPassthruOp = N->getOperand(2);
-  if (!AddPassthruOp.isUndef())
-    return SDValue();
+  if (N->getOpcode() == RISCVISD::ADD_VL) {
+    SDValue AddPassthruOp = N->getOperand(2);
+    if (!AddPassthruOp.isUndef())
+      return SDValue();
+  }
 
   auto IsVqdotqOpc = [](unsigned Opc) {
     switch (Opc) {
@@ -18670,8 +18675,15 @@ static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
   if (!IsVqdotqOpc(DotOp.getOpcode()))
     return SDValue();
 
-  SDValue AddMask = N->getOperand(3);
-  SDValue AddVL = N->getOperand(4);
+  auto [AddMask, AddVL] = [](SDNode *N, SelectionDAG &DAG,
+                             const RISCVSubtarget &Subtarget) {
+    if (N->getOpcode() == ISD::ADD) {
+      SDLoc DL(N);
+      return getDefaultScalableVLOps(N->getSimpleValueType(0), DL, DAG,
+                                     Subtarget);
+    }
+    return std::make_pair(N->getOperand(3), N->getOperand(4));
+  }(N, DAG, Subtarget);
 
   SDValue MulVL = DotOp.getOperand(4);
   if (AddVL != MulVL)
@@ -19308,6 +19320,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
     if (SDValue V = combineToVWMACC(N, DAG, Subtarget))
+      return V;
+    if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
       return V;
     return performADDCombine(N, DCI, Subtarget);
   }

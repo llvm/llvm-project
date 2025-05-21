@@ -1123,8 +1123,7 @@ template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   bool success = true;
 
   auto isImplicit = [this](const ClauseTy *node) {
-    return llvm::any_of(
-        implicit, [node](const ClauseTy &clause) { return &clause == node; });
+    return llvm::is_contained(llvm::make_pointer_range(implicit), node);
   };
 
   for (llvm::omp::Directive leaf :

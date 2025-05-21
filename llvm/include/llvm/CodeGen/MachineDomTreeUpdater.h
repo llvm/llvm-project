@@ -20,6 +20,22 @@
 namespace llvm {
 
 class MachinePostDominatorTree;
+class MachineDomTreeUpdater;
+
+extern template class GenericDomTreeUpdater<
+    MachineDomTreeUpdater, MachineDominatorTree, MachinePostDominatorTree>;
+
+extern template void
+GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
+                      MachinePostDominatorTree>::recalculate(MachineFunction
+                                                                 &MF);
+
+extern template void GenericDomTreeUpdater<
+    MachineDomTreeUpdater, MachineDominatorTree,
+    MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/true>();
+extern template void GenericDomTreeUpdater<
+    MachineDomTreeUpdater, MachineDominatorTree,
+    MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/false>();
 
 class MachineDomTreeUpdater
     : public GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
@@ -61,20 +77,5 @@ private:
   /// Returns true if at least one MachineBasicBlock is deleted.
   bool forceFlushDeletedBB();
 };
-
-extern template class GenericDomTreeUpdater<
-    MachineDomTreeUpdater, MachineDominatorTree, MachinePostDominatorTree>;
-
-extern template void
-GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
-                      MachinePostDominatorTree>::recalculate(MachineFunction
-                                                                 &MF);
-
-extern template void GenericDomTreeUpdater<
-    MachineDomTreeUpdater, MachineDominatorTree,
-    MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/true>();
-extern template void GenericDomTreeUpdater<
-    MachineDomTreeUpdater, MachineDominatorTree,
-    MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/false>();
 } // namespace llvm
 #endif // LLVM_CODEGEN_MACHINEDOMTREEUPDATER_H

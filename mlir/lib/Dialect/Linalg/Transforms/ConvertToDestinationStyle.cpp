@@ -441,8 +441,8 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
   // If the `padOp` has a nofold attribute and all paddings are known to be 0,
   // explicitly insert a `linalg.copy`.
   if (padOp.getNofoldAttr() &&
-      llvm::all_of(padOp.getMixedLowPad(), isZeroIndex) &&
-      llvm::all_of(padOp.getMixedHighPad(), isZeroIndex)) {
+      llvm::all_of(padOp.getMixedLowPad(), isZeroInteger) &&
+      llvm::all_of(padOp.getMixedHighPad(), isZeroInteger)) {
     using bufferization::AllocTensorOp;
     Value allocated =
         rewriter.create<AllocTensorOp>(loc, resultType, dynamicSizes);

@@ -125,6 +125,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
                        bool &MaskAgnostic);
   bool generateVTypeError(SMLoc ErrorLoc);
 
+  bool generateXSfmmVTypeError(SMLoc ErrorLoc);
   // Helper to actually emit an instruction to the MCStreamer. Also, when
   // possible, compression of the instruction is performed.
   void emitToStreamer(MCStreamer &S, const MCInst &Inst);
@@ -221,6 +222,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   }
 
   ParseStatus parseRegReg(OperandVector &Operands);
+  ParseStatus parseXSfmmVType(OperandVector &Operands);
   ParseStatus parseRetval(OperandVector &Operands);
   ParseStatus parseZcmpStackAdj(OperandVector &Operands,
                                 bool ExpectNegative = false);
@@ -632,6 +634,10 @@ public:
     if (Kind == KindTy::VType)
       return true;
     return isUImm<11>();
+  }
+
+  bool isXSfmmVType() const {
+    return Kind == KindTy::VType && RISCVVType::isValidXSfmmVType(VType.Val);
   }
 
   /// Return true if the operand is a valid for the fence instruction e.g.
@@ -2340,6 +2346,65 @@ bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
       ErrorLoc,
       "operand must be "
       "e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
+}
+
+ParseStatus RISCVAsmParser::parseXSfmmVType(OperandVector &Operands) {
+  SMLoc S = getLoc();
+
+  unsigned Widen = 0;
+  unsigned SEW = 0;
+  bool AltFmt = false;
+  StringRef Identifier;
+
+  if (getTok().isNot(AsmToken::Identifier))
+    goto Fail;
+
+  Identifier = getTok().getIdentifier();
+
+  if (!Identifier.consume_front("e"))
+    goto Fail;
+
+  if (Identifier.getAsInteger(10, SEW)) {
+    if (Identifier != "16alt")
+      goto Fail;
+
+    AltFmt = true;
+    SEW = 16;
+  }
+  if (!RISCVVType::isValidSEW(SEW))
+    goto Fail;
+
+  Lex();
+
+  if (!parseOptionalToken(AsmToken::Comma))
+    goto Fail;
+
+  if (getTok().isNot(AsmToken::Identifier))
+    goto Fail;
+
+  Identifier = getTok().getIdentifier();
+
+  if (!Identifier.consume_front("w"))
+    goto Fail;
+  if (Identifier.getAsInteger(10, Widen))
+    goto Fail;
+  if (Widen != 1 && Widen != 2 && Widen != 4)
+    goto Fail;
+
+  Lex();
+
+  if (getLexer().is(AsmToken::EndOfStatement)) {
+    Operands.push_back(RISCVOperand::createVType(
+        RISCVVType::encodeXSfmmVType(SEW, Widen, AltFmt), S));
+    return ParseStatus::Success;
+  }
+
+Fail:
+  return generateXSfmmVTypeError(S);
+}
+
+bool RISCVAsmParser::generateXSfmmVTypeError(SMLoc ErrorLoc) {
+  return Error(ErrorLoc, "operand must be e[8|16|16alt|32|64],w[1|2|4]");
 }
 
 ParseStatus RISCVAsmParser::parseMaskReg(OperandVector &Operands) {

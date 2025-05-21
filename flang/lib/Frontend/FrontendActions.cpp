@@ -922,6 +922,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   if (ci.isTimingEnabled())
     si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
   pto.LoopUnrolling = opts.UnrollLoops;
+  pto.LoopInterchange = opts.InterchangeLoops;
   pto.LoopInterleaving = opts.UnrollLoops;
   pto.LoopVectorization = opts.VectorizeLoop;
   pto.SLPVectorization = opts.VectorizeSLP;

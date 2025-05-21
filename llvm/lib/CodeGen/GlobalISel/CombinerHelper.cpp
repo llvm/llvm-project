@@ -420,8 +420,11 @@ void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
     else
       Extracts.push_back(Unmerge2.getReg(Val - Width));
   }
-
-  Builder.buildBuildVector(MI.getOperand(0).getReg(), Extracts);
+  assert(Extracts.size() > 0 && "Expected at least one element in the shuffle");
+  if (Extracts.size() == 1)
+    Builder.buildCopy(MI.getOperand(0).getReg(), Extracts[0]);
+  else
+    Builder.buildBuildVector(MI.getOperand(0).getReg(), Extracts);
   MI.eraseFromParent();
 }
 

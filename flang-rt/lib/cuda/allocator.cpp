@@ -150,7 +150,7 @@ void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t *asyncObject) {
     CUDA_REPORT_IF_ERROR(
         cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
   } else {
-    if (asyncObject == kNoAsyncObject) {
+    if (asyncObject == nullptr) {
       CUDA_REPORT_IF_ERROR(cudaMalloc(&p, sizeInBytes));
     } else {
       CUDA_REPORT_IF_ERROR(

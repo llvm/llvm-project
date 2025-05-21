@@ -573,7 +573,7 @@ TEST(WalkAST, OperatorNewDelete) {
 
 TEST(WalkAST, CleanupAttr) {
   testWalk("void* $explicit^freep(void *p);",
-           "void foo() { __attribute__((^__cleanup__(freep))) char* x = 0; }");
+           "void foo() { __attribute__((__cleanup__(^freep))) char* x = 0; }");
 }
 
 } // namespace

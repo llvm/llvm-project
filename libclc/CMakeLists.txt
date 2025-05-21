@@ -420,11 +420,39 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
+      # Error on undefined macros
+      -Werror=undef
     )
 
     if( NOT "${cpu}" STREQUAL "" )
       list( APPEND build_flags -mcpu=${cpu} )
     endif()
+
+    # Generic address space support.
+    # Note: when declaring builtins, we must consider that even if a target
+    # formally/nominally supports the generic address space, in practice that
+    # target may map it to the same target address space as another address
+    # space (often the private one). In such cases we must be careful not to
+    # multiply-define a builtin in a single target address space, as it would
+    # result in a mangling clash.
+    # For this reason we must consider the target support of the generic
+    # address space separately from the *implementation* decision about whether
+    # to declare certain builtins in that address space.
+    # Note: we assume that if there is no distinct generic address space, it
+    # maps to the private address space.
+    set ( private_addrspace_val 0 )
+    set ( generic_addrspace_val 0 )
+    if( ARCH STREQUAL amdgcn OR ARCH STREQUAL r600 OR ARCH STREQUAL amdgcn-amdhsa )
+      set ( private_addrspace_val 5 )
+    endif()
+    if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64
+        OR ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
+      set ( generic_addrspace_val 4 )
+    endif()
+    list( APPEND build_flags
+      -D__CLC_PRIVATE_ADDRSPACE_VAL=${private_addrspace_val}
+      -D__CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
+    )
 
     set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
 

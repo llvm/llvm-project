@@ -26,3 +26,10 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(__CLC_GENTYPE x,
                                               local __CLC_GENTYPE *ptr) {
   return __CLC_FUNCTION(FUNCTION)(x, ptr);
 }
+
+#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(__CLC_GENTYPE x,
+                                              generic __CLC_GENTYPE *ptr) {
+  return __CLC_FUNCTION(FUNCTION)(x, ptr);
+}
+#endif

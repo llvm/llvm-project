@@ -170,6 +170,8 @@ public:
     Opts["cl_khr_global_int32_extended_atomics"] = true;
     Opts["cl_khr_local_int32_base_atomics"] = true;
     Opts["cl_khr_local_int32_extended_atomics"] = true;
+
+    Opts["__opencl_c_generic_address_space"] = true;
   }
 
   const llvm::omp::GV &getGridValue() const override {
