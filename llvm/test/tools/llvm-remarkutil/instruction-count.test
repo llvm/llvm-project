@@ -2,6 +2,9 @@ RUN: llvm-remarkutil instruction-count --parser=yaml %p/Inputs/instruction-count
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml | llvm-remarkutil instruction-count --parser=bitstream | FileCheck %s
 RUN: llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --remark-name="InstructionCount" %p/Inputs/instruction-count.yaml | FileCheck %s --check-prefix=COUNT-CHECK
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml  | llvm-remarkutil count --parser=bitstream --count-by=arg --group-by=function --remark-name="InstructionCount" | FileCheck %s --check-prefix=COUNT-CHECK
+RUN: not llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --rremark-name=* %p/Inputs/instruction-count.yaml 2>&1 | FileCheck %s --check-prefix=ERROR -DARG=rremark-name
+RUN: not llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --rpass-name=* %p/Inputs/instruction-count.yaml 2>&1 | FileCheck %s --check-prefix=ERROR -DARG=rpass-name
+RUN: not llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --rfilter-arg-by=* %p/Inputs/instruction-count.yaml 2>&1 | FileCheck %s --check-prefix=ERROR -DARG=rfilter-arg-by
 
 ; CHECK-LABEL: Function,InstructionCount
 ; CHECK: func1,1
@@ -12,3 +15,5 @@ RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml  | llvm-rem
 ; COUNT-CHECK: func1,1
 ; COUNT-CHECK: func2,2
 ; COUNT-CHECK: func3,3
+
+; ERROR: error: invalid argument '--[[ARG]]=*': repetition-operator operand invalid
