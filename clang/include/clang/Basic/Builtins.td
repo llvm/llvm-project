@@ -161,7 +161,22 @@ def ErfcF128 : Builtin {
   let Prototype = "__float128(__float128)";
 }
 
-def ExpF16F128 : Builtin, F16F128MathTemplate {
+def BIExpF : Builtin {
+  let Spellings = ["__builtin_expf"];
+#ifdef LLVM_INTEGRATE_LIBC
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
+#else
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
+                    ConstIgnoringErrnoAndExceptions];
+#endif // LLVM_INTEGRATE_LIBC
+  let Prototype = "float(float)";
+}
+
+def BIExp
+    : Builtin,
+      Template<["double", "long double", "_Float16", "__float128"], ["", "l",
+                                                                     "f16",
+                                                                     "f128"]> {
   let Spellings = ["__builtin_exp"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T)";
@@ -3742,7 +3757,6 @@ def Exp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["exp"];
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T)";
-  let AddBuiltinPrefixedAlias = 1;
 }
 
 def Exp2 : FPMathTemplate, LibBuiltin<"math.h"> {

@@ -57,6 +57,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -15709,6 +15710,24 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     Result.copySign(RHS);
     return true;
+  }
+
+  // FIXME: allow other __builtin_exp* to be constexpr.
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expf128:
+    return false;
+  case Builtin::BI__builtin_expf: {
+#ifdef LLVM_INTEGRATE_LIBC
+    APFloat Input(0.);
+    if (!EvaluateFloat(E->getArg(0), Input, Info))
+      return false;
+    Result = exp(Input);
+    return true;
+#else
+    return false;
+#endif // LLVM_INTEGRATE_LIBC
   }
 
   case Builtin::BI__builtin_fmax:
