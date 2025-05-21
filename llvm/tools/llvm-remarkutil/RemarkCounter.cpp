@@ -239,7 +239,7 @@ Expected<Filters> getRemarkFilter() {
   std::optional<FilterMatcher> RemarkNameFilter;
   if (!RemarkNameOpt.empty())
     RemarkNameFilter = FilterMatcher::createExact(RemarkNameOpt);
-  else if (!RemarkNameOptRE.empty()){
+  else if (!RemarkNameOptRE.empty()) {
     auto FM = FilterMatcher::createRE(RemarkNameOptRE, "rremark-name");
     if (!FM)
       return FM.takeError();
@@ -325,7 +325,8 @@ static Error collectRemarks() {
         ArgumentsVector.push_back(std::move(*FM));
       }
     else
-      ArgumentsVector.push_back(cantFail(FilterMatcher::createRE(".*", "count-by")));
+      ArgumentsVector.push_back(
+          cantFail(FilterMatcher::createRE(".*", "count-by")));
 
     Expected<ArgumentCounter> AC = ArgumentCounter::createArgumentCounter(
         GroupByOpt, ArgumentsVector, Buffer, Filter);

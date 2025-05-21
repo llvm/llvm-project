@@ -68,11 +68,10 @@ class FilterMatcher {
       : FilterRE(Filter), FilterStr(Filter), IsRegex(IsRegex) {}
 
 public:
-  static FilterMatcher createExact(StringRef Filter) {
-    return {Filter, false};
-  }
+  static FilterMatcher createExact(StringRef Filter) { return {Filter, false}; }
 
-  static Expected<FilterMatcher> createRE(StringRef Filter, StringRef Argument) {
+  static Expected<FilterMatcher> createRE(StringRef Filter,
+                                          StringRef Argument) {
     FilterMatcher FM(Filter, true);
     std::string Error;
     if (!FM.FilterRE.isValid(Error))
