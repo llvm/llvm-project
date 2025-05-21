@@ -16,8 +16,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
-#include "llvm/Support/MathExtras.h"
 #include "swift/Demangling/Demangle.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -275,8 +275,7 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
 
   auto *section_list = module_containing_pointer->GetSectionList();
   if (section_list->GetSize() == 0) {
-    LLDB_LOG(log,
-             "[MemoryReader] Module with empty section list.");
+    LLDB_LOG(log, "[MemoryReader] Module with empty section list.");
     return {};
   }
 
@@ -452,11 +451,18 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
   return false;
 }
 
-void LLDBMemoryReader::pushLocalBuffer(uint64_t local_buffer,
-                                       uint64_t local_buffer_size) {
+MemoryReaderLocalBufferHolder::~MemoryReaderLocalBufferHolder() {
+  if (m_memory_reader)
+  m_memory_reader->popLocalBuffer();
+}
+
+MemoryReaderLocalBufferHolder
+LLDBMemoryReader::pushLocalBuffer(uint64_t local_buffer,
+                                  uint64_t local_buffer_size) {
   lldbassert(!m_local_buffer);
   m_local_buffer = local_buffer;
   m_local_buffer_size = local_buffer_size;
+  return MemoryReaderLocalBufferHolder(this);
 }
 
 void LLDBMemoryReader::popLocalBuffer() {
@@ -579,8 +585,7 @@ LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
   ModuleSP module = pair_iterator->second;
   auto *section_list = module->GetSectionList();
   if (section_list->GetSize() == 0) {
-    LLDB_LOG(log,
-             "[MemoryReader] Module with empty section list.");
+    LLDB_LOG(log, "[MemoryReader] Module with empty section list.");
     return {};
   }
   uint64_t file_address;
@@ -633,8 +638,8 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
   Address resolved(file_address, object_file->GetSectionList());
 
   // If the address doesn't have a section it means we couldn't find a section
-  // that contains that file address, and the "resolved" instance is wrong. 
-  // Calculate the virtual address by finding out the slide of the associated 
+  // that contains that file address, and the "resolved" instance is wrong.
+  // Calculate the virtual address by finding out the slide of the associated
   // module, and adding that to the file address.
   if (resolved.GetSection()) {
     LLDB_LOGV(log,
