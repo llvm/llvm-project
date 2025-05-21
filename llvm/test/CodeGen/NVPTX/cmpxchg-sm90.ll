@@ -11,8 +11,8 @@ define i8 @monotonic_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_generic_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -23,7 +23,7 @@ define i8 @monotonic_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -56,8 +56,8 @@ define i8 @monotonic_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_generic_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -68,9 +68,9 @@ define i8 @monotonic_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB1_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -101,8 +101,8 @@ define i8 @monotonic_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_generic_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -113,9 +113,9 @@ define i8 @monotonic_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB2_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -146,8 +146,8 @@ define i8 @monotonic_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_generic_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -158,7 +158,7 @@ define i8 @monotonic_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -191,8 +191,8 @@ define i8 @monotonic_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_global_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -203,7 +203,7 @@ define i8 @monotonic_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -236,8 +236,8 @@ define i8 @monotonic_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_global_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -248,9 +248,9 @@ define i8 @monotonic_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB5_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -281,8 +281,8 @@ define i8 @monotonic_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_global_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -293,9 +293,9 @@ define i8 @monotonic_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB6_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -326,8 +326,8 @@ define i8 @monotonic_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_global_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -338,7 +338,7 @@ define i8 @monotonic_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -371,8 +371,8 @@ define i8 @monotonic_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_shared_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -383,7 +383,7 @@ define i8 @monotonic_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -416,8 +416,8 @@ define i8 @monotonic_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_shared_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -428,9 +428,9 @@ define i8 @monotonic_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB9_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -461,8 +461,8 @@ define i8 @monotonic_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_shared_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -473,9 +473,9 @@ define i8 @monotonic_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB10_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -506,8 +506,8 @@ define i8 @monotonic_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_monotonic_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_shared_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -518,7 +518,7 @@ define i8 @monotonic_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_monotonic_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -551,8 +551,8 @@ define i8 @monotonic_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_generic_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -563,7 +563,7 @@ define i8 @monotonic_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -597,8 +597,8 @@ define i8 @monotonic_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_generic_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -609,9 +609,9 @@ define i8 @monotonic_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB13_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -643,8 +643,8 @@ define i8 @monotonic_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_generic_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -655,9 +655,9 @@ define i8 @monotonic_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB14_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -689,8 +689,8 @@ define i8 @monotonic_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_generic_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -701,7 +701,7 @@ define i8 @monotonic_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -735,8 +735,8 @@ define i8 @monotonic_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_global_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -747,7 +747,7 @@ define i8 @monotonic_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -781,8 +781,8 @@ define i8 @monotonic_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_global_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -793,9 +793,9 @@ define i8 @monotonic_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB17_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -827,8 +827,8 @@ define i8 @monotonic_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_global_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -839,9 +839,9 @@ define i8 @monotonic_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB18_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -873,8 +873,8 @@ define i8 @monotonic_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_global_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -885,7 +885,7 @@ define i8 @monotonic_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -919,8 +919,8 @@ define i8 @monotonic_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_shared_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -931,7 +931,7 @@ define i8 @monotonic_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -965,8 +965,8 @@ define i8 @monotonic_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_shared_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -977,9 +977,9 @@ define i8 @monotonic_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB21_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1011,8 +1011,8 @@ define i8 @monotonic_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_shared_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -1023,9 +1023,9 @@ define i8 @monotonic_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB22_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1057,8 +1057,8 @@ define i8 @monotonic_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_acquire_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_shared_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -1069,7 +1069,7 @@ define i8 @monotonic_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_acquire_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1103,8 +1103,8 @@ define i8 @monotonic_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1116,7 +1116,7 @@ define i8 @monotonic_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1150,8 +1150,8 @@ define i8 @monotonic_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1163,9 +1163,9 @@ define i8 @monotonic_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB25_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1197,8 +1197,8 @@ define i8 @monotonic_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1210,9 +1210,9 @@ define i8 @monotonic_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB26_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1244,8 +1244,8 @@ define i8 @monotonic_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1257,7 +1257,7 @@ define i8 @monotonic_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1291,8 +1291,8 @@ define i8 @monotonic_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1304,7 +1304,7 @@ define i8 @monotonic_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1338,8 +1338,8 @@ define i8 @monotonic_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1351,9 +1351,9 @@ define i8 @monotonic_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB29_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1385,8 +1385,8 @@ define i8 @monotonic_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1398,9 +1398,9 @@ define i8 @monotonic_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB30_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1432,8 +1432,8 @@ define i8 @monotonic_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1445,7 +1445,7 @@ define i8 @monotonic_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1479,8 +1479,8 @@ define i8 @monotonic_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1492,7 +1492,7 @@ define i8 @monotonic_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1526,8 +1526,8 @@ define i8 @monotonic_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1539,9 +1539,9 @@ define i8 @monotonic_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB33_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1573,8 +1573,8 @@ define i8 @monotonic_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1586,9 +1586,9 @@ define i8 @monotonic_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB34_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1620,8 +1620,8 @@ define i8 @monotonic_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [monotonic_seq_cst_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -1633,7 +1633,7 @@ define i8 @monotonic_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [monotonic_seq_cst_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1667,8 +1667,8 @@ define i8 @acquire_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_generic_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -1679,7 +1679,7 @@ define i8 @acquire_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1713,8 +1713,8 @@ define i8 @acquire_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_generic_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -1725,9 +1725,9 @@ define i8 @acquire_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB37_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1759,8 +1759,8 @@ define i8 @acquire_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_generic_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -1771,9 +1771,9 @@ define i8 @acquire_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB38_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1805,8 +1805,8 @@ define i8 @acquire_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_generic_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -1817,7 +1817,7 @@ define i8 @acquire_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1851,8 +1851,8 @@ define i8 @acquire_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_global_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -1863,7 +1863,7 @@ define i8 @acquire_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -1897,8 +1897,8 @@ define i8 @acquire_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_global_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -1909,9 +1909,9 @@ define i8 @acquire_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB41_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1943,8 +1943,8 @@ define i8 @acquire_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_global_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -1955,9 +1955,9 @@ define i8 @acquire_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB42_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1989,8 +1989,8 @@ define i8 @acquire_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_global_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2001,7 +2001,7 @@ define i8 @acquire_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -2035,8 +2035,8 @@ define i8 @acquire_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_shared_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2047,7 +2047,7 @@ define i8 @acquire_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
@@ -2081,8 +2081,8 @@ define i8 @acquire_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_shared_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2093,9 +2093,9 @@ define i8 @acquire_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB45_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2127,8 +2127,8 @@ define i8 @acquire_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_shared_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2139,9 +2139,9 @@ define i8 @acquire_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB46_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2173,8 +2173,8 @@ define i8 @acquire_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_monotonic_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_shared_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2185,9 +2185,9 @@ define i8 @acquire_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_monotonic_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB47_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2219,8 +2219,8 @@ define i8 @acquire_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_generic_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2231,9 +2231,9 @@ define i8 @acquire_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB48_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2265,8 +2265,8 @@ define i8 @acquire_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_generic_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2277,9 +2277,9 @@ define i8 @acquire_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB49_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2311,8 +2311,8 @@ define i8 @acquire_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_generic_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2323,9 +2323,9 @@ define i8 @acquire_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB50_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2357,8 +2357,8 @@ define i8 @acquire_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_generic_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2369,9 +2369,9 @@ define i8 @acquire_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB51_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2403,8 +2403,8 @@ define i8 @acquire_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_global_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2415,9 +2415,9 @@ define i8 @acquire_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB52_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2449,8 +2449,8 @@ define i8 @acquire_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_global_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2461,9 +2461,9 @@ define i8 @acquire_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB53_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2495,8 +2495,8 @@ define i8 @acquire_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_global_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2507,9 +2507,9 @@ define i8 @acquire_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB54_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2541,8 +2541,8 @@ define i8 @acquire_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_global_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2553,9 +2553,9 @@ define i8 @acquire_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB55_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2587,8 +2587,8 @@ define i8 @acquire_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_shared_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2599,9 +2599,9 @@ define i8 @acquire_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB56_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2633,8 +2633,8 @@ define i8 @acquire_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_shared_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2645,9 +2645,9 @@ define i8 @acquire_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB57_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2679,8 +2679,8 @@ define i8 @acquire_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_shared_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2691,9 +2691,9 @@ define i8 @acquire_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB58_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2725,8 +2725,8 @@ define i8 @acquire_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_acquire_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_shared_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
 ; SM90-NEXT:    and.b32 %r10, %r9, 3;
@@ -2737,9 +2737,9 @@ define i8 @acquire_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_acquire_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB59_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2771,8 +2771,8 @@ define i8 @acquire_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -2784,9 +2784,9 @@ define i8 @acquire_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB60_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2818,8 +2818,8 @@ define i8 @acquire_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -2831,9 +2831,9 @@ define i8 @acquire_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB61_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2865,8 +2865,8 @@ define i8 @acquire_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -2878,9 +2878,9 @@ define i8 @acquire_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB62_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2912,8 +2912,8 @@ define i8 @acquire_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -2925,9 +2925,9 @@ define i8 @acquire_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB63_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2959,8 +2959,8 @@ define i8 @acquire_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -2972,9 +2972,9 @@ define i8 @acquire_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB64_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3006,8 +3006,8 @@ define i8 @acquire_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3019,9 +3019,9 @@ define i8 @acquire_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB65_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3053,8 +3053,8 @@ define i8 @acquire_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3066,9 +3066,9 @@ define i8 @acquire_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB66_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3100,8 +3100,8 @@ define i8 @acquire_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3113,9 +3113,9 @@ define i8 @acquire_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB67_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3147,8 +3147,8 @@ define i8 @acquire_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3160,9 +3160,9 @@ define i8 @acquire_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB68_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3194,8 +3194,8 @@ define i8 @acquire_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3207,9 +3207,9 @@ define i8 @acquire_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB69_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3241,8 +3241,8 @@ define i8 @acquire_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3254,9 +3254,9 @@ define i8 @acquire_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB70_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3288,8 +3288,8 @@ define i8 @acquire_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acquire_seq_cst_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3301,9 +3301,9 @@ define i8 @acquire_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acquire_seq_cst_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB71_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3335,8 +3335,8 @@ define i8 @release_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3348,9 +3348,9 @@ define i8 @release_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB72_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3381,8 +3381,8 @@ define i8 @release_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3394,9 +3394,9 @@ define i8 @release_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB73_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3427,8 +3427,8 @@ define i8 @release_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3440,9 +3440,9 @@ define i8 @release_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB74_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3473,8 +3473,8 @@ define i8 @release_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3486,9 +3486,9 @@ define i8 @release_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB75_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3519,8 +3519,8 @@ define i8 @release_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3532,9 +3532,9 @@ define i8 @release_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB76_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3565,8 +3565,8 @@ define i8 @release_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3578,9 +3578,9 @@ define i8 @release_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB77_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3611,8 +3611,8 @@ define i8 @release_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3624,9 +3624,9 @@ define i8 @release_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB78_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3657,8 +3657,8 @@ define i8 @release_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3670,9 +3670,9 @@ define i8 @release_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB79_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3703,8 +3703,8 @@ define i8 @release_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3716,9 +3716,9 @@ define i8 @release_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB80_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3749,8 +3749,8 @@ define i8 @release_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3762,9 +3762,9 @@ define i8 @release_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB81_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3795,8 +3795,8 @@ define i8 @release_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3808,9 +3808,9 @@ define i8 @release_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB82_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3841,8 +3841,8 @@ define i8 @release_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_monotonic_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3854,9 +3854,9 @@ define i8 @release_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_monotonic_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB83_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3887,8 +3887,8 @@ define i8 @release_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3900,9 +3900,9 @@ define i8 @release_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB84_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3934,8 +3934,8 @@ define i8 @release_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3947,9 +3947,9 @@ define i8 @release_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB85_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -3981,8 +3981,8 @@ define i8 @release_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -3994,9 +3994,9 @@ define i8 @release_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB86_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4028,8 +4028,8 @@ define i8 @release_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4041,9 +4041,9 @@ define i8 @release_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB87_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4075,8 +4075,8 @@ define i8 @release_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4088,9 +4088,9 @@ define i8 @release_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB88_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4122,8 +4122,8 @@ define i8 @release_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4135,9 +4135,9 @@ define i8 @release_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB89_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4169,8 +4169,8 @@ define i8 @release_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4182,9 +4182,9 @@ define i8 @release_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB90_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4216,8 +4216,8 @@ define i8 @release_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4229,9 +4229,9 @@ define i8 @release_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB91_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4263,8 +4263,8 @@ define i8 @release_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4276,9 +4276,9 @@ define i8 @release_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB92_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4310,8 +4310,8 @@ define i8 @release_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4323,9 +4323,9 @@ define i8 @release_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB93_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4357,8 +4357,8 @@ define i8 @release_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4370,9 +4370,9 @@ define i8 @release_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB94_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4404,8 +4404,8 @@ define i8 @release_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_acquire_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4417,9 +4417,9 @@ define i8 @release_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_acquire_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB95_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4451,8 +4451,8 @@ define i8 @release_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4464,9 +4464,9 @@ define i8 @release_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB96_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4498,8 +4498,8 @@ define i8 @release_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4511,9 +4511,9 @@ define i8 @release_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB97_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4545,8 +4545,8 @@ define i8 @release_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4558,9 +4558,9 @@ define i8 @release_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB98_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4592,8 +4592,8 @@ define i8 @release_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4605,9 +4605,9 @@ define i8 @release_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB99_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4639,8 +4639,8 @@ define i8 @release_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4652,9 +4652,9 @@ define i8 @release_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB100_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4686,8 +4686,8 @@ define i8 @release_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4699,9 +4699,9 @@ define i8 @release_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB101_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4733,8 +4733,8 @@ define i8 @release_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4746,9 +4746,9 @@ define i8 @release_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB102_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4780,8 +4780,8 @@ define i8 @release_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4793,9 +4793,9 @@ define i8 @release_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB103_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4827,8 +4827,8 @@ define i8 @release_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4840,9 +4840,9 @@ define i8 @release_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB104_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4874,8 +4874,8 @@ define i8 @release_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4887,9 +4887,9 @@ define i8 @release_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB105_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4921,8 +4921,8 @@ define i8 @release_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4934,9 +4934,9 @@ define i8 @release_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB106_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -4968,8 +4968,8 @@ define i8 @release_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [release_seq_cst_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -4981,9 +4981,9 @@ define i8 @release_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [release_seq_cst_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB107_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5015,8 +5015,8 @@ define i8 @acq_rel_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5028,9 +5028,9 @@ define i8 @acq_rel_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB108_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5062,8 +5062,8 @@ define i8 @acq_rel_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5075,9 +5075,9 @@ define i8 @acq_rel_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB109_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5109,8 +5109,8 @@ define i8 @acq_rel_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5122,9 +5122,9 @@ define i8 @acq_rel_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB110_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5156,8 +5156,8 @@ define i8 @acq_rel_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5169,9 +5169,9 @@ define i8 @acq_rel_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB111_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5203,8 +5203,8 @@ define i8 @acq_rel_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5216,9 +5216,9 @@ define i8 @acq_rel_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB112_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5250,8 +5250,8 @@ define i8 @acq_rel_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5263,9 +5263,9 @@ define i8 @acq_rel_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB113_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5297,8 +5297,8 @@ define i8 @acq_rel_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5310,9 +5310,9 @@ define i8 @acq_rel_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB114_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5344,8 +5344,8 @@ define i8 @acq_rel_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5357,9 +5357,9 @@ define i8 @acq_rel_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB115_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5391,8 +5391,8 @@ define i8 @acq_rel_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5404,9 +5404,9 @@ define i8 @acq_rel_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB116_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5438,8 +5438,8 @@ define i8 @acq_rel_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5451,9 +5451,9 @@ define i8 @acq_rel_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB117_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5485,8 +5485,8 @@ define i8 @acq_rel_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5498,9 +5498,9 @@ define i8 @acq_rel_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB118_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5532,8 +5532,8 @@ define i8 @acq_rel_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_monotonic_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5545,9 +5545,9 @@ define i8 @acq_rel_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_monotonic_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB119_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5579,8 +5579,8 @@ define i8 @acq_rel_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5592,9 +5592,9 @@ define i8 @acq_rel_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB120_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5626,8 +5626,8 @@ define i8 @acq_rel_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5639,9 +5639,9 @@ define i8 @acq_rel_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB121_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5673,8 +5673,8 @@ define i8 @acq_rel_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5686,9 +5686,9 @@ define i8 @acq_rel_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB122_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5720,8 +5720,8 @@ define i8 @acq_rel_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5733,9 +5733,9 @@ define i8 @acq_rel_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB123_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5767,8 +5767,8 @@ define i8 @acq_rel_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5780,9 +5780,9 @@ define i8 @acq_rel_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB124_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5814,8 +5814,8 @@ define i8 @acq_rel_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5827,9 +5827,9 @@ define i8 @acq_rel_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB125_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5861,8 +5861,8 @@ define i8 @acq_rel_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5874,9 +5874,9 @@ define i8 @acq_rel_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB126_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5908,8 +5908,8 @@ define i8 @acq_rel_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5921,9 +5921,9 @@ define i8 @acq_rel_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB127_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -5955,8 +5955,8 @@ define i8 @acq_rel_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -5968,9 +5968,9 @@ define i8 @acq_rel_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB128_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6002,8 +6002,8 @@ define i8 @acq_rel_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6015,9 +6015,9 @@ define i8 @acq_rel_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB129_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6049,8 +6049,8 @@ define i8 @acq_rel_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6062,9 +6062,9 @@ define i8 @acq_rel_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB130_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6096,8 +6096,8 @@ define i8 @acq_rel_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_acquire_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6109,9 +6109,9 @@ define i8 @acq_rel_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_acquire_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB131_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6143,8 +6143,8 @@ define i8 @acq_rel_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6156,9 +6156,9 @@ define i8 @acq_rel_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB132_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6190,8 +6190,8 @@ define i8 @acq_rel_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6203,9 +6203,9 @@ define i8 @acq_rel_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB133_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6237,8 +6237,8 @@ define i8 @acq_rel_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6250,9 +6250,9 @@ define i8 @acq_rel_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB134_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6284,8 +6284,8 @@ define i8 @acq_rel_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6297,9 +6297,9 @@ define i8 @acq_rel_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB135_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6331,8 +6331,8 @@ define i8 @acq_rel_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6344,9 +6344,9 @@ define i8 @acq_rel_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB136_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6378,8 +6378,8 @@ define i8 @acq_rel_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6391,9 +6391,9 @@ define i8 @acq_rel_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB137_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6425,8 +6425,8 @@ define i8 @acq_rel_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6438,9 +6438,9 @@ define i8 @acq_rel_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB138_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6472,8 +6472,8 @@ define i8 @acq_rel_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6485,9 +6485,9 @@ define i8 @acq_rel_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB139_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6519,8 +6519,8 @@ define i8 @acq_rel_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6532,9 +6532,9 @@ define i8 @acq_rel_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB140_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6566,8 +6566,8 @@ define i8 @acq_rel_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6579,9 +6579,9 @@ define i8 @acq_rel_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB141_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6613,8 +6613,8 @@ define i8 @acq_rel_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6626,9 +6626,9 @@ define i8 @acq_rel_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB142_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6660,8 +6660,8 @@ define i8 @acq_rel_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [acq_rel_seq_cst_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6673,9 +6673,9 @@ define i8 @acq_rel_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [acq_rel_seq_cst_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB143_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6707,8 +6707,8 @@ define i8 @seq_cst_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6720,9 +6720,9 @@ define i8 @seq_cst_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB144_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6754,8 +6754,8 @@ define i8 @seq_cst_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6767,9 +6767,9 @@ define i8 @seq_cst_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB145_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6801,8 +6801,8 @@ define i8 @seq_cst_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6814,9 +6814,9 @@ define i8 @seq_cst_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB146_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6848,8 +6848,8 @@ define i8 @seq_cst_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6861,9 +6861,9 @@ define i8 @seq_cst_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB147_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6895,8 +6895,8 @@ define i8 @seq_cst_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6908,9 +6908,9 @@ define i8 @seq_cst_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB148_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6942,8 +6942,8 @@ define i8 @seq_cst_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -6955,9 +6955,9 @@ define i8 @seq_cst_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB149_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -6989,8 +6989,8 @@ define i8 @seq_cst_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7002,9 +7002,9 @@ define i8 @seq_cst_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB150_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7036,8 +7036,8 @@ define i8 @seq_cst_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7049,9 +7049,9 @@ define i8 @seq_cst_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB151_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7083,8 +7083,8 @@ define i8 @seq_cst_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7096,9 +7096,9 @@ define i8 @seq_cst_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB152_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7130,8 +7130,8 @@ define i8 @seq_cst_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7143,9 +7143,9 @@ define i8 @seq_cst_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB153_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7177,8 +7177,8 @@ define i8 @seq_cst_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7190,9 +7190,9 @@ define i8 @seq_cst_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB154_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7224,8 +7224,8 @@ define i8 @seq_cst_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_monotonic_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7237,9 +7237,9 @@ define i8 @seq_cst_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_monotonic_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB155_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7271,8 +7271,8 @@ define i8 @seq_cst_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7284,9 +7284,9 @@ define i8 @seq_cst_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB156_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7318,8 +7318,8 @@ define i8 @seq_cst_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7331,9 +7331,9 @@ define i8 @seq_cst_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB157_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7365,8 +7365,8 @@ define i8 @seq_cst_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7378,9 +7378,9 @@ define i8 @seq_cst_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB158_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7412,8 +7412,8 @@ define i8 @seq_cst_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7425,9 +7425,9 @@ define i8 @seq_cst_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB159_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7459,8 +7459,8 @@ define i8 @seq_cst_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7472,9 +7472,9 @@ define i8 @seq_cst_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB160_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7506,8 +7506,8 @@ define i8 @seq_cst_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7519,9 +7519,9 @@ define i8 @seq_cst_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB161_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7553,8 +7553,8 @@ define i8 @seq_cst_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7566,9 +7566,9 @@ define i8 @seq_cst_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB162_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7600,8 +7600,8 @@ define i8 @seq_cst_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7613,9 +7613,9 @@ define i8 @seq_cst_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB163_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7647,8 +7647,8 @@ define i8 @seq_cst_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7660,9 +7660,9 @@ define i8 @seq_cst_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB164_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7694,8 +7694,8 @@ define i8 @seq_cst_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7707,9 +7707,9 @@ define i8 @seq_cst_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB165_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7741,8 +7741,8 @@ define i8 @seq_cst_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7754,9 +7754,9 @@ define i8 @seq_cst_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB166_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7788,8 +7788,8 @@ define i8 @seq_cst_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_acquire_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7801,9 +7801,9 @@ define i8 @seq_cst_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_acquire_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB167_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7835,8 +7835,8 @@ define i8 @seq_cst_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7848,9 +7848,9 @@ define i8 @seq_cst_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_generic_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB168_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7882,8 +7882,8 @@ define i8 @seq_cst_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7895,9 +7895,9 @@ define i8 @seq_cst_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_generic_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB169_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7929,8 +7929,8 @@ define i8 @seq_cst_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7942,9 +7942,9 @@ define i8 @seq_cst_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_generic_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB170_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -7976,8 +7976,8 @@ define i8 @seq_cst_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -7989,9 +7989,9 @@ define i8 @seq_cst_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_generic_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB171_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8023,8 +8023,8 @@ define i8 @seq_cst_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_global_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -8036,9 +8036,9 @@ define i8 @seq_cst_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_global_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_global_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB172_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8070,8 +8070,8 @@ define i8 @seq_cst_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -8083,9 +8083,9 @@ define i8 @seq_cst_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_global_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB173_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8117,8 +8117,8 @@ define i8 @seq_cst_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -8130,9 +8130,9 @@ define i8 @seq_cst_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_global_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB174_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8164,8 +8164,8 @@ define i8 @seq_cst_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -8177,9 +8177,9 @@ define i8 @seq_cst_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_global_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.global.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB175_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8211,8 +8211,8 @@ define i8 @seq_cst_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -8224,9 +8224,9 @@ define i8 @seq_cst_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_shared_sys_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB176_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8258,8 +8258,8 @@ define i8 @seq_cst_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -8271,9 +8271,9 @@ define i8 @seq_cst_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_shared_cta_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB177_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8305,8 +8305,8 @@ define i8 @seq_cst_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -8318,9 +8318,9 @@ define i8 @seq_cst_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_shared_cluster_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB178_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8352,8 +8352,8 @@ define i8 @seq_cst_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u8 %rs1, [seq_cst_seq_cst_i8_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i8_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
@@ -8365,9 +8365,9 @@ define i8 @seq_cst_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM90-NEXT:    and.b32 %r14, %r13, 255;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM90-NEXT:    ld.param.u8 %r15, [seq_cst_seq_cst_i8_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_shared_gpu_param_1];
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
-; SM90-NEXT:    ld.shared.u32 %r16, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM90-NEXT:  $L__BB179_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8399,10 +8399,10 @@ define i16 @monotonic_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_generic_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_generic_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8412,7 +8412,7 @@ define i16 @monotonic_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB180_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8443,10 +8443,10 @@ define i16 @monotonic_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_generic_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_generic_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8456,7 +8456,7 @@ define i16 @monotonic_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB181_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8487,10 +8487,10 @@ define i16 @monotonic_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %ne
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_generic_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_generic_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8500,7 +8500,7 @@ define i16 @monotonic_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB182_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8531,10 +8531,10 @@ define i16 @monotonic_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_generic_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_generic_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8544,7 +8544,7 @@ define i16 @monotonic_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB183_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8575,10 +8575,10 @@ define i16 @monotonic_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_global_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_global_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8588,7 +8588,7 @@ define i16 @monotonic_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB184_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8619,10 +8619,10 @@ define i16 @monotonic_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_global_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_global_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8632,7 +8632,7 @@ define i16 @monotonic_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB185_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8663,10 +8663,10 @@ define i16 @monotonic_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_global_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_global_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8676,7 +8676,7 @@ define i16 @monotonic_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB186_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8707,10 +8707,10 @@ define i16 @monotonic_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_global_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_global_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8720,7 +8720,7 @@ define i16 @monotonic_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB187_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8751,10 +8751,10 @@ define i16 @monotonic_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_shared_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_shared_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8764,7 +8764,7 @@ define i16 @monotonic_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB188_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8795,10 +8795,10 @@ define i16 @monotonic_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_shared_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_shared_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8808,7 +8808,7 @@ define i16 @monotonic_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB189_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8839,10 +8839,10 @@ define i16 @monotonic_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_shared_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_shared_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8852,7 +8852,7 @@ define i16 @monotonic_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB190_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8883,10 +8883,10 @@ define i16 @monotonic_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_monotonic_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_shared_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_monotonic_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_shared_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8896,7 +8896,7 @@ define i16 @monotonic_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB191_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8927,10 +8927,10 @@ define i16 @monotonic_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_generic_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_generic_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8940,7 +8940,7 @@ define i16 @monotonic_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB192_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -8972,10 +8972,10 @@ define i16 @monotonic_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_generic_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_generic_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -8985,7 +8985,7 @@ define i16 @monotonic_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB193_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9017,10 +9017,10 @@ define i16 @monotonic_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_generic_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_generic_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9030,7 +9030,7 @@ define i16 @monotonic_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB194_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9062,10 +9062,10 @@ define i16 @monotonic_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_generic_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_generic_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9075,7 +9075,7 @@ define i16 @monotonic_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB195_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9107,10 +9107,10 @@ define i16 @monotonic_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_global_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_global_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9120,7 +9120,7 @@ define i16 @monotonic_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB196_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9152,10 +9152,10 @@ define i16 @monotonic_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_global_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_global_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9165,7 +9165,7 @@ define i16 @monotonic_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB197_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9197,10 +9197,10 @@ define i16 @monotonic_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_global_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_global_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9210,7 +9210,7 @@ define i16 @monotonic_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB198_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9242,10 +9242,10 @@ define i16 @monotonic_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_global_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_global_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9255,7 +9255,7 @@ define i16 @monotonic_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB199_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9287,10 +9287,10 @@ define i16 @monotonic_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_shared_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_shared_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9300,7 +9300,7 @@ define i16 @monotonic_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB200_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9332,10 +9332,10 @@ define i16 @monotonic_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_shared_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_shared_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9345,7 +9345,7 @@ define i16 @monotonic_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB201_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9377,10 +9377,10 @@ define i16 @monotonic_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_shared_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_shared_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9390,7 +9390,7 @@ define i16 @monotonic_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB202_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9422,10 +9422,10 @@ define i16 @monotonic_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_acquire_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_shared_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_acquire_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_shared_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -9435,7 +9435,7 @@ define i16 @monotonic_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB203_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9467,10 +9467,10 @@ define i16 @monotonic_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9481,7 +9481,7 @@ define i16 @monotonic_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB204_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9513,10 +9513,10 @@ define i16 @monotonic_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9527,7 +9527,7 @@ define i16 @monotonic_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB205_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9559,10 +9559,10 @@ define i16 @monotonic_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9573,7 +9573,7 @@ define i16 @monotonic_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB206_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9605,10 +9605,10 @@ define i16 @monotonic_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9619,7 +9619,7 @@ define i16 @monotonic_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB207_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9651,10 +9651,10 @@ define i16 @monotonic_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9665,7 +9665,7 @@ define i16 @monotonic_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB208_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9697,10 +9697,10 @@ define i16 @monotonic_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9711,7 +9711,7 @@ define i16 @monotonic_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB209_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9743,10 +9743,10 @@ define i16 @monotonic_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9757,7 +9757,7 @@ define i16 @monotonic_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB210_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9789,10 +9789,10 @@ define i16 @monotonic_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9803,7 +9803,7 @@ define i16 @monotonic_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB211_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9835,10 +9835,10 @@ define i16 @monotonic_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9849,7 +9849,7 @@ define i16 @monotonic_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB212_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9881,10 +9881,10 @@ define i16 @monotonic_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9895,7 +9895,7 @@ define i16 @monotonic_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB213_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9927,10 +9927,10 @@ define i16 @monotonic_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9941,7 +9941,7 @@ define i16 @monotonic_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB214_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -9973,10 +9973,10 @@ define i16 @monotonic_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [monotonic_seq_cst_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [monotonic_seq_cst_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -9987,7 +9987,7 @@ define i16 @monotonic_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB215_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10019,10 +10019,10 @@ define i16 @acquire_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_generic_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_generic_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10032,7 +10032,7 @@ define i16 @acquire_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB216_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10064,10 +10064,10 @@ define i16 @acquire_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_generic_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_generic_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10077,7 +10077,7 @@ define i16 @acquire_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB217_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10109,10 +10109,10 @@ define i16 @acquire_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_generic_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_generic_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10122,7 +10122,7 @@ define i16 @acquire_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB218_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10154,10 +10154,10 @@ define i16 @acquire_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_generic_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_generic_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10167,7 +10167,7 @@ define i16 @acquire_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB219_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10199,10 +10199,10 @@ define i16 @acquire_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_global_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_global_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10212,7 +10212,7 @@ define i16 @acquire_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB220_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10244,10 +10244,10 @@ define i16 @acquire_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_global_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_global_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10257,7 +10257,7 @@ define i16 @acquire_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB221_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10289,10 +10289,10 @@ define i16 @acquire_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_global_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_global_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10302,7 +10302,7 @@ define i16 @acquire_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB222_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10334,10 +10334,10 @@ define i16 @acquire_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_global_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_global_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10347,7 +10347,7 @@ define i16 @acquire_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB223_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10379,10 +10379,10 @@ define i16 @acquire_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_shared_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_shared_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10392,7 +10392,7 @@ define i16 @acquire_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB224_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10424,10 +10424,10 @@ define i16 @acquire_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_shared_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_shared_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10437,7 +10437,7 @@ define i16 @acquire_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB225_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10469,10 +10469,10 @@ define i16 @acquire_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_shared_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_shared_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10482,7 +10482,7 @@ define i16 @acquire_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB226_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10514,10 +10514,10 @@ define i16 @acquire_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_monotonic_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_shared_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_monotonic_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_shared_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10527,7 +10527,7 @@ define i16 @acquire_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB227_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10559,10 +10559,10 @@ define i16 @acquire_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_generic_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_generic_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10572,7 +10572,7 @@ define i16 @acquire_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB228_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10604,10 +10604,10 @@ define i16 @acquire_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_generic_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_generic_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10617,7 +10617,7 @@ define i16 @acquire_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB229_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10649,10 +10649,10 @@ define i16 @acquire_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_generic_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_generic_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10662,7 +10662,7 @@ define i16 @acquire_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB230_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10694,10 +10694,10 @@ define i16 @acquire_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_generic_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_generic_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10707,7 +10707,7 @@ define i16 @acquire_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB231_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10739,10 +10739,10 @@ define i16 @acquire_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_global_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_global_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10752,7 +10752,7 @@ define i16 @acquire_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB232_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10784,10 +10784,10 @@ define i16 @acquire_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_global_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_global_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10797,7 +10797,7 @@ define i16 @acquire_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB233_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10829,10 +10829,10 @@ define i16 @acquire_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_global_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_global_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10842,7 +10842,7 @@ define i16 @acquire_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB234_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10874,10 +10874,10 @@ define i16 @acquire_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_global_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_global_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10887,7 +10887,7 @@ define i16 @acquire_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB235_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10919,10 +10919,10 @@ define i16 @acquire_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_shared_sys_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_shared_sys_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10932,7 +10932,7 @@ define i16 @acquire_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB236_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -10964,10 +10964,10 @@ define i16 @acquire_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_shared_cta_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_shared_cta_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -10977,7 +10977,7 @@ define i16 @acquire_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB237_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11009,10 +11009,10 @@ define i16 @acquire_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_shared_cluster_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_shared_cluster_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -11022,7 +11022,7 @@ define i16 @acquire_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB238_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11054,10 +11054,10 @@ define i16 @acquire_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_acquire_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_shared_gpu_param_0];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_acquire_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_shared_gpu_param_1];
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
 ; SM90-NEXT:    shl.b32 %r1, %r11, 3;
@@ -11067,7 +11067,7 @@ define i16 @acquire_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB239_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11099,10 +11099,10 @@ define i16 @acquire_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11113,7 +11113,7 @@ define i16 @acquire_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB240_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11145,10 +11145,10 @@ define i16 @acquire_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11159,7 +11159,7 @@ define i16 @acquire_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB241_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11191,10 +11191,10 @@ define i16 @acquire_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11205,7 +11205,7 @@ define i16 @acquire_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB242_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11237,10 +11237,10 @@ define i16 @acquire_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11251,7 +11251,7 @@ define i16 @acquire_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB243_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11283,10 +11283,10 @@ define i16 @acquire_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11297,7 +11297,7 @@ define i16 @acquire_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB244_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11329,10 +11329,10 @@ define i16 @acquire_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11343,7 +11343,7 @@ define i16 @acquire_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB245_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11375,10 +11375,10 @@ define i16 @acquire_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11389,7 +11389,7 @@ define i16 @acquire_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB246_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11421,10 +11421,10 @@ define i16 @acquire_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11435,7 +11435,7 @@ define i16 @acquire_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB247_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11467,10 +11467,10 @@ define i16 @acquire_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11481,7 +11481,7 @@ define i16 @acquire_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB248_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11513,10 +11513,10 @@ define i16 @acquire_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11527,7 +11527,7 @@ define i16 @acquire_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB249_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11559,10 +11559,10 @@ define i16 @acquire_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11573,7 +11573,7 @@ define i16 @acquire_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB250_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11605,10 +11605,10 @@ define i16 @acquire_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acquire_seq_cst_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acquire_seq_cst_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11619,7 +11619,7 @@ define i16 @acquire_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB251_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11651,10 +11651,10 @@ define i16 @release_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11665,7 +11665,7 @@ define i16 @release_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB252_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11696,10 +11696,10 @@ define i16 @release_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11710,7 +11710,7 @@ define i16 @release_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB253_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11741,10 +11741,10 @@ define i16 @release_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11755,7 +11755,7 @@ define i16 @release_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB254_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11786,10 +11786,10 @@ define i16 @release_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11800,7 +11800,7 @@ define i16 @release_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB255_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11831,10 +11831,10 @@ define i16 @release_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11845,7 +11845,7 @@ define i16 @release_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB256_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11876,10 +11876,10 @@ define i16 @release_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11890,7 +11890,7 @@ define i16 @release_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB257_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11921,10 +11921,10 @@ define i16 @release_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11935,7 +11935,7 @@ define i16 @release_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB258_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -11966,10 +11966,10 @@ define i16 @release_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -11980,7 +11980,7 @@ define i16 @release_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB259_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12011,10 +12011,10 @@ define i16 @release_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12025,7 +12025,7 @@ define i16 @release_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB260_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12056,10 +12056,10 @@ define i16 @release_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12070,7 +12070,7 @@ define i16 @release_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB261_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12101,10 +12101,10 @@ define i16 @release_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12115,7 +12115,7 @@ define i16 @release_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB262_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12146,10 +12146,10 @@ define i16 @release_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_monotonic_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [release_monotonic_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12160,7 +12160,7 @@ define i16 @release_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB263_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12191,10 +12191,10 @@ define i16 @release_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12205,7 +12205,7 @@ define i16 @release_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB264_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12237,10 +12237,10 @@ define i16 @release_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12251,7 +12251,7 @@ define i16 @release_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB265_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12283,10 +12283,10 @@ define i16 @release_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12297,7 +12297,7 @@ define i16 @release_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB266_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12329,10 +12329,10 @@ define i16 @release_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12343,7 +12343,7 @@ define i16 @release_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB267_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12375,10 +12375,10 @@ define i16 @release_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12389,7 +12389,7 @@ define i16 @release_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB268_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12421,10 +12421,10 @@ define i16 @release_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12435,7 +12435,7 @@ define i16 @release_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB269_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12467,10 +12467,10 @@ define i16 @release_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12481,7 +12481,7 @@ define i16 @release_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB270_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12513,10 +12513,10 @@ define i16 @release_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12527,7 +12527,7 @@ define i16 @release_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB271_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12559,10 +12559,10 @@ define i16 @release_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12573,7 +12573,7 @@ define i16 @release_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB272_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12605,10 +12605,10 @@ define i16 @release_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12619,7 +12619,7 @@ define i16 @release_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB273_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12651,10 +12651,10 @@ define i16 @release_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12665,7 +12665,7 @@ define i16 @release_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB274_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12697,10 +12697,10 @@ define i16 @release_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_acquire_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [release_acquire_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12711,7 +12711,7 @@ define i16 @release_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB275_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12743,10 +12743,10 @@ define i16 @release_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12757,7 +12757,7 @@ define i16 @release_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB276_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12789,10 +12789,10 @@ define i16 @release_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12803,7 +12803,7 @@ define i16 @release_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB277_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12835,10 +12835,10 @@ define i16 @release_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12849,7 +12849,7 @@ define i16 @release_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB278_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12881,10 +12881,10 @@ define i16 @release_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12895,7 +12895,7 @@ define i16 @release_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB279_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12927,10 +12927,10 @@ define i16 @release_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12941,7 +12941,7 @@ define i16 @release_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB280_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -12973,10 +12973,10 @@ define i16 @release_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -12987,7 +12987,7 @@ define i16 @release_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB281_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13019,10 +13019,10 @@ define i16 @release_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13033,7 +13033,7 @@ define i16 @release_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB282_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13065,10 +13065,10 @@ define i16 @release_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13079,7 +13079,7 @@ define i16 @release_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB283_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13111,10 +13111,10 @@ define i16 @release_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13125,7 +13125,7 @@ define i16 @release_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB284_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13157,10 +13157,10 @@ define i16 @release_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13171,7 +13171,7 @@ define i16 @release_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB285_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13203,10 +13203,10 @@ define i16 @release_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13217,7 +13217,7 @@ define i16 @release_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB286_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13249,10 +13249,10 @@ define i16 @release_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [release_seq_cst_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [release_seq_cst_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13263,7 +13263,7 @@ define i16 @release_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB287_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13295,10 +13295,10 @@ define i16 @acq_rel_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13309,7 +13309,7 @@ define i16 @acq_rel_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB288_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13341,10 +13341,10 @@ define i16 @acq_rel_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13355,7 +13355,7 @@ define i16 @acq_rel_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB289_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13387,10 +13387,10 @@ define i16 @acq_rel_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13401,7 +13401,7 @@ define i16 @acq_rel_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB290_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13433,10 +13433,10 @@ define i16 @acq_rel_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13447,7 +13447,7 @@ define i16 @acq_rel_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB291_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13479,10 +13479,10 @@ define i16 @acq_rel_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13493,7 +13493,7 @@ define i16 @acq_rel_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB292_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13525,10 +13525,10 @@ define i16 @acq_rel_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13539,7 +13539,7 @@ define i16 @acq_rel_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB293_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13571,10 +13571,10 @@ define i16 @acq_rel_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13585,7 +13585,7 @@ define i16 @acq_rel_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB294_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13617,10 +13617,10 @@ define i16 @acq_rel_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13631,7 +13631,7 @@ define i16 @acq_rel_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB295_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13663,10 +13663,10 @@ define i16 @acq_rel_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13677,7 +13677,7 @@ define i16 @acq_rel_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB296_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13709,10 +13709,10 @@ define i16 @acq_rel_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13723,7 +13723,7 @@ define i16 @acq_rel_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB297_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13755,10 +13755,10 @@ define i16 @acq_rel_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13769,7 +13769,7 @@ define i16 @acq_rel_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB298_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13801,10 +13801,10 @@ define i16 @acq_rel_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_monotonic_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_monotonic_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13815,7 +13815,7 @@ define i16 @acq_rel_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB299_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13847,10 +13847,10 @@ define i16 @acq_rel_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13861,7 +13861,7 @@ define i16 @acq_rel_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB300_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13893,10 +13893,10 @@ define i16 @acq_rel_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13907,7 +13907,7 @@ define i16 @acq_rel_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB301_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13939,10 +13939,10 @@ define i16 @acq_rel_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13953,7 +13953,7 @@ define i16 @acq_rel_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB302_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -13985,10 +13985,10 @@ define i16 @acq_rel_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -13999,7 +13999,7 @@ define i16 @acq_rel_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB303_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14031,10 +14031,10 @@ define i16 @acq_rel_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14045,7 +14045,7 @@ define i16 @acq_rel_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB304_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14077,10 +14077,10 @@ define i16 @acq_rel_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14091,7 +14091,7 @@ define i16 @acq_rel_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB305_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14123,10 +14123,10 @@ define i16 @acq_rel_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14137,7 +14137,7 @@ define i16 @acq_rel_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB306_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14169,10 +14169,10 @@ define i16 @acq_rel_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14183,7 +14183,7 @@ define i16 @acq_rel_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB307_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14215,10 +14215,10 @@ define i16 @acq_rel_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.release.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14229,7 +14229,7 @@ define i16 @acq_rel_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB308_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14261,10 +14261,10 @@ define i16 @acq_rel_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14275,7 +14275,7 @@ define i16 @acq_rel_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB309_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14307,10 +14307,10 @@ define i16 @acq_rel_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.release.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14321,7 +14321,7 @@ define i16 @acq_rel_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB310_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14353,10 +14353,10 @@ define i16 @acq_rel_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_acquire_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.release.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_acquire_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14367,7 +14367,7 @@ define i16 @acq_rel_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB311_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14399,10 +14399,10 @@ define i16 @acq_rel_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14413,7 +14413,7 @@ define i16 @acq_rel_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB312_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14445,10 +14445,10 @@ define i16 @acq_rel_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14459,7 +14459,7 @@ define i16 @acq_rel_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB313_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14491,10 +14491,10 @@ define i16 @acq_rel_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14505,7 +14505,7 @@ define i16 @acq_rel_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB314_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14537,10 +14537,10 @@ define i16 @acq_rel_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14551,7 +14551,7 @@ define i16 @acq_rel_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB315_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14583,10 +14583,10 @@ define i16 @acq_rel_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14597,7 +14597,7 @@ define i16 @acq_rel_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB316_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14629,10 +14629,10 @@ define i16 @acq_rel_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14643,7 +14643,7 @@ define i16 @acq_rel_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB317_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14675,10 +14675,10 @@ define i16 @acq_rel_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14689,7 +14689,7 @@ define i16 @acq_rel_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB318_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14721,10 +14721,10 @@ define i16 @acq_rel_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14735,7 +14735,7 @@ define i16 @acq_rel_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB319_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14767,10 +14767,10 @@ define i16 @acq_rel_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14781,7 +14781,7 @@ define i16 @acq_rel_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB320_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14813,10 +14813,10 @@ define i16 @acq_rel_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14827,7 +14827,7 @@ define i16 @acq_rel_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB321_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14859,10 +14859,10 @@ define i16 @acq_rel_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14873,7 +14873,7 @@ define i16 @acq_rel_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB322_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14905,10 +14905,10 @@ define i16 @acq_rel_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [acq_rel_seq_cst_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [acq_rel_seq_cst_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14919,7 +14919,7 @@ define i16 @acq_rel_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB323_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14951,10 +14951,10 @@ define i16 @seq_cst_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -14965,7 +14965,7 @@ define i16 @seq_cst_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB324_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -14997,10 +14997,10 @@ define i16 @seq_cst_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15011,7 +15011,7 @@ define i16 @seq_cst_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB325_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15043,10 +15043,10 @@ define i16 @seq_cst_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15057,7 +15057,7 @@ define i16 @seq_cst_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB326_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15089,10 +15089,10 @@ define i16 @seq_cst_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15103,7 +15103,7 @@ define i16 @seq_cst_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB327_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15135,10 +15135,10 @@ define i16 @seq_cst_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15149,7 +15149,7 @@ define i16 @seq_cst_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB328_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15181,10 +15181,10 @@ define i16 @seq_cst_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15195,7 +15195,7 @@ define i16 @seq_cst_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB329_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15227,10 +15227,10 @@ define i16 @seq_cst_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15241,7 +15241,7 @@ define i16 @seq_cst_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB330_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15273,10 +15273,10 @@ define i16 @seq_cst_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15287,7 +15287,7 @@ define i16 @seq_cst_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB331_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15319,10 +15319,10 @@ define i16 @seq_cst_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15333,7 +15333,7 @@ define i16 @seq_cst_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB332_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15365,10 +15365,10 @@ define i16 @seq_cst_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15379,7 +15379,7 @@ define i16 @seq_cst_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB333_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15411,10 +15411,10 @@ define i16 @seq_cst_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15425,7 +15425,7 @@ define i16 @seq_cst_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB334_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15457,10 +15457,10 @@ define i16 @seq_cst_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_monotonic_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_monotonic_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15471,7 +15471,7 @@ define i16 @seq_cst_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB335_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15503,10 +15503,10 @@ define i16 @seq_cst_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15517,7 +15517,7 @@ define i16 @seq_cst_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB336_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15549,10 +15549,10 @@ define i16 @seq_cst_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15563,7 +15563,7 @@ define i16 @seq_cst_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB337_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15595,10 +15595,10 @@ define i16 @seq_cst_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15609,7 +15609,7 @@ define i16 @seq_cst_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB338_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15641,10 +15641,10 @@ define i16 @seq_cst_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15655,7 +15655,7 @@ define i16 @seq_cst_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB339_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15687,10 +15687,10 @@ define i16 @seq_cst_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15701,7 +15701,7 @@ define i16 @seq_cst_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB340_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15733,10 +15733,10 @@ define i16 @seq_cst_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15747,7 +15747,7 @@ define i16 @seq_cst_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB341_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15779,10 +15779,10 @@ define i16 @seq_cst_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15793,7 +15793,7 @@ define i16 @seq_cst_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB342_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15825,10 +15825,10 @@ define i16 @seq_cst_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15839,7 +15839,7 @@ define i16 @seq_cst_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB343_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15871,10 +15871,10 @@ define i16 @seq_cst_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15885,7 +15885,7 @@ define i16 @seq_cst_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB344_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15917,10 +15917,10 @@ define i16 @seq_cst_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15931,7 +15931,7 @@ define i16 @seq_cst_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB345_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -15963,10 +15963,10 @@ define i16 @seq_cst_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -15977,7 +15977,7 @@ define i16 @seq_cst_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB346_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16009,10 +16009,10 @@ define i16 @seq_cst_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_acquire_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_acquire_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16023,7 +16023,7 @@ define i16 @seq_cst_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB347_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16055,10 +16055,10 @@ define i16 @seq_cst_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_generic_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_generic_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16069,7 +16069,7 @@ define i16 @seq_cst_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB348_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16101,10 +16101,10 @@ define i16 @seq_cst_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_generic_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_generic_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16115,7 +16115,7 @@ define i16 @seq_cst_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB349_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16147,10 +16147,10 @@ define i16 @seq_cst_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_generic_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_generic_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16161,7 +16161,7 @@ define i16 @seq_cst_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB350_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16193,10 +16193,10 @@ define i16 @seq_cst_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_generic_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_generic_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16207,7 +16207,7 @@ define i16 @seq_cst_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB351_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16239,10 +16239,10 @@ define i16 @seq_cst_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_global_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_global_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_global_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_global_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16253,7 +16253,7 @@ define i16 @seq_cst_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB352_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16285,10 +16285,10 @@ define i16 @seq_cst_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_global_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_global_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_global_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16299,7 +16299,7 @@ define i16 @seq_cst_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB353_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16331,10 +16331,10 @@ define i16 @seq_cst_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_global_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_global_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16345,7 +16345,7 @@ define i16 @seq_cst_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB354_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16377,10 +16377,10 @@ define i16 @seq_cst_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_global_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_global_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16391,7 +16391,7 @@ define i16 @seq_cst_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.global.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB355_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16423,10 +16423,10 @@ define i16 @seq_cst_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_shared_sys_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_shared_sys_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16437,7 +16437,7 @@ define i16 @seq_cst_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB356_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16469,10 +16469,10 @@ define i16 @seq_cst_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_shared_cta_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_shared_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16483,7 +16483,7 @@ define i16 @seq_cst_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB357_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16515,10 +16515,10 @@ define i16 @seq_cst_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_shared_cluster_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_shared_cluster_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16529,7 +16529,7 @@ define i16 @seq_cst_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB358_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16561,10 +16561,10 @@ define i16 @seq_cst_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u16 %rs1, [seq_cst_seq_cst_i16_shared_gpu_param_2];
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i16_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u16 %r9, [seq_cst_seq_cst_i16_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_shared_gpu_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
 ; SM90-NEXT:    and.b32 %r11, %r10, 3;
@@ -16575,7 +16575,7 @@ define i16 @seq_cst_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
-; SM90-NEXT:    ld.shared.u32 %r15, [%rd1];
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
 ; SM90-NEXT:  $L__BB359_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16605,9 +16605,9 @@ define i32 @monotonic_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16622,9 +16622,9 @@ define i32 @monotonic_monotonic_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16639,9 +16639,9 @@ define i32 @monotonic_monotonic_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %ne
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16656,9 +16656,9 @@ define i32 @monotonic_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16673,9 +16673,9 @@ define i32 @monotonic_monotonic_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_global_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16690,9 +16690,9 @@ define i32 @monotonic_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_global_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16707,9 +16707,9 @@ define i32 @monotonic_monotonic_i32_global_cluster(ptr addrspace(1) %addr, i32 %
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16724,9 +16724,9 @@ define i32 @monotonic_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16741,9 +16741,9 @@ define i32 @monotonic_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16758,9 +16758,9 @@ define i32 @monotonic_monotonic_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16775,9 +16775,9 @@ define i32 @monotonic_monotonic_i32_shared_cluster(ptr addrspace(3) %addr, i32 %
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16792,9 +16792,9 @@ define i32 @monotonic_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i32_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_monotonic_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_monotonic_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16809,9 +16809,9 @@ define i32 @monotonic_acquire_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16826,9 +16826,9 @@ define i32 @monotonic_acquire_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16843,9 +16843,9 @@ define i32 @monotonic_acquire_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new)
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16860,9 +16860,9 @@ define i32 @monotonic_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16877,9 +16877,9 @@ define i32 @monotonic_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_global_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16894,9 +16894,9 @@ define i32 @monotonic_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_global_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16911,9 +16911,9 @@ define i32 @monotonic_acquire_i32_global_cluster(ptr addrspace(1) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16928,9 +16928,9 @@ define i32 @monotonic_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16945,9 +16945,9 @@ define i32 @monotonic_acquire_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16962,9 +16962,9 @@ define i32 @monotonic_acquire_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16979,9 +16979,9 @@ define i32 @monotonic_acquire_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -16996,9 +16996,9 @@ define i32 @monotonic_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i32_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_acquire_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_acquire_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17013,10 +17013,10 @@ define i32 @monotonic_seq_cst_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17031,10 +17031,10 @@ define i32 @monotonic_seq_cst_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17049,10 +17049,10 @@ define i32 @monotonic_seq_cst_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new)
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17067,10 +17067,10 @@ define i32 @monotonic_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17085,10 +17085,10 @@ define i32 @monotonic_seq_cst_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17103,10 +17103,10 @@ define i32 @monotonic_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17121,10 +17121,10 @@ define i32 @monotonic_seq_cst_i32_global_cluster(ptr addrspace(1) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17139,10 +17139,10 @@ define i32 @monotonic_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17157,10 +17157,10 @@ define i32 @monotonic_seq_cst_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17175,10 +17175,10 @@ define i32 @monotonic_seq_cst_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17193,10 +17193,10 @@ define i32 @monotonic_seq_cst_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17211,10 +17211,10 @@ define i32 @monotonic_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [monotonic_seq_cst_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [monotonic_seq_cst_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17229,9 +17229,9 @@ define i32 @acquire_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17246,9 +17246,9 @@ define i32 @acquire_monotonic_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17263,9 +17263,9 @@ define i32 @acquire_monotonic_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new)
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17280,9 +17280,9 @@ define i32 @acquire_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17297,9 +17297,9 @@ define i32 @acquire_monotonic_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_global_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17314,9 +17314,9 @@ define i32 @acquire_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_global_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17331,9 +17331,9 @@ define i32 @acquire_monotonic_i32_global_cluster(ptr addrspace(1) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17348,9 +17348,9 @@ define i32 @acquire_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17365,9 +17365,9 @@ define i32 @acquire_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17382,9 +17382,9 @@ define i32 @acquire_monotonic_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17399,9 +17399,9 @@ define i32 @acquire_monotonic_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17416,9 +17416,9 @@ define i32 @acquire_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i32_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_monotonic_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_monotonic_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17433,9 +17433,9 @@ define i32 @acquire_acquire_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17450,9 +17450,9 @@ define i32 @acquire_acquire_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17467,9 +17467,9 @@ define i32 @acquire_acquire_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17484,9 +17484,9 @@ define i32 @acquire_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17501,9 +17501,9 @@ define i32 @acquire_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_global_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17518,9 +17518,9 @@ define i32 @acquire_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_global_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17535,9 +17535,9 @@ define i32 @acquire_acquire_i32_global_cluster(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17552,9 +17552,9 @@ define i32 @acquire_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17569,9 +17569,9 @@ define i32 @acquire_acquire_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17586,9 +17586,9 @@ define i32 @acquire_acquire_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17603,9 +17603,9 @@ define i32 @acquire_acquire_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17620,9 +17620,9 @@ define i32 @acquire_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i32_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_acquire_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_acquire_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17637,10 +17637,10 @@ define i32 @acquire_seq_cst_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17655,10 +17655,10 @@ define i32 @acquire_seq_cst_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17673,10 +17673,10 @@ define i32 @acquire_seq_cst_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17691,10 +17691,10 @@ define i32 @acquire_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17709,10 +17709,10 @@ define i32 @acquire_seq_cst_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17727,10 +17727,10 @@ define i32 @acquire_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17745,10 +17745,10 @@ define i32 @acquire_seq_cst_i32_global_cluster(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17763,10 +17763,10 @@ define i32 @acquire_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17781,10 +17781,10 @@ define i32 @acquire_seq_cst_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17799,10 +17799,10 @@ define i32 @acquire_seq_cst_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17817,10 +17817,10 @@ define i32 @acquire_seq_cst_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17835,10 +17835,10 @@ define i32 @acquire_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [acquire_seq_cst_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acquire_seq_cst_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17853,9 +17853,9 @@ define i32 @release_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.release.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17870,9 +17870,9 @@ define i32 @release_monotonic_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.release.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17887,9 +17887,9 @@ define i32 @release_monotonic_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new)
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.release.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17904,9 +17904,9 @@ define i32 @release_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.release.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17921,9 +17921,9 @@ define i32 @release_monotonic_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_global_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.release.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17938,9 +17938,9 @@ define i32 @release_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_global_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.release.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17955,9 +17955,9 @@ define i32 @release_monotonic_i32_global_cluster(ptr addrspace(1) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.release.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17972,9 +17972,9 @@ define i32 @release_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.release.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17989,9 +17989,9 @@ define i32 @release_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.release.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18006,9 +18006,9 @@ define i32 @release_monotonic_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.release.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18023,9 +18023,9 @@ define i32 @release_monotonic_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.release.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18040,9 +18040,9 @@ define i32 @release_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i32_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_monotonic_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_monotonic_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.release.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18057,9 +18057,9 @@ define i32 @release_acquire_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18074,9 +18074,9 @@ define i32 @release_acquire_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18091,9 +18091,9 @@ define i32 @release_acquire_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18108,9 +18108,9 @@ define i32 @release_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18125,9 +18125,9 @@ define i32 @release_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_global_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18142,9 +18142,9 @@ define i32 @release_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_global_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18159,9 +18159,9 @@ define i32 @release_acquire_i32_global_cluster(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18176,9 +18176,9 @@ define i32 @release_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18193,9 +18193,9 @@ define i32 @release_acquire_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18210,9 +18210,9 @@ define i32 @release_acquire_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18227,9 +18227,9 @@ define i32 @release_acquire_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18244,9 +18244,9 @@ define i32 @release_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i32_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [release_acquire_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_acquire_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18261,10 +18261,10 @@ define i32 @release_seq_cst_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18279,10 +18279,10 @@ define i32 @release_seq_cst_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18297,10 +18297,10 @@ define i32 @release_seq_cst_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18315,10 +18315,10 @@ define i32 @release_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18333,10 +18333,10 @@ define i32 @release_seq_cst_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18351,10 +18351,10 @@ define i32 @release_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18369,10 +18369,10 @@ define i32 @release_seq_cst_i32_global_cluster(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18387,10 +18387,10 @@ define i32 @release_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18405,10 +18405,10 @@ define i32 @release_seq_cst_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18423,10 +18423,10 @@ define i32 @release_seq_cst_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18441,10 +18441,10 @@ define i32 @release_seq_cst_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18459,10 +18459,10 @@ define i32 @release_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [release_seq_cst_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [release_seq_cst_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18477,9 +18477,9 @@ define i32 @acq_rel_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18494,9 +18494,9 @@ define i32 @acq_rel_monotonic_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18511,9 +18511,9 @@ define i32 @acq_rel_monotonic_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new)
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18528,9 +18528,9 @@ define i32 @acq_rel_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18545,9 +18545,9 @@ define i32 @acq_rel_monotonic_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_global_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18562,9 +18562,9 @@ define i32 @acq_rel_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_global_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18579,9 +18579,9 @@ define i32 @acq_rel_monotonic_i32_global_cluster(ptr addrspace(1) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18596,9 +18596,9 @@ define i32 @acq_rel_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18613,9 +18613,9 @@ define i32 @acq_rel_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18630,9 +18630,9 @@ define i32 @acq_rel_monotonic_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18647,9 +18647,9 @@ define i32 @acq_rel_monotonic_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18664,9 +18664,9 @@ define i32 @acq_rel_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i32_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_monotonic_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_monotonic_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18681,9 +18681,9 @@ define i32 @acq_rel_acquire_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18698,9 +18698,9 @@ define i32 @acq_rel_acquire_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18715,9 +18715,9 @@ define i32 @acq_rel_acquire_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18732,9 +18732,9 @@ define i32 @acq_rel_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18749,9 +18749,9 @@ define i32 @acq_rel_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_global_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18766,9 +18766,9 @@ define i32 @acq_rel_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_global_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18783,9 +18783,9 @@ define i32 @acq_rel_acquire_i32_global_cluster(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18800,9 +18800,9 @@ define i32 @acq_rel_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18817,9 +18817,9 @@ define i32 @acq_rel_acquire_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18834,9 +18834,9 @@ define i32 @acq_rel_acquire_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18851,9 +18851,9 @@ define i32 @acq_rel_acquire_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18868,9 +18868,9 @@ define i32 @acq_rel_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i32_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_acquire_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_acquire_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18885,10 +18885,10 @@ define i32 @acq_rel_seq_cst_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18903,10 +18903,10 @@ define i32 @acq_rel_seq_cst_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18921,10 +18921,10 @@ define i32 @acq_rel_seq_cst_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18939,10 +18939,10 @@ define i32 @acq_rel_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18957,10 +18957,10 @@ define i32 @acq_rel_seq_cst_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18975,10 +18975,10 @@ define i32 @acq_rel_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -18993,10 +18993,10 @@ define i32 @acq_rel_seq_cst_i32_global_cluster(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19011,10 +19011,10 @@ define i32 @acq_rel_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19029,10 +19029,10 @@ define i32 @acq_rel_seq_cst_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19047,10 +19047,10 @@ define i32 @acq_rel_seq_cst_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19065,10 +19065,10 @@ define i32 @acq_rel_seq_cst_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19083,10 +19083,10 @@ define i32 @acq_rel_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [acq_rel_seq_cst_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [acq_rel_seq_cst_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19101,10 +19101,10 @@ define i32 @seq_cst_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19119,10 +19119,10 @@ define i32 @seq_cst_monotonic_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19137,10 +19137,10 @@ define i32 @seq_cst_monotonic_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new)
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19155,10 +19155,10 @@ define i32 @seq_cst_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19173,10 +19173,10 @@ define i32 @seq_cst_monotonic_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19191,10 +19191,10 @@ define i32 @seq_cst_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19209,10 +19209,10 @@ define i32 @seq_cst_monotonic_i32_global_cluster(ptr addrspace(1) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19227,10 +19227,10 @@ define i32 @seq_cst_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19245,10 +19245,10 @@ define i32 @seq_cst_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19263,10 +19263,10 @@ define i32 @seq_cst_monotonic_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19281,10 +19281,10 @@ define i32 @seq_cst_monotonic_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cm
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19299,10 +19299,10 @@ define i32 @seq_cst_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_monotonic_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_monotonic_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19317,10 +19317,10 @@ define i32 @seq_cst_acquire_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19335,10 +19335,10 @@ define i32 @seq_cst_acquire_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19353,10 +19353,10 @@ define i32 @seq_cst_acquire_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19371,10 +19371,10 @@ define i32 @seq_cst_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19389,10 +19389,10 @@ define i32 @seq_cst_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19407,10 +19407,10 @@ define i32 @seq_cst_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19425,10 +19425,10 @@ define i32 @seq_cst_acquire_i32_global_cluster(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19443,10 +19443,10 @@ define i32 @seq_cst_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19461,10 +19461,10 @@ define i32 @seq_cst_acquire_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19479,10 +19479,10 @@ define i32 @seq_cst_acquire_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19497,10 +19497,10 @@ define i32 @seq_cst_acquire_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19515,10 +19515,10 @@ define i32 @seq_cst_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_acquire_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_acquire_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19533,10 +19533,10 @@ define i32 @seq_cst_seq_cst_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19551,10 +19551,10 @@ define i32 @seq_cst_seq_cst_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19569,10 +19569,10 @@ define i32 @seq_cst_seq_cst_i32_generic_cluster(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19587,10 +19587,10 @@ define i32 @seq_cst_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19605,10 +19605,10 @@ define i32 @seq_cst_seq_cst_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_global_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_global_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_global_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19623,10 +19623,10 @@ define i32 @seq_cst_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_global_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_global_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19641,10 +19641,10 @@ define i32 @seq_cst_seq_cst_i32_global_cluster(ptr addrspace(1) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19659,10 +19659,10 @@ define i32 @seq_cst_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19677,10 +19677,10 @@ define i32 @seq_cst_seq_cst_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19695,10 +19695,10 @@ define i32 @seq_cst_seq_cst_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19713,10 +19713,10 @@ define i32 @seq_cst_seq_cst_i32_shared_cluster(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19731,10 +19731,10 @@ define i32 @seq_cst_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i32_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u32 %r1, [seq_cst_seq_cst_i32_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u32 %r2, [seq_cst_seq_cst_i32_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -19748,9 +19748,9 @@ define i64 @monotonic_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.relaxed.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19764,9 +19764,9 @@ define i64 @monotonic_monotonic_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.relaxed.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19780,9 +19780,9 @@ define i64 @monotonic_monotonic_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %ne
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19796,9 +19796,9 @@ define i64 @monotonic_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19812,9 +19812,9 @@ define i64 @monotonic_monotonic_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_global_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19828,9 +19828,9 @@ define i64 @monotonic_monotonic_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_global_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19844,9 +19844,9 @@ define i64 @monotonic_monotonic_i64_global_cluster(ptr addrspace(1) %addr, i64 %
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19860,9 +19860,9 @@ define i64 @monotonic_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19876,9 +19876,9 @@ define i64 @monotonic_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19892,9 +19892,9 @@ define i64 @monotonic_monotonic_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19908,9 +19908,9 @@ define i64 @monotonic_monotonic_i64_shared_cluster(ptr addrspace(3) %addr, i64 %
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19924,9 +19924,9 @@ define i64 @monotonic_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_monotonic_i64_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_monotonic_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_monotonic_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19940,9 +19940,9 @@ define i64 @monotonic_acquire_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19956,9 +19956,9 @@ define i64 @monotonic_acquire_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19972,9 +19972,9 @@ define i64 @monotonic_acquire_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new)
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -19988,9 +19988,9 @@ define i64 @monotonic_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20004,9 +20004,9 @@ define i64 @monotonic_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_global_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20020,9 +20020,9 @@ define i64 @monotonic_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_global_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20036,9 +20036,9 @@ define i64 @monotonic_acquire_i64_global_cluster(ptr addrspace(1) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20052,9 +20052,9 @@ define i64 @monotonic_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20068,9 +20068,9 @@ define i64 @monotonic_acquire_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20084,9 +20084,9 @@ define i64 @monotonic_acquire_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20100,9 +20100,9 @@ define i64 @monotonic_acquire_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20116,9 +20116,9 @@ define i64 @monotonic_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_acquire_i64_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_acquire_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_acquire_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20132,10 +20132,10 @@ define i64 @monotonic_seq_cst_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20149,10 +20149,10 @@ define i64 @monotonic_seq_cst_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20166,10 +20166,10 @@ define i64 @monotonic_seq_cst_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new)
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20183,10 +20183,10 @@ define i64 @monotonic_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20200,10 +20200,10 @@ define i64 @monotonic_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20217,10 +20217,10 @@ define i64 @monotonic_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20234,10 +20234,10 @@ define i64 @monotonic_seq_cst_i64_global_cluster(ptr addrspace(1) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20251,10 +20251,10 @@ define i64 @monotonic_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20268,10 +20268,10 @@ define i64 @monotonic_seq_cst_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20285,10 +20285,10 @@ define i64 @monotonic_seq_cst_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20302,10 +20302,10 @@ define i64 @monotonic_seq_cst_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20319,10 +20319,10 @@ define i64 @monotonic_seq_cst_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [monotonic_seq_cst_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [monotonic_seq_cst_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [monotonic_seq_cst_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20336,9 +20336,9 @@ define i64 @acquire_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20352,9 +20352,9 @@ define i64 @acquire_monotonic_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20368,9 +20368,9 @@ define i64 @acquire_monotonic_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new)
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20384,9 +20384,9 @@ define i64 @acquire_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20400,9 +20400,9 @@ define i64 @acquire_monotonic_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_global_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20416,9 +20416,9 @@ define i64 @acquire_monotonic_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_global_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20432,9 +20432,9 @@ define i64 @acquire_monotonic_i64_global_cluster(ptr addrspace(1) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20448,9 +20448,9 @@ define i64 @acquire_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20464,9 +20464,9 @@ define i64 @acquire_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20480,9 +20480,9 @@ define i64 @acquire_monotonic_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20496,9 +20496,9 @@ define i64 @acquire_monotonic_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20512,9 +20512,9 @@ define i64 @acquire_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_monotonic_i64_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_monotonic_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_monotonic_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20528,9 +20528,9 @@ define i64 @acquire_acquire_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20544,9 +20544,9 @@ define i64 @acquire_acquire_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20560,9 +20560,9 @@ define i64 @acquire_acquire_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20576,9 +20576,9 @@ define i64 @acquire_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20592,9 +20592,9 @@ define i64 @acquire_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_global_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20608,9 +20608,9 @@ define i64 @acquire_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_global_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20624,9 +20624,9 @@ define i64 @acquire_acquire_i64_global_cluster(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20640,9 +20640,9 @@ define i64 @acquire_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20656,9 +20656,9 @@ define i64 @acquire_acquire_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20672,9 +20672,9 @@ define i64 @acquire_acquire_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20688,9 +20688,9 @@ define i64 @acquire_acquire_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20704,9 +20704,9 @@ define i64 @acquire_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_acquire_i64_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_acquire_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_acquire_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20720,10 +20720,10 @@ define i64 @acquire_seq_cst_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20737,10 +20737,10 @@ define i64 @acquire_seq_cst_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20754,10 +20754,10 @@ define i64 @acquire_seq_cst_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20771,10 +20771,10 @@ define i64 @acquire_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20788,10 +20788,10 @@ define i64 @acquire_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20805,10 +20805,10 @@ define i64 @acquire_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20822,10 +20822,10 @@ define i64 @acquire_seq_cst_i64_global_cluster(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20839,10 +20839,10 @@ define i64 @acquire_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20856,10 +20856,10 @@ define i64 @acquire_seq_cst_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20873,10 +20873,10 @@ define i64 @acquire_seq_cst_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20890,10 +20890,10 @@ define i64 @acquire_seq_cst_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20907,10 +20907,10 @@ define i64 @acquire_seq_cst_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acquire_seq_cst_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [acquire_seq_cst_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acquire_seq_cst_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20924,9 +20924,9 @@ define i64 @release_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.release.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20940,9 +20940,9 @@ define i64 @release_monotonic_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.release.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20956,9 +20956,9 @@ define i64 @release_monotonic_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new)
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.release.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20972,9 +20972,9 @@ define i64 @release_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.release.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -20988,9 +20988,9 @@ define i64 @release_monotonic_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_global_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.release.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21004,9 +21004,9 @@ define i64 @release_monotonic_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_global_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.release.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21020,9 +21020,9 @@ define i64 @release_monotonic_i64_global_cluster(ptr addrspace(1) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.release.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21036,9 +21036,9 @@ define i64 @release_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.release.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21052,9 +21052,9 @@ define i64 @release_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.release.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21068,9 +21068,9 @@ define i64 @release_monotonic_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.release.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21084,9 +21084,9 @@ define i64 @release_monotonic_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.release.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21100,9 +21100,9 @@ define i64 @release_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_monotonic_i64_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_monotonic_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_monotonic_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.release.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21116,9 +21116,9 @@ define i64 @release_acquire_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21132,9 +21132,9 @@ define i64 @release_acquire_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21148,9 +21148,9 @@ define i64 @release_acquire_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21164,9 +21164,9 @@ define i64 @release_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21180,9 +21180,9 @@ define i64 @release_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_global_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21196,9 +21196,9 @@ define i64 @release_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_global_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21212,9 +21212,9 @@ define i64 @release_acquire_i64_global_cluster(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21228,9 +21228,9 @@ define i64 @release_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21244,9 +21244,9 @@ define i64 @release_acquire_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21260,9 +21260,9 @@ define i64 @release_acquire_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21276,9 +21276,9 @@ define i64 @release_acquire_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21292,9 +21292,9 @@ define i64 @release_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_acquire_i64_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [release_acquire_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_acquire_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21308,10 +21308,10 @@ define i64 @release_seq_cst_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21325,10 +21325,10 @@ define i64 @release_seq_cst_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21342,10 +21342,10 @@ define i64 @release_seq_cst_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21359,10 +21359,10 @@ define i64 @release_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21376,10 +21376,10 @@ define i64 @release_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21393,10 +21393,10 @@ define i64 @release_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21410,10 +21410,10 @@ define i64 @release_seq_cst_i64_global_cluster(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21427,10 +21427,10 @@ define i64 @release_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21444,10 +21444,10 @@ define i64 @release_seq_cst_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21461,10 +21461,10 @@ define i64 @release_seq_cst_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21478,10 +21478,10 @@ define i64 @release_seq_cst_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21495,10 +21495,10 @@ define i64 @release_seq_cst_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [release_seq_cst_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [release_seq_cst_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [release_seq_cst_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21512,9 +21512,9 @@ define i64 @acq_rel_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21528,9 +21528,9 @@ define i64 @acq_rel_monotonic_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21544,9 +21544,9 @@ define i64 @acq_rel_monotonic_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new)
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21560,9 +21560,9 @@ define i64 @acq_rel_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21576,9 +21576,9 @@ define i64 @acq_rel_monotonic_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_global_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21592,9 +21592,9 @@ define i64 @acq_rel_monotonic_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_global_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21608,9 +21608,9 @@ define i64 @acq_rel_monotonic_i64_global_cluster(ptr addrspace(1) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21624,9 +21624,9 @@ define i64 @acq_rel_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21640,9 +21640,9 @@ define i64 @acq_rel_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21656,9 +21656,9 @@ define i64 @acq_rel_monotonic_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21672,9 +21672,9 @@ define i64 @acq_rel_monotonic_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21688,9 +21688,9 @@ define i64 @acq_rel_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_monotonic_i64_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_monotonic_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_monotonic_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21704,9 +21704,9 @@ define i64 @acq_rel_acquire_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_generic_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21720,9 +21720,9 @@ define i64 @acq_rel_acquire_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_generic_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21736,9 +21736,9 @@ define i64 @acq_rel_acquire_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_generic_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21752,9 +21752,9 @@ define i64 @acq_rel_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_generic_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21768,9 +21768,9 @@ define i64 @acq_rel_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_global_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21784,9 +21784,9 @@ define i64 @acq_rel_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_global_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21800,9 +21800,9 @@ define i64 @acq_rel_acquire_i64_global_cluster(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_global_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21816,9 +21816,9 @@ define i64 @acq_rel_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_global_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21832,9 +21832,9 @@ define i64 @acq_rel_acquire_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_shared_sys_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21848,9 +21848,9 @@ define i64 @acq_rel_acquire_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_shared_cta_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acq_rel.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21864,9 +21864,9 @@ define i64 @acq_rel_acquire_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_shared_cluster_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acq_rel.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21880,9 +21880,9 @@ define i64 @acq_rel_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_acquire_i64_shared_gpu_param_0];
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_acquire_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_acquire_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acq_rel.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21896,10 +21896,10 @@ define i64 @acq_rel_seq_cst_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21913,10 +21913,10 @@ define i64 @acq_rel_seq_cst_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21930,10 +21930,10 @@ define i64 @acq_rel_seq_cst_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21947,10 +21947,10 @@ define i64 @acq_rel_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21964,10 +21964,10 @@ define i64 @acq_rel_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21981,10 +21981,10 @@ define i64 @acq_rel_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -21998,10 +21998,10 @@ define i64 @acq_rel_seq_cst_i64_global_cluster(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22015,10 +22015,10 @@ define i64 @acq_rel_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22032,10 +22032,10 @@ define i64 @acq_rel_seq_cst_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22049,10 +22049,10 @@ define i64 @acq_rel_seq_cst_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22066,10 +22066,10 @@ define i64 @acq_rel_seq_cst_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22083,10 +22083,10 @@ define i64 @acq_rel_seq_cst_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [acq_rel_seq_cst_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [acq_rel_seq_cst_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [acq_rel_seq_cst_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22100,10 +22100,10 @@ define i64 @seq_cst_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22117,10 +22117,10 @@ define i64 @seq_cst_monotonic_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22134,10 +22134,10 @@ define i64 @seq_cst_monotonic_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new)
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22151,10 +22151,10 @@ define i64 @seq_cst_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22168,10 +22168,10 @@ define i64 @seq_cst_monotonic_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22185,10 +22185,10 @@ define i64 @seq_cst_monotonic_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22202,10 +22202,10 @@ define i64 @seq_cst_monotonic_i64_global_cluster(ptr addrspace(1) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22219,10 +22219,10 @@ define i64 @seq_cst_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22236,10 +22236,10 @@ define i64 @seq_cst_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22253,10 +22253,10 @@ define i64 @seq_cst_monotonic_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22270,10 +22270,10 @@ define i64 @seq_cst_monotonic_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cm
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22287,10 +22287,10 @@ define i64 @seq_cst_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_monotonic_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_monotonic_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_monotonic_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22304,10 +22304,10 @@ define i64 @seq_cst_acquire_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22321,10 +22321,10 @@ define i64 @seq_cst_acquire_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22338,10 +22338,10 @@ define i64 @seq_cst_acquire_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22355,10 +22355,10 @@ define i64 @seq_cst_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22372,10 +22372,10 @@ define i64 @seq_cst_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22389,10 +22389,10 @@ define i64 @seq_cst_acquire_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22406,10 +22406,10 @@ define i64 @seq_cst_acquire_i64_global_cluster(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22423,10 +22423,10 @@ define i64 @seq_cst_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22440,10 +22440,10 @@ define i64 @seq_cst_acquire_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22457,10 +22457,10 @@ define i64 @seq_cst_acquire_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22474,10 +22474,10 @@ define i64 @seq_cst_acquire_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22491,10 +22491,10 @@ define i64 @seq_cst_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_acquire_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_acquire_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_acquire_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22508,10 +22508,10 @@ define i64 @seq_cst_seq_cst_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_generic_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_generic_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_generic_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_generic_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_generic_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_generic_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22525,10 +22525,10 @@ define i64 @seq_cst_seq_cst_i64_generic_cta(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_generic_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_generic_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_generic_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_generic_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_generic_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_generic_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22542,10 +22542,10 @@ define i64 @seq_cst_seq_cst_i64_generic_cluster(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_generic_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_generic_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_generic_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_generic_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_generic_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_generic_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22559,10 +22559,10 @@ define i64 @seq_cst_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_generic_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_generic_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_generic_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_generic_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_generic_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_generic_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22576,10 +22576,10 @@ define i64 @seq_cst_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_global_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_global_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_global_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_global_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_global_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_global_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22593,10 +22593,10 @@ define i64 @seq_cst_seq_cst_i64_global_cta(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_global_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_global_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_global_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_global_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22610,10 +22610,10 @@ define i64 @seq_cst_seq_cst_i64_global_cluster(ptr addrspace(1) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_global_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_global_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_global_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_global_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_global_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_global_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22627,10 +22627,10 @@ define i64 @seq_cst_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_global_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_global_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_global_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_global_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_global_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_global_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22644,10 +22644,10 @@ define i64 @seq_cst_seq_cst_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_shared_sys_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_shared_sys_param_0];
 ; SM90-NEXT:    fence.sc.sys;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_shared_sys_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_shared_sys_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_shared_sys_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_shared_sys_param_2];
 ; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22661,10 +22661,10 @@ define i64 @seq_cst_seq_cst_i64_shared_cta(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_shared_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_shared_cta_param_0];
 ; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_shared_cta_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_shared_cta_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_shared_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_shared_cta_param_2];
 ; SM90-NEXT:    atom.acquire.cta.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22678,10 +22678,10 @@ define i64 @seq_cst_seq_cst_i64_shared_cluster(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_shared_cluster_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_shared_cluster_param_0];
 ; SM90-NEXT:    fence.sc.cluster;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_shared_cluster_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_shared_cluster_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_shared_cluster_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_shared_cluster_param_2];
 ; SM90-NEXT:    atom.acquire.cluster.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
@@ -22695,10 +22695,10 @@ define i64 @seq_cst_seq_cst_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    .reg .b64 %rd<5>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.u64 %rd1, [seq_cst_seq_cst_i64_shared_gpu_param_0];
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_shared_gpu_param_0];
 ; SM90-NEXT:    fence.sc.gpu;
-; SM90-NEXT:    ld.param.u64 %rd2, [seq_cst_seq_cst_i64_shared_gpu_param_1];
-; SM90-NEXT:    ld.param.u64 %rd3, [seq_cst_seq_cst_i64_shared_gpu_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_shared_gpu_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_shared_gpu_param_2];
 ; SM90-NEXT:    atom.acquire.gpu.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
