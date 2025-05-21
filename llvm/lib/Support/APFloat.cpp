@@ -28,6 +28,11 @@
 #include <cstring>
 #include <limits.h>
 
+#ifdef LLVM_INTEGRATE_LIBC
+// Headers from LLVM libc
+#include "shared/math.h"
+#endif // LLVM_INTEGRATE_LIBC
+
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
     if (usesLayout<IEEEFloat>(getSemantics()))                                 \
@@ -5596,6 +5601,16 @@ float APFloat::convertToFloat() const {
   assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
   (void)St;
   return Temp.getIEEE().convertToFloat();
+}
+
+APFloat exp(const APFloat &X) {
+#ifdef LLVM_INTEGRATE_LIBC
+  if (&X.getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle) {
+    float result = LIBC_NAMESPACE::shared::expf(X.convertToFloat());
+    return APFloat(result);
+  }
+#endif // LLVM_INTEGRATE_LIBC
+  llvm_unreachable("Unexpected semantics");
 }
 
 } // namespace llvm

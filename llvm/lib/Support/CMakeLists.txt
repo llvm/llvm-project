@@ -379,3 +379,13 @@ if(LLVM_WITH_Z3)
     ${Z3_INCLUDE_DIR}
     )
 endif()
+
+if(LLVM_INTEGRATE_LIBC)
+  set_property(TARGET LLVMSupport PROPERTY CXX_STANDARD 17)
+  target_compile_definitions(LLVMSupport PRIVATE
+    "LIBC_NAMESPACE=__llvm_libc_common_utils"
+    "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM"
+  )
+  target_include_directories(LLVMSupport PRIVATE "${LLVM_INCLUDE_DIR}/../../libc")
+  target_compile_options(LLVMSupport PRIVATE "-Wno-c99-extensions") # _Complex warnings.
+endif()
