@@ -19,10 +19,10 @@ gcsrxchg $a0, $a1, -1
 # CHECK: :[[#@LINE-1]]:20: error: immediate must be an integer in the range [0, 16383]
 
 gcsrxchg $a0, $ra, 1
-# CHECK: :[[#@LINE-1]]:16: error: must not be $r0 or $r1
+# CHECK: :[[#@LINE-1]]:16: error: invalid operand for instruction
 
 gcsrxchg $a0, $zero, 1
-# CHECK: :[[#@LINE-1]]:16: error: must not be $r0 or $r1
+# CHECK: :[[#@LINE-1]]:16: error: invalid operand for instruction
 
 hvcl 32768
 # CHECK: :[[#@LINE-1]]:6: error: immediate must be an integer in the range [0, 32767]
