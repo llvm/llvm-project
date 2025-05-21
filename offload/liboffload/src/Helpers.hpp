@@ -55,16 +55,16 @@ llvm::Error getInfo(size_t ParamValueSize, void *ParamValue,
 
 template <typename T>
 llvm::Error getInfoArray(size_t array_length, size_t ParamValueSize,
-                       void *ParamValue, size_t *ParamValueSizeRet,
-                       const T *Value) {
+                         void *ParamValue, size_t *ParamValueSizeRet,
+                         const T *Value) {
   return getInfoImpl(ParamValueSize, ParamValue, ParamValueSizeRet, Value,
                      array_length * sizeof(T), memcpy);
 }
 
 template <>
-inline llvm::Error getInfo<const char *>(size_t ParamValueSize, void *ParamValue,
-                                       size_t *ParamValueSizeRet,
-                                       const char *Value) {
+inline llvm::Error
+getInfo<const char *>(size_t ParamValueSize, void *ParamValue,
+                      size_t *ParamValueSizeRet, const char *Value) {
   return getInfoArray(strlen(Value) + 1, ParamValueSize, ParamValue,
                       ParamValueSizeRet, Value);
 }
