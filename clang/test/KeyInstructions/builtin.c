@@ -1,8 +1,8 @@
 
-// RUN: %clang -gkey-instructions -x c++ %s -gmlt -gno-column-info -S -emit-llvm -o - -ftrivial-auto-var-init=zero -fenable-matrix -Xclang -disable-llvm-passes \
+// RUN: %clang_cc1 -gkey-instructions -x c++ %s -debug-info-kind=line-tables-only -gno-column-info -emit-llvm -o - -ftrivial-auto-var-init=zero -fenable-matrix -disable-llvm-passes \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// RUN: %clang -gkey-instructions -x c %s -gmlt -gno-column-info -S -emit-llvm -o - -ftrivial-auto-var-init=zero -fenable-matrix -Xclang -disable-llvm-passes \
+// RUN: %clang_cc1 -gkey-instructions -x c %s -debug-info-kind=line-tables-only -gno-column-info -emit-llvm -o - -ftrivial-auto-var-init=zero -fenable-matrix -disable-llvm-passes \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 typedef float m2x2 __attribute__((matrix_type(2, 2)));
