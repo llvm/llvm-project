@@ -1,4 +1,4 @@
-// RUN: %clang -gkey-instructions %s -gmlt -S -emit-llvm -o - -fexceptions \
+// RUN: %clang_cc1 -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o - -fexceptions -fcxx-exceptions \
 // RUN: | FileCheck %s
 
 void except() {
