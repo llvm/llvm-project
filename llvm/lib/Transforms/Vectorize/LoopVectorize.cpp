@@ -8914,17 +8914,18 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
 
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
+                        CM.CostKind);
   // Transform recipes to abstract recipes if it is legal and beneficial and
   // clamp the range for better cost estimation.
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
-                        CM.CostKind);
   if (!CM.foldTailWithEVL())
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
                              CostCtx, Range);
 
-  // !!! NEED COMMENT
+  // Convert reverse memory recipes to strided access recipes if the strided
+  // access is legal and profitable.
   VPlanTransforms::runPass(VPlanTransforms::convertToStridedAccesses, *Plan,
                            CostCtx, Range);
 
