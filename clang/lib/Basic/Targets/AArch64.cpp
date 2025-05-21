@@ -1097,14 +1097,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSSVE_FP8DOT4 = true;
     if (Feature == "+ssve-fp8fma")
       HasSSVE_FP8FMA = true;
-    if (Feature == "+sme-f8f32") {
-      HasSME2 = true;
+    if (Feature == "+sme-f8f32")
       HasSME_F8F32 = true;
-    }
-    if (Feature == "+sme-f8f16") {
-      HasSME2 = true;
+    if (Feature == "+sme-f8f16")
       HasSME_F8F16 = true;
-    }
     if (Feature == "+sb")
       HasSB = true;
     if (Feature == "+predres")
