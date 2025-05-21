@@ -1367,8 +1367,9 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   return true;
 }
 
-/// Determine whether the instruction has undefined content for the given Size,
-/// either because it was freshly alloca'd or started its lifetime.
+/// Determine whether the pointer V had only undefined content from Def up to
+/// the given Size, either because it was freshly alloca'd or started its
+/// lifetime.
 static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
                              MemoryDef *Def, Value *Size) {
   if (MSSA->isLiveOnEntryDef(Def))
@@ -1403,6 +1404,24 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
   return false;
 }
 
+static bool coversInputFully(MemorySSA *MSSA, MemCpyInst *MemCpy,
+                             MemIntrinsic *MemSrc, BatchAAResults &BAA) {
+  // If the memcpy is larger than the previous, but the memory was undef prior
+  // to that, we can just ignore the tail. Technically we're only
+  // interested in the bytes from 0..MemSrcOffset and
+  // MemSrcLength+MemSrcOffset..CopySize here, but as we can't easily represent
+  // this location, we use the full 0..CopySize range.
+  Value *CopySize = MemCpy->getLength();
+  MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
+  MemoryUseOrDef *MemSrcAccess = MSSA->getMemoryAccess(MemSrc);
+  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+      MemSrcAccess->getDefiningAccess(), MemCpyLoc, BAA);
+  if (auto *MD = dyn_cast<MemoryDef>(Clobber))
+    if (hasUndefContents(MSSA, BAA, MemCpy->getSource(), MD, CopySize))
+      return true;
+  return false;
+}
+
 /// Transform memcpy to memset when its source was just memset.
 /// In other words, turn:
 /// \code
@@ -1418,51 +1437,63 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
 bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
                                                MemSetInst *MemSet,
                                                BatchAAResults &BAA) {
-  // Make sure that memcpy(..., memset(...), ...), that is we are memsetting and
-  // memcpying from the same address. Otherwise it is hard to reason about.
-  if (!BAA.isMustAlias(MemSet->getRawDest(), MemCpy->getRawSource()))
-    return false;
-
   Value *MemSetSize = MemSet->getLength();
   Value *CopySize = MemCpy->getLength();
 
-  if (MemSetSize != CopySize) {
-    // Make sure the memcpy doesn't read any more than what the memset wrote.
-    // Don't worry about sizes larger than i64.
+  int64_t MOffset = 0;
+  const DataLayout &DL = MemCpy->getModule()->getDataLayout();
+  // We can only transforms memcpy's where the dest of one is the source of the
+  // other, or they have a known offset.
+  if (MemCpy->getSource() != MemSet->getDest()) {
+    std::optional<int64_t> Offset =
+        MemCpy->getSource()->getPointerOffsetFrom(MemSet->getDest(), DL);
+    if (!Offset)
+      return false;
+    MOffset = *Offset;
+  }
 
-    // A known memset size is required.
+  MaybeAlign MDestAlign = MemCpy->getDestAlign();
+  int64_t MOffsetAligned = MDestAlign.valueOrOne().value() > 1 && MOffset < 0 ? -(-MOffset & ~(MDestAlign.valueOrOne().value() - 1)) : MOffset; // Compute the MOffset that keeps MDest aligned (truncate towards zero)
+  if (MOffset != 0 || MemSetSize != CopySize) {
+    // Make sure the memcpy doesn't read any more than what the memset wrote, other than undef.
     auto *CMemSetSize = dyn_cast<ConstantInt>(MemSetSize);
-    if (!CMemSetSize)
-      return false;
-
-    // A known memcpy size is also required.
     auto *CCopySize = dyn_cast<ConstantInt>(CopySize);
-    if (!CCopySize)
-      return false;
-    if (CCopySize->getZExtValue() > CMemSetSize->getZExtValue()) {
-      // If the memcpy is larger than the memset, but the memory was undef prior
-      // to the memset, we can just ignore the tail. Technically we're only
-      // interested in the bytes from MemSetSize..CopySize here, but as we can't
-      // easily represent this location, we use the full 0..CopySize range.
-      MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
-      bool CanReduceSize = false;
-      MemoryUseOrDef *MemSetAccess = MSSA->getMemoryAccess(MemSet);
-      MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
-          MemSetAccess->getDefiningAccess(), MemCpyLoc, BAA);
-      if (auto *MD = dyn_cast<MemoryDef>(Clobber))
-        if (hasUndefContents(MSSA, BAA, MemCpy->getSource(), MD, CopySize))
-          CanReduceSize = true;
-
-      if (!CanReduceSize)
+    // Don't worry about sizes larger than i64.
+    if (!CMemSetSize || !CCopySize || MOffset < 0 ||
+        CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()) {
+      if (!coversInputFully(MSSA, MemCpy, MemSet, BAA))
         return false;
-      CopySize = MemSetSize;
+
+      if (CMemSetSize && CCopySize) {
+        // If both have constant sizes and offsets, clip the memcpy to the bounds of the memset if applicable.
+        if (CCopySize->getZExtValue() + std::abs(MOffset) > CMemSetSize->getZExtValue()) {
+          if (MOffsetAligned == 0 || (MOffset < 0 && CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()))
+            CopySize = MemSetSize;
+          else
+            CopySize = ConstantInt::get(CopySize->getType(), std::max((int64_t)0, (int64_t)(CMemSetSize->getZExtValue() - std::abs(MOffsetAligned))));
+        }
+        else if (MOffsetAligned < 0) {
+          // Even if CMemSetSize isn't known, if the MOffsetAligned is negative, make sure to clip the new memset
+          CopySize = ConstantInt::get(CopySize->getType(), CCopySize->getZExtValue() + MOffsetAligned);
+        }
+      }
+      else if (CCopySize && MOffsetAligned < 0) {
+        // Even if CMemSetSize isn't known, if the MOffsetAligned is negative, can still clip the new memset
+        CopySize = ConstantInt::get(CopySize->getType(), CCopySize->getZExtValue() + MOffsetAligned);
+      }
+      else {
+        MOffsetAligned = 0;
+      }
     }
   }
 
   IRBuilder<> Builder(MemCpy);
+  Value *MDest = MemCpy->getRawDest();
+  if (MOffsetAligned < 0)
+    MDest = Builder.CreateInBoundsPtrAdd(MDest, Builder.getInt64(-MOffsetAligned));
   Instruction *NewM =
-      Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
-                           CopySize, MemCpy->getDestAlign());
+      Builder.CreateMemSet(MDest, MemSet->getOperand(1),
+                           CopySize, MDestAlign);
   auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(MemCpy));
   auto *NewAccess = MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
   MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
@@ -1683,7 +1714,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
   }
 
-  LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
+  LLVM_DEBUG(dbgs() << "Stack Move: Performed stack-move optimization\n");
   NumStackMove++;
   return true;
 }
