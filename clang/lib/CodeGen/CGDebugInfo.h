@@ -58,6 +58,8 @@ class CGBlockInfo;
 class CGDebugInfo {
   friend class ApplyDebugLocation;
   friend class SaveAndRestoreLocation;
+  friend class ApplyAtomGroup;
+
   CodeGenModule &CGM;
   const llvm::codegenoptions::DebugInfoKind DebugKind;
   bool DebugTypeExtRefs;
@@ -179,6 +181,16 @@ class CGDebugInfo {
   /// The key is coroutine real parameters, value is DIVariable in LLVM IR.
   Param2DILocTy ParamDbgMappings;
 
+  /// Key Instructions bookkeeping.
+  /// Source atoms are identified by a {AtomGroup, InlinedAt} pair, meaning
+  /// AtomGroup numbers can be repeated across different functions.
+  struct {
+    uint64_t NextAtom = 1;
+    uint64_t HighestEmittedAtom = 0;
+    uint64_t CurrentAtom = 0;
+  } KeyInstructionsInfo;
+
+private:
   /// Helper functions for getOrCreateType.
   /// @{
   /// Currently the checksum of an interface includes the number of
@@ -643,7 +655,27 @@ public:
   llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
                                             StringRef FuncName);
 
+  /// Reset internal state.
+  void completeFunction();
+
+  /// Add \p KeyInstruction and an optional \p Backup instruction to the
+  /// current atom group, created using ApplyAtomGroup.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup);
+
+  /// Add \p KeyInstruction and an optional \p Backup instruction to the atom
+  /// group \p Atom.
+  void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                   llvm::Value *Backup, uint64_t Atom);
+
 private:
+  /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
+  /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
+  /// has no DebugLoc, and chooses the atom group in which the instruction
+  /// has the highest precedence if it's already in one.
+  void addInstSourceAtomMetadata(llvm::Instruction *I, uint64_t Group,
+                                 uint8_t Rank);
+
   /// Emit call to llvm.dbg.declare for a variable declaration.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.
@@ -858,6 +890,20 @@ private:
       std::memcpy(Data + A.size(), B.data(), B.size());
     return StringRef(Data, A.size() + B.size());
   }
+};
+
+/// A scoped helper to set the current source atom group for
+/// CGDebugInfo::addInstToCurrentSourceAtom. A source atom is a source construct
+/// that is "interesting" for debug stepping purposes. We use an atom group
+/// number to track the instruction(s) that implement the functionality for the
+/// atom, plus backup instructions/source locations.
+class ApplyAtomGroup {
+  uint64_t OriginalAtom = 0;
+  CGDebugInfo *DI = nullptr;
+
+public:
+  ApplyAtomGroup(CGDebugInfo *DI);
+  ~ApplyAtomGroup();
 };
 
 /// A scoped helper to set the current debug location to the specified
