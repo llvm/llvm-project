@@ -1544,7 +1544,16 @@ unsigned CallExpr::offsetToTrailingObjects(StmtClass SC) {
 }
 
 Decl *Expr::getReferencedDeclOfCallee() {
-  Expr *CEE = IgnoreParenImpCasts();
+
+  // Optimize for the common case first
+  // (simple function or member function call)
+  // then try more exotic possibilities
+  Expr *CEE = IgnoreImpCasts();
+  if (auto *DRE = dyn_cast<DeclRefExpr>(CEE))
+    return DRE->getDecl();
+
+  if (auto *ME = dyn_cast<MemberExpr>(CEE))
+    return ME->getMemberDecl();
 
   while (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(CEE))
     CEE = NTTP->getReplacement()->IgnoreParenImpCasts();
