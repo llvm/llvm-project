@@ -1646,12 +1646,12 @@ let Predicates = [HasStdExtC, OptForMinSize] in {
   def : SelectCompressOpt<SETNE>;
 }
 
-multiclass SelectCC_GPR_riirr<DAGOperand outvalty, DAGOperand invalty, DAGOperand imm> {
+multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
   let usesCustomInserter = 1 in
-  def Select_GPR_Using_ # NAME
-      : Pseudo<(outs outvalty:$dst),
-               (ins invalty:$lhs, imm:$imm, cond_code:$cc,
-                outvalty:$truev, outvalty:$falsev), []>;
+  def Select_# valty #_Using_ # NAME
+      : Pseudo<(outs valty:$dst),
+               (ins valty:$lhs, imm:$imm, cond_code:$cc,
+                valty:$truev, valty:$falsev), []>;
 }
 
 /// Branches and jumps
