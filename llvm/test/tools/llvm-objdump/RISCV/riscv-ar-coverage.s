@@ -24,6 +24,8 @@
 # CHECK-NEXT:     103a: fd6080e7     	jalr	-0x2a(ra) <func>
 # CHECK-NEXT:     103e: 00102437     	lui	s0, 0x102
 # CHECK-NEXT:     1042: 8800         	sb	s0, 0x0(s0) <target+0xffffc>
+# CHECK-NEXT:     1044: 00102137     	lui	sp, 0x102
+# CHECK-NEXT:     1048: 4522         	lw	a0, 0x8(sp) <far_target>
 
 .global _start
 .text
@@ -92,6 +94,10 @@ _start:
   # traversed before we hit far_target--.skip 0x4 and .word 1 in target. Adding 8
   # to address resolved for the instruction below yields exactly the desired label.
   c.sb x8, 0(x8)
+
+  # test #8 stack based load/stores
+  lui sp, 0x102
+  c.lwsp a0, 0x8(sp)
 
 # these are the labels that the instructions above are expecteed to resolve to
 .section .data
