@@ -183,7 +183,7 @@ Changes in existing checks
   explicit casting of built-in types within member list initialization.
 
 - Improved :doc:`modernize-use-ranges
-  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
+  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress
   warnings logic for ``nullptr`` in ``std::find``.
 
 - Improved :doc:`modernize-use-starts-ends-with
@@ -203,6 +203,8 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
+  Also suppressed this check for coroutine functions because it may not be safe
+  and suggested fixes may result in hard-to-find bugs and crashes.
 
 Removed checks
 ^^^^^^^^^^^^^^
