@@ -59,7 +59,6 @@ FilterMatcher::createRE(const llvm::cl::opt<std::string> &Arg) {
   return createRE(Arg.ArgStr, Arg);
 }
 
-
 Expected<FilterMatcher>
 FilterMatcher::createRE(StringRef Filter, const cl::list<std::string> &Arg) {
   return createRE(Arg.ArgStr, Filter);
