@@ -1556,9 +1556,9 @@ void main() {
   Child *c;
   Base *b = c;
 
-  b->func1(); // expected-warning {{calling function 'func1' requires holding mutex 'b->mu_' exclusively}}
+  b->func1(); // expected-warning {{calling function 'func1' requires holding mutex 'c->mu_' exclusively}}
   b->mu_.Lock();
-  b->func2(); // expected-warning {{cannot call function 'func2' while mutex 'b->mu_' is held}}
+  b->func2(); // expected-warning {{cannot call function 'func2' while mutex 'c->mu_' is held}}
   b->mu_.Unlock();
 
   c->func1(); // expected-warning {{calling function 'func1' requires holding mutex 'c->mu_' exclusively}}
@@ -7238,3 +7238,173 @@ public:
 };
 
 } // namespace Reentrancy
+
+// Tests for tracking aliases of capabilities.
+namespace CapabilityAliases {
+struct Foo {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+};
+
+void escapeAlias(int a, Foo *&ptr);
+void escapeAlias(int b, Foo **ptr);
+void passByConstRef(Foo* const& ptr);
+
+void testBasicPointerAlias(Foo *f) {
+  Foo *ptr = f;
+  ptr->mu.Lock();         // lock through alias
+  f->data = 42;           // access through original
+  ptr->mu.Unlock();       // unlock through alias
+}
+
+void testBasicPointerAliasNoInit(Foo *f) {
+  Foo *ptr;
+
+  ptr = nullptr;
+  ptr = f;
+  ptr->mu.Lock();
+  f->data = 42;
+  ptr->mu.Unlock();
+  ptr = nullptr;
+}
+
+void testPointerAliasNoEscape1(Foo *f) {
+  Foo *ptr = f;
+  testBasicPointerAlias(ptr);  // pass alias by value
+
+  ptr->mu.Lock();
+  f->data = 42;
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasNoEscape2(Foo *f) {
+  Foo *ptr = f;
+  passByConstRef(ptr);  // pass alias by const ref
+
+  ptr->mu.Lock();
+  f->data = 42;
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasEscape1(Foo *f) {
+  Foo *ptr = f;
+  escapeAlias(0, ptr);
+
+  ptr->mu.Lock();
+  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
+                          // expected-note{{found near match 'ptr->mu'}}
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasEscape2(Foo *f) {
+  Foo *ptr = f;
+  escapeAlias(0, &ptr);
+
+  ptr->mu.Lock();
+  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
+                          // expected-note{{found near match 'ptr->mu'}}
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasEscapeAndReset(Foo *f) {
+  Foo *ptr;
+
+  ptr = f;
+  escapeAlias(0, &ptr);
+  ptr = f;
+
+  ptr->mu.Lock();
+  f->data = 42;
+  ptr->mu.Unlock();
+}
+
+void testReassignment() {
+  Foo f1, f2;
+  Foo *ptr = &f1;
+  ptr->mu.Lock();
+  f1.data = 42;
+  ptr->mu.Unlock();
+
+  ptr = &f2;
+  ptr->mu.Lock();
+  f2.data = 42;
+  f1.data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f1.mu'}} \
+                          // expected-note{{found near match 'f2.mu'}}
+  ptr->mu.Unlock();
+}
+
+// Nested field access through pointer
+struct Container {
+  Foo foo;
+};
+
+void testNestedAccess(Container *c) {
+  Foo *ptr = &c->foo; // pointer to nested field
+  ptr->mu.Lock();
+  c->foo.data = 42;
+  ptr->mu.Unlock();
+}
+
+void testNestedAcquire(Container *c) EXCLUSIVE_LOCK_FUNCTION(&c->foo.mu) {
+  Foo *buf = &c->foo;
+  buf->mu.Lock();
+}
+
+struct ContainerOfPtr {
+  Foo *foo_ptr;
+};
+
+void testIndirectAccess(ContainerOfPtr *fc) {
+  Foo *ptr = fc->foo_ptr; // get pointer
+  ptr->mu.Lock();
+  fc->foo_ptr->data = 42; // access via original
+  ptr->mu.Unlock();
+}
+
+// FIXME: No alias tracking through complex control flow.
+void testComplexControlFlow(Foo *f1, Foo *f2, bool cond) {
+  Foo *ptr;
+  if (cond) {
+    ptr = f1;
+  } else {
+    ptr = f2;
+  }
+  ptr->mu.Lock();
+  if (cond) {
+    f1->data = 42; // expected-warning{{writing variable 'data' requires holding mutex 'f1->mu' exclusively}} \
+                   // expected-note{{found near match 'ptr->mu'}}
+  } else {
+    f2->data = 42; // expected-warning{{writing variable 'data' requires holding mutex 'f2->mu' exclusively}} \
+                   // expected-note{{found near match 'ptr->mu'}}
+  }
+  ptr->mu.Unlock();
+}
+
+void testLockFunction(Foo *f) EXCLUSIVE_LOCK_FUNCTION(&f->mu) {
+  Mutex *mu = &f->mu;
+  mu->Lock();
+}
+
+void testUnlockFunction(Foo *f) UNLOCK_FUNCTION(&f->mu) {
+  Mutex *mu = &f->mu;
+  mu->Unlock();
+}
+
+// Semantically UB, but let's not crash the compiler with this (should be
+// handled by -Wuninitialized).
+void testSelfInit() {
+  Mutex *mu = mu; // don't do this at home
+  mu->Lock();
+  mu->Unlock();
+}
+
+// This is an idiom to deal with "pointer to returned object has a lock held,
+// but you must unlock it later" where the statement expression would be hidden
+// behind a macro.
+Foo *returnsFoo();
+void lockWithinStatementExpr() {
+  Foo *f = ({ auto x = returnsFoo(); x->mu.Lock(); x; });
+  f->data = 42;
+  f->mu.Unlock();
+}
+}  // namespace CapabilityAliases

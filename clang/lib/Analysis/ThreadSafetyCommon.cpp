@@ -241,7 +241,24 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   return CapabilityExpr(E, AttrExp->getType(), Neg);
 }
 
-til::LiteralPtr *SExprBuilder::createVariable(const VarDecl *VD) {
+til::SExpr *SExprBuilder::translateVariable(const VarDecl *VD,
+                                            CallingContext *Ctx) {
+  assert(VD);
+
+  QualType Ty = VD->getType();
+  if (Ty->isPointerType()) {
+    if (LookupLocalVarExpr) {
+      // Substitute local variable aliases with a canonical definition.
+      if (const Expr *E = LookupLocalVarExpr(VD)) {
+        // Guard against recursion on self-assignment (e.g. `T *x = x;`).
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenCasts()))
+          if (DRE->getDecl()->getCanonicalDecl() == VD->getCanonicalDecl())
+            return new (Arena) til::LiteralPtr(VD);
+        return translate(E, Ctx);
+      }
+    }
+  }
+
   return new (Arena) til::LiteralPtr(VD);
 }
 
@@ -313,6 +330,8 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
 
   case Stmt::DeclStmtClass:
     return translateDeclStmt(cast<DeclStmt>(S), Ctx);
+  case Stmt::StmtExprClass:
+    return translateStmtExpr(cast<StmtExpr>(S), Ctx);
   default:
     break;
   }
@@ -352,6 +371,9 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
              ? cast<FunctionDecl>(D)->getCanonicalDecl()->getParamDecl(I)
              : cast<ObjCMethodDecl>(D)->getCanonicalDecl()->getParamDecl(I);
   }
+
+  if (const auto *VarD = dyn_cast<VarDecl>(VD))
+    return translateVariable(VarD, Ctx);
 
   // For non-local variables, treat it as a reference to a named object.
   return new (Arena) til::LiteralPtr(VD);
@@ -689,6 +711,15 @@ SExprBuilder::translateDeclStmt(const DeclStmt *S, CallingContext *Ctx) {
     }
   }
   return nullptr;
+}
+
+til::SExpr *SExprBuilder::translateStmtExpr(const StmtExpr *SE,
+                                            CallingContext *Ctx) {
+  // The value of a statement expression is the value of the last statement,
+  // which must be an expression.
+  const CompoundStmt *CS = SE->getSubStmt();
+  return CS->body_empty() ? new (Arena) til::Undefined(SE)
+                          : translate(CS->body_back(), Ctx);
 }
 
 // If (E) is non-trivial, then add it to the current basic block, and
