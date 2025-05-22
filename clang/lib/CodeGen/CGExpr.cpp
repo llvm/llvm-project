@@ -2706,6 +2706,8 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   }
 
   llvm::StoreInst *Store = Builder.CreateStore(Value, Addr, Volatile);
+  addInstToCurrentSourceAtom(Store, Value);
+
   if (isNontemporal) {
     llvm::MDNode *Node =
         llvm::MDNode::get(Store->getContext(),
