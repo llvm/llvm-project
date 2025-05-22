@@ -7216,8 +7216,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
     SDValue EVL = DAG.getElementCount(DL, TLI.getVPExplicitVectorLengthTy(),
                                       StVT.getVectorElementCount());
     return DAG.getStoreVP(ST->getChain(), DL, StVal, ST->getBasePtr(),
-                          DAG.getUNDEF(ST->getBasePtr().getValueType()), Mask,
-                          EVL, StVT, ST->getMemOperand(),
+                          ST->getOffset(), Mask, EVL, StVT, ST->getMemOperand(),
                           ST->getAddressingMode());
   }
 
