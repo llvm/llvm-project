@@ -206,6 +206,12 @@ class InferAddressSpacesImpl {
 
   bool isSafeToCastConstAddrSpace(Constant *C, unsigned NewAS) const;
 
+  Value *clonePtrMaskWithNewAddressSpace(
+      IntrinsicInst *I, unsigned NewAddrSpace,
+      const ValueToValueMapTy &ValueWithNewAddrSpace,
+      const PredicatedAddrSpaceMapTy &PredicatedAS,
+      SmallVectorImpl<const Use *> *PoisonUsesToFix) const;
+
   Value *cloneInstructionWithNewAddressSpace(
       Instruction *I, unsigned NewAddrSpace,
       const ValueToValueMapTy &ValueWithNewAddrSpace,
@@ -635,6 +641,50 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
   return PoisonValue::get(NewPtrTy);
 }
 
+// A helper function for cloneInstructionWithNewAddressSpace. Handles the
+// conversion of a ptrmask intrinsic instruction.
+Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
+    IntrinsicInst *I, unsigned NewAddrSpace,
+    const ValueToValueMapTy &ValueWithNewAddrSpace,
+    const PredicatedAddrSpaceMapTy &PredicatedAS,
+    SmallVectorImpl<const Use *> *PoisonUsesToFix) const {
+  const Use &PtrOpUse = I->getArgOperandUse(0);
+  unsigned OldAddrSpace = PtrOpUse.get()->getType()->getPointerAddressSpace();
+  Value *MaskOp = I->getArgOperand(1);
+  Type *MaskTy = MaskOp->getType();
+
+  std::optional<uint64_t> TruncateToWidth;
+
+  if (!TTI->isNoopAddrSpaceCast(OldAddrSpace, NewAddrSpace)) {
+    // Get the mask width that is applicable to the new addrspace.
+    TruncateToWidth =
+        TTI->getAddrSpaceCastMaskWidth(OldAddrSpace, NewAddrSpace, MaskOp, I);
+    // If there is no such mask, leave the ptrmask as-is and insert an
+    // addrspacecast after it.
+    if (!TruncateToWidth) {
+      std::optional<BasicBlock::iterator> InsertPoint =
+          I->getInsertionPointAfterDef();
+      assert(InsertPoint && "insertion after ptrmask should be possible");
+      Type *NewPtrType = getPtrOrVecOfPtrsWithNewAS(I->getType(), NewAddrSpace);
+      Instruction *AddrSpaceCast =
+          new AddrSpaceCastInst(I, NewPtrType, "", *InsertPoint);
+      AddrSpaceCast->setDebugLoc(I->getDebugLoc());
+      return AddrSpaceCast;
+    }
+  }
+
+  IRBuilder<> B(I);
+  if (TruncateToWidth) {
+    MaskTy = B.getIntNTy(*TruncateToWidth);
+    MaskOp = B.CreateTrunc(MaskOp, MaskTy);
+  }
+  Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
+      PtrOpUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS,
+      PoisonUsesToFix);
+  return B.CreateIntrinsic(Intrinsic::ptrmask, {NewPtr->getType(), MaskTy},
+                           {NewPtr, MaskOp});
+}
+
 // Returns a clone of `I` with its operands converted to those specified in
 // ValueWithNewAddrSpace. Due to potential cycles in the data flow graph, an
 // operand whose address space needs to be modified might not exist in
@@ -666,51 +716,8 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     // Technically the intrinsic ID is a pointer typed argument, so specially
     // handle calls early.
     assert(II->getIntrinsicID() == Intrinsic::ptrmask);
-    const Use &PtrOpUse = II->getArgOperandUse(0);
-    unsigned OldAddrSpace = PtrOpUse.get()->getType()->getPointerAddressSpace();
-    Value *MaskOp = II->getArgOperand(1);
-    Type *MaskTy = MaskOp->getType();
-
-    bool DoTruncate = false;
-    bool DoNotConvert = false;
-
-    if (!TTI->isNoopAddrSpaceCast(OldAddrSpace, NewAddrSpace)) {
-      // All valid 64-bit to 32-bit casts work by chopping off the high
-      // bits. Any masking only clearing the low bits will also apply in the new
-      // address space.
-      if (DL->getPointerSizeInBits(OldAddrSpace) != 64 ||
-          DL->getPointerSizeInBits(NewAddrSpace) != 32) {
-        DoNotConvert = true;
-      } else {
-        // TODO: Do we need to thread more context in here?
-        KnownBits Known = computeKnownBits(MaskOp, *DL, 0, nullptr, II);
-        if (Known.countMinLeadingOnes() < 32)
-          DoNotConvert = true;
-        else
-          DoTruncate = true;
-      }
-    }
-    if (DoNotConvert) {
-      // Leave the ptrmask as-is and insert an addrspacecast after it.
-      std::optional<BasicBlock::iterator> InsertPoint =
-          II->getInsertionPointAfterDef();
-      assert(InsertPoint && "insertion after ptrmask should be possible");
-      Instruction *AddrSpaceCast =
-          new AddrSpaceCastInst(II, NewPtrType, "", *InsertPoint);
-      AddrSpaceCast->setDebugLoc(II->getDebugLoc());
-      return AddrSpaceCast;
-    }
-
-    IRBuilder<> B(II);
-    if (DoTruncate) {
-      MaskTy = B.getInt32Ty();
-      MaskOp = B.CreateTrunc(MaskOp, MaskTy);
-    }
-    Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
-        PtrOpUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS,
-        PoisonUsesToFix);
-    return B.CreateIntrinsic(Intrinsic::ptrmask, {NewPtr->getType(), MaskTy},
-                             {NewPtr, MaskOp});
+    return clonePtrMaskWithNewAddressSpace(
+        II, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS, PoisonUsesToFix);
   }
 
   unsigned AS = TTI->getAssumedAddrSpace(I);
