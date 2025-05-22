@@ -1451,8 +1451,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (MVT VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 })
       setOperationAction(ISD::ADD, VT, Custom);
     // FADDP custom lowering
-    for (MVT VT : { MVT::v16f16, MVT::v8f32, MVT::v4f64 })
+    for (MVT VT : {MVT::v16f16, MVT::v8f32, MVT::v4f64})
       setOperationAction(ISD::FADD, VT, Custom);
+
+    if (EnablePartialReduceNodes && Subtarget->hasDotProd()) {
+      setPartialReduceMLAAction(MVT::v2i64, MVT::v8i16, Legal);
+      setPartialReduceMLAAction(MVT::v4i32, MVT::v16i8, Legal);
+      setPartialReduceMLAAction(MVT::v2i32, MVT::v8i8, Legal);
+      setPartialReduceMLAAction(MVT::v2i64, MVT::v16i8, Custom);
+    }
+
   } else /* !isNeonAvailable */ {
     for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
       for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
@@ -1870,15 +1878,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
 
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv16i8, Custom);
-  }
-
-  if (EnablePartialReduceNodes && Subtarget->hasNEON() &&
-      Subtarget->hasDotProd()) {
-    setPartialReduceMLAAction(MVT::v2i64, MVT::v8i16, Legal);
-    setPartialReduceMLAAction(MVT::v4i32, MVT::v16i8, Legal);
-    setPartialReduceMLAAction(MVT::v4i32, MVT::v16i8, Legal);
-    setPartialReduceMLAAction(MVT::v2i32, MVT::v8i8, Legal);
-    setPartialReduceMLAAction(MVT::v2i64, MVT::v16i8, Custom);
   }
 
   // Handle operations that are only available in non-streaming SVE mode.
@@ -29544,10 +29543,12 @@ SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
   bool Scalable = Op.getValueType().isScalableVector();
-  if (Scalable && !Subtarget->isSVEorStreamingSVEAvailable())
-    return SDValue();
-  if (!Scalable && (!Subtarget->isNeonAvailable() || !Subtarget->hasDotProd()))
-    return SDValue();
+
+  assert((!Scalable || Subtarget->isSVEorStreamingSVEAvailable()) &&
+         "SVE or StreamingSVE must be available when using scalable vectors.");
+  assert(
+      (Scalable || (Subtarget->isNeonAvailable() || Subtarget->hasDotProd())) &&
+      "Neon or dotprod must be available when using fixed-width vectors.");
 
   SDLoc DL(Op);
 
