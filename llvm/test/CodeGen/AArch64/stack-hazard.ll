@@ -2832,12 +2832,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK0-NEXT:    mov w20, w0
 ; CHECK0-NEXT:    msub x9, x8, x8, x9
 ; CHECK0-NEXT:    mov sp, x9
-; CHECK0-NEXT:    stur x9, [x29, #-80]
-; CHECK0-NEXT:    sub x9, x29, #80
-; CHECK0-NEXT:    sturh wzr, [x29, #-70]
-; CHECK0-NEXT:    stur wzr, [x29, #-68]
-; CHECK0-NEXT:    sturh w8, [x29, #-72]
-; CHECK0-NEXT:    msr TPIDR2_EL0, x9
+; CHECK0-NEXT:    sub x10, x29, #80
+; CHECK0-NEXT:    stp x9, x8, [x29, #-80]
+; CHECK0-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK0-NEXT:    .cfi_offset vg, -32
 ; CHECK0-NEXT:    smstop sm
 ; CHECK0-NEXT:    bl other
@@ -2906,12 +2903,9 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    mov w20, w0
 ; CHECK64-NEXT:    msub x9, x8, x8, x9
 ; CHECK64-NEXT:    mov sp, x9
-; CHECK64-NEXT:    stur x9, [x29, #-208]
-; CHECK64-NEXT:    sub x9, x29, #208
-; CHECK64-NEXT:    sturh wzr, [x29, #-198]
-; CHECK64-NEXT:    stur wzr, [x29, #-196]
-; CHECK64-NEXT:    sturh w8, [x29, #-200]
-; CHECK64-NEXT:    msr TPIDR2_EL0, x9
+; CHECK64-NEXT:    sub x10, x29, #208
+; CHECK64-NEXT:    stp x9, x8, [x29, #-208]
+; CHECK64-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    smstop sm
 ; CHECK64-NEXT:    bl other
@@ -2986,16 +2980,10 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    mov w20, w0
 ; CHECK1024-NEXT:    msub x9, x8, x8, x9
 ; CHECK1024-NEXT:    mov sp, x9
-; CHECK1024-NEXT:    sub x10, x29, #1872
-; CHECK1024-NEXT:    stur x9, [x10, #-256]
-; CHECK1024-NEXT:    sub x9, x29, #1862
-; CHECK1024-NEXT:    sub x10, x29, #1860
-; CHECK1024-NEXT:    sturh wzr, [x9, #-256]
-; CHECK1024-NEXT:    sub x9, x29, #2128
-; CHECK1024-NEXT:    stur wzr, [x10, #-256]
-; CHECK1024-NEXT:    sub x10, x29, #1864
-; CHECK1024-NEXT:    sturh w8, [x10, #-256]
-; CHECK1024-NEXT:    msr TPIDR2_EL0, x9
+; CHECK1024-NEXT:    sub x10, x29, #2128
+; CHECK1024-NEXT:    sub x11, x29, #1616
+; CHECK1024-NEXT:    stp x9, x8, [x11, #-512]
+; CHECK1024-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK1024-NEXT:    .cfi_offset vg, -32
 ; CHECK1024-NEXT:    smstop sm
 ; CHECK1024-NEXT:    bl other
