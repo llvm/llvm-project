@@ -646,16 +646,23 @@ struct DependencyScannerReproducerOptions {
   std::vector<std::string> BuildArgs;
   std::optional<std::string> ModuleName;
   std::optional<std::string> WorkingDirectory;
+  std::optional<std::string> ReproducerLocation;
+  bool UseUniqueReproducerName;
 
   DependencyScannerReproducerOptions(int argc, const char *const *argv,
                                      const char *ModuleName,
-                                     const char *WorkingDirectory) {
+                                     const char *WorkingDirectory,
+                                     const char *ReproducerLocation,
+                                     bool UseUniqueReproducerName)
+      : UseUniqueReproducerName(UseUniqueReproducerName) {
     if (argv)
       BuildArgs.assign(argv, argv + argc);
     if (ModuleName)
       this->ModuleName = ModuleName;
     if (WorkingDirectory)
       this->WorkingDirectory = WorkingDirectory;
+    if (ReproducerLocation)
+      this->ReproducerLocation = ReproducerLocation;
   }
 };
 
@@ -690,9 +697,11 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DependencyScannerReproducerOptions,
 CXDependencyScannerReproducerOptions
 clang_experimental_DependencyScannerReproducerOptions_create(
     int argc, const char *const *argv, const char *ModuleName,
-    const char *WorkingDirectory) {
-  return wrap(new DependencyScannerReproducerOptions{argc, argv, ModuleName,
-                                                     WorkingDirectory});
+    const char *WorkingDirectory, const char *ReproducerLocation,
+    bool UseUniqueReproducerName) {
+  return wrap(new DependencyScannerReproducerOptions{
+      argc, argv, ModuleName, WorkingDirectory, ReproducerLocation,
+      UseUniqueReproducerName});
 }
 
 void clang_experimental_DependencyScannerReproducerOptions_dispose(
@@ -714,6 +723,9 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
     return Report(CXError_InvalidArguments) << "missing compilation command";
   if (!Opts.WorkingDirectory)
     return Report(CXError_InvalidArguments) << "missing working directory";
+  if (!Opts.UseUniqueReproducerName && !Opts.ReproducerLocation)
+    return Report(CXError_InvalidArguments)
+           << "non-unique reproducer is allowed only in a custom location";
 
   CASOptions CASOpts;
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
@@ -724,9 +736,24 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
 
   llvm::SmallString<128> ReproScriptPath;
   int ScriptFD;
-  if (auto EC = llvm::sys::fs::createTemporaryFile("reproducer", "sh", ScriptFD,
-                                                   ReproScriptPath)) {
-    return ReportFailure() << "failed to create a reproducer script file";
+  if (Opts.ReproducerLocation) {
+    if (auto EC = llvm::sys::fs::create_directories(*Opts.ReproducerLocation))
+      return ReportFailure() << "failed to create a reproducer location '"
+                             << *Opts.ReproducerLocation << "'\n"
+                             << EC.message();
+    SmallString<128> Path(*Opts.ReproducerLocation);
+    llvm::sys::path::append(Path, "reproducer");
+    const char *UniqueSuffix = Opts.UseUniqueReproducerName ? "-%%%%%%" : "";
+    if (auto EC = llvm::sys::fs::createUniqueFile(Path + UniqueSuffix + ".sh",
+                                                  ScriptFD, ReproScriptPath))
+      return ReportFailure() << "failed to create a reproducer script file\n"
+                             << EC.message();
+  } else {
+    if (auto EC = llvm::sys::fs::createTemporaryFile(
+            "reproducer", "sh", ScriptFD, ReproScriptPath)) {
+      return ReportFailure() << "failed to create a reproducer script file\n"
+                             << EC.message();
+    }
   }
   SmallString<128> FileCachePath = ReproScriptPath;
   llvm::sys::path::replace_extension(FileCachePath, ".cache");

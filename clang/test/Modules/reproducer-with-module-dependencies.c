@@ -13,6 +13,12 @@
 // RUN:   -- clang-executable -c %t/failed-reproducer.c -o %t/reproducer.o \
 // RUN:      -fmodules -fmodules-cache-path=%t 2>&1 | FileCheck %t/failed-reproducer.c
 
+// Test the content of a reproducer script.
+// RUN: c-index-test core -gen-deps-reproducer -working-dir %t -o %t/repro-content \
+// RUN:   -- clang-executable -c %t/reproducer.c -o %t/reproducer.o \
+// RUN:      -fmodules -fmodules-cache-path=%t
+// RUN: FileCheck %t/script-expectations.txt --input-file %t/repro-content/reproducer.sh
+
 //--- modular-header.h
 void fn_in_modular_header(void);
 
@@ -30,3 +36,7 @@ void test(void) {
 //--- failed-reproducer.c
 // CHECK: fatal error: 'non-existing-header.h' file not found
 #include "non-existing-header.h"
+
+//--- script-expectations.txt
+CHECK: clang-executable
+CHECK: -fmodule-file=Test=reproducer.cache/explicitly-built-modules/Test-{{.*}}.pcm

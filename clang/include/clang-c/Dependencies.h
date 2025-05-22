@@ -608,11 +608,16 @@ typedef struct CXOpaqueDependencyScannerReproducerOptions
  *                   the intermediate modules. Otherwise, reproduce building
  *                   the whole translation unit.
  * \param WorkingDirectory the directory in which the invocation runs.
+ * \param ReproducerLocation the directory where to store the reproducer files.
+ *                           If NULL, use a temporary location.
+ * \param UseUniqueReproducerName if reproducer files should have unique names
+ *                                to avoid collisions with existing files.
  */
 CINDEX_LINKAGE CXDependencyScannerReproducerOptions
 clang_experimental_DependencyScannerReproducerOptions_create(
     int argc, const char *const *argv, const char *ModuleName,
-    const char *WorkingDirectory);
+    const char *WorkingDirectory, const char *ReproducerLocation,
+    bool UseUniqueReproducerName);
 
 CINDEX_LINKAGE void
     clang_experimental_DependencyScannerReproducerOptions_dispose(
