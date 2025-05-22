@@ -1987,6 +1987,7 @@ Error LVLogicalVisitor::visitKnownRecord(CVType &Record, ClassRecord &Class,
   Scope->setName(Class.getName());
   if (Class.hasUniqueName())
     Scope->setLinkageName(Class.getUniqueName());
+  Scope->setBitSize(Class.getSize() * DWARF_CHAR_BIT);
 
   if (Class.isNested()) {
     Scope->setIsNested();
@@ -2455,6 +2456,7 @@ Error LVLogicalVisitor::visitKnownRecord(CVType &Record, UnionRecord &Union,
   Scope->setName(Union.getName());
   if (Union.hasUniqueName())
     Scope->setLinkageName(Union.getUniqueName());
+  Scope->setBitSize(Union.getSize() * DWARF_CHAR_BIT);
 
   if (Union.isNested()) {
     Scope->setIsNested();
@@ -3208,6 +3210,7 @@ LVType *LVLogicalVisitor::createBaseType(TypeIndex TI, StringRef TypeName) {
 
   if (createElement(TIR, SimpleKind)) {
     CurrentType->setName(TypeName);
+    CurrentType->setBitSize(getSizeInBytesForTypeIndex(TIR) * DWARF_CHAR_BIT);
     Reader->getCompileUnit()->addElement(CurrentType);
   }
   return CurrentType;

@@ -121,11 +121,11 @@ TEST(DILLexerTests, IdentifiersTest) {
       "a_b",       "this", "self", "a", "MyName", "namespace"};
 
   // The lexer can lex these strings, but they should not be identifiers.
-  std::vector<std::string> invalid_identifiers = {"", "::", "(", ")", "0abc"};
+  std::vector<std::string> invalid_identifiers = {"", "::", "(", ")"};
 
   // The lexer is expected to fail attempting to lex these strings (it cannot
   // create valid tokens out of them).
-  std::vector<std::string> invalid_tok_strings = {"#include", "a@a"};
+  std::vector<std::string> invalid_tok_strings = {"234", "2a", "2", "1MyName"};
 
   // Verify that all of the valid identifiers come out as identifier tokens.
   for (auto &str : valid_identifiers) {
@@ -150,32 +150,7 @@ TEST(DILLexerTests, IdentifiersTest) {
     DILLexer lexer(*maybe_lexer);
     Token token = lexer.GetCurrentToken();
     EXPECT_TRUE(token.IsNot(Token::identifier));
-    EXPECT_TRUE(token.IsOneOf({Token::eof, Token::coloncolon, Token::l_paren,
-                               Token::r_paren, Token::numeric_constant}));
-  }
-}
-
-TEST(DILLexerTests, NumbersTest) {
-  // These strings should lex into number tokens.
-  std::vector<std::string> valid_numbers = {"123", "0x123", "0123", "0b101"};
-
-  // The lexer can lex these strings, but they should not be numbers.
-  std::vector<std::string> invalid_numbers = {"", "x123", "b123"};
-
-  for (auto &str : valid_numbers) {
-    SCOPED_TRACE(str);
-    EXPECT_THAT_EXPECTED(ExtractTokenData(str),
-                         llvm::HasValue(testing::ElementsAre(
-                             testing::Pair(Token::numeric_constant, str))));
-  }
-  // Verify that none of the invalid numbers come out as numeric tokens.
-  for (auto &str : invalid_numbers) {
-    SCOPED_TRACE(str);
-    llvm::Expected<DILLexer> maybe_lexer = DILLexer::Create(str);
-    EXPECT_THAT_EXPECTED(maybe_lexer, llvm::Succeeded());
-    DILLexer lexer(*maybe_lexer);
-    Token token = lexer.GetCurrentToken();
-    EXPECT_TRUE(token.IsNot(Token::numeric_constant));
-    EXPECT_TRUE(token.IsOneOf({Token::eof, Token::identifier}));
+    EXPECT_TRUE(token.IsOneOf(
+        {Token::eof, Token::coloncolon, Token::l_paren, Token::r_paren}));
   }
 }
