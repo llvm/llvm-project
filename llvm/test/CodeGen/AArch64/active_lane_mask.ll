@@ -174,8 +174,8 @@ define <vscale x 7 x i1> @lane_mask_nxv7i1_i64(i64 %index, i64 %TC) {
   ret <vscale x 7 x i1> %active.lane.mask
 }
 
-define <vscale x 1 x i1> @lane_mask_nxv1i1_i8(i32 %index, i32 %TC) {
-; CHECK-LABEL: lane_mask_nxv1i1_i8:
+define <vscale x 1 x i1> @lane_mask_nxv1i1_i32(i32 %index, i32 %TC) {
+; CHECK-LABEL: lane_mask_nxv1i1_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z0.s, #0, #1
 ; CHECK-NEXT:    mov z1.s, w0
