@@ -2192,6 +2192,14 @@ R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     // FIXME: Cayman at least appears to have instructions for this, but the
     // instruction defintions appear to be missing.
     return AtomicExpansionKind::CmpXChg;
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
+    if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
+      unsigned Size = IntTy->getBitWidth();
+      if (Size == 32)
+        return AtomicExpansionKind::None;
+    }
+    return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
     const DataLayout &DL = RMW->getFunction()->getDataLayout();
     unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());

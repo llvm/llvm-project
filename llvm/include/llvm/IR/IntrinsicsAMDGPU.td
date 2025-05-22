@@ -1739,6 +1739,8 @@ def int_amdgcn_raw_ptr_buffer_atomic_or : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_xor : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_inc : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_dec : AMDGPURawPtrBufferAtomic;
+def int_amdgcn_raw_ptr_buffer_atomic_usub_cond : AMDGPURawPtrBufferAtomic;
+def int_amdgcn_raw_ptr_buffer_atomic_usub_sat : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_cond_sub_u32 : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
