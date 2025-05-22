@@ -207,13 +207,13 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.barrier.cta.sync(i32 %id, i32 %n)
+  declare void @llvm.nvvm.barrier.cta.sync.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.sync.all(i32 %id)
-  declare void @llvm.nvvm.barrier.cta.arrive(i32 %id, i32 %n)
+  declare void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %n)
 
-  declare void @llvm.nvvm.barrier.cta.sync.aligned(i32 %id, i32 %n)
+  declare void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %id)
-  declare void @llvm.nvvm.barrier.cta.arrive.aligned(i32 %id, i32 %n)
+  declare void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 %id, i32 %n)
 
 Overview:
 """""""""
@@ -230,7 +230,8 @@ Operand %id specifies a logical barrier resource and must fall within the range
 participating in the barrier. When specifying a thread count, the value must be
 a multiple of the warp size. With the '``@llvm.nvvm.barrier.cta.sync.*``'
 variants, the '``.all``' suffix indicates that all threads in the CTA should
-participate in the barrier and the %n operand is not present.
+participate in the barrier while the '``.count``' suffix indicates that only
+the threads specified by the %n operand should participate in the barrier.
 
 All forms of the '``@llvm.nvvm.barrier.cta.*``' intrinsic cause the executing
 thread to wait for all non-exited threads from its warp and then marks the

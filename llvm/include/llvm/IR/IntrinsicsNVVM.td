@@ -1300,9 +1300,9 @@ let TargetPrefix = "nvvm" in {
     foreach align = ["", "_aligned"] in {
       def int_nvvm_barrier_cta_sync # align # _all :
           Intrinsic<[], [llvm_i32_ty]>;
-      def int_nvvm_barrier_cta_sync # align :
+      def int_nvvm_barrier_cta_sync # align # _count :
           Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
-      def int_nvvm_barrier_cta_arrive # align :
+      def int_nvvm_barrier_cta_arrive # align # _count :
           Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
     }
   }
