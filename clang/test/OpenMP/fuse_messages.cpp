@@ -70,15 +70,6 @@ void func() {
         for(int j = 0; j < 10; ++j);
     }
 
-    //expected-warning@+5 {{loop sequence following '#pragma omp fuse' contains induction variables of differing types: 'int' and 'unsigned int'}}
-    //expected-warning@+5 {{loop sequence following '#pragma omp fuse' contains induction variables of differing types: 'int' and 'long long'}}
-    #pragma omp fuse 
-    {
-        for(int i = 0; i < 10; ++i);
-        for(unsigned int j = 0; j < 10; ++j);
-        for(long long k = 0; k < 100; ++k);
-    }
-
     //expected-warning@+2 {{loop range in '#pragma omp fuse' contains only a single loop, resulting in redundant fusion}}
     #pragma omp fuse
     {
@@ -122,6 +113,40 @@ void func() {
         for(int i = 0; i < 10; ++i);
         for(int j = 0; j < 100; ++j);
         for(int k = 0; k < 50; ++k);
+    }
+
+    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '6' is greater than the total number of loops '5'}}
+    #pragma omp fuse looprange(1,6)
+    {
+        for(int i = 0; i < 10; ++i);
+        for(int j = 0; j < 100; ++j);
+        for(int k = 0; k < 50; ++k);
+        // This fusion results in  2 loops
+        #pragma omp fuse looprange(1,2)
+        {
+            for(int i = 0; i < 10; ++i);
+            for(int j = 0; j < 100; ++j);
+            for(int k = 0; k < 50; ++k);
+        }
+    }
+
+    //expected-error@+1 {{loop range in '#pragma omp fuse' exceeds the number of available loops: range end '4' is greater than the total number of loops '3'}}
+    #pragma omp fuse looprange(2,3)
+    {
+        #pragma omp unroll partial(2)
+        for(int i = 0; i < 10; ++i);
+        
+        #pragma omp reverse
+        for(int j = 0; j < 10; ++j);
+
+        #pragma omp fuse 
+        {
+            {
+                #pragma omp reverse
+                for(int j = 0; j < 10; ++j);
+            }            
+            for(int k = 0; k < 50; ++k);
+        }
     }
 }
 
