@@ -941,7 +941,6 @@ filegroup(
 cc_library(
     name = "Core",
     srcs = glob([
-        "include/llvm/ProfileData/MemProfCommon.h",
         "lib/IR/*.cpp",
         "lib/IR/*.h",
     ]),
