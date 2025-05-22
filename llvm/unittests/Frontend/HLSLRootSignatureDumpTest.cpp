@@ -140,4 +140,41 @@ TEST(HLSLRootSignatureTest, SetRootConstantsDump) {
   EXPECT_EQ(Out, Expected);
 }
 
+TEST(HLSLRootSignatureTest, NoneRootFlagsDump) {
+  RootFlags Flags = RootFlags::None;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Flags;
+  OS.flush();
+
+  std::string Expected = "RootFlags(None)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, AllRootFlagsDump) {
+  RootFlags Flags = RootFlags::ValidFlags;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Flags;
+  OS.flush();
+
+  std::string Expected = "RootFlags("
+                         "AllowInputAssemblerInputLayout | "
+                         "DenyVertexShaderRootAccess | "
+                         "DenyHullShaderRootAccess | "
+                         "DenyDomainShaderRootAccess | "
+                         "DenyGeometryShaderRootAccess | "
+                         "DenyPixelShaderRootAccess | "
+                         "AllowStreamOutput | "
+                         "LocalRootSignature | "
+                         "DenyAmplificationShaderRootAccess | "
+                         "DenyMeshShaderRootAccess | "
+                         "CBVSRVUAVHeapDirectlyIndexed | "
+                         "SamplerHeapDirectlyIndexed)";
+
+  EXPECT_EQ(Out, Expected);
+}
+
 } // namespace

@@ -46,6 +46,8 @@ enum class RootFlags : uint32_t {
   ValidFlags = 0x00000fff
 };
 
+raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags);
+
 enum class DescriptorRangeFlags : unsigned {
   None = 0,
   DescriptorsVolatile = 0x1,
