@@ -24,13 +24,13 @@ define void @barrier() {
 ; ATOMIC-NEXT: ret void
 
 ; Check that invalid passes are rejected gracefully.
-; RUN: env LLD_IN_TEST=1 not ld.lld -m elf_x86_64 %t.o -o /dev/null \
+; RUN: env LLD_IN_TEST=1 not --crash ld.lld -m elf_x86_64 %t.o -o /dev/null \
 ; RUN:   --lto-newpm-passes=iamnotapass -shared 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=INVALID
 ; INVALID: unable to parse pass pipeline description 'iamnotapass': unknown pass name 'iamnotapass'
 
 ; Check that invalid AA pipelines are rejected gracefully.
-; RUN: env LLD_IN_TEST=1 not ld.lld -m elf_x86_64 %t.o -o /dev/null \
+; RUN: env LLD_IN_TEST=1 not --crash ld.lld -m elf_x86_64 %t.o -o /dev/null \
 ; RUN:   --lto-newpm-passes=globaldce --lto-aa-pipeline=patatino \
 ; RUN:   -shared 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=INVALIDAA
