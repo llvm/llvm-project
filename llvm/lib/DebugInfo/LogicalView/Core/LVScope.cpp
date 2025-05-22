@@ -330,13 +330,16 @@ void LVScope::addMissingElements(LVScope *Reference) {
       Symbol->setIsOptimized();
       Symbol->setReference(Reference);
 
-      // The symbol can be a constant, parameter or variable.
+      // The symbol can be a constant, parameter, variable or unspecified
+      // parameters (i.e. `...`).
       if (Reference->getIsConstant())
         Symbol->setIsConstant();
       else if (Reference->getIsParameter())
         Symbol->setIsParameter();
       else if (Reference->getIsVariable())
         Symbol->setIsVariable();
+      else if (Reference->getIsUnspecified())
+        Symbol->setIsUnspecified();
       else
         llvm_unreachable("Invalid symbol kind.");
     }
@@ -679,7 +682,7 @@ void LVScope::sort() {
         [&](LVScope *Parent, LVSortFunction SortFunction) {
           auto Traverse = [&](auto &Set, LVSortFunction SortFunction) {
             if (Set)
-              std::stable_sort(Set->begin(), Set->end(), SortFunction);
+              llvm::stable_sort(*Set, SortFunction);
           };
           Traverse(Parent->Types, SortFunction);
           Traverse(Parent->Symbols, SortFunction);
@@ -1627,8 +1630,7 @@ void LVScopeCompileUnit::printMatchedElements(raw_ostream &OS,
                                               bool UseMatchedElements) {
   LVSortFunction SortFunction = getSortFunction();
   if (SortFunction)
-    std::stable_sort(MatchedElements.begin(), MatchedElements.end(),
-                     SortFunction);
+    llvm::stable_sort(MatchedElements, SortFunction);
 
   // Check the type of elements required to be printed. 'MatchedElements'
   // contains generic elements (lines, scopes, symbols, types). If we have a

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Casting.h"
@@ -122,10 +123,9 @@ namespace DirectX {
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
   StringRef ParamData;
-  uint32_t Version;
 
-  RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
-      : Header(H), ParamData(P), Version(V) {}
+  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
+      : Header(H), ParamData(P) {}
 
   template <typename T, typename VersionT = T> Expected<T> readParameter() {
     assert(sizeof(VersionT) <= sizeof(T) &&
@@ -165,60 +165,18 @@ struct RootDescriptorView : RootParameterView {
                 llvm::to_underlying(dxbc::RootParameterType::UAV));
   }
 
-  llvm::Expected<dxbc::RST0::v1::RootDescriptor> read(uint32_t Version) {
-    if (Version == 1)
-      return readParameter<dxbc::RST0::v1::RootDescriptor,
-                           dxbc::RST0::v0::RootDescriptor>();
-    return readParameter<dxbc::RST0::v1::RootDescriptor>();
-  }
-};
-template <typename T> struct DescriptorTable {
-  uint32_t NumRanges;
-  uint32_t RangesOffset;
-  ViewArray<T> Ranges;
-
-  typename ViewArray<T>::iterator begin() const { return Ranges.begin(); }
-
-  typename ViewArray<T>::iterator end() const { return Ranges.end(); }
-};
-template <typename T> struct TemplateTypeToVersion {
-  // Default version
-  static constexpr uint32_t Value = -1;
-};
-
-template <> struct TemplateTypeToVersion<dxbc::RST0::v0::DescriptorRange> {
-  static constexpr uint32_t Value = 1;
-};
-
-template <> struct TemplateTypeToVersion<dxbc::RST0::v1::DescriptorRange> {
-  static constexpr uint32_t Value = 2;
-};
-
-template <typename T> struct DescriptorTableView : RootParameterView {
-  using TemplateType = T;
-
-  static bool classof(const RootParameterView *V) {
-    return (V->Header.ParameterType ==
-            llvm::to_underlying(dxbc::RootParameterType::DescriptorTable)) &&
-           (V->Version == TemplateTypeToVersion<T>::Value);
-  }
-
-  // Define a type alias to access the template parameter from inside classof
-  llvm::Expected<DescriptorTable<T>> read() {
-    const char *Current = ParamData.begin();
-    DescriptorTable<T> Table;
-
-    Table.NumRanges =
-        support::endian::read<uint32_t, llvm::endianness::little>(Current);
-    Current += sizeof(uint32_t);
-
-    Table.RangesOffset =
-        support::endian::read<uint32_t, llvm::endianness::little>(Current);
-    Current += sizeof(uint32_t);
-
-    Table.Ranges.Data =
-        ParamData.substr(2 * sizeof(uint32_t), Table.NumRanges * sizeof(T));
-    return Table;
+  llvm::Expected<dxbc::RTS0::v2::RootDescriptor> read(uint32_t Version) {
+    if (Version == 1) {
+      auto Descriptor = readParameter<dxbc::RTS0::v1::RootDescriptor>();
+      if (Error E = Descriptor.takeError())
+        return E;
+      return dxbc::RTS0::v2::RootDescriptor(*Descriptor);
+    }
+    if (Version != 2)
+      return make_error<GenericBinaryError>("Invalid Root Signature version: " +
+                                                Twine(Version),
+                                            object_error::parse_failed);
+    return readParameter<dxbc::RTS0::v2::RootDescriptor>();
   }
 };
 
@@ -269,20 +227,9 @@ public:
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
       if (Version == 1)
-        DataSize = sizeof(dxbc::RST0::v0::RootDescriptor);
+        DataSize = sizeof(dxbc::RTS0::v1::RootDescriptor);
       else
-        DataSize = sizeof(dxbc::RST0::v1::RootDescriptor);
-      break;
-    case dxbc::RootParameterType::DescriptorTable:
-      uint32_t NumRanges =
-          support::endian::read<uint32_t, llvm::endianness::little>(
-              PartData.begin() + Header.ParameterOffset);
-      if (Version == 1)
-        DataSize = sizeof(dxbc::RST0::v0::DescriptorRange) * NumRanges +
-                   2 * sizeof(uint32_t);
-      else
-        DataSize = sizeof(dxbc::RST0::v1::DescriptorRange) * NumRanges +
-                   2 * sizeof(uint32_t);
+        DataSize = sizeof(dxbc::RTS0::v2::RootDescriptor);
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0
@@ -293,7 +240,7 @@ public:
       return parseFailed("Reading structure out of file bounds");
 
     StringRef Buff = PartData.substr(Header.ParameterOffset, DataSize);
-    RootParameterView View = RootParameterView(Version, Header, Buff);
+    RootParameterView View = RootParameterView(Header, Buff);
     return View;
   }
 };

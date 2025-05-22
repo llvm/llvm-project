@@ -66,7 +66,7 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; IF-EVL:       for.inc:
 ; IF-EVL-NEXT:    [[INC]] = add nuw nsw i64 [[I_011]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;

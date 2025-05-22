@@ -512,6 +512,14 @@ TEST(ParseArchString, RejectsDoubleOrTrailingUnderscore) {
 }
 
 TEST(ParseArchString, RejectsDuplicateExtensionNames) {
+  // Zicsr/Zifencei are allowed to duplicate with "g".
+  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseArchString("rv64g_zicsr", true),
+                       Succeeded());
+  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseArchString("rv64g_zifencei", true),
+                       Succeeded());
+  ASSERT_THAT_EXPECTED(
+      RISCVISAInfo::parseArchString("rv64g_zicsr_zifencei", true), Succeeded());
+
   EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64ii", true).takeError()),
             "invalid standard user-level extension 'i'");
   EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv32ee", true).takeError()),
@@ -674,12 +682,12 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 
   for (StringRef Input :
-       {"rv64i_xqcisls0p2", "rv64i_xqcia0p4", "rv64i_xqciac0p3",
-        "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcicm0p2",
-        "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p4",
-        "rv64i_xqciio0p1", "rv64i_xqcilo0p2", "rv64i_xqcilia0p2",
-        "rv64i_xqcibm0p4", "rv64i_xqcibi0p2", "rv64i_xqcili0p2",
-        "rv64i_xqcisim0p2", "rv64i_xqcilb0p2", "rv64i_xqcisync0p2"}) {
+       {"rv64i_xqcia0p7", "rv64i_xqciac0p3", "rv64i_xqcibi0p2",
+        "rv64i_xqcibm0p8", "rv64i_xqcicli0p3", "rv64i_xqcicm0p2",
+        "rv64i_xqcics0p2", "rv64i_xqcicsr0p3", "rv64i_xqciint0p7",
+        "rv64i_xqciio0p1", "rv64i_xqcilb0p2", "rv64i_xqcili0p2",
+        "rv64i_xqcilia0p2", "rv64i_xqcilo0p3", "rv64i_xqcilsm0p5",
+        "rv64i_xqcisim0p2", "rv64i_xqcisls0p2", "rv64i_xqcisync0p3"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
@@ -973,6 +981,7 @@ R"(All available -march extensions for RISC-V
     a                    2.1
     f                    2.2
     d                    2.2
+    q                    2.2
     c                    2.0
     b                    1.0
     v                    1.0
@@ -982,6 +991,7 @@ R"(All available -march extensions for RISC-V
     zicbop               1.0
     zicboz               1.0
     ziccamoa             1.0
+    ziccamoc             1.0
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
@@ -1118,6 +1128,9 @@ R"(All available -march extensions for RISC-V
     svnapot              1.0
     svpbmt               1.0
     svvptc               1.0
+    xandesperf           5.0
+    xandesvdot           5.0
+    xandesvpackfph       5.0
     xcvalu               1.0
     xcvbi                1.0
     xcvbitmanip          1.0
@@ -1161,26 +1174,28 @@ Experimental extensions
     ssctr                1.0
     svukte               0.3
     xqccmp               0.1
-    xqcia                0.4
+    xqcia                0.7
     xqciac               0.3
     xqcibi               0.2
-    xqcibm               0.4
-    xqcicli              0.2
+    xqcibm               0.8
+    xqcicli              0.3
     xqcicm               0.2
     xqcics               0.2
-    xqcicsr              0.2
-    xqciint              0.4
+    xqcicsr              0.3
+    xqciint              0.7
     xqciio               0.1
     xqcilb               0.2
     xqcili               0.2
     xqcilia              0.2
-    xqcilo               0.2
-    xqcilsm              0.2
+    xqcilo               0.3
+    xqcilsm              0.5
     xqcisim              0.2
     xqcisls              0.2
-    xqcisync             0.2
+    xqcisync             0.3
     xrivosvisni          0.1
     xrivosvizip          0.1
+    xsfmclic             0.1
+    xsfsclic             0.1
 
 Supported Profiles
     rva20s64

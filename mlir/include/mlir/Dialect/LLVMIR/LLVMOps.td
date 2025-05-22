@@ -291,7 +291,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
                    Variadic<LLVM_ScalarOrVectorOf<AnySignlessInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
                    TypeAttr:$elem_type,
-                   UnitAttr:$inbounds);
+                   GEPNoWrapFlagsProp:$noWrapFlags);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
 
@@ -303,8 +303,12 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     as indices. In the case of indexing within a structure, it is required to
     either use constant indices directly, or supply a constant SSA value.
 
-    An optional 'inbounds' attribute specifies the low-level pointer arithmetic
+    The no-wrap flags can be used to specify the low-level pointer arithmetic
     overflow behavior that LLVM uses after lowering the operation to LLVM IR.
+    Valid options include 'inbounds' (pointer arithmetic must be within object
+    bounds), 'nusw' (no unsigned signed wrap), and 'nuw' (no unsigned wrap).
+    Note that 'inbounds' implies 'nusw' which is ensured by the enum
+    definition. The flags can be set individually or in combination.
 
     Examples:
 
@@ -323,10 +327,12 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
 
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
-               "ValueRange":$indices, CArg<"bool", "false">:$inbounds,
+               "ValueRange":$indices,
+               CArg<"GEPNoWrapFlags", "GEPNoWrapFlags::none">:$noWrapFlags,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
-               "ArrayRef<GEPArg>":$indices, CArg<"bool", "false">:$inbounds,
+               "ArrayRef<GEPArg>":$indices,
+               CArg<"GEPNoWrapFlags", "GEPNoWrapFlags::none">:$noWrapFlags,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
   ];
   let llvmBuilder = [{
@@ -343,10 +349,13 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     }
     Type baseElementType = op.getElemType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
-    $res = builder.CreateGEP(elementType, $base, indices, "", $inbounds);
+    $res = builder.CreateGEP(elementType, $base, indices, "",
+                             llvm::GEPNoWrapFlags::fromRaw(
+                                 static_cast<unsigned>(
+                                     op.getNoWrapFlags())));
   }];
   let assemblyFormat = [{
-    (`inbounds` $inbounds^)?
+    ($noWrapFlags^)?
     $base `[` custom<GEPIndices>($dynamicIndices, $rawConstantIndices) `]` attr-dict
     `:` functional-type(operands, results) `,` $elem_type
   }];
@@ -1893,6 +1902,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$denormal_fp_math,
     OptionalAttr<StrAttr>:$denormal_fp_math_f32,
     OptionalAttr<StrAttr>:$fp_contract,
+    OptionalAttr<StrAttr>:$instrument_function_entry,
+    OptionalAttr<StrAttr>:$instrument_function_exit,
     OptionalAttr<UnitAttr>:$no_inline,
     OptionalAttr<UnitAttr>:$always_inline,
     OptionalAttr<UnitAttr>:$no_unwind,
@@ -2062,9 +2073,9 @@ def LLVM_ConstantOp
     Unlike LLVM IR, MLIR does not have first-class constant values. Therefore,
     all constants must be created as SSA values before being used in other
     operations. `llvm.mlir.constant` creates such values for scalars, vectors,
-    strings, and structs. It has a mandatory `value` attribute whose type
-    depends on the type of the constant value. The type of the constant value
-    must correspond to the attribute type converted to LLVM IR type.
+    strings, structs, and array of structs. It has a mandatory `value` attribute
+    whose type depends on the type of the constant value. The type of the constant
+    value must correspond to the attribute type converted to LLVM IR type.
 
     When creating constant scalars, the `value` attribute must be either an
     integer attribute or a floating point attribute. The type of the attribute
@@ -2085,6 +2096,11 @@ def LLVM_ConstantOp
     number of elements in the attribute, and the type of each LLVM struct field
     must correspond to the type of the corresponding attribute element converted
     to LLVM IR.
+
+    When creating an array of structs, the `value` attribute must be an array
+    attribute, itself containing zero, or undef, or array attributes for each
+    potential nested array type, and the elements of the leaf array attributes
+    for must match the struct element types or be zero or undef attributes.
 
     Examples:
 

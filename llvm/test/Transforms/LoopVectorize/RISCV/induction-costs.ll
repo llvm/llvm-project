@@ -70,9 +70,9 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP50:%.*]] = mul i32 [[DOTCAST]], 3
 ; CHECK-NEXT:    [[IND_END22:%.*]] = add i32 [[X_I32]], [[TMP50]]
+; CHECK-NEXT:    [[TMP53:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[X_I64]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP53:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
 ; CHECK-NEXT:    [[TMP55:%.*]] = mul <vscale x 8 x i64> [[TMP53]], splat (i64 3)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> [[DOTSPLAT]], [[TMP55]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = mul i64 3, [[TMP52]]

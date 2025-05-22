@@ -159,7 +159,7 @@ There are two kinds of escapes.
 * ``\\`` represents a single ``\`` character.
 
 * ``\`` followed by two hexadecimal characters (0-9, a-f, or A-F)
-  represents the byte with the given value (e.g. \x00 represents a
+  represents the byte with the given value (e.g. ``\00`` represents a
   null byte).
 
 To represent a ``"`` character, use ``\22``. (``\"`` will end the string
@@ -410,8 +410,8 @@ added in the future:
       calling convention: on most platforms, they are not preserved and need to
       be saved by the caller, but on Windows, xmm6-xmm15 are preserved.
 
-    - On AArch64 the callee preserve all general purpose registers, except X0-X8
-      and X16-X18.
+    - On AArch64 the callee preserve all general purpose registers, except
+      X0-X8 and X16-X18. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
@@ -447,9 +447,9 @@ added in the future:
       R11. R11 can be used as a scratch register. Furthermore it also preserves
       all floating-point registers (XMMs/YMMs).
 
-    - On AArch64 the callee preserve all general purpose registers, except X0-X8
-      and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31 SIMD -
-      floating point registers.
+    - On AArch64 the callee preserve all general purpose registers, except
+      X0-X8 and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31
+      SIMD floating point registers. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that don't need to call out to any other functions.
@@ -465,11 +465,11 @@ added in the future:
     Non-general purpose registers still follow the standard c calling
     convention. Currently it is for x86_64 and AArch64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
-    Clang generates an access function to access C++-style TLS. The access
-    function generally has an entry block, an exit block and an initialization
-    block that is run at the first time. The entry and exit blocks can access
-    a few TLS IR variables, each access will be lowered to a platform-specific
-    sequence.
+    Clang generates an access function to access C++-style Thread Local Storage
+    (TLS). The access function generally has an entry block, an exit block and an
+    initialization block that is run at the first time. The entry and exit blocks
+    can access a few TLS IR variables, each access will be lowered to a
+    platform-specific sequence.
 
     This calling convention aims to minimize overhead in the caller by
     preserving as many registers as possible (all the registers that are
@@ -700,7 +700,7 @@ Global Variables
 Global variables define regions of memory allocated at compilation time
 instead of run-time.
 
-Global variable definitions must be initialized.
+Global variable definitions must be initialized with a sized value.
 
 Global variables in other translation units can also be declared, in which
 case they don't have an initializer.
@@ -727,7 +727,7 @@ optimizations based on the 'constantness' are valid for the translation
 units that do not include the definition.
 
 As SSA values, global variables define pointer values that are in scope
-(i.e. they dominate) all basic blocks in the program. Global variables
+for (i.e. they dominate) all basic blocks in the program. Global variables
 always define a pointer to their "content" type because they describe a
 region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
@@ -3133,6 +3133,9 @@ as follows:
     program memory space defaults to the default address space of 0,
     which corresponds to a Von Neumann architecture that has code
     and data in the same space.
+
+.. _globals_addrspace:
+
 ``G<address space>``
     Specifies the address space to be used by default when creating global
     variables. If omitted, the globals address space defaults to the default
@@ -3147,14 +3150,21 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>[:<pref>][:<idx>]``
-    This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``.
-    The fourth parameter ``<idx>`` is the size of the
-    index that used for address calculation, which must be less than or equal
-    to the pointer size. If not
-    specified, the default index size is equal to the pointer size. All sizes
-    are in bits. The address space, ``n``, is optional, and if not specified,
+``p[n]:<size>:<abi>[:<pref>[:<idx>]]``
+    This specifies the properties of a pointer in address space ``n``.
+    The ``<size>`` parameter specifies the size of the bitwise representation.
+    For :ref:`non-integral pointers <nointptrtype>` the representation size may
+    be larger than the address width of the underlying address space (e.g. to
+    accommodate additional metadata).
+    The alignment requirements are specified via the ``<abi>`` and
+    ``<pref>``\erred alignments parameters.
+    The fourth parameter ``<idx>`` is the size of the index that used for
+    address calculations such as :ref:`getelementptr <i_getelementptr>`.
+    It must be less than or equal to the pointer size. If not specified, the
+    default index size is equal to the pointer size.
+    The index size also specifies the width of addresses in this address space.
+    All sizes are in bits.
+    The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^24).
 ``i<size>:<abi>[:<pref>]``
@@ -4122,6 +4132,30 @@ except :ref:`label <t_label>` and :ref:`metadata <t_metadata>`.
 | ``{i32, i32} (i32)``            | A function taking an ``i32``, returning a :ref:`structure <t_struct>` containing two ``i32`` values                                                                 |
 +---------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
+.. _t_opaque:
+
+Opaque Structure Types
+----------------------
+
+:Overview:
+
+Opaque structure types are used to represent structure types that
+do not have a body specified. This corresponds (for example) to the C
+notion of a forward declared structure. They can be named (``%X``) or
+unnamed (``%52``).
+
+It is not possible to create SSA values with an opaque structure type. In
+practice, this largely limits their use to the value type of external globals.
+
+:Syntax:
+
+::
+
+      %X = type opaque
+      %52 = type opaque
+
+      @g = external global %X
+
 .. _t_firstclass:
 
 First Class Types
@@ -4241,6 +4275,16 @@ address spaces defined in the :ref:`datalayout string<langref_datalayout>`.
 ``addrspace("A")`` will use the alloca address space, ``addrspace("G")``
 the default globals address space and ``addrspace("P")`` the program address
 space.
+
+The representation of pointers can be different for each address space and does
+not necessarily need to be a plain integer address (e.g. for
+:ref:`non-integral pointers <nointptrtype>`). In addition to a representation
+bits size, pointers in each address space also have an index size which defines
+the bitwidth of indexing operations as well as the size of `integer addresses`
+in this address space. For example, CHERI capabilities are twice the size of the
+underlying addresses to accommodate for additional metadata such as bounds and
+permissions: on a 32-bit system the bitwidth of the pointer representation size
+is 64, but the underlying address width remains 32 bits.
 
 The default address space is number zero.
 
@@ -4561,31 +4605,6 @@ opaqued and are never uniqued. Identified types must not be recursive.
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``<{ i8, i32 }>``            | A packed struct known to be 5 bytes in size.                                                                                                                                          |
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-.. _t_opaque:
-
-Opaque Structure Types
-""""""""""""""""""""""
-
-:Overview:
-
-Opaque structure types are used to represent structure types that
-do not have a body specified. This corresponds (for example) to the C
-notion of a forward declared structure. They can be named (``%X``) or
-unnamed (``%52``).
-
-:Syntax:
-
-::
-
-      %X = type opaque
-      %52 = type opaque
-
-:Examples:
-
-+--------------+-------------------+
-| ``opaque``   | An opaque type.   |
-+--------------+-------------------+
 
 .. _constants:
 
@@ -5777,6 +5796,7 @@ and GCC likely indicates a bug in LLVM.
 
 Target-independent:
 
+- ``a``: Print a memory reference. Targets might customize the output.
 - ``c``: Print an immediate integer constant unadorned, without
   the target-specific immediate punctuation (e.g. no ``$`` prefix).
 - ``n``: Negate and print immediate integer constant unadorned, without the
@@ -5914,6 +5934,8 @@ target-independent modifiers.
 
 X86:
 
+- ``a``: Print a memory reference. This displays as ``sym(%rip)`` for x86-64.
+  i386 should only use this with the static relocation model.
 - ``c``: Print an unadorned integer or symbol name. (The latter is
   target-specific behavior for this typically target-independent modifier).
 - ``A``: Print a register name with a '``*``' before it.
@@ -6361,6 +6383,8 @@ The following ``tag:`` values are valid:
   DW_TAG_enumeration_type = 4
   DW_TAG_structure_type   = 19
   DW_TAG_union_type       = 23
+  DW_TAG_variant          = 25
+  DW_TAG_variant_part     = 51
 
 For ``DW_TAG_array_type``, the ``elements:`` should be :ref:`subrange
 descriptors <DISubrange>` or :ref:`subrange descriptors
@@ -6395,6 +6419,16 @@ For ``DW_TAG_structure_type``, ``DW_TAG_class_type``, and
 <DIDerivedType>` with ``tag: DW_TAG_member``, ``tag: DW_TAG_inheritance``, or
 ``tag: DW_TAG_friend``; or :ref:`subprograms <DISubprogram>` with
 ``isDefinition: false``.
+
+``DW_TAG_variant_part`` introduces a variant part of a structure type.
+This should have a discriminant, a member that is used to decide which
+elements are active.  The elements of the variant part should each be
+a ``DW_TAG_member``; if a member has a non-null ``ExtraData``, then it
+is a ``ConstantInt`` or ``ConstantDataArray`` indicating the values of
+the discriminant member that cause the activation of this branch.  A
+member itself may be of composite type with tag ``DW_TAG_variant``; in
+this case the members of that composite type are inlined into the
+current one.
 
 .. _DISubrange:
 
@@ -11598,6 +11632,8 @@ operation. The operation must be one of the following keywords:
 -  fsub
 -  fmax
 -  fmin
+-  fmaximum
+-  fminimum
 -  uinc_wrap
 -  udec_wrap
 -  usub_cond
@@ -11607,7 +11643,7 @@ For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin, this must be a floating-point
+as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum, this must be a floating-point
 or fixed vector of floating-point type.  The type of the '``<pointer>``'
 operand must be a pointer to that type. If the ``atomicrmw`` is marked
 as ``volatile``, then the optimizer is not allowed to modify the
@@ -11648,8 +11684,10 @@ operation argument:
 -  umin: ``*ptr = *ptr < val ? *ptr : val`` (using an unsigned comparison)
 - fadd: ``*ptr = *ptr + val`` (using floating point arithmetic)
 - fsub: ``*ptr = *ptr - val`` (using floating point arithmetic)
--  fmax: ``*ptr = maxnum(*ptr, val)`` (match the `llvm.maxnum.*`` intrinsic)
--  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*`` intrinsic)
+-  fmax: ``*ptr = maxnum(*ptr, val)`` (match the `llvm.maxnum.*` intrinsic)
+-  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*` intrinsic)
+-  fmaximum: ``*ptr = maximum(*ptr, val)`` (match the `llvm.maximum.*` intrinsic)
+-  fminimum: ``*ptr = minimum(*ptr, val)`` (match the `llvm.minimum.*` intrinsic)
 -  uinc_wrap: ``*ptr = (*ptr u>= val) ? 0 : (*ptr + 1)`` (increment value with wraparound to zero when incremented above input value)
 -  udec_wrap: ``*ptr = ((*ptr == 0) || (*ptr u> val)) ? val : (*ptr - 1)`` (decrement with wraparound to input value when decremented below zero).
 -  usub_cond: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if no unsigned overflow).
@@ -12390,12 +12428,15 @@ Semantics:
 """"""""""
 
 The '``ptrtoint``' instruction converts ``value`` to integer type
-``ty2`` by interpreting the pointer value as an integer and either
-truncating or zero extending that value to the size of the integer type.
+``ty2`` by interpreting the all pointer representation bits as an integer
+(equivalent to a ``bitcast``) and either truncating or zero extending that value
+to the size of the integer type.
 If ``value`` is smaller than ``ty2`` then a zero extension is done. If
 ``value`` is larger than ``ty2`` then a truncation is done. If they are
 the same size, then nothing is done (*no-op cast*) other than a type
 change.
+The ``ptrtoint`` always :ref:`captures address and provenance <pointercapture>`
+of the pointer argument.
 
 Example:
 """"""""
@@ -12450,6 +12491,9 @@ of the integer ``value``. If ``value`` is larger than the size of a
 pointer then a truncation is done. If ``value`` is smaller than the size
 of a pointer then a zero extension is done. If they are the same size,
 nothing is done (*no-op cast*).
+The behavior is equivalent to a ``bitcast``, however, the resulting value is not
+guaranteed to be dereferenceable (e.g. if the result type is a
+:ref:`non-integral pointers <nointptrtype>`).
 
 Example:
 """"""""
@@ -12880,7 +12924,10 @@ class <t_firstclass>` type.
    :ref:`fast-math flags <fastmath>`. These are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
    for selects that return :ref:`supported floating-point types
-   <fastmath_return_types>`.
+   <fastmath_return_types>`. Note that the presence of value which would otherwise result
+   in poison does not cause the result to be poison if the value is on the non-selected arm.
+   If :ref:`fast-math flags <fastmath>` are present, they are only applied to the result,
+   not both arms.
 
 Semantics:
 """"""""""
@@ -12900,7 +12947,9 @@ Example:
 
 .. code-block:: llvm
 
-      %X = select i1 true, i8 17, i8 42          ; yields i8:17
+      %X = select i1 true, i8 17, i8 42                   ; yields i8:17
+      %Y = select nnan i1 true, float 0.0, float NaN      ; yields float:0.0
+      %Z = select nnan i1 false, float 0.0, float NaN     ; yields float:poison
 
 
 .. _i_freeze:
@@ -15038,7 +15087,8 @@ Syntax:
 
 ::
 
-      declare ptr @llvm.thread.pointer()
+      declare ptr @llvm.thread.pointer.p0()
+      declare ptr addrspace(5) @llvm.thread.pointer.p5()
 
 Overview:
 """""""""
@@ -15055,7 +15105,8 @@ specific: it may point to the start of TLS area, to the end, or somewhere
 in the middle.  Depending on the target, this intrinsic may read a register,
 call a helper function, read from an alternate memory space, or perform
 other operations necessary to locate the TLS area.  Not all targets support
-this intrinsic.
+this intrinsic.  The address space must be the :ref:`globals address space
+<globals_addrspace>`.
 
 '``llvm.call.preallocated.setup``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17172,12 +17223,14 @@ type.
 
 Semantics:
 """"""""""
-If both operands are NaNs (including sNaN), returns qNaN. If one operand
-is NaN (including sNaN) and another operand is a number, return the number.
-Otherwise returns the lesser of the two arguments. -0.0 is considered to
-be less than +0.0 for this intrinsic.
 
-Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
+If both operands are NaNs (including sNaN), returns a :ref:`NaN <floatnan>`. If
+one operand is NaN (including sNaN) and another operand is a number,
+return the number.  Otherwise returns the lesser of the two
+arguments. -0.0 is considered to be less than +0.0 for this intrinsic.
+
+Note that these are the semantics of minimumNumber specified in
+IEEE-754-2019 with the usual :ref:`signaling NaN <floatnan>` exception.
 
 It has some differences with '``llvm.minnum.*``':
 1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
@@ -17218,12 +17271,15 @@ type.
 
 Semantics:
 """"""""""
-If both operands are NaNs (including sNaN), returns qNaN. If one operand
-is NaN (including sNaN) and another operand is a number, return the number.
-Otherwise returns the greater of the two arguments. -0.0 is considered to
-be less than +0.0 for this intrinsic.
 
-Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
+If both operands are NaNs (including sNaN), returns a
+:ref:`NaN <floatnan>`. If one operand is NaN (including sNaN) and
+another operand is a number, return the number.  Otherwise returns the
+greater of the two arguments. -0.0 is considered to be less than +0.0
+for this intrinsic.
+
+Note that these are the semantics of maximumNumber specified in
+IEEE-754-2019  with the usual :ref:`signaling NaN <floatnan>` exception.
 
 It has some differences with '``llvm.maxnum.*``':
 1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
@@ -21097,7 +21153,12 @@ sufficiently aligned block of memory; this memory is written to by the
 intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
-target-specific knowledge. The ``func`` argument must hold a function.
+target-specific knowledge.
+
+The ``func`` argument must be a constant (potentially bitcasted) pointer to a
+function declaration or definition, since the calling convention may affect the
+content of the trampoline that is created.
+
 
 Semantics:
 """"""""""

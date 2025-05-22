@@ -40,6 +40,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
 
   RootSignatureYamlDesc RootSigDesc;
   uint32_t Version = Data.getVersion();
+  uint32_t Version = Data.getVersion();
 
   RootSigDesc.Version = Version;
   RootSigDesc.NumStaticSamplers = Data.getNumStaticSamplers();

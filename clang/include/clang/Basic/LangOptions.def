@@ -347,7 +347,7 @@ BENIGN_ENUM_LANGOPT(DefaultFPContractMode, FPModeKind, 2, FPM_Off, "FP contracti
 COMPATIBLE_LANGOPT(ExpStrictFP, 1, false, "Enable experimental strict floating point")
 BENIGN_LANGOPT(RoundingMath, 1, false, "Do not assume default floating-point rounding behavior")
 BENIGN_ENUM_LANGOPT(FPExceptionMode, FPExceptionModeKind, 2, FPE_Default, "FP Exception Behavior Mode type")
-BENIGN_ENUM_LANGOPT(FPEvalMethod, FPEvalMethodKind, 3, FEM_UnsetOnCommandLine, "FP type used for floating point arithmetic")
+BENIGN_ENUM_LANGOPT(FPEvalMethod, FPEvalMethodKind, 2, FEM_UnsetOnCommandLine, "FP type used for floating point arithmetic")
 ENUM_LANGOPT(Float16ExcessPrecision, ExcessPrecisionKind, 2, FPP_Standard, "Intermediate truncation behavior for Float16 arithmetic")
 ENUM_LANGOPT(BFloat16ExcessPrecision, ExcessPrecisionKind, 2, FPP_Standard, "Intermediate truncation behavior for BFloat16 arithmetic")
 LANGOPT(NoBitFieldTypeAlign , 1, 0, "bit-field type alignment")

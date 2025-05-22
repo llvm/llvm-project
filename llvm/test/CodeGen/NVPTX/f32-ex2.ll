@@ -12,9 +12,9 @@ define float @ex2_float(float %0) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [ex2_float_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [ex2_float_param_0];
 ; CHECK-NEXT:    ex2.approx.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %res = call float @llvm.nvvm.ex2.approx.f(float %0)
   ret float %res
@@ -27,9 +27,9 @@ define float @ex2_float_ftz(float %0) {
 ; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.f32 %f1, [ex2_float_ftz_param_0];
+; CHECK-NEXT:    ld.param.b32 %f1, [ex2_float_ftz_param_0];
 ; CHECK-NEXT:    ex2.approx.ftz.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.f32 [func_retval0], %f2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
 ; CHECK-NEXT:    ret;
   %res = call float @llvm.nvvm.ex2.approx.ftz.f(float %0)
   ret float %res

@@ -19,6 +19,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 using __libcpp_timespec_t = ::timespec;
 
@@ -128,6 +129,7 @@ _LIBCPP_EXPORTED_FROM_ABI void* __libcpp_tls_get(__libcpp_tls_key __key);
 
 _LIBCPP_EXPORTED_FROM_ABI int __libcpp_tls_set(__libcpp_tls_key __key, void* __p);
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___THREAD_SUPPORT_WINDOWS_H

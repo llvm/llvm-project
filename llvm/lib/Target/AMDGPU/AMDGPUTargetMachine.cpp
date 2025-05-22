@@ -495,6 +495,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeR600EmitClauseMarkersPass(*PR);
   initializeR600MachineCFGStructurizerPass(*PR);
   initializeGlobalISel(*PR);
+  initializeAMDGPUAsmPrinterPass(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
@@ -565,6 +566,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
+  initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -686,10 +688,9 @@ static StringRef computeDataLayout(const Triple &TT) {
   // space 8) which cannot be non-trivilally accessed by LLVM memory operations
   // like getelementptr.
   return "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-         "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-"
-         "v32:32-v48:64-v96:"
-         "128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-"
-         "G1-ni:7:8:9";
+         "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-"
+         "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-"
+         "v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 }
 
 LLVM_READNONE
@@ -884,8 +885,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                             OptimizationLevel Level,
                                             ThinOrFullLTOPhase Phase) {
     if (Level != OptimizationLevel::O0) {
-      if (!isLTOPreLink(Phase))
-        MPM.addPass(AMDGPUAttributorPass(*this));
+      if (!isLTOPreLink(Phase)) {
+        AMDGPUAttributorOptions Opts;
+        MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
+      }
     }
   });
 
@@ -914,7 +917,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             AMDGPUAttributorOptions Opt;
             if (HasClosedWorldAssumption)
               Opt.IsClosedWorld = true;
-            PM.addPass(AMDGPUAttributorPass(*this, Opt));
+            PM.addPass(AMDGPUAttributorPass(
+                *this, Opt, ThinOrFullLTOPhase::FullLTOPostLink));
           }
         }
         if (!NoKernelInfoEndLTO) {
@@ -1070,7 +1074,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(GCNTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<GCNTTIImpl>(this, F));
 }
 
 Error GCNTargetMachine::buildCodeGenPipeline(
@@ -1317,6 +1321,10 @@ void AMDGPUPassConfig::addIRPasses() {
 }
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
+  if (TM->getTargetTriple().isAMDGCN() &&
+      TM->getOptLevel() > CodeGenOptLevel::None)
+    addPass(createAMDGPUPreloadKernelArgumentsLegacyPass(TM));
+
   if (TM->getTargetTriple().isAMDGCN() && EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
 
@@ -2046,6 +2054,9 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   // AMDGPUAnnotateKernelFeaturesPass is missing here, but it will hopefully be
   // deleted soon.
 
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(AMDGPUPreloadKernelArgumentsPass(TM));
+
   if (EnableLowerKernelArguments)
     addPass(AMDGPULowerKernelArgumentsPass(TM));
 
@@ -2158,6 +2169,52 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
   }
   addPass(DeadMachineInstructionElimPass());
   addPass(SIShrinkInstructionsPass());
+}
+
+
+
+Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
+    AddMachinePass &addPass) const {
+  // TODO: Check --regalloc-npm option
+
+  addPass(GCNPreRALongBranchRegPass());
+
+  addPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}));
+
+  // Commit allocated register changes. This is mostly necessary because too
+  // many things rely on the use lists of the physical registers, such as the
+  // verifier. This is only necessary with allocators which use LiveIntervals,
+  // since FastRegAlloc does the replacements itself.
+  addPass(VirtRegRewriterPass(false));
+
+  // At this point, the sgpr-regalloc has been done and it is good to have the
+  // stack slot coloring to try to optimize the SGPR spill stack indices before
+  // attempting the custom SGPR spill lowering.
+  addPass(StackSlotColoringPass());
+
+  // Equivalent of PEI for SGPRs.
+  addPass(SILowerSGPRSpillsPass());
+
+  // To Allocate wwm registers used in whole quad mode operations (for shaders).
+  addPass(SIPreAllocateWWMRegsPass());
+
+  // For allocating other wwm register operands.
+  // addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::WWM);
+  addPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}));
+  addPass(SILowerWWMCopiesPass());
+  addPass(VirtRegRewriterPass(false));
+  addPass(AMDGPUReserveWWMRegsPass());
+
+  // For allocating per-thread VGPRs.
+  // addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::VGPR);
+  addPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}));
+
+
+  addPreRewrite(addPass);
+  addPass(VirtRegRewriterPass(true));
+
+  // TODO: addPass(AMDGPUMarkLastScratchLoadPass());
+  return Error::success();
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {

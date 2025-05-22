@@ -77,6 +77,8 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
     return reportError(Ctx, "Invalid format for RootConstants Element");
 
   dxbc::RootParameterHeader Header;
+  // The parameter offset doesn't matter here - we recalculate it during
+  // serialization  Header.ParameterOffset = 0;
   Header.ParameterType =
       llvm::to_underlying(dxbc::RootParameterType::Constants32Bit);
 
@@ -166,7 +168,7 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     return reportValueError(Ctx, "RootFlags", RSD.Flags);
   }
 
-  for (const llvm::mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
+  for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
     if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
       return reportValueError(Ctx, "ShaderVisibility",
                               Info.Header.ShaderVisibility);
@@ -292,26 +294,30 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "NumParameters: " << RS.ParametersContainer.size()
        << "\n";
     Space++;
-    for (auto const &Info : RS.ParametersContainer) {
-      OS << indent(Space) << "- Parameter Type: " << Info.Header.ParameterType
-         << "\n";
+    for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
+      const auto &[Type, Loc] =
+          RS.ParametersContainer.getTypeAndLocForParameter(I);
+      const dxbc::RootParameterHeader Header =
+          RS.ParametersContainer.getHeader(I);
+
+      OS << indent(Space) << "- Parameter Type: " << Type << "\n";
       OS << indent(Space + 2)
-         << "Shader Visibility: " << Info.Header.ShaderVisibility << "\n";
-      std::optional<mcdxbc::ParametersView> P =
-          RS.ParametersContainer.getParameter(&Info);
-      if (!P)
-        continue;
-      if (std::holds_alternative<const dxbc::RootConstants *>(*P)) {
-        auto *Constants = std::get<const dxbc::RootConstants *>(*P);
+         << "Shader Visibility: " << Header.ShaderVisibility << "\n";
+
+      switch (Type) {
+      case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+        const dxbc::RootConstants &Constants =
+            RS.ParametersContainer.getConstant(Loc);
+        OS << indent(Space + 2) << "Register Space: " << Constants.RegisterSpace
+           << "\n";
         OS << indent(Space + 2)
-           << "Register Space: " << Constants->RegisterSpace << "\n";
+           << "Shader Register: " << Constants.ShaderRegister << "\n";
         OS << indent(Space + 2)
-           << "Shader Register: " << Constants->ShaderRegister << "\n";
-        OS << indent(Space + 2)
-           << "Num 32 Bit Values: " << Constants->Num32BitValues << "\n";
+           << "Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
       }
+      }
+      Space--;
     }
-    Space--;
     OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
     OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
        << "\n";
@@ -319,7 +325,6 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     Space--;
     // end root signature header
   }
-
   return PreservedAnalyses::all();
 }
 

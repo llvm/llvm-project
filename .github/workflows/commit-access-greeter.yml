@@ -12,6 +12,7 @@ jobs:
   commit-access-greeter:
     permissions:
       issues: write
+      pull-requests: read
     if: >-
       github.repository_owner == 'llvm' &&
       github.event.label.name == 'infra:commit-access-request'

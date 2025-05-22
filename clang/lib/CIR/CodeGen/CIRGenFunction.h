@@ -63,6 +63,9 @@ public:
   /// declarations.
   DeclMapTy localDeclMap;
 
+  /// The type of the condition for the emitting switch statement.
+  llvm::SmallVector<mlir::Type, 2> condTypeStack;
+
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -91,6 +94,10 @@ public:
 
   static bool hasScalarEvaluationKind(clang::QualType type) {
     return getEvaluationKind(type) == cir::TEK_Scalar;
+  }
+
+  static bool hasAggregateEvaluationKind(clang::QualType type) {
+    return getEvaluationKind(type) == cir::TEK_Aggregate;
   }
 
   CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
@@ -161,6 +168,17 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
+  // an ObjCMethodDecl.
+  struct PrototypeWrapper {
+    llvm::PointerUnion<const clang::FunctionProtoType *,
+                       const clang::ObjCMethodDecl *>
+        p;
+
+    PrototypeWrapper(const clang::FunctionProtoType *ft) : p(ft) {}
+    PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
+  };
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -169,6 +187,23 @@ public:
   public:
     AbstractCallee() : calleeDecl(nullptr) {}
     AbstractCallee(const clang::FunctionDecl *fd) : calleeDecl(fd) {}
+
+    bool hasFunctionDecl() const {
+      return llvm::isa_and_nonnull<clang::FunctionDecl>(calleeDecl);
+    }
+
+    unsigned getNumParams() const {
+      if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
+        return fd->getNumParams();
+      return llvm::cast<clang::ObjCMethodDecl>(calleeDecl)->param_size();
+    }
+
+    const clang::ParmVarDecl *getParamDecl(unsigned I) const {
+      if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
+        return fd->getParamDecl(I);
+      return *(llvm::cast<clang::ObjCMethodDecl>(calleeDecl)->param_begin() +
+               I);
+    }
   };
 
   void finishFunction(SourceLocation endLoc);
@@ -246,6 +281,8 @@ public:
     localDeclMap.insert({vd, addr});
     // TODO: Add symbol table support
   }
+
+  LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
@@ -444,7 +481,13 @@ public:
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e);
 
+  /// Similarly to emitAnyExpr(), however, the result will always be accessible
+  /// even if no aggregate location is provided.
+  RValue emitAnyExprToTemp(const clang::Expr *e);
+
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+
+  Address emitArrayToPointerDecay(const Expr *array);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
 
@@ -462,14 +505,59 @@ public:
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
-                  cir::CIRCallOpInterface *callOp, mlir::Location loc);
+                  const CallArgList &args, cir::CIRCallOpInterface *callOp,
+                  mlir::Location loc);
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
+  void emitCallArg(CallArgList &args, const clang::Expr *e,
+                   clang::QualType argType);
+  void emitCallArgs(
+      CallArgList &args, PrototypeWrapper prototype,
+      llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
+      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
+  LValue emitCallExprLValue(const clang::CallExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
+  template <typename T>
+  mlir::LogicalResult emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
+                                             mlir::ArrayAttr value,
+                                             cir::CaseOpKind kind,
+                                             bool buildingTopLevelCase);
+
+  mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
+                                   mlir::Type condType,
+                                   bool buildingTopLevelCase);
+
+  LValue emitCastLValue(const CastExpr *e);
+
+  LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
+                                          llvm::ArrayRef<const Attr *> attrs);
+
+  RValue emitCXXMemberCallExpr(const clang::CXXMemberCallExpr *e,
+                               ReturnValueSlot returnValue);
+
+  RValue emitCXXMemberOrOperatorCall(
+      const clang::CXXMethodDecl *md, const CIRGenCallee &callee,
+      ReturnValueSlot returnValue, mlir::Value thisPtr,
+      mlir::Value implicitParam, clang::QualType implicitParamTy,
+      const clang::CallExpr *ce, CallArgList *rtlArgs);
+
+  RValue emitCXXMemberOrOperatorMemberCallExpr(
+      const clang::CallExpr *ce, const clang::CXXMethodDecl *md,
+      ReturnValueSlot returnValue, bool hasQualifier,
+      clang::NestedNameSpecifier *qualifier, bool isArrow,
+      const clang::Expr *base);
+
+  RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
+                                       const CXXMethodDecl *md,
+                                       ReturnValueSlot returnValue);
+
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
@@ -517,6 +605,10 @@ public:
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
+  mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
+                                      mlir::Type condType,
+                                      bool buildingTopLevelCase);
+
   /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
   /// the conditional based on the branch.
@@ -545,6 +637,11 @@ public:
   /// returning the rvalue.
   RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
 
+  Address emitLoadOfReference(LValue refLVal, mlir::Location loc,
+                              LValueBaseInfo *pointeeBaseInfo);
+  LValue emitLoadOfReferenceLValue(Address refAddr, mlir::Location loc,
+                                   QualType refTy, AlignmentSource source);
+
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
   /// care to appropriately convert from the memory representation to
   /// the LLVM value representation.  The l-value must be a simple
@@ -572,6 +669,9 @@ public:
   Address emitPointerWithAlignment(const clang::Expr *expr,
                                    LValueBaseInfo *baseInfo);
 
+  /// Emits a reference binding to the passed in expression.
+  RValue emitReferenceBindingToExpr(const Expr *e);
+
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
   /// Emit a conversion from the specified type to the specified destination
@@ -594,6 +694,11 @@ public:
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
+
+  mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
+  mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
+                                     bool buildingTopLevelCase);
+  mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
@@ -636,6 +741,27 @@ private:
       mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
       SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
       const Stmt *associatedStmt);
+
+  template <typename Op, typename TermOp>
+  mlir::LogicalResult emitOpenACCOpCombinedConstruct(
+      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
+      const Stmt *loopStmt);
+
+  template <typename Op>
+  void emitOpenACCClauses(Op &op, OpenACCDirectiveKind dirKind,
+                          SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
+  // The second template argument doesn't need to be a template, since it should
+  // always be an mlir::acc::LoopOp, but as this is a template anyway, we make
+  // it a template argument as this way we can avoid including the OpenACC MLIR
+  // headers here. We will count on linker failures/explicit instantiation to
+  // ensure we don't mess this up, but it is only called from 1 place, and
+  // instantiated 3x.
+  template <typename ComputeOp, typename LoopOp>
+  void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
+                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
 
 public:
   mlir::LogicalResult

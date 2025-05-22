@@ -251,6 +251,7 @@
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl256b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl32b"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+zvl64b"
+// MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+sscofpmf"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svinval"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svnapot"
 // MCPU-TT-ASCALON-D8-SAME: "-target-feature" "+svpbmt"
@@ -565,6 +566,11 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvksh"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvkt"
 // MCPU-SIFIVE-P670-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p870 | FileCheck -check-prefix=MCPU-SIFIVE-P870 %s
+// MCPU-SIFIVE-P870: "-target-cpu" "sifive-p870"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-p870.c`
+// MCPU-SIFIVE-P870-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rp2350-hazard3 | FileCheck -check-prefix=MCPU-HAZARD3 %s
 // MCPU-HAZARD3: "-target-cpu" "rp2350-hazard3"

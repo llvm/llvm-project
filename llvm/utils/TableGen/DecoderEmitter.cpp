@@ -1182,7 +1182,7 @@ bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
   }
 
   bool OpHasCompleteDecoder;
-  if (Decoder != "") {
+  if (!Decoder.empty()) {
     OpHasCompleteDecoder = OpInfo.HasCompleteDecoder;
     OS << Indent << "if (!Check(S, " << Decoder
        << "(MI, tmp, Address, Decoder))) { "
@@ -1791,7 +1791,7 @@ static std::string findOperandDecoderMethod(const Record *Record) {
   const StringInit *String =
       DecoderString ? dyn_cast<StringInit>(DecoderString->getValue()) : nullptr;
   if (String) {
-    Decoder = std::string(String->getValue());
+    Decoder = String->getValue().str();
     if (!Decoder.empty())
       return Decoder;
   }
@@ -1917,7 +1917,7 @@ static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
         Var = dyn_cast<VarInit>(Bits.getBit(J));
       }
       if (!Var || (Var->getName() != OpName &&
-                   Var->getName() != TiedNames[std::string(OpName)]))
+                   Var->getName() != TiedNames[OpName.str()]))
         break;
     }
     if (I == J)
@@ -1946,7 +1946,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
   // If the instruction has specified a custom decoding hook, use that instead
   // of trying to auto-generate the decoder.
   StringRef InstDecoder = EncodingDef.getValueAsString("DecoderMethod");
-  if (InstDecoder != "") {
+  if (!InstDecoder.empty()) {
     bool HasCompleteInstDecoder =
         EncodingDef.getValueAsBit("hasCompleteDecoder");
     InsnOperands.push_back(
@@ -2145,16 +2145,15 @@ static void emitInsertBits(formatted_raw_ostream &OS) {
 // Helper function for inserting bits extracted from an encoded instruction into
 // a field.
 template <typename InsnType>
-static std::enable_if_t<std::is_integral<InsnType>::value>
-insertBits(InsnType &field, InsnType bits, unsigned startBit, unsigned numBits) {
-  assert(startBit + numBits <= sizeof field * 8);
-  field |= (InsnType)bits << startBit;
-}
-
-template <typename InsnType>
-static std::enable_if_t<!std::is_integral<InsnType>::value>
-insertBits(InsnType &field, uint64_t bits, unsigned startBit, unsigned numBits) {
-  field.insertBits(bits, startBit, numBits);
+static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
+                       unsigned numBits) {
+  if constexpr (std::is_integral<InsnType>::value) {
+    assert(startBit + numBits <= sizeof field * 8);
+    (void)numBits;
+    field |= (InsnType)bits << startBit;
+  } else {
+    field.insertBits(bits, startBit, numBits);
+  }
 }
 )";
 }
@@ -2356,7 +2355,7 @@ static void collectHwModesReferencedForEncodings(
     for (const HwModeSelect::PairType &P : MS.second.Items) {
       if (P.second->isSubClassOf("InstructionEncoding")) {
         std::string DecoderNamespace =
-            std::string(P.second->getValueAsString("DecoderNamespace"));
+            P.second->getValueAsString("DecoderNamespace").str();
         if (P.first == DefaultMode) {
           NamespacesWithHwModes[DecoderNamespace].insert("");
         } else {
@@ -2389,7 +2388,7 @@ handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
   }
   case SUPPRESSION_LEVEL1: {
     std::string DecoderNamespace =
-        std::string(InstDef->getValueAsString("DecoderNamespace"));
+        InstDef->getValueAsString("DecoderNamespace").str();
     auto It = NamespacesWithHwModes.find(DecoderNamespace);
     if (It != NamespacesWithHwModes.end()) {
       for (StringRef HwModeName : It->second)
@@ -2508,10 +2507,9 @@ namespace {
         InstrLen[NEI] = Len;
       }
       std::string DecoderNamespace =
-          std::string(EncodingDef->getValueAsString("DecoderNamespace"));
+          EncodingDef->getValueAsString("DecoderNamespace").str();
       if (!NumberedEncoding.HwModeName.empty())
-        DecoderNamespace +=
-            std::string("_") + NumberedEncoding.HwModeName.str();
+        DecoderNamespace += "_" + NumberedEncoding.HwModeName.str();
       OpcMap[{DecoderNamespace, Size}].emplace_back(
           NEI, Target.getInstrIntValue(Def));
     } else {

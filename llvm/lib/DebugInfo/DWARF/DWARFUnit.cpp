@@ -496,8 +496,7 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
-  if ((CUDieOnly && !DieArray.empty()) ||
-      DieArray.size() > 1)
+  if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
     return Error::success(); // Already parsed.
 
   bool HasCUDie = !DieArray.empty();

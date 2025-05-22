@@ -45,6 +45,9 @@ if config.host_os not in [
 ]:  # TODO: Windows
     config.unsupported = True
 
+if config.test_cfi:
+    config.available_features.add("cfi")
+
 # Don't target x86_64h if the test machine can't execute x86_64h binaries.
 if "-arch x86_64h" in target_cflags and "x86_64h" not in config.available_features:
     config.unsupported = True

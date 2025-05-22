@@ -94,27 +94,8 @@ struct RootDescriptorYaml {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
-struct DescriptorRangeYaml {
-  uint32_t RangeType;
-  uint32_t NumDescriptors;
-  uint32_t BaseShaderRegister;
-  uint32_t RegisterSpace;
-  int32_t OffsetInDescriptorsFromTableStart;
-
-  uint32_t getEncodedFlags() const;
-
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) bool Val = false;
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-};
-
-struct DescriptorTableYaml {
-  uint32_t NumRanges;
-  uint32_t RangesOffset;
-  SmallVector<DescriptorRangeYaml> Ranges;
-};
-
 using ParameterData =
-    std::variant<RootConstantsYaml, RootDescriptorYaml, DescriptorTableYaml>;
+    std::variant<RootConstantsYaml, RootDescriptorYaml>;
 
 struct RootParameterYamlDesc {
   uint32_t Type;
@@ -254,7 +235,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterYamlDesc)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::DescriptorRangeYaml)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -337,14 +317,6 @@ template <> struct MappingTraits<llvm::DXContainerYAML::RootConstantsYaml> {
 
 template <> struct MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml> {
   static void mapping(IO &IO, llvm::DXContainerYAML::RootDescriptorYaml &D);
-};
-
-template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorTableYaml> {
-  static void mapping(IO &IO, llvm::DXContainerYAML::DescriptorTableYaml &D);
-};
-
-template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml> {
-  static void mapping(IO &IO, llvm::DXContainerYAML::DescriptorRangeYaml &D);
 };
 
 } // namespace yaml

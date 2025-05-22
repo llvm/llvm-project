@@ -209,9 +209,7 @@ bool NVPTXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   case NVPTX::CallUniPrintCallRetInst1:
   case NVPTX::CallArgBeginInst:
-  case NVPTX::CallArgI32imm:
   case NVPTX::CallArgParam:
-  case NVPTX::LastCallArgI32imm:
   case NVPTX::LastCallArgParam:
   case NVPTX::CallArgEndInst1:
     return true;

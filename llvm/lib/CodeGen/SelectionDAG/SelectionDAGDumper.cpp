@@ -103,6 +103,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_FSUB:           return "AtomicLoadFSub";
   case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
   case ISD::ATOMIC_LOAD_FMAX:           return "AtomicLoadFMax";
+  case ISD::ATOMIC_LOAD_FMINIMUM:       return "AtomicLoadFMinimum";
+  case ISD::ATOMIC_LOAD_FMAXIMUM:       return "AtomicLoadFMaximum";
   case ISD::ATOMIC_LOAD_UINC_WRAP:
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
@@ -122,6 +124,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::TokenFactor:                return "TokenFactor";
   case ISD::AssertSext:                 return "AssertSext";
   case ISD::AssertZext:                 return "AssertZext";
+  case ISD::AssertNoFPClass:            return "AssertNoFPClass";
   case ISD::AssertAlign:                return "AssertAlign";
 
   case ISD::BasicBlock:                 return "BasicBlock";
@@ -573,6 +576,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     return "find_last_active";
+
+  case ISD::GET_ACTIVE_LANE_MASK:
+    return "get_active_lane_mask";
 
   case ISD::PARTIAL_REDUCE_UMLA:
     return "partial_reduce_umla";
