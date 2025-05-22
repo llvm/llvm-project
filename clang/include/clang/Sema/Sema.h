@@ -14629,8 +14629,8 @@ public:
   bool SatisfactionStackContains(const NamedDecl *D,
                                  const llvm::FoldingSetNodeID &ID) const {
     const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
-    return llvm::find(SatisfactionStack, SatisfactionStackEntryTy{Can, ID}) !=
-           SatisfactionStack.end();
+    return llvm::is_contained(SatisfactionStack,
+                              SatisfactionStackEntryTy{Can, ID});
   }
 
   using SatisfactionStackEntryTy =
