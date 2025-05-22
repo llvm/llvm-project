@@ -109,6 +109,12 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Builtins[Kind - FK_NONE];
 }
 
+bool MCAsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
+                                         const MCValue &Target,
+                                         const MCSubtargetInfo *) {
+  return Target.getSpecifier();
+}
+
 bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                                 const MCFixup &Fixup,
                                                 const MCValue &, uint64_t Value,
