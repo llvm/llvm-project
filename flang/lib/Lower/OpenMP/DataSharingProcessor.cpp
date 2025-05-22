@@ -235,11 +235,13 @@ void DataSharingProcessor::insertBarrier(
   if (!needBarrier())
     return;
 
-  if (useDelayedPrivatization)
-    clauseOps->privateNeedsBarrier =
-        mlir::UnitAttr::get(&converter.getMLIRContext());
-  else
+  if (useDelayedPrivatization) {
+    if (clauseOps)
+      clauseOps->privateNeedsBarrier =
+          mlir::UnitAttr::get(&converter.getMLIRContext());
+  } else {
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
+  }
 }
 
 void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
