@@ -163,18 +163,28 @@ template <typename SCEVTy, typename Op0_t, typename Op1_t>
 struct SCEVBinaryExpr_match {
   Op0_t Op0;
   Op1_t Op1;
-  const Loop *L;
 
-  SCEVBinaryExpr_match(Op0_t Op0, Op1_t Op1, const Loop *L = nullptr)
-      : Op0(Op0), Op1(Op1), L(L) {}
+  SCEVBinaryExpr_match(Op0_t Op0, Op1_t Op1) : Op0(Op0), Op1(Op1) {}
 
   bool match(const SCEV *S) const {
     auto *E = dyn_cast<SCEVTy>(S);
-    bool LoopMatches = true;
-    if constexpr (std::is_same_v<SCEVTy, SCEVAddRecExpr>)
-      LoopMatches = !L || (E && E->getLoop() == L);
     return E && E->getNumOperands() == 2 && Op0.match(E->getOperand(0)) &&
-           Op1.match(E->getOperand(1)) && LoopMatches;
+           Op1.match(E->getOperand(1));
+  }
+};
+
+template <typename Op0_t, typename Op1_t> struct SCEVAffineAddRec_match {
+  Op0_t Op0;
+  Op1_t Op1;
+  const Loop *L;
+
+  SCEVAffineAddRec_match(Op0_t Op0, Op1_t Op1, const Loop *L = nullptr)
+      : Op0(Op0), Op1(Op1), L(L) {}
+
+  bool match(const SCEV *S) const {
+    auto *E = dyn_cast<SCEVAddRecExpr>(S);
+    return E && E->getNumOperands() == 2 && Op0.match(E->getOperand(0)) &&
+           Op1.match(E->getOperand(1)) && (!L || E->getLoop() == L);
   }
 };
 
@@ -203,10 +213,10 @@ m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVAddRecExpr, Op0_t, Op1_t>
+inline SCEVAffineAddRec_match<Op0_t, Op1_t>
 m_scev_AffineAddRec(const Op0_t &Op0, const Op1_t &Op1,
                     const Loop *L = nullptr) {
-  return m_scev_Binary<SCEVAddRecExpr>(Op0, Op1);
+  return SCEVAffineAddRec_match<Op0_t, Op1_t>(Op0, Op1, L);
 }
 } // namespace SCEVPatternMatch
 } // namespace llvm
