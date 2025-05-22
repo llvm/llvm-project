@@ -136,7 +136,7 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     ArrayRef<int64_t> shape = tdescTy.getShape();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || llvm::equal(*targetShape, shape))
+    if (!targetShape)
       return failure();
 
     auto newTdescTy = getUnrolledTypes(tdescTy, *targetShape)[0];
@@ -187,10 +187,9 @@ struct UnrollUpdateNdOffsetOp : public UnrollPattern<xegpu::UpdateNdOffsetOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
-    ArrayRef<int64_t> shape = tdescTy.getShape();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || llvm::equal(*targetShape, shape))
+    if (!targetShape)
       return failure();
 
     SmallVector<Type> convertedTdescTypes =
@@ -216,10 +215,9 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
-    ArrayRef<int64_t> shape = tdescTy.getShape();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || llvm::equal(*targetShape, shape))
+    if (!targetShape)
       return failure();
 
     SmallVector<Type> convertedTdescTypes =
@@ -243,10 +241,9 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     Location loc = op.getLoc();
     VectorType valueTy = op.getType();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
-    ArrayRef<int64_t> shape = tdescTy.getShape();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || llvm::equal(*targetShape, shape))
+    if (!targetShape)
       return failure();
 
     Type elemTy = tdescTy.getElementType();
@@ -278,10 +275,9 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     Location loc = op.getLoc();
     VectorType valueTy = op.getValueType();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
-    ArrayRef<int64_t> shape = tdescTy.getShape();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || llvm::equal(*targetShape, shape))
+    if (!targetShape)
       return failure();
 
     SmallVector<Type> convertedValTypes =
