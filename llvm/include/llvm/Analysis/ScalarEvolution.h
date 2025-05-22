@@ -124,11 +124,12 @@ public:
   /// at runtime.  A SCEV being defined does not require the existence of any
   /// instruction within the defined scope.
   enum NoWrapFlags {
-    FlagAnyWrap = 0,    // No guarantee.
-    FlagNW = (1 << 0),  // No self-wrap.
-    FlagNUW = (1 << 1), // No unsigned wrap.
-    FlagNSW = (1 << 2), // No signed wrap.
-    NoWrapMask = (1 << 3) - 1
+    FlagAnyWrap = 0,         // No guarantee.
+    FlagSafeWrap = (1 << 0), // Expected to wrap.
+    FlagNW = (1 << 1),       // No self-wrap.
+    FlagNUW = (1 << 2),      // No unsigned wrap.
+    FlagNSW = (1 << 3),      // No signed wrap.
+    NoWrapMask = (1 << 4) - 1
   };
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
@@ -563,7 +564,9 @@ public:
   const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
   const SCEV *getLosslessPtrToIntExpr(const SCEV *Op, unsigned Depth = 0);
   const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty);
-  const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
+  const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty,
+                              SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                              unsigned Depth = 0);
   const SCEV *getVScale(Type *Ty);
   const SCEV *getElementCount(Type *Ty, ElementCount EC);
   const SCEV *getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth = 0);
@@ -708,13 +711,17 @@ public:
 
   /// Return a SCEV corresponding to a conversion of the input value to the
   /// specified type.  If the type must be extended, it is zero extended.
-  const SCEV *getTruncateOrZeroExtend(const SCEV *V, Type *Ty,
-                                      unsigned Depth = 0);
+  const SCEV *
+  getTruncateOrZeroExtend(const SCEV *V, Type *Ty,
+                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                          unsigned Depth = 0);
 
   /// Return a SCEV corresponding to a conversion of the input value to the
   /// specified type.  If the type must be extended, it is sign extended.
-  const SCEV *getTruncateOrSignExtend(const SCEV *V, Type *Ty,
-                                      unsigned Depth = 0);
+  const SCEV *
+  getTruncateOrSignExtend(const SCEV *V, Type *Ty,
+                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                          unsigned Depth = 0);
 
   /// Return a SCEV corresponding to a conversion of the input value to the
   /// specified type.  If the type must be extended, it is zero extended.  The

@@ -33,8 +33,7 @@ for.body:                                         ; preds = %for.body, %entry
   %arrayidx = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 %indvars.iv
   store x86_fp80 %conv, ptr %arrayidx, align 16
   %indvars.iv.next = add i64 %indvars.iv, 1
-  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-  %exitcond = icmp eq i32 %lftr.wideiv, 1024
+  %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
