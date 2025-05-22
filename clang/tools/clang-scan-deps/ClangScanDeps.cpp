@@ -1256,9 +1256,10 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   }();
   SharedStream DependencyOS(ThreadUnsafeDependencyOS);
 
-  auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
-      llvm::errs(), new DiagnosticOptions(), false);
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
+  DiagnosticOptions DiagOpts;
+  auto DiagsConsumer =
+      std::make_unique<TextDiagnosticPrinter>(llvm::errs(), DiagOpts, false);
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
 
   CASOptions CASOpts;

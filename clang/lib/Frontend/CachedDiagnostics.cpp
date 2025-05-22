@@ -150,6 +150,7 @@ struct Diagnostics {
 /// locations using its own \p SourceManager.
 struct CachedDiagnosticSerializer {
   PrefixMapper &Mapper;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine DiagEngine;
   SourceManager SourceMgr;
   /// Diagnostics either emitted during compilation or deserialized from a
@@ -167,8 +168,7 @@ struct CachedDiagnosticSerializer {
   StringSaver Saver{Alloc};
 
   CachedDiagnosticSerializer(PrefixMapper &Mapper, FileManager &FileMgr)
-      : Mapper(Mapper),
-        DiagEngine(new DiagnosticIDs(), new DiagnosticOptions()),
+      : Mapper(Mapper), DiagEngine(new DiagnosticIDs(), DiagOpts),
         SourceMgr(DiagEngine, FileMgr) {}
 
   size_t getNumDiags() const { return CachedDiags.getNumDiags(); }

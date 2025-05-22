@@ -44,9 +44,9 @@ static bool shouldCacheInvocation(ArrayRef<const char *> Args,
   CreateInvocationOptions Opts;
   // Ignore diagnostic parsing diagnostics; if they are real issues they will be
   // seen when compiling. Just fallback to disabling caching here.
+  DiagnosticOptions DiagOpts;
   Opts.Diags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), new DiagnosticOptions,
-      new IgnoringDiagConsumer);
+      *llvm::vfs::getRealFileSystem(), DiagOpts, new IgnoringDiagConsumer);
   // This enables picking the first invocation in a multi-arch build.
   Opts.RecoverOnError = true;
   std::shared_ptr<CompilerInvocation> CInvok =
@@ -198,7 +198,7 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
                                   llvm::StringSaver &Saver) {
   assert(Args.size() >= 1);
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
   if (std::optional<std::string> WarnOptsValue =
           llvm::sys::Process::GetEnv("LLVM_CACHE_WARNINGS")) {
     SmallVector<const char *, 8> WarnOpts;
@@ -206,12 +206,12 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     llvm::cl::TokenizeGNUCommandLine(*WarnOptsValue, Saver, WarnOpts);
     DiagOpts = CreateAndPopulateDiagOpts(WarnOpts);
   } else {
-    DiagOpts = new DiagnosticOptions();
+    DiagOpts = std::make_unique<DiagnosticOptions>();
   }
-  auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
-      llvm::errs(), DiagOpts.get(), false);
+  auto DiagsConsumer =
+      std::make_unique<TextDiagnosticPrinter>(llvm::errs(), *DiagOpts, false);
   IntrusiveRefCntPtr<DiagnosticsEngine> DiagsPtr(
-      new DiagnosticsEngine(new DiagnosticIDs(), DiagOpts));
+      new DiagnosticsEngine(new DiagnosticIDs(), *DiagOpts));
   DiagnosticsEngine &Diags = *DiagsPtr;
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
   auto VFS = llvm::vfs::getRealFileSystem();

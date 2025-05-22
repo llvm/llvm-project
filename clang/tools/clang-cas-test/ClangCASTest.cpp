@@ -67,9 +67,10 @@ int main(int Argc, const char **Argv) {
     return 1;
   }
 
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions));
+                                          DiagOpts));
 
   CASOptions Opts;
   // Printing a cache key only makes sense in an existing CAS, so default to

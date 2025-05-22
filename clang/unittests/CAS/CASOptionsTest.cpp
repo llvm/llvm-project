@@ -39,7 +39,8 @@ TEST(CASOptionsTest, getKind) {
 }
 
 TEST(CASOptionsTest, getOrCreateDatabases) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                           new IgnoringDiagConsumer());
 
   // Create an in-memory CAS.
@@ -93,7 +94,8 @@ TEST(CASOptionsTest, getOrCreateObjectStoreInvalid) {
   if (!llvm::cas::isOnDiskCASEnabled())
     return;
 
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                           new IgnoringDiagConsumer());
 
   // Create a file, then try to put a CAS there.
@@ -124,7 +126,8 @@ TEST(CASOptionsTest, freezeConfig) {
   if (!llvm::cas::isOnDiskCASEnabled())
     return;
 
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                           new IgnoringDiagConsumer());
 
   // Hide the CAS configuration when creating it.

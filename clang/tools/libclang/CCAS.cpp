@@ -131,10 +131,10 @@ CXCASDatabases clang_experimental_cas_Databases_create(CXCASOptions COpts,
 
   SmallString<128> DiagBuf;
   llvm::raw_svector_ostream OS(DiagBuf);
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  TextDiagnosticPrinter DiagPrinter(OS, DiagOpts.get());
+  DiagnosticOptions DiagOpts;
+  TextDiagnosticPrinter DiagPrinter(OS, DiagOpts);
   DiagnosticsEngine Diags(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts.get(),
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
       &DiagPrinter, /*ShouldOwnClient=*/false);
 
   auto [CAS, Cache] = Opts.getOrCreateDatabases(Diags);
@@ -549,11 +549,11 @@ CXCASReplayResult clang_experimental_cas_replayCompilation(
     *OutError = nullptr;
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   SmallString<128> DiagsBuffer;
   llvm::raw_svector_ostream DiagOS(DiagsBuffer);
-  auto *DiagsPrinter = new TextDiagnosticPrinter(DiagOS, DiagOpts.get());
-  DiagnosticsEngine Diags(DiagID, DiagOpts.get(), DiagsPrinter);
+  auto *DiagsPrinter = new TextDiagnosticPrinter(DiagOS, DiagOpts);
+  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagsPrinter);
 
   SmallVector<const char *, 256> Args(argv, argv + argc);
   llvm::BumpPtrAllocator Alloc;

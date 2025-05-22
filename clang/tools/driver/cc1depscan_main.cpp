@@ -534,7 +534,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
 
 int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
                     void *MainAddr) {
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
   {
     auto FoundCC1Args =
         std::find_if(Argv.begin(), Argv.end(), [](const char *Arg) -> bool {
@@ -545,12 +545,12 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
       WarnOpts.append(FoundCC1Args + 1, Argv.end());
       DiagOpts = CreateAndPopulateDiagOpts(WarnOpts);
     } else {
-      DiagOpts = new DiagnosticOptions();
+      DiagOpts = std::make_unique<DiagnosticOptions>();
     }
   }
-  auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
-      llvm::errs(), DiagOpts.get(), false);
-  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
+  auto DiagsConsumer =
+      std::make_unique<TextDiagnosticPrinter>(llvm::errs(), *DiagOpts, false);
+  DiagnosticsEngine Diags(new DiagnosticIDs(), *DiagOpts);
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
   auto VFS = llvm::vfs::getRealFileSystem();
   ProcessWarningOptions(Diags, *DiagOpts, *VFS);
@@ -817,7 +817,8 @@ findLLVMCasBinary(const char *Argv0, llvm::SmallVectorImpl<char> &Storage) {
 
 void ScanServer::start(bool Exclusive, ArrayRef<const char *> CASArgs) {
   // Parse CAS options and validate if needed.
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
 
   const OptTable &Opts = clang::driver::getDriverOptTable();
   unsigned MissingArgIndex, MissingArgCount;
@@ -880,7 +881,8 @@ void ScanServer::start(bool Exclusive, ArrayRef<const char *> CASArgs) {
 int ScanServer::listen() {
   llvm::DefaultThreadPool Pool;
 
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   std::tie(CAS, Cache) = CASOpts.getOrCreateDatabases(Diags);
@@ -991,13 +993,13 @@ int ScanServer::listen() {
         Tool.emplace(Service, std::move(UnderlyingFS));
       }
 
-      IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
+      std::unique_ptr<DiagnosticOptions> DiagOpts =
           CreateAndPopulateDiagOpts(Args);
       SmallString<128> DiagsBuffer;
       llvm::raw_svector_ostream DiagsOS(DiagsBuffer);
       DiagsOS.enable_colors(true);
-      auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
-          DiagsOS, DiagOpts.get(), false);
+      auto DiagsConsumer =
+          std::make_unique<TextDiagnosticPrinter>(DiagsOS, *DiagOpts, false);
 
       SmallVector<const char *> NewArgs;
       auto RootID = scanAndUpdateCC1InlineWithTool(
@@ -1087,7 +1089,8 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     ArrayRef<const char *> InputArgs, StringRef WorkingDirectory,
     SmallVectorImpl<const char *> &OutputArgs, llvm::cas::ObjectStore &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
   Diags.setClient(&DiagsConsumer, /*ShouldOwnClient=*/false);
   auto Invocation = std::make_shared<CompilerInvocation>();
   if (!CompilerInvocation::CreateFromArgs(*Invocation, InputArgs, Diags, Exec))
@@ -1130,10 +1133,10 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
   tooling::dependencies::DependencyScanningTool Tool(Service,
                                                      std::move(UnderlyingFS));
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
+  std::unique_ptr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(InputArgs);
-  auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
-      llvm::errs(), DiagOpts.get(), false);
+  auto DiagsConsumer =
+      std::make_unique<TextDiagnosticPrinter>(llvm::errs(), *DiagOpts, false);
 
   auto Result = scanAndUpdateCC1InlineWithTool(
       Tool, *DiagsConsumer, /*VerboseOS*/ nullptr, Exec, InputArgs,

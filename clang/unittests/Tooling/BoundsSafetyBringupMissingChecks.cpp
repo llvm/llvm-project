@@ -63,10 +63,8 @@ runToolOnCodeWithArgs(std::unique_ptr<FrontendAction> ToolAction,
   std::vector<const char *> ArgsCC;
   for (const auto &Arg : Args)
     ArgsCC.push_back(Arg.c_str());
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-      clang::CreateAndPopulateDiagOpts(ArgsCC);
-  auto TDP =
-      std::make_unique<TextDiagnosticPrinter>(llvm::errs(), DiagOpts.get());
+  auto DiagOpts = clang::CreateAndPopulateDiagOpts(ArgsCC);
+  auto TDP = std::make_unique<TextDiagnosticPrinter>(llvm::errs(), *DiagOpts);
   Invocation.setDiagnosticConsumer(TDP.get());
 
   return Invocation.run() && TDP->getNumErrors() == 0;
