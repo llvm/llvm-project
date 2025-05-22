@@ -58,6 +58,13 @@ def SDT_LoongArchMovgr2fcsr : SDTypeProfile<0, 2, [SDTCisVT<0, GRLenVT>,
 def SDT_LoongArchMovfcsr2gr : SDTypeProfile<1, 1, [SDTCisVT<0, GRLenVT>,
                                                    SDTCisSameAs<0, 1>]>;
 
+def SDT_LoongArchBuildPairF64 : SDTypeProfile<1, 2, [SDTCisVT<0, f64>,
+                                                     SDTCisVT<1, i32>,
+                                                     SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchSplitPairF64 : SDTypeProfile<2, 1, [SDTCisVT<0, i32>,
+                                                     SDTCisVT<1, i32>,
+                                                     SDTCisVT<2, f64>]>;
+
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
@@ -164,6 +171,11 @@ def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
                                   [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_cpucfg : SDNode<"LoongArchISD::CPUCFG", SDTUnaryOp,
                                [SDNPHasChain]>;
+
+def loongarch_build_pair_f64 : SDNode<"LoongArchISD::BUILD_PAIR_F64",
+                                      SDT_LoongArchBuildPairF64>;
+def loongarch_split_pair_f64 : SDNode<"LoongArchISD::SPLIT_PAIR_F64",
+                                      SDT_LoongArchSplitPairF64>;
 
 def to_fclass_mask: SDNodeXForm<timm, [{
   uint64_t Check = N->getZExtValue();
