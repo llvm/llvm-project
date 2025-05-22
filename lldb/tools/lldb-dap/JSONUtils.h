@@ -269,6 +269,20 @@ protocol::Source CreateSource(const lldb::SBLineEntry &line_entry);
 ///     definition outlined by Microsoft.
 protocol::Source CreateSource(llvm::StringRef source_path);
 
+/// Create a "Source" object for a given frame, using its assembly for source.
+///
+/// \param[in] target
+///     The relevant target.
+///
+/// \param[in] address
+///     The address to use when creating the "Source" object.
+///
+/// \return
+///     A "Source" JSON object that follows the formal JSON
+///     definition outlined by Microsoft.
+protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
+                                      lldb::SBAddress &address);
+
 /// Return true if the given line entry should be displayed as assembly.
 ///
 /// \param[in] line_entry
