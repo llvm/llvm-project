@@ -1460,11 +1460,6 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   CallExprBits.NumPreArgs = NumPreArgs;
   assert((NumPreArgs == getNumPreArgs()) && "NumPreArgs overflow!");
 
-  unsigned OffsetToTrailingObjects = offsetToTrailingObjects(SC);
-  CallExprBits.OffsetToTrailingObjects = OffsetToTrailingObjects;
-  assert((CallExprBits.OffsetToTrailingObjects == OffsetToTrailingObjects) &&
-         "OffsetToTrailingObjects overflow!");
-
   CallExprBits.UsesADL = static_cast<bool>(UsesADL);
 
   setCallee(Fn);
@@ -1490,11 +1485,6 @@ CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
     : Expr(SC, Empty), NumArgs(NumArgs) {
   CallExprBits.NumPreArgs = NumPreArgs;
   assert((NumPreArgs == getNumPreArgs()) && "NumPreArgs overflow!");
-
-  unsigned OffsetToTrailingObjects = offsetToTrailingObjects(SC);
-  CallExprBits.OffsetToTrailingObjects = OffsetToTrailingObjects;
-  assert((CallExprBits.OffsetToTrailingObjects == OffsetToTrailingObjects) &&
-         "OffsetToTrailingObjects overflow!");
   CallExprBits.HasFPFeatures = HasFPFeatures;
   CallExprBits.IsCoroElideSafe = false;
 }
@@ -1508,7 +1498,8 @@ CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/0, NumArgs, FPFeatures.requiresTrailingStorage());
   void *Mem =
-      Ctx.Allocate(sizeof(CallExpr) + SizeOfTrailingObjects, alignof(CallExpr));
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CallExpr>(SizeOfTrailingObjects),
+                   alignof(CallExpr));
   return new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
                             RParenLoc, FPFeatures, MinNumArgs, UsesADL);
 }
@@ -1518,26 +1509,9 @@ CallExpr *CallExpr::CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
   unsigned SizeOfTrailingObjects =
       CallExpr::sizeOfTrailingObjects(/*NumPreArgs=*/0, NumArgs, HasFPFeatures);
   void *Mem =
-      Ctx.Allocate(sizeof(CallExpr) + SizeOfTrailingObjects, alignof(CallExpr));
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CallExpr>(SizeOfTrailingObjects), alignof(CallExpr));
   return new (Mem)
       CallExpr(CallExprClass, /*NumPreArgs=*/0, NumArgs, HasFPFeatures, Empty);
-}
-
-unsigned CallExpr::offsetToTrailingObjects(StmtClass SC) {
-  switch (SC) {
-  case CallExprClass:
-    return sizeof(CallExpr);
-  case CXXOperatorCallExprClass:
-    return sizeof(CXXOperatorCallExpr);
-  case CXXMemberCallExprClass:
-    return sizeof(CXXMemberCallExpr);
-  case UserDefinedLiteralClass:
-    return sizeof(UserDefinedLiteral);
-  case CUDAKernelCallExprClass:
-    return sizeof(CUDAKernelCallExpr);
-  default:
-    llvm_unreachable("unexpected class deriving from CallExpr!");
-  }
 }
 
 Decl *Expr::getReferencedDeclOfCallee() {
@@ -1645,27 +1619,6 @@ CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
     if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
       return {TD->getDecl(), A};
   return {nullptr, nullptr};
-}
-
-SourceLocation CallExpr::getBeginLoc() const {
-  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
-    return OCE->getBeginLoc();
-
-  // A non-dependent call to a member function with an explicit object parameter
-  // is modelled with the object expression being the first argument, e.g. in
-  // `o.f(x)`, the callee will be just `f`, and `o` will be the first argument.
-  // Since the first argument is written before the callee, the expression's
-  // begin location should come from the first argument.
-  // This does not apply to dependent calls, which are modelled with `o.f`
-  // being the callee.
-  // Because this check is expennsive, we cache the result.
-  if (usesMemberSyntax()) {
-    if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
-      return FirstArgLoc;
-    }
-  }
-
-  return getCallee()->getBeginLoc();
 }
 
 SourceLocation CallExpr::getEndLoc() const {

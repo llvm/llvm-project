@@ -2915,18 +2915,23 @@ class CallExpr : public Expr {
   // instead of re-computing the offset each time the trailing objects are
   // accessed.
 
+protected:
+  static constexpr unsigned offsetToTrailingObjects = 32;
+
+  template <typename T>
+  static constexpr unsigned sizeToAllocateForCallExprSubclass(unsigned SizeOfTrailingObjects) {
+    static_assert(sizeof(T) <= CallExpr::offsetToTrailingObjects);
+    return SizeOfTrailingObjects + CallExpr::offsetToTrailingObjects;
+  }
+private:
   /// Return a pointer to the start of the trailing array of "Stmt *".
   Stmt **getTrailingStmts() {
     return reinterpret_cast<Stmt **>(reinterpret_cast<char *>(this) +
-                                     CallExprBits.OffsetToTrailingObjects);
+                                     offsetToTrailingObjects);
   }
   Stmt *const *getTrailingStmts() const {
     return const_cast<CallExpr *>(this)->getTrailingStmts();
   }
-
-  /// Map a statement class to the appropriate offset in bytes from the
-  /// this pointer to the trailing objects.
-  static unsigned offsetToTrailingObjects(StmtClass SC);
 
   unsigned getSizeOfTrailingStmts() const {
     return (1 + getNumPreArgs() + getNumArgs()) * sizeof(Stmt *);
@@ -2934,7 +2939,7 @@ class CallExpr : public Expr {
 
   size_t getOffsetOfTrailingFPFeatures() const {
     assert(hasStoredFPFeatures());
-    return CallExprBits.OffsetToTrailingObjects + getSizeOfTrailingStmts();
+    return offsetToTrailingObjects + getSizeOfTrailingStmts();
   }
 
 public:
@@ -2981,14 +2986,14 @@ protected:
   FPOptionsOverride *getTrailingFPFeatures() {
     assert(hasStoredFPFeatures());
     return reinterpret_cast<FPOptionsOverride *>(
-        reinterpret_cast<char *>(this) + CallExprBits.OffsetToTrailingObjects +
+        reinterpret_cast<char *>(this) + offsetToTrailingObjects +
         getSizeOfTrailingStmts());
   }
   const FPOptionsOverride *getTrailingFPFeatures() const {
     assert(hasStoredFPFeatures());
     return reinterpret_cast<const FPOptionsOverride *>(
         reinterpret_cast<const char *>(this) +
-        CallExprBits.OffsetToTrailingObjects + getSizeOfTrailingStmts());
+        offsetToTrailingObjects + getSizeOfTrailingStmts());
   }
 
 public:
@@ -3196,7 +3201,26 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY;
+  SourceLocation getBeginLoc() const {
+    //if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
+    //    return OCE->getBeginLoc();
+
+    // A non-dependent call to a member function with an explicit object parameter
+    // is modelled with the object expression being the first argument, e.g. in
+    // `o.f(x)`, the callee will be just `f`, and `o` will be the first argument.
+    // Since the first argument is written before the callee, the expression's
+    // begin location should come from the first argument.
+    // This does not apply to dependent calls, which are modelled with `o.f`
+    // being the callee.
+    // Because this check is expennsive, we cache the result.
+    if (usesMemberSyntax()) {
+      if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
+        return FirstArgLoc;
+      }
+    }
+    return getCallee()->getBeginLoc();
+  }
+
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   /// Return true if this is a call to __assume() or __builtin_assume() with
@@ -3228,8 +3252,6 @@ public:
                                  getNumPreArgs() + getNumArgs());
   }
 };
-
-static_assert(sizeof(CallExpr) == 24);
 
 /// MemberExpr - [C99 6.5.2.3] Structure and Union Members.  X->F and X.F.
 ///
