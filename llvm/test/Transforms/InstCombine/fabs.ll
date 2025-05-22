@@ -1380,6 +1380,17 @@ define void @test_fabs_used_by_nofpclass_nan(float %x) {
   ret void
 }
 
+define nofpclass(nan) float @test_fabs_used_by_ret_nofpclass_nan(float %x) {
+; CHECK-LABEL: @test_fabs_used_by_ret_nofpclass_nan(
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[SEL]]
+;
+  %cmp = fcmp oge float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select nsz i1 %cmp, float %x, float %neg
+  ret float %sel
+}
+
 define i32 @test_fabs_used_fptosi(float %x) {
 ; CHECK-LABEL: @test_fabs_used_fptosi(
 ; CHECK-NEXT:    [[SEL:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])

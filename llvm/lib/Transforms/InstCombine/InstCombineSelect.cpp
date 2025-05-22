@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -2853,6 +2854,9 @@ static bool ignoreSignBitOfNaN(Instruction &I) {
   case Instruction::Select:
   case Instruction::PHI:
     return false;
+  case Instruction::Ret:
+    return I.getFunction()->getAttributes().getRetNoFPClass() &
+           FPClassTest::fcNan;
   case Instruction::Call:
   case Instruction::Invoke: {
     if (auto *II = dyn_cast<IntrinsicInst>(User)) {
