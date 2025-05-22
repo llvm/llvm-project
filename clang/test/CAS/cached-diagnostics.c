@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos12 -fsyntax-only %t/src/main.c -I %t/src/inc -Wunknown-pragmas 2> %t/regular-diags1.txt
 
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t1.rsp -cc1-args \
-// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -fdepscan-prefix-map=%t/src=/^src \
+// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -fdepscan-prefix-map %t/src /^src \
 // RUN:     -emit-obj %t/src/main.c -o %t/out/output.o -I %t/src/inc -Wunknown-pragmas
 
 // Compare diagnostics after a miss.
@@ -42,7 +42,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos12 -fsyntax-only %t/src2/main.c -I %t/src2/inc -Wunknown-pragmas 2> %t/regular-diags2.txt
 
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t2.rsp -cc1-args \
-// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -fdepscan-prefix-map=%t/src2=/^src \
+// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -fdepscan-prefix-map %t/src2 /^src \
 // RUN:     -emit-obj %t/src2/main.c -o %t/out2/output.o -I %t/src2/inc -Wunknown-pragmas
 // RUN: %clang @%t/t2.rsp -Rcompile-job-cache 2> %t/diags-hit2.txt
 
@@ -55,7 +55,7 @@
 // RUN: diff -u %t/regular-diags2.txt %t/cached-diags2.txt
 
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/terr.rsp -cc1-args \
-// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -fdepscan-prefix-map=%t/src=/^src \
+// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -fdepscan-prefix-map %t/src /^src \
 // RUN:     -emit-obj %t/src/main.c -o %t/out/output.o -I %t/src/inc -Rcompile-job-cache -DERROR
 
 // RUN: not %clang @%t/terr.rsp -ferror-limit 1 2> %t/diags_error1.txt

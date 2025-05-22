@@ -48,7 +48,7 @@ struct DepscanPrefixMapping {
                                     llvm::PrefixMapper &Mapper);
 
   /// Add path mappings to the \p Mapper.
-  static void configurePrefixMapper(ArrayRef<std::string> PathPrefixMappings,
+  static void configurePrefixMapper(ArrayRef<std::pair<std::string, std::string>> PathPrefixMappings,
                                     llvm::PrefixMapper &Mapper);
 
   /// Apply the mappings from \p Mapper to \p Invocation.

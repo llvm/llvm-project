@@ -98,15 +98,15 @@
 // SESSION-CMAKE-PREFIX: note: setting LLVM_CACHE_BUILD_SESSION_ID=
 
 // CLANG-CMAKE-PREFIX: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=[[INPUTS]]/SDK=/^sdk"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=[[INPUTS]]/toolchain_dir=/^toolchain"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/build=/^build"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/llvm=/^src"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/clang=/^src-clang"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/clang-tools-extra=/^src-clang-tools-extra"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/third-party/benchmark=/^src-benchmark"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/other/benchmark=/^src-benchmark-1"
-// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map=/llvm/llvm-project/another/benchmark=/^src-benchmark-2"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "[[INPUTS]]/SDK" "/^sdk"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "[[INPUTS]]/toolchain_dir" "/^toolchain"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "/llvm/build" "/^build"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "/llvm/llvm-project/llvm" "/^src"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "/llvm/llvm-project/clang" "/^src-clang"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "/llvm/llvm-project/clang-tools-extra" "/^src-clang-tools-extra"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "/llvm/llvm-project/third-party/benchmark" "/^src-benchmark"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "/llvm/llvm-project/other/benchmark" "/^src-benchmark-1"
+// CLANG-CMAKE-PREFIX: "-fdepscan-prefix-map" "/llvm/llvm-project/another/benchmark" "/^src-benchmark-2"
 
 // Make sure `cache-build-session` can invoke an executable script.
 // RUN: cache-build-session %t/clang -c %s -o %t.o 2>&1 | FileCheck %s -check-prefix=SESSION-SCRIPT -DSRC=%s -DPREFIX=%t

@@ -70,6 +70,13 @@ void MappedPrefix::transformJoinedIfValid(
   transformJoinedImpl</*StopOnInvalid*/ false>(Joined, Split);
 }
 
+void MappedPrefix::transformPairs(
+    ArrayRef<std::pair<std::string, std::string>> Pairs, SmallVectorImpl<MappedPrefix> &Split) {
+  for (auto &Pair : Pairs) {
+    Split.push_back(MappedPrefix{Pair.first, Pair.second});
+  }
+}
+
 /// FIXME: Copy/pasted from llvm/lib/Support/Path.cpp.
 static bool startsWith(StringRef Path, StringRef Prefix,
                        sys::path::Style PathStyle) {

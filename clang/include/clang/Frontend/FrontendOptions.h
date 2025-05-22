@@ -528,7 +528,7 @@ public:
   /// When caching is enabled, represents remappings for all the file paths that
   /// the compilation may access. This is useful for canonicalizing the
   /// compilation for caching purposes.
-  std::vector<std::string> PathPrefixMappings;
+  std::vector<std::pair<std::string, std::string>> PathPrefixMappings;
 
   // Currently this is only used as part of the `-extract-api` action.
   // A comma separated list of files providing a list of APIs to

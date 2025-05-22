@@ -143,7 +143,7 @@ void DepscanPrefixMapping::remapInvocationPaths(CompilerInvocation &Invocation,
   // Pass the remappings so that we can map cached diagnostics to the local
   // paths during diagnostic rendering.
   for (const llvm::MappedPrefix &Map : Mapper.getMappings()) {
-    FrontendOpts.PathPrefixMappings.push_back(Map.Old + "=" + Map.New);
+    FrontendOpts.PathPrefixMappings.emplace_back(Map.Old, Map.New);
   }
 
   auto mapInPlaceAll = [&](std::vector<std::string> &Vector) {
@@ -244,12 +244,12 @@ void DepscanPrefixMapping::configurePrefixMapper(const CompilerInvocation &CI,
 }
 
 void DepscanPrefixMapping::configurePrefixMapper(
-    ArrayRef<std::string> PathPrefixMappings, llvm::PrefixMapper &Mapper) {
+    ArrayRef<std::pair<std::string, std::string>> PathPrefixMappings, llvm::PrefixMapper &Mapper) {
   if (PathPrefixMappings.empty())
     return;
 
   llvm::SmallVector<llvm::MappedPrefix> Split;
-  llvm::MappedPrefix::transformJoinedIfValid(PathPrefixMappings, Split);
+  llvm::MappedPrefix::transformPairs(PathPrefixMappings, Split);
   for (auto &MappedPrefix : Split)
     Mapper.add(MappedPrefix);
 

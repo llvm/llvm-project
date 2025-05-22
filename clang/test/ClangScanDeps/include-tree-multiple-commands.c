@@ -218,7 +218,7 @@
 // CHECK-LIBCLANG-NEXT:       [[SRC]]/header.h
 // CHECK-LIBCLANG-NOT:             -fcas-input-file-cache-key
 // CHECK-LIBCLANG-NOT:             {{.*}}tu.c
-// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[DST]]/tu.i {{.*}} -E -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
+// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[DST]]/tu.i {{.*}} -E -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] {{.*}} -x c {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
 // CHECK-LIBCLANG-NEXT:   command 1:
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
 // FIXME: This should be empty.
@@ -231,7 +231,7 @@
 // CHECK-LIBCLANG-NEXT:       [[SRC]]/header.h
 // CHECK-LIBCLANG-NOT:                  -fcas-include-tree
 // CHECK-LIBCLANG-NOT:                  {{.*}}tu.i
-// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[DST]]/tu.bc {{.*}} -fcas-input-file-cache-key [[CPP_CACHE_KEY]] {{.*}} -emit-llvm-bc -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] -x c-cpp-output {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
+// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[DST]]/tu.bc {{.*}} -fcas-input-file-cache-key [[CPP_CACHE_KEY]] {{.*}} -emit-llvm-bc -fmodule-file-cache-key {{.*}} [[M_CACHE_KEY]] {{.*}} -x c-cpp-output {{.*}} -fmodule-file={{.*}}[[PREFIX]]/modules/Mod_{{.*}}.pcm
 // CHECK-LIBCLANG-NEXT:   command 2:
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
 // FIXME: This should be empty.
@@ -243,7 +243,7 @@
 // CHECK-LIBCLANG-NEXT:     file-deps:
 // CHECK-LIBCLANG-NEXT:       [[SRC]]/tu.c
 // CHECK-LIBCLANG-NEXT:       [[SRC]]/header.h
-// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[DST]]/tu.s {{.*}} -fcas-input-file-cache-key [[COMPILER_CACHE_KEY]] {{.*}} -S -x ir
+// CHECK-LIBCLANG-NEXT:     build-args: -cc1 {{.*}} -o [[DST]]/tu.s {{.*}} -fcas-input-file-cache-key [[COMPILER_CACHE_KEY]] {{.*}} -S {{.*}} -x ir
 // CHECK-LIBCLANG-NEXT:   command 3:
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
 // FIXME: This should be empty.

@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include <optional>
@@ -48,6 +49,8 @@ struct MappedPrefix {
                                      SmallVectorImpl<MappedPrefix> &Split);
   static void transformJoinedIfValid(ArrayRef<std::string> Joined,
                                      SmallVectorImpl<MappedPrefix> &Split);
+  static void transformPairs(ArrayRef<std::pair<std::string, std::string>> Pairs,
+                             SmallVectorImpl<MappedPrefix> & Split);
 };
 
 /// Remap path prefixes.

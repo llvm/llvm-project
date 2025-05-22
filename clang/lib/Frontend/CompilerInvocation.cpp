@@ -86,6 +86,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VersionTuple.h"
@@ -3155,6 +3156,9 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
   for (const auto &A : Opts.ModuleCacheKeys)
     GenerateMultiArg(Consumer, OPT_fmodule_file_cache_key, {A.first, A.second});
 
+  for (const auto &A : Opts.PathPrefixMappings)
+    GenerateMultiArg(Consumer, OPT_fdepscan_prefix_map, {A.first, A.second});
+
   if (Opts.AuxTargetCPU)
     GenerateArg(Consumer, OPT_aux_target_cpu, *Opts.AuxTargetCPU);
 
@@ -3379,6 +3383,13 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     ArrayRef<const char *> Values = A->getValues();
     assert(Values.size() == 2);
     Opts.ModuleCacheKeys.emplace_back(Values[0], Values[1]);
+  }
+
+  // Handle path prefix mappings
+  for (const Arg *A : Args.filtered(OPT_fdepscan_prefix_map)) {
+    ArrayRef<const char *> Values = A->getValues();
+    assert(Values.size() == 2);
+    Opts.PathPrefixMappings.emplace_back(Values[0], Values[1]);
   }
 
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)

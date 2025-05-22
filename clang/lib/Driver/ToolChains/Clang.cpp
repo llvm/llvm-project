@@ -5059,8 +5059,9 @@ void Clang::AddPrefixMappingOptions(const ArgList &Args, ArgStringList &CmdArgs,
 
   if (Arg *A = Args.getLastArg(options::OPT_fdepscan_prefix_map_sdk_EQ)) {
     if (IsPathApplicableAsPrefix(Sysroot)) {
-      CmdArgs.push_back(Args.MakeArgString(Twine("-fdepscan-prefix-map=") +
-                                           *Sysroot + "=" + A->getValue()));
+      CmdArgs.push_back("-fdepscan-prefix-map");
+      CmdArgs.push_back(Args.MakeArgString(*Sysroot));
+      CmdArgs.push_back(Args.MakeArgString(A->getValue()));
     } else {
       // FIXME: warning if we cannot infer sdk
     }
@@ -5075,22 +5076,31 @@ void Clang::AddPrefixMappingOptions(const ArgList &Args, ArgStringList &CmdArgs,
       Guess = llvm::sys::path::parent_path(Guess);
     }
     if (IsPathApplicableAsPrefix(Guess)) {
-      CmdArgs.push_back(Args.MakeArgString(Twine("-fdepscan-prefix-map=") +
-                                           Guess + "=" + A->getValue()));
+      CmdArgs.push_back("-fdepscan-prefix-map");
+      CmdArgs.push_back(Args.MakeArgString(Guess));
+      CmdArgs.push_back(Args.MakeArgString(A->getValue()));
     } else {
       // FIXME: warning if we cannot infer toolchain
     }
   }
 
-  for (const Arg *A : Args.filtered(options::OPT_fdepscan_prefix_map_EQ)) {
+  for (const Arg *A : Args.filtered(options::OPT_fdepscan_prefix_map, options::OPT_fdepscan_prefix_map_EQ)) {
     A->claim();
-    StringRef Map = A->getValue();
-    StringRef Prefix = Map.split('=').first;
-    if (Prefix.size() == Map.size() || !IsPathApplicableAsPrefix(Prefix)) {
+    StringRef Prefix, MapTarget;
+    if (A->getOption().matches(options::OPT_fdepscan_prefix_map_EQ)) {
+      StringRef Map = A->getValue();
+      std::tie(Prefix, MapTarget) = Map.split('=');
+    } else {
+      Prefix = A->getValue(0);
+      MapTarget = A->getValue(1);
+    }
+    if (MapTarget.size() == 0 || !IsPathApplicableAsPrefix(Prefix)) {
       D.Diag(diag::err_drv_invalid_argument_to_option)
           << A->getValue() << A->getOption().getName();
     } else {
-      A->render(Args, CmdArgs);
+      CmdArgs.push_back("-fdepscan-prefix-map");
+      CmdArgs.push_back(Args.MakeArgString(Prefix));
+      CmdArgs.push_back(Args.MakeArgString(MapTarget));
     }
   }
 }

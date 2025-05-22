@@ -125,6 +125,21 @@ TEST(MappedPrefixTest, transformJoinedIfValid) {
   EXPECT_EQ(ArrayRef(ExpectedSplit), ArrayRef(ComputedSplit));
 }
 
+TEST(PrefixMapperTest, transformPairs) {
+  SmallVector<std::pair<std::string, std::string>> PrefixMappings = {
+    {"", ""}, {"a", "b"}, {"", "a"}, {"a", ""}, {"=a=b=", "=c=d==="}
+  };
+  MappedPrefix ExpectedSplit[] = {
+    MappedPrefix{"", ""}, MappedPrefix{"a", "b"},
+    MappedPrefix{"", "a"}, MappedPrefix{"a", ""},
+    MappedPrefix{"=a=b=", "=c=d==="},
+  };
+
+  SmallVector<MappedPrefix> ComputedSplit;
+  MappedPrefix::transformPairs(PrefixMappings, ComputedSplit);
+  EXPECT_EQ(ArrayRef(ExpectedSplit), ArrayRef(ComputedSplit));
+}
+
 TEST(PrefixMapperTest, construct) {
   for (auto PathStyle : {
            sys::path::Style::posix,
