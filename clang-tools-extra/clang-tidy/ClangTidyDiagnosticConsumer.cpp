@@ -49,7 +49,7 @@ namespace {
 class ClangTidyDiagnosticRenderer : public DiagnosticRenderer {
 public:
   ClangTidyDiagnosticRenderer(const LangOptions &LangOpts,
-                              DiagnosticOptions *DiagOpts,
+                              DiagnosticOptions &DiagOpts,
                               ClangTidyError &Error)
       : DiagnosticRenderer(LangOpts, DiagOpts), Error(Error) {}
 
@@ -429,7 +429,7 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     forwardDiagnostic(Info);
   } else {
     ClangTidyDiagnosticRenderer Converter(
-        Context.getLangOpts(), &Context.DiagEngine->getDiagnosticOptions(),
+        Context.getLangOpts(), Context.DiagEngine->getDiagnosticOptions(),
         Errors.back());
     SmallString<100> Message;
     Info.FormatDiagnostic(Message);
