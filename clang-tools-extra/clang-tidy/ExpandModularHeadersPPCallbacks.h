@@ -132,7 +132,6 @@ private:
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFs;
 
   SourceManager &Sources;
-  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   LangOptions LangOpts;
   HeaderSearchOptions HSOpts;

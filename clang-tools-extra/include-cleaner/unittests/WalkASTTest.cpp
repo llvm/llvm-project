@@ -85,9 +85,9 @@ std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
   // For each difference, show the target point in context, like a diagnostic.
   std::string DiagBuf;
   llvm::raw_string_ostream DiagOS(DiagBuf);
-  DiagnosticOptions DiagOpts;
-  DiagOpts.ShowLevel = 0;
-  DiagOpts.ShowNoteIncludeStack = 0;
+  auto *DiagOpts = new DiagnosticOptions();
+  DiagOpts->ShowLevel = 0;
+  DiagOpts->ShowNoteIncludeStack = 0;
   TextDiagnostic Diag(DiagOS, AST.context().getLangOpts(), DiagOpts);
   auto DiagnosePoint = [&](llvm::StringRef Message, unsigned Offset) {
     Diag.emitDiagnostic(

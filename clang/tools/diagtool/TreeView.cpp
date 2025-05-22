@@ -31,8 +31,8 @@ public:
 
   static bool isIgnored(unsigned DiagID) {
     // FIXME: This feels like a hack.
-    static DiagnosticOptions DiagOpts;
-    static clang::DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts);
+    static clang::DiagnosticsEngine Diags(new DiagnosticIDs,
+                                          new DiagnosticOptions);
     return Diags.isIgnored(DiagID, SourceLocation());
   }
 

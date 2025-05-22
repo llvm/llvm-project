@@ -108,9 +108,8 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   MCPArg.append(ModuleCachePath);
   CreateInvocationOptions CIOpts;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
-  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, new DiagnosticOptions());
   CIOpts.Diags = Diags;
 
   // First run should pass with no errors
@@ -158,9 +157,8 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   MCPArg.append(ModuleCachePath);
   CreateInvocationOptions CIOpts;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
-  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, new DiagnosticOptions());
   CIOpts.Diags = Diags;
 
   // First run should pass with no errors

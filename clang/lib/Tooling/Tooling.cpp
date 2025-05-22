@@ -377,17 +377,17 @@ bool ToolInvocation::run() {
 
   // Parse diagnostic options from the driver command-line only if none were
   // explicitly set.
-  std::unique_ptr<DiagnosticOptions> ParsedDiagOpts;
+  IntrusiveRefCntPtr<DiagnosticOptions> ParsedDiagOpts;
   DiagnosticOptions *DiagOpts = this->DiagOpts;
   if (!DiagOpts) {
     ParsedDiagOpts = CreateAndPopulateDiagOpts(Argv);
     DiagOpts = &*ParsedDiagOpts;
   }
 
-  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), *DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), DiagOpts);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics =
       CompilerInstance::createDiagnostics(
-          Files->getVirtualFileSystem(), *DiagOpts,
+          Files->getVirtualFileSystem(), &*DiagOpts,
           DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
   // Although `Diagnostics` are used only for command-line parsing, the custom
   // `DiagConsumer` might expect a `SourceManager` to be present.
@@ -652,9 +652,9 @@ public:
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
-        Invocation, std::move(PCHContainerOps), nullptr,
+        Invocation, std::move(PCHContainerOps),
         CompilerInstance::createDiagnostics(Files->getVirtualFileSystem(),
-                                            Invocation->getDiagnosticOpts(),
+                                            &Invocation->getDiagnosticOpts(),
                                             DiagConsumer,
                                             /*ShouldOwnClient=*/false),
         Files);

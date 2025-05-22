@@ -163,7 +163,8 @@ void ClangHighlighter::Highlight(const HighlightStyle &options,
   // objects.
   std::string full_source = previous_lines.str() + line.str();
   llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_ids(new DiagnosticIDs());
-  DiagnosticOptions diags_opts;
+  llvm::IntrusiveRefCntPtr<DiagnosticOptions> diags_opts(
+      new DiagnosticOptions());
   DiagnosticsEngine diags(diag_ids, diags_opts);
   clang::SourceManager SM(diags, file_mgr);
   auto buf = llvm::MemoryBuffer::getMemBuffer(full_source);

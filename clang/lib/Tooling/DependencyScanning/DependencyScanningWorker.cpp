@@ -895,7 +895,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   auto DiagOpts = createDiagOptions(CommandLine);
-  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, *DiagOpts);
+  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts.release());
 
   if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
                           DiagPrinter, TUBuffer))
@@ -913,7 +913,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   auto DiagOpts = createDiagOptions(CommandLine);
-  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, *DiagOpts);
+  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts.release());
 
   if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
                           DiagPrinter, ModuleName))
@@ -999,7 +999,7 @@ bool DependencyScanningWorker::scanDependencies(
   sanitizeDiagOpts(*DiagOpts);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(FileMgr->getVirtualFileSystem(),
-                                          *DiagOpts, &DC,
+                                          DiagOpts.release(), &DC,
                                           /*ShouldOwnClient=*/false);
 
   // Although `Diagnostics` are used only for command-line parsing, the
