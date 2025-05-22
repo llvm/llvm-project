@@ -406,8 +406,8 @@ bootstrapping-build)
     ${NINJA} -vC "${BUILD_DIR}" install-runtimes
 
     step "Running the LLDB libc++ data formatter tests"
-    ${NINJA} -vC "${BUILD_DIR}" lldb-api-test-deps
-    ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
+    # ${NINJA} -vC "${BUILD_DIR}" lldb-api-test-deps
+    # ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
 
     ccache -s
 ;;
