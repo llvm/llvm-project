@@ -201,10 +201,13 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 }
 
 Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
-                         lldb::DynamicValueType use_dynamic,
-                         std::shared_ptr<StackFrame> frame_sp)
-    : m_target(std::move(target)), m_expr(expr), m_default_dynamic(use_dynamic),
-      m_exe_ctx_scope(frame_sp) {}
+                         std::shared_ptr<StackFrame> frame_sp,
+                         lldb::DynamicValueType use_dynamic, bool use_synthetic,
+                         bool fragile_ivar, bool check_ptr_vs_member)
+    : m_target(std::move(target)), m_expr(expr), m_exe_ctx_scope(frame_sp),
+      m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic),
+      m_fragile_ivar(fragile_ivar), m_check_ptr_vs_member(check_ptr_vs_member) {
+}
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
   // Evaluate an AST.
@@ -216,7 +219,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IdentifierNode *node) {
-  lldb::DynamicValueType use_dynamic = m_default_dynamic;
+  lldb::DynamicValueType use_dynamic = m_use_dynamic;
 
   lldb::ValueObjectSP identifier =
       LookupIdentifier(node->GetName(), m_exe_ctx_scope, use_dynamic);
@@ -245,7 +248,7 @@ Interpreter::Visit(const UnaryOpNode *node) {
 
   switch (node->kind()) {
   case UnaryOpKind::Deref: {
-    lldb::ValueObjectSP dynamic_rhs = rhs->GetDynamicValue(m_default_dynamic);
+    lldb::ValueObjectSP dynamic_rhs = rhs->GetDynamicValue(m_use_dynamic);
     if (dynamic_rhs)
       rhs = dynamic_rhs;
 
@@ -278,14 +281,10 @@ Interpreter::Visit(const MemberOfNode *node) {
   if (!base_or_err)
     return base_or_err;
   lldb::ValueObjectSP base = *base_or_err;
-  bool check_ptr_vs_member = node->GetCheckPtrVsMember();
-  bool fragile_ivar = node->GetFragileIvar();
-  bool synth_child = node->GetSynthChild();
-  lldb::DynamicValueType use_dynamic = node->GetUseDynamic();
 
   // Perform some basic type & correctness checking.
   if (node->GetIsArrow()) {
-    if (!fragile_ivar) {
+    if (!m_fragile_ivar) {
       // Make sure we aren't trying to deref an objective
       // C ivar if this is not allowed
       const uint32_t pointer_type_flags =
@@ -323,7 +322,7 @@ Interpreter::Visit(const MemberOfNode *node) {
     }
   }
 
-  if (check_ptr_vs_member) {
+  if (m_check_ptr_vs_member) {
     bool expr_is_ptr = node->GetIsArrow();
     bool base_is_ptr = base->IsPointerType();
 
@@ -349,13 +348,13 @@ Interpreter::Visit(const MemberOfNode *node) {
   lldb::ValueObjectSP field_obj =
       base->GetChildMemberWithName(node->GetFieldName());
   if (!field_obj) {
-    if (synth_child) {
+    if (m_use_synthetic) {
       field_obj = base->GetSyntheticValue();
       if (field_obj)
         field_obj = field_obj->GetChildMemberWithName(node->GetFieldName());
     }
 
-    if (!synth_child || !field_obj) {
+    if (!m_use_synthetic || !field_obj) {
       std::string errMsg = llvm::formatv(
           "no member named '{0}' in {1}", node->GetFieldName(),
           base->GetCompilerType().GetFullyUnqualifiedType().TypeDescription());
@@ -365,9 +364,9 @@ Interpreter::Visit(const MemberOfNode *node) {
   }
 
   if (field_obj && field_obj->GetName() == node->GetFieldName()) {
-    if (use_dynamic != lldb::eNoDynamicValues) {
+    if (m_use_dynamic != lldb::eNoDynamicValues) {
       lldb::ValueObjectSP dynamic_val_sp =
-          field_obj->GetDynamicValue(use_dynamic);
+          field_obj->GetDynamicValue(m_use_dynamic);
       if (dynamic_val_sp)
         field_obj = dynamic_val_sp;
     }
