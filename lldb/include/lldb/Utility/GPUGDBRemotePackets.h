@@ -171,6 +171,9 @@ struct GPUActions {
   bool load_libraries = false;
   /// Set this to true if the native plug-in resume the GPU process.
   bool resume_gpu_process = false;
+  /// Set this to true if the native plug-in sync with the GPU process and wait
+  /// for it to return to a running state.
+  bool wait_for_gpu_process_to_resume = false;
 };
 
 bool fromJSON(const llvm::json::Value &value, 

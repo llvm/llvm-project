@@ -2311,6 +2311,21 @@ public:
                        SelectMostRelevant select_most_relevant =
                            DoNoSelectMostRelevantFrame);
 
+  /// Wait for the process to resume.
+  ///
+  /// Given the current ProcessModID that identifies a current state, wait for
+  /// the process to resume. 
+  ///
+  /// \param[in] curr_resume_id
+  ///     The resume ID that identifies the resume ID from a stopped state.
+  ///
+  /// \param[in] timeout_sec
+  ///     The maximum time in seconds to wait for the process to transition to
+  ///     the eStateRunning state. If no timeout is supplied, block and wait
+  ///     indefinitely.
+  Status WaitForNextResume(const uint32_t curr_resume_id, 
+                           std::optional<uint32_t> timeout_sec);
+
   uint32_t GetIOHandlerID() const { return m_iohandler_sync.GetValue(); }
 
   /// Waits for the process state to be running within a given msec timeout.

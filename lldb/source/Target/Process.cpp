@@ -2563,6 +2563,38 @@ Status Process::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   return error;
 }
 
+Status Process::WaitForNextResume(const uint32_t curr_resume_id, 
+                                std::optional<uint32_t> opt_timeout_seconds) {
+  ListenerSP listener_sp;
+  {
+    // Don't let the private state change on us while we do some checking by 
+    // locking the private state mutex. The resume ID can't be bumped while we
+    // hold this lock. We also need to start listening for state changed events
+    // prior to letting go of this mutex to ensure there is no race condition.
+    std::lock_guard<std::recursive_mutex> guard(m_private_state.GetMutex());
+    if (GetResumeID() != curr_resume_id)
+      return Status(); ///< Process already resumed.
+  
+    listener_sp = Listener::MakeListener("Process::WaitForNextResume");
+    listener_sp->StartListeningForEvents(this, eBroadcastBitStateChanged);
+  }
+
+  lldb::EventSP event_sp;
+  Timeout<std::micro> timeout(std::nullopt);
+  if (opt_timeout_seconds.has_value())
+    timeout = std::chrono::seconds(*opt_timeout_seconds);
+  listener_sp->GetEvent(event_sp, timeout);
+
+  if (!event_sp)
+    return Status::FromErrorString("timeout waiting for process to resume");
+  
+  // Don't let the private state change on us while we do some checking.
+  std::lock_guard<std::recursive_mutex> guard(m_private_state.GetMutex());
+  if (GetResumeID() != curr_resume_id)
+    return Status(); // Success
+  return Status::FromErrorString("process was not resumed");
+}
+
 StateType
 Process::WaitForProcessStopPrivate(EventSP &event_sp,
                                    const Timeout<std::micro> &timeout) {

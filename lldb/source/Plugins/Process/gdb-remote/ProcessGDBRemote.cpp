@@ -885,23 +885,41 @@ Status ProcessGDBRemote::HandleGPUActions(const GPUActions &gpu_action) {
   Status error;
   if (!gpu_action.breakpoints.empty())
     HandleGPUBreakpoints(gpu_action);
-  if (gpu_action.connect_info)
+  if (gpu_action.connect_info) {
     error = HandleConnectionRequest(gpu_action);
-  if (gpu_action.load_libraries) {
-    lldb::TargetSP gpu_target_sp = 
-        GetTarget().GetGPUPluginTarget(gpu_action.plugin_name);
-    if (gpu_target_sp) {
-      lldb::ProcessSP gpu_process_sp = gpu_target_sp->GetProcessSP();
-      if (gpu_process_sp) {
-        llvm::Error error = gpu_process_sp->LoadModules();
-        if (error)
-          llvm::consumeError(std::move(error));
-        if (gpu_action.resume_gpu_process)
-          gpu_process_sp->Resume();
-      }
-    }
+    if (error.Fail())
+      return error;
   }
-  return error;
+
+  // Any commands below require a GPU process
+  if (!(gpu_action.load_libraries || gpu_action.resume_gpu_process || 
+      gpu_action.wait_for_gpu_process_to_resume))
+    return;
+  lldb::TargetSP gpu_target_sp = 
+      GetTarget().GetGPUPluginTarget(gpu_action.plugin_name);
+  if (!gpu_target_sp)
+    return;
+  lldb::ProcessSP gpu_process_sp = gpu_target_sp->GetProcessSP();
+  if (!gpu_process_sp)
+    return;
+  // Save the resume ID in case we need to wait for the process to resume below.
+  const uint32_t gpu_process_resume_id = gpu_process_sp->GetResumeID();
+  if (gpu_action.load_libraries) {
+    llvm::Error error = gpu_process_sp->LoadModules();
+    if (error)
+      return Status::FromError(std::move(error));
+  }
+  if (gpu_action.resume_gpu_process) {
+    error = gpu_process_sp->Resume();
+    if (error.Fail())
+      return error;
+  }
+  if (gpu_action.wait_for_gpu_process_to_resume) {
+    error = gpu_process_sp->WaitForNextResume(gpu_process_resume_id, 5);
+    if (error.Fail())
+      return error;
+  }
+  return Status();
 }
 
 Status ProcessGDBRemote::HandleConnectionRequest(const GPUActions &gpu_action) {
