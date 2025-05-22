@@ -716,68 +716,32 @@
 // MTUNE-ANDES-AX25: "-tune-cpu" "andes-ax25"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=andes-n45 | FileCheck -check-prefix=MCPU-ANDES-N45 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-andes-n45.c`
 // MCPU-ANDES-N45: "-target-cpu" "andes-n45"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+m"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+a"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+f"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+d"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+c"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+zicsr"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+zifencei"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+zba"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+zbb"
-// MCPU-ANDES-N45-SAME: "-target-feature" "+zbs"
 // MCPU-ANDES-N45-SAME: "-target-abi" "ilp32d"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=andes-n45 | FileCheck -check-prefix=MTUNE-ANDES-N45 %s
 // MTUNE-ANDES-N45: "-tune-cpu" "andes-n45"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=andes-nx45 | FileCheck -check-prefix=MCPU-ANDES-NX45 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-andes-nx45.c`
 // MCPU-ANDES-NX45: "-target-cpu" "andes-nx45"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+m"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+a"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+f"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+d"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+c"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+zicsr"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+zifencei"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+zba"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+zbb"
-// MCPU-ANDES-NX45-SAME: "-target-feature" "+zbs"
 // MCPU-ANDES-NX45-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-nx45 | FileCheck -check-prefix=MTUNE-ANDES-NX45 %s
 // MTUNE-ANDES-NX45: "-tune-cpu" "andes-nx45"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=andes-a45 | FileCheck -check-prefix=MCPU-ANDES-A45 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-andes-a45.c`
 // MCPU-ANDES-A45: "-target-cpu" "andes-a45"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+m"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+a"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+f"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+d"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+c"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+zicsr"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+zifencei"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+zba"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+zbb"
-// MCPU-ANDES-A45-SAME: "-target-feature" "+zbs"
 // MCPU-ANDES-A45-SAME: "-target-abi" "ilp32d"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=andes-a45 | FileCheck -check-prefix=MTUNE-ANDES-A45 %s
 // MTUNE-ANDES-A45: "-tune-cpu" "andes-a45"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=andes-ax45 | FileCheck -check-prefix=MCPU-ANDES-AX45 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-andes-ax45.c`
 // MCPU-ANDES-AX45: "-target-cpu" "andes-ax45"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+m"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+a"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+f"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+d"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+c"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+zicsr"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+zifencei"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+zba"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+zbb"
-// MCPU-ANDES-AX45-SAME: "-target-feature" "+zbs"
 // MCPU-ANDES-AX45-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45 | FileCheck -check-prefix=MTUNE-ANDES-AX45 %s

@@ -604,7 +604,6 @@ size_t AffineMap::getNumOfZeroResults() const {
 }
 
 AffineMap AffineMap::dropZeroResults() {
-  auto exprs = llvm::to_vector(getResults());
   SmallVector<AffineExpr> newExprs;
 
   for (auto expr : getResults()) {
