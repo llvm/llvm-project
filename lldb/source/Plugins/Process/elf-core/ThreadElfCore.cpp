@@ -264,24 +264,19 @@ bool ThreadElfCore::CalculateStopInfo() {
   if (!process_sp)
     return false;
 
-  lldb::UnixSignalsSP unix_signals_sp(process_sp->GetUnixSignals());
-  if (!unix_signals_sp)
-    return false;
-
-  lldb::ValueObjectSP siginfo = GetSiginfoValue();
-  if (!siginfo || !siginfo->GetValueIsValid()) {
-    SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
-  } else {
-    std::string description =
-        unix_signals_sp->GetSignalDescriptionFromSiginfo(siginfo);
-    uint32_t signo =
-        siginfo->GetChildMemberWithName("si_signo")->GetValueAsUnsigned(-1);
-    uint32_t code =
-        siginfo->GetChildMemberWithName("si_code")->GetValueAsUnsigned(0);
-    SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-        *this, signo, description.c_str(), code));
+  PlatformSP platform_sp = process_sp->GetTarget().GetPlatform();
+  if (platform_sp) {
+    lldb::StopInfoSP stopinfo_sp = platform_sp->GetStopInfoFromSiginfo(*this);
+    // The platform SP can optionally handle creating the stop info from the
+    // siginfo value however it's not guaraunteed to be implemented on every
+    // platform, so if we fall through this case, we create from just the signo.
+    if (stopinfo_sp) {
+      SetStopInfo(std::move(stopinfo_sp));
+      return true;
+    }
   }
 
+  SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
   return true;
 }
 

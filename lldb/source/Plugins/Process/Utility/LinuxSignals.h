@@ -18,9 +18,6 @@ class LinuxSignals : public UnixSignals {
 public:
   LinuxSignals();
 
-  std::string GetSignalDescriptionFromSiginfo(
-      lldb::ValueObjectSP siginfo_sp) const override;
-
 private:
   void Reset() override;
 };
