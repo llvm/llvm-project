@@ -3157,7 +3157,7 @@ void tools::handleVectorizeSLPArgs(const ArgList &Args,
 
 void tools::handleInterchangeLoopsArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) {
-  // FIXME: instead of relying on shouldEnableVectorizerAtOLevel, we may want to
+  // FIXME: Instead of relying on shouldEnableVectorizerAtOLevel, we may want to
   // implement a separate function to infer loop interchange from opt level.
   // For now, enable loop-interchange at the same opt levels as loop-vectorize.
   bool EnableInterchange = shouldEnableVectorizerAtOLevel(Args, false);
