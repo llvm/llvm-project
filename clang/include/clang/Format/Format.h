@@ -2251,8 +2251,8 @@ struct FormatStyle {
   /// parenthesis.
   /// \code
   ///   true:                             false:
-  ///   if constexpr (          vs.       if constexpr (a ||
-  ///      a || b                                       b)
+  ///   if constexpr (          vs.       if constexpr (
+  ///      a || b                            a || b )
   ///   )
   /// \endcode
   /// \version 21
@@ -2264,8 +2264,8 @@ struct FormatStyle {
   /// parenthesis.
   /// \code
   ///   true:                             false:
-  ///   while (                  vs.      while (a &&
-  ///      a && b                                b) {
+  ///   while (                  vs.      while (
+  ///      a && b                            a && b) {
   ///   ) {
   /// \endcode
   /// \version 21
@@ -2277,8 +2277,8 @@ struct FormatStyle {
   /// parenthesis.
   /// \code
   ///   true:                             false:
-  ///   switch (                 vs.      switch (a &&
-  ///      a && b                                 b) {
+  ///   switch (                 vs.      switch (
+  ///      a && b                            a && b) {
   ///   ) {
   /// \endcode
   /// \version 21
