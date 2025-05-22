@@ -233,13 +233,11 @@ unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
 static constexpr const char *AttrSpellingList[] = {
 #include "clang/Basic/AttributeSpellingList.inc"
 };
-#undef ATTR_NAME
 
-#define ATTR_SCOPE_SCOPE(SCOPE_NAME) SCOPE_NAME,
+#define ATTR_SCOPE_NAME(SCOPE_NAME) SCOPE_NAME,
 static constexpr const char *AttrScopeSpellingList[] = {
 #include "clang/Basic/AttributeSpellingList.inc"
 };
-#undef ATTR_SCOPE_SCOPE
 
 std::optional<std::string>
 AttributeCommonInfo::getCorrectedFullName(const TargetInfo &Target,
