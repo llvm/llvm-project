@@ -108,6 +108,7 @@
 ; NO_HOTNESS-NEXT: Freeing Pass 'Unpack machine instruction bundles'
 ; NO_HOTNESS-NEXT: Executing Pass 'Verify generated machine code'
 ; NO_HOTNESS-NEXT: Freeing Pass 'Verify generated machine code'
+; NO_HOTNESS-NEXT: Executing Pass 'Basic Block Hash Compute'
 ; NO_HOTNESS-NEXT: Executing Pass 'Lazy Machine Block Frequency Analysis'
 ; NO_HOTNESS-NEXT: Executing Pass 'Machine Optimization Remark Emitter'
 ; NO_HOTNESS-NEXT: Executing Pass 'AArch64 Assembly Printer'

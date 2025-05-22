@@ -434,6 +434,7 @@
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:        Stack Frame Layout Analysis
 ; GCN-O1-NEXT:        Function register usage analysis
+; GCN-O1-NEXT:        Basic Block Hash Compute
 ; GCN-O1-NEXT:        AMDGPU Assembly Printer
 ; GCN-O1-NEXT:        Free MachineFunction
 
@@ -745,6 +746,7 @@
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:        Stack Frame Layout Analysis
 ; GCN-O1-OPTS-NEXT:        Function register usage analysis
+; GCN-O1-OPTS-NEXT:        Basic Block Hash Compute
 ; GCN-O1-OPTS-NEXT:        AMDGPU Assembly Printer
 ; GCN-O1-OPTS-NEXT:        Free MachineFunction
 
@@ -1062,6 +1064,7 @@
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:        Stack Frame Layout Analysis
 ; GCN-O2-NEXT:        Function register usage analysis
+; GCN-O2-NEXT:        Basic Block Hash Compute
 ; GCN-O2-NEXT:        AMDGPU Assembly Printer
 ; GCN-O2-NEXT:        Free MachineFunction
 
@@ -1392,6 +1395,7 @@
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Stack Frame Layout Analysis
 ; GCN-O3-NEXT:        Function register usage analysis
+; GCN-O3-NEXT:        Basic Block Hash Compute
 ; GCN-O3-NEXT:        AMDGPU Assembly Printer
 ; GCN-O3-NEXT:        Free MachineFunction
 
