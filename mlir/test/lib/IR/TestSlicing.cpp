@@ -43,6 +43,7 @@ static LogicalResult createBackwardSliceFunction(Operation *op,
   options.omitUsesFromAbove = false;
   LogicalResult result = getBackwardSlice(op, &slice, options);
   assert(result.succeeded() && "expected a backward slice");
+  (void)result;
   for (Operation *slicedOp : slice)
     builder.clone(*slicedOp, mapper);
   builder.create<func::ReturnOp>(loc);
