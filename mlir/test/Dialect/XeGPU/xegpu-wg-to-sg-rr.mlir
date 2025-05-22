@@ -85,7 +85,7 @@ gpu.module @test_round_robin_assignment {
     %tdesc_c = xegpu.create_nd_tdesc %c[0, 0] : memref<8x8xf32>
       -> !xegpu.tensor_desc<8x8xf32, #xegpu.layout<sg_layout = [2, 2], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
     %dpas = xegpu.dpas %load_a, %load_b
-      {layout =  #xegpu.layout<sg_layout = [2, 2], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>}
+      {layout_result_0 =  #xegpu.layout<sg_layout = [2, 2], sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>}
       : vector<8x8xf32>, vector<8x8xf32> -> vector<8x8xf32>
     gpu.return
   }

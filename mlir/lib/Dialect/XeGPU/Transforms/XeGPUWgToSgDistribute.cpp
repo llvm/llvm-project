@@ -315,6 +315,7 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
                                            resultTy.getElementType());
         tmpC = rewriter.create<xegpu::DpasOp>(loc, resTy, operands);
         xegpu::setLayoutAttr(cast<OpResult>(tmpC), originalLayout.dropSgLayoutAndData());
+
         newDpasOps.push_back(tmpC);
       }
     }
