@@ -90,8 +90,7 @@ struct RootDescriptorYaml {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
-using ParameterData =
-    std::variant<RootConstantsYaml, RootDescriptorYaml>;
+using ParameterData = std::variant<RootConstantsYaml, RootDescriptorYaml>;
 
 struct RootParameterYamlDesc {
   uint32_t Type;
@@ -99,7 +98,7 @@ struct RootParameterYamlDesc {
   uint32_t Offset;
   ParameterData Data;
 
-  RootParameterYamlDesc(){};
+  RootParameterYamlDesc() {};
   RootParameterYamlDesc(uint32_t T) : Type(T) {}
 };
 
