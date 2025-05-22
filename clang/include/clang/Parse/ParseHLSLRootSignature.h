@@ -73,6 +73,7 @@ private:
   /// Root Element parse methods:
   std::optional<llvm::hlsl::rootsig::RootFlags> parseRootFlags();
   std::optional<llvm::hlsl::rootsig::RootConstants> parseRootConstants();
+  std::optional<llvm::hlsl::rootsig::RootDescriptor> parseRootDescriptor();
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
   std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
   parseDescriptorTableClause();
