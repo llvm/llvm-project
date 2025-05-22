@@ -8,12 +8,23 @@
 ///
 /// \file
 /// This file contains the declaration of the macroses defining attributes for
-/// exported methods.
+/// exported methods and defining API namespaces.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef __LIBSYCL_DETAIL_EXPORT_HPP
-#define __LIBSYCL_DETAIL_EXPORT_HPP
+#ifndef __LIBSYCL_DETAIL_CONFIG_HPP
+#define __LIBSYCL_DETAIL_CONFIG_HPP
+
+#include <sycl/version.hpp>
+
+#define __SYCL_BEGIN_UNVERSIONED_NAMESPACE namespace sycl {
+#define __SYCL_END_UNVERSIONED_NAMESPACE }
+
+#define __SYCL_BEGIN_VERSIONED_NAMESPACE                                       \
+  __SYCL_BEGIN_UNVERSIONED_NAMESPACE inline namespace V__LIBSYCL_MAJOR_VERSION {
+#define __SYCL_END_VERSIONED_NAMESPACE                                         \
+  }                                                                            \
+  __SYCL_END_UNVERSIONED_NAMESPACE
 
 #ifndef __SYCL_DEVICE_ONLY__
 #ifndef __SYCL_EXPORT
@@ -50,4 +61,4 @@
 
 #endif // __SYCL_DEVICE_ONLY__
 
-#endif // __LIBSYCL_DETAIL_EXPORT_HPP
+#endif // __LIBSYCL_DETAIL_CONFIG_HPP

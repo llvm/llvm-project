@@ -55,9 +55,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 
 # The change in LIBSYCL_MAJOR_VERSION must be accompanied with the same update in
 # clang/lib/Driver/CMakeLists.txt.
-#
-# See doc/developer/ABIPolicyGuide.md for the meaning when in the middle of
-# development cycle.
 set(LIBSYCL_MAJOR_VERSION 0)
 set(LIBSYCL_MINOR_VERSION 1)
 set(LIBSYCL_PATCH_VERSION 0)
@@ -139,6 +136,12 @@ add_custom_command(
   COMMENT "Copying SYCL headers...")
 
 install(DIRECTORY "${LIBSYCL_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INSTALL_INCLUDE_DIR} COMPONENT sycl-headers)
+
+configure_file("src/version.hpp.in" "${LIBSYCL_INSTALL_INCLUDE_DIR}/sycl/version.hpp")
+install(FILES
+  "${LIBSYCL_INSTALL_INCLUDE_DIR}/sycl/version.hpp"
+  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl"
+  COMPONENT sycl-headers)
 
 if (WIN32)
   set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME}${LIBSYCL_MAJOR_VERSION})

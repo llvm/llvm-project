@@ -1,0 +1,12 @@
+//==------ version.hpp --- SYCL compiler version macro ---------*- C++ -*---==//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#cmakedefine __SYCL_COMPILER_VERSION ${__SYCL_COMPILER_VERSION}
+#define __LIBSYCL_MAJOR_VERSION ${SYCL_MAJOR_VERSION}
+#define __LIBSYCL_MINOR_VERSION ${SYCL_MINOR_VERSION}
+#define __LIBSYCL_PATCH_VERSION ${SYCL_PATCH_VERSION}
