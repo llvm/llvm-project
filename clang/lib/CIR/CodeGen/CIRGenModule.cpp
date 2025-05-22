@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include "CIRGenFunctionInfo.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -60,7 +61,6 @@ CIRGenCXXABI *CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
   return new CIRGenCXXABI(cgm);
 }
 } // namespace clang::CIRGen
-CIRGenCXXABI::~CIRGenCXXABI() {}
 
 CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                            clang::ASTContext &astContext,
@@ -247,9 +247,9 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
              "function definition with a non-identifier for a name");
     return;
   }
-  cir::FuncType funcType =
-      cast<cir::FuncType>(convertType(funcDecl->getType()));
 
+  const CIRGenFunctionInfo &fi = getTypes().arrangeGlobalDeclaration(gd);
+  cir::FuncType funcType = getTypes().getFunctionType(fi);
   cir::FuncOp funcOp = dyn_cast_if_present<cir::FuncOp>(op);
   if (!funcOp || funcOp.getFunctionType() != funcType) {
     funcOp = getAddrOfFunction(gd, funcType, /*ForVTable=*/false,
@@ -537,8 +537,16 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
     if (const auto *method = dyn_cast<CXXMethodDecl>(decl)) {
       // Make sure to emit the definition(s) before we emit the thunks. This is
       // necessary for the generation of certain thunks.
-      (void)method;
-      errorNYI(method->getSourceRange(), "member function");
+      if (isa<CXXConstructorDecl>(method) || isa<CXXDestructorDecl>(method))
+        errorNYI(method->getSourceRange(), "C++ ctor/dtor");
+      else if (fd->isMultiVersion())
+        errorNYI(method->getSourceRange(), "multiversion functions");
+      else
+        emitGlobalFunctionDefinition(gd, op);
+
+      if (method->isVirtual())
+        errorNYI(method->getSourceRange(), "virtual member function");
+
       return;
     }
 
@@ -552,6 +560,30 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
     return emitGlobalVarDefinition(vd, !vd->hasDefinition());
 
   llvm_unreachable("Invalid argument to CIRGenModule::emitGlobalDefinition");
+}
+
+mlir::Attribute
+CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
+  assert(!e->getType()->isPointerType() && "Strings are always arrays");
+
+  // Don't emit it as the address of the string, emit the string data itself
+  // as an inline array.
+  if (e->getCharByteWidth() == 1) {
+    SmallString<64> str(e->getString());
+
+    // Resize the string to the right size, which is indicated by its type.
+    const ConstantArrayType *cat =
+        astContext.getAsConstantArrayType(e->getType());
+    uint64_t finalSize = cat->getZExtSize();
+    str.resize(finalSize);
+
+    mlir::Type eltTy = convertType(cat->getElementType());
+    return builder.getString(str, eltTy, finalSize);
+  }
+
+  errorNYI(e->getSourceRange(),
+           "getConstantArrayFromStringLiteral: wide characters");
+  return mlir::Attribute();
 }
 
 static bool shouldBeInCOMDAT(CIRGenModule &cgm, const Decl &d) {
@@ -741,6 +773,84 @@ CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd, bool isConstant) {
   return getCIRLinkageForDeclarator(vd, linkage, isConstant);
 }
 
+static cir::GlobalOp generateStringLiteral(mlir::Location loc,
+                                           mlir::TypedAttr c, CIRGenModule &cgm,
+                                           StringRef globalName) {
+  assert(!cir::MissingFeatures::addressSpace());
+
+  // Create a global variable for this string
+  // FIXME(cir): check for insertion point in module level.
+  cir::GlobalOp gv =
+      CIRGenModule::createGlobalOp(cgm, loc, globalName, c.getType());
+
+  // Set up extra information and add to the module
+  assert(!cir::MissingFeatures::opGlobalAlignment());
+  assert(!cir::MissingFeatures::opGlobalLinkage());
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  CIRGenModule::setInitializer(gv, c);
+  assert(!cir::MissingFeatures::supportComdat());
+  assert(!cir::MissingFeatures::opGlobalDSOLocal());
+  return gv;
+}
+
+// LLVM IR automatically uniques names when new llvm::GlobalVariables are
+// created. This is handy, for example, when creating globals for string
+// literals. Since we don't do that when creating cir::GlobalOp's, we need
+// a mechanism to generate a unique name in advance.
+//
+// For now, this mechanism is only used in cases where we know that the
+// name is compiler-generated, so we don't use the MLIR symbol table for
+// the lookup.
+std::string CIRGenModule::getUniqueGlobalName(const std::string &baseName) {
+  // If this is the first time we've generated a name for this basename, use
+  // it as is and start a counter for this base name.
+  auto it = cgGlobalNames.find(baseName);
+  if (it == cgGlobalNames.end()) {
+    cgGlobalNames[baseName] = 1;
+    return baseName;
+  }
+
+  std::string result =
+      baseName + "." + std::to_string(cgGlobalNames[baseName]++);
+  // There should not be any symbol with this name in the module.
+  assert(!mlir::SymbolTable::lookupSymbolIn(theModule, result));
+  return result;
+}
+
+/// Return a pointer to a constant array for the given string literal.
+cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
+                                                      StringRef name) {
+  mlir::Attribute c = getConstantArrayFromStringLiteral(s);
+
+  if (getLangOpts().WritableStrings) {
+    errorNYI(s->getSourceRange(),
+             "getGlobalForStringLiteral: Writable strings");
+  }
+
+  // Mangle the string literal if that's how the ABI merges duplicate strings.
+  // Don't do it if they are writable, since we don't want writes in one TU to
+  // affect strings in another.
+  if (getCXXABI().getMangleContext().shouldMangleStringLiteral(s) &&
+      !getLangOpts().WritableStrings) {
+    errorNYI(s->getSourceRange(),
+             "getGlobalForStringLiteral: mangle string literals");
+  }
+
+  // Unlike LLVM IR, CIR doesn't automatically unique names for globals, so
+  // we need to do that explicitly.
+  std::string uniqueName = getUniqueGlobalName(name.str());
+  mlir::Location loc = getLoc(s->getSourceRange());
+  auto typedC = llvm::cast<mlir::TypedAttr>(c);
+  assert(!cir::MissingFeatures::opGlobalAlignment());
+  cir::GlobalOp gv = generateStringLiteral(loc, typedC, *this, uniqueName);
+  assert(!cir::MissingFeatures::opGlobalDSOLocal());
+
+  assert(!cir::MissingFeatures::sanitizers());
+
+  return gv;
+}
+
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
   for (Decl *decl : dc->decls()) {
     // Unlike other DeclContexts, the contents of an ObjCImplDecl at TU scope
@@ -768,6 +878,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
              decl->getDeclKindName());
     break;
 
+  case Decl::CXXMethod:
   case Decl::Function: {
     auto *fd = cast<FunctionDecl>(decl);
     // Consteval functions shouldn't be emitted.
@@ -787,7 +898,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::OpenACCDeclare:
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
-
+  case Decl::Enum:
   case Decl::UsingDirective: // using namespace X; [C++]
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]

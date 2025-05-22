@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -111,7 +112,7 @@ public:
   cir::BoolType getBoolTy() { return cir::BoolType::get(getContext()); }
 
   cir::PointerType getPointerTo(mlir::Type ty) {
-    return cir::PointerType::get(getContext(), ty);
+    return cir::PointerType::get(ty);
   }
 
   cir::PointerType getVoidPtrTy() {
@@ -177,6 +178,12 @@ public:
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
   }
 
+  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
+    assert(!cir::MissingFeatures::addressSpace());
+    return create<cir::GetGlobalOp>(loc, getPointerTo(global.getSymType()),
+                                    global.getSymName());
+  }
+
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
                          bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr intAttr;
@@ -223,6 +230,14 @@ public:
                            mlir::ValueRange operands) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
                         callee.getFunctionType().getReturnType(), operands);
+  }
+
+  cir::CallOp createIndirectCallOp(mlir::Location loc,
+                                   mlir::Value indirectTarget,
+                                   cir::FuncType funcType,
+                                   mlir::ValueRange operands) {
+    return create<cir::CallOp>(loc, indirectTarget, funcType.getReturnType(),
+                               operands);
   }
 
   //===--------------------------------------------------------------------===//

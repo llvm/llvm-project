@@ -669,6 +669,21 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
       VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
+
+    if (!S.getLangOpts().CPlusPlus23 && VD == S.EvaluatingDecl) {
+      if (!S.getLangOpts().CPlusPlus14 &&
+          !VD->getType().isConstant(S.getASTContext())) {
+        // Diagnose as non-const read.
+        diagnoseNonConstVariable(S, OpPC, VD);
+      } else {
+        const SourceInfo &Loc = S.Current->getSource(OpPC);
+        // Diagnose as "read of object outside its lifetime".
+        S.FFDiag(Loc, diag::note_constexpr_access_uninit)
+            << AK << /*IsIndeterminate=*/false;
+      }
+      return false;
+    }
+
     if (VD->getAnyInitializer()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
@@ -851,6 +866,21 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   if (F->isLambdaStaticInvoker())
     return true;
 
+  // Diagnose failed assertions specially.
+  if (S.Current->getLocation(OpPC).isMacroID() &&
+      F->getDecl()->getIdentifier()) {
+    // FIXME: Instead of checking for an implementation-defined function,
+    // check and evaluate the assert() macro.
+    StringRef Name = F->getDecl()->getName();
+    bool AssertFailed =
+        Name == "__assert_rtn" || Name == "__assert_fail" || Name == "_wassert";
+    if (AssertFailed) {
+      S.FFDiag(S.Current->getLocation(OpPC),
+               diag::note_constexpr_assert_failed);
+      return false;
+    }
+  }
+
   if (S.getLangOpts().CPlusPlus11) {
     const FunctionDecl *DiagDecl = F->getDecl();
 
@@ -939,15 +969,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   else
     S.FFDiag(Loc);
 
-  return false;
-}
-
-bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
-  if (!MD->isPureVirtual())
-    return true;
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
-  S.Note(MD->getLocation(), diag::note_declared_at);
   return false;
 }
 
@@ -1260,12 +1281,11 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
                        const APSInt &Value) {
-  llvm::APInt Min;
-  llvm::APInt Max;
-
   if (S.EvaluatingDecl && !S.EvaluatingDecl->isConstexpr())
     return;
 
+  llvm::APInt Min;
+  llvm::APInt Max;
   ED->getValueRange(Max, Min);
   --Max;
 
@@ -1382,6 +1402,10 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  if (!CheckTemporary(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
     return false;
 
   // Can't call a dtor on a global variable.
@@ -1511,7 +1535,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  InterpStateCCOverride CCOverride(S, Func->getDecl()->isImmediateFunction());
+  InterpStateCCOverride CCOverride(S, Func->isImmediate());
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.

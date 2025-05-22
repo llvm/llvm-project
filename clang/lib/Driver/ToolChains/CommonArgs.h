@@ -259,6 +259,10 @@ void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
 bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
                                     bool isSlpVec);
 
+/// Enable -floop-interchange based on the optimization level selected.
+void handleInterchangeLoopsArgs(const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs);
+
 /// Enable -fvectorize based on the optimization level selected.
 void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
                               llvm::opt::ArgStringList &CmdArgs);

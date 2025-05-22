@@ -325,7 +325,7 @@ Value *AA::getWithType(Value &V, Type &Ty) {
   if (isa<UndefValue>(V))
     return UndefValue::get(&Ty);
   if (auto *C = dyn_cast<Constant>(&V)) {
-    if (C->isNullValue())
+    if (C->isNullValue() && !Ty.isPtrOrPtrVectorTy())
       return Constant::getNullValue(&Ty);
     if (C->getType()->isPointerTy() && Ty.isPointerTy())
       return ConstantExpr::getPointerCast(C, &Ty);
@@ -3285,7 +3285,7 @@ InformationCache::FunctionInfo::~FunctionInfo() {
     It.getSecond()->~InstructionVectorTy();
 }
 
-const ArrayRef<Function *>
+ArrayRef<Function *>
 InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
   assert(A.isClosedWorldModule() && "Cannot see all indirect callees!");
   return IndirectlyCallableFunctions;

@@ -1026,14 +1026,6 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     SmallPtrSetImpl<Instruction *> &Stores, const SCEVAddRecExpr *Ev,
     const SCEV *BECount, bool IsNegStride, bool IsLoopMemset) {
   Module *M = TheStore->getModule();
-  Value *SplatValue = isBytewiseValue(StoredVal, *DL);
-  Constant *PatternValue = nullptr;
-
-  if (!SplatValue)
-    PatternValue = getMemSetPatternValue(StoredVal, DL);
-
-  assert((SplatValue || PatternValue) &&
-         "Expected either splat value or pattern value.");
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
   // guaranteed to be loop invariant, which means that it should dominate the
@@ -1095,9 +1087,6 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
 
-  if (!SplatValue && !isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16))
-    return Changed;
-
   AAMDNodes AATags = TheStore->getAAMetadata();
   for (Instruction *Store : Stores)
     AATags = AATags.merge(Store->getAAMetadata());
@@ -1107,12 +1096,11 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     AATags = AATags.extendTo(-1);
 
   CallInst *NewCall;
-  if (SplatValue) {
-    NewCall = Builder.CreateMemSet(
-        BasePtr, SplatValue, NumBytes, MaybeAlign(StoreAlignment),
-        /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
-  } else {
-    assert (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16));
+  if (Value *SplatValue = isBytewiseValue(StoredVal, *DL)) {
+    NewCall = Builder.CreateMemSet(BasePtr, SplatValue, NumBytes,
+                                   MaybeAlign(StoreAlignment),
+                                   /*isVolatile=*/false, AATags);
+  } else if (isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     // Everything is emitted in default address space
     Type *Int8PtrTy = DestInt8PtrTy;
 
@@ -1123,23 +1111,18 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
     // Otherwise we should form a memset_pattern16.  PatternValue is known to be
     // an constant array of 16-bytes.  Plop the value into a mergable global.
+    Constant *PatternValue = getMemSetPatternValue(StoredVal, DL);
+    assert(PatternValue && "Expected pattern value.");
     GlobalVariable *GV = new GlobalVariable(*M, PatternValue->getType(), true,
                                             GlobalValue::PrivateLinkage,
                                             PatternValue, ".memset_pattern");
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global); // Ok to merge these.
     GV->setAlignment(Align(16));
-    Value *PatternPtr = GV;
-    NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
-
-    // Set the TBAA info if present.
-    if (AATags.TBAA)
-      NewCall->setMetadata(LLVMContext::MD_tbaa, AATags.TBAA);
-
-    if (AATags.Scope)
-      NewCall->setMetadata(LLVMContext::MD_alias_scope, AATags.Scope);
-
-    if (AATags.NoAlias)
-      NewCall->setMetadata(LLVMContext::MD_noalias, AATags.NoAlias);
+    NewCall = Builder.CreateCall(MSP, {BasePtr, GV, NumBytes});
+    NewCall->setAAMetadata(AATags);
+  } else {
+    // Neither a memset, nor memset_pattern16
+    return Changed;
   }
 
   NewCall->setDebugLoc(TheStore->getDebugLoc());
@@ -1430,21 +1413,20 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   //  by previous checks.
   if (!IsAtomic) {
     if (UseMemMove)
-      NewCall = Builder.CreateMemMove(
-          StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign, NumBytes,
-          /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
+      NewCall = Builder.CreateMemMove(StoreBasePtr, StoreAlign, LoadBasePtr,
+                                      LoadAlign, NumBytes,
+                                      /*isVolatile=*/false, AATags);
     else
       NewCall =
           Builder.CreateMemCpy(StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign,
-                               NumBytes, /*isVolatile=*/false, AATags.TBAA,
-                               AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
+                               NumBytes, /*isVolatile=*/false, AATags);
   } else {
     // Create the call.
     // Note that unordered atomic loads/stores are *required* by the spec to
     // have an alignment but non-atomic loads/stores may not.
     NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
         StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes, StoreSize,
-        AATags.TBAA, AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
+        AATags);
   }
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
@@ -1764,6 +1746,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   }
 
   IRBuilder<> Builder(Preheader->getTerminator());
+  Builder.SetCurrentDebugLocation(CurLoop->getStartLoc());
   SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(),
                         "strlen_idiom");
   Value *MaterialzedBase = Expander.expandCodeFor(
@@ -2687,7 +2670,7 @@ template <typename SubPattern_t> struct match_LoopInvariant {
   match_LoopInvariant(const SubPattern_t &SP, const Loop *L)
       : SubPattern(SP), L(L) {}
 
-  template <typename ITy> bool match(ITy *V) {
+  template <typename ITy> bool match(ITy *V) const {
     return L->isLoopInvariant(V) && SubPattern.match(V);
   }
 };

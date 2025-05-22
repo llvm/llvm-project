@@ -23,6 +23,27 @@ using namespace CodeGen;
 using namespace llvm;
 
 namespace {
+
+// Has second type mangled argument.
+static Value *
+emitBinaryExpMaybeConstrainedFPBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                                       Intrinsic::ID IntrinsicID,
+                                       Intrinsic::ID ConstrainedIntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+
+  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
+  if (CGF.Builder.getIsFPConstrained()) {
+    Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID,
+                                       {Src0->getType(), Src1->getType()});
+    return CGF.Builder.CreateConstrainedFPCall(F, {Src0, Src1});
+  }
+
+  Function *F =
+      CGF.CGM.getIntrinsic(IntrinsicID, {Src0->getType(), Src1->getType()});
+  return CGF.Builder.CreateCall(F, {Src0, Src1});
+}
+
 // If \p E is not null pointer, insert address space cast to match return
 // type of \p E if necessary.
 Value *EmitAMDGPUDispatchPtr(CodeGenFunction &CGF,
@@ -563,6 +584,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr});
+  }
+  case AMDGPU::BI__builtin_amdgcn_load_to_lds: {
+    // Should this have asan instrumentation?
+    return emitBuiltinWithOneOverloadedType<5>(*this, E,
+                                               Intrinsic::amdgcn_load_to_lds);
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
     Function *F = CGM.getIntrinsic(Intrinsic::get_fpenv,
@@ -1179,6 +1205,57 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
         *this, E, Intrinsic::amdgcn_s_prefetch_data);
+  case Builtin::BIlogbf:
+  case Builtin::BI__builtin_logbf: {
+    Value *Src0 = EmitScalarExpr(E->getArg(0));
+    Function *FrExpFunc = CGM.getIntrinsic(
+        Intrinsic::frexp, {Src0->getType(), Builder.getInt32Ty()});
+    CallInst *FrExp = Builder.CreateCall(FrExpFunc, Src0);
+    Value *Exp = Builder.CreateExtractValue(FrExp, 1);
+    Value *Add = Builder.CreateAdd(
+        Exp, ConstantInt::getSigned(Exp->getType(), -1), "", false, true);
+    Value *SIToFP = Builder.CreateSIToFP(Add, Builder.getFloatTy());
+    Value *Fabs =
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::fabs);
+    Value *FCmpONE = Builder.CreateFCmpONE(
+        Fabs, ConstantFP::getInfinity(Builder.getFloatTy()));
+    Value *Sel1 = Builder.CreateSelect(FCmpONE, SIToFP, Fabs);
+    Value *FCmpOEQ =
+        Builder.CreateFCmpOEQ(Src0, ConstantFP::getZero(Builder.getFloatTy()));
+    Value *Sel2 = Builder.CreateSelect(
+        FCmpOEQ,
+        ConstantFP::getInfinity(Builder.getFloatTy(), /*Negative=*/true), Sel1);
+    return Sel2;
+  }
+  case Builtin::BIlogb:
+  case Builtin::BI__builtin_logb: {
+    Value *Src0 = EmitScalarExpr(E->getArg(0));
+    Function *FrExpFunc = CGM.getIntrinsic(
+        Intrinsic::frexp, {Src0->getType(), Builder.getInt32Ty()});
+    CallInst *FrExp = Builder.CreateCall(FrExpFunc, Src0);
+    Value *Exp = Builder.CreateExtractValue(FrExp, 1);
+    Value *Add = Builder.CreateAdd(
+        Exp, ConstantInt::getSigned(Exp->getType(), -1), "", false, true);
+    Value *SIToFP = Builder.CreateSIToFP(Add, Builder.getDoubleTy());
+    Value *Fabs =
+        emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::fabs);
+    Value *FCmpONE = Builder.CreateFCmpONE(
+        Fabs, ConstantFP::getInfinity(Builder.getDoubleTy()));
+    Value *Sel1 = Builder.CreateSelect(FCmpONE, SIToFP, Fabs);
+    Value *FCmpOEQ =
+        Builder.CreateFCmpOEQ(Src0, ConstantFP::getZero(Builder.getDoubleTy()));
+    Value *Sel2 = Builder.CreateSelect(
+        FCmpOEQ,
+        ConstantFP::getInfinity(Builder.getDoubleTy(), /*Negative=*/true),
+        Sel1);
+    return Sel2;
+  }
+  case Builtin::BIscalbnf:
+  case Builtin::BI__builtin_scalbnf:
+  case Builtin::BIscalbn:
+  case Builtin::BI__builtin_scalbn:
+    return emitBinaryExpMaybeConstrainedFPBuiltin(
+        *this, E, Intrinsic::ldexp, Intrinsic::experimental_constrained_ldexp);
   default:
     return nullptr;
   }

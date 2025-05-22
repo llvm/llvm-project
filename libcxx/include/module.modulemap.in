@@ -272,6 +272,10 @@ module std_core [system] {
       header "__type_traits/is_referenceable.h"
       export std_core.type_traits.integral_constant
     }
+    module is_replaceable {
+      header "__type_traits/is_replaceable.h"
+      export std_core.type_traits.integral_constant
+    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -433,6 +437,7 @@ module std [system] {
     module find_segment_if                        { header "__algorithm/find_segment_if.h" }
     module find                                   { header "__algorithm/find.h" }
     module for_each_n                             { header "__algorithm/for_each_n.h" }
+    module for_each_n_segment                     { header "__algorithm/for_each_n_segment.h" }
     module for_each_segment                       { header "__algorithm/for_each_segment.h" }
     module for_each                               { header "__algorithm/for_each.h" }
     module generate_n                             { header "__algorithm/generate_n.h" }

@@ -2150,7 +2150,8 @@ struct AANoUnwindCallSite final
 
 bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
-  case Intrinsic::nvvm_barrier0:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned:
   case Intrinsic::nvvm_barrier0_and:
   case Intrinsic::nvvm_barrier0_or:
   case Intrinsic::nvvm_barrier0_popc:
@@ -10909,9 +10910,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return II.I == I && II.S == S;
     };
     bool operator<(const ItemInfo &II) const {
-      if (I == II.I)
-        return S < II.S;
-      return I < II.I;
+      return std::tie(I, S) < std::tie(II.I, II.S);
     };
   };
 
