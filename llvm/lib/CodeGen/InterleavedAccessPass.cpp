@@ -571,6 +571,25 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   return true;
 }
 
+static unsigned getIntrinsicFactor(const IntrinsicInst *II) {
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::vector_deinterleave2:
+  case Intrinsic::vector_interleave2:
+    return 2;
+  case Intrinsic::vector_deinterleave3:
+  case Intrinsic::vector_interleave3:
+    return 3;
+  case Intrinsic::vector_deinterleave5:
+  case Intrinsic::vector_interleave5:
+    return 5;
+  case Intrinsic::vector_deinterleave7:
+  case Intrinsic::vector_interleave7:
+    return 7;
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  }
+}
+
 // For an (de)interleave tree like this:
 //
 //   A   C B   D
@@ -586,7 +605,7 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
 //  to reorder them by interleaving these values.
 static void interleaveLeafValues(MutableArrayRef<Value *> SubLeaves) {
   unsigned NumLeaves = SubLeaves.size();
-  if (NumLeaves == 2)
+  if (NumLeaves == 2 || !isPowerOf2_64(NumLeaves))
     return;
 
   assert(isPowerOf2_32(NumLeaves) && NumLeaves > 1);
@@ -608,7 +627,10 @@ static void interleaveLeafValues(MutableArrayRef<Value *> SubLeaves) {
 static bool
 getVectorInterleaveFactor(IntrinsicInst *II, SmallVectorImpl<Value *> &Operands,
                           SmallVectorImpl<Instruction *> &DeadInsts) {
-  assert(II->getIntrinsicID() == Intrinsic::vector_interleave2);
+  assert(II->getIntrinsicID() == Intrinsic::vector_interleave2 ||
+         II->getIntrinsicID() == Intrinsic::vector_interleave3 ||
+         II->getIntrinsicID() == Intrinsic::vector_interleave5 ||
+         II->getIntrinsicID() == Intrinsic::vector_interleave7);
 
   // Visit with BFS
   SmallVector<IntrinsicInst *, 8> Queue;
@@ -620,7 +642,7 @@ getVectorInterleaveFactor(IntrinsicInst *II, SmallVectorImpl<Value *> &Operands,
     // All the intermediate intrinsics will be deleted.
     DeadInsts.push_back(Current);
 
-    for (unsigned I = 0; I < 2; ++I) {
+    for (unsigned I = 0; I < getIntrinsicFactor(Current); ++I) {
       Value *Op = Current->getOperand(I);
       if (auto *OpII = dyn_cast<IntrinsicInst>(Op))
         if (OpII->getIntrinsicID() == Intrinsic::vector_interleave2) {
@@ -638,9 +660,10 @@ getVectorInterleaveFactor(IntrinsicInst *II, SmallVectorImpl<Value *> &Operands,
   }
 
   const unsigned Factor = Operands.size();
-  // Currently we only recognize power-of-two factors.
+  // Currently we only recognize factors of 3, 5, 7, and powers of 2.
   // FIXME: should we assert here instead?
-  if (Factor <= 1 || !isPowerOf2_32(Factor))
+  if (Factor <= 1 ||
+      (!isPowerOf2_32(Factor) && Factor != getIntrinsicFactor(II)))
     return false;
 
   interleaveLeafValues(Operands);
@@ -651,9 +674,12 @@ static bool
 getVectorDeinterleaveFactor(IntrinsicInst *II,
                             SmallVectorImpl<Value *> &Results,
                             SmallVectorImpl<Instruction *> &DeadInsts) {
-  assert(II->getIntrinsicID() == Intrinsic::vector_deinterleave2);
+  assert(II->getIntrinsicID() == Intrinsic::vector_deinterleave2 ||
+         II->getIntrinsicID() == Intrinsic::vector_deinterleave3 ||
+         II->getIntrinsicID() == Intrinsic::vector_deinterleave5 ||
+         II->getIntrinsicID() == Intrinsic::vector_deinterleave7);
   using namespace PatternMatch;
-  if (!II->hasNUses(2))
+  if (!II->hasNUses(getIntrinsicFactor(II)))
     return false;
 
   // Visit with BFS
@@ -662,12 +688,12 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
   while (!Queue.empty()) {
     IntrinsicInst *Current = Queue.front();
     Queue.erase(Queue.begin());
-    assert(Current->hasNUses(2));
+    assert(Current->hasNUses(getIntrinsicFactor(Current)));
 
     // All the intermediate intrinsics will be deleted from the bottom-up.
     DeadInsts.insert(DeadInsts.begin(), Current);
 
-    ExtractValueInst *LHS = nullptr, *RHS = nullptr;
+    SmallVector<ExtractValueInst *> EVs(getIntrinsicFactor(Current), nullptr);
     for (User *Usr : Current->users()) {
       if (!isa<ExtractValueInst>(Usr))
         return 0;
@@ -679,17 +705,15 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
       if (Indices.size() != 1)
         return false;
 
-      if (Indices[0] == 0 && !LHS)
-        LHS = EV;
-      else if (Indices[0] == 1 && !RHS)
-        RHS = EV;
+      if (!EVs[Indices[0]])
+        EVs[Indices[0]] = EV;
       else
         return false;
     }
 
     // We have legal indices. At this point we're either going
     // to continue the traversal or push the leaf values into Results.
-    for (ExtractValueInst *EV : {LHS, RHS}) {
+    for (ExtractValueInst *EV : EVs) {
       // Continue the traversal. We're playing safe here and matching only the
       // expression consisting of a perfectly balanced binary tree in which all
       // intermediate values are only used once.
@@ -713,9 +737,10 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
   }
 
   const unsigned Factor = Results.size();
-  // Currently we only recognize power-of-two factors.
+  // Currently we only recognize factors of 3, 5, 7, and powers of 2.
   // FIXME: should we assert here instead?
-  if (Factor <= 1 || !isPowerOf2_32(Factor))
+  if (Factor <= 1 ||
+      (!isPowerOf2_32(Factor) && Factor != getIntrinsicFactor(II)))
     return 0;
 
   interleaveLeafValues(Results);
@@ -878,11 +903,23 @@ bool InterleavedAccessImpl::runOnFunction(Function &F) {
 
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
       // At present, we only have intrinsics to represent (de)interleaving
-      // with a factor of 2.
-      if (II->getIntrinsicID() == Intrinsic::vector_deinterleave2)
+      // with a factor of 2,3,5 and 7.
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::vector_deinterleave2:
+      case Intrinsic::vector_deinterleave3:
+      case Intrinsic::vector_deinterleave5:
+      case Intrinsic::vector_deinterleave7:
         Changed |= lowerDeinterleaveIntrinsic(II, DeadInsts);
-      else if (II->getIntrinsicID() == Intrinsic::vector_interleave2)
+        break;
+      case Intrinsic::vector_interleave2:
+      case Intrinsic::vector_interleave3:
+      case Intrinsic::vector_interleave5:
+      case Intrinsic::vector_interleave7:
         Changed |= lowerInterleaveIntrinsic(II, DeadInsts);
+        break;
+      default:
+        break;
+      }
     }
   }
 
