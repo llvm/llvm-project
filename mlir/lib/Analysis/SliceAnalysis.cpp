@@ -95,8 +95,7 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
   auto processValue = [&](Value value) {
     if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
-        return getBackwardSliceImpl(definingOp, backwardSlice, options)
-            .succeeded();
+        return getBackwardSliceImpl(definingOp, backwardSlice, options);
     } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
         return success();
@@ -110,13 +109,10 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
         if (parentOp->getNumRegions() == 1 &&
             llvm::hasSingleElement(parentOp->getRegion(0).getBlocks())) {
           return getBackwardSliceImpl(parentOp, backwardSlice, options);
-        } else {
-          return failure();
         }
       }
-    } else {
-      return failure()
     }
+    return failure();
   };
 
   bool succeeded = true;
