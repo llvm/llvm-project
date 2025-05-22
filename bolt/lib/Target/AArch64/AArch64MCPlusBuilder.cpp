@@ -533,6 +533,10 @@ public:
       return false;
     };
 
+    // FIXME: Not all load instructions are handled by this->mayLoad(Inst).
+    //        On the other hand, MCInstrDesc::mayLoad() is permitted to return
+    //        true for non-load instructions (such as AArch64::HINT) which
+    //        would result in false negatives.
     if (mayLoad(Inst)) {
       // The first Use operand is the base address register.
       unsigned BaseRegIndex = Desc.getNumDefs();
