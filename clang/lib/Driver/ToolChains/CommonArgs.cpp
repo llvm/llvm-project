@@ -935,6 +935,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
             .Case("Accelerate", "Accelerate")
             .Case("libmvec", "LIBMVEC")
+            .Case("AMDLIBM", "AMDLIBM")
             .Case("MASSV", "MASSV")
             .Case("SVML", "SVML")
             .Case("SLEEF", "sleefgnuabi")
@@ -1646,17 +1647,18 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 }
 
 bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringList &CmdArgs) {
+  const XRayArgs &XRay = TC.getXRayArgs(Args);
   if (Args.hasArg(options::OPT_shared)) {
-    if (TC.getXRayArgs().needsXRayDSORt()) {
+    if (XRay.needsXRayDSORt()) {
       CmdArgs.push_back("--whole-archive");
       CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray-dso"));
       CmdArgs.push_back("--no-whole-archive");
       return true;
     }
-  } else if (TC.getXRayArgs().needsXRayRt()) {
+  } else if (XRay.needsXRayRt()) {
     CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray"));
-    for (const auto &Mode : TC.getXRayArgs().modeList())
+    for (const auto &Mode : XRay.modeList())
       CmdArgs.push_back(TC.getCompilerRTArgString(Args, Mode));
     CmdArgs.push_back("--no-whole-archive");
     return true;
@@ -3148,4 +3150,17 @@ void tools::handleVectorizeSLPArgs(const ArgList &Args,
   if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
                    options::OPT_fno_slp_vectorize, EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
+}
+
+void tools::handleInterchangeLoopsArgs(const ArgList &Args,
+                                       ArgStringList &CmdArgs) {
+  // FIXME: instead of relying on shouldEnableVectorizerAtOLevel, we may want to
+  // implement a separate function to infer loop interchange from opt level.
+  // For now, enable loop-interchange at the same opt levels as loop-vectorize.
+  bool EnableInterchange = shouldEnableVectorizerAtOLevel(Args, false);
+  OptSpecifier InterchangeAliasOption =
+      EnableInterchange ? options::OPT_O_Group : options::OPT_floop_interchange;
+  if (Args.hasFlag(options::OPT_floop_interchange, InterchangeAliasOption,
+                   options::OPT_fno_loop_interchange, EnableInterchange))
+    CmdArgs.push_back("-floop-interchange");
 }

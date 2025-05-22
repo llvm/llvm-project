@@ -59,8 +59,9 @@ Value ConvertToLLVMPattern::createIndexAttrConstant(OpBuilder &builder,
 }
 
 Value ConvertToLLVMPattern::getStridedElementPtr(
-    Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
-    ConversionPatternRewriter &rewriter) const {
+    ConversionPatternRewriter &rewriter, Location loc, MemRefType type,
+    Value memRefDesc, ValueRange indices,
+    LLVM::GEPNoWrapFlags noWrapFlags) const {
 
   auto [strides, offset] = type.getStridesAndOffset();
 
@@ -72,6 +73,15 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
   Value base =
       memRefDescriptor.bufferPtr(rewriter, loc, *getTypeConverter(), type);
 
+  LLVM::IntegerOverflowFlags intOverflowFlags =
+      LLVM::IntegerOverflowFlags::none;
+  if (LLVM::bitEnumContainsAny(noWrapFlags, LLVM::GEPNoWrapFlags::nusw)) {
+    intOverflowFlags = intOverflowFlags | LLVM::IntegerOverflowFlags::nsw;
+  }
+  if (LLVM::bitEnumContainsAny(noWrapFlags, LLVM::GEPNoWrapFlags::nuw)) {
+    intOverflowFlags = intOverflowFlags | LLVM::IntegerOverflowFlags::nuw;
+  }
+
   Type indexType = getIndexType();
   Value index;
   for (int i = 0, e = indices.size(); i < e; ++i) {
@@ -81,17 +91,19 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
           ShapedType::isDynamic(strides[i])
               ? memRefDescriptor.stride(rewriter, loc, i)
               : createIndexAttrConstant(rewriter, loc, indexType, strides[i]);
-      increment = rewriter.create<LLVM::MulOp>(loc, increment, stride);
+      increment = rewriter.create<LLVM::MulOp>(loc, increment, stride,
+                                               intOverflowFlags);
     }
-    index =
-        index ? rewriter.create<LLVM::AddOp>(loc, index, increment) : increment;
+    index = index ? rewriter.create<LLVM::AddOp>(loc, index, increment,
+                                                 intOverflowFlags)
+                  : increment;
   }
 
   Type elementPtrType = memRefDescriptor.getElementPtrType();
   return index ? rewriter.create<LLVM::GEPOp>(
                      loc, elementPtrType,
                      getTypeConverter()->convertType(type.getElementType()),
-                     base, index)
+                     base, index, noWrapFlags)
                : base;
 }
 

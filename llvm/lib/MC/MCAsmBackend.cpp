@@ -24,8 +24,8 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind)
-    : Endian(Endian), RelaxFixupKind(RelaxFixupKind) {}
+MCAsmBackend::MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation)
+    : Endian(Endian), LinkerRelaxation(LinkerRelaxation) {}
 
 MCAsmBackend::~MCAsmBackend() = default;
 
@@ -107,12 +107,6 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   assert(size_t(Kind - FK_NONE) < std::size(Builtins) && "Unknown fixup kind");
   return Builtins[Kind - FK_NONE];
-}
-
-bool MCAsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                                         const MCValue &Target,
-                                         const MCSubtargetInfo *) {
-  return Target.getSpecifier();
 }
 
 bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,

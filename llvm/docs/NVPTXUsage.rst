@@ -385,7 +385,7 @@ Semantics:
 """"""""""
 
 Before the absolute value is taken, the input is flushed to sign preserving
-zero if it is a subnormal. In addtion, unlike '``llvm.fabs.*``', a NaN input
+zero if it is a subnormal. In addition, unlike '``llvm.fabs.*``', a NaN input
 yields an unspecified NaN output.
 
 
@@ -473,7 +473,7 @@ Overview:
 
 The '``llvm.nvvm.fshl.clamp``' family of intrinsics performs a clamped funnel
 shift left. These intrinsics are very similar to '``llvm.fshl``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
@@ -501,7 +501,7 @@ Overview:
 
 The '``llvm.nvvm.fshr.clamp``' family of intrinsics perform a clamped funnel
 shift right. These intrinsics are very similar to '``llvm.fshr``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
@@ -623,6 +623,126 @@ all bits set to 0 except for %b bits starting at bit position %a. For the
 '``wrap``' variants, the values of %a and %b modulo 32 are used. For the
 '``clamp``' variants, the values of %a and %b are clamped to the range [0, 32],
 which in practice is equivalent to using them as is.
+
+'``llvm.nvvm.prmt``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.prmt(i32 %lo, i32 %hi, i32 %selector)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.prmt``' constructs a permutation of the bytes of the first two
+operands, selecting based on the third operand.
+
+Semantics:
+""""""""""
+
+The bytes in the first two source operands are numbered from 0 to 7:
+{%hi, %lo} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}. For each byte in the target
+register, a 4-bit selection value is defined.
+
+The 3 lsbs of the selection value specify which of the 8 source bytes should be
+moved into the target position. The msb defines if the byte value should be
+copied, or if the sign (msb of the byte) should be replicated over all 8 bits
+of the target position (sign extend of the byte value); msb=0 means copy the
+literal value; msb=1 means replicate the sign.
+
+These 4-bit selection values are pulled from the lower 16-bits of the %selector
+operand, with the least significant selection value corresponding to the least
+significant byte of the destination.
+
+
+'``llvm.nvvm.prmt.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.prmt.f4e(i32 %lo, i32 %hi, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.b4e(i32 %lo, i32 %hi, i32 %selector)
+
+    declare i32 @llvm.nvvm.prmt.rc8(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.ecl(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.ecr(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.rc16(i32 %lo, i32 %selector)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.prmt.*``' family of intrinsics constructs a permutation of the
+bytes of the first one or two operands, selecting based on the 2 least
+significant bits of the final operand.
+
+Semantics:
+""""""""""
+
+As with the generic '``llvm.nvvm.prmt``' intrinsic, the bytes in the first one
+or two source operands are numbered. The first source operand (%lo) is numbered
+{b3, b2, b1, b0}, in the case of the '``f4e``' and '``b4e``' variants, the
+second source operand (%hi) is numbered {b7, b6, b5, b4}.
+
+Depending on the 2 least significant bits of the %selector operand, the result
+of the permutation is defined as follows:
+
++------------+----------------+--------------+
+|    Mode    | %selector[1:0] |    Output    |
++------------+----------------+--------------+
+| '``f4e``'  | 0              | {3, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {4, 3, 2, 1} |
+|            +----------------+--------------+
+|            | 2              | {5, 4, 3, 2} |
+|            +----------------+--------------+
+|            | 3              | {6, 5, 4, 3} |
++------------+----------------+--------------+
+| '``b4e``'  | 0              | {5, 6, 7, 0} |
+|            +----------------+--------------+
+|            | 1              | {6, 7, 0, 1} |
+|            +----------------+--------------+
+|            | 2              | {7, 0, 1, 2} |
+|            +----------------+--------------+
+|            | 3              | {0, 1, 2, 3} |
++------------+----------------+--------------+
+| '``rc8``'  | 0              | {0, 0, 0, 0} |
+|            +----------------+--------------+
+|            | 1              | {1, 1, 1, 1} |
+|            +----------------+--------------+
+|            | 2              | {2, 2, 2, 2} |
+|            +----------------+--------------+
+|            | 3              | {3, 3, 3, 3} |
++------------+----------------+--------------+
+| '``ecl``'  | 0              | {3, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {3, 2, 1, 1} |
+|            +----------------+--------------+
+|            | 2              | {3, 2, 2, 2} |
+|            +----------------+--------------+
+|            | 3              | {3, 3, 3, 3} |
++------------+----------------+--------------+
+| '``ecr``'  | 0              | {0, 0, 0, 0} |
+|            +----------------+--------------+
+|            | 1              | {1, 1, 1, 0} |
+|            +----------------+--------------+
+|            | 2              | {2, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 3              | {3, 2, 1, 0} |
++------------+----------------+--------------+
+| '``rc16``' | 0              | {1, 0, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {3, 2, 3, 2} |
+|            +----------------+--------------+
+|            | 2              | {1, 0, 1, 0} |
+|            +----------------+--------------+
+|            | 3              | {3, 2, 3, 2} |
++------------+----------------+--------------+
 
 TMA family of Intrinsics
 ------------------------
@@ -1617,6 +1737,98 @@ The ``@llvm.nvvm.st.bulk.shared.cta`` and ``@llvm.nvvm.st.bulk`` intrinsics are
 similar but the latter uses generic addressing (see `Generic Addressing <https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing>`__).
 
 For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
+
+
+clusterlaunchcontrol Intrinsics
+-------------------------------
+
+'``llvm.nvvm.clusterlaunchcontrol.try_cancel*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.clusterlaunchcontrol.try_cancel.async.shared(ptr addrspace(3) %addr, ptr addrspace(3) %mbar)
+  declare void @llvm.nvvm.clusterlaunchcontrol.try_cancel.async.multicast.shared(ptr addrspace(3) %addr, ptr addrspace(3) %mbar)
+
+Overview:
+"""""""""
+
+The ``clusterlaunchcontrol.try_cancel`` intrinsics requests atomically cancelling
+the launch of a cluster that has not started running yet. It asynchronously non-atomically writes
+a 16-byte opaque response to shared memory, pointed to by 16-byte-aligned ``addr`` indicating whether the
+operation succeeded or failed. ``addr`` and 8-byte-aligned ``mbar`` must refer to ``shared::cta``
+otherwise the behavior is undefined. The completion of the asynchronous operation
+is tracked using the mbarrier completion mechanism at ``.cluster`` scope referenced
+by the shared memory pointer, ``mbar``. On success, the opaque response contains
+the CTA id of the first CTA of the canceled cluster; no other successful response
+from other ``clusterlaunchcontrol.try_cancel`` operations from the same grid will
+contain that id.
+
+The ``multicast`` variant specifies that the response is asynchronously non-atomically written to
+the corresponding shared memory location of each CTA in the requesting cluster.
+The completion of the write of each local response is tracked by independent
+mbarriers at the corresponding shared memory location of each CTA in the
+cluster.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-try-cancel>`__.
+
+'``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled(i128 %try_cancel_response)
+
+Overview:
+"""""""""
+
+The ``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled`` intrinsic decodes the opaque response written by the
+``llvm.nvvm.clusterlaunchcontrol.try_cancel`` operation.
+
+The intrinsic returns ``0`` (false) if the request failed. If the request succeeded,
+it returns ``1`` (true). A true result indicates that:
+
+- the thread block cluster whose first CTA id matches that of the response
+  handle will not run, and
+- no other successful response of another ``try_cancel`` request in the grid will contain
+  the first CTA id of that cluster
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
+
+
+'``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.x(i128 %try_cancel_response)
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.y(i128 %try_cancel_response)
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.z(i128 %try_cancel_response)
+
+Overview:
+"""""""""
+
+The ``clusterlaunchcontrol.query_cancel.get_first_ctaid.*`` intrinsic can be
+used to decode the successful opaque response written by the
+``llvm.nvvm.clusterlaunchcontrol.try_cancel`` operation.
+
+If the request succeeded:
+
+- ``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.{x,y,z}`` returns
+  the coordinate of the first CTA in the canceled cluster, either x, y, or z.
+
+If the request failed, the behavior of these intrinsics is undefined.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
 
 Other Intrinsics
 ----------------

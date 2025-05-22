@@ -591,20 +591,29 @@ bool RuntimePointerChecking::needsChecking(unsigned I, unsigned J) const {
   return PointerI.AliasSetId == PointerJ.AliasSetId;
 }
 
+/// Assign each RuntimeCheckingPtrGroup pointer an index for stable UTC output.
+static DenseMap<const RuntimeCheckingPtrGroup *, unsigned>
+getPtrToIdxMap(ArrayRef<RuntimeCheckingPtrGroup> CheckingGroups) {
+  DenseMap<const RuntimeCheckingPtrGroup *, unsigned> PtrIndices;
+  for (const auto &[Idx, CG] : enumerate(CheckingGroups))
+    PtrIndices[&CG] = Idx;
+  return PtrIndices;
+}
+
 void RuntimePointerChecking::printChecks(
     raw_ostream &OS, const SmallVectorImpl<RuntimePointerCheck> &Checks,
     unsigned Depth) const {
   unsigned N = 0;
+  auto PtrIndices = getPtrToIdxMap(CheckingGroups);
   for (const auto &[Check1, Check2] : Checks) {
     const auto &First = Check1->Members, &Second = Check2->Members;
-
     OS.indent(Depth) << "Check " << N++ << ":\n";
-
-    OS.indent(Depth + 2) << "Comparing group (" << Check1 << "):\n";
+    OS.indent(Depth + 2) << "Comparing group GRP" << PtrIndices.at(Check1)
+                         << ":\n";
     for (unsigned K : First)
       OS.indent(Depth + 2) << *Pointers[K].PointerValue << "\n";
-
-    OS.indent(Depth + 2) << "Against group (" << Check2 << "):\n";
+    OS.indent(Depth + 2) << "Against group GRP" << PtrIndices.at(Check2)
+                         << ":\n";
     for (unsigned K : Second)
       OS.indent(Depth + 2) << *Pointers[K].PointerValue << "\n";
   }
@@ -616,8 +625,9 @@ void RuntimePointerChecking::print(raw_ostream &OS, unsigned Depth) const {
   printChecks(OS, Checks, Depth);
 
   OS.indent(Depth) << "Grouped accesses:\n";
+  auto PtrIndices = getPtrToIdxMap(CheckingGroups);
   for (const auto &CG : CheckingGroups) {
-    OS.indent(Depth + 2) << "Group " << &CG << ":\n";
+    OS.indent(Depth + 2) << "Group GRP" << PtrIndices.at(&CG) << ":\n";
     OS.indent(Depth + 4) << "(Low: " << *CG.Low << " High: " << *CG.High
                          << ")\n";
     for (unsigned Member : CG.Members) {
@@ -683,8 +693,7 @@ public:
   ///
   /// Returns true if we need no check or if we do and we can generate them
   /// (i.e. the pointers have computable bounds).
-  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
-                       Loop *TheLoop,
+  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, Loop *TheLoop,
                        const DenseMap<Value *, const SCEV *> &Strides,
                        Value *&UncomputablePtr);
 
@@ -1178,7 +1187,7 @@ bool AccessAnalysis::createCheckForAccess(
 }
 
 bool AccessAnalysis::canCheckPtrAtRT(
-    RuntimePointerChecking &RtCheck, ScalarEvolution *SE, Loop *TheLoop,
+    RuntimePointerChecking &RtCheck, Loop *TheLoop,
     const DenseMap<Value *, const SCEV *> &StridesMap,
     Value *&UncomputablePtr) {
   // Find pointers with computable bounds. We are going to use this information
@@ -2641,7 +2650,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
   bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
-      *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides, UncomputablePtr);
+      *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr);
   if (!CanDoRTIfNeeded) {
     const auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I)
@@ -2669,10 +2678,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       PtrRtChecking->reset();
       PtrRtChecking->Need = true;
 
-      auto *SE = PSE->getSE();
       UncomputablePtr = nullptr;
       CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
-          *PtrRtChecking, SE, TheLoop, SymbolicStrides, UncomputablePtr);
+          *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr);
 
       // Check that we found the bounds for the pointer.
       if (!CanDoRTIfNeeded) {
