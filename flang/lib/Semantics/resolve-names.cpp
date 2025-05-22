@@ -6690,7 +6690,7 @@ void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
   }
   pointer->set(Symbol::Flag::CrayPointer);
   const DeclTypeSpec &pointerType{MakeNumericType(
-      TypeCategory::Integer, context().targetCharacteristics().pointerSize())};
+      TypeCategory::Integer, context().targetCharacteristics().integerKindForPointer())};
   const auto *type{pointer->GetType()};
   if (!type) {
     pointer->SetType(pointerType);
