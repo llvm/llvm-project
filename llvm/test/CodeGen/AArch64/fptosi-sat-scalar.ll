@@ -23,8 +23,9 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ; CHECK-SD-LABEL: test_signed_i1_f32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs w8, s0
-; CHECK-SD-NEXT:    ands w8, w8, w8, asr #31
-; CHECK-SD-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-SD-NEXT:    and w8, w8, w8, asr #31
+; CHECK-SD-NEXT:    cmn w8, #1
+; CHECK-SD-NEXT:    csinv w8, w8, wzr, gt
 ; CHECK-SD-NEXT:    and w0, w8, #0x1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -268,8 +269,9 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 ; CHECK-SD-LABEL: test_signed_i1_f64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtzs w8, d0
-; CHECK-SD-NEXT:    ands w8, w8, w8, asr #31
-; CHECK-SD-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-SD-NEXT:    and w8, w8, w8, asr #31
+; CHECK-SD-NEXT:    cmn w8, #1
+; CHECK-SD-NEXT:    csinv w8, w8, wzr, gt
 ; CHECK-SD-NEXT:    and w0, w8, #0x1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -518,16 +520,18 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-SD-CVT:       // %bb.0:
 ; CHECK-SD-CVT-NEXT:    fcvt s0, h0
 ; CHECK-SD-CVT-NEXT:    fcvtzs w8, s0
-; CHECK-SD-CVT-NEXT:    ands w8, w8, w8, asr #31
-; CHECK-SD-CVT-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-SD-CVT-NEXT:    and w8, w8, w8, asr #31
+; CHECK-SD-CVT-NEXT:    cmn w8, #1
+; CHECK-SD-CVT-NEXT:    csinv w8, w8, wzr, gt
 ; CHECK-SD-CVT-NEXT:    and w0, w8, #0x1
 ; CHECK-SD-CVT-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: test_signed_i1_f16:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs w8, h0
-; CHECK-SD-FP16-NEXT:    ands w8, w8, w8, asr #31
-; CHECK-SD-FP16-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-SD-FP16-NEXT:    and w8, w8, w8, asr #31
+; CHECK-SD-FP16-NEXT:    cmn w8, #1
+; CHECK-SD-FP16-NEXT:    csinv w8, w8, wzr, gt
 ; CHECK-SD-FP16-NEXT:    and w0, w8, #0x1
 ; CHECK-SD-FP16-NEXT:    ret
 ;
