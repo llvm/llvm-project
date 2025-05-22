@@ -6,9 +6,73 @@
 // - Generation of their '_vtable$' data members:
 //   * Correct scope and attributes
 
-#include "Inputs/vtable-debug-info-inheritance-simple-base.h"
-#include "Inputs/vtable-debug-info-inheritance-simple-derived.h"
+#ifdef BASE_CODE
+#define BASE_DEF
+#endif
 
+#ifdef DERIVED_CODE
+#define BASE_DEF
+#define DERIVED_DEF
+#endif
+
+#ifdef MAIN_CODE
+#define BASE_DEF
+#define DERIVED_DEF
+#endif
+
+#ifdef BASE_DEF
+namespace NSP {
+  struct CBase {
+    unsigned B = 1;
+    virtual void zero();
+    virtual int one();
+    virtual int two();
+    virtual int three();
+  };
+}
+extern void fooBase();
+#endif
+
+#ifdef BASE_CODE
+void NSP::CBase::zero() {}
+int NSP::CBase::one() { return 1; }
+int NSP::CBase::two() { return 2; };
+int NSP::CBase::three() { return 3; }
+
+#ifdef SYMBOL_AT_FILE_SCOPE
+static NSP::CBase Base;
+#else
+void fooBase() {
+  NSP::CBase Base;
+}
+#endif
+#endif
+
+#ifdef DERIVED_DEF
+struct CDerived : NSP::CBase {
+  unsigned D = 2;
+  void zero() override;
+  int two() override;
+  int three() override;
+};
+extern void fooDerived();
+#endif
+
+#ifdef DERIVED_CODE
+void CDerived::zero() {}
+int CDerived::two() { return 22; };
+int CDerived::three() { return 33; }
+
+#ifdef SYMBOL_AT_FILE_SCOPE
+static CDerived Derived;
+#else
+void fooDerived() {
+  CDerived Derived;
+}
+#endif
+#endif
+
+#ifdef MAIN_CODE
 int main() {
 #ifdef SYMBOL_AT_FILE_SCOPE
   NSP::CBase Base;
@@ -20,28 +84,29 @@ int main() {
 
   return 0;
 }
+#endif
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %S/Inputs/vtable-debug-info-inheritance-simple-base.cpp -o %t.simple-base.bc
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %S/Inputs/vtable-debug-info-inheritance-simple-derived.cpp -o %t.simple-derived.bc
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-main.bc
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-base.bc    -DBASE_CODE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-derived.bc -DDERIVED_CODE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-main.bc    -DMAIN_CODE
 // RUN: llvm-link %t.simple-base.bc %t.simple-derived.bc %t.simple-main.bc -S -o %t.simple-combined.ll
 // RUN: FileCheck --input-file=%t.simple-combined.ll -check-prefix=CHECK-ONE %s
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %S/Inputs/vtable-debug-info-inheritance-simple-base.cpp -o %t.simple-base.bc
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %S/Inputs/vtable-debug-info-inheritance-simple-derived.cpp -o %t.simple-derived.bc
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-main.bc
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-base.bc    -DBASE_CODE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-derived.bc -DDERIVED_CODE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-main.bc    -DMAIN_CODE
 // RUN: llvm-link %t.simple-base.bc %t.simple-derived.bc %t.simple-main.bc -S -o %t.simple-combined.ll
 // RUN: FileCheck --input-file=%t.simple-combined.ll -check-prefix=CHECK-ONE %s
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %S/Inputs/vtable-debug-info-inheritance-simple-base.cpp -o %t.simple-base.bc -DSYMBOL_AT_FILE_SCOPE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %S/Inputs/vtable-debug-info-inheritance-simple-derived.cpp -o %t.simple-derived.bc -DSYMBOL_AT_FILE_SCOPE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-main.bc -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-base.bc    -DBASE_CODE    -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-derived.bc -DDERIVED_CODE -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g %s -o %t.simple-main.bc    -DMAIN_CODE    -DSYMBOL_AT_FILE_SCOPE
 // RUN: llvm-link %t.simple-base.bc %t.simple-derived.bc %t.simple-main.bc -S -o %t.simple-combined.ll
 // RUN: FileCheck --input-file=%t.simple-combined.ll -check-prefix=CHECK-TWO %s
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %S/Inputs/vtable-debug-info-inheritance-simple-base.cpp -o %t.simple-base.bc -DSYMBOL_AT_FILE_SCOPE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %S/Inputs/vtable-debug-info-inheritance-simple-derived.cpp -o %t.simple-derived.bc -DSYMBOL_AT_FILE_SCOPE
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-main.bc -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-base.bc    -DBASE_CODE    -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-derived.bc -DDERIVED_CODE -DSYMBOL_AT_FILE_SCOPE
+// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -c -g -flto %s -o %t.simple-main.bc    -DMAIN_CODE    -DSYMBOL_AT_FILE_SCOPE
 // RUN: llvm-link %t.simple-base.bc %t.simple-derived.bc %t.simple-main.bc -S -o %t.simple-combined.ll
 // RUN: FileCheck --input-file=%t.simple-combined.ll -check-prefix=CHECK-TWO %s
 
