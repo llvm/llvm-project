@@ -17,6 +17,18 @@ define i32 @constraint_r(i32 %a, i32 %b) nounwind {
   ret i32 %1
 }
 
+define i32 @constraint_q(i32 %a) nounwind {
+; CHECK-LABEL: constraint_q:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    move $a1, $zero
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    csrxchg $a0, $a1, 0
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+  %1 = tail call i32 asm "csrxchg $0, $1, $2", "=r,q,i,0"(i32 0, i32 0, i32 %a)
+  ret i32 %1
+}
+
 define i32 @constraint_i(i32 %a) nounwind {
 ; CHECK-LABEL: constraint_i:
 ; CHECK:       # %bb.0:
