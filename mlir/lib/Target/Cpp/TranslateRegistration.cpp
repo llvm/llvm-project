@@ -34,7 +34,9 @@ void registerToCppTranslation() {
       llvm::cl::init(""));
 
   static llvm::cl::opt<std::string> className(
-      "class-name", llvm::cl::desc("Specify the class name for the generated C++ code"),
+      "class-name",
+      llvm::cl::desc("Optional class name. If specified, the output will be a "
+                     "class where the function(s) in the module are members."),
       llvm::cl::init(""));
 
   TranslateFromMLIRRegistration reg(
