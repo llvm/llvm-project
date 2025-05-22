@@ -922,9 +922,9 @@ def FeatureStdExtSscsrind
     : RISCVExtension<1, 0, "Indirect CSR Access Supervisor Level">;
 
 def FeatureStdExtSmdbltrp
-    : RISCVExtension<1, 0, "Double Trap Machine Level">;
+    : RISCVExtension<1, 0, "Double Trap Machine Level", [FeatureStdExtZicsr]>;
 def FeatureStdExtSsdbltrp
-    : RISCVExtension<1, 0, "Double Trap Supervisor Level">;
+    : RISCVExtension<1, 0, "Double Trap Supervisor Level", [FeatureStdExtZicsr]>;
 
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
