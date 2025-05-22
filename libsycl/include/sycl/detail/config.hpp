@@ -21,7 +21,7 @@
 #define __SYCL_END_UNVERSIONED_NAMESPACE }
 
 #define __SYCL_BEGIN_VERSIONED_NAMESPACE                                       \
-  __SYCL_BEGIN_UNVERSIONED_NAMESPACE inline namespace V__LIBSYCL_MAJOR_VERSION {
+  __SYCL_BEGIN_UNVERSIONED_NAMESPACE inline namespace __LIBSYCL_ABI_NAMESPACE {
 #define __SYCL_END_VERSIONED_NAMESPACE                                         \
   }                                                                            \
   __SYCL_END_UNVERSIONED_NAMESPACE

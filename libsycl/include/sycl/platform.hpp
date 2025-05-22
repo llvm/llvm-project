@@ -15,20 +15,17 @@
 #ifndef __LIBSYCL_PLATFORM_HPP
 #define __LIBSYCL_PLATFORM_HPP
 
-#include <sycl/detail/export.hpp>
+#include <sycl/detail/config.hpp>
 
-namespace sycl {
-inline namespace _V1 {
-/// Encapsulates a SYCL platform on which kernels may be executed.
-///
-/// \ingroup sycl_api
+__SYCL_BEGIN_VERSIONED_NAMESPACE
+
 class __SYCL_EXPORT platform {
 public:
   /// Constructs a SYCL platform using the default device.
   platform();
 
 }; // class platform
-} // namespace _V1
-} // namespace sycl
+
+__SYCL_END_VERSIONED_NAMESPACE
 
 #endif // __LIBSYCL_PLATFORM_HPP

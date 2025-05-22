@@ -1,4 +1,4 @@
-//==---------------- platform.cpp - SYCL platform --------------------------==//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 
 #include <stdexcept>
 
-namespace sycl {
-inline namespace _V1 {
+__SYCL_BEGIN_VERSIONED_NAMESPACE
+
 platform::platform() { throw std::runtime_error("Unimplemented"); }
-} // namespace _V1
-} // namespace sycl
+
+__SYCL_END_VERSIONED_NAMESPACE

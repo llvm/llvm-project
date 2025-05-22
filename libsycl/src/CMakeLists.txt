@@ -11,7 +11,7 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
     ${LIB_OBJ_NAME}
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
-      "${libsycl_inc_dir}"
+      "${LIBSYCL_INCLUDE_DIR}"
   )
 
   add_library(${LIB_NAME} SHARED

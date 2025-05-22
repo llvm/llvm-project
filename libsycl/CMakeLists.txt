@@ -59,6 +59,7 @@ set(LIBSYCL_MAJOR_VERSION 0)
 set(LIBSYCL_MINOR_VERSION 1)
 set(LIBSYCL_PATCH_VERSION 0)
 set(LIBSYCL_VERSION_STRING "${LIBSYCL_MAJOR_VERSION}.${LIBSYCL_MINOR_VERSION}.${LIBSYCL_PATCH_VERSION}")
+set(LIBSYCL_ABI_NAMESPACE "V${LIBSYCL_MAJOR_VERSION}" CACHE STRING "The inline ABI namespace used by libsycl. It defaults to Vn where `n` is the current ABI version.")
 
 #===============================================================================
 # Setup Compiler Flags
@@ -129,6 +130,8 @@ string(REPLACE "${LIBSYCL_INCLUDE_DIR}" "${LIBSYCL_BUILD_INCLUDE_DIR}"
 add_custom_target(sycl-headers
   DEPENDS ${OUT_HEADERS_IN_SYCL_DIR})
 
+configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_INCLUDE_DIR}/sycl/version.hpp")
+
 add_custom_command(
   OUTPUT  ${OUT_HEADERS_IN_SYCL_DIR}
   DEPENDS ${HEADERS_IN_SYCL_DIR}
@@ -136,12 +139,6 @@ add_custom_command(
   COMMENT "Copying SYCL headers...")
 
 install(DIRECTORY "${LIBSYCL_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INSTALL_INCLUDE_DIR} COMPONENT sycl-headers)
-
-configure_file("src/version.hpp.in" "${LIBSYCL_INSTALL_INCLUDE_DIR}/sycl/version.hpp")
-install(FILES
-  "${LIBSYCL_INSTALL_INCLUDE_DIR}/sycl/version.hpp"
-  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl"
-  COMPONENT sycl-headers)
 
 if (WIN32)
   set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME}${LIBSYCL_MAJOR_VERSION})
