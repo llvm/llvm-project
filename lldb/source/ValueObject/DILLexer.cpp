@@ -13,7 +13,6 @@
 
 #include "lldb/ValueObject/DILLexer.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/ValueObject/DILParser.h"
 #include "llvm/ADT/StringSwitch.h"
 
 namespace lldb_private::dil {
@@ -30,14 +29,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "identifier";
   case Kind::l_paren:
     return "l_paren";
-  case Kind::l_square:
-    return "l_square";
-  case Kind::numeric_constant:
-    return "numeric_constant";
   case Kind::r_paren:
     return "r_paren";
-  case Kind::r_square:
-    return "r_square";
   case Token::star:
     return "star";
   }
@@ -64,18 +57,6 @@ static std::optional<llvm::StringRef> IsWord(llvm::StringRef expr,
   return candidate;
 }
 
-static bool IsNumberBodyChar(char ch) { return IsDigit(ch) || IsLetter(ch); }
-
-static std::optional<llvm::StringRef> IsNumber(llvm::StringRef expr,
-                                               llvm::StringRef &remainder) {
-  if (IsDigit(remainder[0])) {
-    llvm::StringRef number = remainder.take_while(IsNumberBodyChar);
-    remainder = remainder.drop_front(number.size());
-    return number;
-  }
-  return std::nullopt;
-}
-
 llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr) {
   std::vector<Token> tokens;
   llvm::StringRef remainder = expr;
@@ -100,17 +81,13 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(Token::eof, "", (uint32_t)expr.size());
 
   uint32_t position = cur_pos - expr.begin();
-  std::optional<llvm::StringRef> maybe_number = IsNumber(expr, remainder);
-  if (maybe_number)
-    return Token(Token::numeric_constant, maybe_number->str(), position);
   std::optional<llvm::StringRef> maybe_word = IsWord(expr, remainder);
   if (maybe_word)
     return Token(Token::identifier, maybe_word->str(), position);
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},      {Token::coloncolon, "::"}, {Token::l_paren, "("},
-      {Token::l_square, "["}, {Token::r_paren, ")"},     {Token::r_square, "]"},
-      {Token::star, "*"},
+      {Token::amp, "&"},     {Token::coloncolon, "::"}, {Token::l_paren, "("},
+      {Token::r_paren, ")"}, {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))
@@ -118,8 +95,7 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
   }
 
   // Unrecognized character(s) in string; unable to lex it.
-  return llvm::make_error<DILDiagnosticError>(expr, "unrecognized token",
-                                              position);
+  return llvm::createStringError("Unable to lex input string");
 }
 
 } // namespace lldb_private::dil
