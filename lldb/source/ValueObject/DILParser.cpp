@@ -111,42 +111,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
       llvm_unreachable("invalid token kind");
     }
   }
-  return ParsePostfixExpression();
-}
-
-// Parse a postfix_expression.
-//
-//  postfix_expression:
-//    primary_expression
-//    postfix_expression "[" integer_literal "]"
-//
-ASTNodeUP DILParser::ParsePostfixExpression() {
-  ASTNodeUP lhs = ParsePrimaryExpression();
-  while (CurToken().Is(Token::l_square)) {
-    uint32_t loc = CurToken().GetLocation();
-    Token token = CurToken();
-    switch (token.GetKind()) {
-    case Token::l_square: {
-      m_dil_lexer.Advance();
-      std::optional<int64_t> rhs = ParseIntegerConstant();
-      if (!rhs) {
-        BailOut(
-            llvm::formatv("failed to parse integer constant: {0}", CurToken()),
-            CurToken().GetLocation(), CurToken().GetSpelling().length());
-        return std::make_unique<ErrorNode>();
-      }
-      Expect(Token::r_square);
-      m_dil_lexer.Advance();
-      lhs = std::make_unique<ArraySubscriptNode>(loc, std::move(lhs),
-                                                 std::move(*rhs));
-      break;
-    }
-    default:
-      llvm_unreachable("invalid token");
-    }
-  }
-
-  return lhs;
+  return ParsePrimaryExpression();
 }
 
 // Parse a primary_expression.
@@ -313,23 +278,6 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
       llvm::make_error<DILDiagnosticError>(m_input_expr, error, loc, err_len);
   // Advance the lexer token index to the end of the lexed tokens vector.
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
-}
-
-// Parse a integer_literal.
-//
-//  integer_literal:
-//    ? Integer constant ?
-//
-std::optional<int64_t> DILParser::ParseIntegerConstant() {
-  auto spelling = CurToken().GetSpelling();
-  llvm::StringRef spelling_ref = spelling;
-  int64_t raw_value;
-  if (!spelling_ref.getAsInteger<int64_t>(0, raw_value)) {
-    m_dil_lexer.Advance();
-    return raw_value;
-  }
-
-  return std::nullopt;
 }
 
 void DILParser::Expect(Token::Kind kind) {
