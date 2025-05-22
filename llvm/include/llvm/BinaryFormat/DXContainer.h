@@ -613,7 +613,7 @@ struct DescriptorRange {
   uint32_t NumDescriptors;
   uint32_t BaseShaderRegister;
   uint32_t RegisterSpace;
-  int32_t OffsetInDescriptorsFromTableStart;
+  uint32_t OffsetInDescriptorsFromTableStart;
   void swapBytes() {
     sys::swapByteOrder(RangeType);
     sys::swapByteOrder(NumDescriptors);

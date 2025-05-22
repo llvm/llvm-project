@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <climits>
 #include <cstdint>
 #include <system_error>
 
@@ -95,10 +96,10 @@ DXContainerYAML::RootSignatureYamlDesc::create(
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
-    } else if (auto *TDV =
+    } else if (auto *DTV =
                    dyn_cast<object::DirectX::DescriptorTableView>(&ParamView)) {
       llvm::Expected<object::DirectX::DescriptorTable> TableOrErr =
-          TDV->read(Version);
+          DTV->read(Version);
       if (Error E = TableOrErr.takeError())
         return std::move(E);
       auto Table = *TableOrErr;
@@ -349,7 +350,19 @@ void MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml>::mapping(
 void MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml>::mapping(
     IO &IO, llvm::DXContainerYAML::DescriptorRangeYaml &R) {
   IO.mapRequired("RangeType", R.RangeType);
-  IO.mapRequired("NumDescriptors", R.NumDescriptors);
+  // handling the edge case where NumDescriptors might be -1
+  if (IO.outputting()) {
+    if (R.NumDescriptors == UINT_MAX) {
+      int32_t NegOne = -1;
+      IO.mapRequired("NumDescriptors", NegOne);
+    } else
+      IO.mapRequired("NumDescriptors", R.NumDescriptors);
+  } else {
+    int32_t TmpNumDesc = 0;
+    IO.mapRequired("NumDescriptors", TmpNumDesc);
+    R.NumDescriptors = static_cast<uint32_t>(TmpNumDesc);
+  }
+
   IO.mapRequired("BaseShaderRegister", R.BaseShaderRegister);
   IO.mapRequired("RegisterSpace", R.RegisterSpace);
   IO.mapRequired("OffsetInDescriptorsFromTableStart",

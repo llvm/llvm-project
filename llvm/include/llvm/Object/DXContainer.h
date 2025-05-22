@@ -282,8 +282,8 @@ public:
       else
         DataSize = sizeof(dxbc::RTS0::v2::DescriptorRange) * NumRanges;
 
-      // 4 bits for the number of ranges in table and
-      // 4 bits for the ranges offset
+      // 4 bytes for the number of ranges in table and
+      // 4 bytes for the ranges offset
       DataSize += 2 * sizeof(uint32_t);
       break;
     }

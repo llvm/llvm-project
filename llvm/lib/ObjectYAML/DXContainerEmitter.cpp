@@ -322,6 +322,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       }
 
       RS.write(OS);
+      break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
     RollingOffset += BytesWritten;

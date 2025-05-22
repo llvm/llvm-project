@@ -62,9 +62,9 @@ struct RootParametersContainer {
     Descriptors.push_back(Descriptor);
   }
 
-  void addParameter(dxbc::RootParameterHeader H, DescriptorTable D) {
-    addInfo(H, Tables.size());
-    Tables.push_back(D);
+  void addParameter(dxbc::RootParameterHeader Header, DescriptorTable Table) {
+    addInfo(Header, Tables.size());
+    Tables.push_back(Table);
   }
 
   const std::pair<uint32_t, uint32_t>

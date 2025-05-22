@@ -95,7 +95,7 @@ struct DescriptorRangeYaml {
   uint32_t NumDescriptors;
   uint32_t BaseShaderRegister;
   uint32_t RegisterSpace;
-  int32_t OffsetInDescriptorsFromTableStart;
+  uint32_t OffsetInDescriptorsFromTableStart;
 
   uint32_t getEncodedFlags() const;
 
@@ -195,7 +195,6 @@ struct RootParameterYamlDesc {
     return *this;
   }
 
-  // ToDo: Fix this (Already have a follow up PR with it)
   union {
     RootConstantsYaml Constants;
     RootDescriptorYaml Descriptor;

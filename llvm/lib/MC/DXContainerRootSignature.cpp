@@ -50,8 +50,8 @@ size_t RootSignatureDesc::getSize() const {
       const DescriptorTable &Table =
           ParametersContainer.getDescriptorTable(I.Location);
 
-      // 4 bits for the number of ranges in table and
-      // 4 bits for the ranges offset
+      // 4 bytes for the number of ranges in table and
+      // 4 bytes for the ranges offset
       Size += 2 * sizeof(uint32_t);
       if (Version == 1)
         Size += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
