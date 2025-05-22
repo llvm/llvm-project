@@ -67,8 +67,7 @@ struct FormatStyle {
   /// \code
   ///   true:                             false:
   ///   if constexpr (          vs.       if constexpr (a ||
-  ///                 a ||                              b)
-  ///                 b)
+  ///      a || b)                                      b)
   /// \endcode
   /// \version 21
   bool BreakAfterOpenBracketIf;
@@ -78,8 +77,7 @@ struct FormatStyle {
   /// \code
   ///   true:                             false:
   ///   while (                  vs.      while (a &&
-  ///          a &&                              b) {
-  ///          b) {
+  ///      a && b) {                             b) {
   /// \endcode
   /// \version 21
   bool BreakAfterOpenBracketLoop;
@@ -89,8 +87,7 @@ struct FormatStyle {
   /// \code
   ///   true:                             false:
   ///   switch (                 vs.      switch (a &&
-  ///           a &&                              b) {
-  ///           b) {
+  ///      a && b) {                              b) {
   /// \endcode
   /// \version 21
   bool BreakAfterOpenBracketSwitch;
@@ -2249,34 +2246,40 @@ struct FormatStyle {
   BraceBreakingStyle BreakBeforeBraces;
 
   /// Force break before the right parenthesis of an if control statement
-  /// when the expression exceeds the column limit.
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
   /// \code
   ///   true:                             false:
-  ///   if constexpr (a ||      vs.       if constexpr (a ||
-  ///                 b                                 b)
-  ///                 )
+  ///   if constexpr (          vs.       if constexpr (a ||
+  ///      a || b                                       b)
+  ///   )              
   /// \endcode
   /// \version 21
   bool BreakBeforeCloseBracketIf;
 
   /// Force break before the right parenthesis of a loop control statement
-  /// when the expression exceeds the column limit.
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
   /// \code
   ///   true:                             false:
-  ///   while (a &&              vs.      while (a &&
-  ///          b                                 b) {
-  ///          ) {
+  ///   while (                  vs.      while (a &&
+  ///      a && b                                b) {
+  ///   ) {       
   /// \endcode
   /// \version 21
   bool BreakBeforeCloseBracketLoop;
 
   /// Force break before the right parenthesis of a switch control statement
-  /// when the expression exceeds the column limit.
+  /// when the expression exceeds the column limit. The break before the
+  /// closing parenthesis is only made if there is a break after the opening
+  /// parenthesis.
   /// \code
   ///   true:                             false:
-  ///   switch (a &&             vs.      switch (a &&
-  ///           b                                 b) {
-  ///           ) {
+  ///   switch (                 vs.      switch (a &&
+  ///      a && b                                 b) {
+  ///   ) {   
   /// \endcode
   /// \version 21
   bool BreakBeforeCloseBracketSwitch;

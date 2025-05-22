@@ -1437,6 +1437,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
+  if ((Style.BreakBeforeCloseBracketIf || Style.BreakBeforeCloseBracketLoop ||
+       Style.BreakBeforeCloseBracketSwitch) &&
+      Current.is(tok::r_paren) && State.Stack.size() > 1) {
+    return State.Stack[State.Stack.size() - 2].LastSpace;
+  }
   if (Style.BreakBeforeTemplateCloser && Current.is(TT_TemplateCloser) &&
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
