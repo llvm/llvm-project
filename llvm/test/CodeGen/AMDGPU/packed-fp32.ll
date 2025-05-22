@@ -1713,6 +1713,7 @@ define amdgpu_kernel void @fma_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; PACKED-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; PACKED-SDAG-NEXT:    s_endpgm
 ;
+<<<<<<< HEAD
 ; GFX90A-GISEL-LABEL: fma_v2_v_lit_splat:
 ; GFX90A-GISEL:       ; %bb.0:
 ; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -1746,6 +1747,19 @@ define amdgpu_kernel void @fma_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX942-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], s[2:3], v[2:3]
 ; GFX942-GISEL-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
 ; GFX942-GISEL-NEXT:    s_endpgm
+=======
+; PACKED-GISEL-LABEL: fma_v2_v_lit_splat:
+; PACKED-GISEL:       ; %bb.0:
+; PACKED-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; PACKED-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; PACKED-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; PACKED-GISEL-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; PACKED-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], 4.0, 1.0
+; PACKED-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; PACKED-GISEL-NEXT:    s_endpgm
+>>>>>>> parent of 4ddab1252fe6... AMDGPU: Move reg_sequence splat handling (#140313)
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
