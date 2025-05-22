@@ -105,7 +105,7 @@ class DAPTestCaseBase(TestBase):
         return False
 
     def verify_breakpoint_hit(
-            self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, is_watchpoint=False
+        self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, is_watchpoint=False
     ):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
@@ -333,12 +333,12 @@ class DAPTestCaseBase(TestBase):
         return self.dap_server.wait_for_stopped(timeout)
 
     def continue_to_breakpoint(
-            self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT, is_watchpoint=False
+        self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT, is_watchpoint=False
     ):
         self.continue_to_breakpoints([breakpoint_id], timeout, is_watchpoint)
 
     def continue_to_breakpoints(
-            self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, is_watchpoint=False
+        self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, is_watchpoint=False
     ):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids, timeout, is_watchpoint)

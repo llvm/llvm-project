@@ -1042,12 +1042,12 @@ class DebugCommunication(object):
         return self.send_recv(command_dict)
 
     def request_dataBreakpointInfo(
-            self,
-            name: str,
-            variablesReference: int = None,
-            frameIndex: int = 0,
-            bytes_: int = None,
-            asAddress: bool = None,
+        self,
+        name: str,
+        variablesReference: int = None,
+        frameIndex: int = 0,
+        bytes_: int = None,
+        asAddress: bool = None,
     ):
 
         args_dict = {}
