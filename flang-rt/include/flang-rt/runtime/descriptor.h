@@ -448,7 +448,7 @@ template <int RANK = -1> class DescriptorIterator {
 private:
   const Descriptor &descriptor;
   SubscriptValue subscripts[maxRank];
-  std::size_t elementOffset = 0;
+  std::size_t elementOffset{0};
 
 public:
   RT_API_ATTRS DescriptorIterator(const Descriptor &descriptor)
@@ -460,7 +460,7 @@ public:
   };
 
   template <typename A> RT_API_ATTRS A *Get() {
-    std::size_t offset = 0;
+    std::size_t offset{0};
     // The rank-1 case doesn't require looping at all
     if constexpr (RANK == 1) {
       offset = elementOffset;
