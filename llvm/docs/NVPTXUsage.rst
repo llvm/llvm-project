@@ -624,6 +624,126 @@ all bits set to 0 except for %b bits starting at bit position %a. For the
 '``clamp``' variants, the values of %a and %b are clamped to the range [0, 32],
 which in practice is equivalent to using them as is.
 
+'``llvm.nvvm.prmt``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.prmt(i32 %lo, i32 %hi, i32 %selector)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.prmt``' constructs a permutation of the bytes of the first two
+operands, selecting based on the third operand.
+
+Semantics:
+""""""""""
+
+The bytes in the first two source operands are numbered from 0 to 7:
+{%hi, %lo} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}. For each byte in the target
+register, a 4-bit selection value is defined.
+
+The 3 lsbs of the selection value specify which of the 8 source bytes should be
+moved into the target position. The msb defines if the byte value should be
+copied, or if the sign (msb of the byte) should be replicated over all 8 bits
+of the target position (sign extend of the byte value); msb=0 means copy the
+literal value; msb=1 means replicate the sign.
+
+These 4-bit selection values are pulled from the lower 16-bits of the %selector
+operand, with the least significant selection value corresponding to the least
+significant byte of the destination.
+
+
+'``llvm.nvvm.prmt.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.prmt.f4e(i32 %lo, i32 %hi, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.b4e(i32 %lo, i32 %hi, i32 %selector)
+
+    declare i32 @llvm.nvvm.prmt.rc8(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.ecl(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.ecr(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.rc16(i32 %lo, i32 %selector)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.prmt.*``' family of intrinsics constructs a permutation of the
+bytes of the first one or two operands, selecting based on the 2 least
+significant bits of the final operand.
+
+Semantics:
+""""""""""
+
+As with the generic '``llvm.nvvm.prmt``' intrinsic, the bytes in the first one
+or two source operands are numbered. The first source operand (%lo) is numbered
+{b3, b2, b1, b0}, in the case of the '``f4e``' and '``b4e``' variants, the
+second source operand (%hi) is numbered {b7, b6, b5, b4}.
+
+Depending on the 2 least significant bits of the %selector operand, the result
+of the permutation is defined as follows:
+
++------------+----------------+--------------+
+|    Mode    | %selector[1:0] |    Output    |
++------------+----------------+--------------+
+| '``f4e``'  | 0              | {3, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {4, 3, 2, 1} |
+|            +----------------+--------------+
+|            | 2              | {5, 4, 3, 2} |
+|            +----------------+--------------+
+|            | 3              | {6, 5, 4, 3} |
++------------+----------------+--------------+
+| '``b4e``'  | 0              | {5, 6, 7, 0} |
+|            +----------------+--------------+
+|            | 1              | {6, 7, 0, 1} |
+|            +----------------+--------------+
+|            | 2              | {7, 0, 1, 2} |
+|            +----------------+--------------+
+|            | 3              | {0, 1, 2, 3} |
++------------+----------------+--------------+
+| '``rc8``'  | 0              | {0, 0, 0, 0} |
+|            +----------------+--------------+
+|            | 1              | {1, 1, 1, 1} |
+|            +----------------+--------------+
+|            | 2              | {2, 2, 2, 2} |
+|            +----------------+--------------+
+|            | 3              | {3, 3, 3, 3} |
++------------+----------------+--------------+
+| '``ecl``'  | 0              | {3, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {3, 2, 1, 1} |
+|            +----------------+--------------+
+|            | 2              | {3, 2, 2, 2} |
+|            +----------------+--------------+
+|            | 3              | {3, 3, 3, 3} |
++------------+----------------+--------------+
+| '``ecr``'  | 0              | {0, 0, 0, 0} |
+|            +----------------+--------------+
+|            | 1              | {1, 1, 1, 0} |
+|            +----------------+--------------+
+|            | 2              | {2, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 3              | {3, 2, 1, 0} |
++------------+----------------+--------------+
+| '``rc16``' | 0              | {1, 0, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {3, 2, 3, 2} |
+|            +----------------+--------------+
+|            | 2              | {1, 0, 1, 0} |
+|            +----------------+--------------+
+|            | 3              | {3, 2, 3, 2} |
++------------+----------------+--------------+
+
 TMA family of Intrinsics
 ------------------------
 
