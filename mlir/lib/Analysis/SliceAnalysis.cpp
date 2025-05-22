@@ -92,16 +92,14 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
   if (options.filter && !options.filter(op))
     return success();
 
-  bool succeeded = true;
-
   auto processValue = [&](Value value) {
     if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
-        succeeded &= getBackwardSliceImpl(definingOp, backwardSlice, options)
+        return getBackwardSliceImpl(definingOp, backwardSlice, options)
                          .succeeded();
     } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
-        return;
+        return success();
 
       Block *block = blockArg.getOwner();
       Operation *parentOp = block->getParentOp();
@@ -111,16 +109,17 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
       if (parentOp && backwardSlice->count(parentOp) == 0) {
         if (parentOp->getNumRegions() == 1 &&
             llvm::hasSingleElement(parentOp->getRegion(0).getBlocks())) {
-          succeeded &= getBackwardSliceImpl(parentOp, backwardSlice, options)
-                           .succeeded();
+          return getBackwardSliceImpl(parentOp, backwardSlice, options);
         } else {
-          succeeded = false;
+          return failure();
         }
       }
     } else {
-      llvm_unreachable("No definingOp and not a block argument.");
+      return failure()
     }
   };
+
+  bool succeeded = true;
 
   if (!options.omitUsesFromAbove) {
     llvm::for_each(op->getRegions(), [&](Region &region) {
@@ -132,8 +131,11 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
       region.walk([&](Operation *op) {
         for (OpOperand &operand : op->getOpOperands()) {
           if (!descendents.contains(operand.get().getParentRegion()))
-            processValue(operand.get());
+            if (!processValue(operand.get()).succeeded()) {
+	      return WalkResult::interrupt();
+	    }
         }
+	return WalkResult::advance();
       });
     });
   }

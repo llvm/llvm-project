@@ -138,6 +138,8 @@ void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
 /// Assuming all local orders match the numbering order:
 ///    {1, 2, 5, 3, 4, 6}
 ///
+/// This function returns whether the backwards slice was able to be successfully
+/// computed, and failure if it was unable to determine the slice.
 LogicalResult getBackwardSlice(Operation *op,
                                SetVector<Operation *> *backwardSlice,
                                const BackwardSliceOptions &options = {});
