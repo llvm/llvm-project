@@ -18609,10 +18609,7 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
   if (ExtendType.isVector() && !ExtendType.isScalableVT()) {
     const int NumElements = ExtendType.getVectorNumElements();
     SmallBitVector UsedElements(NumElements, false);
-    for (auto UI = Extend.getNode()->use_begin(),
-              UE = Extend.getNode()->use_end();
-         UI != UE; ++UI) {
-      SDNode *User = UI->getUser();
+    for (SDNode *User : Extend.getNode()->users()) {
       if (User->getOpcode() == ISD::VECTOR_SHUFFLE &&
           User->getOperand(0) == Extend) {
         ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(User)->getMask();

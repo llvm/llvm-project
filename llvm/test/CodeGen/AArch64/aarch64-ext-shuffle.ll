@@ -32,16 +32,16 @@ define <4 x i32> @ext_shuffle_v4i16_v4i32(<4 x i16> %l, <4 x i32> %a, <4 x i32> 
 ; CHECK-GI-NEXT:    sub v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
   %lanes = sext <4 x i16> %l to <4 x i32>
-  %shf0 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> zeroinitializer
+  %shf0 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> zeroinitializer
   %mul0 = mul <4 x i32> %shf0, %a
   %add0 = add <4 x i32> %mul0, %b
-  %shf1 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %shf1 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %mul1 = mul <4 x i32> %shf1, %a
   %add1 = add <4 x i32> %mul1, %b
-  %shf2 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %shf2 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   %mul2 = mul <4 x i32> %shf2, %a
   %add2 = add <4 x i32> %mul2, %b
-  %shf3 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %shf3 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %mul3 = mul <4 x i32> %shf3, %a
   %add3 = add <4 x i32> %mul3, %b
   %sub1 = sub <4 x i32> %add0, %add1
@@ -81,13 +81,13 @@ define <4 x i32> @ext_shuffle_v4i16_v4i32_partial(<4 x i16> %l, <4 x i32> %a, <4
 ; CHECK-GI-NEXT:    sub v0.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    ret
   %lanes = sext <4 x i16> %l to <4 x i32>
-  %shf0 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> zeroinitializer
+  %shf0 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> zeroinitializer
   %mul0 = mul <4 x i32> %shf0, %a
   %add0 = add <4 x i32> %mul0, %b
-  %shf1 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %shf1 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %mul1 = mul <4 x i32> %shf1, %a
   %add1 = add <4 x i32> %mul1, %b
-  %shf2 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %shf2 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   %mul2 = mul <4 x i32> %shf2, %a
   %add2 = add <4 x i32> %mul2, %b
   %sub1 = sub <4 x i32> %add0, %add1
@@ -128,13 +128,13 @@ define <4 x i32> @ext_shuffle_v4i16_v4i32_add(<4 x i16> %l, <4 x i32> %a, <4 x i
 ; CHECK-GI-NEXT:    sub v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    ret
   %lanes = sext <4 x i16> %l to <4 x i32>
-  %shf0 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> zeroinitializer
+  %shf0 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> zeroinitializer
   %add0 = add <4 x i32> %shf0, %b
-  %shf1 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %shf1 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %add1 = add <4 x i32> %shf1, %b
-  %shf2 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %shf2 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   %add2 = add <4 x i32> %shf2, %b
-  %shf3 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %shf3 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %add3 = add <4 x i32> %shf3, %b
   %sub1 = sub <4 x i32> %add0, %add1
   %sub2 = sub <4 x i32> %add2, %add3
@@ -159,7 +159,7 @@ define <4 x i32> @ext_shuffle_v4i16_v4i32_one(<4 x i16> %l, <4 x i32> %a, <4 x i
 ; CHECK-GI-NEXT:    mla v0.4s, v1.4s, v3.s[3]
 ; CHECK-GI-NEXT:    ret
   %lanes = sext <4 x i16> %l to <4 x i32>
-  %shf3 = shufflevector <4 x i32> %lanes, <4 x i32> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %shf3 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %mul3 = mul <4 x i32> %shf3, %a
   %add3 = add <4 x i32> %mul3, %b
   ret <4 x i32> %add3
