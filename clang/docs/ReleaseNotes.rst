@@ -563,6 +563,8 @@ Improvements to Clang's diagnostics
 - Fixed a crash when checking a ``__thread``-specified variable declaration
   with a dependent type in C++. (#GH140509)
 
+- Clang now suggests corrections for unknown attribute names.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
