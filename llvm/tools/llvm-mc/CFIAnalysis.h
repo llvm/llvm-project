@@ -51,18 +51,22 @@ private:
   // not consider that a register spilling.
   bool isSuperReg(MCPhysReg Reg) { return MCRI->superregs(Reg).empty(); }
 
-  std::set<MCPhysReg> getAllSuperRegs() {
-    std::set<MCPhysReg> SuperRegs;
+  std::vector<std::pair<MCPhysReg, MCRegisterClass const *>> getAllSuperRegs() {
+    std::map<MCPhysReg, MCRegisterClass const *> SuperRegs;
     for (auto &&RegClass : MCRI->regclasses()) {
       for (unsigned I = 0; I < RegClass.getNumRegs(); I++) {
         MCPhysReg Reg = RegClass.getRegister(I);
         if (!isSuperReg(Reg))
           continue;
-        SuperRegs.insert(Reg);
+        SuperRegs[Reg] = &RegClass;
       }
     }
 
-    return SuperRegs;
+    std::vector<std::pair<MCPhysReg, MCRegisterClass const *>>
+        SuperRegWithClass;
+    for (auto &&[Reg, RegClass] : SuperRegs)
+      SuperRegWithClass.emplace_back(Reg, RegClass);
+    return SuperRegWithClass;
   }
 
   MCPhysReg getSuperReg(MCPhysReg Reg) {
@@ -83,22 +87,28 @@ public:
       : Context(Context), MCII(MCII), MCRI(Context.getRegisterInfo()) {
     EMCIA.reset(new ExtendedMCInstrAnalysis(Context, MCII, MCIA));
 
-    // TODO CFA offset should be the slot size, but for now I don't have any
-    // access to it, maybe can be read from the prologue
+    MCPhysReg StackPointer = EMCIA->getStackPointer();
+
     // TODO check what should be passed as EH?
-    State = CFIState(MCRI->getDwarfRegNum(EMCIA->getStackPointer(), false), 8);
-    for (MCPhysReg I : getAllSuperRegs()) {
-      DWARFRegType DwarfI = MCRI->getDwarfRegNum(I, false);
-      State.RegisterCFIStates[DwarfI] = RegisterCFIState::createSameValue();
+    State = CFIState(MCRI->getDwarfRegNum(StackPointer, false), 0);
+    for (auto &&[Reg, RegClass] : getAllSuperRegs()) {
+      if (MCRI->get(Reg).IsArtificial || MCRI->get(Reg).IsConstant)
+        continue;
+
+      if (Reg == StackPointer)
+        State.CFAOffset = RegClass->getSizeInBits() / 8;
+
+      DWARFRegType DwarfReg = MCRI->getDwarfRegNum(Reg, false);
+      State.RegisterCFIStates[DwarfReg] = RegisterCFIState::createSameValue();
     }
 
     // TODO these are temporay added to make things work.
     // Setup the basic information:
     State.RegisterCFIStates[MCRI->getDwarfRegNum(MCRI->getProgramCounter(),
                                                  false)] =
-        RegisterCFIState::createUndefined(); // For now, we don't care about the
-                                             // PC
-    State.RegisterCFIStates[MCRI->getDwarfRegNum(EMCIA->getStackPointer(),
+        RegisterCFIState::createUndefined(); // TODO for now, we don't care
+                                             // about the PC
+    State.RegisterCFIStates[MCRI->getDwarfRegNum(StackPointer,
                                                  false)] =
         RegisterCFIState::createOffsetFromCFAVal(0); // sp's old value is CFA
 
@@ -169,8 +179,6 @@ private:
 
     auto &&PrevRefReg =
         PrevState.getReferenceRegisterForCallerValueOfRegister(Reg);
-    auto &&NextRefReg =
-        NextState.getReferenceRegisterForCallerValueOfRegister(Reg);
 
     std::optional<MCPhysReg> PrevRefRegLLVM =
         (PrevRefReg != std::nullopt
@@ -189,64 +197,6 @@ private:
     { // try generate
       // Widen
       std::vector<RegisterCFIState> PossibleNextRegStates;
-      { // storing to offset from CFA
-        if (PrevRegState.RetrieveApproach == RegisterCFIState::SameValue ||
-            PrevRegState.RetrieveApproach ==
-                RegisterCFIState::AnotherRegister) {
-          int64_t OffsetFromCFAReg;
-          if (EMCIA->doStoreFromReg(Inst, PrevRefRegLLVM.value(),
-                                    PrevStateCFARegLLVM, OffsetFromCFAReg)) {
-            PossibleNextRegStates.push_back(
-                RegisterCFIState::createOffsetFromCFAAddr(OffsetFromCFAReg -
-                                                          PrevState.CFAOffset));
-          }
-        }
-      }
-
-      { // loading from an offset from CFA
-        if (PrevRegState.RetrieveApproach ==
-            RegisterCFIState::OffsetFromCFAAddr) {
-          int64_t OffsetFromCFAReg;
-          MCPhysReg ToRegLLVM;
-          if (EMCIA->doLoadFromReg(Inst, PrevStateCFARegLLVM, OffsetFromCFAReg,
-                                   ToRegLLVM) &&
-              OffsetFromCFAReg - PrevState.CFAOffset ==
-                  PrevRegState.Info.OffsetFromCFA) {
-            DWARFRegType ToReg = MCRI->getDwarfRegNum(ToRegLLVM, false);
-            if (ToReg == Reg) {
-              PossibleNextRegStates.push_back(
-                  RegisterCFIState::createSameValue());
-            } else {
-              PossibleNextRegStates.push_back(
-                  RegisterCFIState::createAnotherRegister(ToReg));
-            }
-          }
-        }
-      }
-
-      { // moved from reg to other reg
-        if (PrevRegState.RetrieveApproach == RegisterCFIState::SameValue ||
-            PrevRegState.RetrieveApproach ==
-                RegisterCFIState::AnotherRegister) {
-
-          int Diff;
-          MCPhysReg PossibleRegLLVM;
-          if (EMCIA->isInConstantDistanceOfEachOther(
-                  Inst, PossibleRegLLVM, PrevRefRegLLVM.value(), Diff)) {
-            DWARFRegType PossibleReg =
-                MCRI->getDwarfRegNum(PossibleRegLLVM, false);
-            if (Diff == 0) {
-              if (PossibleReg == Reg) {
-                PossibleNextRegStates.push_back(
-                    RegisterCFIState::createSameValue());
-              } else {
-                PossibleNextRegStates.push_back(
-                    RegisterCFIState::createAnotherRegister(PossibleReg));
-              }
-            }
-          }
-        }
-      }
 
       { // stay the same
         bool CanStayTheSame = false;
@@ -342,71 +292,18 @@ private:
                     const CFIState &NextState,
                     const std::set<DWARFRegType> &Reads,
                     const std::set<DWARFRegType> &Writes) {
-    MCPhysReg PrevCFAPhysReg =
-        MCRI->getLLVMRegNum(PrevState.CFARegister, false).value();
-    MCPhysReg NextCFAPhysReg =
-        MCRI->getLLVMRegNum(NextState.CFARegister, false).value();
-
-    { // try generate
-      // Widen
-      std::vector<std::pair<DWARFRegType, int>> PossibleNextCFAStates;
-      { // no change
-        if (!Writes.count(PrevState.CFARegister)) {
-          PossibleNextCFAStates.emplace_back(PrevState.CFARegister,
-                                             PrevState.CFAOffset);
-        }
-      }
-
-      { // const change
-        int64_t HowMuch;
-        if (EMCIA->doesConstantChange(Inst, PrevCFAPhysReg, HowMuch)) {
-          PossibleNextCFAStates.emplace_back(PrevState.CFARegister,
-                                             PrevState.CFAOffset - HowMuch);
-        }
-      }
-
-      { // constant distance with each other
-        int Diff;
-        MCPhysReg PossibleNewCFAReg;
-        if (EMCIA->isInConstantDistanceOfEachOther(Inst, PossibleNewCFAReg,
-                                                   PrevCFAPhysReg, Diff)) {
-          PossibleNextCFAStates.emplace_back(
-              MCRI->getDwarfRegNum(PossibleNewCFAReg, false),
-              PrevState.CFAOffset - Diff);
-        }
-      }
-
-      for (auto &&[PossibleNextCFAReg, PossibleNextCFAOffset] :
-           PossibleNextCFAStates) {
-        if (PossibleNextCFAReg != NextState.CFARegister)
-          continue;
-
-        if (PossibleNextCFAOffset == NextState.CFAOffset) {
-          // Everything is ok!
-          return;
-        }
-
-        Context.reportError(Inst.getLoc(),
-                            formatv("Expected CFA [reg: {0}, offset: {1}] but "
-                                    "got [reg: {2}, offset: {3}].",
-                                    NextCFAPhysReg, PossibleNextCFAOffset,
-                                    NextCFAPhysReg, NextState.CFAOffset));
-        return;
-      }
-    }
-
-    // Either couldn't generate, or did, but the programmer wants to change
-    // the source of register for CFA to something not expected by the
-    // generator. So it falls back into read/write checks.
+    const char *PrevCFARegName = MCRI->getName(
+        MCRI->getLLVMRegNum(PrevState.CFARegister, false).value());
 
     if (PrevState.CFARegister == NextState.CFARegister) {
       if (PrevState.CFAOffset == NextState.CFAOffset) {
         if (Writes.count(PrevState.CFARegister)) {
           Context.reportError(
               Inst.getLoc(),
-              formatv("This instruction changes reg#{0}, which is "
-                      "the CFA register, but the CFI directives do not.",
-                      PrevCFAPhysReg));
+              formatv(
+                  "Missing CFI directive for the CFA offset adjustment. CFA "
+                  "register ({0}) is modified by this instruction.",
+                  PrevCFARegName));
           return;
         }
 
@@ -418,25 +315,17 @@ private:
       if (!Writes.count(PrevState.CFARegister)) {
         Context.reportError(
             Inst.getLoc(),
-            formatv(
-                "You changed the CFA offset, but there is no modification to "
-                "the CFA register happening in this instruction."));
+            formatv("Wrong adjustment to CFA offset. CFA register ({0}) is not "
+                    "modified by this instruction.",
+                    PrevCFARegName));
       }
 
-      Context.reportWarning(
-          Inst.getLoc(),
-          "I don't know what the instruction did, but it changed the CFA "
-          "reg's "
-          "value, and the offset is changed as well by the CFI directives.");
-      // Everything may be ok!
+      // The CFA register value is changed, and the offset is changed as well,
+      // everything may be ok.
       return;
     }
-    // The CFA register is changed
-    Context.reportWarning(
-        Inst.getLoc(), "The CFA register is changed to something, and I don't "
-                       "have any idea on the new register relevance to CFA. I "
-                       "assume CFA is preserved.");
-    // Everything may be ok!
+
+    // The CFA register is changed, everything may be ok.
   }
 };
 
