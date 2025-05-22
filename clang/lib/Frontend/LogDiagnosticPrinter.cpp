@@ -18,10 +18,9 @@ using namespace clang;
 using namespace markup;
 
 LogDiagnosticPrinter::LogDiagnosticPrinter(
-    raw_ostream &os, DiagnosticOptions &DiagOpts,
+    raw_ostream &os, DiagnosticOptions &,
     std::unique_ptr<raw_ostream> StreamOwner)
-    : OS(os), StreamOwner(std::move(StreamOwner)), LangOpts(nullptr),
-      DiagOpts(DiagOpts) {}
+    : OS(os), StreamOwner(std::move(StreamOwner)), LangOpts(nullptr) {}
 
 static StringRef getLevelName(DiagnosticsEngine::Level Level) {
   switch (Level) {
