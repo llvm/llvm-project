@@ -324,6 +324,13 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   for (unsigned E = TypeList->size(); Idx < E; ++Idx)
     IS.ParamTys.push_back(TypeList->getElementAsRecord(Idx));
 
+  // Apply default properties, unless they are disabled.
+  ArrayRef<const Record *> DefaultProperties(Ctx.DefaultProperties);
+  if (TheDef->getValueAsBit("DisableDefaultAttributes"))
+    DefaultProperties = {};
+  for (const Record *Property : DefaultProperties)
+    setProperty(Property);
+
   // Parse the intrinsic properties.
   const ListInit *PropList = R->getValueAsListInit("IntrProperties");
   for (unsigned i = 0, e = PropList->size(); i != e; ++i) {
@@ -331,11 +338,13 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
     assert(Property->isSubClassOf("IntrinsicProperty") &&
            "Expected a property!");
 
+    if (is_contained(DefaultProperties, Property)) {
+      PrintWarning(TheDef->getLoc(), "property '" + Property->getName() +
+                                         "' is already enabled by default");
+    }
+
     setProperty(Property);
   }
-
-  // Set default properties to true.
-  setDefaultProperties(Ctx.DefaultProperties);
 
   // Also record the SDPatternOperator Properties.
   Properties = parseSDPatternOperatorProperties(R);
@@ -343,16 +352,6 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   // Sort the argument attributes for later benefit.
   for (auto &Attrs : ArgumentAttributes)
     llvm::sort(Attrs);
-}
-
-void CodeGenIntrinsic::setDefaultProperties(
-    ArrayRef<const Record *> DefaultProperties) {
-  // opt-out of using default attributes.
-  if (TheDef->getValueAsBit("DisableDefaultAttributes"))
-    return;
-
-  for (const Record *Rec : DefaultProperties)
-    setProperty(Rec);
 }
 
 void CodeGenIntrinsic::setProperty(const Record *R) {
