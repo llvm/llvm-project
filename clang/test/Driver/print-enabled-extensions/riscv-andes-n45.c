@@ -22,7 +22,8 @@
 // CHECK-NEXT:     zba                  1.0       'Zba' (Address Generation Instructions)
 // CHECK-NEXT:     zbb                  1.0       'Zbb' (Basic Bit-Manipulation)
 // CHECK-NEXT:     zbs                  1.0       'Zbs' (Single-Bit Instructions)
+// CHECK-NEXT:     xandesperf           5.0       'XAndesPerf' (Andes Performance Extension)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
 // CHECK-EMPTY:
-// CHECK-NEXT: ISA String: rv32i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zcf1p0_zba1p0_zbb1p0_zbs1p0
+// CHECK-NEXT: ISA String: rv32i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zcf1p0_zba1p0_zbb1p0_zbs1p0_xandesperf5p0
