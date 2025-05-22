@@ -1923,8 +1923,8 @@ def : Pat<(i32 (atomic_load_azext_8 ADDRrr:$src)), (LDUBrr ADDRrr:$src)>;
 def : Pat<(i32 (atomic_load_azext_8 ADDRri:$src)), (LDUBri ADDRri:$src)>;
 def : Pat<(i32 (atomic_load_azext_16 ADDRrr:$src)), (LDUHrr ADDRrr:$src)>;
 def : Pat<(i32 (atomic_load_azext_16 ADDRri:$src)), (LDUHri ADDRri:$src)>;
-def : Pat<(i32 (atomic_load_32 ADDRrr:$src)), (LDrr ADDRrr:$src)>;
-def : Pat<(i32 (atomic_load_32 ADDRri:$src)), (LDri ADDRri:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 ADDRrr:$src)), (LDrr ADDRrr:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 ADDRri:$src)), (LDri ADDRri:$src)>;
 
 // atomic_store val, addr -> store val, addr
 def : Pat<(atomic_store_8 i32:$val, ADDRrr:$dst), (STBrr ADDRrr:$dst, $val)>;

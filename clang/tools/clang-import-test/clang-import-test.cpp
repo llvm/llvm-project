@@ -208,7 +208,7 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
   Ins->setInvocation(std::move(Inv));
 
   TargetInfo *TI = TargetInfo::CreateTargetInfo(
-      Ins->getDiagnostics(), Ins->getInvocation().TargetOpts);
+      Ins->getDiagnostics(), Ins->getInvocation().getTargetOpts());
   Ins->setTarget(TI);
   Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts());
   Ins->createFileManager();

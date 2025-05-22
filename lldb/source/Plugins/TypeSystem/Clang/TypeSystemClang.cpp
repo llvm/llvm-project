@@ -744,7 +744,7 @@ TargetInfo *TypeSystemClang::getTargetInfo() {
   // target_triple should be something like "x86_64-apple-macosx"
   if (m_target_info_up == nullptr && !m_target_triple.empty())
     m_target_info_up.reset(TargetInfo::CreateTargetInfo(
-        getASTContext().getDiagnostics(), getTargetOptions()));
+        getASTContext().getDiagnostics(), *getTargetOptions()));
   return m_target_info_up.get();
 }
 

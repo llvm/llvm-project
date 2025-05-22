@@ -418,7 +418,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   NamedDecl *IIDecl = nullptr;
   UsingShadowDecl *FoundUsingShadow = nullptr;
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     if (CorrectedII) {
       TypeNameValidatorCCC CCC(/*AllowInvalid=*/true, isClassName,
                                AllowDeducedTemplate);
@@ -460,7 +460,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     }
     Result.suppressDiagnostics();
     return nullptr;
-  case LookupResult::NotFoundInCurrentInstantiation:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
     if (AllowImplicitTypename == ImplicitTypenameContext::Yes) {
       QualType T = Context.getDependentNameType(ElaboratedTypeKeyword::None,
                                                 SS->getScopeRep(), &II);
@@ -472,18 +472,18 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
       return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
     }
     [[fallthrough]];
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
     Result.suppressDiagnostics();
     return nullptr;
 
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Ambiguous:
     // Recover from type-hiding ambiguities by hiding the type.  We'll
     // do the lookup again when looking for an object, and we can
     // diagnose the error then.  If we don't do this, then the error
     // about hiding the type will be immediately followed by an error
     // that only makes sense if the identifier was treated like a type.
-    if (Result.getAmbiguityKind() == LookupResult::AmbiguousTagHiding) {
+    if (Result.getAmbiguityKind() == LookupAmbiguityKind::AmbiguousTagHiding) {
       Result.suppressDiagnostics();
       return nullptr;
     }
@@ -521,7 +521,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     // perform the name lookup again.
     break;
 
-  case LookupResult::Found:
+  case LookupResultKind::Found:
     IIDecl = Result.getFoundDecl();
     FoundUsingShadow = dyn_cast<UsingShadowDecl>(*Result.begin());
     break;
@@ -657,7 +657,7 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
   LookupResult R(*this, &II, SourceLocation(), LookupTagName);
   LookupName(R, S, false);
   R.suppressDiagnostics();
-  if (R.getResultKind() == LookupResult::Found)
+  if (R.getResultKind() == LookupResultKind::Found)
     if (const TagDecl *TD = R.getAsSingle<TagDecl>()) {
       switch (TD->getTagKind()) {
       case TagTypeKind::Struct:
@@ -926,7 +926,7 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
 
 Corrected:
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     // If an unqualified-id is followed by a '(', then we have a function
     // call.
     if (SS.isEmpty() && NextToken.is(tok::l_paren)) {
@@ -1043,7 +1043,7 @@ Corrected:
     Result.suppressDiagnostics();
     return NameClassification::Unknown();
 
-  case LookupResult::NotFoundInCurrentInstantiation: {
+  case LookupResultKind::NotFoundInCurrentInstantiation: {
     // We performed name lookup into the current instantiation, and there were
     // dependent bases, so we treat this result the same way as any other
     // dependent nested-name-specifier.
@@ -1061,12 +1061,12 @@ Corrected:
     return NameClassification::DependentNonType();
   }
 
-  case LookupResult::Found:
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
+  case LookupResultKind::Found:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
     break;
 
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Ambiguous:
     if (getLangOpts().CPlusPlus && NextToken.is(tok::less) &&
         hasAnyAcceptableTemplateNames(Result, /*AllowFunctionTemplates=*/true,
                                       /*AllowDependent=*/false)) {
@@ -1498,11 +1498,11 @@ static bool AllowOverloadingOfFunction(const LookupResult &Previous,
   // to check at least two; hence the 'any_of' check below. Note that
   // the overloadable attribute is implicitly added to declarations
   // that were required to have it but did not.
-  if (Previous.getResultKind() == LookupResult::FoundOverloaded) {
+  if (Previous.getResultKind() == LookupResultKind::FoundOverloaded) {
     return llvm::any_of(Previous, [](const NamedDecl *ND) {
       return ND->hasAttr<OverloadableAttr>();
     });
-  } else if (Previous.getResultKind() == LookupResult::Found)
+  } else if (Previous.getResultKind() == LookupResultKind::Found)
     return Previous.getFoundDecl()->hasAttr<OverloadableAttr>();
 
   return false;
@@ -8290,7 +8290,7 @@ static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
 static bool shouldWarnIfShadowedDecl(const DiagnosticsEngine &Diags,
                                      const LookupResult &R) {
   // Only diagnose if we're shadowing an unambiguous field or variable.
-  if (R.getResultKind() != LookupResult::Found)
+  if (R.getResultKind() != LookupResultKind::Found)
     return false;
 
   // Return false if warning is ignored.
@@ -10504,7 +10504,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // Recover gracefully from an invalid redeclaration.
       D.setRedeclaration(true);
     assert((NewFD->isInvalidDecl() || !D.isRedeclaration() ||
-            Previous.getResultKind() != LookupResult::FoundOverloaded) &&
+            Previous.getResultKind() != LookupResultKind::FoundOverloaded) &&
            "previous declaration set still overloaded");
 
     // Diagnose no-prototype function declarations with calling conventions that
@@ -10671,7 +10671,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     assert((NewFD->isInvalidDecl() || NewFD->isMultiVersion() ||
             !D.isRedeclaration() ||
-            Previous.getResultKind() != LookupResult::FoundOverloaded) &&
+            Previous.getResultKind() != LookupResultKind::FoundOverloaded) &&
            "previous declaration set still overloaded");
 
     NamedDecl *PrincipalDecl = (FunctionTemplate
@@ -17567,6 +17567,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       // parsing of the struct).
       if (TUK == TagUseKind::Definition &&
           (!SkipBody || !SkipBody->ShouldSkip)) {
+        if (LangOpts.HLSL)
+          RD->addAttr(PackedAttr::CreateImplicit(Context));
         AddAlignmentAttributesForRecord(RD);
         AddMsStructLayoutForRecord(RD);
       }
@@ -18257,6 +18259,8 @@ CreateNewDecl:
     // the #pragma tokens are effectively skipped over during the
     // parsing of the struct).
     if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
+      if (LangOpts.HLSL)
+        RD->addAttr(PackedAttr::CreateImplicit(Context));
       AddAlignmentAttributesForRecord(RD);
       AddMsStructLayoutForRecord(RD);
     }
@@ -18679,19 +18683,19 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
                         RedeclarationKind::ForVisibleRedeclaration);
   LookupName(Previous, S);
   switch (Previous.getResultKind()) {
-    case LookupResult::Found:
-    case LookupResult::FoundUnresolvedValue:
-      PrevDecl = Previous.getAsSingle<NamedDecl>();
-      break;
+  case LookupResultKind::Found:
+  case LookupResultKind::FoundUnresolvedValue:
+    PrevDecl = Previous.getAsSingle<NamedDecl>();
+    break;
 
-    case LookupResult::FoundOverloaded:
-      PrevDecl = Previous.getRepresentativeDecl();
-      break;
+  case LookupResultKind::FoundOverloaded:
+    PrevDecl = Previous.getRepresentativeDecl();
+    break;
 
-    case LookupResult::NotFound:
-    case LookupResult::NotFoundInCurrentInstantiation:
-    case LookupResult::Ambiguous:
-      break;
+  case LookupResultKind::NotFound:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
+  case LookupResultKind::Ambiguous:
+    break;
   }
   Previous.suppressDiagnostics();
 

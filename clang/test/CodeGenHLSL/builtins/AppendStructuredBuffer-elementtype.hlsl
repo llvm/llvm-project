@@ -19,7 +19,7 @@ struct MyStruct {
 // DXIL: %"class.hlsl::AppendStructuredBuffer.10" = type { target("dx.RawBuffer", <2 x half>, 1, 0)
 // DXIL: %"class.hlsl::AppendStructuredBuffer.11" = type { target("dx.RawBuffer", <3 x float>, 1, 0)
 // DXIL: %"class.hlsl::AppendStructuredBuffer.12" = type { target("dx.RawBuffer", %struct.MyStruct, 1, 0)
-// DXIL: %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }
+// DXIL: %struct.MyStruct = type <{ <4 x float>, <2 x i32> }>
 // DXIL: %"class.hlsl::AppendStructuredBuffer.13" = type { target("dx.RawBuffer", i32, 1, 0)
 // DXIL: %"class.hlsl::AppendStructuredBuffer.14" = type { target("dx.RawBuffer", <4 x i32>, 1, 0)
 

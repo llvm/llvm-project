@@ -292,18 +292,18 @@ def CIR_ArrayType : CIR_Type<"Array", "array",
     `CIR.array` represents C/C++ constant arrays.
   }];
 
-  let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
+  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$eltType, "uint64_t":$size
+      "mlir::Type":$elementType, "uint64_t":$size
     ), [{
-        return $_get(eltType.getContext(), eltType, size);
+        return $_get(elementType.getContext(), elementType, size);
     }]>,
   ];
 
   let assemblyFormat = [{
-    `<` $eltType `x` $size `>`
+    `<` $elementType `x` $size `>`
   }];
 }
 
