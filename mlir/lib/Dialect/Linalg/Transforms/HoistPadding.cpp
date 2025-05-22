@@ -124,10 +124,13 @@ static void computeBackwardSlice(tensor::PadOp padOp,
   getUsedValuesDefinedAbove(padOp.getRegion(), padOp.getRegion(),
                             valuesDefinedAbove);
   for (Value v : valuesDefinedAbove) {
-    getBackwardSlice(v, &backwardSlice, sliceOptions);
+    LogicalResult result = getBackwardSlice(v, &backwardSlice, sliceOptions);
+    assert(result.succeeded() && "expected a backward slice");
   }
   // Then, add the backward slice from padOp itself.
-  getBackwardSlice(padOp.getOperation(), &backwardSlice, sliceOptions);
+  LogicalResult result =
+      getBackwardSlice(padOp.getOperation(), &backwardSlice, sliceOptions);
+  assert(result.succeeded() && "expected a backward slice");
 }
 
 //===----------------------------------------------------------------------===//

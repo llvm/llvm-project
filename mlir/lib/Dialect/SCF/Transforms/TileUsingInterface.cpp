@@ -1772,7 +1772,8 @@ checkAssumptionForLoop(Operation *loopOp, Operation *consumerOp,
   };
   llvm::SetVector<Operation *> slice;
   for (auto operand : consumerOp->getOperands()) {
-    getBackwardSlice(operand, &slice, options);
+    LogicalResult result = getBackwardSlice(operand, &slice, options);
+    assert(result.succeeded() && "expected a backward slice");
   }
 
   if (!slice.empty()) {
