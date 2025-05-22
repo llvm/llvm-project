@@ -15,18 +15,14 @@
 #ifndef LLVM_OBJECTYAML_DXCONTAINERYAML_H
 #define LLVM_OBJECTYAML_DXCONTAINERYAML_H
 
-#include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <array>
-#include <cstdint>
 #include <optional>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace llvm {

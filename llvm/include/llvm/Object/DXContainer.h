@@ -20,11 +20,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <variant>
 
 namespace llvm {
@@ -40,7 +41,6 @@ template <typename T>
 std::enable_if_t<std::is_class<T>::value, void> swapBytes(T &value) {
   value.swapBytes();
 }
-
 } // namespace detail
 
 // This class provides a view into the underlying resource array. The Resource
@@ -127,16 +127,13 @@ struct RootParameterView {
   RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
       : Header(H), ParamData(P) {}
 
-  template <typename T, typename VersionT = T> Expected<T> readParameter() {
-    assert(sizeof(VersionT) <= sizeof(T) &&
-           "Parameter of higher version must inherit all previous version data "
-           "members");
-    if (sizeof(VersionT) != ParamData.size())
+  template <typename T> Expected<T> readParameter() {
+    T Struct;
+    if (sizeof(T) != ParamData.size())
       return make_error<GenericBinaryError>(
           "Reading structure out of file bounds", object_error::parse_failed);
 
-    T Struct;
-    memcpy(&Struct, ParamData.data(), sizeof(VersionT));
+    memcpy(&Struct, ParamData.data(), sizeof(T));
     // DXContainer is always little endian
     if (sys::IsBigEndianHost)
       Struct.swapBytes();

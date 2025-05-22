@@ -6,14 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include <cstddef>
 #include <cstdint>
-#include <optional>
-#include <utility>
-#include <variant>
+#include <limits>
 
 namespace llvm {
 

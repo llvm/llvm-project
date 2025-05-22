@@ -170,13 +170,6 @@ enum class RootParameterType : uint32_t {
 
 ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
-enum class DescriptorRangeType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
-
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
     return true;
