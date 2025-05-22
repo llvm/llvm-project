@@ -294,48 +294,12 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
                        Param.Data)) {
           auto DescriptorYaml =
               std::get<DXContainerYAML::RootDescriptorYaml>(Param.Data);
-
-          if (RS.Version == 1) {
-            dxbc::RST0::v0::RootDescriptor Descriptor;
-            Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
-            Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
-            RS.ParametersContainer.addParameter(Header, Descriptor);
-          } else {
-            dxbc::RST0::v1::RootDescriptor Descriptor;
-            Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
-            Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
+          dxbc::RTS0::v2::RootDescriptor Descriptor;
+          Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
+          Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
+          if (RS.Version > 1)
             Descriptor.Flags = DescriptorYaml.getEncodedFlags();
-            RS.ParametersContainer.addParameter(Header, Descriptor);
-          }
-        } else if (std::holds_alternative<DXContainerYAML::DescriptorTableYaml>(
-                       Param.Data)) {
-          mcdxbc::DescriptorTable Table;
-          auto TableYaml =
-              std::get<DXContainerYAML::DescriptorTableYaml>(Param.Data);
-
-          for (const auto &R : TableYaml.Ranges) {
-            if (RS.Version == 1) {
-              dxbc::RST0::v0::DescriptorRange Range;
-              Range.RangeType = R.RangeType;
-              Range.NumDescriptors = R.NumDescriptors;
-              Range.BaseShaderRegister = R.BaseShaderRegister;
-              Range.RegisterSpace = R.RegisterSpace;
-              Range.OffsetInDescriptorsFromTableStart =
-                  R.OffsetInDescriptorsFromTableStart;
-              Table.Ranges.push_back(Range);
-            } else {
-              dxbc::RST0::v1::DescriptorRange Range;
-              Range.RangeType = R.RangeType;
-              Range.NumDescriptors = R.NumDescriptors;
-              Range.BaseShaderRegister = R.BaseShaderRegister;
-              Range.RegisterSpace = R.RegisterSpace;
-              Range.OffsetInDescriptorsFromTableStart =
-                  R.OffsetInDescriptorsFromTableStart;
-              Range.Flags = R.getEncodedFlags();
-              Table.Ranges.push_back(Range);
-            }
-          }
-          RS.ParametersContainer.addParameter(Header, Table);
+          RS.ParametersContainer.addParameter(Header, Descriptor);
         } else {
           // Handling invalid parameter type edge case
           RS.ParametersContainer.addInfo(Header, -1);
