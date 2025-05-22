@@ -628,6 +628,7 @@ Bug Fixes in This Version
 - Fix crash due to unknown references and pointer implementation and handling of
   base classes. (GH139452)
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
+- Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -703,6 +704,7 @@ Bug Fixes to C++ Support
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
 - Fixed type alias CTAD issues involving default template arguments. (#GH134471)
+- Fixed CTAD issues when initializing anonymous fields with designated initializers. (#GH67173)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
@@ -741,7 +743,7 @@ Bug Fixes to C++ Support
   in a ``constexpr`` function. (#GH131432)
 - Fixed an incorrect TreeTransform for calls to ``consteval`` functions if a conversion template is present. (#GH137885)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
-- Fix missed initializer instantiation bug for variable templates. (#GH138122)
+- Fixed a missed initializer instantiation bug for variable templates. (#GH134526), (#GH138122)
 - Fix a crash when checking the template template parameters of a dependent lambda appearing in an alias declaration.
   (#GH136432), (#GH137014), (#GH138018)
 - Fixed an assertion when trying to constant-fold various builtins when the argument
@@ -760,6 +762,7 @@ Bug Fixes to C++ Support
   reference in its own initializer in C++23 mode (#GH131330).
 - Clang could incorrectly instantiate functions in discarded contexts (#GH140449)
 - Fix instantiation of default-initialized variable template specialization. (#GH140632) (#GH140622)
+- Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

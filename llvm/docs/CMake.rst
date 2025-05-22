@@ -733,7 +733,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   On Windows, allows embedding a different C runtime allocator into the LLVM
   tools and libraries. Using a lock-free allocator such as the ones listed below
   greatly decreases ThinLTO link time by about an order of magnitude. It also
-  midly improves Clang build times, by about 5-10%. At the moment, rpmalloc,
+  mildly improves Clang build times, by about 5-10%. At the moment, rpmalloc,
   snmalloc and mimalloc are supported. Use the path to `git clone` to select
   the respective allocator, for example:
 
