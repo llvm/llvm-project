@@ -129,7 +129,20 @@ public:
   /// check::PostCall
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const {}
 
-  /// Pre-visit of the condition statement of a branch (such as IfStmt).
+  /// Pre-visit of the condition statement of a branch.
+  /// For example:
+  ///  - logical operators (&&, ||)
+  ///  - if, do, while, for, ranged-for statements
+  ///  - ternary operators (?:), gnu conditionals, gnu choose expressions
+  /// Interestingly, switch statements don't seem to trigger BranchCondition.
+  ///
+  /// check::BlockEntrance is a similar callback, which is strictly more
+  /// generic. Prefer check::BranchCondition to check::BlockEntrance if
+  /// pre-visiting conditional statements is enough for the checker.
+  /// Note that check::BlockEntrance is also invoked for leaving basic blocks
+  /// while entering the next.
+  ///
+  /// check::BranchCondition
   void checkBranchCondition(const Stmt *Condition, CheckerContext &Ctx) const {}
 
   /// Post-visit the C++ operator new's allocation call.
@@ -173,6 +186,10 @@ public:
   /// Note that when inlining a call, there is no CFG edge between the caller
   /// and the callee. One will only see the edge between the entry block and
   /// the body of the function once inlined.
+  ///
+  /// check::BranchCondition is a similar callback, which is only invoked for
+  /// pre-visiting the condition statement of a branch. Prefer that callback if
+  /// possible.
   ///
   /// \param E The ProgramPoint that describes the transition.
   ///
