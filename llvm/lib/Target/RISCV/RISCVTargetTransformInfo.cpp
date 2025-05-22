@@ -300,12 +300,13 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
     TTI::PartialReductionExtendKind OpBExtend,
     std::optional<unsigned> BinOp) const {
 
-  // FIXME: Guard zve32x properly here
-  if (!ST->hasStdExtZvqdotq() || Opcode != Instruction::Add || !BinOp ||
-      *BinOp != Instruction::Mul || InputTypeA != InputTypeB ||
-      !InputTypeA->isIntegerTy(8) || OpAExtend != OpBExtend ||
-      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4) ||
-      !VF.isScalable())
+  // zve32x is broken for partial_reduce_umla, but let's make sure we
+  // don't generate them.
+  if (!ST->hasStdExtZvqdotq() || ST->getELen() < 64 ||
+      Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
+      InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
+      OpAExtend != OpBExtend || !AccumType->isIntegerTy(32) ||
+      !VF.isKnownMultipleOf(4) || !VF.isScalable())
     return InstructionCost::getInvalid();
 
   Type *Tp = VectorType::get(AccumType, VF);
