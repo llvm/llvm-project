@@ -20,6 +20,7 @@ class TestDAP_disassemble(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         source = "main.c"
+        self.source_path = os.path.join(os.getcwd(), source)
         self.set_source_breakpoints(source, [line_number(source, "// breakpoint 1")])
         self.continue_to_next_stop()
 
