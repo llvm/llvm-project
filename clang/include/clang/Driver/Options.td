@@ -4744,8 +4744,10 @@ def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
            " or precompiled headers">;
 def gno_modules : Flag <["-"], "gno-modules">, Group<g_flags_Group>;
 def gz_EQ : Joined<["-"], "gz=">, Group<g_flags_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"DWARF debug sections compression type">;
-def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>;
+def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Embed source text in DWARF debug sections">,
