@@ -83,8 +83,7 @@ struct CastOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto castOp = cast<tensor::CastOp>(op);
 
     // The result buffer still has the old (pre-cast) type.
@@ -163,8 +162,7 @@ struct CollapseShapeOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto collapseShapeOp = cast<tensor::CollapseShapeOp>(op);
     RankedTensorType tensorResultType = collapseShapeOp.getResultType();
     FailureOr<Value> maybeBuffer =
@@ -249,8 +247,7 @@ struct DimOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto dimOp = cast<tensor::DimOp>(op);
     FailureOr<Value> v = getBuffer(rewriter, dimOp.getSource(), options);
     if (failed(v))
@@ -274,8 +271,7 @@ struct EmptyOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto emptyOp = cast<tensor::EmptyOp>(op);
 
     // Optimization: Fold away the op if it has no uses.
@@ -333,8 +329,7 @@ struct ExpandShapeOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto expandShapeOp = cast<tensor::ExpandShapeOp>(op);
     auto tensorResultType = expandShapeOp.getResultType();
     FailureOr<Value> buffer =
@@ -372,8 +367,7 @@ struct ExtractSliceOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
     SmallVector<OpFoldResult> mixedOffsets = extractSliceOp.getMixedOffsets();
     SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
@@ -438,8 +432,7 @@ struct ExtractOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto extractOp = cast<tensor::ExtractOp>(op);
     FailureOr<Value> srcMemref =
         getBuffer(rewriter, extractOp.getTensor(), options);
@@ -481,8 +474,7 @@ struct FromElementsOpInterface
   bool bufferizesToAllocation(Operation *op, Value value) const { return true; }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto fromElementsOp = cast<tensor::FromElementsOp>(op);
     auto tensorType = cast<RankedTensorType>(fromElementsOp.getType());
 
@@ -594,8 +586,7 @@ struct GenerateOpInterface
   bool bufferizesToAllocation(Operation *op, Value value) const { return true; }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto generateOp = cast<tensor::GenerateOp>(op);
 
     auto type = generateOp.getResult().getType();
@@ -629,8 +620,7 @@ struct InsertOpInterface
     : public DstBufferizableOpInterfaceExternalModel<InsertOpInterface,
                                                      tensor::InsertOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto insertOp = cast<tensor::InsertOp>(op);
     FailureOr<Value> destMemref =
         getBuffer(rewriter, insertOp.getDest(), options);
@@ -680,8 +670,7 @@ struct InsertSliceOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     // insert_slice ops arise from tiling and bufferizing them out-of-place is
     // generally a deal breaker. When used with loops, this ends up cloning the
     // whole tensor on every single iteration and is a symptom of a
@@ -763,8 +752,7 @@ struct PadOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto padOp = cast<tensor::PadOp>(op);
     Location loc = padOp.getLoc();
     RankedTensorType resultType = padOp.getResultType();
@@ -843,8 +831,7 @@ struct RankOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto rankOp = cast<tensor::RankOp>(op);
     FailureOr<Value> v = getBuffer(rewriter, rankOp.getTensor(), options);
     if (failed(v))
@@ -881,8 +868,7 @@ struct ReshapeOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto reshapeOp = cast<tensor::ReshapeOp>(op);
     FailureOr<Value> srcBuffer =
         getBuffer(rewriter, reshapeOp.getSource(), options);
@@ -954,8 +940,7 @@ struct ParallelInsertSliceOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     OpBuilder::InsertionGuard g(rewriter);
     auto parallelInsertSliceOp = cast<ParallelInsertSliceOp>(op);
     ParallelCombiningOpInterface parallelCombiningParent =
@@ -1030,8 +1015,7 @@ struct SplatOpInterface
   bool bufferizesToAllocation(Operation *op, Value value) const { return true; }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     OpBuilder::InsertionGuard g(rewriter);
     auto splatOp = cast<tensor::SplatOp>(op);
 

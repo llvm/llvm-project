@@ -426,8 +426,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"::llvm::LogicalResult",
         /*methodName=*/"bufferize",
         /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
-                      "const ::mlir::bufferization::BufferizationOptions &":$options,
-                      "::mlir::bufferization::BufferizationState &":$state),
+                      "const ::mlir::bufferization::BufferizationOptions &":$options),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           llvm_unreachable("bufferize not implemented");

@@ -114,11 +114,8 @@ public:
       return false;
     });
 
-    bufferization::BufferizationState bufferizationState;
-
     if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
-                                                updatedOptions,
-                                                bufferizationState)))
+                                                updatedOptions)))
       return failure();
 
     bufferization::removeBufferizationAttributesInModule(getOperation());

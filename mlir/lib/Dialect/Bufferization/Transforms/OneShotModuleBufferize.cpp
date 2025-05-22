@@ -512,7 +512,7 @@ void mlir::bufferization::removeBufferizationAttributesInModule(
 
 LogicalResult mlir::bufferization::bufferizeModuleOp(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationState &state, BufferizationStatistics *statistics) {
+    BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
@@ -548,10 +548,10 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
       // Buffer copies must be inserted before every write.
       OneShotBufferizationOptions updatedOptions = options;
       updatedOptions.copyBeforeWrite = true;
-      if (failed(bufferizeOp(funcOp, updatedOptions, state, statistics)))
+      if (failed(bufferizeOp(funcOp, updatedOptions, statistics)))
         return failure();
     } else {
-      if (failed(bufferizeOp(funcOp, options, state, statistics)))
+      if (failed(bufferizeOp(funcOp, options, statistics)))
         return failure();
     }
 
@@ -565,7 +565,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
     // Functions were already bufferized.
     if (isa<func::FuncOp>(&op) || op.hasTrait<OpTrait::SymbolTable>())
       continue;
-    if (failed(bufferizeOp(&op, options, state, statistics)))
+    if (failed(bufferizeOp(&op, options, statistics)))
       return failure();
   }
 
@@ -577,7 +577,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
 
 LogicalResult mlir::bufferization::runOneShotModuleBufferize(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationState &state, BufferizationStatistics *statistics) {
+    BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
@@ -606,7 +606,7 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
   }
   if (options.testAnalysisOnly)
     return success();
-  if (failed(bufferizeModuleOp(moduleOp, options, state, statistics)))
+  if (failed(bufferizeModuleOp(moduleOp, options, statistics)))
     return failure();
   return success();
 }

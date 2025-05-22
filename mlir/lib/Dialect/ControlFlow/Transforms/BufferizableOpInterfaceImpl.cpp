@@ -43,8 +43,7 @@ struct BranchLikeOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     // The operands of this op are bufferized together with the block signature.
     return success();
   }
