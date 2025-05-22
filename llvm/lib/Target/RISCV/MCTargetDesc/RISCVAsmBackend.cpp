@@ -104,28 +104,6 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-// If linker relaxation is enabled, emit relocation to mark the instruction as
-// shrinkable by the linker.
-bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                            const MCFixup &Fixup,
-                                            const MCValue &Target,
-                                            const MCSubtargetInfo *STI) {
-  switch (Fixup.getTargetKind()) {
-  default:
-    break;
-  case FK_Data_1:
-  case FK_Data_2:
-  case FK_Data_4:
-  case FK_Data_8:
-  case FK_Data_leb128:
-    if (Target.isAbsolute())
-      return false;
-    break;
-  }
-
-  return Fixup.needsRelax();
-}
-
 bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                                    const MCFixup &Fixup,
                                                    const MCValue &,
@@ -674,14 +652,17 @@ bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
     return false;
   }
 
+  // If linker relaxation is enabled and supported by the current relocation,
+  // generate a relocation and then append a RELAX.
+  if (Fixup.needsRelax())
+    IsResolved = false;
   if (IsResolved &&
       (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
     IsResolved = isPCRelFixupResolved(Asm, Target.getAddSym(), F);
   IsResolved = MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
                                       IsResolved, STI);
-  // If linker relaxation is enabled and supported by the current relocation,
-  // append a RELAX relocation.
-  if (!IsResolved && Fixup.needsRelax()) {
+
+  if (Fixup.needsRelax()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
     Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
                                      FixedValueA);

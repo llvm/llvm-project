@@ -62,10 +62,6 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
-
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                     const MCFixup &, const MCValue &, uint64_t,
                                     bool) const override;
