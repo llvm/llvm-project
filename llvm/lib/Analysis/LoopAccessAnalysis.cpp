@@ -693,8 +693,7 @@ public:
   ///
   /// Returns true if we need no check or if we do and we can generate them
   /// (i.e. the pointers have computable bounds).
-  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
-                       Loop *TheLoop,
+  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, Loop *TheLoop,
                        const DenseMap<Value *, const SCEV *> &Strides,
                        Value *&UncomputablePtr);
 
@@ -1188,7 +1187,7 @@ bool AccessAnalysis::createCheckForAccess(
 }
 
 bool AccessAnalysis::canCheckPtrAtRT(
-    RuntimePointerChecking &RtCheck, ScalarEvolution *SE, Loop *TheLoop,
+    RuntimePointerChecking &RtCheck, Loop *TheLoop,
     const DenseMap<Value *, const SCEV *> &StridesMap,
     Value *&UncomputablePtr) {
   // Find pointers with computable bounds. We are going to use this information
@@ -2651,7 +2650,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
   bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
-      *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides, UncomputablePtr);
+      *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr);
   if (!CanDoRTIfNeeded) {
     const auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I)
@@ -2679,10 +2678,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       PtrRtChecking->reset();
       PtrRtChecking->Need = true;
 
-      auto *SE = PSE->getSE();
       UncomputablePtr = nullptr;
       CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
-          *PtrRtChecking, SE, TheLoop, SymbolicStrides, UncomputablePtr);
+          *PtrRtChecking, TheLoop, SymbolicStrides, UncomputablePtr);
 
       // Check that we found the bounds for the pointer.
       if (!CanDoRTIfNeeded) {
