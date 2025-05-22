@@ -2783,15 +2783,42 @@ static bool ignoreSignBitOfZero(Instruction &I) {
   if (!I.hasOneUse())
     return false;
   Instruction *User = I.user_back();
-
-  // fcmp treats both positive and negative zero as equal.
-  if (User->getOpcode() == Instruction::FCmp)
+  if (User->getOpcode() == Instruction::FPToSI ||
+      User->getOpcode() == Instruction::FPToUI)
     return true;
 
-  if (auto *FPOp = dyn_cast<FPMathOperator>(User))
-    return FPOp->hasNoSignedZeros();
+  if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
+    if (FPOp->hasNoSignedZeros())
+      return true;
+  }
 
-  return false;
+  switch (User->getOpcode()) {
+  case Instruction::FCmp:
+    // fcmp treats both positive and negative zero as equal.
+    return true;
+  case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(User)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::fabs:
+        return true;
+      case Intrinsic::copysign:
+        return II->getArgOperand(0) == &I;
+      case Intrinsic::is_fpclass:
+      case Intrinsic::vp_is_fpclass: {
+        auto Test =
+            static_cast<FPClassTest>(
+                cast<ConstantInt>(II->getArgOperand(1))->getZExtValue()) &
+            FPClassTest::fcZero;
+        return Test == FPClassTest::fcZero || Test == FPClassTest::fcNone;
+      }
+      default:
+        return false;
+      }
+    }
+    return false;
+  default:
+    return false;
+  }
 }
 
 /// Return true if the sign bit of result can be ignored when the result is NaN.
@@ -2804,14 +2831,68 @@ static bool ignoreSignBitOfNaN(Instruction &I) {
     return false;
   Instruction *User = I.user_back();
 
-  // fcmp ignores the sign bit of NaN.
-  if (User->getOpcode() == Instruction::FCmp)
+  if (User->getOpcode() == Instruction::FPToSI ||
+      User->getOpcode() == Instruction::FPToUI)
     return true;
 
-  if (auto *FPOp = dyn_cast<FPMathOperator>(User))
-    return FPOp->hasNoNaNs();
+  if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
+    if (FPOp->hasNoNaNs())
+      return true;
+  }
 
-  return false;
+  switch (User->getOpcode()) {
+  // Proper FP math operations ignore the sign bit of NaN.
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+  case Instruction::FCmp:
+    return true;
+  // Bitwise FP operations should preserve the sign bit of NaN.
+  case Instruction::FNeg:
+  case Instruction::Select:
+  case Instruction::PHI:
+    return false;
+  case Instruction::Call:
+  case Instruction::Invoke: {
+    if (auto *II = dyn_cast<IntrinsicInst>(User)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::fabs:
+        return true;
+      case Intrinsic::copysign:
+        return II->getArgOperand(0) == &I;
+      // Other proper FP math intrinsics ignore the sign bit of NaN.
+      case Intrinsic::maxnum:
+      case Intrinsic::minnum:
+      case Intrinsic::maximum:
+      case Intrinsic::minimum:
+      case Intrinsic::maximumnum:
+      case Intrinsic::minimumnum:
+      case Intrinsic::canonicalize:
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
+      case Intrinsic::sqrt:
+      case Intrinsic::pow:
+      case Intrinsic::powi:
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::fptosi_sat:
+      case Intrinsic::is_fpclass:
+        return true;
+      default:
+        return false;
+      }
+    }
+
+    FPClassTest NoFPClass = cast<CallBase>(User)->getParamNoFPClass(
+        I.uses().begin()->getOperandNo());
+    return NoFPClass & FPClassTest::fcNan;
+  }
+  default:
+    return false;
+  }
 }
 
 // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need

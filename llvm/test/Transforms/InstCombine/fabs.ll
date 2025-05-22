@@ -1329,12 +1329,9 @@ define float @test_fabs_fsub_used_by_fpop_nnan(float %x, float %y) {
   ret float %add
 }
 
-; TODO: fadd ignores the sign bit of NaN.
 define float @test_fabs_used_by_fpop_nsz(float %x, float %y) {
 ; CHECK-LABEL: @test_fabs_used_by_fpop_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd nsz float [[SEL]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
@@ -1345,13 +1342,9 @@ define float @test_fabs_used_by_fpop_nsz(float %x, float %y) {
   ret float %add
 }
 
-; TODO: copysign ignores the sign bit of NaN magnitude.
 define float @test_fabs_used_by_fcopysign_mag(float %x, float %y) {
 ; CHECK-LABEL: @test_fabs_used_by_fcopysign_mag(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X1:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X1]]
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[CMP]], float [[X1]], float [[NEG]]
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[X]], float [[Y:%.*]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00
@@ -1363,9 +1356,7 @@ define float @test_fabs_used_by_fcopysign_mag(float %x, float %y) {
 
 define float @test_fabs_nsz_used_by_canonicalize(float %x) {
 ; CHECK-LABEL: @test_fabs_nsz_used_by_canonicalize(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select nsz i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[SEL]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
@@ -1378,9 +1369,7 @@ define float @test_fabs_nsz_used_by_canonicalize(float %x) {
 
 define void @test_fabs_used_by_nofpclass_nan(float %x) {
 ; CHECK-LABEL: @test_fabs_used_by_nofpclass_nan(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select nsz i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    call void @use(float nofpclass(nan) [[SEL]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1393,9 +1382,7 @@ define void @test_fabs_used_by_nofpclass_nan(float %x) {
 
 define i32 @test_fabs_used_fptosi(float %x) {
 ; CHECK-LABEL: @test_fabs_used_fptosi(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[FPTOSI:%.*]] = fptosi float [[SEL]] to i32
 ; CHECK-NEXT:    ret i32 [[FPTOSI]]
 ;
@@ -1408,9 +1395,7 @@ define i32 @test_fabs_used_fptosi(float %x) {
 
 define i32 @test_fabs_used_fptoui(float %x) {
 ; CHECK-LABEL: @test_fabs_used_fptoui(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[FPTOSI:%.*]] = fptoui float [[SEL]] to i32
 ; CHECK-NEXT:    ret i32 [[FPTOSI]]
 ;
@@ -1423,9 +1408,7 @@ define i32 @test_fabs_used_fptoui(float %x) {
 
 define float @test_fabs_nsz_used_by_maxnum(float %x, float %y) {
 ; CHECK-LABEL: @test_fabs_nsz_used_by_maxnum(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select nsz i1 [[CMP]], float [[X]], float [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = call nsz float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[Y:%.*]], float [[SEL]])
 ; CHECK-NEXT:    ret float [[MAX]]
 ;
@@ -1438,10 +1421,7 @@ define float @test_fabs_nsz_used_by_maxnum(float %x, float %y) {
 
 define i1 @test_fabs_used_is_fpclass_pnorm_or_nan(float %x) {
 ; CHECK-LABEL: @test_fabs_used_is_fpclass_pnorm_or_nan(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[SEL]], i32 259)
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 267)
 ; CHECK-NEXT:    ret i1 [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00
@@ -1453,10 +1433,7 @@ define i1 @test_fabs_used_is_fpclass_pnorm_or_nan(float %x) {
 
 define i1 @test_fabs_used_is_fpclass_zero_or_pinf(float %x) {
 ; CHECK-LABEL: @test_fabs_used_is_fpclass_zero_or_pinf(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[SEL]], i32 608)
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 612)
 ; CHECK-NEXT:    ret i1 [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00
