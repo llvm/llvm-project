@@ -793,7 +793,7 @@ TEST(ClangToolTest, StripDependencyFileAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("-MD"));
   EXPECT_FALSE(HasFlag("-MMD"));
@@ -825,7 +825,7 @@ TEST(ClangToolTest, StripDependencyFileAdjusterShowIncludes) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("/showIncludes"));
   EXPECT_FALSE(HasFlag("/showIncludes:user"));
@@ -858,7 +858,7 @@ TEST(ClangToolTest, StripDependencyFileAdjusterMsvc) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_TRUE(HasFlag("-MD"));
   EXPECT_TRUE(HasFlag("-MDd"));
@@ -891,7 +891,7 @@ TEST(ClangToolTest, StripPluginsAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("-Xclang"));
   EXPECT_FALSE(HasFlag("-add-plugin"));
