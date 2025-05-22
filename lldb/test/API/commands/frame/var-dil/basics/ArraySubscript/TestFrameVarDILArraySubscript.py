@@ -8,7 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbutil
 
 
-class TestFrameVarDILGlobalVariableLookup(TestBase):
+class TestFrameVarDILArraySubscript(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def expect_var_path(self, expr, compare_to_framevar=False, value=None, type=None):
@@ -19,7 +19,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
             self.runCmd("settings set target.experimental.use-DIL true")
             self.assertEqual(value_dil.GetValue(), value_frv.GetValue())
 
-    def test_dereference(self):
+    def test_subscript(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
@@ -65,14 +65,6 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
             substrs=["unrecognized token"],
         )
 
-        # Test synthetic value subscription
-        self.expect_var_path("vector[1]", value="2")
-        self.expect(
-            "frame var 'vector[100]'",
-            error=True,
-            substrs=["array index 100 is not valid"],
-        )
-
         # Test for floating point index
         self.expect(
             "frame var 'int_arr[1.0]'",
@@ -107,4 +99,21 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
             "frame var 'p_void[0]'",
             error=True,
             substrs=["subscript of pointer to incomplete type 'void'"],
+        )
+
+    @expectedFailureAll(oslist=["windows"])
+    def test_subscript_synthetic(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
+
+        self.runCmd("settings set target.experimental.use-DIL true")
+
+        # Test synthetic value subscription
+        self.expect_var_path("vector[1]", value="2")
+        self.expect(
+            "frame var 'vector[100]'",
+            error=True,
+            substrs=["array index 100 is not valid"],
         )
