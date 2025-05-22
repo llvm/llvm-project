@@ -14,6 +14,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
@@ -293,6 +294,22 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           if (RS.Version > 1)
             Descriptor.Flags = DescriptorYaml->getEncodedFlags();
           RS.ParametersContainer.addParameter(Header, Descriptor);
+        } else if (auto *TableYaml = std::get_if<DXContainerYAML::DescriptorTableYaml>(&Param.Data)) {  
+          mcdxbc::DescriptorTable Table;
+          for (const auto &R : TableYaml->Ranges) {
+
+            dxbc::RTS0::v2::DescriptorRange Range;
+            Range.RangeType = R.RangeType;
+            Range.NumDescriptors = R.NumDescriptors;
+            Range.BaseShaderRegister = R.BaseShaderRegister;
+            Range.RegisterSpace = R.RegisterSpace;
+            Range.OffsetInDescriptorsFromTableStart =
+                R.OffsetInDescriptorsFromTableStart;
+            if (RS.Version > 1)
+              Range.Flags = R.getEncodedFlags();
+            Table.Ranges.push_back(Range);
+          }
+          RS.ParametersContainer.addParameter(Header, Table);
         } else {
           // Handling invalid parameter type edge case. We intentionally let
           // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order

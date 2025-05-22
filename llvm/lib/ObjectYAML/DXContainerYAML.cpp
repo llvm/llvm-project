@@ -158,6 +158,15 @@ uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
   return Flag;
 }
 
+uint32_t DXContainerYAML::DescriptorRangeYaml::getEncodedFlags() const {
+  uint64_t Flag = 0;
+#define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
+  if (Val)                                                                     \
+    Flag |= (uint32_t)dxbc::DescriptorRangeFlag::Val;
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  return Flag;
+}
+
 uint64_t DXContainerYAML::ShaderFeatureFlags::getEncodedFlags() {
   uint64_t Flag = 0;
 #define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
