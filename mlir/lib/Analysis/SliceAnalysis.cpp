@@ -96,7 +96,7 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
     if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
         return getBackwardSliceImpl(definingOp, backwardSlice, options)
-                         .succeeded();
+            .succeeded();
     } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
         return success();
@@ -132,10 +132,10 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
         for (OpOperand &operand : op->getOpOperands()) {
           if (!descendents.contains(operand.get().getParentRegion()))
             if (!processValue(operand.get()).succeeded()) {
-	      return WalkResult::interrupt();
-	    }
+              return WalkResult::interrupt();
+            }
         }
-	return WalkResult::advance();
+        return WalkResult::advance();
       });
     });
   }
