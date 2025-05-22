@@ -593,14 +593,12 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
       // Don't cluster scalar and vecter memory ops
       const MachineFunction &MF = *FirstLdSt.getParent()->getParent();
       const MachineRegisterInfo &MRI = MF.getRegInfo();
-      if (FirstLdSt.getOperand(0).isReg() &&
-          SecondLdSt.getOperand(0).isReg()) {
-        bool isFirstVecReg =  RI.isVectorRegister(MRI, 
-            FirstLdSt.getOperand(0).getReg());
-        bool isSecondVecReg = RI.isVectorRegister(MRI,
-            SecondLdSt.getOperand(0).getReg());
-        if ((isFirstVecReg && !isSecondVecReg) || 
-            (!isFirstVecReg && isSecondVecReg))
+      if (FirstLdSt.getOperand(0).isReg() && SecondLdSt.getOperand(0).isReg()) {
+        bool isFirstVecReg =
+            RI.isVectorRegister(MRI, FirstLdSt.getOperand(0).getReg());
+        bool isSecondVecReg =
+            RI.isVectorRegister(MRI, SecondLdSt.getOperand(0).getReg());
+        if (isFirstVecReg ^ isSecondVecReg)
           return false;
       }
     } else {
