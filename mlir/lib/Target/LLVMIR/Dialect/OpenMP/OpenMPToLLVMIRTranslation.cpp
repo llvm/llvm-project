@@ -5792,14 +5792,13 @@ static void updateDebugInfoForDeclareTargetFunctions(
     if (DR->getNumVariableLocationOps() != 1u)
       return;
     auto Loc = DR->getVariableLocationOp(0u);
-    llvm::Type *Ty = Loc->getType();
-    if (auto *Ref = dyn_cast<llvm::AddrSpaceCastInst>(Loc)) {
-      DR->replaceVariableLocationOp(0u, Loc->stripPointerCasts());
-      Ty = Ref->getPointerOperand()->getType();
-    }
+    if (!isa<llvm::AllocaInst>(Loc->stripPointerCasts()))
+      return;
+    llvm::AllocaInst *AI = cast<llvm::AllocaInst>(Loc->stripPointerCasts());
+    DR->replaceVariableLocationOp(0u, AI);
     llvm::DIExprBuilder EB(Fn->getContext());
-    EB.append<llvm::DIOp::Arg>(0u, Ty);
-    EB.append<llvm::DIOp::Deref>(Loc->getType());
+    EB.append<llvm::DIOp::Arg>(0u, AI->getType());
+    EB.append<llvm::DIOp::Deref>(AI->getAllocatedType());
     DR->setExpression(EB.intoExpression());
   };
 

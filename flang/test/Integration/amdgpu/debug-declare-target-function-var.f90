@@ -15,7 +15,7 @@ end
 !CHECK: define float @add_({{.*}}){{.*}}!dbg ![[SP:[0-9]+]] {
 !CHECK: #dbg_declare({{.*}}, ![[A:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), !{{.*}})
 !CHECK: #dbg_declare({{.*}}, ![[B:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), !{{.*}})
-!CHECK: #dbg_declare({{.*}}, ![[RET:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr)), !{{.*}})
+!CHECK: #dbg_declare({{.*}}, ![[RET:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(float)), !{{.*}})
 !CHECK: }
 !CHECK: ![[SP]] = {{.*}}!DISubprogram(name: "add"{{.*}})
 !CHECK: ![[A]] = !DILocalVariable(name: "a", arg: 1, scope: ![[SP]]{{.*}})
