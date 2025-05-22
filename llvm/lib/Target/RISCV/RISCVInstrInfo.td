@@ -1648,9 +1648,9 @@ let Predicates = [HasStdExtC, OptForMinSize] in {
 
 multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
   let usesCustomInserter = 1 in
-  def Select_GPR_Using_ # NAME
+  def Select_# valty #_Using_ # NAME
       : Pseudo<(outs valty:$dst),
-               (ins GPR:$lhs, imm:$imm, cond_code:$cc,
+               (ins valty:$lhs, imm:$imm, cond_code:$cc,
                 valty:$truev, valty:$falsev), []>;
 }
 

@@ -21032,7 +21032,11 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
   auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
   if ((MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
-       MI.getOpcode() != RISCV::Select_GPR_Using_CC_SImm5) &&
+       MI.getOpcode() != RISCV::Select_GPR_Using_CC_SImm5_CV &&
+       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_SImm5NonZero_QC &&
+       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_UImm5NonZero_QC &&
+       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_SImm16NonZero_QC &&
+       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_UImm16NonZero_QC) &&
       Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
       Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
       Next->getOperand(5).isKill())
@@ -21365,11 +21369,11 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
            "ReadCounterWide is only to be used on riscv32");
     return emitReadCounterWidePseudo(MI, BB);
   case RISCV::Select_GPR_Using_CC_GPR:
-  case RISCV::Select_GPR_Using_CC_SImm5:
-  case RISCV::Select_GPR_Using_CC_SImm5NonZero:
-  case RISCV::Select_GPR_Using_CC_UImm5NonZero:
-  case RISCV::Select_GPR_Using_CC_SImm16NonZero:
-  case RISCV::Select_GPR_Using_CC_UImm16NonZero:
+  case RISCV::Select_GPR_Using_CC_SImm5_CV:
+  case RISCV::Select_GPRNoX0_Using_CC_SImm5NonZero_QC:
+  case RISCV::Select_GPRNoX0_Using_CC_UImm5NonZero_QC:
+  case RISCV::Select_GPRNoX0_Using_CC_SImm16NonZero_QC:
+  case RISCV::Select_GPRNoX0_Using_CC_UImm16NonZero_QC:
   case RISCV::Select_FPR16_Using_CC_GPR:
   case RISCV::Select_FPR16INX_Using_CC_GPR:
   case RISCV::Select_FPR32_Using_CC_GPR:
