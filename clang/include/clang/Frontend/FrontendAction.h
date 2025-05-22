@@ -84,6 +84,8 @@ protected:
   /// \return True on success; on failure ExecutionAction() and
   /// EndSourceFileAction() will not be called.
   virtual bool BeginSourceFileAction(CompilerInstance &CI) {
+    if (CurrentInput.isPreprocessed())
+      CI.getPreprocessor().SetDisableMacroExpansion();
     return true;
   }
 
