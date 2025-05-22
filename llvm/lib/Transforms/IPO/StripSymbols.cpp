@@ -19,7 +19,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"

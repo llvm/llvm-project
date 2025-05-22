@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
