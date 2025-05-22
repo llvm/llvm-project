@@ -65,13 +65,13 @@ struct DisconnectArguments {
   /// disconnected. If unspecified, the debug adapter is free to do whatever it
   /// thinks is best. The attribute is only honored by a debug adapter if the
   /// corresponding capability `supportTerminateDebuggee` is true.
-  std::optional<bool> terminateDebuggee;
+  bool terminateDebuggee = false;
 
   /// Indicates whether the debuggee should stay suspended when the debugger is
   /// disconnected. If unspecified, the debuggee should resume execution. The
   /// attribute is only honored by a debug adapter if the corresponding
   /// capability `supportSuspendDebuggee` is true.
-  std::optional<bool> suspendDebuggee;
+  bool suspendDebuggee = false;
 };
 bool fromJSON(const llvm::json::Value &, DisconnectArguments &,
               llvm::json::Path);

@@ -10,7 +10,7 @@ import subprocess
 import json
 
 
-@skipIfBinaryToLarge(os.getenv("LLDBDAP_EXEC"), 1_000_000)
+@skipIfBuildType(["debug"])
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     def readPidMessage(self, fifo_file):
         with open(fifo_file, "r") as file:
@@ -90,6 +90,12 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("FOO", request_envs)
         self.assertEqual("BAR", request_envs["FOO"])
 
+        # Ensure we can continue to a breakpoint.
+        source = "main.c"
+        breakpoint_line = line_number(source, "// breakpoint")
+        self.set_source_breakpoints(source, [breakpoint_line])
+        self.continue_to_next_stop()
+
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminalInvalidTarget(self):
@@ -103,8 +109,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertFalse(response["success"])
         self.assertIn(
-            "Could not create a target for a program 'INVALIDPROGRAM': 'INVALIDPROGRAM' does not exist",
-            response["message"],
+            "'INVALIDPROGRAM' does not exist",
+            response["body"]["error"]["format"],
         )
 
     @skipIfWindows

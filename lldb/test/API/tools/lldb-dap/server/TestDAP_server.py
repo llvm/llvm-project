@@ -98,11 +98,12 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.set_source_breakpoints(source, [breakpoint_line])
         self.continue_to_next_stop()
 
-        # Interrupt the server which should disconnect all clients.
-        process.send_signal(signal.SIGINT)
-
-        self.dap_server.wait_for_terminated()
         self.assertIsNone(
             self.dap_server.exit_status,
             "Process exited before interrupting lldb-dap server",
         )
+
+        # Interrupt the server which should disconnect all clients.
+        process.send_signal(signal.SIGINT)
+
+        self.dap_server.wait_for_terminated()

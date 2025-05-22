@@ -1335,7 +1335,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
-    const llvm::StringMap<std::string> env, llvm::StringRef cwd,
+    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening
@@ -1352,7 +1352,7 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   req_args.push_back("--launch-target");
   req_args.push_back(program.str());
   req_args.insert(req_args.end(), args.begin(), args.end());
-  run_in_terminal_args.try_emplace("args", args);
+  run_in_terminal_args.try_emplace("args", req_args);
 
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);

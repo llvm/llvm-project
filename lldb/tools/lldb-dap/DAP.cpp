@@ -250,7 +250,9 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
 
 void DAP::StopEventHandlers() {
   if (event_thread.joinable()) {
+    DAP_LOG(log, "Sending eBroadcastBitStopEventThread");
     broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
+    DAP_LOG(log, "Waiting for join...");
     event_thread.join();
   }
   if (progress_event_thread.joinable()) {
@@ -820,9 +822,9 @@ void DAP::SendTerminatedEvent() {
   });
 }
 
-llvm::Error DAP::Disconnect() { return Disconnect(is_attach); }
+llvm::Error DAP::Disconnect() { return Disconnect(!is_attach, false); }
 
-llvm::Error DAP::Disconnect(bool terminateDebuggee) {
+llvm::Error DAP::Disconnect(bool terminate_debuggee, bool keep_stopped) {
   lldb::SBError error;
   lldb::SBProcess process = target.GetProcess();
   auto state = process.GetState();
@@ -841,7 +843,7 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   case lldb::eStateStopped:
   case lldb::eStateRunning: {
     ScopeSyncMode scope_sync_mode(debugger);
-    error = terminateDebuggee ? process.Kill() : process.Detach();
+    error = terminate_debuggee ? process.Kill() : process.Detach(keep_stopped);
     break;
   }
   }
@@ -886,6 +888,8 @@ llvm::Error DAP::Loop() {
       std::async(std::launch::async, [&]() -> lldb::SBError {
         llvm::set_thread_name(transport.GetClientName() + ".transport_handler");
         auto cleanup = llvm::make_scope_exit([&]() {
+          DAP_LOG(log, "({0}) Loop queue_reader has exited",
+                  transport.GetClientName());
           // Ensure we're marked as disconnecting when the reader exits.
           disconnecting = true;
           m_queue_cv.notify_all();
@@ -950,9 +954,12 @@ llvm::Error DAP::Loop() {
       });
 
   auto cleanup = llvm::make_scope_exit([&]() {
+    DAP_LOG(log, "({0}) Starting Loop cleanup...", transport.GetClientName());
     out.Stop();
     err.Stop();
     StopEventHandlers();
+    DAP_LOG(log, "({0}) Finished with Loop cleanup...",
+            transport.GetClientName());
   });
 
   while (true) {
@@ -1219,7 +1226,12 @@ void DAP::EventThread() {
       listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
   bool done = false;
   while (!done) {
+    DAP_LOG(log, "({0}) EventThread waiting....", transport.GetClientName());
     if (listener.WaitForEvent(1, event)) {
+      lldb::SBStream desc;
+      event.GetDescription(desc);
+      DAP_LOG(log, "({0}) EventThread, got event {1}",
+              transport.GetClientName(), desc.GetData());
       const auto event_mask = event.GetType();
       if (lldb::SBProcess::EventIsProcessEvent(event)) {
         lldb::SBProcess process = lldb::SBProcess::GetProcessFromEvent(event);

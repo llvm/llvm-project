@@ -544,7 +544,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 ///     Microsoft.
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
-    const llvm::StringMap<std::string> env, llvm::StringRef cwd,
+    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid);
 
 /// Create a "Terminated" JSON object that contains statistics

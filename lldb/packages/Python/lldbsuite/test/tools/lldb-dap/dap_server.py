@@ -164,6 +164,7 @@ class DebugCommunication(object):
         self.output: dict[str, list[str]] = {}
         self.configuration_done_sent = False
         self.initialized = False
+        self.terminated = False
         self.frame_scopes = {}
         self.init_commands = init_commands
 
@@ -271,6 +272,10 @@ class DebugCommunication(object):
                 # When a new process is attached or launched, remember the
                 # details that are available in the body of the event
                 self.process_event_body = body
+            elif event == "terminated":
+                # If we get the 'terminated' event then lldb-dap has exited
+                # itself.
+                self.terminated = True
             elif event == "exited":
                 # Process exited, mark the status to indicate the process is not
                 # alive.
@@ -388,7 +393,7 @@ class DebugCommunication(object):
                 if response_or_request["command"] == "runInTerminal":
                     subprocess.Popen(
                         response_or_request["arguments"]["args"],
-                        env=response_or_request["arguments"]["env"],
+                        env=response_or_request["arguments"].get("env", {}),
                     )
                     self.send_packet(
                         {
@@ -749,13 +754,11 @@ class DebugCommunication(object):
         # Caller must still call wait_for_stopped.
         return response
 
-    def request_disconnect(self, terminateDebuggee=None):
-        args_dict = {}
-        if terminateDebuggee is not None:
-            if terminateDebuggee:
-                args_dict["terminateDebuggee"] = True
-            else:
-                args_dict["terminateDebuggee"] = False
+    def request_disconnect(self, terminateDebuggee=False, suspendDebuggee=False):
+        args_dict = {
+            "terminateDebuggee": terminateDebuggee,
+            "suspendDebuggee": suspendDebuggee,
+        }
         command_dict = {
             "command": "disconnect",
             "type": "request",

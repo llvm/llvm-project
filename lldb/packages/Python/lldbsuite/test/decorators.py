@@ -1105,26 +1105,13 @@ def skipUnlessFeature(feature):
     return skipTestIfFn(is_feature_enabled)
 
 
-def skipIfBinaryToLarge(path: Optional[str], maxSize: int):
-    """Skip the test if a binary is to large.
+def skipIfBuildType(types: list[str]):
+    """Skip tests if built in a specific CMAKE_BUILD_TYPE.
 
-    We skip this test for debug builds because it takes too long
-    parsing lldb's own debug info. Release builds are fine.
-    Checking the size of the lldb-dap binary seems to be a decent
-    proxy for a quick detection. It should be far less than 1 MB in
-    Release builds.
+    Supported types include 'Release', 'RelWithDebInfo', 'Debug', 'MinSizeRel'.
     """
-
-    def check_binary_size():
-        if not path or not os.path.exists(path):
-            return "invalid path"
-
-        try:
-            size = os.path.getsize(path)
-            if size <= maxSize:
-                return None
-            return f"binary {path} (size = {size} is to larger than {maxSize}"
-        except:
-            return f"failed to read size of {path}"
-
-    return skipTestIfFn(check_binary_size)
+    types = [name.lower() for name in types]
+    return unittest.skipIf(
+        configuration.cmake_build_type.lower() in types,
+        "skip on {} build type(s)".format(", ".join(types)),
+    )

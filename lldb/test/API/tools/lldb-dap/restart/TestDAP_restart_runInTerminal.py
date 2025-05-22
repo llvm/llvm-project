@@ -2,13 +2,12 @@
 Test lldb-dap restart request.
 """
 
-import os
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 import lldbdap_testcase
 
 
-@skipIfBinaryToLarge(os.getenv("LLDBDAP_EXEC"), 1_000_000)
+@skipIfBuildType(["debug"])
 class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm"])  # Always times out on buildbot
@@ -56,6 +55,7 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, runInTerminal=True, stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
+        self.dap_server.request_configurationDone()
 
         # When using stopOnEntry, configurationDone doesn't result in a running
         # process, we should immediately get a stopped event instead.
