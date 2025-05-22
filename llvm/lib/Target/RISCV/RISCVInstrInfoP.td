@@ -18,7 +18,20 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def simm10 : RISCVSImmLeafOp<10>;
+// A 10-bit signed immediate allowing range [-512, 1023]
+// but will decode to [-512, 511].
+def simm10_unsigned : RISCVOp {
+  let ParserMatchClass = SImmAsmOperand<10, "Unsigned">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<10>";
+  let OperandType = "OPERAND_SIMM10_UNSIGNED";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<10>(Imm) || isUInt<10>(Imm);
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -26,13 +39,13 @@ def simm10 : RISCVSImmLeafOp<10>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnaryImm10<bits<7> funct7, string opcodestr>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins simm10:$simm10),
-                  opcodestr, "$rd, $simm10"> {
-  bits<10> simm10;
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins simm10_unsigned:$simm10u),
+                  opcodestr, "$rd, $simm10u"> {
+  bits<10> simm10u;
 
   let Inst{31-25} = funct7;
-  let Inst{24-16} = simm10{8-0};
-  let Inst{15}    = simm10{9};
+  let Inst{24-16} = simm10u{8-0};
+  let Inst{15}    = simm10u{9};
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
