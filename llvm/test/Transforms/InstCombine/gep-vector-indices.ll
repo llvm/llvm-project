@@ -26,7 +26,7 @@ define ptr @vector_splat_indices_nxv2i64_ext0_inbounds(ptr %a) {
 
 define ptr @vector_splat_indices_nxv2i64_ext0_nuw(ptr %a) {
 ; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0_nuw(
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 16
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr nuw i8, ptr [[A:%.*]], i64 16
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %tmp = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
@@ -38,7 +38,7 @@ define ptr @vector_splat_indices_nxv2i64_ext0_nuw(ptr %a) {
 
 define ptr @vector_splat_indices_nxv2i64_ext0_nusw(ptr %a) {
 ; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0_nusw(
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 16
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr nusw nuw i8, ptr [[A:%.*]], i64 16
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %tmp = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
