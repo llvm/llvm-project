@@ -198,21 +198,15 @@ public:
   // The TwoAddressInstructionPass and PHIElimination passes take the machine
   // function out of SSA form when they introduce multiple defs per virtual
   // register.
-  bool isSSA() const {
-    return MF->getProperties().hasProperty(
-        MachineFunctionProperties::Property::IsSSA);
-  }
+  bool isSSA() const { return MF->getProperties().hasIsSSA(); }
 
   // leaveSSA - Indicates that the machine function is no longer in SSA form.
-  void leaveSSA() {
-    MF->getProperties().reset(MachineFunctionProperties::Property::IsSSA);
-  }
+  void leaveSSA() { MF->getProperties().resetIsSSA(); }
 
   /// tracksLiveness - Returns true when tracking register liveness accurately.
   /// (see MachineFUnctionProperties::Property description for details)
   bool tracksLiveness() const {
-    return MF->getProperties().hasProperty(
-        MachineFunctionProperties::Property::TracksLiveness);
+    return MF->getProperties().hasTracksLiveness();
   }
 
   /// invalidateLiveness - Indicates that register liveness is no longer being
@@ -220,10 +214,7 @@ public:
   ///
   /// This should be called by late passes that invalidate the liveness
   /// information.
-  void invalidateLiveness() {
-    MF->getProperties().reset(
-        MachineFunctionProperties::Property::TracksLiveness);
-  }
+  void invalidateLiveness() { MF->getProperties().resetTracksLiveness(); }
 
   /// Returns true if liveness for register class @p RC should be tracked at
   /// the subregister level.

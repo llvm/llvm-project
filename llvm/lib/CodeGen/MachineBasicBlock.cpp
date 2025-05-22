@@ -1776,17 +1776,15 @@ void MachineBasicBlock::clearLiveIns(
 }
 
 MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
-  assert(getParent()->getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksLiveness) &&
-      "Liveness information is accurate");
+  assert(getParent()->getProperties().hasTracksLiveness() &&
+         "Liveness information is accurate");
   return LiveIns.begin();
 }
 
 MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   const MachineFunction &MF = *getParent();
-  assert(MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksLiveness) &&
-      "Liveness information is accurate");
+  assert(MF.getProperties().hasTracksLiveness() &&
+         "Liveness information is accurate");
 
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
   MCRegister ExceptionPointer, ExceptionSelector;
