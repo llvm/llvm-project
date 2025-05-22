@@ -45,7 +45,6 @@ struct BufferizationStatistics {
 /// additional buffer copies or set "options.copyBeforeWrite = true". The
 /// general bufferization entry point is `runOneShotBufferize`.
 LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
-                          BufferizationState &bufferizationState,
                           BufferizationStatistics *statistics = nullptr);
 
 /// Bufferize the signature of `block` and its callers (i.e., ops that have the

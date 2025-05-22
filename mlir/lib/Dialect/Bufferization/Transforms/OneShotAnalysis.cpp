@@ -1365,9 +1365,10 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   return success(!failedAnalysis);
 }
 
-LogicalResult bufferization::runOneShotBufferize(
-    Operation *op, const OneShotBufferizationOptions &options,
-    BufferizationState &state, BufferizationStatistics *statistics) {
+LogicalResult
+bufferization::runOneShotBufferize(Operation *op,
+                                   const OneShotBufferizationOptions &options,
+                                   BufferizationStatistics *statistics) {
   // copy-before-write deactivates the analysis. It cannot be used together with
   // test-analysis-only.
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
@@ -1390,5 +1391,5 @@ LogicalResult bufferization::runOneShotBufferize(
 
   // Bufferize the op and its nested ops. If options.copyBeforeWrite is set,
   // a new buffer copy is allocated every time a buffer is written to.
-  return bufferizeOp(op, options, state, statistics);
+  return bufferizeOp(op, options, statistics);
 }

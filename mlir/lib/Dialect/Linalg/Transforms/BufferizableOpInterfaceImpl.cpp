@@ -148,8 +148,7 @@ struct LinalgOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     return bufferizeDestinationStyleOpInterface(
         rewriter, cast<DestinationStyleOpInterface>(op), options);
   }
@@ -175,8 +174,7 @@ struct SoftmaxOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto softmaxOp = cast<linalg::SoftmaxOp>(op);
     FailureOr<Value> inputBuffer =
         getBuffer(rewriter, softmaxOp.getInput(), options);
@@ -204,7 +202,6 @@ void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
     LinalgOpInterfaceHelper<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-
         >::registerOpInterface(ctx);
 
     SoftmaxOp::attachInterface<SoftmaxOpInterface>(*ctx);
