@@ -2,11 +2,11 @@
 ; RUN: llc --mtriple=loongarch64 --mattr=+f --verify-machineinstrs < %s | FileCheck %s
 
 ;; Check that the "q" operand is not R0.
-define i32 @constraint_q_not_r0(i32 %a) {
+define i32 @constraint_q_not_r0() {
 ; CHECK-NOT:    csrxchg ${{[a-z]*}}, $r0, 0
 ; CHECK-NOT:    csrxchg ${{[a-z]*}}, $zero, 0
 entry:
-  %1 = tail call i32 asm "csrxchg $0, $1, $2", "=r,q,i,0"(i32 0, i32 0, i32 %a)
+  %1 = tail call i32 asm "csrxchg $0, $1, $2", "=r,q,i,0"(i32 0, i32 0, i32 0)
   ret i32 %1
 }
 
