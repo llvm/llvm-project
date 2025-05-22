@@ -433,10 +433,9 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
     StringRef Prefix = "llvm";
     ToReplace.back().second.replace(0, Prefix.size(), "__hipstdpar");
   }
-  for (auto &&F : ToReplace)
-    F.first->replaceAllUsesWith(
-        M.getOrInsertFunction(F.second, F.first->getFunctionType())
-            .getCallee());
+  for (auto &&[F, NewF] : ToReplace)
+    F->replaceAllUsesWith(
+        M.getOrInsertFunction(NewF, F->getFunctionType()).getCallee());
 
   return PreservedAnalyses::none();
 }
