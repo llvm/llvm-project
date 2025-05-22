@@ -11814,10 +11814,6 @@ static void CheckImplicitArgumentConversions(Sema &S, CallExpr *TheCall,
 
 static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
                                    SourceLocation CC) {
-  if (S.Diags.isIgnored(diag::warn_impcast_null_pointer_to_integer,
-                        E->getExprLoc()))
-    return;
-
   // Don't warn on functions which have return type nullptr_t.
   if (isa<CallExpr>(E))
     return;
@@ -11832,6 +11828,10 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
   // Return if target type is a safe conversion.
   if (T->isAnyPointerType() || T->isBlockPointerType() ||
       T->isMemberPointerType() || !T->isScalarType() || T->isNullPtrType())
+    return;
+
+  if (S.Diags.isIgnored(diag::warn_impcast_null_pointer_to_integer,
+                        E->getExprLoc()))
     return;
 
   SourceLocation Loc = E->getSourceRange().getBegin();
