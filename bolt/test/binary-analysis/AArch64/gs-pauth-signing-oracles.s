@@ -1025,7 +1025,6 @@ inst_ldrab_non_wb:
 // CHECK-LABEL: GS-PAUTH: signing oracle found in function inst_ldrab_non_wb, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      pacda   x0, x1
 // CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-        autia   x0, x3
         ldrab   x2, [x0]
         pacda   x0, x1
         ret
