@@ -15,7 +15,7 @@ define i32 @constraint_q_not_r1(i32 %0) {
 ; CHECK-NOT:    csrxchg ${{[a-z]*}}, $r1, 0
 ; CHECK-NOT:    csrxchg ${{[a-z]*}}, $ra, 0
 entry:
-  %2 = tail call i32 asm "", "={$r1},{$r1}"(i32 undef)
+  %2 = tail call i32 asm "", "={$r1},{$r1}"(i32 0)
   %3 = tail call i32 asm "csrxchg $0, $1, 0", "=r,q,0"(i32 %2, i32 %0)
   ret i32 %3
 }
