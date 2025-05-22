@@ -263,8 +263,7 @@ private:
             Previous->setType(TT_SelectorName);
           }
         }
-      }
-      if (Style.isTableGen()) {
+      } else if (Style.isTableGen()) {
         if (CurrentToken->isOneOf(tok::comma, tok::equal)) {
           // They appear as separators. Unless they are not in class definition.
           next();
@@ -3016,12 +3015,13 @@ private:
       return TT_BinaryOperator;
 
     const FormatToken *NextToken = Tok.getNextNonComment();
+    if (!NextToken)
+      return TT_PointerOrReference;
 
-    if (InTemplateArgument && NextToken && NextToken->is(tok::kw_noexcept))
+    if (InTemplateArgument && NextToken->is(tok::kw_noexcept))
       return TT_BinaryOperator;
 
-    if (!NextToken ||
-        NextToken->isOneOf(tok::arrow, tok::equal, tok::comma, tok::r_paren,
+    if (NextToken->isOneOf(tok::arrow, tok::equal, tok::comma, tok::r_paren,
                            TT_RequiresClause) ||
         (NextToken->is(tok::kw_noexcept) && !IsExpression) ||
         NextToken->canBePointerOrReferenceQualifier() ||
@@ -3100,7 +3100,8 @@ private:
       if (NextNextToken) {
         if (NextNextToken->is(tok::arrow))
           return TT_BinaryOperator;
-        if (NextNextToken->isPointerOrReference()) {
+        if (NextNextToken->isPointerOrReference() &&
+            !NextToken->isObjCLifetimeQualifier(Style)) {
           NextNextToken->setFinalizedType(TT_BinaryOperator);
           return TT_BinaryOperator;
         }
@@ -5032,7 +5033,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     }
 
     if (Left.is(tok::kw_operator))
-      return Right.is(tok::coloncolon);
+      return Right.is(tok::coloncolon) || Style.SpaceAfterOperatorKeyword;
     if (Right.is(tok::l_brace) && Right.is(BK_BracedInit) &&
         !Left.opensScope() && Style.SpaceBeforeCpp11BracedList) {
       return true;
@@ -6518,18 +6519,8 @@ TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
 FormatStyle::PointerAlignmentStyle
 TokenAnnotator::getTokenPointerOrReferenceAlignment(
     const FormatToken &PointerOrReference) const {
-  if (PointerOrReference.isOneOf(tok::amp, tok::ampamp)) {
-    switch (Style.ReferenceAlignment) {
-    case FormatStyle::RAS_Pointer:
-      return Style.PointerAlignment;
-    case FormatStyle::RAS_Left:
-      return FormatStyle::PAS_Left;
-    case FormatStyle::RAS_Right:
-      return FormatStyle::PAS_Right;
-    case FormatStyle::RAS_Middle:
-      return FormatStyle::PAS_Middle;
-    }
-  }
+  if (PointerOrReference.isOneOf(tok::amp, tok::ampamp))
+    return getTokenReferenceAlignment(PointerOrReference);
   assert(PointerOrReference.is(tok::star));
   return Style.PointerAlignment;
 }

@@ -444,9 +444,8 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
   // Ensure the profile inference match the profile knowledge of the
   // specification.
   for (const auto &cands : specRequiredModeSet) {
-    for (size_t i = 0; i < opRequiredMode.size(); i++) {
-      if (std::find(cands.begin(), cands.end(), opRequiredMode[i]) ==
-          cands.end()) {
+    for (const auto &mode : opRequiredMode) {
+      if (!llvm::is_contained(cands, mode)) {
         op->emitOpError() << "illegal: requires ["
                           << llvm::join(stringifyProfile<T>(opRequiredMode),
                                         ", ")

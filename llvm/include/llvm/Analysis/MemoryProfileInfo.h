@@ -103,7 +103,8 @@ private:
   bool buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                      std::vector<uint64_t> &MIBCallStack,
                      std::vector<Metadata *> &MIBNodes,
-                     bool CalleeHasAmbiguousCallerContext);
+                     bool CalleeHasAmbiguousCallerContext, uint64_t &TotalBytes,
+                     uint64_t &ColdBytes);
 
 public:
   CallStackTrie() = default;
@@ -166,7 +167,7 @@ public:
 
   CallStackIterator begin() const;
   CallStackIterator end() const { return CallStackIterator(N, /*End*/ true); }
-  CallStackIterator beginAfterSharedPrefix(CallStack &Other);
+  CallStackIterator beginAfterSharedPrefix(const CallStack &Other);
   uint64_t back() const;
 
 private:
@@ -204,7 +205,7 @@ CallStack<NodeT, IteratorT>::begin() const {
 
 template <class NodeT, class IteratorT>
 typename CallStack<NodeT, IteratorT>::CallStackIterator
-CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(CallStack &Other) {
+CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(const CallStack &Other) {
   CallStackIterator Cur = begin();
   for (CallStackIterator OtherCur = Other.begin();
        Cur != end() && OtherCur != Other.end(); ++Cur, ++OtherCur)

@@ -1469,7 +1469,8 @@ def err_acc_expected_reduction_operator
 def err_acc_invalid_reduction_operator
     : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
             "'&', '|', '^', '&&', or '||'">;
-def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
+def err_acc_incorrect_bind_arg
+    : Error<"expected identifier or string literal in OpenACC 'bind' clause">;
 def err_acc_modifier
     : Error<"%enum_select<ACCModifier>{%Unknown{unknown}|%Duplicate{duplicate}}"
             "0 modifier %1 in OpenACC modifier-list on '%2' clause">;
@@ -1856,5 +1857,6 @@ def err_hlsl_unexpected_end_of_params
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
 def err_hlsl_number_literal_overflow : Error<"integer literal is too large to be represented as a 32-bit %select{signed |}0 integer type">;
+def err_hlsl_rootsig_non_zero_flag : Error<"flag value is neither a literal 0 nor a named value">;
 
 } // end of Parser diagnostics

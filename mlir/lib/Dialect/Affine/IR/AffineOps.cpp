@@ -294,12 +294,10 @@ bool mlir::affine::isValidDim(Value value) {
     return isValidDim(value, getAffineScope(defOp));
 
   // This value has to be a block argument for an op that has the
-  // `AffineScope` trait or an induction var of an affine.for or
-  // affine.parallel.
-  if (isAffineInductionVar(value))
-    return true;
+  // `AffineScope` trait or for an affine.for or affine.parallel.
   auto *parentOp = llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
-  return parentOp && parentOp->hasTrait<OpTrait::AffineScope>();
+  return parentOp && (parentOp->hasTrait<OpTrait::AffineScope>() ||
+                      isa<AffineForOp, AffineParallelOp>(parentOp));
 }
 
 // Value can be used as a dimension id iff it meets one of the following
@@ -307,6 +305,8 @@ bool mlir::affine::isValidDim(Value value) {
 // *) It is valid as a symbol.
 // *) It is an induction variable.
 // *) It is the result of an affine apply operation with dimension id operands.
+// *) It is the result of a more specialized index transformation (ex.
+// delinearize_index or linearize_index) with dimension id operands.
 bool mlir::affine::isValidDim(Value value, Region *region) {
   // The value must be an index type.
   if (!value.getType().isIndex())
@@ -318,14 +318,20 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
 
   auto *op = value.getDefiningOp();
   if (!op) {
-    // This value has to be an induction var for an affine.for or an
+    // This value has to be a block argument for an affine.for or an
     // affine.parallel.
-    return isAffineInductionVar(value);
+    auto *parentOp = llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
+    return isa<AffineForOp, AffineParallelOp>(parentOp);
   }
 
   // Affine apply operation is ok if all of its operands are ok.
   if (auto applyOp = dyn_cast<AffineApplyOp>(op))
     return applyOp.isValidDim(region);
+  // delinearize_index and linearize_index are special forms of apply
+  // and so are valid dimensions if all their arguments are valid dimensions.
+  if (isa<AffineDelinearizeIndexOp, AffineLinearizeIndexOp>(op))
+    return llvm::all_of(op->getOperands(),
+                        [&](Value arg) { return ::isValidDim(arg, region); });
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
   if (auto dimOp = dyn_cast<ShapedDimOpInterface>(op))
@@ -2195,7 +2201,7 @@ static void printBound(AffineMapAttr boundMap,
     // Print bound that consists of a single SSA symbol if the map is over a
     // single symbol.
     if (map.getNumDims() == 0 && map.getNumSymbols() == 1) {
-      if (dyn_cast<AffineSymbolExpr>(expr)) {
+      if (isa<AffineSymbolExpr>(expr)) {
         p.printOperand(*boundOperands.begin());
         return;
       }
@@ -5039,8 +5045,7 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
   if (getMultiIndex().size() == 1)
     return getMultiIndex().front();
 
-  if (llvm::any_of(adaptor.getMultiIndex(),
-                   [](Attribute a) { return a == nullptr; }))
+  if (llvm::is_contained(adaptor.getMultiIndex(), nullptr))
     return nullptr;
 
   if (!adaptor.getDynamicBasis().empty())

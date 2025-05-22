@@ -62,10 +62,6 @@ void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
 /// Add patterns to expand Arith ops.
 void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
 
-/// Create a pass to replace signed ops with unsigned ones where they are proven
-/// equivalent.
-std::unique_ptr<Pass> createArithUnsignedWhenEquivalentPass();
-
 /// Add patterns for int range based optimizations.
 void populateIntRangeOptimizationsPatterns(RewritePatternSet &patterns,
                                            DataFlowSolver &solver);

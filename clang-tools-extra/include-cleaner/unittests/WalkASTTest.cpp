@@ -570,5 +570,11 @@ TEST(WalkAST, OperatorNewDelete) {
   testWalk("struct A { static void $ambiguous^operator delete(void*); };",
            "void foo() { A a; ^delete &a; }");
 }
+
+TEST(WalkAST, CleanupAttr) {
+  testWalk("void* $explicit^freep(void *p);",
+           "void foo() { __attribute__((__cleanup__(^freep))) char* x = 0; }");
+}
+
 } // namespace
 } // namespace clang::include_cleaner
