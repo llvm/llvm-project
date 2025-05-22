@@ -753,7 +753,6 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
   if (IsAuthenticated)
     return std::nullopt;
 
-  assert(*RetReg != BC.MIB->getNoRegister());
   LLVM_DEBUG({
     traceInst(BC, "Found RET inst", Inst);
     traceReg(BC, "RetReg", *RetReg);
@@ -779,7 +778,7 @@ shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
   if (IsAuthenticated)
     return std::nullopt;
 
-  assert(DestReg != BC.MIB->getNoRegister());
+  assert(DestReg != BC.MIB->getNoRegister() && "Valid register expected");
   LLVM_DEBUG({
     traceInst(BC, "Found call inst", Inst);
     traceReg(BC, "Call destination reg", DestReg);
@@ -800,7 +799,6 @@ shouldReportSigningOracle(const BinaryContext &BC, const MCInstReference &Inst,
   if (!SignedReg)
     return std::nullopt;
 
-  assert(*SignedReg != BC.MIB->getNoRegister());
   LLVM_DEBUG({
     traceInst(BC, "Found sign inst", Inst);
     traceReg(BC, "Signed reg", *SignedReg);

@@ -610,7 +610,8 @@ public:
   getRegUsedAsIndirectBranchDest(const MCInst &Inst,
                                  bool &IsAuthenticatedInternally) const {
     llvm_unreachable("not implemented");
-    return 0;
+    return 0; // Unreachable. A valid register should be returned by the
+              // target implementation.
   }
 
   /// Returns the register containing an address safely materialized by `Inst`
