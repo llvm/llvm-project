@@ -19,18 +19,17 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
-
-#include <initializer_list>
 
 using namespace clang;
 using namespace ento;
 
 namespace {
 
-class BlockEntranceCallbackTester : public Checker<check::BlockEntrance> {
+class BlockEntranceCallbackTester final : public Checker<check::BlockEntrance> {
   const BugType Bug{this, "BlockEntranceTester"};
 
 public:
@@ -53,38 +52,84 @@ public:
   }
 };
 
-void registerBlockEntranceTester(CheckerManager &Mgr) {
-  Mgr.registerChecker<BlockEntranceCallbackTester>();
+class BranchConditionCallbackTester final
+    : public Checker<check::BranchCondition> {
+  const BugType Bug{this, "BranchConditionCallbackTester"};
+
+public:
+  void checkBranchCondition(const Stmt *Condition, CheckerContext &C) const {
+    ExplodedNode *Node = C.generateNonFatalErrorNode(C.getState());
+    if (!Node)
+      return;
+    const auto *FD =
+        cast<FunctionDecl>(C.getLocationContext()->getStackFrame()->getDecl());
+
+    std::string Buffer =
+        (llvm::Twine("Within '") + FD->getIdentifier()->getName() +
+         "': branch condition '")
+            .str();
+    llvm::raw_string_ostream OS(Buffer);
+    Condition->printPretty(OS, /*Helper=*/nullptr,
+                           C.getASTContext().getPrintingPolicy());
+    OS << "'";
+    auto Report = std::make_unique<PathSensitiveBugReport>(Bug, Buffer, Node);
+    C.emitReport(std::move(Report));
+
+    C.addTransition();
+  }
+};
+
+template <typename Checker> void registerChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<Checker>();
 }
 
-bool shouldRegisterBlockEntranceTester(const CheckerManager &) { return true; }
+bool shouldAlwaysRegister(const CheckerManager &) { return true; }
 
 void addBlockEntranceTester(AnalysisASTConsumer &AnalysisConsumer,
                             AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages = {{"test.BlockEntranceTester", true}};
+  AnOpts.CheckersAndPackages.emplace_back("test.BlockEntranceTester", true);
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addChecker(
-        &registerBlockEntranceTester, &shouldRegisterBlockEntranceTester,
-        "test.BlockEntranceTester", "EmptyDescription", "EmptyDocsUri",
-        /*IsHidden=*/false);
+    Registry.addChecker(&registerChecker<BlockEntranceCallbackTester>,
+                        &shouldAlwaysRegister, "test.BlockEntranceTester",
+                        "EmptyDescription", "EmptyDocsUri",
+                        /*IsHidden=*/false);
   });
+}
+
+void addBranchConditionTester(AnalysisASTConsumer &AnalysisConsumer,
+                              AnalyzerOptions &AnOpts) {
+  AnOpts.CheckersAndPackages.emplace_back("test.BranchConditionTester", true);
+  AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
+    Registry.addChecker(&registerChecker<BranchConditionCallbackTester>,
+                        &shouldAlwaysRegister, "test.BranchConditionTester",
+                        "EmptyDescription", "EmptyDocsUri",
+                        /*IsHidden=*/false);
+  });
+}
+
+[[maybe_unused]] void dumpCFGAndEgraph(AnalysisASTConsumer &AnalysisConsumer,
+                                       AnalyzerOptions &AnOpts) {
+  AnOpts.CheckersAndPackages.emplace_back("debug.DumpCFG", true);
+  AnOpts.CheckersAndPackages.emplace_back("debug.ViewExplodedGraph", true);
 }
 
 llvm::SmallVector<StringRef> parseEachDiag(StringRef Diags) {
   llvm::SmallVector<StringRef> Fragments;
   llvm::SplitString(Diags, Fragments, "\n");
+  // Drop the prefix like "test.BlockEntranceTester: " from each fragment.
   llvm::for_each(Fragments, [](StringRef &Fragment) {
-    Fragment.consume_front("test.BlockEntranceTester: ");
+    Fragment = Fragment.drop_until([](char Ch) { return Ch == ' '; });
+    Fragment.consume_front(" ");
   });
   llvm::sort(Fragments);
   return Fragments;
 }
 
+template <AddCheckerFn Fn = addBlockEntranceTester, AddCheckerFn... Fns>
 bool runChecker(const std::string &Code, std::string &Diags) {
   std::string RawDiags;
-  bool Res =
-      runCheckerOnCode<addBlockEntranceTester>(Code, RawDiags,
-                                               /*OnlyEmitWarnings=*/true);
+  bool Res = runCheckerOnCode<Fn, Fns...>(Code, RawDiags,
+                                          /*OnlyEmitWarnings=*/true);
   llvm::raw_string_ostream OS(Diags);
   llvm::interleave(parseEachDiag(RawDiags), OS, "\n");
   return Res;
@@ -276,6 +321,35 @@ TEST(BlockEntranceTester, Switch) {
                 "Within 'top' B4 -> B1",
                 "Within 'top' B5 -> B1",
                 "Within 'top' B6 -> B2",
+            }),
+            Diags);
+}
+
+TEST(BlockEntranceTester, BlockEntranceVSBranchCondition) {
+  constexpr auto Code = R"cpp(
+  bool coin();
+  int top(int x) {
+    int v = 0;
+    switch (x) {
+      default: v = 30; break;
+    }
+    if (x == 6) {
+      v = 40;
+    }
+    return v;
+  })cpp";
+  std::string Diags;
+  EXPECT_TRUE((runChecker<addBlockEntranceTester, addBranchConditionTester>(
+      Code, Diags)));
+  EXPECT_EQ(expected({
+                "Within 'top' B1 -> B0",
+                "Within 'top' B2 -> B1",
+                "Within 'top' B3 -> B1",
+                "Within 'top' B3 -> B2",
+                "Within 'top' B4 -> B5",
+                "Within 'top' B5 -> B3",
+                "Within 'top' B6 -> B4",
+                "Within 'top': branch condition 'x == 6'",
             }),
             Diags);
 }
