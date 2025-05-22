@@ -1214,9 +1214,6 @@ public:
   struct IntrinsicInfo {
     unsigned     opc = 0;          // target opcode
     EVT          memVT;            // memory VT
-    SyncScope::ID ssid = SyncScope::System;
-    AtomicOrdering order = AtomicOrdering::NotAtomic;
-    AtomicOrdering failureOrder = AtomicOrdering::NotAtomic;
 
     // value representing memory location
     PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
@@ -1231,6 +1228,9 @@ public:
     MaybeAlign align = Align(1);   // alignment
 
     MachineMemOperand::Flags flags = MachineMemOperand::MONone;
+    SyncScope::ID ssid = SyncScope::System;
+    AtomicOrdering order = AtomicOrdering::NotAtomic;
+    AtomicOrdering failureOrder = AtomicOrdering::NotAtomic;
     IntrinsicInfo() = default;
   };
 
