@@ -751,7 +751,8 @@ let TargetPrefix = "nvvm" in {
           DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
     // Note: these variants also have 2 source operands but only one will ever
-    // be used so we eliminate the other operand in the IR.
+    // be used so we eliminate the other operand in the IR (0 is used as the
+    // placeholder in the backend).
     foreach mode = ["rc8", "ecl", "ecr", "rc16"] in
       def int_nvvm_prmt_ # mode :
           DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;

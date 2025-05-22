@@ -4,7 +4,7 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-define i32 @test_prmt_basic(i32 %a, i32 %b, i32 %c) {
+define i32 @test_prmt_basic(i32 %lo, i32 %hi, i32 %selector) {
 ; CHECK-LABEL: test_prmt_basic(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -16,11 +16,11 @@ define i32 @test_prmt_basic(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    prmt.b32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-    %val = call i32 @llvm.nvvm.prmt(i32 %a, i32 %b, i32 %c)
+    %val = call i32 @llvm.nvvm.prmt(i32 %lo, i32 %hi, i32 %selector)
     ret i32 %val
 }
 
-define i32 @test_prmt_f4e(i32 %a, i32 %b, i32 %c) {
+define i32 @test_prmt_f4e(i32 %lo, i32 %hi, i32 %selector) {
 ; CHECK-LABEL: test_prmt_f4e(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -32,11 +32,11 @@ define i32 @test_prmt_f4e(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    prmt.b32.f4e %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %val = call i32 @llvm.nvvm.prmt.f4e(i32 %a, i32 %b, i32 %c)
+  %val = call i32 @llvm.nvvm.prmt.f4e(i32 %lo, i32 %hi, i32 %selector)
   ret i32 %val
 }
 
-define i32 @test_prmt_b4e(i32 %a, i32 %b, i32 %c) {
+define i32 @test_prmt_b4e(i32 %lo, i32 %hi, i32 %selector) {
 ; CHECK-LABEL: test_prmt_b4e(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -48,11 +48,11 @@ define i32 @test_prmt_b4e(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    prmt.b32.b4e %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %val = call i32 @llvm.nvvm.prmt.b4e(i32 %a, i32 %b, i32 %c)
+  %val = call i32 @llvm.nvvm.prmt.b4e(i32 %lo, i32 %hi, i32 %selector)
   ret i32 %val
 }
 
-define i32 @test_prmt_rc8(i32 %a, i32 %b) {
+define i32 @test_prmt_rc8(i32 %lo, i32 %selector) {
 ; CHECK-LABEL: test_prmt_rc8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -63,11 +63,11 @@ define i32 @test_prmt_rc8(i32 %a, i32 %b) {
 ; CHECK-NEXT:    prmt.b32.rc8 %r3, %r1, 0, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %val = call i32 @llvm.nvvm.prmt.rc8(i32 %a, i32 %b)
+  %val = call i32 @llvm.nvvm.prmt.rc8(i32 %lo, i32 %selector)
   ret i32 %val
 }
 
-define i32 @test_prmt_ecl(i32 %a, i32 %b) {
+define i32 @test_prmt_ecl(i32 %lo, i32 %selector) {
 ; CHECK-LABEL: test_prmt_ecl(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -78,11 +78,11 @@ define i32 @test_prmt_ecl(i32 %a, i32 %b) {
 ; CHECK-NEXT:    prmt.b32.ecl %r3, %r1, 0, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %val = call i32 @llvm.nvvm.prmt.ecl(i32 %a, i32 %b)
+  %val = call i32 @llvm.nvvm.prmt.ecl(i32 %lo, i32 %selector)
   ret i32 %val
 }
 
-define i32 @test_prmt_ecr(i32 %a, i32 %b) {
+define i32 @test_prmt_ecr(i32 %lo, i32 %selector) {
 ; CHECK-LABEL: test_prmt_ecr(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -93,11 +93,11 @@ define i32 @test_prmt_ecr(i32 %a, i32 %b) {
 ; CHECK-NEXT:    prmt.b32.ecr %r3, %r1, 0, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %val = call i32 @llvm.nvvm.prmt.ecr(i32 %a, i32 %b)
+  %val = call i32 @llvm.nvvm.prmt.ecr(i32 %lo, i32 %selector)
   ret i32 %val
 }
 
-define i32 @test_prmt_rc16(i32 %a, i32 %b) {
+define i32 @test_prmt_rc16(i32 %lo, i32 %selector) {
 ; CHECK-LABEL: test_prmt_rc16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -108,6 +108,6 @@ define i32 @test_prmt_rc16(i32 %a, i32 %b) {
 ; CHECK-NEXT:    prmt.b32.rc16 %r3, %r1, 0, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %val = call i32 @llvm.nvvm.prmt.rc16(i32 %a, i32 %b)
+  %val = call i32 @llvm.nvvm.prmt.rc16(i32 %lo, i32 %selector)
   ret i32 %val
 }
