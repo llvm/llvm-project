@@ -74,22 +74,10 @@ add_llvm_target(HexagonCodeGen
   RDFDeadCode.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
   HexagonAsmParser
   HexagonDesc
   HexagonInfo
-  IPO
-  MC
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   Hexagon

@@ -183,26 +183,13 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUDesc
   AMDGPUInfo
   AMDGPUUtils
-  Analysis
-  AsmPrinter
+  ${TARGET_LIBRARIES}
   BinaryFormat
-  CodeGen
-  CodeGenTypes
-  Core
   GlobalISel
   HipStdPar
-  IPO
   IRPrinter
-  Instrumentation
-  MC
   MIRParser
   Passes
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
   Vectorize
 
   ADD_TO_COMPONENT

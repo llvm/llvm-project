@@ -29,19 +29,9 @@ add_llvm_target(XCoreCodeGen
   XCoreFrameToArgsOffsetElim.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  MC
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
   XCoreDesc
   XCoreInfo
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   XCore

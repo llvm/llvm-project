@@ -29,18 +29,9 @@ add_llvm_target(VECodeGen
   VVPISelLowering.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  MC
-  SelectionDAG
-  Support
-  Target
-  TransformUtils
   VEDesc
   VEInfo
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   VE

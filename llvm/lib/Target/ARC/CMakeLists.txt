@@ -30,17 +30,7 @@ add_llvm_target(ARCCodeGen
   LINK_COMPONENTS
   ARCDesc
   ARCInfo
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  MC
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   ARC

@@ -37,18 +37,10 @@ add_llvm_target(M68kCodeGen
   M68kTargetObjectFile.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  GlobalISel
   M68kDesc
   M68kInfo
-  MC
-  SelectionDAG
-  Support
-  Target
+  ${TARGET_LIBRARIES}
+  GlobalISel
 
   ADD_TO_COMPONENT
   M68k

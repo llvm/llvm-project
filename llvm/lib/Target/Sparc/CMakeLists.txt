@@ -31,17 +31,9 @@ add_llvm_target(SparcCodeGen
   SparcTargetObjectFile.cpp
 
   LINK_COMPONENTS
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  MC
-  SelectionDAG
   SparcDesc
   SparcInfo
-  Support
-  Target
-  TargetParser
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   Sparc

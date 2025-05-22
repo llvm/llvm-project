@@ -35,23 +35,12 @@ add_llvm_target(DirectXCodeGen
   DXILTranslateMetadata.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  DXILBitWriter
   DirectXDesc
   DirectXInfo
   DirectXPointerTypeAnalysis
+  DXILBitWriter
+  ${TARGET_LIBRARIES}
   FrontendHLSL
-  MC
-  ScalarOpts
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
 
   ADD_TO_COMPONENT
   DirectX

@@ -32,20 +32,9 @@ add_llvm_target(LoongArchCodeGen
   LoongArchTargetTransformInfo.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
   LoongArchDesc
   LoongArchInfo
-  MC
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   LoongArch

@@ -20,6 +20,22 @@ add_llvm_component_library(LLVMTarget
   TargetParser
   )
 
+set(TARGET_LIBRARIES
+  Analysis
+  AsmPrinter
+  CodeGen
+  CodeGenTypes
+  Core
+  Instrumentation
+  IPO
+  MC
+  Scalar
+  SelectionDAG
+  Support
+  Target
+  TargetParser
+  TransformUtils)
+
 # When building shared objects for each target there are some internal APIs
 # that are used across shared objects which we can't hide.
 if (NOT BUILD_SHARED_LIBS AND NOT APPLE AND

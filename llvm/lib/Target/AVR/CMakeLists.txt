@@ -34,14 +34,7 @@ add_llvm_target(AVRCodeGen
   LINK_COMPONENTS
   AVRDesc
   AVRInfo
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  MC
-  SelectionDAG
-  Support
-  Target
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   AVR
