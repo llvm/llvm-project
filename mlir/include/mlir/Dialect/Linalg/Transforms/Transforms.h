@@ -30,7 +30,6 @@ namespace mlir {
 namespace bufferization {
 class AllocTensorOp;
 class OneShotAnalysisState;
-class BufferizationState;
 } // namespace bufferization
 
 namespace linalg {

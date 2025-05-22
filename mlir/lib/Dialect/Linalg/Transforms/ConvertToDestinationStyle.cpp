@@ -263,11 +263,7 @@ Value linalg::bufferizeToAllocation(
   assert(llvm::range_size(maskOp.getMaskBlock()->without_terminator()) == 1 &&
          "expected single masked op");
   OpBuilder::InsertionGuard g(rewriter);
-
-  // Should the bufferization options and state be function arguments?
   bufferization::BufferizationOptions bufferizationOptions;
-  bufferization::BufferizationState bufferizationState;
-
   Operation *yieldOp = maskOp.getMaskRegion().front().getTerminator();
   assert(isa<vector::YieldOp>(yieldOp) && "expected yield op terminator");
 
@@ -283,7 +279,7 @@ Value linalg::bufferizeToAllocation(
   // Bufferize terminator.
   rewriter.setInsertionPoint(yieldOp);
   if (failed(cast<bufferization::BufferizableOpInterface>(yieldOp).bufferize(
-          rewriter, bufferizationOptions, bufferizationState)))
+          rewriter, bufferizationOptions)))
     return nullptr;
 
   // Erase dead to_tensor ops inside of the mask op. This is necessary because
@@ -304,9 +300,8 @@ Value linalg::bufferizeToAllocation(
       for (OpOperand &use : result.getUses())
         resultUses.push_back(&use);
   rewriter.setInsertionPoint(maskOp);
-  if (failed(
-          cast<bufferization::BufferizableOpInterface>(maskOp.getOperation())
-              .bufferize(rewriter, bufferizationOptions, bufferizationState)))
+  if (failed(cast<bufferization::BufferizableOpInterface>(maskOp.getOperation())
+                 .bufferize(rewriter, bufferizationOptions)))
     return nullptr;
 
   // Set "restrict" attribute, indicating that no other tensor aliases with
@@ -489,11 +484,8 @@ Value linalg::bufferizeToAllocation(
   auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
   if (!bufferizableOp)
     return nullptr;
-
-  // Should the bufferization options and states be function arguments?
   BufferizationOptions bufferizationOptions;
-  AnalysisState analysisState(bufferizationOptions);
-  BufferizationState bufferizationState;
+  AnalysisState state(bufferizationOptions);
 
 #ifndef NDEBUG
   if (!options.bufferizeDestinationOnly) {
@@ -535,7 +527,7 @@ Value linalg::bufferizeToAllocation(
   };
   for (OpResult result : tensorResults) {
     AliasingOpOperandList aliasingOperands =
-        analysisState.getAliasingOpOperands(result);
+        state.getAliasingOpOperands(result);
     for (const AliasingOpOperand &operand : aliasingOperands) {
       addOutOfPlaceOperand(operand.opOperand);
       for (OpOperand &resultUse : result.getUses())
@@ -543,7 +535,7 @@ Value linalg::bufferizeToAllocation(
     }
   }
   for (OpOperand &operand : op->getOpOperands()) {
-    if (!analysisState.bufferizesToMemoryWrite(operand))
+    if (!state.bufferizesToMemoryWrite(operand))
       continue;
     if (!isa<RankedTensorType>(operand.get().getType()))
       continue;
@@ -561,7 +553,7 @@ Value linalg::bufferizeToAllocation(
     Value alloc = createAllocationForTensor(
         rewriter, op->getLoc(), operand->get(), options, memorySpace);
     allocs.push_back(alloc);
-    if (!analysisState.findDefinitions(operand).empty()) {
+    if (!state.findDefinitions(operand).empty()) {
       // Initialize buffer with a copy of the operand data. Not needed if the
       // tensor is uninitialized.
       createMemcpy(rewriter, op->getLoc(), operand->get(), alloc, options);
@@ -583,8 +575,7 @@ Value linalg::bufferizeToAllocation(
 
   // Bufferize the op.
   rewriter.setInsertionPoint(op);
-  if (failed(bufferizableOp.bufferize(rewriter, bufferizationOptions,
-                                      bufferizationState)))
+  if (failed(bufferizableOp.bufferize(rewriter, bufferizationOptions)))
     return nullptr;
 
   // Set "restrict" attribute, indicating that no other tensor aliases with
