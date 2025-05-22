@@ -27,7 +27,7 @@
 using namespace Fortran::frontend;
 
 TextDiagnosticPrinter::TextDiagnosticPrinter(raw_ostream &diagOs,
-                                             clang::DiagnosticOptions *diags)
+                                             clang::DiagnosticOptions &diags)
     : os(diagOs), diagOpts(diags) {}
 
 TextDiagnosticPrinter::~TextDiagnosticPrinter() {}
