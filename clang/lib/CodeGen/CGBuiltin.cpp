@@ -277,7 +277,7 @@ Address CheckAtomicAlignment(CodeGenFunction &CGF, const CallExpr *E) {
   const llvm::DataLayout &DL = CGF.CGM.getDataLayout();
   unsigned Bytes = Ptr.getElementType()->isPointerTy()
                        ? Ctx.getTypeSizeInChars(Ctx.VoidPtrTy).getQuantity()
-                       : DL.getTypeSizeInBits(Ptr.getElementType()) / 8;
+                       : DL.getTypeStoreSize(Ptr.getElementType());
   unsigned Align = Ptr.getAlignment().getQuantity();
   if (Align % Bytes != 0) {
     DiagnosticsEngine &Diags = CGF.CGM.getDiags();
