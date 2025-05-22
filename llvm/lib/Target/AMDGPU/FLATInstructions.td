@@ -1822,7 +1822,7 @@ defm : FlatStorePats <FLAT_STORE_SHORT, store_flat, i16>;
 let OtherPredicates = [isGFX12Plus] in
 defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 
-let OtherPredicates = [isGFX12Plus, HasAtomicCSubNoRtnInsts] in
+let OtherPredicates = [isGFX12Plus] in
 defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 
 let OtherPredicates = [HasD16LoadStore] in {
@@ -1990,9 +1990,7 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", "atomic_load_xor_global", i
 
 let SubtargetPredicate = isGFX12Plus in {
   defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_global", i32>;
-
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_global", i32>;
+  defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_global", i32>;
 }
 
 let OtherPredicates = [isGFX12PlusNot12_50] in
