@@ -574,7 +574,7 @@ protected:
     /// Indicates that SourceLocations are cached as
     /// Trailing objects. See the definition of CallExpr.
     LLVM_PREFERRED_TYPE(bool)
-    unsigned HasTrailingSourceLocs : 1;
+    unsigned HasTrailingSourceLoc : 1;
   };
 
   enum { NumCallExprBits = 25 };
