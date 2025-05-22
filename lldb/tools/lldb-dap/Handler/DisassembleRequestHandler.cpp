@@ -87,7 +87,7 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   auto addr = inst.GetAddress();
   const auto inst_addr = addr.GetLoadAddress(target);
-  
+
   // FIXME: This is a workaround - this address might come from
   // disassembly that started in a different section, and thus
   // comparisons between this object and other address objects with the
