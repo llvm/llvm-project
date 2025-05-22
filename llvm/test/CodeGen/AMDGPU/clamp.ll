@@ -4115,13 +4115,13 @@ define float @v_clamp_f32_daz_minimumnum_maximumnum(float %a) #0 {
 ; GFX6-LABEL: v_clamp_f32_daz_minimumnum_maximumnum:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_mul_f32_e64 v0, 1.0, v0 clamp
+; GFX6-NEXT:    v_max_f32_e64 v0, v0, v0 clamp
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_clamp_f32_daz_minimumnum_maximumnum:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mul_f32_e64 v0, 1.0, v0 clamp
+; GFX8-NEXT:    v_max_f32_e64 v0, v0, v0 clamp
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_clamp_f32_daz_minimumnum_maximumnum:
@@ -4154,13 +4154,13 @@ define float @v_clamp_f32_minimumnum_maximumnum(float %a) #1 {
 ; GFX6-LABEL: v_clamp_f32_minimumnum_maximumnum:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_mul_f32_e64 v0, 1.0, v0 clamp
+; GFX6-NEXT:    v_max_f32_e64 v0, v0, v0 clamp
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_clamp_f32_minimumnum_maximumnum:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mul_f32_e64 v0, 1.0, v0 clamp
+; GFX8-NEXT:    v_max_f32_e64 v0, v0, v0 clamp
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_clamp_f32_minimumnum_maximumnum:
@@ -4193,13 +4193,13 @@ define float @v_clamp_f32_neg_minimumnum_maximumnum(float %a) #1 {
 ; GFX6-LABEL: v_clamp_f32_neg_minimumnum_maximumnum:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_mul_f32_e64 v0, -1.0, v0 clamp
+; GFX6-NEXT:    v_max_f32_e64 v0, -v0, -v0 clamp
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_clamp_f32_neg_minimumnum_maximumnum:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mul_f32_e64 v0, -1.0, v0 clamp
+; GFX8-NEXT:    v_max_f32_e64 v0, -v0, -v0 clamp
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_clamp_f32_neg_minimumnum_maximumnum:
@@ -4233,13 +4233,13 @@ define float @v_clamp_f32_minimumnum_maximumnum_no_ieee(float %a) #5 {
 ; GFX6-LABEL: v_clamp_f32_minimumnum_maximumnum_no_ieee:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_mul_f32_e64 v0, 1.0, v0 clamp
+; GFX6-NEXT:    v_max_f32_e64 v0, v0, v0 clamp
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_clamp_f32_minimumnum_maximumnum_no_ieee:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mul_f32_e64 v0, 1.0, v0 clamp
+; GFX8-NEXT:    v_max_f32_e64 v0, v0, v0 clamp
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_clamp_f32_minimumnum_maximumnum_no_ieee:
