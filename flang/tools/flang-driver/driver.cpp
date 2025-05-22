@@ -43,9 +43,9 @@ std::string getExecutablePath(const char *argv0) {
 
 // This lets us create the DiagnosticsEngine with a properly-filled-out
 // DiagnosticOptions instance
-static clang::DiagnosticOptions *
+static std::unique_ptr<clang::DiagnosticOptions>
 createAndPopulateDiagOpts(llvm::ArrayRef<const char *> argv) {
-  auto *diagOpts = new clang::DiagnosticOptions;
+  auto diagOpts = std::make_unique<clang::DiagnosticOptions>();
 
   // Ignore missingArgCount and the return value of ParseDiagnosticArgs.
   // Any errors that would be diagnosed here will also be diagnosed later,
@@ -114,17 +114,17 @@ int main(int argc, const char **argv) {
   // Not in the frontend mode - continue in the compiler driver mode.
 
   // Create DiagnosticsEngine for the compiler driver
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
+  std::unique_ptr<clang::DiagnosticOptions> diagOpts =
       createAndPopulateDiagOpts(args);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
       new clang::DiagnosticIDs());
   Fortran::frontend::TextDiagnosticPrinter *diagClient =
-      new Fortran::frontend::TextDiagnosticPrinter(llvm::errs(), &*diagOpts);
+      new Fortran::frontend::TextDiagnosticPrinter(llvm::errs(), *diagOpts);
 
   diagClient->setPrefix(
       std::string(llvm::sys::path::stem(getExecutablePath(args[0]))));
 
-  clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagClient);
+  clang::DiagnosticsEngine diags(diagID, *diagOpts, diagClient);
 
   // Prepare the driver
   clang::driver::Driver theDriver(driverPath,
