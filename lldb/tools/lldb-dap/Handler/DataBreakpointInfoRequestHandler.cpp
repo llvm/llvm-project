@@ -37,7 +37,7 @@ HandleDataBreakpointBytes(DAP &dap,
       args.bytes.value_or(dap.target.GetAddressByteSize());
 
   protocol::DataBreakpointInfoResponseBody response;
-  response.dataId = llvm::formatv("{:x}/{}", load_addr, byte_size);
+  response.dataId = llvm::formatv("{:x-}/{}", load_addr, byte_size);
 
   lldb::SBMemoryRegionInfo region;
   lldb::SBError err =
@@ -48,8 +48,10 @@ HandleDataBreakpointBytes(DAP &dap,
     response.description = llvm::formatv(
         "memory region for address {} has no read or write permissions",
         load_addr);
+
   } else {
-    response.description = llvm::formatv("{} bytes at {:x}", load_addr);
+    response.description =
+        llvm::formatv("{} bytes at {:x}", byte_size, load_addr);
     response.accessTypes = {protocol::eDataBreakpointAccessTypeRead,
                             protocol::eDataBreakpointAccessTypeWrite,
                             protocol::eDataBreakpointAccessTypeReadWrite};
@@ -86,7 +88,7 @@ DataBreakpointInfoRequestHandler::Run(
       is_data_ok = false;
       response.description = "variable size is 0";
     } else {
-      addr = llvm::utohexstr(load_addr);
+      addr = llvm::utohexstr(load_addr, /*lowerCase=*/true);
       size = llvm::utostr(byte_size);
     }
   } else if (args.variablesReference.value_or(0) == 0 && frame.IsValid()) {
@@ -103,7 +105,7 @@ DataBreakpointInfoRequestHandler::Run(
       lldb::SBData data = value.GetPointeeData();
       if (data.IsValid()) {
         size = llvm::utostr(data.GetByteSize());
-        addr = llvm::utohexstr(load_addr);
+        addr = llvm::utohexstr(load_addr, /*lowerCase=*/true);
         lldb::SBMemoryRegionInfo region;
         lldb::SBError err =
             dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
@@ -132,7 +134,7 @@ DataBreakpointInfoRequestHandler::Run(
     response.accessTypes = {protocol::eDataBreakpointAccessTypeRead,
                             protocol::eDataBreakpointAccessTypeWrite,
                             protocol::eDataBreakpointAccessTypeReadWrite};
-    response.description = size + " bytes at " + addr + " " + args.name;
+    response.description = size + " bytes at 0x" + addr + " " + args.name;
   }
 
   return response;
