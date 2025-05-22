@@ -174,6 +174,22 @@ define <vscale x 7 x i1> @lane_mask_nxv7i1_i64(i64 %index, i64 %TC) {
   ret <vscale x 7 x i1> %active.lane.mask
 }
 
+define <vscale x 1 x i1> @lane_mask_nxv1i1_i8(i32 %index, i32 %TC) {
+; CHECK-LABEL: lane_mask_nxv1i1_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    index z0.s, #0, #1
+; CHECK-NEXT:    mov z1.s, w0
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    uqadd z0.s, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, w1
+; CHECK-NEXT:    cmphi p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %active.lane.mask = call <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i32(i32 %index, i32 %TC)
+  ret <vscale x 1 x i1> %active.lane.mask
+}
+
 ; UTC_ARGS: --disable
 ; This test exists to protect against a compiler crash caused by an attempt to
 ; convert (via changeVectorElementType) an MVT into an EVT, which is impossible.
@@ -392,6 +408,7 @@ declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32, i32)
 declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32, i32)
 declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32, i32)
 declare <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i32(i32, i32)
+declare <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i32(i32, i32)
 
 declare <vscale x 64 x i1> @llvm.get.active.lane.mask.nxv64i1.i64(i64, i64)
 declare <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i64(i64, i64)

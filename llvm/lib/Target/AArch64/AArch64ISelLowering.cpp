@@ -2105,9 +2105,10 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
   if (!Subtarget->hasSVE() || ResVT.getVectorElementType() != MVT::i1)
     return true;
 
-  // Only support illegal types if the result is scalable.
-  if (ResVT.isFixedLengthVector() && (ResVT.getVectorNumElements() > 16 ||
-                                      (OpVT != MVT::i32 && OpVT != MVT::i64)))
+  // Only support illegal types if the result is scalable and min elements > 1.
+  if (ResVT.getVectorMinNumElements() == 1 ||
+      (ResVT.isFixedLengthVector() && (ResVT.getVectorNumElements() > 16 ||
+                                       (OpVT != MVT::i32 && OpVT != MVT::i64))))
     return true;
 
   // 32 & 64 bit operands are supported. We can promote anything < 64 bits,
