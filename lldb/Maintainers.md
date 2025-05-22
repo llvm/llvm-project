@@ -238,4 +238,5 @@ a20012251@gmail.com (email), [walter-erquinigo](https://github.com/walter-erquin
 The following people have graciously spent time performing maintainership duties but are no longer active in that role. Thank you for all your help with the success of the project!
 
 Kamil Rytarowski (kamil@netbsd.org)
+
 Zachary Turner (zturner@google.com)
