@@ -46,6 +46,7 @@ protected:
   SlotIndexes *const Indexes;
   const bool RegClassPriorityTrumpsGlobalness;
   const bool ReverseLocalAssignment;
+  const bool ForceLocalAssignment;
 };
 
 class DefaultPriorityAdvisor : public RegAllocPriorityAdvisor {

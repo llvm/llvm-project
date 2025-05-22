@@ -69,7 +69,7 @@ static cl::opt<bool>
     RematLiveThru("amdgpu-remat-livethru", cl::Hidden,
                   cl::desc("Rematerialize the LiveThru registers for the first "
                            "loop found in the code"),
-                  cl::init(true));
+                  cl::init(false));
 
 static cl::opt<bool> RematLiveIn(
     "amdgpu-remat-into", cl::Hidden,
@@ -678,6 +678,28 @@ GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
   SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
   if (!DisableRemat) SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
+
+  bool HasIGLP = false;
+  for (auto &MBB : *C->MF) {
+    for (auto &MI : MBB) {
+      unsigned Opc = MI.getOpcode();
+      if (Opc == AMDGPU::IGLP_OPT) {
+        auto Strat = MI.getOperand(0).getImm();
+        if (Strat == 10) {
+          HasIGLP = true;
+          break;
+        }
+      }
+    }
+    if (HasIGLP)
+      break;
+  }
+
+  if (HasIGLP) {
+    GCNTrackers = true;
+    RematLiveThru = true;
+  }
+
   GCNTrackers = GCNTrackers & !IsLegacyScheduler;
 }
 
@@ -1633,6 +1655,9 @@ bool PreRARematStage::initGCNSchedStage() {
   // need to be fixed if there is another pass after this pass.
   assert(!S.hasNextStage());
 
+  SIRegisterInfo *SRI = const_cast<SIRegisterInfo *>(
+      static_cast<const SIRegisterInfo *>(DAG.TRI));
+  SRI->setLocalAssignment(true);
   CI.clear();
   CI.compute(MF);
   PDT.recalculate(MF);

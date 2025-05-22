@@ -101,6 +101,8 @@ protected:
   // GCN RP Tracker for botttom-up scheduling
   mutable GCNUpwardRPTracker UpwardTracker;
 
+  MachineCycleInfo CI;
+
 public:
   // schedule() have seen register pressure over the critical limits and had to
   // track register pressure for actual scheduling heuristics.
@@ -673,9 +675,7 @@ public:
 
     std::set<RematCandidate> Cache;
 
-    // errs() << "HoistToDominator\n";
     for (auto RematInfo : RematMap) {
-      // errs() << "\nRemat Inst: "; RematInfo.first->dump();
       std::set<unsigned> HighRPs;
       SmallVector<MachineBasicBlock *> MBBs;
       for (auto R : RematInfo.second) {
@@ -683,14 +683,10 @@ public:
           HighRPs.insert(HRP);
         }
         MBBs.push_back(R.InsertPt->getParent());
-        // errs() << "Has remat point in: " <<
-        // printMBBReference(*R.InsertPt->getParent()) << "\n";
       }
 
       auto DomBlock = PDT->findNearestCommonDominator(iterator_range(MBBs));
       if (DomBlock && isReachableFrom(TargetBlock, DomBlock)) {
-        // errs() << "Found dom block: " << printMBBReference(*DomBlock) <<
-        // "\n";
         RematCandidate New(RematInfo.first, CI.getCycleDepth(DomBlock), HighRPs,
                            DomBlock->begin());
         Cache.insert(New);
@@ -701,37 +697,13 @@ public:
       }
     }
 
-    // errs() << "Condensed: " << Entries.size() << " into: " << Cache.size() <<
-    // "\n";
     Entries.clear();
     Entries = Cache;
     return true;
   }
 
   bool update(RematCandidate &RNew, const LiveIntervals *LIS) {
-    // errs() << "Update: "; RNew.Def->dump();
-    ////errs() << "Calling update for cand: ";
-    // RNew.Def->dump();
-    ////errs() << "With Regions: ";
-    // for (auto Regi : RNew.HighRPRegions) {
-    //   //errs() << Regi;
-    // }
-    ////errs() << "\n";
     auto Match = find_if(Entries, [RNew](const RematCandidate &R) {
-      if (R.Def == RNew.Def) {
-        ////errs() << "equal defs for cand match: \n";
-
-        // R.Def->dump();
-        ////errs() << "With Regions: ";
-        // for (auto Regi : R.HighRPRegions) {
-        //   //errs() << Regi;
-        // }
-        ////errs() << "\n";
-
-        ////errs() << "RNew parent: " << RNew.InsertPt->getParent()->getName()
-        ///<< "\n"; /errs() << "R parent: " <<
-        ///R.InsertPt->getParent()->getName() << "\n";
-      }
       return R.Def == RNew.Def &&
              RNew.InsertPt->getParent() == R.InsertPt->getParent();
     });
@@ -767,32 +739,21 @@ public:
 
   void resolveSameBlockUses(const MachineRegisterInfo *MRI,
                             const LiveIntervals *LIS) {
-    // errs() << "\nResolve Same Block uses";
     // We may have added remat candidates which are used by other remat
     // candidates -- be sure that we have correct insert points for this
     bool FixedPoint = false;
     while (!FixedPoint) {
-      // errs() << "Fixed Point iter\n";
-      //  //errs() << "Doling fixed point\n";
       FixedPoint = true;
       for (auto &RematEntry : Entries) {
 
         MachineInstr *RematInst = RematEntry.Def;
-        // errs() << "R: "; RematInst->dump();
-        // errs() << "For Regions: ";
-        // errs() << "\n";
         MachineBasicBlock::iterator RematPt = RematEntry.InsertPt;
-        // for (auto RematInst : RematEntry.second) {
-        //   //errs() << "Have Remat Inst: "; RematInst.first->dump();
-        // //errs() << "With Insert Point: " <<
-        // DAG.LIS->getInstructionIndex(*RematInst.second) << "\n";
         for (auto MO : RematInst->operands()) {
           if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
             continue;
           auto UseReg = MO.getReg();
           if (!UseReg.isVirtual())
             continue;
-          // //errs() << "Found UseReg: " << printReg(UseReg) << "\n";
           for (MachineInstr &DefInst : MRI->def_instructions(UseReg)) {
 
             auto Match =

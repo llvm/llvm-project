@@ -153,6 +153,7 @@ public:
     return RegClassPriorityTrumpsGlobalness;
   }
   bool getReverseLocalAssignment() const { return ReverseLocalAssignment; }
+  bool getForceLocalAssignment() const { return ForceLocalAssignment; }
   // end (interface to priority advisers)
 
 private:
@@ -285,6 +286,8 @@ private:
   bool RegClassPriorityTrumpsGlobalness = false;
 
   bool ReverseLocalAssignment = false;
+
+  bool ForceLocalAssignment = false;
 
 public:
   RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F = nullptr);

@@ -44,6 +44,8 @@ private:
   bool isWave32;
   BitVector RegPressureIgnoredUnits;
 
+  bool ForceLocalAssignment = false;
+
   /// Sub reg indexes for getRegSplitParts.
   /// First index represents subreg size from 1 to 32 Half DWORDS.
   /// The inner vector is sorted by bit offset.
@@ -115,6 +117,10 @@ public:
   unsigned getCSRFirstUseCost() const override {
     return 100;
   }
+
+  bool forceLocalAssignment() const override { return ForceLocalAssignment; }
+
+  void setLocalAssignment(bool Flag) { ForceLocalAssignment = Flag; }
 
   // When building a block VGPR load, we only really transfer a subset of the
   // registers in the block, based on a mask. Liveness analysis is not aware of

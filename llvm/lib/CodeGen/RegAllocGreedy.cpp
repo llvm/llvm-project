@@ -132,11 +132,11 @@ static cl::opt<bool> GreedyReverseLocalAssignment(
              "shorter local live ranges will tend to be allocated first"),
     cl::Hidden);
 
-static cl::opt<bool> ForceLocalAssignment(
+static cl::opt<bool> GreedyForceLocalAssignment(
     "force-local-assignment",
     cl::desc("Force allocation order of local live ranges, such that "
              "shorter local live ranges will tend to be allocated first"),
-    cl::init(false), cl::Hidden);
+    cl::Hidden);
 
 static cl::opt<unsigned> SplitThresholdForRegWithHint(
     "split-threshold-for-reg-with-hint",
@@ -2880,6 +2880,10 @@ bool RAGreedy::run(MachineFunction &mf) {
   ReverseLocalAssignment = GreedyReverseLocalAssignment.getNumOccurrences()
                                ? GreedyReverseLocalAssignment
                                : TRI->reverseLocalAssignment();
+
+  ForceLocalAssignment = GreedyForceLocalAssignment.getNumOccurrences()
+                             ? GreedyForceLocalAssignment
+                             : TRI->forceLocalAssignment();
 
   ExtraInfo.emplace();
 

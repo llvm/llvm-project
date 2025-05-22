@@ -215,4 +215,5 @@ RegAllocPriorityAdvisor::RegAllocPriorityAdvisor(const MachineFunction &MF,
       RegClassInfo(RA.getRegClassInfo()), Indexes(Indexes),
       RegClassPriorityTrumpsGlobalness(
           RA.getRegClassPriorityTrumpsGlobalness()),
-      ReverseLocalAssignment(RA.getReverseLocalAssignment()) {}
+      ReverseLocalAssignment(RA.getReverseLocalAssignment()),
+      ForceLocalAssignment(RA.getForceLocalAssignment()) {}
