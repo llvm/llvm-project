@@ -17,7 +17,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCValue.h"
 
 using namespace llvm;
 
@@ -113,8 +112,6 @@ public:
   // Override MCAsmBackend
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
-  bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                             const MCValue &, const MCSubtargetInfo *) override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -153,13 +150,6 @@ MCFixupKindInfo SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   assert(unsigned(Kind - FirstTargetFixupKind) < SystemZ::NumTargetFixupKinds &&
          "Invalid kind!");
   return SystemZ::MCFixupKindInfos[Kind - FirstTargetFixupKind];
-}
-
-bool SystemZMCAsmBackend::shouldForceRelocation(const MCAssembler &,
-                                                const MCFixup &,
-                                                const MCValue &Target,
-                                                const MCSubtargetInfo *) {
-  return Target.getSpecifier();
 }
 
 void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,
