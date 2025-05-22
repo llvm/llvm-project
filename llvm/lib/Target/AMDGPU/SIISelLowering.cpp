@@ -13593,10 +13593,34 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
   if (K0->getValueAPF() > K1->getValueAPF())
     return SDValue();
 
+  // med3 with a nan input acts like
+  // v_min_f32(v_min_f32(S0.f32, S1.f32), S2.f32)
+  //
+  // So the result depends on whether the IEEE mode bit is enabled or not with a
+  // signaling nan input.
+  // ieee=1
+  // s0 snan: yields s2
+  // s1 snan: yields s2
+  // s2 snan: qnan
+
+  // s0 qnan: min(s1, s2)
+  // s1 qnan: min(s0, s2)
+  // s2 qnan: min(s0, s1)
+
+  // ieee=0
+  // s0 snan: min(s1, s2)
+  // s1 snan: min(s0, s2)
+  // s2 snan: qnan
+
+  // s0 qnan: min(s1, s2)
+  // s1 qnan: min(s0, s2)
+  // s2 qnan: min(s0, s1)
   const MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
-  // TODO: Check IEEE bit enabled?
+  // TODO: Check IEEE bit enabled. We can form fmed3 with IEEE=0 regardless of
+  // whether the input is a signaling nan if op0 is fmaximum or fmaximumnum. We
+  // can only form if op0 is fmaxnum_ieee if IEEE=1.
   EVT VT = Op0.getValueType();
   if (Info->getMode().DX10Clamp) {
     // If dx10_clamp is enabled, NaNs clamp to 0.0. This is the same as the
@@ -13714,9 +13738,14 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
       return Med3;
   }
 
-  // fminnum(fmaxnum(x, K0), K1), K0 < K1 && !is_snan(x) -> fmed3(x, K0, K1)
+  // if !is_snan(x):
+  //   fminnum(fmaxnum(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fminnum_ieee(fmaxnum_ieee(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fminnumnum(fmaxnumnum(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fmin_legacy(fmax_legacy(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
   if (((Opc == ISD::FMINNUM && Op0.getOpcode() == ISD::FMAXNUM) ||
        (Opc == ISD::FMINNUM_IEEE && Op0.getOpcode() == ISD::FMAXNUM_IEEE) ||
+       (Opc == ISD::FMINIMUMNUM && Op0.getOpcode() == ISD::FMAXIMUMNUM) ||
        (Opc == AMDGPUISD::FMIN_LEGACY &&
         Op0.getOpcode() == AMDGPUISD::FMAX_LEGACY)) &&
       (VT == MVT::f32 || VT == MVT::f64 ||
