@@ -75,9 +75,7 @@ public:
   /// Sets the DiagnosticsEngine that diag() will emit diagnostics to.
   // FIXME: this is required initialization, and should be a constructor param.
   // Fix the context -> diag engine -> consumer -> context initialization cycle.
-  void setDiagnosticsEngine(std::unique_ptr<DiagnosticOptions> DiagOpts,
-                            DiagnosticsEngine *DiagEngine) {
-    this->DiagOpts = std::move(DiagOpts);
+  void setDiagnosticsEngine(DiagnosticsEngine *DiagEngine) {
     this->DiagEngine = DiagEngine;
   }
 
@@ -233,7 +231,6 @@ private:
   // Writes to Stats.
   friend class ClangTidyDiagnosticConsumer;
 
-  std::unique_ptr<DiagnosticOptions> DiagOpts = nullptr;
   DiagnosticsEngine *DiagEngine = nullptr;
   std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider;
 

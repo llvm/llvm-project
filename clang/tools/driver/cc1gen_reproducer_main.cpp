@@ -117,12 +117,12 @@ generateReproducerForInvocationArguments(ArrayRef<const char *> Argv,
   using namespace driver;
   auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Argv[0]);
 
-  DiagnosticOptions DiagOpts;
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions;
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  DiagnosticsEngine Diags(DiagID, DiagOpts, new IgnoringDiagConsumer());
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, new IgnoringDiagConsumer());
   auto VFS = llvm::vfs::getRealFileSystem();
-  ProcessWarningOptions(Diags, DiagOpts, *VFS, /*ReportDiags=*/false);
+  ProcessWarningOptions(Diags, *DiagOpts, *VFS, /*ReportDiags=*/false);
   Driver TheDriver(ToolContext.Path, llvm::sys::getDefaultTargetTriple(), Diags,
                    /*Title=*/"clang LLVM compiler", VFS);
   TheDriver.setTargetAndMode(TargetAndMode);
