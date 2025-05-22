@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class AddressSpacesImpl {
+def AddrSpaces {
   int Flat = 0;
   int Global = 1;
   int Region = 2;
@@ -23,8 +23,6 @@ class AddressSpacesImpl {
   int LaneShared = 10;
 #endif /* LLPC_BUILD_NPI */
 }
-
-def AddrSpaces : AddressSpacesImpl;
 
 
 class AMDGPUInst <dag outs, dag ins, string asm = "",

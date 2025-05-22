@@ -18104,10 +18104,11 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
     case 'v':
       switch (BitWidth) {
       case 16:
+        RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
 #if LLPC_BUILD_NPI
-        RC = &AMDGPU::VGPR_32_Lo256RegClass;
+                                             : &AMDGPU::VGPR_32_Lo256RegClass;
 #else /* LLPC_BUILD_NPI */
-        RC = &AMDGPU::VGPR_32RegClass;
+                                             : &AMDGPU::VGPR_32RegClass;
 #endif /* LLPC_BUILD_NPI */
         break;
       default:
