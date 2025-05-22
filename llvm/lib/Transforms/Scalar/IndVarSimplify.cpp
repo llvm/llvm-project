@@ -38,6 +38,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -53,7 +54,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -79,6 +79,7 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "indvars"
 
@@ -806,12 +807,9 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
   if (!SE->isSCEVable(Phi->getType()))
     return false;
 
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
-  if (!AR || AR->getLoop() != L || !AR->isAffine())
-    return false;
-
-  const SCEV *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
-  if (!Step || !Step->isOne())
+  const SCEV *S = SE->getSCEV(Phi);
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_scev_One())) ||
+      cast<SCEVAddRecExpr>(S)->getLoop() != L)
     return false;
 
   int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
