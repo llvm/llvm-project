@@ -529,8 +529,10 @@ void RuntimePointerChecking::groupChecks(
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
       auto PointerI = PositionMap.find(M.getPointer());
-      assert(PointerI != PositionMap.end() &&
-             "pointer in equivalence class not found in PositionMap");
+      // If we can't find the pointer in PositionMap that means we can't
+      // generate a memcheck for it.
+      if (PointerI == PositionMap.end())
+        continue;
       for (unsigned Pointer : PointerI->second) {
         bool Merged = false;
         // Mark this pointer as seen.
@@ -692,7 +694,9 @@ public:
   /// non-intersection.
   ///
   /// Returns true if we need no check or if we do and we can generate them
-  /// (i.e. the pointers have computable bounds).
+  /// (i.e. the pointers have computable bounds). A return value of false means
+  /// we couldn't analyze and generate runtime checks for all pointers in the
+  /// loop, but we will have checks for those pointers we could analyze.
   bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
                        Loop *TheLoop,
                        const DenseMap<Value *, const SCEV *> &Strides,
@@ -1283,7 +1287,6 @@ bool AccessAnalysis::canCheckPtrAtRT(
                                   /*Assume=*/true)) {
           CanDoAliasSetRT = false;
           UncomputablePtr = Access.getPointer();
-          break;
         }
       }
     }
@@ -1323,7 +1326,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
     }
   }
 
-  if (MayNeedRTCheck && CanDoRT)
+  if (MayNeedRTCheck)
     RtCheck.generateChecks(DepCands, IsDepCheckNeeded);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
@@ -1333,12 +1336,9 @@ bool AccessAnalysis::canCheckPtrAtRT(
   // are needed. This can happen when all pointers point to the same underlying
   // object for example.
   RtCheck.Need = CanDoRT ? RtCheck.getNumberOfChecks() != 0 : MayNeedRTCheck;
-
   bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;
   assert(CanDoRTIfNeeded == (CanDoRT || !MayNeedRTCheck) &&
          "CanDoRTIfNeeded depends on RtCheck.Need");
-  if (!CanDoRTIfNeeded)
-    RtCheck.reset();
   return CanDoRTIfNeeded;
 }
 
@@ -2650,9 +2650,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
-  bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
+  HasCompletePtrRtChecking = Accesses.canCheckPtrAtRT(
       *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides, UncomputablePtr);
-  if (!CanDoRTIfNeeded) {
+  if (!HasCompletePtrRtChecking) {
     const auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I)
         << "cannot identify array bounds";
@@ -2681,11 +2681,11 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
       auto *SE = PSE->getSE();
       UncomputablePtr = nullptr;
-      CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
+      HasCompletePtrRtChecking = Accesses.canCheckPtrAtRT(
           *PtrRtChecking, SE, TheLoop, SymbolicStrides, UncomputablePtr);
 
       // Check that we found the bounds for the pointer.
-      if (!CanDoRTIfNeeded) {
+      if (!HasCompletePtrRtChecking) {
         auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
         recordAnalysis("CantCheckMemDepsAtRunTime", I)
             << "cannot check memory dependencies at runtime";
@@ -3019,6 +3019,8 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 
   // List the pair of accesses need run-time checks to prove independence.
   PtrRtChecking->print(OS, Depth);
+  if (PtrRtChecking->Need && !HasCompletePtrRtChecking)
+    OS.indent(Depth) << "Generated run-time checks are incomplete\n";
   OS << "\n";
 
   OS.indent(Depth)

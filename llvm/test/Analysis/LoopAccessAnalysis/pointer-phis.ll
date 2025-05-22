@@ -462,6 +462,10 @@ define i32 @store_with_pointer_phi_in_same_bb_use_other_phi(ptr %A, ptr %B, ptr 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %A High: (256000 + %A))
+; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
+; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
