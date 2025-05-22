@@ -18,6 +18,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mustache.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::json;
@@ -74,7 +75,50 @@ static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
 
 static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
 
+static Error
+setupTemplate(std::unique_ptr<MustacheTemplateFile> &Template,
+              StringRef TemplatePath,
+              std::vector<std::pair<StringRef, StringRef>> Partials) {
+  auto T = MustacheTemplateFile::createMustacheFile(TemplatePath);
+  if (Error Err = T.takeError())
+    return Err;
+  Template = std::move(T.get());
+  for (const auto [Name, FileName] : Partials)
+    if (auto Err = Template->registerPartialFile(Name, FileName))
+      return Err;
+  return Error::success();
+}
+
 static Error setupTemplateFiles(const clang::doc::ClangDocContext &CDCtx) {
+  // Template files need to use the native path when they're opened,
+  // but have to be used in POSIX style when used in HTML.
+  auto ConvertToNative = [](std::string &&Path) -> std::string {
+    SmallString<128> PathBuf(Path);
+    llvm::sys::path::native(PathBuf);
+    return PathBuf.str().str();
+  };
+
+  std::string NamespaceFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("namespace-template"));
+  std::string ClassFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("class-template"));
+  std::string CommentFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("comment-template"));
+  std::string FunctionFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("function-template"));
+  std::string EnumFilePath =
+      ConvertToNative(CDCtx.MustacheTemplates.lookup("enum-template"));
+  std::vector<std::pair<StringRef, StringRef>> Partials = {
+      {"Comments", CommentFilePath},
+      {"FunctionPartial", FunctionFilePath},
+      {"EnumPartial", EnumFilePath}};
+
+  if (Error Err = setupTemplate(NamespaceTemplate, NamespaceFilePath, Partials))
+    return Err;
+
+  if (Error Err = setupTemplate(RecordTemplate, ClassFilePath, Partials))
+    return Err;
+
   return Error::success();
 }
 

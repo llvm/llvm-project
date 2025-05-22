@@ -314,7 +314,7 @@ features.
 ``MLModelRunner`` implementations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We currently feature 3 implementations:
+We currently feature 4 implementations:
 
 - ``ModelUnderTrainingRunner``. This requires the compiler be built with TFLite
   support. It allows loading a TFLite model dynamically and is primarily
@@ -338,12 +338,187 @@ requiring no out of tree build-time dependencies.
   presumably a python training algorithm. We do not envision using this in a
   production environment.
 
+- ``NoInferenceModelRunner``. This serves as a store for feature values, and its
+  ``evaluate`` should never be called. It's used for training scenarios, when we
+  want to capture the behavior of the default (non-ML) heuristic.
+
 Note that training leaves it to the training infrastructure to handle
 distributed computing. The assumed architecture has python processes
 communicating remotely between themselves, but managing local communication with
 clang.
 
-..
-    TODO(mtrofin): 
-        - logging, and the use in interactive mode.
-        - discuss an example (like the inliner)
+Logging Facility
+----------------
+
+When training models, we need to expose the features we will want to use during
+inference, as well as outcomes, to guide reward-based learning techniques. This
+can happen in 2 forms:
+
+- when running the compiler on some input, as a capture of the features and
+  actions taken by some policy or a model currently being used.
+  For example, see ``DevelopmentModeInlineAdvisor`` or ``DevelopmentModeEvictAdvisor``
+  in ``MLRegallocEvictAdvisor.cpp``. In more detail, in the former case, if
+  ``-training-log`` is specified, the features and actions (inline/no inline)
+  from each inlining decision are saved to the specified file. Since
+  ``MLModelRunner`` implementations hold on to feature values (they don't get
+  cleared by ``evaluate``), logging is easily supported by just looping over the
+  model runner's features and passing the tensor buffers to the logger. Note how
+  we use the ``NoInferenceModelRunner`` to capture the features observed when
+  using the default policy.
+
+- as a serialization mechanism for the ``InteractiveModelRunner``. Here, we need
+  to pass the observed features over IPC (a file descriptor, likely a named
+  pipe).
+
+Both cases require serializing the same kind of data and we support both with
+``Analysis/Utils/TrainingLogger``.
+
+The goal of the logger design was avoiding any new dependency, and optimizing
+for the tensor scenario - i.e. exchanging potentially large buffers of fixed
+size, containing scalars. We explicitly assume the reader of the format has the
+same endianness as the compiler host, and we further expect the reader and the
+compiler run on the same host. This is because we expect the training scenarios
+have a (typically python) process managing the compiler process, and we leave to
+the training side to handle remoting.
+
+The logger produces the following sequence:
+
+- a header describing the structure of the log. This is a one-line textual JSON
+  dictionary with the following elements:
+  
+  - ``features``: a list of JSON-serialized ``TensorSpec`` values. The position
+    in the list matters, as it will be the order in which values will be
+    subsequently recorded. If we are just logging (i.e. not using the
+    ``InteractiveModelRunner``), the last feature should be that of the action
+    (e.g. "inline/no inline", or "index of evicted live range")
+  - (optional) ``score``: a ``TensorSpec`` describing a value we will include to
+    help formulate a reward. This could be a size estimate or a latency estimate.
+  - (optional) ``advice``: a ``TensorSpec`` describing the action. This is used
+    for the ``InteractiveModelRunner``, in which case it shouldn't be in the 
+    ``features`` list.
+- a sequence of ``contexts``. Contexts are independent traces of the optimization
+  problem. For module passes, there is only one context, for function passes,
+  there is a context per function. The start of a context is marked with a
+  one-line JSON dictionary of the form ``{"context": <context name, a string>}``
+  
+  Each context has a sequence of:
+
+  - ``observations``. An observation is:
+    
+    - one-line JSON ``{"observation": <observation number. 0-indexed>}``
+    - a binary dump of the tensor buffers, in the order in which they were
+      specified in the header.
+    - a new line character
+    - if ``score`` was specified in the header:
+    
+      - a one-line JSON object ``{"outcome": <value>}``, where the ``value``
+        conforms to the ``TensorSpec`` in defined for the ``score`` in the header.
+      - the outcome value, as a binary dump
+      - a new line character.
+
+The format uses a mix of textual JSON (for headers) and binary dumps (for tensors)
+because the headers are not expected to dominate the payload - the tensor values
+are. We wanted to avoid overburdening the log reader - likely python - from
+additional dependencies; and the one-line JSON makes it rudimentarily possible
+to inspect a log without additional tooling.
+
+A python utility for reading logs, used for tests, is available at
+``Analysis/models/log_reader.py``. A utility showcasing the ``InteractiveModelRunner``,
+which uses this reader as well, is at ``Analysis/models/interactive_host.py``.
+The latter is also used in tests.
+
+There is no C++ implementation of a log reader. We do not have a scenario
+motivating one.
+
+IR2Vec Embeddings
+=================
+
+IR2Vec is a program embedding approach designed specifically for LLVM IR. It
+is implemented as a function analysis pass in LLVM. The IR2Vec embeddings
+capture syntactic, semantic, and structural properties of the IR through 
+learned representations. These representations are obtained as a JSON 
+vocabulary that maps the entities of the IR (opcodes, types, operands) to 
+n-dimensional floating point vectors (embeddings). 
+
+With IR2Vec, representation at different granularities of IR, such as
+instructions, functions, and basic blocks, can be obtained. Representations 
+of loops and regions can be derived from these representations, which can be
+useful in different scenarios. The representations can be useful for various
+downstream tasks, including ML-guided compiler optimizations.
+
+The core components are:
+  - **Vocabulary**: A mapping from IR entities (opcodes, types, etc.) to their
+    vector representations. This is managed by ``IR2VecVocabAnalysis``.
+  - **Embedder**: A class (``ir2vec::Embedder``) that uses the vocabulary to
+    compute embeddings for instructions, basic blocks, and functions.
+
+Using IR2Vec
+------------
+
+For generating embeddings, first the vocabulary should be obtained. Then, the 
+embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
+
+1. **Get the Vocabulary**:
+   In a ModulePass, get the vocabulary analysis result:
+
+   .. code-block:: c++
+
+      auto &VocabRes = MAM.getResult<IR2VecVocabAnalysis>(M);
+      if (!VocabRes.isValid()) {
+        // Handle error: vocabulary is not available or invalid
+        return;
+      }
+      const ir2vec::Vocab &Vocabulary = VocabRes.getVocabulary();
+      unsigned Dimension = VocabRes.getDimension();
+
+    Note that ``IR2VecVocabAnalysis`` pass is immutable.
+
+2. **Create Embedder instance**:
+   With the vocabulary, create an embedder for a specific function:
+
+   .. code-block:: c++
+
+      // Assuming F is an llvm::Function&
+      // For example, using IR2VecKind::Symbolic:
+      Expected<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
+          ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary, Dimension);
+
+      if (auto Err = EmbOrErr.takeError()) {
+        // Handle error in embedder creation
+        return;
+      }
+      std::unique_ptr<ir2vec::Embedder> Emb = std::move(*EmbOrErr);
+
+3. **Compute and Access Embeddings**:
+   Call ``computeEmbeddings()`` on the embedder instance to compute the 
+   embeddings. Then the embeddings can be accessed using different getter 
+   methods. Currently, ``Embedder`` can generate embeddings at three levels:
+   Instructions, Basic Blocks, and Functions.
+
+   .. code-block:: c++
+
+      Emb->computeEmbeddings();
+      const ir2vec::Embedding &FuncVector = Emb->getFunctionVector();
+      const ir2vec::InstEmbeddingsMap &InstVecMap = Emb->getInstVecMap();
+      const ir2vec::BBEmbeddingsMap &BBVecMap = Emb->getBBVecMap();
+
+      // Example: Iterate over instruction embeddings
+      for (const auto &Entry : InstVecMap) {
+        const Instruction *Inst = Entry.getFirst();
+        const ir2vec::Embedding &InstEmbedding = Entry.getSecond();
+        // Use Inst and InstEmbedding
+      }
+
+4. **Working with Embeddings:**
+   Embeddings are represented as ``std::vector<double>``. These
+   vectors as features for machine learning models, compute similarity scores
+   between different code snippets, or perform other analyses as needed.
+
+Further Details
+---------------
+
+For more detailed information about the IR2Vec algorithm, its parameters, and
+advanced usage, please refer to the original paper:
+`IR2Vec: LLVM IR Based Scalable Program Embeddings <https://doi.org/10.1145/3418463>`_.
+The LLVM source code for ``IR2Vec`` can also be explored to understand the 
+implementation details.
