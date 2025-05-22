@@ -678,24 +678,51 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     // Technically the intrinsic ID is a pointer typed argument, so specially
     // handle calls early.
     assert(II->getIntrinsicID() == Intrinsic::ptrmask);
-    const Use &PtrArgUse = II->getArgOperandUse(0);
-    Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
-        PtrArgUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS,
-        PoisonUsesToFix);
-    Value *Rewrite =
-        TTI->rewriteIntrinsicWithAddressSpace(II, II->getArgOperand(0), NewPtr);
-    if (Rewrite) {
-      assert(Rewrite != II && "cannot modify this pointer operation in place");
-      return Rewrite;
+    const Use &PtrOpUse = II->getArgOperandUse(0);
+    unsigned OldAddrSpace = PtrOpUse.get()->getType()->getPointerAddressSpace();
+    Value *MaskOp = II->getArgOperand(1);
+    Type *MaskTy = MaskOp->getType();
+
+    bool DoTruncate = false;
+    bool DoNotConvert = false;
+
+    if (!TTI->isNoopAddrSpaceCast(OldAddrSpace, NewAddrSpace)) {
+      // All valid 64-bit to 32-bit casts work by chopping off the high
+      // bits. Any masking only clearing the low bits will also apply in the new
+      // address space.
+      if (DL->getPointerSizeInBits(OldAddrSpace) != 64 ||
+          DL->getPointerSizeInBits(NewAddrSpace) != 32) {
+        DoNotConvert = true;
+      } else {
+        // TODO: Do we need to thread more context in here?
+        KnownBits Known = computeKnownBits(MaskOp, *DL, 0, nullptr, II);
+        if (Known.countMinLeadingOnes() < 32)
+          DoNotConvert = true;
+        else
+          DoTruncate = true;
+      }
     }
-    // Leave the ptrmask as-is and insert an addrspacecast after it.
-    Instruction *AddrSpaceCast = new AddrSpaceCastInst(II, NewPtr->getType());
-    AddrSpaceCast->insertAfter(II->getIterator());
-    AddrSpaceCast->setDebugLoc(II->getDebugLoc());
-    // If we generated a poison operand for the ptr argument, remove it.
-    if (!PoisonUsesToFix->empty() && PoisonUsesToFix->back() == &PtrArgUse)
-      PoisonUsesToFix->pop_back();
-    return AddrSpaceCast;
+    if (DoNotConvert) {
+      // Leave the ptrmask as-is and insert an addrspacecast after it.
+      std::optional<BasicBlock::iterator> InsertPoint =
+          II->getInsertionPointAfterDef();
+      assert(InsertPoint && "insertion after ptrmask should be possible");
+      Instruction *AddrSpaceCast =
+          new AddrSpaceCastInst(II, NewPtrType, "", *InsertPoint);
+      AddrSpaceCast->setDebugLoc(II->getDebugLoc());
+      return AddrSpaceCast;
+    }
+
+    IRBuilder<> B(II);
+    if (DoTruncate) {
+      MaskTy = B.getInt32Ty();
+      MaskOp = B.CreateTrunc(MaskOp, MaskTy);
+    }
+    Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
+        PtrOpUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS,
+        PoisonUsesToFix);
+    return B.CreateIntrinsic(Intrinsic::ptrmask, {NewPtr->getType(), MaskTy},
+                             {NewPtr, MaskOp});
   }
 
   unsigned AS = TTI->getAssumedAddrSpace(I);
