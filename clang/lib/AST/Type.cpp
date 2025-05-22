@@ -4793,8 +4793,12 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<ReferenceType>(T)->getPointeeType());
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);
-    LinkageInfo LV =
-        getDeclLinkageAndVisibility(MPT->getMostRecentCXXRecordDecl());
+    LinkageInfo LV;
+    if (auto *D = MPT->getMostRecentCXXRecordDecl()) {
+      LV.merge(getDeclLinkageAndVisibility(D));
+    } else if (auto *Ty = MPT->getQualifier()->getAsType()) {
+      LV.merge(computeTypeLinkageInfo(Ty));
+    }
     LV.merge(computeTypeLinkageInfo(MPT->getPointeeType()));
     return LV;
   }

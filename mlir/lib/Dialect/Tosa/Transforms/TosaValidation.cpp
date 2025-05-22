@@ -1112,9 +1112,31 @@ bool checkErrorIfRescale(Operation *op) {
   return true;
 }
 
+bool checkErrorIfPad(Operation *op) {
+  auto pad = dyn_cast<tosa::PadOp>(op);
+  if (!pad)
+    return true;
+
+  DenseIntElementsAttr paddingAttr;
+  if (!matchPattern(pad.getPadding(), m_Constant(&paddingAttr)))
+    // Pad verifier will catch this
+    return true;
+
+  for (const APInt &val : paddingAttr.getValues<APInt>()) {
+    if (val.getSExtValue() < 0) {
+      op->emitOpError() << "padding value must all be non-negative, got "
+                        << val.getSExtValue();
+      return false;
+    }
+  }
+
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
-      !checkErrorIfTable(op) || !checkErrorIfRescale(op))
+      !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
+      !checkErrorIfPad(op))
     return failure();
   return success();
 }

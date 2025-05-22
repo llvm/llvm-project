@@ -813,10 +813,11 @@ public:
   getInsertExtractValueCost(unsigned Opcode,
                             TTI::TargetCostKind CostKind) const {
     // Note: The `insertvalue` cost here is chosen to match the default case of
-    // getInstructionCost() -- as pior to adding this helper `insertvalue` was
+    // getInstructionCost() -- as prior to adding this helper `insertvalue` was
     // not handled.
-    if (Opcode == Instruction::InsertValue)
-      return CostKind == TTI::TCK_RecipThroughput ? -1 : TTI::TCC_Basic;
+    if (Opcode == Instruction::InsertValue &&
+        CostKind != TTI::TCK_RecipThroughput)
+      return TTI::TCC_Basic;
     return TTI::TCC_Free;
   }
 
@@ -1651,9 +1652,8 @@ public:
     }
     }
 
-    // By default, just classify everything as 'basic' or -1 to represent that
-    // don't know the throughput cost.
-    return CostKind == TTI::TCK_RecipThroughput ? -1 : TTI::TCC_Basic;
+    // By default, just classify everything remaining as 'basic'.
+    return TTI::TCC_Basic;
   }
 
   bool isExpensiveToSpeculativelyExecute(const Instruction *I) const override {
