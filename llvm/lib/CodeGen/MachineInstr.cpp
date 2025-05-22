@@ -1417,10 +1417,6 @@ bool MachineInstr::isDead(const MachineRegisterInfo &MRI,
   if (isInlineAsm())
     return false;
 
-  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
-  if (isLifetimeMarker())
-    return true;
-
   // If there are no defs with uses, then we call the instruction dead so long
   // as we do not suspect it may have sideeffects.
   return wouldBeTriviallyDead();

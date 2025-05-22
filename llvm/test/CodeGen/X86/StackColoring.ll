@@ -581,6 +581,41 @@ onerr:
 
 %Data = type { [32 x i64] }
 
+declare void @throw()
+
+declare i32 @__CxxFrameHandler3(...)
+
+declare void @llvm.trap()
+
+;CHECK-LABEL: removed_all_lifetime:
+;YESCOLOR-NOT: LIFETIME_END
+;NOFIRSTUSE-NOT: LIFETIME_END
+;NOCOLOR-NOT: LIFETIME_END
+define void @removed_all_lifetime() personality ptr @__CxxFrameHandler3 {
+entry:
+  %alloca2 = alloca ptr, align 4
+  %alloca1 = alloca ptr, align 4
+  store volatile ptr null, ptr %alloca1
+  invoke void @throw()
+          to label %unreachable unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %cs = catchswitch within none [label %catch.pad] unwind to caller
+
+catch.pad:                                        ; preds = %catch.dispatch
+  %cp = catchpad within %cs [ptr null, i32 0, ptr %alloca1]
+  %v = load volatile ptr, ptr %alloca1
+  store volatile ptr null, ptr %alloca1
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %alloca1)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %alloca2)
+  store volatile ptr null, ptr %alloca1
+  call void @llvm.trap()
+  unreachable
+
+unreachable:                                      ; preds = %entry
+  unreachable
+}
+
 declare void @destructor()
 
 declare void @inita(ptr)

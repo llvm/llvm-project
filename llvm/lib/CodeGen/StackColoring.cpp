@@ -686,8 +686,10 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
       if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
           MI.getOpcode() == TargetOpcode::LIFETIME_END) {
         int Slot = getStartOrEndSlot(MI);
-        if (Slot < 0)
+        if (Slot < 0) {
+          Markers.push_back(&MI);
           continue;
+        }
         InterestingSlots.set(Slot);
         if (MI.getOpcode() == TargetOpcode::LIFETIME_START) {
           BetweenStartEnd.set(Slot);
@@ -926,6 +928,17 @@ bool StackColoring::removeAllMarkers() {
     Count++;
   }
   Markers.clear();
+
+  for (MachineBasicBlock &MBB : *MF) {
+    if (BlockLiveness.empty() || BlockLiveness[MBB.getNumber()].isEmpty())
+      for (MachineInstr &MI : make_early_inc_range(MBB)) {
+        if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
+            MI.getOpcode() == TargetOpcode::LIFETIME_END) {
+          Count++;
+          MI.eraseFromParent();
+        }
+      }
+  }
 
   LLVM_DEBUG(dbgs() << "Removed " << Count << " markers.\n");
   return Count;
@@ -1247,8 +1260,8 @@ bool StackColoring::run(MachineFunction &Func) {
   unsigned NumSlots = MFI->getObjectIndexEnd();
 
   // If there are no stack slots then there are no markers to remove.
-  if (!NumSlots)
-    return false;
+  if (!NumSlots || DisableColoring)
+    return removeAllMarkers();
 
   SmallVector<int, 8> SortedSlots;
   SortedSlots.reserve(NumSlots);
@@ -1272,7 +1285,7 @@ bool StackColoring::run(MachineFunction &Func) {
 
   // Don't continue because there are not enough lifetime markers, or the
   // stack is too small, or we are told not to optimize the slots.
-  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring) {
+  if (NumMarkers < 2 || TotalSize < 16) {
     LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
     return removeAllMarkers();
   }
