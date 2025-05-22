@@ -320,6 +320,7 @@ getSliceContract(Operation *op,
     LogicalResult result =
         getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
     assert(result.succeeded() && "expected a backward slice");
+    (void)result;
     slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.

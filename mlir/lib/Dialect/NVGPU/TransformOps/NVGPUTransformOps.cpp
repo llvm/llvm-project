@@ -293,6 +293,7 @@ static void getPipelineStages(
     if (stage0Ops.contains(&op)) {
       LogicalResult result = getBackwardSlice(&op, &dependencies, options);
       assert(result.succeeded() && "expected a backward slice");
+      (void)result;
     }
   }
 
