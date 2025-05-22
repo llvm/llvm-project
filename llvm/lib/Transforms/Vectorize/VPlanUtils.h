@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace llvm {
 class ScalarEvolution;
@@ -59,29 +60,37 @@ inline bool isSingleScalar(const VPValue *VPV) {
   if (VPV->isLiveIn())
     return true;
 
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
-    const VPRegionBlock *RegionOfR = Rep->getParent()->getParent();
-    // Don't consider recipes in replicate regions as uniform yet; their first
-    // lane cannot be accessed when executing the replicate region for other
-    // lanes.
-    if (RegionOfR && RegionOfR->isReplicator())
-      return false;
-    return Rep->isSingleScalar() || (PreservesUniformity(Rep->getOpcode()) &&
-                                     all_of(Rep->operands(), isSingleScalar));
-  }
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
-    return PreservesUniformity(WidenR->getOpcode()) &&
-           all_of(WidenR->operands(), isSingleScalar);
-  }
-  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           (PreservesUniformity(VPI->getOpcode()) &&
-            all_of(VPI->operands(), isSingleScalar));
-
-  // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
-  return isa<VPExpandSCEVRecipe>(VPV);
+  return TypeSwitch<const VPValue *, bool>(VPV)
+      .Case<VPReplicateRecipe>([&](const auto *Rep) {
+        const VPRegionBlock *RegionOfR = Rep->getParent()->getParent();
+        // Don't consider recipes in replicate regions as uniform yet; their
+        // first lane cannot be accessed when executing the replicate region for
+        // other lanes.
+        if (RegionOfR && RegionOfR->isReplicator())
+          return false;
+        return Rep->isSingleScalar() ||
+               (PreservesUniformity(Rep->getOpcode()) &&
+                all_of(Rep->operands(), isSingleScalar));
+      })
+      .Case<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(
+          [&](const auto *R) {
+            return all_of(R->getDefiningRecipe()->operands(), isSingleScalar);
+          })
+      .Case<VPWidenRecipe>([&](const auto *WidenR) {
+        return PreservesUniformity(WidenR->getOpcode()) &&
+               all_of(WidenR->operands(), isSingleScalar);
+      })
+      .Case<VPInstruction>([&](const auto *VPI) {
+        return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
+               (PreservesUniformity(VPI->getOpcode()) &&
+                all_of(VPI->operands(), isSingleScalar));
+      })
+      .Case<VPExpandSCEVRecipe>([](const VPValue *) {
+        // VPExpandSCEVRecipes must be placed in the entry and are alway
+        // uniform.
+        return true;
+      })
+      .Default([](const VPValue *) { return false; });
 }
 
 /// Return true if \p V is a header mask in \p Plan.
