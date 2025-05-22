@@ -9,7 +9,6 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -73,7 +72,8 @@ template <typename Container, typename UnaryFunctor>
 inline LogicalResult interleaveWithNewLineWithError(const Container &c,
                                               raw_ostream &os,
                                               UnaryFunctor eachFn) {
-  return interleaveWithError(c.begin(), c.end(), eachFn, [&]() { os << "\n"; });
+  return interleaveWithError(c.begin(), c.end(), eachFn,
+                             [&]() { os << ";\n"; });
 }
 
 /// Return the precedence of a operator as an integer, higher values
@@ -241,8 +241,11 @@ struct CppEmitter {
   /// be declared at the beginning of a function.
   bool shouldDeclareVariablesAtTop() { return declareVariablesAtTop; };
 
-  // Returns if we should spit out a C++ class
-  std::string shouldSpitClass() { return className; };
+  // Returns whether we should emit a C++ class
+  bool shouldPrintClass() { return !className.empty(); };
+
+  // Returns the class name to emit
+  std::string getClassName() { return className; };
 
   /// Returns whether this file op should be emitted
   bool shouldEmitFile(FileOp file) {
@@ -1047,30 +1050,25 @@ static LogicalResult printFunctionArgs(CppEmitter &emitter,
       }));
 }
 
-static LogicalResult printAttributes(CppEmitter &emitter,
-                                       Operation *functionOp,
-                                       ArrayRef<Type> arguments) {
+static LogicalResult printFields(CppEmitter &emitter, Operation *functionOp,
+                                 ArrayRef<Type> arguments) {
   raw_indented_ostream &os = emitter.ostream();
-  for (auto arg : arguments) {
-    os << "  ";
-    if (failed(emitter.emitType(functionOp->getLoc(), arg)))
-      return failure();
-    os << " " << arg << ";\n";
-  }
-  return success();
+
+  return (interleaveWithNewLineWithError(
+      arguments, os, [&](Type arg) -> LogicalResult {
+        return emitter.emitType(functionOp->getLoc(), arg);
+      }));
 }
 
-static LogicalResult printAttributes(CppEmitter &emitter,
-                                       Operation *functionOp,
-                                       Region::BlockArgListType arguments) {
+static LogicalResult printFields(CppEmitter &emitter, Operation *functionOp,
+                                 Region::BlockArgListType arguments) {
   raw_indented_ostream &os = emitter.ostream();
-  for (auto arg : arguments) {
-    os << "  ";
-    if (failed(emitter.emitType(functionOp->getLoc(), arg.getType())))
-      return failure();
-    os << " " << emitter.getOrCreateName(arg) << ";\n";
-  }
-  return success();
+
+  return (interleaveWithNewLineWithError(
+      arguments, os, [&](BlockArgument arg) -> LogicalResult {
+        return emitter.emitVariableDeclaration(
+            functionOp->getLoc(), arg.getType(), emitter.getOrCreateName(arg));
+      }));
 }
 
 static LogicalResult printFunctionBody(CppEmitter &emitter,
@@ -1177,6 +1175,92 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
+static LogicalResult printFunctionHeader(CppEmitter &emitter,
+                                         emitc::FuncOp functionOp) {
+  raw_indented_ostream &os = emitter.ostream();
+  Operation *operation = functionOp.getOperation();
+  if (functionOp.getSpecifiers()) {
+    for (Attribute specifier : functionOp.getSpecifiersAttr()) {
+      os << cast<StringAttr>(specifier).str() << " ";
+    }
+  }
+
+  if (failed(emitter.emitTypes(functionOp.getLoc(),
+                               functionOp.getFunctionType().getResults())))
+    return failure();
+  os << " " << functionOp.getName();
+  if (!emitter.shouldPrintClass()) {
+    os << "(";
+    if (functionOp.isExternal()) {
+      if (failed(printFunctionArgs(emitter, operation,
+                                   functionOp.getArgumentTypes())))
+        return failure();
+      os << ");";
+      return success();
+    }
+    if (failed(
+            printFunctionArgs(emitter, operation, functionOp.getArguments())))
+      return failure();
+    os << ") {\n";
+
+  } else {
+    os << "() { \n";
+  }
+
+  return success();
+}
+
+static LogicalResult emitClassBody(CppEmitter &emitter,
+                                   emitc::FuncOp functionOp) {
+  raw_indented_ostream &os = emitter.ostream();
+  Operation *operation = functionOp.getOperation();
+  auto argAttrs = functionOp.getArgAttrs();
+  std::map<std::string, Value> fields;
+  os << "\nstd::map<std::string, char*> _buffer_map {";
+  if (argAttrs) // We can have no argattrs in the case that the function has no
+                // inputs nor outputs -> procedure
+    for (const auto [a, v] : zip(*argAttrs, functionOp.getArguments())) {
+      if (auto da = dyn_cast<mlir::DictionaryAttr>(a)) {
+        auto nv =
+            da.getNamed("tf_saved_model.index_path")
+                ->getValue(); // From what I've seen so far, this is the only
+                              // way to have the argAttrs keys. If there is
+                              // another way, I need to run the tests to see and
+                              // see what cases trigger this change in format.
+        auto name = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]).str();
+        fields[name] = v; // The only way to not have unique names is in the
+                          // case that you have duplicate arguments in your
+                          // tensorflow/python function. By python syntax rules,
+                          // you're not allowed to have that(Current assumption)
+        os << "{ \"" << name << "\"" << ", reinterpret_cast<char*>("
+           << emitter.getOrCreateName(v) << ") },";
+      }
+    }
+  else
+    return failure();
+
+  os << " };\n";
+  os << "char* getBufferForName(const std::string& name) const {\n";
+  os.indent();
+  os.indent();
+  os << "auto it = _buffer_map.find(name);\n";
+  os << "return (it == _buffer_map.end()) ? nullptr : it->second;\n";
+  os.unindent();
+  os.unindent();
+  os << "}\n\n";
+
+  if (failed(printFunctionHeader(emitter, functionOp)))
+    return failure();
+
+  if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
+    return failure();
+  os << "}\n";
+  os.unindent();
+  os << "};\n";
+
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::FuncOp functionOp) {
   // We need to declare variables at top if the function has multiple blocks.
@@ -1189,104 +1273,37 @@ static LogicalResult printOperation(CppEmitter &emitter,
   CppEmitter::Scope classScope(emitter);
   raw_indented_ostream &os = emitter.ostream();
   Operation *operation = functionOp.getOperation();
-  if (!emitter.shouldSpitClass().empty()) {
-    os << "class " << emitter.shouldSpitClass() << " final {\n";
-    os << "public: \n";
+  if (!emitter.shouldPrintClass()) {
 
-    if (functionOp.isExternal()) { 
-      if (failed(printAttributes(emitter, operation,
-                                  functionOp.getArgumentTypes())))
-        return failure();
-      return success();
-    }
-    if (failed(printAttributes(emitter, operation, functionOp.getArguments())))
+    if (failed(printFunctionHeader(emitter, functionOp)))
       return failure();
-    
-    os << "\n";
-    
-    auto argAttrs = functionOp.getArgAttrs();
-    std::map<std::string, Value> fields; 
-    if (argAttrs)
-      for (auto [a,v] : zip(*argAttrs, functionOp.getArguments())) { 
-        if (auto da = dyn_cast<mlir::DictionaryAttr>(a)) {
-          auto nv = da.getNamed("tf_saved_model.index_path")->getValue(); 
-          auto name = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]).str(); 
-          fields[name] = v;
-        }
-      }
 
-    for (auto & r : functionOp->getRegions()) 
-      for (auto &b : r.getBlocks())
-        for (auto &opt : b.getOperations())  
-          if (auto alloc = dyn_cast<memref::AllocOp>(opt)) { 
-            auto name = emitter.getOrCreateName(alloc).str(); 
-            fields[name] = alloc;
-            if (failed(emitter.emitType(alloc.getLoc(), alloc.getType().getElementType())))
-              return failure();
-            os << " [" << alloc.getType().getNumElements() <<"] "; 
-            os << " " << name << ";\n";
-          }
-    os << "  std::map<std::string, char*> _buffer_map {"; 
-    for (auto &[n,v]:fields)
-      os << "{ \"" << n << "\"" << ", reinterpret_cast<char*>(" << emitter.getOrCreateName(v) << ") },";
-    os << "  };\n";
-    os << "  char* getBufferForName(const std::string& name) const {\n";
-    os << "    auto it = _buffer_map.find(name);\n";
-    os << "    return (it == _buffer_map.end()) ? nullptr : it->second;\n";
-    os << "  }\n\n";
-
-    os.indent();
-
-    // Begin defining the main function where we have the actual execution
-    if (functionOp.getSpecifiers()) {
-      for (Attribute specifier : functionOp.getSpecifiersAttr()) {
-        os << cast<StringAttr>(specifier).str() << " ";
-      }
-    }
-
-    if (failed(emitter.emitTypes(functionOp.getLoc(),
-                                functionOp.getFunctionType().getResults())))
+    if (failed(printFunctionBody(
+            emitter, operation,
+            functionOp.getBlocks()))) // This is the only similarity between the
+                                      // function and the class
       return failure();
-    os << " " << functionOp.getName();
-
-    //Defining the functionBody
-    os << "() { \n"; // Begin defining the function header (We need the function name and output type to remain without the rest of the function header)
-    os.indent();
-    if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
-      return failure();
-    os.unindent();
     os << "}\n";
-    os.unindent();
-    os << "};\n";
+
   } else {
-    if (functionOp.getSpecifiers()) {
-      for (Attribute specifier : functionOp.getSpecifiersAttr()) {
-        os << cast<StringAttr>(specifier).str() << " ";
-      }
-    }
+    os << "class " << emitter.getClassName() << " final {\n";
+    os << "public: \n";
+    os.indent();
 
-    if (failed(emitter.emitTypes(functionOp.getLoc(),
-                                functionOp.getFunctionType().getResults())))
-      return failure();
-    os << " " << functionOp.getName();
-
-    os << "(";
-    Operation *operation = functionOp.getOperation();
     if (functionOp.isExternal()) {
-      if (failed(printFunctionArgs(emitter, operation,
-                                  functionOp.getArgumentTypes())))
+      if (failed(
+              printFields(emitter, operation, functionOp.getArgumentTypes())))
         return failure();
-      os << ");";
       return success();
     }
-    if (failed(printFunctionArgs(emitter, operation, functionOp.getArguments())))
+    if (failed(printFields(emitter, operation, functionOp.getArguments())))
       return failure();
-    os << ") {\n";
-    if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
+    os << ";\n";
+
+    if (failed(emitClassBody(emitter, functionOp)))
       return failure();
-    os << "}\n";
   }
-  
+
   return success();
 }
 
