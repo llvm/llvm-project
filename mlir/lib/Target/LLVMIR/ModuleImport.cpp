@@ -756,7 +756,6 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
 
   // Build ModuleFlagProfileSummaryAttr by sequentially fetching elements in
   // a fixed order: format, total count, etc.
-  SmallVector<Attribute> profileSummary;
   std::optional<ProfileSummaryFormatKind> format = convertProfileSummaryFormat(
       mlirModule, llvmModule, mdTuple->getOperand(summayIdx++));
   if (!format.has_value())
