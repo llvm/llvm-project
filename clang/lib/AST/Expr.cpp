@@ -1450,6 +1450,23 @@ OverloadedOperatorKind UnaryOperator::getOverloadedOperator(Opcode Opc) {
 // Postfix Operators.
 //===----------------------------------------------------------------------===//
 
+static unsigned SizeOfCallExprInstance(Expr::StmtClass SC) {
+  switch (SC) {
+  case Expr::CallExprClass:
+    return sizeof(CallExpr);
+  case Expr::CXXOperatorCallExprClass:
+    return sizeof(CXXOperatorCallExpr);
+  case Expr::CXXMemberCallExprClass:
+    return sizeof(CXXMemberCallExpr);
+  case Expr::UserDefinedLiteralClass:
+    return sizeof(UserDefinedLiteral);
+  case Expr::CUDAKernelCallExprClass:
+    return sizeof(CUDAKernelCallExpr);
+  default:
+    llvm_unreachable("unexpected class deriving from CallExpr!");
+  }
+}
+
 CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
                    ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
                    SourceLocation RParenLoc, FPOptionsOverride FPFeatures,
@@ -1459,6 +1476,8 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   unsigned NumPreArgs = PreArgs.size();
   CallExprBits.NumPreArgs = NumPreArgs;
   assert((NumPreArgs == getNumPreArgs()) && "NumPreArgs overflow!");
+  assert(SizeOfCallExprInstance(SC) <= offsetToTrailingObjects &&
+         "This CallExpr subclass is too big or unsupported");
 
   CallExprBits.UsesADL = static_cast<bool>(UsesADL);
 
@@ -1475,7 +1494,7 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   CallExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   CallExprBits.IsCoroElideSafe = false;
   CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = false;
-  CallExprBits.HasTrailingSourceLoc = false;
+  CallExprBits.HasTrailingSourceLocs = false;
 
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
@@ -1489,8 +1508,7 @@ CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
   CallExprBits.HasFPFeatures = HasFPFeatures;
   CallExprBits.IsCoroElideSafe = false;
   CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = false;
-  CallExprBits.HasTrailingSourceLoc = false;
-
+  CallExprBits.HasTrailingSourceLocs = false;
 }
 
 CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
@@ -1501,12 +1519,13 @@ CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
   unsigned NumArgs = std::max<unsigned>(Args.size(), MinNumArgs);
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/0, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem =
-      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CallExpr>(SizeOfTrailingObjects),
-                   alignof(CallExpr));
-  CallExpr* E = new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
-                            RParenLoc, FPFeatures, MinNumArgs, UsesADL);
-  E->setTrailingSourceLocs();
+  void *Mem = Ctx.Allocate(
+      sizeToAllocateForCallExprSubclass<CallExpr>(SizeOfTrailingObjects),
+      alignof(CallExpr));
+  CallExpr *E =
+      new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
+                         RParenLoc, FPFeatures, MinNumArgs, UsesADL);
+  E->updateTrailingSourceLocs();
   return E;
 }
 
@@ -1514,8 +1533,9 @@ CallExpr *CallExpr::CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
                                 bool HasFPFeatures, EmptyShell Empty) {
   unsigned SizeOfTrailingObjects =
       CallExpr::sizeOfTrailingObjects(/*NumPreArgs=*/0, NumArgs, HasFPFeatures);
-  void *Mem =
-      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CallExpr>(SizeOfTrailingObjects), alignof(CallExpr));
+  void *Mem = Ctx.Allocate(
+      sizeToAllocateForCallExprSubclass<CallExpr>(SizeOfTrailingObjects),
+      alignof(CallExpr));
   return new (Mem)
       CallExpr(CallExprClass, /*NumPreArgs=*/0, NumArgs, HasFPFeatures, Empty);
 }
@@ -1626,7 +1646,6 @@ CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
       return {TD->getDecl(), A};
   return {nullptr, nullptr};
 }
-
 
 OffsetOfExpr *OffsetOfExpr::Create(const ASTContext &C, QualType type,
                                    SourceLocation OperatorLoc,

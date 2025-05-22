@@ -2907,22 +2907,27 @@ class CallExpr : public Expr {
   //
   // * An optional of type FPOptionsOverride.
   //
-  // Note that we store the offset in bytes from the this pointer to the start
-  // of the trailing objects. It would be perfectly possible to compute it
-  // based on the dynamic kind of the CallExpr. However 1.) we have plenty of
-  // space in the bit-fields of Stmt. 2.) It was benchmarked to be faster to
-  // compute this once and then load the offset from the bit-fields of Stmt,
-  // instead of re-computing the offset each time the trailing objects are
-  // accessed.
+  // CallExpr subclasses are asssumed to be 32 bytes or less, and CallExpr
+  // itself is 24 bytes. To avoid having to recompute or store the offset of the
+  // trailing objects, we put it at 32 bytes (such that it is suitable for all
+  // subclasses) We use the 8 bytes gap left for instances of CallExpr to store
+  // the begin and end source locations. Caching the begin source location in
+  // particular as a significant impact on perf as getBeginLoc is assumed to be
+  // cheap.
+  // The layourt is as follow:
+  // CallExpr | Begin | End | Trailing Objects
+  // CXXMemberCallExpr | Trailing Objects
+  // A bit in CallExprBitfields indicates if source locations are presents.
 
 protected:
   static constexpr unsigned offsetToTrailingObjects = 32;
-
   template <typename T>
-  static constexpr unsigned sizeToAllocateForCallExprSubclass(unsigned SizeOfTrailingObjects) {
+  static constexpr unsigned
+  sizeToAllocateForCallExprSubclass(unsigned SizeOfTrailingObjects) {
     static_assert(sizeof(T) <= CallExpr::offsetToTrailingObjects);
     return SizeOfTrailingObjects + CallExpr::offsetToTrailingObjects;
   }
+
 private:
   /// Return a pointer to the start of the trailing array of "Stmt *".
   Stmt **getTrailingStmts() {
@@ -2992,8 +2997,8 @@ protected:
   const FPOptionsOverride *getTrailingFPFeatures() const {
     assert(hasStoredFPFeatures());
     return reinterpret_cast<const FPOptionsOverride *>(
-        reinterpret_cast<const char *>(this) +
-        offsetToTrailingObjects + getSizeOfTrailingStmts());
+        reinterpret_cast<const char *>(this) + offsetToTrailingObjects +
+        getSizeOfTrailingStmts());
   }
 
 public:
@@ -3039,15 +3044,17 @@ public:
 
   bool hasStoredFPFeatures() const { return CallExprBits.HasFPFeatures; }
 
-  bool usesMemberSyntax() const { return CallExprBits.ExplicitObjectMemFunUsingMemberSyntax; }
+  bool usesMemberSyntax() const {
+    return CallExprBits.ExplicitObjectMemFunUsingMemberSyntax;
+  }
   void setUsesMemberSyntax(bool V = true) {
-      CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = V;
-      // Because the source location may be different for explicit
-      // member, we reset the cached values.
-      if(CallExprBits.HasTrailingSourceLoc) {
-          CallExprBits.HasTrailingSourceLoc = false;
-          setTrailingSourceLocs();
-      }
+    CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = V;
+    // Because the source location may be different for explicit
+    // member, we reset the cached values.
+    if (CallExprBits.HasTrailingSourceLocs) {
+      CallExprBits.HasTrailingSourceLocs = false;
+      updateTrailingSourceLocs();
+    }
   }
 
   bool isCoroElideSafe() const { return CallExprBits.IsCoroElideSafe; }
@@ -3209,24 +3216,20 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
+  template <unsigned N> SourceLocation getTrailingSourceLoc() const {
+    static_assert(N <= 1);
+    assert(CallExprBits.HasTrailingSourceLocs && "No trailing source loc");
+    static_assert(sizeof(CallExpr) <=
+                  offsetToTrailingObjects + 2 * sizeof(SourceLocation));
+    return *reinterpret_cast<const SourceLocation *>(
+        reinterpret_cast<const char *>(this) + sizeof(CallExpr) +
+        sizeof(SourceLocation) * N);
+  }
+
   SourceLocation getBeginLoc() const {
-    if(CallExprBits.HasTrailingSourceLoc) {
-        static_assert(sizeof(CallExpr) <= offsetToTrailingObjects + 2 * sizeof(SourceLocation));
-        return *reinterpret_cast<const SourceLocation*>(reinterpret_cast<const char *>(this) +
-                                                        sizeof(CallExpr));
-    }
+    if (CallExprBits.HasTrailingSourceLocs)
+      return getTrailingSourceLoc<0>();
 
-    //if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
-    //    return OCE->getBeginLoc();
-
-    // A non-dependent call to a member function with an explicit object parameter
-    // is modelled with the object expression being the first argument, e.g. in
-    // `o.f(x)`, the callee will be just `f`, and `o` will be the first argument.
-    // Since the first argument is written before the callee, the expression's
-    // begin location should come from the first argument.
-    // This does not apply to dependent calls, which are modelled with `o.f`
-    // being the callee.
-    // Because this check is expennsive, we cache the result.
     if (usesMemberSyntax()) {
       if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
         return FirstArgLoc;
@@ -3236,11 +3239,8 @@ public:
   }
 
   SourceLocation getEndLoc() const {
-      if(CallExprBits.HasTrailingSourceLoc) {
-          static_assert(sizeof(CallExpr) <= offsetToTrailingObjects + 2 * sizeof(SourceLocation));
-          return *reinterpret_cast<const SourceLocation*>(reinterpret_cast<const char *>(this) +
-                                                          sizeof(CallExpr) + sizeof(SourceLocation));
-      }
+    if (CallExprBits.HasTrailingSourceLocs)
+      return getTrailingSourceLoc<0>();
 
     SourceLocation end = getRParenLoc();
     if (end.isInvalid() && getNumArgs() > 0 && getArg(getNumArgs() - 1))
@@ -3248,24 +3248,27 @@ public:
     return end;
   }
 
-
 private:
-  friend class ASTStmtReader;
   bool hasTrailingSourceLoc() const {
-      return CallExprBits.HasTrailingSourceLoc;
+    return CallExprBits.HasTrailingSourceLocs;
   }
-  void setTrailingSourceLocs() {
-      assert(!CallExprBits.HasTrailingSourceLoc);
-      static_assert(sizeof(CallExpr) <= offsetToTrailingObjects + 2 * sizeof(SourceLocation));
-      SourceLocation* Locs = reinterpret_cast<SourceLocation*>(reinterpret_cast<char *>(this) +
-                                                               sizeof(CallExpr));
-      new (Locs) SourceLocation(getBeginLoc());
-      new (Locs+1) SourceLocation(getEndLoc());
-      CallExprBits.HasTrailingSourceLoc = true;
+
+  void updateTrailingSourceLocs() {
+    assert(!CallExprBits.HasTrailingSourceLocs &&
+           "Trailing source loc already set?");
+    assert(getStmtClass() == CallExprClass &&
+           "Calling setTrailingSourceLocs on a subclass of CallExpr");
+    static_assert(sizeof(CallExpr) <=
+                  offsetToTrailingObjects + 2 * sizeof(SourceLocation));
+
+    SourceLocation *Locs = reinterpret_cast<SourceLocation *>(
+        reinterpret_cast<char *>(this) + sizeof(CallExpr));
+    new (Locs) SourceLocation(getBeginLoc());
+    new (Locs + 1) SourceLocation(getEndLoc());
+    CallExprBits.HasTrailingSourceLocs = true;
   }
 
 public:
-
   /// Return true if this is a call to __assume() or __builtin_assume() with
   /// a non-value-dependent constant parameter evaluating as false.
   bool isBuiltinAssumeFalse(const ASTContext &Ctx) const;

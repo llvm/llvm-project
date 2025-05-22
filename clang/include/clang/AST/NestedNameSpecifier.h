@@ -309,9 +309,7 @@ public:
 
   /// Retrieve the location of the end of this
   /// nested-name-specifier.
-  SourceLocation getEndLoc() const {
-    return getLocalSourceRange().getEnd();
-  }
+  SourceLocation getEndLoc() const { return getLocalSourceRange().getEnd(); }
 
   /// Retrieve the location of the beginning of this
   /// component of the nested-name-specifier.

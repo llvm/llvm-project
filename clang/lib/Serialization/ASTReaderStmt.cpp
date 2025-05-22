@@ -1048,8 +1048,8 @@ void ASTStmtReader::VisitCallExpr(CallExpr *E) {
     E->setStoredFPFeatures(
         FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
 
-  if(E->getStmtClass() == Stmt::CallExprClass)
-    E->setTrailingSourceLocs();
+  if (E->getStmtClass() == Stmt::CallExprClass)
+    E->updateTrailingSourceLocs();
 }
 
 void ASTStmtReader::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {

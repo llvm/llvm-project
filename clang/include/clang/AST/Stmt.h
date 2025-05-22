@@ -566,11 +566,15 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsCoroElideSafe : 1;
 
+    /// Tracks When CallExpr is used to represent an explicit object
+    /// member function, in order to adjust the begin location.
     LLVM_PREFERRED_TYPE(bool)
     unsigned ExplicitObjectMemFunUsingMemberSyntax : 1;
 
+    /// Indicates that SourceLocations are cached as
+    /// Trailing objects. See the definition of CallExpr.
     LLVM_PREFERRED_TYPE(bool)
-    unsigned HasTrailingSourceLoc : 1;
+    unsigned HasTrailingSourceLocs : 1;
   };
 
   enum { NumCallExprBits = 25 };
