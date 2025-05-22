@@ -2783,16 +2783,15 @@ static bool ignoreSignBitOfZero(Instruction &I) {
   if (!I.hasOneUse())
     return false;
   Instruction *User = I.user_back();
-  if (User->getOpcode() == Instruction::FPToSI ||
-      User->getOpcode() == Instruction::FPToUI)
-    return true;
-
   if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
     if (FPOp->hasNoSignedZeros())
       return true;
   }
 
   switch (User->getOpcode()) {
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+    return true;
   case Instruction::FCmp:
     // fcmp treats both positive and negative zero as equal.
     return true;
@@ -2830,17 +2829,15 @@ static bool ignoreSignBitOfNaN(Instruction &I) {
   if (!I.hasOneUse())
     return false;
   Instruction *User = I.user_back();
-
-  if (User->getOpcode() == Instruction::FPToSI ||
-      User->getOpcode() == Instruction::FPToUI)
-    return true;
-
   if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
     if (FPOp->hasNoNaNs())
       return true;
   }
 
   switch (User->getOpcode()) {
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+    return true;
   // Proper FP math operations ignore the sign bit of NaN.
   case Instruction::FAdd:
   case Instruction::FSub:
