@@ -12,18 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonRegisterInfo.h"
-#include "Hexagon.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -31,12 +28,10 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 #define GET_REGINFO_TARGET_DESC
@@ -436,8 +431,9 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
       return WSub[GenIdx];
   }
 
-  if (const TargetRegisterClass *SuperRC = *RC.getSuperClasses())
-    return getHexagonSubRegIndex(*SuperRC, GenIdx);
+  if (!RC.superclasses().empty())
+    return getHexagonSubRegIndex(*getRegClass(*RC.superclasses().begin()),
+                                 GenIdx);
 
   llvm_unreachable("Invalid register class");
 }

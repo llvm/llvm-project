@@ -11,6 +11,7 @@
 #include "CommandObjectRegexCommand.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -792,12 +793,15 @@ a number follows 'f':"
 
 protected:
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString("Enter one or more sed substitution commands in "
-                            "the form: 's/<regex>/<subst>/'.\nTerminate the "
-                            "substitution list with an empty line.\n");
-      output_sp->Flush();
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(
+            "Enter one or more sed substitution commands in "
+            "the form: 's/<regex>/<subst>/'.\nTerminate the "
+            "substitution list with an empty line.\n");
+      }
     }
   }
 
@@ -811,10 +815,9 @@ protected:
         for (const std::string &line : lines) {
           Status error = AppendRegexSubstitution(line, check_only);
           if (error.Fail()) {
-            if (!GetDebugger().GetCommandInterpreter().GetBatchCommandMode()) {
-              StreamSP out_stream = GetDebugger().GetAsyncOutputStream();
-              out_stream->Printf("error: %s\n", error.AsCString());
-            }
+            if (!GetDebugger().GetCommandInterpreter().GetBatchCommandMode())
+              GetDebugger().GetAsyncOutputStream()->Printf("error: %s\n",
+                                                           error.AsCString());
           }
         }
       }
@@ -1534,9 +1537,8 @@ private:
           option_def.completion_type = (CommandArgumentType) completion_type;
         } else
           option_def.completion_type = eNoCompletion;
-        
+
         // Usage Text:
-        std::string usage_text;
         obj_sp = opt_dict->GetValueForKey("help");
         if (!obj_sp) {
           error = Status::FromErrorStringWithFormatv(
@@ -2377,16 +2379,18 @@ protected:
   };
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(g_python_command_instructions);
-      output_sp->Flush();
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(g_python_command_instructions);
+      }
     }
   }
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
-    StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
+    LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
     ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
     if (interpreter) {
@@ -2396,9 +2400,10 @@ protected:
         std::string funct_name_str;
         if (interpreter->GenerateScriptAliasFunction(lines, funct_name_str)) {
           if (funct_name_str.empty()) {
-            error_sp->Printf("error: unable to obtain a function name, didn't "
-                             "add python command.\n");
-            error_sp->Flush();
+            LockedStreamFile locked_stream = error_sp->Lock();
+            locked_stream.Printf(
+                "error: unable to obtain a function name, didn't "
+                "add python command.\n");
           } else {
             // everything should be fine now, let's add this alias
 
@@ -2409,33 +2414,36 @@ protected:
               Status error = m_interpreter.AddUserCommand(
                   m_cmd_name, command_obj_sp, m_overwrite);
               if (error.Fail()) {
-                error_sp->Printf("error: unable to add selected command: '%s'",
-                                 error.AsCString());
-                error_sp->Flush();
+                LockedStreamFile locked_stream = error_sp->Lock();
+                locked_stream.Printf(
+                    "error: unable to add selected command: '%s'",
+                    error.AsCString());
               }
             } else {
               llvm::Error llvm_error = m_container->LoadUserSubcommand(
                   m_cmd_name, command_obj_sp, m_overwrite);
               if (llvm_error) {
-                error_sp->Printf("error: unable to add selected command: '%s'",
-                               llvm::toString(std::move(llvm_error)).c_str());
-                error_sp->Flush();
+                LockedStreamFile locked_stream = error_sp->Lock();
+                locked_stream.Printf(
+                    "error: unable to add selected command: '%s'",
+                    llvm::toString(std::move(llvm_error)).c_str());
               }
             }
           }
         } else {
-          error_sp->Printf(
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf(
               "error: unable to create function, didn't add python command\n");
-          error_sp->Flush();
         }
       } else {
-        error_sp->Printf("error: empty function, didn't add python command\n");
-        error_sp->Flush();
+        LockedStreamFile locked_stream = error_sp->Lock();
+        locked_stream.Printf(
+            "error: empty function, didn't add python command\n");
       }
     } else {
-      error_sp->Printf(
+      LockedStreamFile locked_stream = error_sp->Lock();
+      locked_stream.Printf(
           "error: script interpreter missing, didn't add python command\n");
-      error_sp->Flush();
     }
 
     io_handler.SetIsDone(true);

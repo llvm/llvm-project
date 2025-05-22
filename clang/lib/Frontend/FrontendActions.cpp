@@ -263,6 +263,20 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                                     /*ForceUseTemporary=*/true);
 }
 
+bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
+    CompilerInstance &CI) {
+  for (const auto &FIF : CI.getFrontendOpts().Inputs) {
+    if (const auto InputFormat = FIF.getKind().getFormat();
+        InputFormat != InputKind::Format::Source) {
+      CI.getDiagnostics().Report(
+          diag::err_frontend_action_unsupported_input_format)
+          << "module interface compilation" << FIF.getFile() << InputFormat;
+      return false;
+    }
+  }
+  return GenerateModuleAction::PrepareToExecuteAction(CI);
+}
+
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(
     CompilerInstance &CI) {
   CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
@@ -279,12 +293,14 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
       !CI.getFrontendOpts().ModuleOutputPath.empty()) {
     Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath));
+        CI.getFrontendOpts().ModuleOutputPath,
+        +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
   }
 
   Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(),
-      CI.getFrontendOpts().OutputFile));
+      CI.getFrontendOpts().OutputFile,
+      +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
@@ -348,7 +364,7 @@ void VerifyPCHAction::ExecuteAction() {
       DisableValidationForModuleKind::None,
       /*AllowASTWithCompilerErrors*/ false,
       /*AllowConfigurationMismatch*/ true,
-      /*ValidateSystemInputs*/ true));
+      /*ValidateSystemInputs*/ true, /*ForceValidateUserInputs*/ true));
 
   Reader->ReadAST(getCurrentFile(),
                   Preamble ? serialization::MK_Preamble
@@ -457,6 +473,8 @@ private:
       return "BuildingDeductionGuides";
     case CodeSynthesisContext::TypeAliasTemplateInstantiation:
       return "TypeAliasTemplateInstantiation";
+    case CodeSynthesisContext::PartialOrderingTTP:
+      return "PartialOrderingTTP";
     }
     return "";
   }
@@ -773,10 +791,11 @@ namespace {
     /// Indicates that the AST file contains particular input file.
     ///
     /// \returns true to continue receiving the next input file, false to stop.
-    bool visitInputFile(StringRef Filename, bool isSystem,
-                        bool isOverridden, bool isExplicitModule) override {
+    bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                        bool isSystem, bool isOverridden,
+                        bool isExplicitModule) override {
 
-      Out.indent(2) << "Input file: " << Filename;
+      Out.indent(2) << "Input file: " << FilenameAsRequested;
 
       if (isSystem || isOverridden || isExplicitModule) {
         Out << " [";
@@ -874,7 +893,8 @@ void DumpModuleInfoAction::ExecuteAction() {
 
   Preprocessor &PP = CI.getPreprocessor();
   DumpModuleInfoListener Listener(Out);
-  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   // The FrontendAction::BeginSourceFile () method loads the AST so that much
   // of the information is already available and modules should have been
@@ -1210,9 +1230,9 @@ void GetDependenciesByModuleNameAction::ExecuteAction() {
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();
   SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  SmallVector<IdentifierLoc, 2> Path;
   IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.push_back(std::make_pair(ModuleID, FileStart));
+  Path.emplace_back(FileStart, ModuleID);
   auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
   PPCallbacks *CB = PP.getPPCallbacks();
   CB->moduleImport(SourceLocation(), Path, ModResult);

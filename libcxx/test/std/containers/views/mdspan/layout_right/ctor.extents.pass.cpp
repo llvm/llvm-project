@@ -17,9 +17,10 @@
 //
 // Effects: Direct-non-list-initializes extents_ with e.
 
-#include <mdspan>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <mdspan>
 #include <span> // dynamic_extent
 
 #include "test_macros.h"

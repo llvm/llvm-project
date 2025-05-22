@@ -66,6 +66,81 @@ define void @memset_and_store_2(ptr %ptr, i64 %len) {
   ret void
 }
 
+define void @memset_pattern_equal_size_values(ptr %ptr, i64 %len) {
+; CHECK-LABEL: @memset_pattern_equal_size_values(
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR:%.*]], i8 0, i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 %len, i1 false)
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 %len, i1 false)
+  ret void
+}
+
+define void @memset_pattern_different_size_values_1(ptr %ptr, i64 %len.1, i64 %len.2) {
+; CHECK-LABEL: @memset_pattern_different_size_values_1(
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR:%.*]], i8 0, i64 [[LEN_1:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR]], i8 0, i64 [[LEN_2:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 %len.1, i1 false)
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 %len.2, i1 false)
+  ret void
+}
+
+define void @memset_pattern_different_size_values_2(ptr %ptr, i64 %len) {
+; CHECK-LABEL: @memset_pattern_different_size_values_2(
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR:%.*]], i8 0, i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR]], i8 0, i64 100, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 %len, i1 false)
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 100, i1 false)
+  ret void
+}
+
+define void @memset_pattern_different_size_values_3(ptr %ptr, i64 %len) {
+; CHECK-LABEL: @memset_pattern_different_size_values_3(
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR:%.*]], i8 0, i64 100, i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR]], i8 0, i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 100, i1 false)
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 %len, i1 false)
+  ret void
+}
+
+define void @memset_pattern_and_store_1(ptr %ptr, i64 %len) {
+; CHECK-LABEL: @memset_pattern_and_store_1(
+; CHECK-NEXT:    store i64 123, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR]], i8 0, i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  store i64 123, ptr %ptr
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 %len, i1 false)
+  ret void
+}
+
+define void @memset_pattern_and_store_2(ptr %ptr, i64 %len) {
+; CHECK-LABEL: @memset_pattern_and_store_2(
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR:%.*]], i8 0, i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    store i64 123, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 %len, i1 false)
+  store i64 123, ptr %ptr
+  ret void
+}
+
+define void @memset_pattern_and_store_3(ptr %ptr) {
+; CHECK-LABEL: @memset_pattern_and_store_3(
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR:%.*]], i8 0, i64 13, i1 false)
+; CHECK-NEXT:    ret void
+;
+  store i64 0, ptr %ptr
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 13, i1 false)
+  ret void
+}
+
 define void @memcpy_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memcpy_equal_size_values(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)

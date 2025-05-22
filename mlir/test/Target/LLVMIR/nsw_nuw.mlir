@@ -10,5 +10,7 @@ llvm.func @intflags_func(%arg0: i64, %arg1: i64) {
   %2 = llvm.mul %arg0, %arg1 overflow <nsw, nuw> : i64
   // CHECK: %{{.*}} = shl nuw nsw i64 %{{.*}}, %{{.*}}
   %3 = llvm.shl %arg0, %arg1 overflow <nsw, nuw> : i64
+  // CHECK: %{{.*}} = trunc nuw i64 %{{.*}} to i32
+  %4 = llvm.trunc %arg1 overflow<nuw> : i64 to i32
   llvm.return
 }

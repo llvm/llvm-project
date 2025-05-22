@@ -52,13 +52,24 @@ set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_TOOLS_BINARY_DIR}/dsymutil${CMAKE_EXECUTA
 if(LLDB_TEST_MAKE)
   set(LLDB_DEFAULT_TEST_MAKE ${LLDB_TEST_MAKE})
 else()
-  find_program(LLDB_DEFAULT_TEST_MAKE make gmake)
+  # Prefer gmake as it will be a version of GNU make. 'make' could be GNU compatible or not.
+  set(MAKE_NAMES "gmake" "make")
+  find_program(LLDB_DEFAULT_TEST_MAKE NAMES ${MAKE_NAMES})
   if(LLDB_DEFAULT_TEST_MAKE)
     message(STATUS "Found make: ${LLDB_DEFAULT_TEST_MAKE}")
+    execute_process(COMMAND ${LLDB_DEFAULT_TEST_MAKE} --version OUTPUT_VARIABLE MAKE_VERSION
+           ERROR_QUIET)
+    if(NOT MAKE_VERSION MATCHES "^GNU Make")
+      message(WARNING "'make' tool ${LLDB_DEFAULT_TEST_MAKE} may not be GNU make compatible. "
+             "Some tests may fail to build. Provide a GNU compatible 'make' tool by setting "
+             "LLDB_TEST_MAKE.")
+    endif()
   else()
-    message(STATUS "Not found: make")
+    list(JOIN "${MAKE_NAMES}" " " MAKE_NAMES_SPACES)
+    string(REPLACE ";" " " MAKE_NAMES_SPACES "${MAKE_NAMES}")
+    message(STATUS "Did not find one of: ${MAKE_NAMES_SPACES}")
     message(WARNING
-          "Many LLDB API tests require 'make' tool. Please provide it in Path "
+          "Many LLDB API tests require a 'make' tool. Please provide it in Path "
           "or pass via LLDB_TEST_MAKE.")
   endif()
 endif()
@@ -126,6 +137,12 @@ if(CMAKE_HOST_APPLE)
   else()
     message(STATUS "LLDB tests use just-built debug server")
   endif()
+endif()
+
+if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL Debug)
+  set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE_DEBUG}")
+else()
+  set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE}")
 endif()
 
 set(dotest_args_replacement ${LLVM_BUILD_MODE})

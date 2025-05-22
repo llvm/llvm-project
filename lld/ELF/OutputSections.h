@@ -41,7 +41,7 @@ public:
     return s->kind() == SectionBase::Output;
   }
 
-  uint64_t getLMA() const { return ptLoad ? addr + ptLoad->lmaOffset : addr; }
+  uint64_t getLMA() const;
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *sHdr);
 
   Ctx &ctx;
@@ -102,6 +102,7 @@ public:
   bool expressionsUseSymbols = false;
   bool usedInExpression = false;
   bool inOverlay = false;
+  bool firstInOverlay = false;
 
   // Tracks whether the section has ever had an input section added to it, even
   // if the section was later removed (e.g. because it is a synthetic section
@@ -124,14 +125,14 @@ public:
   void sortInitFini();
   void sortCtorsDtors();
 
+  std::array<uint8_t, 4> getFiller(Ctx &);
+
   // Used for implementation of --compress-debug-sections and
   // --compress-sections.
   CompressedData compressed;
 
 private:
   SmallVector<InputSection *, 0> storage;
-
-  std::array<uint8_t, 4> getFiller(Ctx &);
 };
 
 struct OutputDesc final : SectionCommand {

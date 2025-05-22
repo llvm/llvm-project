@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONFIG_SITE
-#define _LIBCPP___CONFIG_SITE
+#ifndef _LIBCPP___CXX03___CONFIG_SITE
+#define _LIBCPP___CXX03___CONFIG_SITE
 
 #cmakedefine _LIBCPP_ABI_VERSION @_LIBCPP_ABI_VERSION@
 #cmakedefine _LIBCPP_ABI_NAMESPACE @_LIBCPP_ABI_NAMESPACE@
@@ -53,4 +53,4 @@
 #  pragma clang diagnostic pop
 #endif
 
-#endif // _LIBCPP___CONFIG_SITE
+#endif // _LIBCPP___CXX03___CONFIG_SITE

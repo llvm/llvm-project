@@ -297,3 +297,9 @@
 // RUN: %clang --target=riscv64-unknown-fuchsia -mno-relax -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
 // RISCV64-FLAGS: "-X" "--no-relax"
+
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia 2>&1 \
+// RUN:     -nostdlib -nolibc \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIB-NOLIBC
+// CHECK-NOSTDLIB-NOLIBC-NOT: "warning:"
+// CHECK-NOSTDLIB-NOLIBC-NOT: "error:"

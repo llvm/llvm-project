@@ -59,7 +59,7 @@ void S2::f(int i) {
   (void)[i, i]{ }; // expected-error{{'i' can appear only once in a capture list}}
   (void)[&, i, i]{ }; // expected-error{{'i' can appear only once in a capture list}}
   (void)[] mutable {};
-  (void)[]->int{};
+  (void)[]->int{ return 0; };
 #if __cplusplus <= 202002L
   // expected-warning@-3{{is a C++23 extension}}
   // expected-warning@-3{{is a C++23 extension}}

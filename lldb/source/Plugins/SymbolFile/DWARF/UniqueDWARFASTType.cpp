@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "UniqueDWARFASTType.h"
+#include "SymbolFileDWARF.h"
 
 #include "lldb/Core/Declaration.h"
+#include "lldb/Target/Language.h"
 
 using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
@@ -18,6 +20,33 @@ static bool IsStructOrClassTag(llvm::dwarf::Tag Tag) {
          Tag == llvm::dwarf::Tag::DW_TAG_structure_type;
 }
 
+static bool IsSizeAndDeclarationMatching(UniqueDWARFASTType const &udt,
+                                         DWARFDIE const &die,
+                                         const lldb_private::Declaration &decl,
+                                         const int32_t byte_size,
+                                         bool is_forward_declaration) {
+
+  // If they are not both definition DIEs or both declaration DIEs, then
+  // don't check for byte size and declaration location, because declaration
+  // DIEs usually don't have those info.
+  if (udt.m_is_forward_declaration != is_forward_declaration)
+    return true;
+
+  if (udt.m_byte_size > 0 && byte_size > 0 && udt.m_byte_size != byte_size)
+    return false;
+
+  // For C++, we match the behaviour of
+  // DWARFASTParserClang::GetUniqueTypeNameAndDeclaration. We rely on the
+  // one-definition-rule: for a given fully qualified name there exists only one
+  // definition, and there should only be one entry for such name, so ignore
+  // location of where it was declared vs. defined.
+  if (lldb_private::Language::LanguageIsCPlusPlus(
+          SymbolFileDWARF::GetLanguage(*die.GetCU())))
+    return true;
+
+  return udt.m_declaration == decl;
+}
+
 UniqueDWARFASTType *UniqueDWARFASTTypeList::Find(
     const DWARFDIE &die, const lldb_private::Declaration &decl,
     const int32_t byte_size, bool is_forward_declaration) {
@@ -25,17 +54,11 @@ UniqueDWARFASTType *UniqueDWARFASTTypeList::Find(
     // Make sure the tags match
     if (udt.m_die.Tag() == die.Tag() || (IsStructOrClassTag(udt.m_die.Tag()) &&
                                          IsStructOrClassTag(die.Tag()))) {
-      // If they are not both definition DIEs or both declaration DIEs, then
-      // don't check for byte size and declaration location, because declaration
-      // DIEs usually don't have those info.
-      bool matching_size_declaration =
-          udt.m_is_forward_declaration != is_forward_declaration
-              ? true
-              : (udt.m_byte_size < 0 || byte_size < 0 ||
-                 udt.m_byte_size == byte_size) &&
-                    udt.m_declaration == decl;
-      if (!matching_size_declaration)
+
+      if (!IsSizeAndDeclarationMatching(udt, die, decl, byte_size,
+                                        is_forward_declaration))
         continue;
+
       // The type has the same name, and was defined on the same file and
       // line. Now verify all of the parent DIEs match.
       DWARFDIE parent_arg_die = die.GetParent();

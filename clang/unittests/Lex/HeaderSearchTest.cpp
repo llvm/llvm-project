@@ -16,7 +16,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -33,10 +32,9 @@ protected:
         DiagID(new DiagnosticIDs()),
         Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions),
-        Search(std::make_shared<HeaderSearchOptions>(), SourceMgr, Diags,
-               LangOpts, Target.get()) {
+        Search(HSOpts, SourceMgr, Diags, LangOpts, Target.get()) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   void addSearchDir(llvm::StringRef Dir) {
@@ -75,8 +73,7 @@ protected:
     // Test class supports only one HMap at a time.
     assert(!HMap);
     HMap = HeaderMap::Create(*FE, FileMgr);
-    auto DL =
-        DirectoryLookup(HMap.get(), SrcMgr::C_User, /*isFramework=*/false);
+    auto DL = DirectoryLookup(HMap.get(), SrcMgr::C_User);
     Search.AddSearchPath(DL, isAngled);
   }
 
@@ -89,6 +86,7 @@ protected:
   LangOptions LangOpts;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
+  HeaderSearchOptions HSOpts;
   HeaderSearch Search;
   std::unique_ptr<HeaderMap> HMap;
 };
@@ -251,7 +249,6 @@ TEST_F(HeaderSearchTest, HeaderFrameworkLookup) {
   auto FI = Search.getExistingFileInfo(FE);
   EXPECT_TRUE(FI);
   EXPECT_TRUE(FI->IsValid);
-  EXPECT_EQ(FI->Framework.str(), "Foo");
   EXPECT_EQ(Search.getIncludeNameForHeader(FE), "Foo/Foo.h");
 }
 
@@ -321,7 +318,6 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
   auto FI = Search.getExistingFileInfo(FE);
   EXPECT_TRUE(FI);
   EXPECT_TRUE(FI->IsValid);
-  EXPECT_EQ(FI->Framework.str(), "Foo");
   EXPECT_EQ(Search.getIncludeNameForHeader(FE), "Foo/Foo.h");
 }
 

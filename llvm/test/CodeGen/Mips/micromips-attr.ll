@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mcpu=mips32 --mattr=-micromips < %s | FileCheck %s 
+; RUN: llc -mtriple=mips -mcpu=mips32 --mattr=-micromips < %s | FileCheck %s 
 
 define void @foo() #0 {
 entry:

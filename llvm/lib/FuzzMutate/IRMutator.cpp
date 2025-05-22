@@ -122,9 +122,8 @@ getInsertionRange(BasicBlock &BB) {
 }
 
 void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -375,7 +374,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     return T->isMetadataTy() || T->isTokenTy();
   };
   if (!F || IsUnsupportedTy(F->getReturnType()) ||
-      any_of(F->getFunctionType()->params(), IsUnsupportedTy)) {
+      any_of(F->getFunctionType()->params(), IsUnsupportedTy) ||
+      !isCallableCC(F->getCallingConv())) {
     F = IB.createFunctionDeclaration(*M);
   }
 
@@ -391,13 +391,13 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
                                          BasicBlock::iterator InsertPt) {
     StringRef Name = isRetVoid ? nullptr : "C";
     CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, InsertPt);
+    Call->setCallingConv(F->getCallingConv());
     // Don't return this call inst if it return void as it can't be sinked.
     return isRetVoid ? nullptr : Call;
   };
 
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -421,9 +421,8 @@ void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 }
 
 void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
 
@@ -561,9 +560,8 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     }
     PHI->addIncoming(Src, Pred);
   }
-  SmallVector<Instruction *, 32> InstsAfter;
-  for (Instruction &I : getInsertionRange(BB))
-    InstsAfter.push_back(&I);
+  SmallVector<Instruction *, 32> InstsAfter(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   IB.connectToSink(BB, InstsAfter, PHI);
 }
 
@@ -573,9 +571,8 @@ void SinkInstructionStrategy::mutate(Function &F, RandomIRBuilder &IB) {
   }
 }
 void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallVector<Instruction *, 32> Insts;
-  for (Instruction &I : getInsertionRange(BB))
-    Insts.push_back(&I);
+  SmallVector<Instruction *, 32> Insts(
+      llvm::make_pointer_range(getInsertionRange(BB)));
   if (Insts.size() < 1)
     return;
   // Choose an Instruction to mutate.
@@ -660,7 +657,7 @@ void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   Instruction *Terminator = BB.getTerminator();
   // Then put instructions back.
   for (Instruction *I : Insts) {
-    I->insertBefore(Terminator);
+    I->insertBefore(Terminator->getIterator());
   }
 }
 

@@ -365,9 +365,9 @@ void MacroCallReconstructor::endReconstruction(FormatToken *Token) {
 }
 
 void MacroCallReconstructor::debugParentMap() const {
-  llvm::DenseSet<FormatToken *> Values;
-  for (const auto &P : SpelledParentToReconstructedParent)
-    Values.insert(P.second);
+  llvm::DenseSet<FormatToken *> Values(
+      llvm::from_range,
+      llvm::make_second_range(SpelledParentToReconstructedParent));
 
   for (const auto &P : SpelledParentToReconstructedParent) {
     if (Values.contains(P.first))
@@ -518,9 +518,9 @@ MacroCallReconstructor::createUnwrappedLine(const ReconstructedLine &Line,
       // If we only have one child, and the child is due to a macro expansion
       // (either attached to a left parenthesis or comma), merge the child into
       // the current line to prevent forced breaks for macro arguments.
-      auto *Child = std::find_if(
-          N->Children.begin(), N->Children.end(),
-          [](const auto &Child) { return !Child->Tokens.empty(); });
+      auto *Child = llvm::find_if(N->Children, [](const auto &Child) {
+        return !Child->Tokens.empty();
+      });
       auto Line = createUnwrappedLine(**Child, Level);
       Result.Tokens.splice(Result.Tokens.end(), Line.Tokens);
     } else if (NumChildren > 0) {

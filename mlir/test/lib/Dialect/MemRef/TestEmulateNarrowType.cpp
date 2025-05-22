@@ -78,7 +78,11 @@ struct TestEmulateNarrowTypePass
           IntegerType::get(ty.getContext(), arithComputeBitwidth));
     });
 
-    memref::populateMemRefNarrowTypeEmulationConversions(typeConverter);
+    // With the type converter enabled, we are effectively unable to write
+    // negative tests. This is a workaround specifically for negative tests.
+    if (!disableMemrefTypeConversion)
+      memref::populateMemRefNarrowTypeEmulationConversions(typeConverter);
+
     ConversionTarget target(*ctx);
     target.addDynamicallyLegalOp<func::FuncOp>([&typeConverter](Operation *op) {
       return typeConverter.isLegal(cast<func::FuncOp>(op).getFunctionType());
@@ -95,7 +99,8 @@ struct TestEmulateNarrowTypePass
 
     arith::populateArithNarrowTypeEmulationPatterns(typeConverter, patterns);
     memref::populateMemRefNarrowTypeEmulationPatterns(typeConverter, patterns);
-    vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns);
+    vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns,
+                                                      disableAtomicRMW);
 
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
@@ -109,6 +114,17 @@ struct TestEmulateNarrowTypePass
   Option<unsigned> arithComputeBitwidth{
       *this, "arith-compute-bitwidth",
       llvm::cl::desc("arith computation bit width"), llvm::cl::init(4)};
+
+  Option<bool> disableMemrefTypeConversion{
+      *this, "skip-memref-type-conversion",
+      llvm::cl::desc("disable memref type conversion (to test failures)"),
+      llvm::cl::init(false)};
+
+  Option<bool> disableAtomicRMW{
+      *this, "disable-atomic-rmw",
+      llvm::cl::desc("disable atomic read-modify-write and prefer generating "
+                     "normal sequence"),
+      llvm::cl::init(false)};
 };
 } // namespace
 

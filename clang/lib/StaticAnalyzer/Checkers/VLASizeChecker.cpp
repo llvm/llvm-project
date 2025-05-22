@@ -96,7 +96,7 @@ ProgramStateRef VLASizeChecker::checkVLA(CheckerContext &C,
   SValBuilder &SVB = C.getSValBuilder();
   CanQualType SizeTy = Ctx.getSizeType();
   uint64_t SizeMax =
-      SVB.getBasicValueFactory().getMaxValue(SizeTy).getZExtValue();
+      SVB.getBasicValueFactory().getMaxValue(SizeTy)->getZExtValue();
 
   // Get the element size.
   CharUnits EleSize = Ctx.getTypeSizeInChars(VLALast->getElementType());

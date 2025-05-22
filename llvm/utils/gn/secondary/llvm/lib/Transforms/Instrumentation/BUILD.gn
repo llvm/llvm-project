@@ -19,7 +19,6 @@ static_library("Instrumentation") {
     "GCOVProfiling.cpp",
     "HWAddressSanitizer.cpp",
     "IndirectCallPromotion.cpp",
-    "InstrOrderFile.cpp",
     "InstrProfiling.cpp",
     "KCFI.cpp",
     "LowerAllowCheckPass.cpp",
@@ -31,11 +30,11 @@ static_library("Instrumentation") {
     "PGOForceFunctionAttrs.cpp",
     "PGOInstrumentation.cpp",
     "PGOMemOPSizeOpt.cpp",
-    "PoisonChecking.cpp",
     "RealtimeSanitizer.cpp",
     "SanitizerBinaryMetadata.cpp",
     "SanitizerCoverage.cpp",
     "ThreadSanitizer.cpp",
+    "TypeSanitizer.cpp",
     "ValueProfileCollector.cpp",
   ]
 }

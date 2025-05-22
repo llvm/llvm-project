@@ -152,6 +152,20 @@ TEST(buildASTFromCode, ReportsErrors) {
   EXPECT_EQ(1u, Consumer.NumDiagnosticsSeen);
 }
 
+TEST(buildASTFromCode, FileSystem) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+  InMemoryFileSystem->addFile("included_file.h", 0,
+                              llvm::MemoryBuffer::getMemBufferCopy("class X;"));
+  std::unique_ptr<ASTUnit> AST = buildASTFromCodeWithArgs(
+      R"(#include "included_file.h")", {}, "input.cc", "clang-tool",
+      std::make_shared<PCHContainerOperations>(),
+      getClangStripDependencyFileAdjuster(), FileContentMappings(), nullptr,
+      InMemoryFileSystem);
+  ASSERT_TRUE(AST.get());
+  EXPECT_TRUE(FindClassDeclX(AST.get()));
+}
+
 TEST(newFrontendActionFactory, CreatesFrontendActionFactoryFromType) {
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory<SyntaxOnlyAction>());
@@ -384,7 +398,8 @@ struct CommandLineExtractorTest : public ::testing::Test {
 public:
   CommandLineExtractorTest()
       : InMemoryFS(new llvm::vfs::InMemoryFileSystem),
-        Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions)),
+        Diags(CompilerInstance::createDiagnostics(*InMemoryFS,
+                                                  new DiagnosticOptions)),
         Driver("clang", llvm::sys::getDefaultTargetTriple(), *Diags,
                "clang LLVM compiler", overlayRealFS(InMemoryFS)) {}
 
@@ -778,7 +793,7 @@ TEST(ClangToolTest, StripDependencyFileAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("-MD"));
   EXPECT_FALSE(HasFlag("-MMD"));
@@ -810,7 +825,7 @@ TEST(ClangToolTest, StripDependencyFileAdjusterShowIncludes) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("/showIncludes"));
   EXPECT_FALSE(HasFlag("/showIncludes:user"));
@@ -843,7 +858,7 @@ TEST(ClangToolTest, StripDependencyFileAdjusterMsvc) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_TRUE(HasFlag("-MD"));
   EXPECT_TRUE(HasFlag("-MDd"));
@@ -876,7 +891,7 @@ TEST(ClangToolTest, StripPluginsAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("-Xclang"));
   EXPECT_FALSE(HasFlag("-add-plugin"));

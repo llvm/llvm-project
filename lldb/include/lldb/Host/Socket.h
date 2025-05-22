@@ -11,8 +11,10 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private.h"
 
 #include "lldb/Host/SocketAddress.h"
@@ -93,7 +95,6 @@ public:
   static void Terminate();
 
   static std::unique_ptr<Socket> Create(const SocketProtocol protocol,
-                                        bool child_processes_inherit,
                                         Status &error);
 
   virtual Status Connect(llvm::StringRef name) = 0;
@@ -108,20 +109,19 @@ public:
 
   // Accept a single connection and "return" it in the pointer argument. This
   // function blocks until the connection arrives.
-  virtual Status Accept(Socket *&socket);
+  virtual Status Accept(const Timeout<std::micro> &timeout, Socket *&socket);
 
   // Initialize a Tcp Socket object in listening mode.  listen and accept are
   // implemented separately because the caller may wish to manipulate or query
   // the socket after it is initialized, but before entering a blocking accept.
   static llvm::Expected<std::unique_ptr<TCPSocket>>
-  TcpListen(llvm::StringRef host_and_port, bool child_processes_inherit,
-            int backlog = 5);
+  TcpListen(llvm::StringRef host_and_port, int backlog = 5);
 
   static llvm::Expected<std::unique_ptr<Socket>>
-  TcpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);
+  TcpConnect(llvm::StringRef host_and_port);
 
   static llvm::Expected<std::unique_ptr<UDPSocket>>
-  UdpConnect(llvm::StringRef host_and_port, bool child_processes_inherit);
+  UdpConnect(llvm::StringRef host_and_port);
 
   static int GetOption(NativeSocket sockfd, int level, int option_name,
                        int &option_value);
@@ -152,9 +152,13 @@ public:
   // If this Socket is connected then return the URI used to connect.
   virtual std::string GetRemoteConnectionURI() const { return ""; };
 
+  // If the Socket is listening then return the URI for clients to connect.
+  virtual std::vector<std::string> GetListeningConnectionURI() const {
+    return {};
+  }
+
 protected:
-  Socket(SocketProtocol protocol, bool should_close,
-         bool m_child_process_inherit);
+  Socket(SocketProtocol protocol, bool should_close);
 
   virtual size_t Send(const void *buf, const size_t num_bytes);
 
@@ -162,15 +166,12 @@ protected:
   static Status GetLastError();
   static void SetLastError(Status &error);
   static NativeSocket CreateSocket(const int domain, const int type,
-                                   const int protocol,
-                                   bool child_processes_inherit, Status &error);
+                                   const int protocol, Status &error);
   static NativeSocket AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
-                                   socklen_t *addrlen,
-                                   bool child_processes_inherit, Status &error);
+                                   socklen_t *addrlen, Status &error);
 
   SocketProtocol m_protocol;
   NativeSocket m_socket;
-  bool m_child_processes_inherit;
   bool m_should_close_fd;
 };
 

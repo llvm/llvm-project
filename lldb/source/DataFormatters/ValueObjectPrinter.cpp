@@ -503,14 +503,7 @@ ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
 }
 
 bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion() const {
-  switch (m_mode) {
-  case Mode::Always:
-  case Mode::Default:
-    return m_count > 0;
-  case Mode::Never:
-    return false;
-  }
-  return false;
+  return m_count > 0;
 }
 
 bool ValueObjectPrinter::ShouldPrintChildren(
@@ -554,12 +547,14 @@ bool ValueObjectPrinter::ShouldPrintChildren(
       return false;
 
     const bool is_root_level = m_curr_depth == 0;
+    const bool is_expanded_ptr =
+        is_ptr && m_type_flags.Test(m_options.m_expand_ptr_type_flags);
 
-    if (is_ref && is_root_level && print_children) {
-      // If this is the root object (depth is zero) that we are showing and
-      // it is a reference, and no pointer depth has been supplied print out
-      // what it references. Don't do this at deeper depths otherwise we can
-      // end up with infinite recursion...
+    if ((is_ref || is_expanded_ptr) && is_root_level && print_children) {
+      // If this is the root object (depth is zero) that we are showing and it
+      // is either a reference or a preferred type of pointer, then print it.
+      // Don't do this at deeper depths otherwise we can end up with infinite
+      // recursion...
       return true;
     }
 

@@ -14,6 +14,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// FIXME: For now we just default to the NVIDIA device allocator which is
+// always available on NVPTX targets. This will be implemented fully later.
+#ifndef LIBC_TARGET_ARCH_IS_NVPTX
 LLVM_LIBC_FUNCTION(void, free, (void *ptr)) { gpu::deallocate(ptr); }
+#endif
 
 } // namespace LIBC_NAMESPACE_DECL

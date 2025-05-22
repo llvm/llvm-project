@@ -24,6 +24,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
@@ -48,6 +49,7 @@ class APInt;
 class BasicBlock;
 class ConstantInt;
 class DataLayout;
+struct KnownBits;
 class StringRef;
 class Type;
 class Value;
@@ -749,6 +751,14 @@ public:
     /// \p minnum matches the behavior of \p llvm.minnum.*.
     FMin,
 
+    /// *p = maximum(old, v)
+    /// \p maximum matches the behavior of \p llvm.maximum.*.
+    FMaximum,
+
+    /// *p = minimum(old, v)
+    /// \p minimum matches the behavior of \p llvm.minimum.*.
+    FMinimum,
+
     /// Increment one up to a maximum value.
     /// *p = (old u>= v) ? 0 : (old + 1)
     UIncWrap,
@@ -810,6 +820,8 @@ public:
     case AtomicRMWInst::FSub:
     case AtomicRMWInst::FMax:
     case AtomicRMWInst::FMin:
+    case AtomicRMWInst::FMaximum:
+    case AtomicRMWInst::FMinimum:
       return true;
     default:
       return false;
@@ -1202,29 +1214,84 @@ public:
 #endif
   }
 
+  /// @returns the predicate along with samesign information.
+  CmpPredicate getCmpPredicate() const {
+    return {getPredicate(), hasSameSign()};
+  }
+
+  /// @returns the inverse predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getInverseCmpPredicate(CmpPredicate Pred) {
+    return {getInversePredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// @returns the inverse predicate along with samesign information.
+  CmpPredicate getInverseCmpPredicate() const {
+    return getInverseCmpPredicate(getCmpPredicate());
+  }
+
+  /// @returns the swapped predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getSwappedCmpPredicate(CmpPredicate Pred) {
+    return {getSwappedPredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// @returns the swapped predicate along with samesign information.
+  CmpPredicate getSwappedCmpPredicate() const {
+    return getSwappedCmpPredicate(getCmpPredicate());
+  }
+
+  /// @returns the non-strict predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getNonStrictCmpPredicate(CmpPredicate Pred) {
+    return {getNonStrictPredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// For example, SGT -> SGE, SLT -> SLE, ULT -> ULE, UGT -> UGE.
+  /// @returns the non-strict predicate along with samesign information.
+  Predicate getNonStrictCmpPredicate() const {
+    return getNonStrictCmpPredicate(getCmpPredicate());
+  }
+
   /// For example, EQ->EQ, SLE->SLE, UGT->SGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as signed.
-  /// Return the signed version of the predicate
+  /// Return the signed version of the predicate.
   Predicate getSignedPredicate() const {
     return getSignedPredicate(getPredicate());
   }
 
-  /// This is a static version that you can use without an instruction.
-  /// Return the signed version of the predicate.
-  static Predicate getSignedPredicate(Predicate pred);
+  /// Return the signed version of the predicate: static variant.
+  static Predicate getSignedPredicate(Predicate Pred);
 
   /// For example, EQ->EQ, SLE->ULE, UGT->UGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as unsigned.
-  /// Return the unsigned version of the predicate
+  /// Return the unsigned version of the predicate.
   Predicate getUnsignedPredicate() const {
     return getUnsignedPredicate(getPredicate());
   }
 
-  /// This is a static version that you can use without an instruction.
-  /// Return the unsigned version of the predicate.
-  static Predicate getUnsignedPredicate(Predicate pred);
+  /// Return the unsigned version of the predicate: static variant.
+  static Predicate getUnsignedPredicate(Predicate Pred);
+
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->EQ
+  /// @returns the unsigned version of the signed predicate pred or
+  ///          the signed version of the signed predicate pred.
+  /// Static variant.
+  static Predicate getFlippedSignednessPredicate(Predicate Pred);
+
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->EQ
+  /// @returns the unsigned version of the signed predicate pred or
+  ///          the signed version of the signed predicate pred.
+  Predicate getFlippedSignednessPredicate() const {
+    return getFlippedSignednessPredicate(getPredicate());
+  }
+
+  /// Determine if Pred1 implies Pred2 is true, false, or if nothing can be
+  /// inferred about the implication, when two compares have matching operands.
+  static std::optional<bool> isImpliedByMatchingCmp(CmpPredicate Pred1,
+                                                    CmpPredicate Pred2);
 
   void setSameSign(bool B = true) {
     SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);
@@ -1247,9 +1314,13 @@ public:
     return isEquality(getPredicate());
   }
 
+  /// @returns true if the predicate is commutative
+  /// Determine if this relation is commutative.
+  static bool isCommutative(Predicate P) { return isEquality(P); }
+
   /// @returns true if the predicate of this ICmpInst is commutative
   /// Determine if this relation is commutative.
-  bool isCommutative() const { return isEquality(); }
+  bool isCommutative() const { return isCommutative(getPredicate()); }
 
   /// Return true if the predicate is relational (not EQ or NE).
   ///
@@ -1304,6 +1375,11 @@ public:
   /// Return result of `LHS Pred RHS` comparison.
   static bool compare(const APInt &LHS, const APInt &RHS,
                       ICmpInst::Predicate Pred);
+
+  /// Return result of `LHS Pred RHS`, if it can be determined from the
+  /// KnownBits. Otherwise return nullopt.
+  static std::optional<bool> compare(const KnownBits &LHS, const KnownBits &RHS,
+                                     ICmpInst::Predicate Pred);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1363,7 +1439,7 @@ public:
     AssertOK();
   }
 
-  /// @returns true if the predicate of this instruction is EQ or NE.
+  /// @returns true if the predicate is EQ or NE.
   /// Determine if this is an equality predicate.
   static bool isEquality(Predicate Pred) {
     return Pred == FCMP_OEQ || Pred == FCMP_ONE || Pred == FCMP_UEQ ||
@@ -1374,15 +1450,16 @@ public:
   /// Determine if this is an equality predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
+  /// @returns true if the predicate is commutative.
+  /// Determine if this is a commutative predicate.
+  static bool isCommutative(Predicate Pred) {
+    return isEquality(Pred) || Pred == FCMP_FALSE || Pred == FCMP_TRUE ||
+           Pred == FCMP_ORD || Pred == FCMP_UNO;
+  }
+
   /// @returns true if the predicate of this instruction is commutative.
   /// Determine if this is a commutative predicate.
-  bool isCommutative() const {
-    return isEquality() ||
-           getPredicate() == FCMP_FALSE ||
-           getPredicate() == FCMP_TRUE ||
-           getPredicate() == FCMP_ORD ||
-           getPredicate() == FCMP_UNO;
-  }
+  bool isCommutative() const { return isCommutative(getPredicate()); }
 
   /// @returns true if the predicate is relational (not EQ or NE).
   /// Determine if this a relational predicate.
@@ -3299,7 +3376,7 @@ public:
 
   /// Returns true if the default branch must result in immediate undefined
   /// behavior, false otherwise.
-  bool defaultDestUndefined() const {
+  bool defaultDestUnreachable() const {
     return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
   }
 
@@ -4429,6 +4506,9 @@ public:
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
+
+  // Whether to do target lowering in SelectionDAG.
+  bool shouldLowerToTrap(bool TrapUnreachable, bool NoTrapAfterNoreturn) const;
 
 private:
   BasicBlock *getSuccessor(unsigned idx) const {

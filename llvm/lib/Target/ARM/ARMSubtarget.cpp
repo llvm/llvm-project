@@ -226,9 +226,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   SupportsTailCall = !isThumb1Only() || hasV8MBaselineOps();
 
-  if (isTargetMachO() && isTargetIOS() && getTargetTriple().isOSVersionLT(5, 0))
-    SupportsTailCall = false;
-
   switch (IT) {
   case DefaultIT:
     RestrictIT = false;
@@ -287,12 +284,15 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA78:
   case CortexA78AE:
   case CortexA78C:
+  case CortexA510:
   case CortexA710:
   case CortexR4:
   case CortexR5:
   case CortexR7:
   case CortexM3:
+  case CortexM55:
   case CortexM7:
+  case CortexM85:
   case CortexR52:
   case CortexR52plus:
   case CortexX1:
@@ -475,7 +475,7 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
 }
 
 bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                               unsigned PhysReg) const {
+                                               MCRegister PhysReg) const {
   // To minimize code size in Thumb2, we prefer the usage of low regs (lower
   // cost per use) so we can  use narrow encoding. By default, caller-saved
   // registers (e.g. lr, r12) are always  allocated first, regardless of
@@ -489,8 +489,6 @@ ARMSubtarget::PushPopSplitVariation
 ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const std::vector<CalleeSavedInfo> CSI =
-      MF.getFrameInfo().getCalleeSavedInfo();
 
   // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
   // cannot use high registers except for lr.

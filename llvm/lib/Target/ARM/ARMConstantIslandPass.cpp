@@ -47,7 +47,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -194,7 +193,8 @@ namespace {
     struct ImmBranch {
       MachineInstr *MI;
       unsigned MaxDisp : 31;
-      bool isCond : 1;
+      LLVM_PREFERRED_TYPE(bool)
+      unsigned isCond : 1;
       unsigned UncondBr;
 
       ImmBranch(MachineInstr *mi, unsigned maxdisp, bool cond, unsigned ubr)

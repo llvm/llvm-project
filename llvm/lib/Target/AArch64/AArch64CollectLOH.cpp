@@ -98,7 +98,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -109,7 +108,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-collect-loh"
@@ -253,7 +251,7 @@ static bool supportLoadFromLiteral(const MachineInstr &MI) {
 /// Number of GPR registers traked by mapRegToGPRIndex()
 static const unsigned N_GPR_REGS = 31;
 /// Map register number to index from 0-30.
-static int mapRegToGPRIndex(MCPhysReg Reg) {
+static int mapRegToGPRIndex(MCRegister Reg) {
   static_assert(AArch64::X28 - AArch64::X0 + 3 == N_GPR_REGS, "Number of GPRs");
   static_assert(AArch64::W30 - AArch64::W0 + 1 == N_GPR_REGS, "Number of GPRs");
   if (AArch64::X0 <= Reg && Reg <= AArch64::X28)
@@ -274,9 +272,12 @@ static int mapRegToGPRIndex(MCPhysReg Reg) {
 /// datastructure for each tracked general purpose register.
 struct LOHInfo {
   MCLOHType Type : 8;           ///< "Best" type of LOH possible.
-  bool IsCandidate : 1;         ///< Possible LOH candidate.
-  bool OneUser : 1;             ///< Found exactly one user (yet).
-  bool MultiUsers : 1;          ///< Found multiple users.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsCandidate : 1;     ///< Possible LOH candidate.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned OneUser : 1;         ///< Found exactly one user (yet).
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned MultiUsers : 1;      ///< Found multiple users.
   const MachineInstr *MI0;      ///< First instruction involved in the LOH.
   const MachineInstr *MI1;      ///< Second instruction involved in the LOH
                                 ///  (if any).

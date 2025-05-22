@@ -94,7 +94,7 @@ public:
 
   /// creates a mapping for the specified virtual register to
   /// the specified physical register
-  void assignVirt2Phys(Register virtReg, MCPhysReg physReg);
+  void assignVirt2Phys(Register virtReg, MCRegister physReg);
 
   bool isShapeMapEmpty() const { return Virt2ShapeMap.empty(); }
 
@@ -235,6 +235,21 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
+
+class VirtRegRewriterPass : public PassInfoMixin<VirtRegRewriterPass> {
+  bool ClearVirtRegs = true;
+
+public:
+  VirtRegRewriterPass(bool ClearVirtRegs = true)
+      : ClearVirtRegs(ClearVirtRegs) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  static bool isRequired() { return true; }
+
+  void printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)>) const;
+};
+
 } // end llvm namespace
 
 #endif // LLVM_CODEGEN_VIRTREGMAP_H

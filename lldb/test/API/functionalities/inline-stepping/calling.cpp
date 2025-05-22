@@ -95,7 +95,7 @@ void caller_trivial_inline_1() {
 
 void caller_trivial_inline_2() {
   caller_trivial_inline_3(); // In caller_trivial_inline_2.
-  inline_value += 1;
+  inline_value += 1;         // After caller_trivial_inline_3
 }
 
 void caller_trivial_inline_3() {

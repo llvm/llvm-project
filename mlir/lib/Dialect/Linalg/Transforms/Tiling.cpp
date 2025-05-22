@@ -23,6 +23,7 @@
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -101,7 +102,7 @@ static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
 
   Value zero = b.create<arith::ConstantIndexOp>(0);
   Value condition = b.create<arith::CmpIOp>(arith::CmpIPredicate::sgt,
-                                            value.get<Value>(), zero);
+                                            cast<Value>(value), zero);
   b.create<cf::AssertOp>(
       condition,
       b.getStringAttr("expected strictly positive tile size and divisor"));
@@ -375,16 +376,14 @@ static void calculateTileOffsetsAndSizes(
   b.setInsertionPointToStart(forallOp.getBody(0));
 
   SmallVector<Value> threadIds = forallOp.getInductionVars();
-  SmallVector<OpFoldResult> nonZeroNumThreads =
-      llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
-        return !isConstantIntValue(ofr, 0);
-      }));
+  SmallVector<OpFoldResult> nonZeroNumThreads = llvm::filter_to_vector(
+      numThreads, [](OpFoldResult ofr) { return !isZeroInteger(ofr); });
   int64_t nLoops = loopRanges.size();
   tiledOffsets.reserve(nLoops);
   tiledSizes.reserve(nLoops);
   for (unsigned loopIdx = 0, threadIdIdx = 0; loopIdx < nLoops; ++loopIdx) {
     bool overflow = loopIdx >= numThreads.size();
-    bool isZero = !overflow && isConstantIntValue(numThreads[loopIdx], 0);
+    bool isZero = !overflow && isZeroInteger(numThreads[loopIdx]);
     // Degenerate case: take the whole domain.
     if (overflow || isZero) {
       tiledOffsets.push_back(loopRanges[loopIdx].offset);
@@ -415,7 +414,7 @@ static void calculateTileOffsetsAndSizes(
     OpFoldResult residualTileSize = makeComposedFoldedAffineApply(
         b, loc, i + j * m - n,
         {offset, nonZeroNumThreads[threadIdIdx], tileSizePerThread, size});
-    if (!isConstantIntValue(residualTileSize, 0)) {
+    if (!isZeroInteger(residualTileSize)) {
       OpFoldResult sizeMinusOffsetPerThread = makeComposedFoldedAffineApply(
           b, loc, -i + m, {offsetPerThread, size});
       tileSizePerThread =
@@ -656,10 +655,8 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
 
   Operation *tiledOp = nullptr;
 
-  SmallVector<OpFoldResult> nonZeroNumThreads =
-      llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
-        return !isConstantIntValue(ofr, 0);
-      }));
+  SmallVector<OpFoldResult> nonZeroNumThreads = llvm::filter_to_vector(
+      numThreads, [](OpFoldResult ofr) { return !isZeroInteger(ofr); });
   SmallVector<Value> materializedNonZeroNumThreads =
       getValueOrCreateConstantIndexOp(b, loc, nonZeroNumThreads);
 

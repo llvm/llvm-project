@@ -196,22 +196,6 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   return DirectoryEntryRef(NamedDirEnt);
 }
 
-llvm::ErrorOr<const DirectoryEntry *>
-FileManager::getDirectory(StringRef DirName, bool CacheFailure) {
-  auto Result = getDirectoryRef(DirName, CacheFailure);
-  if (Result)
-    return &Result->getDirEntry();
-  return llvm::errorToErrorCode(Result.takeError());
-}
-
-llvm::ErrorOr<const FileEntry *>
-FileManager::getFile(StringRef Filename, bool openFile, bool CacheFailure) {
-  auto Result = getFileRef(Filename, openFile, CacheFailure);
-  if (Result)
-    return &Result->getFileEntry();
-  return llvm::errorToErrorCode(Result.takeError());
-}
-
 llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
                                                      bool openFile,
                                                      bool CacheFailure,
@@ -324,9 +308,9 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
         *SeenFileEntries
              .insert({Status.getName(), FileEntryRef::MapValue(*UFE, DirInfo)})
              .first;
-    assert(Redirection.second->V.is<FileEntry *>() &&
+    assert(isa<FileEntry *>(Redirection.second->V) &&
            "filename redirected to a non-canonical filename?");
-    assert(Redirection.second->V.get<FileEntry *>() == UFE &&
+    assert(cast<FileEntry *>(Redirection.second->V) == UFE &&
            "filename from getStatValue() refers to wrong file");
 
     // Cache the redirection in the previously-inserted entry, still available
@@ -346,6 +330,8 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
   UFE->UID = NextFileUID++;
   UFE->UniqueID = Status.getUniqueID();
   UFE->IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
+  UFE->IsDeviceFile =
+      Status.getType() == llvm::sys::fs::file_type::character_file;
   UFE->File = std::move(F);
 
   if (UFE->File) {
@@ -398,9 +384,9 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
       {Filename, std::errc::no_such_file_or_directory}).first;
   if (NamedFileEnt.second) {
     FileEntryRef::MapValue Value = *NamedFileEnt.second;
-    if (LLVM_LIKELY(Value.V.is<FileEntry *>()))
+    if (LLVM_LIKELY(isa<FileEntry *>(Value.V)))
       return FileEntryRef(NamedFileEnt);
-    return FileEntryRef(*Value.V.get<const FileEntryRef::MapEntry *>());
+    return FileEntryRef(*cast<const FileEntryRef::MapEntry *>(Value.V));
   }
 
   // We've not seen this before, or the file is cached as non-existent.
@@ -620,7 +606,7 @@ void FileManager::GetUniqueIDMapping(
 
   for (const auto &Entry : SeenFileEntries) {
     // Only return files that exist and are not redirected.
-    if (!Entry.getValue() || !Entry.getValue()->V.is<FileEntry *>())
+    if (!Entry.getValue() || !isa<FileEntry *>(Entry.getValue()->V))
       continue;
     FileEntryRef FE(Entry);
     // Add this file if it's the first one with the UID, or if its name is

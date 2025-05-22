@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_MAKE_SIGNED_H
-#define _LIBCPP___TYPE_TRAITS_MAKE_SIGNED_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_MAKE_SIGNED_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_MAKE_SIGNED_H
 
-#include <__config>
-#include <__type_traits/copy_cv.h>
-#include <__type_traits/is_enum.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/nat.h>
-#include <__type_traits/remove_cv.h>
-#include <__type_traits/type_list.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/copy_cv.h>
+#include <__cxx03/__type_traits/is_enum.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/nat.h>
+#include <__cxx03/__type_traits/remove_cv.h>
+#include <__cxx03/__type_traits/type_list.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -79,11 +79,6 @@ struct make_signed {
   using type _LIBCPP_NODEBUG = __make_signed_t<_Tp>;
 };
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-using make_signed_t = __make_signed_t<_Tp>;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_MAKE_SIGNED_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_MAKE_SIGNED_H

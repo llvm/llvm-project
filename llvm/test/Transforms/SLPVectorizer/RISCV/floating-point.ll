@@ -62,7 +62,7 @@ define void @fp_sub(ptr %dst, ptr %p) {
 ; CHECK-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[TMP0]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[TMP0]], splat (float 3.000000e+00)
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -70,7 +70,7 @@ define void @fp_sub(ptr %dst, ptr %p) {
 ; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[TMP0]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+; DEFAULT-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[TMP0]], splat (float 3.000000e+00)
 ; DEFAULT-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
@@ -156,7 +156,7 @@ define void @fp_div(ptr %dst, ptr %p) {
 ; CHECK-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <4 x float> [[TMP0]], <float 1.050000e+01, float 1.050000e+01, float 1.050000e+01, float 1.050000e+01>
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <4 x float> [[TMP0]], splat (float 1.050000e+01)
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -164,7 +164,7 @@ define void @fp_div(ptr %dst, ptr %p) {
 ; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = fdiv <4 x float> [[TMP0]], <float 1.050000e+01, float 1.050000e+01, float 1.050000e+01, float 1.050000e+01>
+; DEFAULT-NEXT:    [[TMP1:%.*]] = fdiv <4 x float> [[TMP0]], splat (float 1.050000e+01)
 ; DEFAULT-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
@@ -254,7 +254,7 @@ define void @fp_min(ptr %dst, ptr %p) {
 ; CHECK-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> <float 1.250000e+00, float 1.250000e+00, float 1.250000e+00, float 1.250000e+00>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> splat (float 1.250000e+00))
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -262,7 +262,7 @@ define void @fp_min(ptr %dst, ptr %p) {
 ; DEFAULT-SAME: (ptr [[DST:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[P]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> <float 1.250000e+00, float 1.250000e+00, float 1.250000e+00, float 1.250000e+00>)
+; DEFAULT-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> splat (float 1.250000e+00))
 ; DEFAULT-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; DEFAULT-NEXT:    ret void
 ;

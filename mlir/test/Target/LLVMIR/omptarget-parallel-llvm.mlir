@@ -3,7 +3,7 @@
 // The aim of the test is to check the LLVM IR codegen for the device
 // for omp target parallel construct
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9", llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9", llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
   llvm.func @_QQmain_omp_outline_1(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
     omp.target map_entries(%0 -> %arg2 : !llvm.ptr) {
@@ -33,8 +33,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 
   llvm.func @parallel_if(%arg0: !llvm.ptr {fir.bindc_name = "ifcond"}) {
     %0 = llvm.mlir.constant(1 : i64) : i64
-    %1 = llvm.alloca %0 x i32 {bindc_name = "d"} : (i64) -> !llvm.ptr
-    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
+    %1 = llvm.alloca %0 x i32 {bindc_name = "d"} : (i64) -> !llvm.ptr<5>
+    %cast = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
+    %2 = omp.map.info var_ptr(%cast : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
     %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "ifcond"}
     omp.target map_entries(%2 -> %arg1, %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
       %4 = llvm.mlir.constant(10 : i32) : i32
@@ -52,7 +53,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 }
 
 // CHECK: define weak_odr protected amdgpu_kernel void @[[FUNC0:.*]](
-// CHECK-SAME: ptr %[[TMP:.*]], ptr %[[TMP0:.*]]) {
+// CHECK-SAME: ptr %[[TMP:.*]], ptr %[[TMP0:.*]]) #{{[0-9]+}} {
 // CHECK:         %[[TMP1:.*]] = alloca [1 x ptr], align 8, addrspace(5)
 // CHECK:         %[[TMP2:.*]] = addrspacecast ptr addrspace(5) %[[TMP1]] to ptr
 // CHECK:         %[[STRUCTARG:.*]] = alloca { ptr }, align 8, addrspace(5)
@@ -96,7 +97,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // is passed as a param to kmpc_parallel_51 function
 
 // CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(
-// CHECK-SAME: ptr {{.*}}, ptr {{.*}}, ptr %[[IFCOND_ARG2:.*]]) {
+// CHECK-SAME: ptr {{.*}}, ptr {{.*}}, ptr %[[IFCOND_ARG2:.*]]) #{{[0-9]+}} {
 // CHECK:         store ptr %[[IFCOND_ARG2]], ptr %[[IFCOND_TMP1:.*]], align 8
 // CHECK:         %[[IFCOND_TMP2:.*]] = load i32, ptr %[[IFCOND_TMP1]], align 4
 // CHECK:         %[[IFCOND_TMP3:.*]] = icmp ne i32 %[[IFCOND_TMP2]], 0

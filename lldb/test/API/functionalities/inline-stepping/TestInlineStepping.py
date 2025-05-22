@@ -1,6 +1,5 @@
 """Test stepping over and into inlined functions."""
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -291,7 +290,7 @@ class TestInlineStepping(TestBase):
         break_1_in_main = target.BreakpointCreateBySourceRegex(
             "// At second call of caller_ref_1 in main.", self.main_source_spec
         )
-        self.assertTrue(break_1_in_main, VALID_BREAKPOINT)
+        self.assertGreater(break_1_in_main.GetNumLocations(), 0, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
         self.process = target.LaunchSimple(
@@ -316,6 +315,24 @@ class TestInlineStepping(TestBase):
             ["// At increment in caller_ref_2.", "over"],
         ]
         self.run_step_sequence(step_sequence)
+
+        # Now make sure that next to a virtual inlined call stack
+        # gets the call stack depth correct.
+        break_2_in_main = target.BreakpointCreateBySourceRegex(
+            "// Call max_value specialized", self.main_source_spec
+        )
+        self.assertGreater(break_2_in_main.GetNumLocations(), 0, VALID_BREAKPOINT)
+        threads = lldbutil.continue_to_breakpoint(self.process, break_2_in_main)
+        self.assertEqual(len(threads), 1, "Hit our second breakpoint")
+        self.assertEqual(threads[0].id, self.thread.id, "Stopped at right thread")
+        self.thread.StepOver()
+        frame_0 = self.thread.frames[0]
+        line_entry = frame_0.line_entry
+        self.assertEqual(
+            line_entry.file.basename, self.main_source_spec.basename, "File matches"
+        )
+        target_line = line_number("calling.cpp", "// At caller_trivial_inline_1")
+        self.assertEqual(line_entry.line, target_line, "Lines match as well.")
 
     def step_in_template(self):
         """Use Python APIs to test stepping in to templated functions."""
@@ -364,7 +381,9 @@ class TestInlineStepping(TestBase):
         step_sequence = [["// In max_value specialized", "into"]]
         self.run_step_sequence(step_sequence)
 
-    def run_to_call_site_and_step(self, source_regex, func_name, start_pos):
+    def run_to_call_site_and_step(
+        self, source_regex, func_name, start_pos, one_more_step_loc=None
+    ):
         main_spec = lldb.SBFileSpec("calling.cpp")
         # Set the breakpoint by file and line, not sourced regex because
         # we want to make sure we can set breakpoints on call sites:
@@ -408,6 +427,14 @@ class TestInlineStepping(TestBase):
                 # stepping for this function...
                 break
 
+        if one_more_step_loc:
+            thread.StepInto()
+            frame_0 = thread.frame[0]
+            self.assertEqual(
+                frame_0.line_entry.line,
+                line_number(self.main_source, one_more_step_loc),
+                "Was able to step one more time",
+            )
         process.Kill()
         target.Clear()
 
@@ -419,4 +446,10 @@ class TestInlineStepping(TestBase):
         )
         self.run_to_call_site_and_step(
             "In caller_trivial_inline_2", "caller_trivial_inline_2", 3
+        )
+        self.run_to_call_site_and_step(
+            "In caller_trivial_inline_3",
+            "caller_trivial_inline_3",
+            4,
+            "After caller_trivial_inline_3",
         )

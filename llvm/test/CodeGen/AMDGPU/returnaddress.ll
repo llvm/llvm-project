@@ -58,7 +58,7 @@ exit:
 define void @func5() nounwind {
 entry:
   %tmp = tail call ptr @llvm.returnaddress(i32 2)
-  store volatile i32 0, ptr addrspace(3) undef, align 4
+  store volatile i32 0, ptr addrspace(3) poison, align 4
   unreachable
 }
 
@@ -73,10 +73,10 @@ declare void @callee()
 define void @multi_use() nounwind {
 entry:
   %ret0 = tail call ptr @llvm.returnaddress(i32 0)
-  store volatile ptr %ret0, ptr addrspace(1) undef
+  store volatile ptr %ret0, ptr addrspace(1) poison
   call void @callee()
   %ret1 = tail call ptr @llvm.returnaddress(i32 0)
-  store volatile ptr %ret1, ptr addrspace(1) undef
+  store volatile ptr %ret1, ptr addrspace(1) poison
   ret void
 }
 

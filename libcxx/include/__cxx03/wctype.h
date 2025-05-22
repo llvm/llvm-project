@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_WCTYPE_H
-#define _LIBCPP_WCTYPE_H
+#ifndef _LIBCPP___CXX03_WCTYPE_H
+#define _LIBCPP___CXX03_WCTYPE_H
 
 /*
     wctype.h synopsis
@@ -44,7 +44,7 @@ wctrans_t wctrans(const char* property);
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #  error                                                                                                               \
@@ -59,7 +59,7 @@ wctrans_t wctrans(const char* property);
 // In the future, we should unconditionally include_next <wctype.h> here and instead
 // have a mode under which the library does not need libc++'s <wctype.h> or <cwctype>
 // at all (i.e. a mode without wchar_t). As it stands, we need to do that to completely
-// bypass the using declarations in <cwctype> when we did not include <wctype.h>.
+// bypass the using declarations in <cwctype> when we did not include <__cxx03/wctype.h>.
 // Otherwise, a using declaration like `using ::wint_t` in <cwctype> will refer to
 // nothing (with using_if_exists), and if we include another header that defines one
 // of these declarations (e.g. <wchar.h>), the second `using ::wint_t` with using_if_exists
@@ -92,4 +92,4 @@ wctrans_t wctrans(const char* property);
 
 #endif // __cplusplus
 
-#endif // _LIBCPP_WCTYPE_H
+#endif // _LIBCPP___CXX03_WCTYPE_H

@@ -44,10 +44,7 @@ class RISCVRedundantCopyElimination : public MachineFunctionPass {
 
 public:
   static char ID;
-  RISCVRedundantCopyElimination() : MachineFunctionPass(ID) {
-    initializeRISCVRedundantCopyEliminationPass(
-        *PassRegistry::getPassRegistry());
-  }
+  RISCVRedundantCopyElimination() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {

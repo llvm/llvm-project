@@ -1,4 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -O3 -misched=gcn-iterative-max-occupancy-experimental < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -O3 -misched=gcn-iterative-ilp < %s | FileCheck %s
 
 ; Test should not result in build failure
 ; CHECK-LABEL: shouldNotReApply

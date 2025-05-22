@@ -8,11 +8,9 @@
 
 #include "src/errno/libc_errno.h"
 #include "src/time/asctime_r.h"
-#include "src/time/time_utils.h"
+#include "src/time/time_constants.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
-
-using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 static inline char *call_asctime_r(struct tm *tm_data, int year, int month,
                                    int mday, int hour, int min, int sec,
@@ -30,7 +28,7 @@ TEST(LlvmLibcAsctimeR, Nullptr) {
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
 
-  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
+  char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
   result = LIBC_NAMESPACE::asctime_r(nullptr, buffer);
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_STREQ(nullptr, result);
@@ -42,7 +40,7 @@ TEST(LlvmLibcAsctimeR, Nullptr) {
 }
 
 TEST(LlvmLibcAsctimeR, ValidDate) {
-  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
+  char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
   struct tm tm_data;
   char *result;
   // 1970-01-01 00:00:00. Test with a valid buffer size.

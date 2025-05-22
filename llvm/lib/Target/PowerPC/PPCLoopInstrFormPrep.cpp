@@ -93,7 +93,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -109,7 +108,6 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <cmath>
-#include <iterator>
 #include <utility>
 
 #define DEBUG_TYPE "ppc-loop-instr-form-prep"
@@ -223,13 +221,7 @@ namespace {
   public:
     static char ID; // Pass ID, replacement for typeid
 
-    PPCLoopInstrFormPrep() : FunctionPass(ID) {
-      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
-    }
-
-    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {
-      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
-    }
+    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addPreserved<DominatorTreeWrapperPass>();
@@ -938,9 +930,9 @@ bool PPCLoopInstrFormPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
   // 1 X form.
   unsigned MaxCountRemainder = 0;
   for (unsigned j = 0; j < (unsigned)Form; j++)
-    if ((RemainderOffsetInfo.contains(j)) &&
-        RemainderOffsetInfo[j].second >
-            RemainderOffsetInfo[MaxCountRemainder].second)
+    if (auto It = RemainderOffsetInfo.find(j);
+        It != RemainderOffsetInfo.end() &&
+        It->second.second > RemainderOffsetInfo[MaxCountRemainder].second)
       MaxCountRemainder = j;
 
   // Abort when there are too few insts with common base.

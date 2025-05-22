@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: vmpyh
 ; CHECK: vmpyh
 ; CHECK: vtrunewh

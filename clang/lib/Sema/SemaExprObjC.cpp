@@ -26,9 +26,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
 #include <optional>
 
@@ -551,9 +549,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
             const llvm::UTF8 *StrEnd = Str.bytes_end();
             // Check that this is a valid UTF-8 string.
             if (llvm::isLegalUTF8String(&StrBegin, StrEnd)) {
-              BoxedType = Context.getAttributedType(
-                  AttributedType::getNullabilityAttrKind(
-                      NullabilityKind::NonNull),
+              BoxedType = Context.getAttributedType(NullabilityKind::NonNull,
                   NSStringPointer, NSStringPointer);
               return new (Context) ObjCBoxedExpr(CE, BoxedType, nullptr, SR);
             }
@@ -605,9 +601,8 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       std::optional<NullabilityKind> Nullability =
           BoxingMethod->getReturnType()->getNullability();
       if (Nullability)
-        BoxedType = Context.getAttributedType(
-            AttributedType::getNullabilityAttrKind(*Nullability), BoxedType,
-            BoxedType);
+        BoxedType =
+            Context.getAttributedType(*Nullability, BoxedType, BoxedType);
     }
   } else if (ValueType->isBuiltinType()) {
     // The other types we support are numeric, char and BOOL/bool. We could also
@@ -1444,10 +1439,8 @@ static QualType stripObjCInstanceType(ASTContext &Context, QualType T) {
   QualType origType = T;
   if (auto nullability = AttributedType::stripOuterNullability(T)) {
     if (T == Context.getObjCInstanceType()) {
-      return Context.getAttributedType(
-               AttributedType::getNullabilityAttrKind(*nullability),
-               Context.getObjCIdType(),
-               Context.getObjCIdType());
+      return Context.getAttributedType(*nullability, Context.getObjCIdType(),
+                                       Context.getObjCIdType());
     }
 
     return origType;
@@ -1485,10 +1478,7 @@ static QualType getBaseMessageSendResultType(Sema &S,
       (void)AttributedType::stripOuterNullability(type);
 
       // Form a new attributed type using the method result type's nullability.
-      return Context.getAttributedType(
-               AttributedType::getNullabilityAttrKind(*nullability),
-               type,
-               type);
+      return Context.getAttributedType(*nullability, type, type);
     }
 
     return type;
@@ -1559,9 +1549,8 @@ QualType SemaObjC::getMessageSendResultType(const Expr *Receiver,
         QualType NewResultType = Context.getObjCObjectPointerType(
             Context.getObjCInterfaceType(MD->getClassInterface()));
         if (auto Nullability = resultType->getNullability())
-          NewResultType = Context.getAttributedType(
-              AttributedType::getNullabilityAttrKind(*Nullability),
-              NewResultType, NewResultType);
+          NewResultType = Context.getAttributedType(*Nullability, NewResultType,
+                                                    NewResultType);
         return NewResultType;
       }
     }
@@ -1623,9 +1612,7 @@ QualType SemaObjC::getMessageSendResultType(const Expr *Receiver,
   if (newResultNullabilityIdx > 0) {
     auto newNullability
       = static_cast<NullabilityKind>(newResultNullabilityIdx-1);
-    return Context.getAttributedType(
-             AttributedType::getNullabilityAttrKind(newNullability),
-             resultType, resultType);
+    return Context.getAttributedType(newNullability, resultType, resultType);
   }
 
   return resultType;
@@ -1907,7 +1894,7 @@ bool SemaObjC::CheckMessageArgumentTypes(
         continue;
 
       ExprResult Arg = SemaRef.DefaultVariadicArgumentPromotion(
-          Args[i], Sema::VariadicMethod, nullptr);
+          Args[i], VariadicCallType::Method, nullptr);
       IsError |= Arg.isInvalid();
       Args[i] = Arg.get();
     }
@@ -1993,6 +1980,7 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
     SourceLocation SuperLoc, QualType SuperType, bool Super) {
   ASTContext &Context = getASTContext();
   const ObjCInterfaceType *IFaceT = OPT->getInterfaceType();
+  assert(IFaceT && "Expected an Interface");
   ObjCInterfaceDecl *IFace = IFaceT->getDecl();
 
   if (!MemberName.isIdentifier()) {
@@ -2116,7 +2104,8 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
   DeclFilterCCC<ObjCPropertyDecl> CCC{};
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           DeclarationNameInfo(MemberName, MemberLoc), Sema::LookupOrdinaryName,
-          nullptr, nullptr, CCC, Sema::CTK_ErrorRecovery, IFace, false, OPT)) {
+          nullptr, nullptr, CCC, CorrectTypoKind::ErrorRecovery, IFace, false,
+          OPT)) {
     DeclarationName TypoResult = Corrected.getCorrection();
     if (TypoResult.isIdentifier() &&
         TypoResult.getAsIdentifierInfo() == Member) {
@@ -2310,7 +2299,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   SemaRef.LookupName(Result, S);
 
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     // Normal name lookup didn't find anything. If we're in an
     // Objective-C method, look for ivars. If we find one, we're done!
     // FIXME: This is a hack. Ivar lookup should be part of normal
@@ -2330,14 +2319,14 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     // Break out; we'll perform typo correction below.
     break;
 
-  case LookupResult::NotFoundInCurrentInstantiation:
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
-  case LookupResult::Ambiguous:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
+  case LookupResultKind::Ambiguous:
     Result.suppressDiagnostics();
     return ObjCInstanceMessage;
 
-  case LookupResult::Found: {
+  case LookupResultKind::Found: {
     // If the identifier is a class or not, and there is a trailing dot,
     // it's an instance message.
     if (HasTrailingDot)
@@ -2366,7 +2355,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   ObjCInterfaceOrSuperCCC CCC(SemaRef.getCurMethodDecl());
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           Result.getLookupNameInfo(), Result.getLookupKind(), S, nullptr, CCC,
-          Sema::CTK_ErrorRecovery, nullptr, false, nullptr, false)) {
+          CorrectTypoKind::ErrorRecovery, nullptr, false, nullptr, false)) {
     if (Corrected.isKeyword()) {
       // If we've found the keyword "super" (the only keyword that would be
       // returned by CorrectTypo), this is a send to super.

@@ -20,6 +20,7 @@ define void @use_frame_base_reg() {
 ; RV32I-NEXT:    lui a0, 24
 ; RV32I-NEXT:    addi a0, a0, 1712
 ; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: use_frame_base_reg:
@@ -36,6 +37,7 @@ define void @use_frame_base_reg() {
 ; RV64I-NEXT:    lui a0, 24
 ; RV64I-NEXT:    addiw a0, a0, 1712
 ; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 
   %va = alloca i8, align 4
@@ -59,6 +61,7 @@ define void @load_with_offset() {
 ; RV32I-NEXT:    sb a1, 0(a0)
 ; RV32I-NEXT:    addi sp, sp, 2032
 ; RV32I-NEXT:    addi sp, sp, 480
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_with_offset:
@@ -71,6 +74,7 @@ define void @load_with_offset() {
 ; RV64I-NEXT:    sb a1, 0(a0)
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    addi sp, sp, 480
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 
   %va = alloca [2500 x i8], align 4
@@ -92,6 +96,7 @@ define void @load_with_offset2() {
 ; RV32I-NEXT:    sb a0, 1412(sp)
 ; RV32I-NEXT:    addi sp, sp, 2032
 ; RV32I-NEXT:    addi sp, sp, 480
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: load_with_offset2:
@@ -103,6 +108,7 @@ define void @load_with_offset2() {
 ; RV64I-NEXT:    sb a0, 1412(sp)
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    addi sp, sp, 480
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 
   %va = alloca [2500 x i8], align 4
@@ -127,9 +133,13 @@ define void @frame_pointer() "frame-pointer"="all" {
 ; RV32I-NEXT:    lbu a0, -1960(s0)
 ; RV32I-NEXT:    sb a0, -1960(s0)
 ; RV32I-NEXT:    addi sp, sp, 480
+; RV32I-NEXT:    .cfi_def_cfa sp, 2032
 ; RV32I-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
 ; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: frame_pointer:
@@ -147,9 +157,13 @@ define void @frame_pointer() "frame-pointer"="all" {
 ; RV64I-NEXT:    lbu a1, 0(a0)
 ; RV64I-NEXT:    sb a1, 0(a0)
 ; RV64I-NEXT:    addi sp, sp, 496
+; RV64I-NEXT:    .cfi_def_cfa sp, 2032
 ; RV64I-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
 ; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 
   %va = alloca [2500 x i8], align 4

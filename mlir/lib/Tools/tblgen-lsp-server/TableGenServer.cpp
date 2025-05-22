@@ -113,7 +113,7 @@ getBaseValue(const Record *record, const RecordVal *value) {
   // On success, `record` is updated to the new parent record.
   StringRef valueName = value->getName();
   auto findValueInSupers = [&](const Record *&record) -> const RecordVal * {
-    for (auto [parentRecord, loc] : record->getSuperClasses()) {
+    for (const Record *parentRecord : record->getSuperClasses()) {
       if (auto *newBase = parentRecord->getValue(valueName)) {
         record = parentRecord;
         return newBase;
@@ -165,11 +165,11 @@ struct TableGenRecordSymbol : public TableGenIndexSymbol {
   ~TableGenRecordSymbol() override = default;
 
   static bool classof(const TableGenIndexSymbol *symbol) {
-    return symbol->definition.is<const Record *>();
+    return isa<const Record *>(symbol->definition);
   }
 
   /// Return the value of this symbol.
-  const Record *getValue() const { return definition.get<const Record *>(); }
+  const Record *getValue() const { return cast<const Record *>(definition); }
 };
 /// This class represents a single record value symbol.
 struct TableGenRecordValSymbol : public TableGenIndexSymbol {
@@ -178,12 +178,12 @@ struct TableGenRecordValSymbol : public TableGenIndexSymbol {
   ~TableGenRecordValSymbol() override = default;
 
   static bool classof(const TableGenIndexSymbol *symbol) {
-    return symbol->definition.is<const RecordVal *>();
+    return isa<const RecordVal *>(symbol->definition);
   }
 
   /// Return the value of this symbol.
   const RecordVal *getValue() const {
-    return definition.get<const RecordVal *>();
+    return cast<const RecordVal *>(definition);
   }
 
   /// The parent record of this symbol.
@@ -403,8 +403,7 @@ TableGenTextFile::TableGenTextFile(
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
   includeDirs.push_back(uriDirectory.str().str());
-  includeDirs.insert(includeDirs.end(), extraIncludeDirs.begin(),
-                     extraIncludeDirs.end());
+  llvm::append_range(includeDirs, extraIncludeDirs);
 
   // Initialize the file.
   initialize(uri, version, diagnostics);

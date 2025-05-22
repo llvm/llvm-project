@@ -66,7 +66,7 @@ bb11:
   ret void
 }
 
-define void @spam(ptr %arg) {
+define void @spam(ptr %arg, i1 %arg2) {
 ; CHECK-LABEL: @spam(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr undef, align 8
@@ -87,9 +87,11 @@ define void @spam(ptr %arg) {
 ; CHECK-NEXT:      i8 0, label [[BB11]]
 ; CHECK-NEXT:      i8 1, label [[BB10:%.*]]
 ; CHECK-NEXT:      i8 2, label [[BB10]]
-; CHECK-NEXT:      i8 3, label [[BB8]]
-; CHECK-NEXT:      i8 4, label [[BB8]]
+; CHECK-NEXT:      i8 3, label [[BB7:%.*]]
+; CHECK-NEXT:      i8 4, label [[BB7]]
 ; CHECK-NEXT:    ]
+; CHECK:       bb7:
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB8]], label [[BB10]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq ptr undef, [[ARG:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[BB10]], label [[BB2]]
@@ -129,20 +131,16 @@ define void @spam(ptr %arg) {
 ; CHECK:       bb31:
 ; CHECK-NEXT:    [[TMP32:%.*]] = phi i8 [ [[TMP32]], [[BB31]] ], [ [[TMP32_PR]], [[BB30]] ]
 ; CHECK-NEXT:    [[TMP33:%.*]] = icmp eq i8 [[TMP32]], 0
-; CHECK-NEXT:    br i1 [[TMP33]], label [[BB31]], label [[BB37]]
+; CHECK-NEXT:    br i1 [[TMP33]], label [[BB31]], label [[BB41_THREAD]]
 ; CHECK:       bb37:
-; CHECK-NEXT:    [[TMP36:%.*]] = phi i1 [ false, [[BB23]] ], [ true, [[BB31]] ]
+; CHECK-NEXT:    [[TMP36:%.*]] = phi i1 [ false, [[BB23]] ]
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq ptr [[TMP15]], null
-; CHECK-NEXT:    br i1 [[TMP38]], label [[BB39:%.*]], label [[BB41:%.*]]
-; CHECK:       bb39:
-; CHECK-NEXT:    [[TMP364:%.*]] = phi i1 [ [[TMP36]], [[BB37]] ]
-; CHECK-NEXT:    [[TMP40:%.*]] = load ptr, ptr @global, align 8
-; CHECK-NEXT:    br i1 [[TMP364]], label [[BB41_THREAD]], label [[BB41_THREAD]]
+; CHECK-NEXT:    br i1 [[TMP38]], label [[BB41:%.*]], label [[BB41_THREAD]]
 ; CHECK:       bb41:
-; CHECK-NEXT:    [[TMP363:%.*]] = phi i1 [ [[TMP36]], [[BB37]] ]
-; CHECK-NEXT:    br i1 [[TMP363]], label [[BB41_THREAD]], label [[BB41_THREAD]]
-; CHECK:       bb41.thread:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ undef, [[BB41]] ], [ undef, [[BB39]] ], [ undef, [[BB39]] ], [ undef, [[BB41]] ], [ undef, [[BB27]] ], [ undef, [[BB25]] ]
+; CHECK-NEXT:    [[TMP40:%.*]] = load ptr, ptr @global, align 8
+; CHECK-NEXT:    br label [[BB41_THREAD]]
+; CHECK:       bb41.thread11:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi ptr [ undef, [[BB41]] ], [ undef, [[BB25]] ], [ undef, [[BB31]] ], [ undef, [[BB27]] ], [ undef, [[BB37]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -175,7 +173,7 @@ bb6:
   br label %bb7
 
 bb7:
-  br i1 undef, label %bb8, label %bb10
+  br i1 %arg2, label %bb8, label %bb10
 
 bb8:
   %tmp9 = icmp eq ptr undef, %arg

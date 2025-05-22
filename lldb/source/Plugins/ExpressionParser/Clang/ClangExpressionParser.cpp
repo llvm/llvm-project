@@ -13,6 +13,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
@@ -135,8 +136,9 @@ public:
 
     SourceModule module;
 
-    for (const std::pair<IdentifierInfo *, SourceLocation> &component : path)
-      module.path.push_back(ConstString(component.first->getName()));
+    for (const IdentifierLoc &component : path)
+      module.path.push_back(
+          ConstString(component.getIdentifierInfo()->getName()));
 
     StreamString error_stream;
 
@@ -486,6 +488,19 @@ static std::string GetClangTargetABI(const ArchSpec &target_arch) {
     }
   }
 
+  if (target_arch.GetTriple().isLoongArch64()) {
+    switch (target_arch.GetFlags() & ArchSpec::eLoongArch_abi_mask) {
+    case ArchSpec::eLoongArch_abi_soft_float:
+      return "lp64s";
+    case ArchSpec::eLoongArch_abi_single_float:
+      return "lp64f";
+    case ArchSpec::eLoongArch_abi_double_float:
+      return "lp64d";
+    default:
+      return {};
+    }
+  }
+
   return {};
 }
 
@@ -544,6 +559,14 @@ static void SetupTargetOpts(CompilerInstance &compiler,
        compiler.getTargetOpts().ABI == "lp64d") ||
       (target_machine == llvm::Triple::riscv32 &&
        compiler.getTargetOpts().ABI == "ilp32d"))
+    compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+d");
+
+  if ((target_machine == llvm::Triple::loongarch64 &&
+       compiler.getTargetOpts().ABI == "lp64f"))
+    compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+f");
+
+  if ((target_machine == llvm::Triple::loongarch64 &&
+       compiler.getTargetOpts().ABI == "lp64d"))
     compiler.getTargetOpts().FeaturesAsWritten.emplace_back("+d");
 }
 
@@ -759,14 +782,14 @@ ClangExpressionParser::ClangExpressionParser(
   SetupTargetOpts(*m_compiler, *target_sp);
 
   // 3. Create and install the target on the compiler.
-  m_compiler->createDiagnostics();
+  m_compiler->createDiagnostics(m_compiler->getVirtualFileSystem());
   // Limit the number of error diagnostics we emit.
   // A value of 0 means no limit for both LLDB and Clang.
   m_compiler->getDiagnostics().setErrorLimit(target_sp->GetExprErrorLimit());
 
   if (auto *target_info = TargetInfo::CreateTargetInfo(
           m_compiler->getDiagnostics(),
-          m_compiler->getInvocation().TargetOpts)) {
+          m_compiler->getInvocation().getTargetOpts())) {
     if (log) {
       LLDB_LOGF(log, "Target datalayout string: '%s'",
                 target_info->getDataLayoutString());
@@ -1517,6 +1540,10 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
       llvm_module_up, // handed off here
       function_name, exe_ctx.GetTargetSP(), sc,
       m_compiler->getTargetOpts().Features);
+
+  if (auto *options = m_expr.GetOptions())
+    execution_unit_sp->AppendPreferredSymbolContexts(
+        options->GetPreferredSymbolContexts());
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());

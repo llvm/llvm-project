@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_TIMED_BACKOFF_POLICY_H
-#define _LIBCPP___THREAD_TIMED_BACKOFF_POLICY_H
+#ifndef _LIBCPP___CXX03___THREAD_TIMED_BACKOFF_POLICY_H
+#define _LIBCPP___CXX03___THREAD_TIMED_BACKOFF_POLICY_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-#  include <__chrono/duration.h>
-#  include <__thread/support.h>
+#  include <__cxx03/__chrono/duration.h>
+#  include <__cxx03/__thread/support.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -41,4 +41,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_NO_THREADS
 
-#endif // _LIBCPP___THREAD_TIMED_BACKOFF_POLICY_H
+#endif // _LIBCPP___CXX03___THREAD_TIMED_BACKOFF_POLICY_H

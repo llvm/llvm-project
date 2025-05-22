@@ -21,7 +21,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DWARFDebugInfo.cpp
   DWARFDebugInfoEntry.cpp
   DWARFDebugMacro.cpp
-  DWARFDebugRanges.cpp
   DWARFDeclContext.cpp
   DWARFDefines.cpp
   DWARFDIE.cpp
@@ -31,6 +30,7 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DWARFUnit.cpp
   LogChannelDWARF.cpp
   ManualDWARFIndex.cpp
+  ManualDWARFIndexSet.cpp
   NameToDIE.cpp
   SymbolFileDWARF.cpp
   SymbolFileDWARFDwo.cpp

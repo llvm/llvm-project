@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_IOTA_H
-#define _LIBCPP___NUMERIC_IOTA_H
+#ifndef _LIBCPP___CXX03___NUMERIC_IOTA_H
+#define _LIBCPP___CXX03___NUMERIC_IOTA_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -19,12 +19,11 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ForwardIterator, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-iota(_ForwardIterator __first, _ForwardIterator __last, _Tp __value) {
+_LIBCPP_HIDE_FROM_ABI void iota(_ForwardIterator __first, _ForwardIterator __last, _Tp __value) {
   for (; __first != __last; ++__first, (void)++__value)
     *__first = __value;
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___NUMERIC_IOTA_H
+#endif // _LIBCPP___CXX03___NUMERIC_IOTA_H

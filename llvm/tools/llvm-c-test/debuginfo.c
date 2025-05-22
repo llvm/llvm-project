@@ -163,6 +163,11 @@ int llvm_test_dibuilder(void) {
 
   LLVMSetSubprogram(FooFunction, FunctionMetadata);
 
+  LLVMMetadataRef FooLabel1 = LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
+    "label1", 6, File, 42, false);
+  LLVMDIBuilderInsertLabelAtEnd(DIB, FooLabel1, FooParamLocation,
+    FooEntryBlock);
+
   LLVMMetadataRef FooLexicalBlock =
     LLVMDIBuilderCreateLexicalBlock(DIB, FunctionMetadata, File, 42, 0);
 
@@ -210,7 +215,25 @@ int llvm_test_dibuilder(void) {
   LLVMAddNamedMetadataOperand(
       M, "EnumTest", LLVMMetadataAsValue(LLVMGetModuleContext(M), EnumTest));
 
-  LLVMDIBuilderFinalize(DIB);
+  LLVMMetadataRef UInt128Ty = LLVMDIBuilderCreateBasicType(
+      DIB, "UInt128", strlen("UInt128"), 128, 0, LLVMDIFlagZero);
+  const uint64_t WordsTestD[] = {0x098a224000000000ull, 0x4b3b4ca85a86c47aull};
+  const uint64_t WordsTestE[] = {0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull};
+
+  LLVMMetadataRef LargeEnumeratorTestD =
+      LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+          DIB, "Test_D", strlen("Test_D"), 128, WordsTestD, false);
+  LLVMMetadataRef LargeEnumeratorTestE =
+      LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+          DIB, "Test_E", strlen("Test_E"), 128, WordsTestE, false);
+  LLVMMetadataRef LargeEnumeratorsTest[] = {LargeEnumeratorTestD,
+                                            LargeEnumeratorTestE};
+  LLVMMetadataRef LargeEnumTest = LLVMDIBuilderCreateEnumerationType(
+      DIB, NameSpace, "LargeEnumTest", strlen("LargeEnumTest"), File, 0, 128, 0,
+      LargeEnumeratorsTest, 2, UInt128Ty);
+  LLVMAddNamedMetadataOperand(
+      M, "LargeEnumTest",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), LargeEnumTest));
 
   // Using the new debug format, debug records get attached to instructions.
   // Insert a `br` and `ret` now to absorb the debug records which are
@@ -221,6 +244,20 @@ int llvm_test_dibuilder(void) {
   LLVMPositionBuilderAtEnd(Builder, FooEntryBlock);
   // Build `br label %vars` in entry.
   LLVMBuildBr(Builder, FooVarBlock);
+
+  // Build another br for the sake of testing labels.
+  LLVMMetadataRef FooLabel2 = LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
+    "label2", 6, File, 42, false);
+  LLVMDIBuilderInsertLabelBefore(DIB, FooLabel2, FooParamLocation,
+    LLVMBuildBr(Builder, FooVarBlock));
+  // label3 will be emitted, but label4 won't be emitted
+  // because label3 is AlwaysPreserve and label4 is not.
+  LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
+    "label3", 6, File, 42, true);
+  LLVMDIBuilderCreateLabel(DIB, FunctionMetadata,
+    "label4", 6, File, 42, false);
+  LLVMDIBuilderFinalize(DIB);
+
   // Build `ret i64 0` in vars.
   LLVMPositionBuilderAtEnd(Builder, FooVarBlock);
   LLVMTypeRef I64 = LLVMInt64TypeInContext(Ctx);

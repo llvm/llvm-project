@@ -3,10 +3,10 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec -data-sections=false < %s |\
 ; RUN:   FileCheck %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -filetype=obj %s -o %t.o
+; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj %s -o %t.o
 ; RUN: llvm-readobj --syms --auxiliary-header %t.o | FileCheck %s --check-prefixes=SYM,AUX32
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -filetype=obj %s -o %t64.o
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=ppc -filetype=obj %s -o %t64.o
 ; RUN: llvm-readobj --syms --auxiliary-header %t64.o | FileCheck %s --check-prefixes=SYM,AUX64
 
 @b =  global i32 0, align 4

@@ -197,15 +197,15 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
 static std::optional<size_t>
 CalculateNumChildren(CompilerType container_elem_type, uint64_t num_elements,
                      CompilerType element_type) {
-  std::optional<uint64_t> container_elem_size =
-      container_elem_type.GetByteSize(/* exe_scope */ nullptr);
+  std::optional<uint64_t> container_elem_size = llvm::expectedToOptional(
+      container_elem_type.GetByteSize(/* exe_scope */ nullptr));
   if (!container_elem_size)
     return {};
 
   auto container_size = *container_elem_size * num_elements;
 
-  std::optional<uint64_t> element_size =
-      element_type.GetByteSize(/* exe_scope */ nullptr);
+  std::optional<uint64_t> element_size = llvm::expectedToOptional(
+      element_type.GetByteSize(/* exe_scope */ nullptr));
   if (!element_size || !*element_size)
     return {};
 
@@ -236,10 +236,11 @@ public:
           nullptr, Status::FromError(num_children_or_err.takeError()));
     if (idx >= *num_children_or_err)
       return {};
-    std::optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
-    if (!size)
-      return {};
-    auto offset = idx * *size;
+    auto size_or_err = m_child_type.GetByteSize(nullptr);
+    if (!size_or_err)
+      return ValueObjectConstResult::Create(
+          nullptr, Status::FromError(size_or_err.takeError()));
+    auto offset = idx * *size_or_err;
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     ValueObjectSP child_sp(m_backend.GetSyntheticChildAtOffset(
@@ -268,13 +269,16 @@ public:
     return lldb::ChildCacheState::eRefetch;
   }
 
-  bool MightHaveChildren() override { return true; }
-
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    const char *item_name = name.GetCString();
-    uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-      return UINT32_MAX;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    auto optional_idx = ExtractIndexFromString(name.AsCString());
+    if (!optional_idx) {
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
+    }
+    uint32_t idx = *optional_idx;
+    if (idx >= CalculateNumChildrenIgnoringErrors())
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
     return idx;
   }
 

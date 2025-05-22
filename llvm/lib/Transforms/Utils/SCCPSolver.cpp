@@ -147,6 +147,16 @@ static bool refineInstruction(SCCPSolver &Solver,
         Changed = true;
       }
     }
+  } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&Inst)) {
+    if (GEP->hasNoUnsignedWrap() || !GEP->hasNoUnsignedSignedWrap())
+      return false;
+
+    if (all_of(GEP->indices(),
+               [&](Value *V) { return GetRange(V).isAllNonNegative(); })) {
+      GEP->setNoWrapFlags(GEP->getNoWrapFlags() |
+                          GEPNoWrapFlags::noUnsignedWrap());
+      Changed = true;
+    }
   }
 
   return Changed;
@@ -514,7 +524,7 @@ private:
   ValueLatticeElement &getValueState(Value *V) {
     assert(!V->getType()->isStructTy() && "Should use getStructValueState");
 
-    auto I = ValueState.insert(std::make_pair(V, ValueLatticeElement()));
+    auto I = ValueState.try_emplace(V);
     ValueLatticeElement &LV = I.first->second;
 
     if (!I.second)
@@ -755,10 +765,9 @@ public:
     if (auto *STy = dyn_cast<StructType>(F->getReturnType())) {
       MRVFunctionsTracked.insert(F);
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
-        TrackedMultipleRetVals.insert(
-            std::make_pair(std::make_pair(F, i), ValueLatticeElement()));
+        TrackedMultipleRetVals.try_emplace(std::make_pair(F, i));
     } else if (!F->getReturnType()->isVoidTy())
-      TrackedRetVals.insert(std::make_pair(F, ValueLatticeElement()));
+      TrackedRetVals.try_emplace(F);
   }
 
   void addToMustPreserveReturnsInFunctions(Function *F) {
@@ -830,15 +839,16 @@ public:
     return I->second;
   }
 
-  const MapVector<Function *, ValueLatticeElement> &getTrackedRetVals() {
+  const MapVector<Function *, ValueLatticeElement> &getTrackedRetVals() const {
     return TrackedRetVals;
   }
 
-  const DenseMap<GlobalVariable *, ValueLatticeElement> &getTrackedGlobals() {
+  const DenseMap<GlobalVariable *, ValueLatticeElement> &
+  getTrackedGlobals() const {
     return TrackedGlobals;
   }
 
-  const SmallPtrSet<Function *, 16> getMRVFunctionsTracked() {
+  const SmallPtrSet<Function *, 16> &getMRVFunctionsTracked() const {
     return MRVFunctionsTracked;
   }
 
@@ -1475,10 +1485,11 @@ void SCCPInstVisitor::visitSelectInst(SelectInst &I) {
   ValueLatticeElement TVal = getValueState(I.getTrueValue());
   ValueLatticeElement FVal = getValueState(I.getFalseValue());
 
-  bool Changed = ValueState[&I].mergeIn(TVal);
-  Changed |= ValueState[&I].mergeIn(FVal);
+  ValueLatticeElement &State = ValueState[&I];
+  bool Changed = State.mergeIn(TVal);
+  Changed |= State.mergeIn(FVal);
   if (Changed)
-    pushToWorkListMsg(ValueState[&I], &I);
+    pushToWorkListMsg(State, &I);
 }
 
 // Handle Unary Operators.
@@ -1923,6 +1934,12 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       return (void)mergeInValue(IV, &CB, CopyOfVal);
     }
 
+    if (II->getIntrinsicID() == Intrinsic::vscale) {
+      unsigned BitWidth = CB.getType()->getScalarSizeInBits();
+      const ConstantRange Result = getVScaleRange(II->getFunction(), BitWidth);
+      return (void)mergeInValue(II, ValueLatticeElement::getRange(Result));
+    }
+
     if (ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
       // Compute result range for intrinsics supported by ConstantRange.
       // Do this even if we don't know a range for all operands, as we may
@@ -2210,11 +2227,11 @@ SCCPSolver::getTrackedRetVals() const {
 }
 
 const DenseMap<GlobalVariable *, ValueLatticeElement> &
-SCCPSolver::getTrackedGlobals() {
+SCCPSolver::getTrackedGlobals() const {
   return Visitor->getTrackedGlobals();
 }
 
-const SmallPtrSet<Function *, 16> SCCPSolver::getMRVFunctionsTracked() {
+const SmallPtrSet<Function *, 16> &SCCPSolver::getMRVFunctionsTracked() const {
   return Visitor->getMRVFunctionsTracked();
 }
 

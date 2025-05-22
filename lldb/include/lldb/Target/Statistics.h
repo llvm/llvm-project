@@ -41,6 +41,8 @@ public:
   }
   operator Duration() const { return get(); }
 
+  void reset() { value.store(0, std::memory_order_relaxed); }
+
   StatsDuration &operator+=(Duration dur) {
     value.fetch_add(std::chrono::duration_cast<InternalDuration>(dur).count(),
                     std::memory_order_relaxed);
@@ -88,6 +90,26 @@ public:
   }
 };
 
+/// A class to count time for plugins
+class StatisticsMap {
+public:
+  void add(llvm::StringRef key, double value) {
+    if (key.empty())
+      return;
+    auto it = map.find(key);
+    if (it == map.end())
+      map.try_emplace(key, value);
+    else
+      it->second += value;
+  }
+  void merge(StatisticsMap map_to_merge) {
+    for (const auto &entry : map_to_merge.map) {
+      add(entry.first(), entry.second);
+    }
+  }
+  llvm::StringMap<double> map;
+};
+
 /// A class to count success/fail statistics.
 struct StatsSuccessFail {
   StatsSuccessFail(llvm::StringRef n) : name(n.str()) {}
@@ -116,8 +138,10 @@ struct ModuleStats {
   // track down all of the stats that contribute to this module.
   std::vector<intptr_t> symfile_modules;
   llvm::StringMap<llvm::json::Value> type_system_stats;
+  StatisticsMap symbol_locator_time;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
+  uint32_t symtab_symbol_count = 0;
   double debug_parse_time = 0.0;
   double debug_index_time = 0.0;
   uint64_t debug_info_size = 0;
@@ -201,6 +225,8 @@ public:
 
   llvm::json::Value ToJSON() const;
 
+  void Reset() { m_total_time.reset(); }
+
   /// Basic RAII class to increment the summary count when the call is complete.
   class SummaryInvocation {
   public:
@@ -250,6 +276,8 @@ public:
 
   llvm::json::Value ToJSON();
 
+  void Reset();
+
 private:
   llvm::StringMap<SummaryStatisticsSP> m_summary_stats_map;
   std::mutex m_map_mutex;
@@ -271,6 +299,7 @@ public:
   StatsDuration &GetCreateTime() { return m_create_time; }
   StatsSuccessFail &GetExpressionStats() { return m_expr_eval; }
   StatsSuccessFail &GetFrameVariableStats() { return m_frame_var; }
+  void Reset(Target &target);
 
 protected:
   StatsDuration m_create_time;
@@ -310,6 +339,16 @@ public:
   static llvm::json::Value
   ReportStatistics(Debugger &debugger, Target *target,
                    const lldb_private::StatisticsOptions &options);
+
+  /// Reset metrics associated with one or all targets in a debugger.
+  ///
+  /// \param debugger
+  ///   The debugger to reset the target list from if \a target is NULL.
+  ///
+  /// \param target
+  ///   The target to reset statistics for, or if null, reset statistics
+  ///   for all targets
+  static void ResetStatistics(Debugger &debugger, Target *target);
 
 protected:
   // Collecting stats can be set to true to collect stats that are expensive

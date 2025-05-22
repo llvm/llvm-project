@@ -123,8 +123,13 @@ public:
                                       : terminator->operand_begin();
     loopCarried.append(begin, terminator->operand_end());
     loopCarried.push_back(itersMinusOne);
-    rewriter.create<mlir::cf::BranchOp>(loc, conditionalBlock, loopCarried);
+    auto backEdge =
+        rewriter.create<mlir::cf::BranchOp>(loc, conditionalBlock, loopCarried);
     rewriter.eraseOp(terminator);
+
+    // Copy loop annotations from the do loop to the loop back edge.
+    if (auto ann = loop.getLoopAnnotation())
+      backEdge->setAttr("loop_annotation", *ann);
 
     // Conditional block
     rewriter.setInsertionPointToEnd(conditionalBlock);
@@ -132,13 +137,9 @@ public:
     auto comparison = rewriter.create<mlir::arith::CmpIOp>(
         loc, arith::CmpIPredicate::sgt, itersLeft, zero);
 
-    auto cond = rewriter.create<mlir::cf::CondBranchOp>(
+    rewriter.create<mlir::cf::CondBranchOp>(
         loc, comparison, firstBlock, llvm::ArrayRef<mlir::Value>(), endBlock,
         llvm::ArrayRef<mlir::Value>());
-
-    // Copy loop annotations from the do loop to the loop entry condition.
-    if (auto ann = loop.getLoopAnnotation())
-      cond->setAttr("loop_annotation", *ann);
 
     // The result of the loop operation is the values of the condition block
     // arguments except the induction variable on the last iteration.
@@ -332,8 +333,6 @@ class CfgConversion : public fir::impl::CFGConversionBase<CfgConversion> {
 public:
   using CFGConversionBase<CfgConversion>::CFGConversionBase;
 
-  CfgConversion(bool setNSW) { this->setNSW = setNSW; }
-
   void runOnOperation() override {
     auto *context = &this->getContext();
     mlir::RewritePatternSet patterns(context);
@@ -364,8 +363,4 @@ void fir::populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                         bool setNSW) {
   patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
       patterns.getContext(), forceLoopToExecuteOnce, setNSW);
-}
-
-std::unique_ptr<mlir::Pass> fir::createCFGConversionPassWithNSW() {
-  return std::make_unique<CfgConversion>(true);
 }

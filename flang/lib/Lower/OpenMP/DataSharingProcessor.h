@@ -86,7 +86,8 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  lower::SymMap *symTable;
+  llvm::SmallSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
+  lower::SymMap &symTable;
   OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
@@ -99,7 +100,7 @@ private:
       const omp::ObjectList &objects,
       llvm::SetVector<const semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
-  void insertBarrier();
+  void insertBarrier(mlir::omp::PrivateClauseOps *clauseOps);
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
@@ -122,8 +123,7 @@ public:
                        const List<Clause> &clauses,
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
-                       bool useDelayedPrivatization = false,
-                       lower::SymMap *symTable = nullptr);
+                       bool useDelayedPrivatization, lower::SymMap &symTable);
 
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for

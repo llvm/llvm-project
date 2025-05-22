@@ -67,7 +67,7 @@ unsigned LoongArchTTIImpl::getRegisterClassForType(bool Vector,
   return LoongArchRegisterClass::GPRRC;
 }
 
-unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
+unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
   return ST->getMaxInterleaveFactor();
 }
 
@@ -84,9 +84,15 @@ const char *LoongArchTTIImpl::getRegisterClassName(unsigned ClassID) const {
 }
 
 TargetTransformInfo::PopcntSupportKind
-LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) {
+LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
   return ST->hasExtLSX() ? TTI::PSK_FastHardware : TTI::PSK_Software;
 }
+
+unsigned LoongArchTTIImpl::getCacheLineSize() const { return 64; }
+
+unsigned LoongArchTTIImpl::getPrefetchDistance() const { return 200; }
+
+bool LoongArchTTIImpl::enableWritePrefetching() const { return true; }
 
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.

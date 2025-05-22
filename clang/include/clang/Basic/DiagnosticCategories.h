@@ -11,7 +11,7 @@
 
 namespace clang {
   namespace diag {
-    enum {
+    enum DiagCategory {
 #define GET_CATEGORY_TABLE
 #define CATEGORY(X, ENUM) ENUM,
 #include "clang/Basic/DiagnosticGroups.inc"
@@ -21,11 +21,12 @@ namespace clang {
     };
 
     enum class Group {
-#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs)        \
-  GroupName,
+#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs)    \
+      GroupName,
 #include "clang/Basic/DiagnosticGroups.inc"
 #undef CATEGORY
 #undef DIAG_ENTRY
+      NUM_GROUPS
     };
   }  // end namespace diag
 }  // end namespace clang

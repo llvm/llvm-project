@@ -1,6 +1,3 @@
-# TODO: Re-enable the tests once the CI is back under control
-return()
-
 # The find_package changes these variables. This leaves the build in an odd
 # state. Calling cmake a second time tries to write site config information in
 # the system's libc++. Restoring these setting after testing fixes this issue.
@@ -11,6 +8,10 @@ set(Clang_DIR_SAVE ${Clang_DIR})
 # versions must match. Otherwise there likely will be ODR-violations. This had
 # led to crashes and incorrect output of the clang-tidy based checks.
 find_package(Clang ${CMAKE_CXX_COMPILER_VERSION})
+
+set(LLVM_DIR "${LLVM_DIR_SAVE}" CACHE PATH "The directory containing a CMake configuration file for LLVM." FORCE)
+set(Clang_DIR "${Clang_DIR_SAVE}" CACHE PATH "The directory containing a CMake configuration file for Clang." FORCE)
+
 if(NOT Clang_FOUND)
   message(STATUS "Clang-tidy tests are disabled since the "
                  "Clang development package is unavailable.")
@@ -21,9 +22,6 @@ if(NOT TARGET clangTidy)
                  "Clang development package has no clangTidy target.")
   return()
 endif()
-
-set(LLVM_DIR "${LLVM_DIR_SAVE}" CACHE PATH "The directory containing a CMake configuration file for LLVM." FORCE)
-set(Clang_DIR "${Clang_DIR_SAVE}" CACHE PATH "The directory containing a CMake configuration file for Clang." FORCE)
 
 message(STATUS "Found system-installed LLVM ${LLVM_PACKAGE_VERSION} with headers in ${LLVM_INCLUDE_DIRS}")
 
@@ -95,9 +93,10 @@ set(SOURCES
     header_exportable_declarations.cpp
     hide_from_abi.cpp
     internal_ftm_use.cpp
+    nodebug_on_aliases.cpp
     proper_version_checks.cpp
-    qualify_declval.cpp
     robust_against_adl.cpp
+    robust_against_operator_ampersand.cpp
     uglify_attributes.cpp
 
     libcpp_module.cpp

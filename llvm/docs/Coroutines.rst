@@ -606,7 +606,7 @@ be used to communicate with the coroutine. This distinguished alloca is called
 **coroutine promise** and is provided as the second parameter to the
 `coro.id`_ intrinsic.
 
-The following coroutine designates a 32 bit integer `promise` and uses it to
+The following coroutine designates a 32-bit integer `promise` and uses it to
 store the current value produced by a coroutine.
 
 .. code-block:: llvm
@@ -809,6 +809,28 @@ The LLVM IR for a coroutine using a Coroutine with a custom ABI looks like:
     %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
+
+Parameter Attributes
+====================
+Some parameter attributes, used to communicate additional information about the result or parameters of a function, require special handling.
+
+ByVal
+-----
+A ByVal parameter on an argument indicates that the pointee should be treated as being passed by value to the function.
+Prior to the coroutine transforms loads and stores to/from the pointer are generated where the value is needed.
+Consequently, a ByVal argument is treated much like an alloca.
+Space is allocated for it on the coroutine frame and the uses of the argument pointer are replaced with a pointer to the coroutine frame.
+
+Swift Error
+-----------
+Clang supports the swiftcall calling convention in many common targets, and a user could call a function that takes a swifterror argument from a C++ coroutine.
+The swifterror parameter attribute exists to model and optimize Swift error handling.
+A swifterror alloca or parameter can only be loaded, stored, or passed as a swifterror call argument, and a swifterror call argument can only be a direct reference to a swifterror alloca or parameter. 
+These rules, not coincidentally, mean that you can always perfectly model the data flow in the alloca, and LLVM CodeGen actually has to do that in order to emit code.
+
+For coroutine lowering the default treatment of allocas breaks those rules — splitting will try to replace the alloca with an entry in the coro frame, which can lead to trying to pass that as a swifterror argument.
+To pass a swifterror argument in a split function, we need to still have the alloca around; but we also potentially need the coro frame slot, since useful data can (in theory) be stored in the swifterror alloca slot across suspensions in the presplit coroutine. 
+When split a coroutine it is consequently necessary to keep both the frame slot as well as the alloca itself and then keep them in sync.
 
 Intrinsics
 ==========
@@ -2033,7 +2055,7 @@ coroutine, and things that happen after the resumption of the coroutine
 are not guaranteed to happen only after the end of `await_suspend`.
 
 This version of intrinsic corresponds to 
-'``std::corouine_handle<> awaiter.await_suspend(...)``' variant.
+'``std::coroutine_handle<> awaiter.await_suspend(...)``' variant.
 
 Arguments:
 """"""""""
@@ -2099,10 +2121,11 @@ Coroutine Transformation Passes
 ===============================
 CoroEarly
 ---------
-The pass CoroEarly lowers coroutine intrinsics that hide the details of the
-structure of the coroutine frame, but, otherwise not needed to be preserved to
-help later coroutine passes. This pass lowers `coro.frame`_, `coro.done`_,
-and `coro.promise`_ intrinsics.
+The CoroEarly pass ensures later middle end passes correctly interpret coroutine 
+semantics and lowers coroutine intrinsics that not needed to be preserved to 
+help later coroutine passes. This pass lowers `coro.promise`_, `coro.frame`_ and 
+`coro.done`_ intrinsics. Afterwards, it replace uses of promise alloca with 
+`coro.promise`_ intrinsic.
 
 .. _CoroSplit:
 

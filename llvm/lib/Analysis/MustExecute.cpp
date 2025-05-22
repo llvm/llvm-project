@@ -12,7 +12,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
@@ -20,7 +19,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -162,6 +160,9 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
 /// Collect all blocks from \p CurLoop which lie on all possible paths from
 /// the header of \p CurLoop (inclusive) to BB (exclusive) into the set
 /// \p Predecessors. If \p BB is the header, \p Predecessors will be empty.
+/// Note: It's possible that we encounter Irreducible control flow, due to
+/// which, we may find that a few predecessors of \p BB are not a part of the
+/// \p CurLoop. We only return Predecessors that are a part of \p CurLoop.
 static void collectTransitivePredecessors(
     const Loop *CurLoop, const BasicBlock *BB,
     SmallPtrSetImpl<const BasicBlock *> &Predecessors) {
@@ -171,6 +172,8 @@ static void collectTransitivePredecessors(
     return;
   SmallVector<const BasicBlock *, 4> WorkList;
   for (const auto *Pred : predecessors(BB)) {
+    if (!CurLoop->contains(Pred))
+      continue;
     Predecessors.insert(Pred);
     WorkList.push_back(Pred);
   }
@@ -187,7 +190,7 @@ static void collectTransitivePredecessors(
     // We can ignore backedge of all loops containing BB to get a sligtly more
     // optimistic result.
     for (const auto *PredPred : predecessors(Pred))
-      if (Predecessors.insert(PredPred).second)
+      if (CurLoop->contains(PredPred) && Predecessors.insert(PredPred).second)
         WorkList.push_back(PredPred);
   }
 }
@@ -272,7 +275,7 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
     // exit.  At the moment, we use a (cheap) hack for the common case where
     // the instruction of interest is the first one in the block.
     return !HeaderMayThrow ||
-           Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
+           &*Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
 
   // If there is a path from header to exit or latch that doesn't lead to our
   // instruction's block, return false.
