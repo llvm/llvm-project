@@ -4304,6 +4304,10 @@ def floop_interchange : Flag<["-"], "floop-interchange">, Group<f_Group>,
   HelpText<"Enable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_loop_interchange: Flag<["-"], "fno-loop-interchange">, Group<f_Group>,
   HelpText<"Disable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def floop_fuse : Flag<["-"], "floop-fuse">, Group<f_Group>,
+  HelpText<"Enable the loop fuse pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def fno_loop_fuse: Flag<["-"], "fno-loop-fuse">, Group<f_Group>,
+  HelpText<"Disable the loop fuse pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop unroller">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,

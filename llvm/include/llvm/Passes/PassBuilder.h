@@ -65,6 +65,9 @@ public:
   /// false.
   bool LoopInterchange;
 
+  /// Tuning option to enable/disable loop fuse. Its default value is false.
+  bool LoopFuse;
+
   /// Tuning option to forget all SCEV loops in LoopUnroll. Its default value
   /// is that of the flag: `-forget-scev-loop-unroll`.
   bool ForgetAllSCEVInLoopUnroll;

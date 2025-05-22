@@ -276,6 +276,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.getLastArg(clang::driver::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
 
+  if (args.getLastArg(clang::driver::options::OPT_floop_fuse))
+    opts.FuseLoops = 1;
+
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
 

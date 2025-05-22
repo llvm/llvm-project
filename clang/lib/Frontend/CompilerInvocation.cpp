@@ -1680,6 +1680,11 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   else
     GenerateArg(Consumer, OPT_fno_loop_interchange);
 
+  if (Opts.FuseLoops)
+    GenerateArg(Consumer, OPT_floop_fuse);
+  else
+    GenerateArg(Consumer, OPT_fno_loop_fuse);
+
   if (!Opts.BinutilsVersion.empty())
     GenerateArg(Consumer, OPT_fbinutils_version_EQ, Opts.BinutilsVersion);
 
@@ -2001,6 +2006,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                    (Opts.OptimizationLevel > 1));
   Opts.InterchangeLoops =
       Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, false);
+  Opts.FuseLoops = Args.hasFlag(OPT_floop_fuse, OPT_fno_loop_fuse, false);
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
 
