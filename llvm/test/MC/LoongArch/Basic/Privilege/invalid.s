@@ -3,9 +3,9 @@
 
 ## csrxchg: rj != 0,1
 csrxchg $a0, $zero, 0
-# ERR: :[[#@LINE-1]]:15: error: invalid operand for instruction
+# ERR: :[[#@LINE-1]]:15: error: must not be $r0 or $r1
 csrxchg $a0, $ra, 0
-# ERR: :[[#@LINE-1]]:15: error: invalid operand for instruction
+# ERR: :[[#@LINE-1]]:15: error: must not be $r0 or $r1
 
 ## LoongArch64 mnemonics
 iocsrrd.d $a0, $a1
