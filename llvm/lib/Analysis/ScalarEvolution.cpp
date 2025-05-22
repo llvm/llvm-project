@@ -10963,6 +10963,56 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
   return all_of(Mul->operands(), NonRecursive) && (OrZero || isKnownNonZero(S));
 }
 
+bool ScalarEvolution::isKnownMultipleOf(
+    const SCEV *S, uint64_t M,
+    SmallVectorImpl<const SCEVPredicate *> &Assumptions) {
+  if (M == 0)
+    return false;
+  if (M == 1)
+    return true;
+
+  // Recursively check AddRec operands. An AddRecExpr S is a multiple of M if S
+  // starts with a multiple of M and at every iteration step S only adds
+  // multiples of M.
+  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
+    return isKnownMultipleOf(AddRec->getStart(), M, Assumptions) &&
+           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Assumptions);
+
+  // For a constant, check that "S % M == 0".
+  if (auto *Cst = dyn_cast<SCEVConstant>(S)) {
+    APInt C = Cst->getAPInt();
+    return C.urem(M) == 0;
+  }
+
+  // TODO: Also check other SCEV expressions, i.e., SCEVAddRecExpr, etc.
+
+  // Basic tests have failed.
+  // Check "S % M == 0" at compile time and record runtime Assumptions.
+  auto *STy = dyn_cast<IntegerType>(S->getType());
+  const SCEV *SmodM =
+      getURemExpr(S, getConstant(ConstantInt::get(STy, M, false)));
+  const SCEV *Zero = getZero(STy);
+
+  // Check whether "S % M == 0" is known at compile time.
+  if (isKnownPredicate(ICmpInst::ICMP_EQ, SmodM, Zero))
+    return true;
+
+  // Check whether "S % M != 0" is known at compile time.
+  if (isKnownPredicate(ICmpInst::ICMP_NE, SmodM, Zero))
+    return false;
+
+  const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
+
+  // Detect redundant predicates.
+  for (auto *A : Assumptions)
+    if (A->implies(P, *this))
+      return true;
+
+  // Only record non-redundant predicates.
+  Assumptions.push_back(P);
+  return true;
+}
+
 std::pair<const SCEV *, const SCEV *>
 ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
   // Compute SCEV on entry of loop L.

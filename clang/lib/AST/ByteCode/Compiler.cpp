@@ -296,12 +296,15 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_BaseToDerived: {
     if (!this->delegate(SubExpr))
       return false;
-
     unsigned DerivedOffset =
         collectBaseOffset(SubExpr->getType(), CE->getType());
 
-    return this->emitGetPtrDerivedPop(
-        DerivedOffset, /*NullOK=*/CE->getType()->isPointerType(), CE);
+    const Type *TargetType = CE->getType().getTypePtr();
+    if (TargetType->isPointerOrReferenceType())
+      TargetType = TargetType->getPointeeType().getTypePtr();
+    return this->emitGetPtrDerivedPop(DerivedOffset,
+                                      /*NullOK=*/CE->getType()->isPointerType(),
+                                      TargetType, CE);
   }
 
   case CK_FloatingCast: {
@@ -2922,32 +2925,22 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   if (T && !E->isLValue()) {
     // For primitive types, we just visit the initializer.
     return this->delegate(Init);
-  } else {
-    unsigned LocalIndex;
-
-    if (T)
-      LocalIndex = this->allocateLocalPrimitive(Init, *T, /*IsConst=*/false);
-    else if (std::optional<unsigned> MaybeIndex = this->allocateLocal(Init))
-      LocalIndex = *MaybeIndex;
-    else
-      return false;
-
-    if (!this->emitGetPtrLocal(LocalIndex, E))
-      return false;
-
-    if (T) {
-      if (!this->visit(Init)) {
-        return false;
-      }
-      return this->emitInit(*T, E);
-    } else {
-      if (!this->visitInitializer(Init) || !this->emitFinishInit(E))
-        return false;
-    }
-    return true;
   }
 
-  return false;
+  unsigned LocalIndex;
+  if (T)
+    LocalIndex = this->allocateLocalPrimitive(Init, *T, /*IsConst=*/false);
+  else if (std::optional<unsigned> MaybeIndex = this->allocateLocal(Init))
+    LocalIndex = *MaybeIndex;
+  else
+    return false;
+
+  if (!this->emitGetPtrLocal(LocalIndex, E))
+    return false;
+
+  if (T)
+    return this->visit(Init) && this->emitInit(*T, E);
+  return this->visitInitializer(Init) && this->emitFinishInit(E);
 }
 
 template <class Emitter>

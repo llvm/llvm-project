@@ -1891,7 +1891,7 @@ static void debugDumpRecord(const Record &Rec) {
 /// constant-valued bit values, and OpInfo.Fields with the ranges of bits to
 /// insert from the decoded instruction.
 static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
-                                std::map<std::string, std::string> &TiedNames,
+                                std::map<StringRef, StringRef> &TiedNames,
                                 StringRef OpName, OperandInfo &OpInfo) {
   // Some bits of the operand may be required to be 1 depending on the
   // instruction's encoding. Collect those bits.
@@ -1916,8 +1916,8 @@ static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
       } else {
         Var = dyn_cast<VarInit>(Bits.getBit(J));
       }
-      if (!Var || (Var->getName() != OpName &&
-                   Var->getName() != TiedNames[OpName.str()]))
+      if (!Var ||
+          (Var->getName() != OpName && Var->getName() != TiedNames[OpName]))
         break;
     }
     if (I == J)
@@ -1972,22 +1972,22 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
 
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
-  std::map<std::string, std::string> TiedNames;
-  for (const auto &[I, Op] : enumerate(CGI.Operands)) {
+  std::map<StringRef, StringRef> TiedNames;
+  for (const auto &Op : CGI.Operands) {
     for (const auto &[J, CI] : enumerate(Op.Constraints)) {
-      if (CI.isTied()) {
-        std::pair<unsigned, unsigned> SO =
-            CGI.Operands.getSubOperandNumber(CI.getTiedOperand());
-        std::string TiedName = CGI.Operands[SO.first].SubOpNames[SO.second];
-        if (TiedName.empty())
-          TiedName = CGI.Operands[SO.first].Name;
-        std::string MyName = Op.SubOpNames[J];
-        if (MyName.empty())
-          MyName = Op.Name;
+      if (!CI.isTied())
+        continue;
+      std::pair<unsigned, unsigned> SO =
+          CGI.Operands.getSubOperandNumber(CI.getTiedOperand());
+      StringRef TiedName = CGI.Operands[SO.first].SubOpNames[SO.second];
+      if (TiedName.empty())
+        TiedName = CGI.Operands[SO.first].Name;
+      StringRef MyName = Op.SubOpNames[J];
+      if (MyName.empty())
+        MyName = Op.Name;
 
-        TiedNames[MyName] = TiedName;
-        TiedNames[TiedName] = std::move(MyName);
-      }
+      TiedNames[MyName] = TiedName;
+      TiedNames[TiedName] = MyName;
     }
   }
 

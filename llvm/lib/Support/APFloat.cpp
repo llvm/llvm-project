@@ -893,8 +893,9 @@ writeSignedDecimal (char *dst, int value)
   if (value < 0) {
     *dst++ = '-';
     dst = writeUnsignedDecimal(dst, -(unsigned) value);
-  } else
+  } else {
     dst = writeUnsignedDecimal(dst, value);
+  }
 
   return dst;
 }
@@ -2814,8 +2815,8 @@ APFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
   if (lost_fraction == lfExactlyZero) {
     *isExact = true;
     return opOK;
-  } else
-    return opInexact;
+  }
+  return opInexact;
 }
 
 /* Same as convertToSignExtendedInteger, except we provide
@@ -3302,8 +3303,9 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
       if (str.size() > 1 && tolower(str[1]) == 'x') {
         str = str.drop_front(2);
         Radix = 16;
-      } else
+      } else {
         Radix = 8;
+      }
     }
 
     // Parse the payload and make the NaN.
@@ -4529,8 +4531,9 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
           Str.append(FormatPrecision - 1, '0');
         append(Str, "e+00");
       }
-    } else
+    } else {
       Str.push_back('0');
+    }
     return;
 
   case fcNormal:
