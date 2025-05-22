@@ -222,30 +222,17 @@ the configuration (without a prefix: ``Auto``).
           argument2);
 
   * ``BAS_AlwaysBreak`` (in configuration: ``AlwaysBreak``)
-    Always break after an open bracket, if the parameters don't fit
-    on a single line, e.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(
-          argument1, argument2);
+    This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
 
   * ``BAS_BlockIndent`` (in configuration: ``BlockIndent``)
-    Always break after an open bracket, if the parameters don't fit
-    on a single line. Closing brackets will be placed on a new line.
-    E.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(
-          argument1, argument2
-      )
-
-
-    .. note::
-
-     This currently only applies to braced initializer lists (when
-     ``Cpp11BracedListStyle`` is ``true``) and parentheses.
+    This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+    in combination with ``BreakBeforeCloseBracketBracedList``,
+    ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
+    ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
 
 
 
@@ -2739,9 +2726,34 @@ the configuration (without a prefix: ``Auto``).
      @Mock
      DataLoad loader;
 
+.. _BreakAfterOpenBracketBracedList:
+
+**BreakAfterOpenBracketBracedList** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketBracedList>`
+  Force break after the left bracket of a braced initializer list (when
+   ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    vector<int> x {         vs.       vector<int> x {1,
+       1, 2, 3}                            2, 3}
+
+.. _BreakAfterOpenBracketFunction:
+
+**BreakAfterOpenBracketFunction** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketFunction>`
+  Force break after the left parenthesis of a function (declaration,
+  definition, call) when the parameters exceed the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    foo (                   vs.       foo (a ||
+       a || b)                             b)
+
 .. _BreakAfterOpenBracketIf:
 
-**BreakAfterOpenBracketIf** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakAfterOpenBracketIf>`
+**BreakAfterOpenBracketIf** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketIf>`
   Force break after the left parenthesis of an if control statement
   when the expression exceeds the column limit.
 
@@ -2749,12 +2761,11 @@ the configuration (without a prefix: ``Auto``).
 
     true:                             false:
     if constexpr (          vs.       if constexpr (a ||
-                  a ||                              b)
-                  b)
+       a || b)                                      b)
 
 .. _BreakAfterOpenBracketLoop:
 
-**BreakAfterOpenBracketLoop** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakAfterOpenBracketLoop>`
+**BreakAfterOpenBracketLoop** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketLoop>`
   Force break after the left parenthesis of a loop control statement
   when the expression exceeds the column limit.
 
@@ -2762,12 +2773,11 @@ the configuration (without a prefix: ``Auto``).
 
     true:                             false:
     while (                  vs.      while (a &&
-           a &&                              b) {
-           b) {
+       a && b) {                             b) {
 
 .. _BreakAfterOpenBracketSwitch:
 
-**BreakAfterOpenBracketSwitch** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakAfterOpenBracketSwitch>`
+**BreakAfterOpenBracketSwitch** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakAfterOpenBracketSwitch>`
   Force break after the left parenthesis of a switch control statement
   when the expression exceeds the column limit.
 
@@ -2775,8 +2785,7 @@ the configuration (without a prefix: ``Auto``).
 
     true:                             false:
     switch (                 vs.      switch (a &&
-            a &&                              b) {
-            b) {
+       a && b) {                              b) {
 
 .. _BreakAfterReturnType:
 
@@ -3415,44 +3424,78 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-.. _BreakBeforeCloseBracketIf:
+.. _BreakBeforeCloseBracketBracedList:
 
-**BreakBeforeCloseBracketIf** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeCloseBracketIf>`
-  Force break before the right parenthesis of an if control statement
-  when the expression exceeds the column limit.
+**BreakBeforeCloseBracketBracedList** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketBracedList>`
+  Force break before the right bracket of a braced initializer list (when
+   ``Cpp11BracedListStyle`` is ``true``) when the list exceeds the column
+  limit. The break before the right bracket is only made if there is a
+  break after the opening bracket.
 
   .. code-block:: c++
 
     true:                             false:
-    if constexpr (a ||      vs.       if constexpr (a ||
-                  b                                 b)
-                  )
+    vector<int> x {         vs.       vector<int> x {
+       1, 2, 3                           1, 2, 3}
+    }
+
+.. _BreakBeforeCloseBracketFunction:
+
+**BreakBeforeCloseBracketFunction** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketFunction>`
+  Force break before the right parenthesis of a function (declaration,
+  definition, call) when the parameters exceed the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    foo (                   vs.       foo (
+       a || b                            a || b)
+    )
+
+.. _BreakBeforeCloseBracketIf:
+
+**BreakBeforeCloseBracketIf** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketIf>`
+  Force break before the right parenthesis of an if control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    if constexpr (          vs.       if constexpr (
+       a || b                            a || b )
+    )
 
 .. _BreakBeforeCloseBracketLoop:
 
-**BreakBeforeCloseBracketLoop** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeCloseBracketLoop>`
+**BreakBeforeCloseBracketLoop** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketLoop>`
   Force break before the right parenthesis of a loop control statement
-  when the expression exceeds the column limit.
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
 
   .. code-block:: c++
 
     true:                             false:
-    while (a &&              vs.      while (a &&
-           b                                 b) {
-           ) {
+    while (                  vs.      while (
+       a && b                            a && b) {
+    ) {
 
 .. _BreakBeforeCloseBracketSwitch:
 
-**BreakBeforeCloseBracketSwitch** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeCloseBracketSwitch>`
+**BreakBeforeCloseBracketSwitch** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <BreakBeforeCloseBracketSwitch>`
   Force break before the right parenthesis of a switch control statement
-  when the expression exceeds the column limit.
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
 
   .. code-block:: c++
 
     true:                             false:
-    switch (a &&             vs.      switch (a &&
-            b                                 b) {
-            ) {
+    switch (                 vs.      switch (
+       a && b                            a && b) {
+    ) {
 
 .. _BreakBeforeConceptDeclarations:
 

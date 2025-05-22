@@ -1067,6 +1067,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakAfterJavaFieldAnnotations);
     IO.mapOptional("BreakAfterOpenBracketBracedList",
                    Style.BreakAfterOpenBracketBracedList);
+    IO.mapOptional("BreakAfterOpenBracketFunction",
+                   Style.BreakAfterOpenBracketFunction);
     IO.mapOptional("BreakAfterOpenBracketIf", Style.BreakAfterOpenBracketIf);
     IO.mapOptional("BreakAfterOpenBracketLoop",
                    Style.BreakAfterOpenBracketLoop);
@@ -1078,6 +1080,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakBeforeBinaryOperators);
     IO.mapOptional("BreakBeforeCloseBracketBracedList",
                    Style.BreakBeforeCloseBracketBracedList);
+    IO.mapOptional("BreakBeforeCloseBracketFunction",
+                   Style.BreakBeforeCloseBracketFunction);
     IO.mapOptional("BreakBeforeCloseBracketIf",
                    Style.BreakBeforeCloseBracketIf);
     IO.mapOptional("BreakBeforeCloseBracketLoop",
