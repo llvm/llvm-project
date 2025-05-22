@@ -1836,19 +1836,15 @@ let TargetPrefix = "ppc" in {
   def int_ppc_iospace_eieio : ClangBuiltin<"__builtin_ppc_iospace_eieio">,
                               Intrinsic<[],[],[]>;
   def int_ppc_lbarx :
-    ClangBuiltin<"__builtin_ppc_lbarx">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
               [IntrReadMem, IntrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_lharx :
-    ClangBuiltin<"__builtin_ppc_lharx">,
     Intrinsic<[llvm_i32_ty],[llvm_ptr_ty],
               [IntrReadMem, IntrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_lwarx :
-    ClangBuiltin<"__builtin_ppc_lwarx">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
               [IntrReadMem, IntrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_ldarx :
-    ClangBuiltin<"__builtin_ppc_ldarx">,
     Intrinsic<[llvm_i64_ty],[llvm_ptr_ty],
               [IntrReadMem, IntrArgMemOnly, IntrNoDuplicate]>;
 
