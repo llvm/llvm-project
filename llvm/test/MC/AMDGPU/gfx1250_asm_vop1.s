@@ -599,22 +599,22 @@ v_cvt_f16_fp8 v1.h, v2
 // GFX1250: v_cvt_f16_fp8_e32 v1.h, v2              ; encoding: [0x02,0xef,0x02,0x7f]
 
 v_cvt_pk_f16_bf8 v1, v2
-// GFX1250: v_cvt_pk_f16_bf8_e32 v1, v2             ; encoding: [0x02,0xed,0x02,0x7e]
+// GFX1250: v_cvt_pk_f16_bf8 v1, v2                 ; encoding: [0x02,0xed,0x02,0x7e]
 
 v_cvt_pk_f16_bf8 v1, s2
-// GFX1250: v_cvt_pk_f16_bf8_e32 v1, s2             ; encoding: [0x02,0xec,0x02,0x7e]
+// GFX1250: v_cvt_pk_f16_bf8 v1, s2                 ; encoding: [0x02,0xec,0x02,0x7e]
 
 v_cvt_pk_f16_bf8 v1, 100
-// GFX1250: v_cvt_pk_f16_bf8_e32 v1, 0x64           ; encoding: [0xff,0xec,0x02,0x7e,0x64,0x00,0x00,0x00]
+// GFX1250: v_cvt_pk_f16_bf8 v1, 0x64               ; encoding: [0xff,0xec,0x02,0x7e,0x64,0x00,0x00,0x00]
 
 v_cvt_pk_f16_fp8 v1, v2
-// GFX1250: v_cvt_pk_f16_fp8_e32 v1, v2             ; encoding: [0x02,0xeb,0x02,0x7e]
+// GFX1250: v_cvt_pk_f16_fp8 v1, v2                 ; encoding: [0x02,0xeb,0x02,0x7e]
 
 v_cvt_pk_f16_fp8 v1, s2
-// GFX1250: v_cvt_pk_f16_fp8_e32 v1, s2             ; encoding: [0x02,0xea,0x02,0x7e]
+// GFX1250: v_cvt_pk_f16_fp8 v1, s2                 ; encoding: [0x02,0xea,0x02,0x7e]
 
 v_cvt_pk_f16_fp8 v1, 100
-// GFX1250: v_cvt_pk_f16_fp8_e32 v1, 0x64           ; encoding: [0xff,0xea,0x02,0x7e,0x64,0x00,0x00,0x00]
+// GFX1250: v_cvt_pk_f16_fp8 v1, 0x64               ; encoding: [0xff,0xea,0x02,0x7e,0x64,0x00,0x00,0x00]
 
 v_cvt_f32_bf8_e32 v1, s3
 // GFX1250: v_cvt_f32_bf8_e32 v1, s3                ; encoding: [0x03,0xda,0x02,0x7e]
