@@ -242,7 +242,7 @@ static void printInstsShort(raw_ostream &OS,
   }
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const SrcState &S) {
+static raw_ostream &operator<<(raw_ostream &OS, const SrcState &S) {
   OS << "src-state<";
   if (S.empty()) {
     OS << "empty";
@@ -432,8 +432,7 @@ protected:
     SrcStatePrinter P(BC);
     LLVM_DEBUG({
       dbgs() << "  SrcSafetyAnalysis::ComputeNext(";
-      BC.InstPrinter->printInst(&const_cast<MCInst &>(Point), 0, "", *BC.STI,
-                                dbgs());
+      BC.InstPrinter->printInst(&Point, 0, "", *BC.STI, dbgs());
       dbgs() << ", ";
       P.print(dbgs(), Cur);
       dbgs() << ")\n";
@@ -611,6 +610,42 @@ protected:
   StringRef getAnnotationName() const { return "DataflowSrcSafetyAnalysis"; }
 };
 
+/// A helper base class for implementing a simplified counterpart of a dataflow
+/// analysis for functions without CFG information.
+template <typename StateTy> class CFGUnawareAnalysis {
+  BinaryContext &BC;
+  BinaryFunction &BF;
+  MCPlusBuilder::AllocatorIdTy AllocId;
+  unsigned StateAnnotationIndex;
+
+  void cleanStateAnnotations() {
+    for (auto &I : BF.instrs())
+      BC.MIB->removeAnnotation(I.second, StateAnnotationIndex);
+  }
+
+protected:
+  CFGUnawareAnalysis(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
+                     StringRef AnnotationName)
+      : BC(BF.getBinaryContext()), BF(BF), AllocId(AllocId) {
+    StateAnnotationIndex = BC.MIB->getOrCreateAnnotationIndex(AnnotationName);
+  }
+
+  void setState(MCInst &Inst, const StateTy &S) {
+    // Check if we need to remove an old annotation (this is the case if
+    // this is the second, detailed run of the analysis).
+    if (BC.MIB->hasAnnotation(Inst, StateAnnotationIndex))
+      BC.MIB->removeAnnotation(Inst, StateAnnotationIndex);
+    // Attach the state.
+    BC.MIB->addAnnotation(Inst, StateAnnotationIndex, S, AllocId);
+  }
+
+  const StateTy &getState(const MCInst &Inst) const {
+    return BC.MIB->getAnnotationAs<StateTy>(Inst, StateAnnotationIndex);
+  }
+
+  ~CFGUnawareAnalysis() { cleanStateAnnotations(); }
+};
+
 // A simplified implementation of DataflowSrcSafetyAnalysis for functions
 // lacking CFG information.
 //
@@ -645,15 +680,10 @@ protected:
 // of instructions without labels in between. These sequences can be processed
 // the same way basic blocks are processed by data-flow analysis, assuming
 // pessimistically that all registers are unsafe at the start of each sequence.
-class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis {
+class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis,
+                                    public CFGUnawareAnalysis<SrcState> {
+  using SrcSafetyAnalysis::BC;
   BinaryFunction &BF;
-  MCPlusBuilder::AllocatorIdTy AllocId;
-  unsigned StateAnnotationIndex;
-
-  void cleanStateAnnotations() {
-    for (auto &I : BF.instrs())
-      BC.MIB->removeAnnotation(I.second, StateAnnotationIndex);
-  }
 
   /// Creates a state with all registers marked unsafe (not to be confused
   /// with empty state).
@@ -665,9 +695,8 @@ public:
   CFGUnawareSrcSafetyAnalysis(BinaryFunction &BF,
                               MCPlusBuilder::AllocatorIdTy AllocId,
                               ArrayRef<MCPhysReg> RegsToTrackInstsFor)
-      : SrcSafetyAnalysis(BF, RegsToTrackInstsFor), BF(BF), AllocId(AllocId) {
-    StateAnnotationIndex =
-        BC.MIB->getOrCreateAnnotationIndex("CFGUnawareSrcSafetyAnalysis");
+      : SrcSafetyAnalysis(BF, RegsToTrackInstsFor),
+        CFGUnawareAnalysis(BF, AllocId, "CFGUnawareSrcSafetyAnalysis"), BF(BF) {
   }
 
   void run() override {
@@ -686,12 +715,8 @@ public:
         S = createUnsafeState();
       }
 
-      // Check if we need to remove an old annotation (this is the case if
-      // this is the second, detailed, run of the analysis).
-      if (BC.MIB->hasAnnotation(Inst, StateAnnotationIndex))
-        BC.MIB->removeAnnotation(Inst, StateAnnotationIndex);
       // Attach the state *before* this instruction executes.
-      BC.MIB->addAnnotation(Inst, StateAnnotationIndex, S, AllocId);
+      setState(Inst, S);
 
       // Compute the state after this instruction executes.
       S = computeNext(Inst, S);
@@ -699,10 +724,8 @@ public:
   }
 
   const SrcState &getStateBefore(const MCInst &Inst) const override {
-    return BC.MIB->getAnnotationAs<SrcState>(Inst, StateAnnotationIndex);
+    return getState(Inst);
   }
-
-  ~CFGUnawareSrcSafetyAnalysis() { cleanStateAnnotations(); }
 };
 
 std::shared_ptr<SrcSafetyAnalysis>
@@ -786,7 +809,7 @@ struct DstState {
   bool operator!=(const DstState &RHS) const { return !((*this) == RHS); }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DstState &S) {
+static raw_ostream &operator<<(raw_ostream &OS, const DstState &S) {
   OS << "dst-state<";
   if (S.empty()) {
     OS << "empty";
@@ -962,8 +985,7 @@ protected:
     DstStatePrinter P(BC);
     LLVM_DEBUG({
       dbgs() << "  DstSafetyAnalysis::ComputeNext(";
-      BC.InstPrinter->printInst(&const_cast<MCInst &>(Point), 0, "", *BC.STI,
-                                dbgs());
+      BC.InstPrinter->printInst(&Point, 0, "", *BC.STI, dbgs());
       dbgs() << ", ";
       P.print(dbgs(), Cur);
       dbgs() << ")\n";
@@ -1108,15 +1130,10 @@ protected:
   StringRef getAnnotationName() const { return "DataflowDstSafetyAnalysis"; }
 };
 
-class CFGUnawareDstSafetyAnalysis : public DstSafetyAnalysis {
+class CFGUnawareDstSafetyAnalysis : public DstSafetyAnalysis,
+                                    public CFGUnawareAnalysis<DstState> {
+  using DstSafetyAnalysis::BC;
   BinaryFunction &BF;
-  MCPlusBuilder::AllocatorIdTy AllocId;
-  unsigned StateAnnotationIndex;
-
-  void cleanStateAnnotations() {
-    for (auto &I : BF.instrs())
-      BC.MIB->removeAnnotation(I.second, StateAnnotationIndex);
-  }
 
   DstState createUnsafeState() const {
     return DstState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
@@ -1126,9 +1143,8 @@ public:
   CFGUnawareDstSafetyAnalysis(BinaryFunction &BF,
                               MCPlusBuilder::AllocatorIdTy AllocId,
                               ArrayRef<MCPhysReg> RegsToTrackInstsFor)
-      : DstSafetyAnalysis(BF, RegsToTrackInstsFor), BF(BF), AllocId(AllocId) {
-    StateAnnotationIndex =
-        BC.MIB->getOrCreateAnnotationIndex("CFGUnawareDstSafetyAnalysis");
+      : DstSafetyAnalysis(BF, RegsToTrackInstsFor),
+        CFGUnawareAnalysis(BF, AllocId, "CFGUnawareDstSafetyAnalysis"), BF(BF) {
   }
 
   void run() override {
@@ -1146,12 +1162,8 @@ public:
         S = createUnsafeState();
       }
 
-      // Check if we need to remove an old annotation (this is the case if
-      // this is the second, detailed, run of the analysis).
-      if (BC.MIB->hasAnnotation(Inst, StateAnnotationIndex))
-        BC.MIB->removeAnnotation(Inst, StateAnnotationIndex);
       // Attach the state *after* this instruction executes.
-      BC.MIB->addAnnotation(Inst, StateAnnotationIndex, S, AllocId);
+      setState(Inst, S);
 
       // Compute the next state.
       S = computeNext(Inst, S);
@@ -1159,10 +1171,8 @@ public:
   }
 
   const DstState &getStateAfter(const MCInst &Inst) const override {
-    return BC.MIB->getAnnotationAs<DstState>(Inst, StateAnnotationIndex);
+    return getState(Inst);
   }
-
-  ~CFGUnawareDstSafetyAnalysis() { cleanStateAnnotations(); }
 };
 
 std::shared_ptr<DstSafetyAnalysis>
