@@ -53,9 +53,8 @@ public:
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::vfs::createPhysicalFileSystem();
-    DiagnosticOptions DiagOpts;
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(*VFS, DiagOpts);
+        CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions());
     CreateInvocationOptions CIOpts;
     CIOpts.Diags = Diags;
     CIOpts.VFS = VFS;

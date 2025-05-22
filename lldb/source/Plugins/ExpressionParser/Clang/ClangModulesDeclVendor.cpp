@@ -66,7 +66,6 @@ private:
   typedef std::pair<clang::DiagnosticsEngine::Level, std::string>
       IDAndDiagnostic;
   std::vector<IDAndDiagnostic> m_diagnostics;
-  std::unique_ptr<clang::DiagnosticOptions> m_diag_opts;
   /// The DiagnosticPrinter used for creating the full diagnostic messages
   /// that are stored in m_diagnostics.
   std::unique_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
@@ -84,7 +83,6 @@ private:
 class ClangModulesDeclVendorImpl : public ClangModulesDeclVendor {
 public:
   ClangModulesDeclVendorImpl(
-      std::unique_ptr<clang::DiagnosticOptions> diagnostic_options,
       llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine,
       std::shared_ptr<clang::CompilerInvocation> compiler_invocation,
       std::unique_ptr<clang::CompilerInstance> compiler_instance,
@@ -117,7 +115,6 @@ private:
 
   bool m_enabled = false;
 
-  std::unique_ptr<clang::DiagnosticOptions> m_diagnostic_options;
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> m_diagnostics_engine;
   std::shared_ptr<clang::CompilerInvocation> m_compiler_invocation;
   std::unique_ptr<clang::CompilerInstance> m_compiler_instance;
@@ -137,10 +134,10 @@ private:
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
-  m_diag_opts = std::make_unique<clang::DiagnosticOptions>();
+  auto *options = new clang::DiagnosticOptions();
   m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
   m_diag_printer =
-      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, *m_diag_opts);
+      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, options);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
@@ -231,13 +228,11 @@ ClangModulesDeclVendor::ClangModulesDeclVendor()
 ClangModulesDeclVendor::~ClangModulesDeclVendor() = default;
 
 ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
-    std::unique_ptr<clang::DiagnosticOptions> diagnostic_options,
     llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine,
     std::shared_ptr<clang::CompilerInvocation> compiler_invocation,
     std::unique_ptr<clang::CompilerInstance> compiler_instance,
     std::unique_ptr<clang::Parser> parser)
-    : m_diagnostic_options(std::move(diagnostic_options)),
-      m_diagnostics_engine(std::move(diagnostics_engine)),
+    : m_diagnostics_engine(std::move(diagnostics_engine)),
       m_compiler_invocation(std::move(compiler_invocation)),
       m_compiler_instance(std::move(compiler_instance)),
       m_parser(std::move(parser)) {
@@ -711,8 +706,8 @@ ClangModulesDeclVendor::Create(Target &target) {
       clang::CreateAndPopulateDiagOpts(compiler_invocation_argument_cstrs);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine =
       clang::CompilerInstance::createDiagnostics(
-          *FileSystem::Instance().GetVirtualFileSystem(), *diag_options_up,
-          new StoringDiagnosticConsumer);
+          *FileSystem::Instance().GetVirtualFileSystem(),
+          diag_options_up.release(), new StoringDiagnosticConsumer);
 
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "ClangModulesDeclVendor's compiler flags {0:$[ ]}",
@@ -772,7 +767,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   while (!parser->ParseTopLevelDecl(parsed, ImportState))
     ;
 
-  return new ClangModulesDeclVendorImpl(
-      std::move(diag_options_up), std::move(diagnostics_engine),
-      std::move(invocation), std::move(instance), std::move(parser));
+  return new ClangModulesDeclVendorImpl(std::move(diagnostics_engine),
+                                        std::move(invocation),
+                                        std::move(instance), std::move(parser));
 }

@@ -126,7 +126,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   FS->addFile(FileName, time_t(), llvm::MemoryBuffer::getMemBufferCopy(""));
 
   if (!Diags->getClient())
-    Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), DiagOpts));
+    Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), DiagOpts.get()));
   Diags->setSeverityForGroup(diag::Flavor::WarningOrError, "unused-value",
                              diag::Severity::Ignored, SourceLocation());
 
