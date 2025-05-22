@@ -2150,8 +2150,7 @@ struct AANoUnwindCallSite final
 
 bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
-  case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
-  case Intrinsic::nvvm_barrier_cta_sync_aligned:
+  case Intrinsic::nvvm_barrier0:
   case Intrinsic::nvvm_barrier0_and:
   case Intrinsic::nvvm_barrier0_or:
   case Intrinsic::nvvm_barrier0_popc:
