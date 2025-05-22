@@ -15253,7 +15253,7 @@ static SDValue lowerShuffleAsSplitOrBlend(const SDLoc &DL, MVT VT, SDValue V1,
                                 /*SimpleOnly*/ false);
 
   // Without AVX2, if we can freely split the subvectors then we're better off
-  // performing half width shuffles. 
+  // performing half width shuffles.
   if (!Subtarget.hasAVX2()) {
     SDValue BC1 = peekThroughBitcasts(V1);
     SDValue BC2 = peekThroughBitcasts(V2);
