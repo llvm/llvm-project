@@ -69,7 +69,7 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   llvm::raw_string_ostream diagnosticsOS(diagnosticOutput);
   clang::DiagnosticOptions diagPrinterOpts;
   auto diagPrinter = std::make_unique<Fortran::frontend::TextDiagnosticPrinter>(
-      diagnosticsOS, *diagPrinterOpts;
+      diagnosticsOS, diagPrinterOpts);
 
   // 2. Create a CompilerInstance (to manage a DiagnosticEngine)
   CompilerInstance compInst;
@@ -79,7 +79,7 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   // Tell the diagnostics engine to emit the diagnostic log to STDERR. This
   // ensures that a chained diagnostic consumer is created so that the test can
   // exercise the unowned diagnostic consumer in a chained consumer.
-  diagOpts->DiagnosticLogFile = "-";
+  diagOpts.DiagnosticLogFile = "-";
 
   // 4. Create a DiagnosticEngine with an unowned consumer
   IntrusiveRefCntPtr<clang::DiagnosticsEngine> diags =
