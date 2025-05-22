@@ -591,7 +591,7 @@ void RTDEF(CopyInAssign)(Descriptor &temp, const Descriptor &var,
   temp = var;
   temp.set_base_addr(nullptr);
   temp.raw().attribute = CFI_attribute_allocatable;
-  temp.Allocate(kNoAsyncId);
+  temp.Allocate(kNoAsyncObject);
   ShallowCopy(temp, var);
 }
 
