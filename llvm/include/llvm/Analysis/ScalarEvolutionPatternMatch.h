@@ -178,7 +178,7 @@ template <typename Op0_t, typename Op1_t> struct SCEVAffineAddRec_match {
   Op1_t Op1;
   const Loop *L;
 
-  SCEVAffineAddRec_match(Op0_t Op0, Op1_t Op1, const Loop *L = nullptr)
+  SCEVAffineAddRec_match(Op0_t Op0, Op1_t Op1, const Loop *L)
       : Op0(Op0), Op1(Op1), L(L) {}
 
   bool match(const SCEV *S) const {
