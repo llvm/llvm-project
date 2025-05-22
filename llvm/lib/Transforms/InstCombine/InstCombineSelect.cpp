@@ -3879,11 +3879,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // (X ugt Y) ? X : Y -> (X ole Y) ? Y : X
       if (FCmp->hasOneUse() && FCmpInst::isUnordered(Pred)) {
         FCmpInst::Predicate InvPred = FCmp->getInversePredicate();
-        // FIXME: The FMF should propagate from the select, not the fcmp.
         Value *NewCond = Builder.CreateFCmpFMF(InvPred, Cmp0, Cmp1, FCmp,
                                                FCmp->getName() + ".inv");
         Value *NewSel =
-            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FCmp);
+            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, &SI);
         return replaceInstUsesWith(SI, NewSel);
       }
     }
