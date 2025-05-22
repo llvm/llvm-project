@@ -14360,31 +14360,12 @@ bool SemaOpenMP::analyzeLoopSequence(
     OpenMPDirectiveKind Kind) {
 
   VarsWithInheritedDSAType TmpDSA;
-  QualType BaseInductionVarType;
   /// Helper Lambda to handle storing initialization and body statements for
-  /// both ForStmt and CXXForRangeStmt and checks for any possible mismatch
-  /// between induction variables types
+  /// both ForStmt and CXXForRangeStmt
   auto StoreLoopStatements = [&](Stmt *LoopStmt) {
     if (auto *For = dyn_cast<ForStmt>(LoopStmt)) {
       OriginalInits.back().push_back(For->getInit());
       ForStmts.push_back(For);
-      // Extract induction variable
-      if (auto *InitStmt = dyn_cast_or_null<DeclStmt>(For->getInit())) {
-        if (auto *InitDecl = dyn_cast<VarDecl>(InitStmt->getSingleDecl())) {
-          QualType InductionVarType = InitDecl->getType().getCanonicalType();
-
-          // Compare with first loop type
-          if (BaseInductionVarType.isNull()) {
-            BaseInductionVarType = InductionVarType;
-          } else if (!Context.hasSameType(BaseInductionVarType,
-                                          InductionVarType)) {
-            Diag(InitDecl->getBeginLoc(),
-                 diag::warn_omp_different_loop_ind_var_types)
-                << getOpenMPDirectiveName(OMPD_fuse) << BaseInductionVarType
-                << InductionVarType;
-          }
-        }
-      }
     } else {
       auto *CXXFor = cast<CXXForRangeStmt>(LoopStmt);
       OriginalInits.back().push_back(CXXFor->getBeginStmt());

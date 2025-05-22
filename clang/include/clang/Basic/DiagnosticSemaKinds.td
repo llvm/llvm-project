@@ -11612,9 +11612,6 @@ def note_omp_implicit_dsa : Note<
   "implicitly determined as %0">;
 def err_omp_loop_var_dsa : Error<
   "loop iteration variable in the associated loop of 'omp %1' directive may not be %0, predetermined as %2">;
-def warn_omp_different_loop_ind_var_types : Warning <
-  "loop sequence following '#pragma omp %0' contains induction variables of differing types: %1 and %2">,
-  InGroup<OpenMPLoopForm>;
 def err_omp_not_canonical_loop : Error <
   "loop after '#pragma omp %0' is not in canonical form">;
 def err_omp_not_a_loop_sequence : Error < 
