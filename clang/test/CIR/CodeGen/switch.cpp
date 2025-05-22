@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 /// RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 void sw1(int a) {
@@ -27,6 +29,36 @@ void sw1(int a) {
 // CIR: cir.scope {
 // CIR: cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
 // CIR: cir.break
+
+// LLVM: define void @_Z3sw1i
+// LLVM:   store i32 1, ptr %[[B_ADDR:.*]], align 4
+// LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
+// LLVM:   br label %[[BB7:.*]]
+// LLVM: [[BB7]]:
+// LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
+// LLVM-DAG:   i32 0, label %[[CASE0:.*]]
+// LLVM-DAG:   i32 1, label %[[CASE1:.*]]
+// LLVM-DAG:   i32 2, label %[[CASE2:.*]]
+// LLVM:   ]
+// LLVM: [[CASE0]]:
+// LLVM:   %[[B:.*]] = load i32, ptr %[[B_ADDR]], align 4
+// LLVM:   %[[INC0:.*]] = add nsw i32 %[[B]], 1
+// LLVM:   store i32 %[[INC0]], ptr %[[B_ADDR]], align 4
+// LLVM:   br label %[[EXIT]]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[EXIT]]
+// LLVM: [[CASE2]]:
+// LLVM:   br label %[[BB14:.*]]
+// LLVM: [[BB14]]:
+// LLVM:   %[[B2:.*]] = load i32, ptr %[[B_ADDR]], align 4
+// LLVM:   %[[INC2:.*]] = add nsw i32 %[[B2]], 1
+// LLVM:   store i32 %[[INC2]], ptr %[[B_ADDR]], align 4
+// LLVM:   store i32 100, ptr %[[YOLO:.*]], align 4
+// LLVM:   br label %[[EXIT]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[DEFAULT:.*]]
+// LLVM: [[DEFAULT]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z3sw1i
 // OGCG: entry:
@@ -74,6 +106,26 @@ void sw2(int a) {
 // CIR-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-NEXT:     cir.store %[[ZERO]], %[[FOMO]] : !s32i, !cir.ptr<!s32i>
 
+// LLVM: define void @_Z3sw2i
+// LLVM:   store i32 2, ptr %[[YOLO_ADDR:.*]], align 4
+// LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
+// LLVM:   br label %[[SWITCH:.*]]
+// LLVM: [[SWITCH]]:
+// LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
+// LLVM:     i32 3, label %[[CASE3:.*]]
+// LLVM:   ]
+// LLVM: [[CASE3]]:
+// LLVM:   store i32 0, ptr %[[FOMO_ADDR:.*]], align 4
+// LLVM:   %[[YOLO_VAL:.*]] = load i32, ptr %[[YOLO_ADDR]], align 4
+// LLVM:   %[[FOMO_VAL:.*]] = load i32, ptr %[[FOMO_ADDR]], align 4
+// LLVM:   %[[YOLO_PLUS_FOMO:.*]] = add nsw i32 %[[YOLO_VAL]], %[[FOMO_VAL]]
+// LLVM:   store i32 %[[YOLO_PLUS_FOMO]], ptr %[[YOLO_ADDR]], align 4
+// LLVM:   br label %[[EXIT]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
+
 // OGCG: define dso_local void @_Z3sw2i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
@@ -108,6 +160,19 @@ void sw3(int a) {
 // CIR-NEXT:   }
 // CIR-NEXT:   cir.yield
 // CIR-NEXT:   }
+
+// LLVM-LABEL: define void @_Z3sw3i
+// LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
+// LLVM:   br label %[[SWITCH:.*]]
+// LLVM: [[SWITCH]]:
+// LLVM:   switch i32 %[[A_VAL]], label %[[DEFAULT:.*]] [
+// LLVM:   ]
+// LLVM: [[DEFAULT]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[EXIT:.*]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z3sw3i
 // OGCG: entry:
@@ -150,6 +215,32 @@ int sw4(int a) {
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:  }
 
+// LLVM: define i32 @_Z3sw4i
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   br label %[[ENTRY:.*]]
+// LLVM: [[ENTRY]]:
+// LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM:   br label %[[SWITCH:.*]]
+// LLVM: [[SWITCH]]:
+// LLVM:   switch i32 %[[A_VAL]], label %[[DEFAULT:.*]] [
+// LLVM-DAG:     i32 42, label %[[CASE42:.*]]
+// LLVM:   ]
+// LLVM: [[CASE42]]:
+// LLVM:   br label %[[CASE42_BODY:.*]]
+// LLVM: [[CASE42_BODY]]:
+// LLVM:   store i32 3, ptr %[[RET_ADDR]], align 4
+// LLVM:   %[[RET3:.*]] = load i32, ptr %[[RET_ADDR]], align 4
+// LLVM:   ret i32 %[[RET3]]
+// LLVM: [[DEFAULT]]:
+// LLVM:   store i32 2, ptr %[[RET_ADDR]], align 4
+// LLVM:   %[[RET2:.*]] = load i32, ptr %[[RET_ADDR]], align 4
+// LLVM:   ret i32 %[[RET2]]
+// LLVM: [[EXIT_UNRE:.*]]:
+// LLVM:   store i32 0, ptr %[[RET_ADDR]], align 4
+// LLVM:   %[[RET0:.*]] = load i32, ptr %[[RET_ADDR]], align 4
+// LLVM:   ret i32 %[[RET0]]
+
 // OGCG: define dso_local noundef i32 @_Z3sw4i
 // OGCG: entry:
 // OGCG:   %[[RETVAL:.*]] = alloca i32, align 4
@@ -179,6 +270,23 @@ void sw5(int a) {
 // CIR-NEXT:   }
 // CIR-NEXT:   cir.yield
 // CIR-NEXT:   }
+
+// LLVM-LABEL: define void @_Z3sw5i
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   br label %[[ENTRY:.*]]
+// LLVM: [[ENTRY]]:
+// LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM:   br label %[[SWITCH:.*]]
+// LLVM: [[SWITCH]]:
+// LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
+// LLVM-DAG:     i32 1, label %[[CASE1:.*]]
+// LLVM:   ]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z3sw5i
 // OGCG: entry:
@@ -226,6 +334,42 @@ void sw6(int a) {
 // CIR-NEXT:     cir.break
 // CIR-NEXT: }
 
+// LLVM: define void @_Z3sw6i
+// LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
+// LLVM:   br label %[[SWITCH:.*]]
+// LLVM: [[SWITCH]]:
+// LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
+// LLVM-DAG:     i32 0, label %[[CASE0:.*]]
+// LLVM-DAG:     i32 1, label %[[CASE1:.*]]
+// LLVM-DAG:     i32 2, label %[[CASE2:.*]]
+// LLVM-DAG:     i32 3, label %[[CASE3:.*]]
+// LLVM-DAG:     i32 4, label %[[CASE4:.*]]
+// LLVM-DAG:     i32 5, label %[[CASE5:.*]]
+// LLVM:   ]
+// LLVM: [[CASE0]]:
+// LLVM:   br label %[[CASE0_CONT:.*]]
+// LLVM: [[CASE0_CONT]]:
+// LLVM:   br label %[[CASE1]]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[CASE1_CONT:.*]]
+// LLVM: [[CASE1_CONT]]:
+// LLVM:   br label %[[CASE2]]
+// LLVM: [[CASE2]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[CASE3]]:
+// LLVM:   br label %[[CASE3_CONT:.*]]
+// LLVM: [[CASE3_CONT]]:
+// LLVM:   br label %[[CASE4]]
+// LLVM: [[CASE4]]:
+// LLVM:   br label %[[CASE4_CONT:.*]]
+// LLVM: [[CASE4_CONT]]:
+// LLVM:   br label %[[CASE5]]
+// LLVM: [[CASE5]]:
+// LLVM:   br label %[[EXIT]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z3sw6i
 // OGCG: entry:
@@ -284,6 +428,45 @@ void sw7(int a) {
 // CIR-NEXT: cir.yield
 // CIR: }
 
+// LLVM: define void @_Z3sw7i
+// LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
+// LLVM:   br label %[[SWITCH:.*]]
+// LLVM: [[SWITCH]]:
+// LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
+// LLVM-DAG:     i32 0, label %[[CASE0:.*]]
+// LLVM-DAG:     i32 1, label %[[CASE1:.*]]
+// LLVM-DAG:     i32 2, label %[[CASE2:.*]]
+// LLVM-DAG:     i32 3, label %[[CASE3:.*]]
+// LLVM-DAG:     i32 4, label %[[CASE4:.*]]
+// LLVM-DAG:     i32 5, label %[[CASE5:.*]]
+// LLVM:   ]
+// LLVM: [[CASE0]]:
+// LLVM:   br label %[[CASE0_CONT:.*]]
+// LLVM: [[CASE0_CONT]]:
+// LLVM:   br label %[[CASE1]]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[CASE1_CONT:.*]]
+// LLVM: [[CASE1_CONT]]:
+// LLVM:   br label %[[CASE2]]
+// LLVM: [[CASE2]]:
+// LLVM:   br label %[[CASE2_CONT:.*]]
+// LLVM: [[CASE2_CONT]]:
+// LLVM:   br label %[[CASE3]]
+// LLVM: [[CASE3]]:
+// LLVM:   br label %[[CASE3_CONT:.*]]
+// LLVM: [[CASE3_CONT]]:
+// LLVM:   br label %[[CASE4]]
+// LLVM: [[CASE4]]:
+// LLVM:   br label %[[CASE4_CONT:.*]]
+// LLVM: [[CASE4_CONT]]:
+// LLVM:   br label %[[CASE5]]
+// LLVM: [[CASE5]]:
+// LLVM:   br label %[[EXIT]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
+
 // OGCG: define dso_local void @_Z3sw7i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
@@ -327,6 +510,23 @@ void sw8(int a) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
 
+// LLVM: define void @_Z3sw8i
+// LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
+// LLVM-DAG:  i32 3, label %[[CASE3:.*]]
+// LLVM-DAG:  i32 4, label %[[CASE4:.*]]
+// LLVM:   ]
+// LLVM: [[CASE3]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[CASE4]]:
+// LLVM:   br label %[[CASE4_CONT:.*]]
+// LLVM: [[CASE4_CONT]]:
+// LLVM:   br label %[[DEFAULT]]
+// LLVM: [[DEFAULT]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[EXIT]]:
+// LLVM:    br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z3sw8i
 // OGCG: entry:
@@ -367,6 +567,24 @@ void sw9(int a) {
 // CIR-NEXT: cir.case(equal, [#cir.int<4> : !s32i]) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
+
+// LLVM: define void @_Z3sw9i
+// LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
+// LLVM-DAG:     i32 3, label %[[CASE3:.*]]
+// LLVM-DAG:     i32 4, label %[[CASE4:.*]]
+// LLVM:   ]
+// LLVM: [[CASE3]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[DEFAULT]]:
+// LLVM:   br label %[[DEFAULT_CONT:.*]]
+// LLVM: [[DEFAULT_CONT]]:
+// LLVM:   br label %[[CASE4]]
+// LLVM: [[CASE4]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z3sw9i
 // OGCG: entry:
@@ -411,6 +629,29 @@ void sw10(int a) {
 // CIR-NEXT: cir.case(equal, [#cir.int<5> : !s32i]) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
+
+// LLVM: define void @_Z4sw10i
+// LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
+// LLVM-DAG:     i32 3, label %[[CASE_3:.*]]
+// LLVM-DAG:     i32 4, label %[[CASE_4:.*]]
+// LLVM-DAG:     i32 5, label %[[CASE_5:.*]]
+// LLVM:   ]
+// LLVM: [[CASE_3]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[CASE_4]]:
+// LLVM:   br label %[[CASE4_CONT:.*]]
+// LLVM: [[CASE4_CONT]]:
+// LLVM:   br label %[[DEFAULT]]
+// LLVM: [[DEFAULT]]:
+// LLVM:   br label %[[DEFAULT_CONT:.*]]
+// LLVM: [[DEFAULT_CONT]]:
+// LLVM:   br label %[[CASE_5]]
+// LLVM: [[CASE_5]]:
+// LLVM:   br label %[[EXIT]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z4sw10i
 // OGCG: entry:
@@ -467,6 +708,39 @@ void sw11(int a) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
 
+// LLVM: define void @_Z4sw11i
+// LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
+// LLVM-DAG:     i32 3, label %[[CASE_3:.*]]
+// LLVM-DAG:     i32 4, label %[[CASE_4:.*]]
+// LLVM-DAG:     i32 5, label %[[CASE_5:.*]]
+// LLVM-DAG:     i32 6, label %[[CASE_6:.*]]
+// LLVM-DAG:     i32 7, label %[[CASE_7:.*]]
+// LLVM:   ]
+// LLVM: [[CASE_3]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[CASE_4]]:
+// LLVM:   br label %[[CASE4_CONT:.*]]
+// LLVM: [[CASE4_CONT]]:
+// LLVM:   br label %[[CASE_5]]
+// LLVM: [[CASE_5]]:
+// LLVM:   br label %[[CASE5_CONT:.*]]
+// LLVM: [[CASE5_CONT]]:
+// LLVM:   br label %[[DEFAULT]]
+// LLVM: [[DEFAULT]]:
+// LLVM:   br label %[[DEFAULT_CONT:.*]]
+// LLVM: [[DEFAULT_CONT]]:
+// LLVM:   br label %[[CASE_6]]
+// LLVM: [[CASE_6]]:
+// LLVM:   br label %[[CASE6_CONT:.*]]
+// LLVM: [[CASE6_CONT]]:
+// LLVM:   br label %[[CASE_7]]
+// LLVM: [[CASE_7]]:
+// LLVM:   br label %[[EXIT]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
+
 // OGCG: define dso_local void @_Z4sw11i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
@@ -507,6 +781,19 @@ void sw12(int a) {
 // CIR-NEXT:       cir.break
 // CIR-NEXT:     }
 
+// LLVM: define void @_Z4sw12i
+// LLVM:   switch i32 %[[COND:.*]], label %[[EXIT:.*]] [
+// LLVM-DAG:     i32 3, label %[[CASE_3:.*]]
+// LLVM:   ]
+// LLVM: [[CASE_3]]:
+// LLVM:   ret void
+// LLVM: [[UNREACHABLE:.*]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
+
 // OGCG: define dso_local void @_Z4sw12i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
@@ -544,6 +831,32 @@ void sw13(int a, int b) {
 //      CIR:    cir.yield
 //      CIR:    }
 //      CIR:    cir.return
+
+// LLVM: define void @_Z4sw13ii
+// LLVM:   switch i32 %[[COND:.*]], label %[[OUTER_EXIT:.*]] [
+// LLVM-DAG:     i32 1, label %[[CASE_A_1:.*]]
+// LLVM:   ]
+// LLVM: [[CASE_A_1]]:
+// LLVM:   br label %[[LOAD_B:.*]]
+// LLVM: [[LOAD_B]]:
+// LLVM:   %[[B_VAL:.*]] = load i32, ptr %[[B_ADDR:.*]], align 4
+// LLVM:   br label %[[INNER_SWITCH:.*]]
+// LLVM: [[INNER_SWITCH]]:
+// LLVM:   switch i32 %[[B_VAL]], label %[[INNER_EXIT:.*]] [
+// LLVM-DAG:     i32 2, label %[[CASE_B_2:.*]]
+// LLVM:   ]
+// LLVM: [[CASE_B_2]]:
+// LLVM:   br label %[[INNER_EXIT]]
+// LLVM: [[INNER_EXIT]]:
+// LLVM:   br label %[[INNER_EXIT_CONT:.*]]
+// LLVM: [[INNER_EXIT_CONT]]:
+// LLVM:   br label %[[MERGE:.*]]
+// LLVM: [[MERGE]]:
+// LLVM:   br label %[[OUTER_EXIT]]
+// LLVM: [[OUTER_EXIT]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[EXIT]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z4sw13ii
 // OGCG: entry:
@@ -595,12 +908,42 @@ void sw14(int x) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
 
+// LLVM: define void @_Z4sw14i
+// LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
+// LLVM-DAG:     i32 1, label %[[CASE1:.*]]
+// LLVM-DAG:     i32 2, label %[[CASE2:.*]]
+// LLVM-DAG:     i32 3, label %[[CASE3_TO_6:.*]]
+// LLVM-DAG:     i32 4, label %[[CASE3_TO_6]]
+// LLVM-DAG:     i32 5, label %[[CASE3_TO_6]]
+// LLVM-DAG:     i32 6, label %[[CASE3_TO_6]]
+// LLVM-DAG:     i32 7, label %[[CASE7:.*]]
+// LLVM:   ]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[AFTER1:.*]]
+// LLVM: [[AFTER1]]:
+// LLVM:   br label %[[CASE2]]
+// LLVM: [[CASE2]]:
+// LLVM:   br label %[[AFTER2:.*]]
+// LLVM: [[AFTER2]]:
+// LLVM:   br label %[[CASE3_TO_6]]
+// LLVM: [[CASE3_TO_6]]:
+// LLVM:   br label %[[AFTER3_6:.*]]
+// LLVM: [[AFTER3_6]]:
+// LLVM:   br label %[[CASE7]]
+// LLVM: [[CASE7]]:
+// LLVM:   br label %[[EXIT1:.*]]
+// LLVM: [[DEFAULT]]:
+// LLVM:   br label %[[EXIT1]]
+// LLVM: [[EXIT1]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
+
 // OGCG: define dso_local void @_Z4sw14i
 // OGCG: entry:
 // OGCG:   %[[X_ADDR:.*]] = alloca i32, align 4
 // OGCG:   store i32 %x, ptr %[[X_ADDR]], align 4
 // OGCG:   %[[X_VAL:.*]] = load i32, ptr %[[X_ADDR]], align 4
-
 // OGCG:   switch i32 %[[X_VAL]], label %[[DEFAULT:.*]] [
 // OGCG-DAG:     i32 1, label %[[BB1:.*]]
 // OGCG-DAG:     i32 2, label %[[BB1]]
@@ -651,6 +994,30 @@ void sw15(int x) {
 // CIR-NEXT: cir.case(default, []) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
+
+// LLVM: define void @_Z4sw15i
+// LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
+// LLVM-DAG:     i32 1, label %[[CASE1:.*]]
+// LLVM-DAG:     i32 2, label %[[CASE2:.*]]
+// LLVM-DAG:     i32 3, label %[[CASE3:.*]]
+// LLVM:   ]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[CASE1_CONT:.*]]
+// LLVM: [[CASE1_CONT]]:
+// LLVM:   br label %[[CASE2]]
+// LLVM: [[CASE2]]:
+// LLVM:   store i32 0, ptr %[[Y_ADDR:.*]], align 4
+// LLVM:   br label %[[CASE2_CONT:.*]]
+// LLVM: [[CASE2_CONT]]:
+// LLVM:   br label %[[CASE3]]
+// LLVM: [[CASE3]]:
+// LLVM:   br label %[[EXIT:.*]]
+// LLVM: [[DEFAULT]]:
+// LLVM:   br label %[[EXIT]]
+// LLVM: [[EXIT]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z4sw15i
 // OGCG: entry:
@@ -713,6 +1080,61 @@ int nested_switch(int a) {
 // CIR:         cir.if
 // CIR:           cir.case(equal, [#cir.int<7> : !s32i]) {
 // CIR:           cir.return
+
+// LLVM: define i32 @_Z13nested_switchi
+// LLVM:   %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[RES_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   store i32 %[[ARG:.*]], ptr %[[A_ADDR]], align 4
+// LLVM:   br label %[[ENTRY:.*]]
+// LLVM: [[ENTRY]]:
+// LLVM:   store i32 1, ptr %[[B_ADDR]], align 4
+// LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM:   br label %[[SWITCH:.*]]
+// LLVM: [[SWITCH]]:
+// LLVM:   switch i32 %[[A_VAL]], label %[[EXIT:.*]] [
+// LLVM-DAG:     i32 0, label %[[CASE0:.*]]
+// LLVM-DAG:     i32 1, label %[[CASE1:.*]]
+// LLVM-DAG:     i32 2, label %[[CASE2:.*]]
+// LLVM-DAG:     i32 9, label %[[CASE9:.*]]
+// LLVM-DAG:     i32 7, label %[[CASE7:.*]]
+// LLVM:   ]
+// LLVM: [[CASE0]]:
+// LLVM:   %[[B0:.*]] = load i32, ptr %[[B_ADDR]], align 4
+// LLVM:   %[[B1:.*]] = add nsw i32 %[[B0]], 1
+// LLVM:   store i32 %[[B1]], ptr %[[B_ADDR]], align 4
+// LLVM:   br label %[[CASE0_CONT:.*]]
+// LLVM: [[CASE0_CONT]]:
+// LLVM:   br label %[[CASE1]]
+// LLVM: [[CASE1]]:
+// LLVM:   %[[B1a:.*]] = load i32, ptr %[[B_ADDR]], align 4
+// LLVM:   store i32 %[[B1a]], ptr %[[RES_ADDR]], align 4
+// LLVM:   %[[RET1:.*]] = load i32, ptr %[[RES_ADDR]], align 4
+// LLVM:   ret i32 %[[RET1]]
+// LLVM: [[CASE2]]:
+// LLVM:   br label %[[CASE2_BODY:.*]]
+// LLVM: [[CASE2_BODY]]:
+// LLVM:   %[[B2:.*]] = load i32, ptr %[[B_ADDR]], align 4
+// LLVM:   %[[B3:.*]] = add nsw i32 %[[B2]], 1
+// LLVM:   store i32 %[[B3]], ptr %[[B_ADDR]], align 4
+// LLVM:   br label %[[CASE2_CONT:.*]]
+// LLVM: [[CASE9]]:
+// LLVM:   %[[A9:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM:   %[[B4:.*]] = load i32, ptr %[[B_ADDR]], align 4
+// LLVM:   %[[SUM9:.*]] = add nsw i32 %[[A9]], %[[B4]]
+// LLVM:   store i32 %[[SUM9]], ptr %[[B_ADDR]], align 4
+// LLVM:   br label %[[CASE2_CONT1:.*]]
+// LLVM: [[CASE7]]:
+// LLVM:   %[[A7:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM:   %[[B5:.*]] = load i32, ptr %[[B_ADDR]], align 4
+// LLVM:   %[[SUM7:.*]] = add nsw i32 %[[A7]], %[[B5]]
+// LLVM:   store i32 %[[SUM7]], ptr %[[RES_ADDR]], align 4
+// LLVM:   %[[RET7:.*]] = load i32, ptr %[[RES_ADDR]], align 4
+// LLVM:   ret i32 %[[RET7]]
+// LLVM: [[EXIT]]:
+// LLVM:   store i32 0, ptr %[[RES_ADDR]], align 4
+// LLVM:   %[[RET0:.*]] = load i32, ptr %[[RES_ADDR]], align 4
+// LLVM:   ret i32 %[[RET0]]
 
 // OGCG: define dso_local noundef i32 @_Z13nested_switchi
 // OGCG: entry:

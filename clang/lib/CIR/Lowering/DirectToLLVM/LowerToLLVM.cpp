@@ -1065,6 +1065,33 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
+    cir::SwitchFlatOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+
+  llvm::SmallVector<mlir::APInt, 8> caseValues;
+  for (mlir::Attribute val : op.getCaseValues()) {
+    auto intAttr = cast<cir::IntAttr>(val);
+    caseValues.push_back(intAttr.getValue());
+  }
+
+  llvm::SmallVector<mlir::Block *, 8> caseDestinations;
+  llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
+
+  for (mlir::Block *x : op.getCaseDestinations())
+    caseDestinations.push_back(x);
+
+  for (mlir::OperandRange x : op.getCaseOperands())
+    caseOperands.push_back(x);
+
+  // Set switch op to branch to the newly created blocks.
+  rewriter.setInsertionPoint(op);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
+      op, adaptor.getCondition(), op.getDefaultDestination(),
+      op.getDefaultOperands(), caseValues, caseDestinations, caseOperands);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
     cir::UnaryOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1681,6 +1708,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,
                CIRToLLVMSelectOpLowering,
+               CIRToLLVMSwitchFlatOpLowering,
                CIRToLLVMShiftOpLowering,
                CIRToLLVMStackSaveOpLowering,
                CIRToLLVMStackRestoreOpLowering,
