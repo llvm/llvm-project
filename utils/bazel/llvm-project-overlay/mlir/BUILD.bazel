@@ -3419,10 +3419,13 @@ cc_library(
     deps = [
         ":AffineUtils",
         ":Analysis",
+        ":ArithUtils",
+        ":DialectUtils",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":GPUUtils",
         ":IR",
+        ":IndexDialect",
         ":InliningUtils",
         ":MemRefDialect",
         ":Pass",
@@ -5312,6 +5315,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
         ":AffineDialect",
         ":ArithDialect",
         ":DialectUtils",
@@ -5542,6 +5546,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"],
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
         ":AMDGPUToROCDL",
         ":ArithTransforms",
         ":ControlFlowDialect",
@@ -5772,10 +5777,12 @@ cc_library(
     srcs = [
         "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMRequiresSMTraits.cpp",
     ],
     hdrs = [
         "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h",
     ],
     includes = ["include"],
     deps = [
@@ -5787,6 +5794,7 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
+        ":NVVMRequiresSMTraitsIncGen",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -5853,6 +5861,16 @@ td_library(
 )
 
 td_library(
+    name = "NVVMRequiresSMTraitsTdFiles",
+    srcs = ["include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"],
+    includes = ["include"],
+    deps = [
+        ":LLVMOpsTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+td_library(
     name = "NVVMOpsTdFiles",
     srcs = ["include/mlir/Dialect/LLVMIR/NVVMOps.td"],
     includes = ["include"],
@@ -5860,6 +5878,7 @@ td_library(
         ":BasicPtxBuilderIntTdFiles",
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
+        ":NVVMRequiresSMTraitsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -5882,6 +5901,17 @@ gentbl_cc_library(
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "NVVMRequiresSMTraitsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td",
+    deps = [":NVVMRequiresSMTraitsTdFiles"],
 )
 
 gentbl_cc_library(
@@ -6154,96 +6184,6 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/PDLInterp/IR/PDLInterpOps.td",
     deps = [":PDLInterpOpsTdFiles"],
-)
-
-cc_library(
-    name = "PolynomialDialect",
-    srcs = glob([
-        "lib/Dialect/Polynomial/IR/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/mlir/Dialect/Polynomial/IR/*.h",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":ArithDialect",
-        ":IR",
-        ":InferTypeOpInterface",
-        ":PolynomialAttributesIncGen",
-        ":PolynomialCanonicalizationIncGen",
-        ":PolynomialIncGen",
-        ":Support",
-        "//llvm:Support",
-    ],
-)
-
-td_library(
-    name = "PolynomialTdFiles",
-    srcs = glob(["include/mlir/Dialect/Polynomial/IR/*.td"]),
-    includes = ["include"],
-    deps = [
-        ":BuiltinDialectTdFiles",
-        ":InferTypeOpInterfaceTdFiles",
-        ":OpBaseTdFiles",
-        ":SideEffectInterfacesTdFiles",
-    ],
-)
-
-gentbl_cc_library(
-    name = "PolynomialIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/Polynomial/IR/Polynomial.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/Polynomial/IR/Polynomial.cpp.inc": ["-gen-op-defs"],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.h.inc": [
-            "-gen-dialect-decls",
-            "-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.cpp.inc": [
-            "-gen-dialect-defs",
-            "-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.h.inc": [
-            "--gen-typedef-decls",
-            "-typedefs-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.cpp.inc": [
-            "--gen-typedef-defs",
-            "-typedefs-dialect=polynomial",
-        ],
-        "g3doc/Dialects/Polynomial/Polynomial.md": ["-gen-op-doc"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
-    deps = [":PolynomialTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "PolynomialAttributesIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.h.inc": [
-            "-gen-attrdef-decls",
-            "-attrdefs-dialect=polynomial",
-        ],
-        "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.cpp.inc": [
-            "-gen-attrdef-defs",
-            "-attrdefs-dialect=polynomial",
-        ],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
-    deps = [":PolynomialTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "PolynomialCanonicalizationIncGen",
-    strip_include_prefix = "include/mlir/Dialect/Polynomial/IR",
-    tbl_outs = {"include/mlir/Dialect/Polynomial/IR/PolynomialCanonicalization.inc": ["-gen-rewriters"]},
-    tblgen = ":mlir-tblgen",
-    td_file = "lib/Dialect/Polynomial/IR/PolynomialCanonicalization.td",
-    deps = [
-        ":ArithOpsTdFiles",
-        ":PolynomialTdFiles",
-    ],
 )
 
 td_library(
@@ -8864,7 +8804,6 @@ cc_library(
         ":PDLDialect",
         ":PDLInterpDialect",
         ":PDLToPDLInterp",
-        ":PolynomialDialect",
         ":PtrDialect",
         ":QuantOps",
         ":QuantTransforms",
@@ -8988,6 +8927,7 @@ cc_binary(
         "//mlir/test:TestTransforms",
         "//mlir/test:TestVector",
         "//mlir/test:TestVectorToSPIRV",
+        "//mlir/test:TestXeGPU",
     ],
 )
 
@@ -12961,6 +12901,7 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":FuncDialect",
         ":IR",
         ":Reducer",

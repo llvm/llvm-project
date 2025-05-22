@@ -12,7 +12,6 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Passes/BinaryPasses.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -43,9 +42,7 @@ struct MCInstInBBReference {
     return BB == RHS.BB && BBIndex == RHS.BBIndex;
   }
   bool operator<(const MCInstInBBReference &RHS) const {
-    if (BB != RHS.BB)
-      return BB < RHS.BB;
-    return BBIndex < RHS.BBIndex;
+    return std::tie(BB, BBIndex) < std::tie(RHS.BB, RHS.BBIndex);
   }
   operator MCInst &() const {
     assert(BB != nullptr);
@@ -67,6 +64,14 @@ struct MCInstInBFReference {
   uint64_t Offset;
   MCInstInBFReference(BinaryFunction *BF, uint64_t Offset)
       : BF(BF), Offset(Offset) {}
+
+  static MCInstInBFReference get(const MCInst *Inst, BinaryFunction &BF) {
+    for (auto &I : BF.instrs())
+      if (Inst == &I.second)
+        return MCInstInBFReference(&BF, I.first);
+    return {};
+  }
+
   MCInstInBFReference() : BF(nullptr), Offset(0) {}
   bool operator==(const MCInstInBFReference &RHS) const {
     return BF == RHS.BF && Offset == RHS.Offset;
@@ -106,6 +111,12 @@ struct MCInstReference {
   MCInstReference(BinaryFunction *BF, uint32_t Offset)
       : MCInstReference(MCInstInBFReference(BF, Offset)) {}
 
+  static MCInstReference get(const MCInst *Inst, BinaryFunction &BF) {
+    if (BF.hasCFG())
+      return MCInstInBBReference::get(Inst, BF);
+    return MCInstInBFReference::get(Inst, BF);
+  }
+
   bool operator<(const MCInstReference &RHS) const {
     if (ParentKind != RHS.ParentKind)
       return ParentKind < RHS.ParentKind;
@@ -136,6 +147,16 @@ struct MCInstReference {
       return U.BBRef;
     case FunctionParent:
       return U.BFRef;
+    }
+    llvm_unreachable("");
+  }
+
+  operator bool() const {
+    switch (ParentKind) {
+    case BasicBlockParent:
+      return U.BBRef.BB != nullptr;
+    case FunctionParent:
+      return U.BFRef.BF != nullptr;
     }
     llvm_unreachable("");
   }
@@ -175,9 +196,6 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &);
 
 namespace PAuthGadgetScanner {
 
-class SrcSafetyAnalysis;
-struct SrcState;
-
 /// Description of a gadget kind that can be detected. Intended to be
 /// statically allocated to be attached to reports by reference.
 class GadgetKind {
@@ -186,7 +204,7 @@ class GadgetKind {
 public:
   GadgetKind(const char *Description) : Description(Description) {}
 
-  const StringRef getDescription() const { return Description; }
+  StringRef getDescription() const { return Description; }
 };
 
 /// Base report located at some instruction, without any additional information.
@@ -201,8 +219,8 @@ struct Report {
 
   // The two methods below are called by Analysis::computeDetailedInfo when
   // iterating over the reports.
-  virtual const ArrayRef<MCPhysReg> getAffectedRegisters() const { return {}; }
-  virtual void setOverwritingInstrs(const ArrayRef<MCInstReference> Instrs) {}
+  virtual ArrayRef<MCPhysReg> getAffectedRegisters() const { return {}; }
+  virtual void setOverwritingInstrs(ArrayRef<MCInstReference> Instrs) {}
 
   void printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                       StringRef IssueKind) const;
@@ -225,11 +243,11 @@ struct GadgetReport : public Report {
 
   void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
 
-  const ArrayRef<MCPhysReg> getAffectedRegisters() const override {
+  ArrayRef<MCPhysReg> getAffectedRegisters() const override {
     return AffectedRegisters;
   }
 
-  void setOverwritingInstrs(const ArrayRef<MCInstReference> Instrs) override {
+  void setOverwritingInstrs(ArrayRef<MCInstReference> Instrs) override {
     OverwritingInstrs.assign(Instrs.begin(), Instrs.end());
   }
 };
@@ -237,7 +255,7 @@ struct GadgetReport : public Report {
 /// Report with a free-form message attached.
 struct GenericReport : public Report {
   std::string Text;
-  GenericReport(MCInstReference Location, const std::string &Text)
+  GenericReport(MCInstReference Location, StringRef Text)
       : Report(Location), Text(Text) {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const override;

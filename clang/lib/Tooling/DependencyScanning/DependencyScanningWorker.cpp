@@ -530,6 +530,7 @@ public:
     ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
         true;
+    ScanInstance.getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
 
     // Avoid some checks and module map parsing when loading PCM files.
     ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;

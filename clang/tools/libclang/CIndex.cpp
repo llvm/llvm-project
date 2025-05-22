@@ -4390,7 +4390,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
       CXXIdx->getPCHContainerOperations(), Diags,
       CXXIdx->getClangResourcesPath(), CXXIdx->getStorePreamblesInMemory(),
       CXXIdx->getPreambleStoragePath(), CXXIdx->getOnlyLocalDecls(),
-      CaptureDiagnostics, *RemappedFiles.get(),
+      CaptureDiagnostics, *RemappedFiles,
       /*RemappedFilesKeepOriginalName=*/true, PrecompilePreambleAfterNParses,
       TUKind, CacheCodeCompletionResults, IncludeBriefCommentsInCodeCompletion,
       /*AllowPCHWithCompilerErrors=*/true, SkipFunctionBodies, SingleFileParse,
@@ -4981,8 +4981,7 @@ clang_reparseTranslationUnit_Impl(CXTranslationUnit TU,
     RemappedFiles->push_back(std::make_pair(UF.Filename, MB.release()));
   }
 
-  if (!CXXUnit->Reparse(CXXIdx->getPCHContainerOperations(),
-                        *RemappedFiles.get()))
+  if (!CXXUnit->Reparse(CXXIdx->getPCHContainerOperations(), *RemappedFiles))
     return CXError_Success;
   if (isASTReadError(CXXUnit))
     return CXError_ASTReadError;
@@ -7230,6 +7229,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::MSProperty:
   case Decl::MSGuid:
   case Decl::HLSLBuffer:
+  case Decl::HLSLRootSignature:
   case Decl::UnnamedGlobalConstant:
   case Decl::TemplateParamObject:
   case Decl::IndirectField:
@@ -8872,9 +8872,8 @@ static void getCursorPlatformAvailabilityForDecl(
         return LHS->getPlatform()->getName() < RHS->getPlatform()->getName();
       });
   ASTContext &Ctx = D->getASTContext();
-  auto It = std::unique(
-      AvailabilityAttrs.begin(), AvailabilityAttrs.end(),
-      [&Ctx](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
+  auto It = llvm::unique(
+      AvailabilityAttrs, [&Ctx](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
         if (LHS->getPlatform() != RHS->getPlatform())
           return false;
 
