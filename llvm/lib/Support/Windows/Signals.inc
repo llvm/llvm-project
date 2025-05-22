@@ -634,13 +634,13 @@ static void Cleanup(bool ExecuteSignalHandlers) {
   LeaveCriticalSection(&CriticalSection);
 }
 
-void llvm::sys::RunInterruptHandlers() {
+void llvm::sys::RunInterruptHandlers(bool ExecuteSignalHandlers) {
   // The interrupt handler may be called from an interrupt, but it may also be
   // called manually (such as the case of report_fatal_error with no registered
   // error handler). We must ensure that the critical section is properly
   // initialized.
   InitializeThreading();
-  Cleanup(true);
+  Cleanup(ExecuteSignalHandlers);
 }
 
 /// Find the Windows Registry Key for a given location.
@@ -847,7 +847,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
-  Cleanup(true);
+  Cleanup(/*ExecuteSignalHandlers=*/true);
 
   // Write out the exception code.
   if (ep && ep->ExceptionRecord)
@@ -887,7 +887,7 @@ static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType) {
   // This function is only ever called when a CTRL-C or similar control signal
   // is fired. Killing a process in this way is normal, so don't trigger the
   // signal handlers.
-  Cleanup(false);
+  Cleanup(/*ExecuteSignalHandlers=*/false);
 
   // If an interrupt function has been set, go and run one it; otherwise,
   // the process dies.

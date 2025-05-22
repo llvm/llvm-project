@@ -118,7 +118,7 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
   // If we reached here, we are failing ungracefully. Run the interrupt handlers
   // to make sure any special cleanups get done, in particular that we remove
   // files registered with RemoveFileOnSignal.
-  sys::RunInterruptHandlers();
+  sys::RunInterruptHandlers(GenCrashDiag);
 
   if (GenCrashDiag)
     abort();

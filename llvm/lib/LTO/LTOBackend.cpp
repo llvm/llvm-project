@@ -290,8 +290,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.AAPipeline.empty()) {
     AAManager AA;
     if (auto Err = PB.parseAAPipeline(AA, Conf.AAPipeline)) {
-      report_fatal_error(Twine("unable to parse AA pipeline description '") +
-                         Conf.AAPipeline + "': " + toString(std::move(Err)));
+      reportFatalUsageError(Twine("unable to parse AA pipeline description '") +
+                            Conf.AAPipeline + "': " + toString(std::move(Err)));
     }
     // Register the AA manager first so that our version is the one used.
     FAM.registerPass([&] { return std::move(AA); });
@@ -331,8 +331,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   // Parse a custom pipeline if asked to.
   if (!Conf.OptPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, Conf.OptPipeline)) {
-      report_fatal_error(Twine("unable to parse pass pipeline description '") +
-                         Conf.OptPipeline + "': " + toString(std::move(Err)));
+      reportFatalUsageError(
+          Twine("unable to parse pass pipeline description '") +
+          Conf.OptPipeline + "': " + toString(std::move(Err)));
     }
   } else if (IsThinLTO) {
     MPM.addPass(PB.buildThinLTODefaultPipeline(OL, ImportSummary));

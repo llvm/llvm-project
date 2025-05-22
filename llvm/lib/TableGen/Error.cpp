@@ -43,7 +43,7 @@ static void PrintMessage(ArrayRef<SMLoc> Loc, SourceMgr::DiagKind Kind,
 // Run file cleanup handlers and then exit fatally (with non-zero exit code).
 [[noreturn]] inline static void fatal_exit() {
   // The following call runs the file cleanup handlers.
-  sys::RunInterruptHandlers();
+  sys::RunInterruptHandlers(/*ExecuteSignalHandlers=*/true);
   std::exit(1);
 }
 
