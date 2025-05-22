@@ -66,14 +66,12 @@ namespace PAuthGadgetScanner {
 }
 
 [[maybe_unused]] static void traceReg(const BinaryContext &BC, StringRef Label,
-                                      ErrorOr<MCPhysReg> Reg) {
+                                      MCPhysReg Reg) {
   dbgs() << "    " << Label << ": ";
-  if (Reg.getError())
-    dbgs() << "(error)";
-  else if (*Reg == BC.MIB->getNoRegister())
+  if (Reg == BC.MIB->getNoRegister())
     dbgs() << "(none)";
   else
-    dbgs() << BC.MRI->getName(*Reg);
+    dbgs() << BC.MRI->getName(Reg);
   dbgs() << "\n";
 }
 
