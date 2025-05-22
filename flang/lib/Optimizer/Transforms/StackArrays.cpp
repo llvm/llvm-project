@@ -805,7 +805,7 @@ void AllocMemConversion::insertLifetimeMarkers(
   if (!dl || !kindMap)
     return;
   llvm::StringRef attrName = fir::getHasLifetimeMarkerAttrName();
-  // Do not add lifetime markers, of the alloca already has any.
+  // Do not add lifetime markers if the alloca already has any.
   if (newAlloc->hasAttr(attrName))
     return;
   if (std::optional<int64_t> size =
