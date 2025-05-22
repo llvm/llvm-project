@@ -1136,7 +1136,6 @@ int main(int argc, char **argv) {
     if (SaveLinkedModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".linked.bc";
-      std::string ErrMsg;
 
       if (!CodeGen.writeMergedModules(ModuleFilename))
         error("writing linked module failed.");
@@ -1150,7 +1149,6 @@ int main(int argc, char **argv) {
     if (SaveModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".merged.bc";
-      std::string ErrMsg;
 
       if (!CodeGen.writeMergedModules(ModuleFilename))
         error("writing merged module failed.");

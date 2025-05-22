@@ -712,7 +712,7 @@ public:
 
   /// Returns the candidates for the primary function template.
   ArrayRef<FunctionTemplateDecl *> getCandidates() const {
-    return {getTrailingObjects<FunctionTemplateDecl *>(), NumCandidates};
+    return getTrailingObjects(NumCandidates);
   }
 };
 
@@ -781,16 +781,15 @@ protected:
   bool loadLazySpecializationsImpl(llvm::ArrayRef<TemplateArgument> Args,
                                    TemplateParameterList *TPL = nullptr) const;
 
-  template <class EntryType, typename ...ProfileArguments>
-  typename SpecEntryTraits<EntryType>::DeclType*
+  template <class EntryType, typename... ProfileArguments>
+  typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
-                         void *&InsertPos, ProfileArguments &&...ProfileArgs);
+                         void *&InsertPos, ProfileArguments... ProfileArgs);
 
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationLocally(llvm::FoldingSetVector<EntryType> &Specs,
-                            void *&InsertPos,
-                            ProfileArguments &&...ProfileArgs);
+                            void *&InsertPos, ProfileArguments... ProfileArgs);
 
   template <class Derived, class EntryType>
   void addSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
@@ -1326,8 +1325,7 @@ public:
   /// Returns the type constraint associated with this template parameter (if
   /// any).
   const TypeConstraint *getTypeConstraint() const {
-    return TypeConstraintInitialized ? getTrailingObjects<TypeConstraint>() :
-         nullptr;
+    return TypeConstraintInitialized ? getTrailingObjects() : nullptr;
   }
 
   void setTypeConstraint(ConceptReference *CR,
@@ -1712,7 +1710,7 @@ public:
   /// pack.
   TemplateParameterList *getExpansionTemplateParameters(unsigned I) const {
     assert(I < NumExpandedParams && "Out-of-range expansion type index");
-    return getTrailingObjects<TemplateParameterList *>()[I];
+    return getTrailingObjects()[I];
   }
 
   const DefArgStorage &getDefaultArgStorage() const { return DefaultArgument; }
@@ -1860,7 +1858,8 @@ class ClassTemplateSpecializationDecl : public CXXRecordDecl,
   /// This needs to be cached as deduction is performed during declaration,
   /// and we need the information to be preserved so that it is consistent
   /// during instantiation.
-  bool StrictPackMatch : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned StrictPackMatch : 1;
 
 protected:
   ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
@@ -3255,8 +3254,7 @@ public:
                      unsigned NumTemplateArgs);
 
   ArrayRef<TemplateArgument> getTemplateArguments() const {
-    return ArrayRef<TemplateArgument>(getTrailingObjects<TemplateArgument>(),
-                                      NumTemplateArgs);
+    return getTrailingObjects(NumTemplateArgs);
   }
   void setTemplateArguments(ArrayRef<TemplateArgument> Converted);
 

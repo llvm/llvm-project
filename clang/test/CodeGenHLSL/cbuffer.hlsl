@@ -102,7 +102,7 @@ typedef uint32_t4 uint32_t8[2];
 typedef uint4 T1;
 typedef T1 T2[2]; // check a double typedef
 
-cbuffer CBTypedefArray {
+cbuffer CBTypedefArray : register(space2) {
   uint32_t8 t1[2];
   T2 t2[2];
 }
@@ -133,11 +133,11 @@ struct D {
 
 // CHECK: @CBStructs.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBStructs,
 // CHECK-SAME: 246, 0, 16, 32, 64, 144, 238, 240))
-// CHECK: @a = external addrspace(2) global target("dx.Layout", %A, 8, 0), align 8
-// CHECK: @b = external addrspace(2) global target("dx.Layout", %B, 14, 0, 8), align 8
-// CHECK: @c = external addrspace(2) global target("dx.Layout", %C, 24, 0, 16), align 8
-// CHECK: @array_of_A = external addrspace(2) global [5 x target("dx.Layout", %A, 8, 0)], align 8
-// CHECK: @d = external addrspace(2) global target("dx.Layout", %__cblayout_D, 94, 0), align 8
+// CHECK: @a = external addrspace(2) global target("dx.Layout", %A, 8, 0), align 1
+// CHECK: @b = external addrspace(2) global target("dx.Layout", %B, 14, 0, 8), align 1
+// CHECK: @c = external addrspace(2) global target("dx.Layout", %C, 24, 0, 16), align 1
+// CHECK: @array_of_A = external addrspace(2) global [5 x target("dx.Layout", %A, 8, 0)], align 1
+// CHECK: @d = external addrspace(2) global target("dx.Layout", %__cblayout_D, 94, 0), align 1
 // CHECK: @e = external addrspace(2) global half, align 2
 // CHECK: @f = external addrspace(2) global <3 x i16>, align 8
 
@@ -173,10 +173,10 @@ cbuffer CBClasses {
 
 // CHECK: @CBClasses.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBClasses,
 // CHECK-SAME: 260, 0, 16, 32, 112))
-// CHECK: @k = external addrspace(2) global target("dx.Layout", %K, 4, 0), align 4
-// CHECK: @l = external addrspace(2) global target("dx.Layout", %L, 8, 0, 4), align 4
-// CHECK: @m = external addrspace(2) global target("dx.Layout", %M, 68, 0), align 4
-// CHECK: @ka = external addrspace(2) global [10 x target("dx.Layout", %K, 4, 0)], align 4
+// CHECK: @k = external addrspace(2) global target("dx.Layout", %K, 4, 0), align 1
+// CHECK: @l = external addrspace(2) global target("dx.Layout", %L, 8, 0, 4), align 1
+// CHECK: @m = external addrspace(2) global target("dx.Layout", %M, 68, 0), align 1
+// CHECK: @ka = external addrspace(2) global [10 x target("dx.Layout", %K, 4, 0)], align 1
 
 struct Test {
     float a, b;
@@ -184,13 +184,13 @@ struct Test {
 
 // CHECK: @CBMix.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBMix,
 // CHECK-SAME: 170, 0, 24, 32, 120, 128, 136, 144, 152, 160, 168))
-// CHECK: @test = external addrspace(2) global [2 x target("dx.Layout", %Test, 8, 0, 4)], align 4
+// CHECK: @test = external addrspace(2) global [2 x target("dx.Layout", %Test, 8, 0, 4)], align 1
 // CHECK: @f1 = external addrspace(2) global float, align 4
 // CHECK: @f2 = external addrspace(2) global [3 x [2 x <2 x float>]], align 8
 // CHECK: @f3 = external addrspace(2) global float, align 4
-// CHECK: @f4 = external addrspace(2) global target("dx.Layout", %anon, 4, 0), align 4
+// CHECK: @f4 = external addrspace(2) global target("dx.Layout", %anon, 4, 0), align 1
 // CHECK: @f5 = external addrspace(2) global double, align 8
-// CHECK: @f6 = external addrspace(2) global target("dx.Layout", %anon.0, 8, 0), align 8
+// CHECK: @f6 = external addrspace(2) global target("dx.Layout", %anon.0, 8, 0), align 1
 // CHECK: @f7 = external addrspace(2) global float, align 4
 // CHECK: @f8 = external addrspace(2) global <1 x double>, align 8
 // CHECK: @f9 = external addrspace(2) global i16, align 2
@@ -266,17 +266,65 @@ cbuffer CB_C {
   double D4;
 }
 
-// CHECK: define internal void @_init_resource_CBScalars.cb()
+// CHECK: define internal void @_init_buffer_CBScalars.cb()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %[[HANDLE1:.*]] = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars, 56, 0, 8, 16, 24, 32, 36, 40, 48))
+// CHECK-NEXT: %CBScalars.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars, 56, 0, 8, 16, 24, 32, 36, 40, 48))
 // CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBScalarss_56_0_8_16_24_32_36_40_48tt(i32 5, i32 1, i32 1, i32 0, i1 false)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars, 56, 0, 8, 16, 24, 32, 36, 40, 48)) %CBScalars.cb_h, ptr @CBScalars.cb, align 4
 
-// CHECK: define internal void @_init_resource_CBArrays.cb()
+// CHECK: define internal void @_init_buffer_CBVectors.cb()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: %[[HANDLE2:.*]] = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBArrays, 708, 0, 48, 112, 176, 224, 608, 624, 656))
+// CHECK-NEXT: %CBVectors.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBVectors, 136, 0, 16, 40, 48, 80, 96, 112))
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBVectorss_136_0_16_40_48_80_96_112tt(i32 0, i32 0, i32 1, i32 0, i1 false)
+// CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBVectors, 136, 0, 16, 40, 48, 80, 96, 112)) %CBVectors.cb_h, ptr @CBVectors.cb, align 4
+
+// CHECK: define internal void @_init_buffer_CBArrays.cb()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %CBArrays.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBArrays, 708, 0, 48, 112, 176, 224, 608, 624, 656))
 // CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBArrayss_708_0_48_112_176_224_608_624_656tt(i32 0, i32 2, i32 1, i32 0, i1 false)
 // CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBArrays, 708, 0, 48, 112, 176, 224, 608, 624, 656)) %CBArrays.cb_h, ptr @CBArrays.cb, align 4
+
+// CHECK: define internal void @_init_buffer_CBTypedefArray.cb()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %CBTypedefArray.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBTypedefArray, 128, 0, 64))
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBTypedefArrays_128_0_64tt(i32 1, i32 2, i32 1, i32 0, i1 false)
+// CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBTypedefArray, 128, 0, 64)) %CBTypedefArray.cb_h, ptr @CBTypedefArray.cb, align 4
+
+// CHECK: define internal void @_init_buffer_CBStructs.cb()
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %CBStructs.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBStructs, 246, 0, 16, 32, 64, 144, 238, 240))
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBStructss_246_0_16_32_64_144_238_240tt(i32 2, i32 0, i32 1, i32 0, i1 false)
+// CHECK-NEXT:   store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBStructs, 246, 0, 16, 32, 64, 144, 238, 240)) %CBStructs.cb_h, ptr @CBStructs.cb, align 4
+
+// CHECK: define internal void @_init_buffer_CBClasses.cb()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %CBClasses.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBClasses, 260, 0, 16, 32, 112))
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBClassess_260_0_16_32_112tt(i32 3, i32 0, i32 1, i32 0, i1 false)
+// CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBClasses, 260, 0, 16, 32, 112)) %CBClasses.cb_h, ptr @CBClasses.cb, align 4
+
+// CHECK: define internal void @_init_buffer_CBMix.cb()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %CBMix.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBMix, 170, 0, 24, 32, 120, 128, 136, 144, 152, 160, 168))
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CBMixs_170_0_24_32_120_128_136_144_152_160_168tt(i32 4, i32 0, i32 1, i32 0, i1 false)
+// CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CBMix, 170, 0, 24, 32, 120, 128, 136, 144, 152, 160, 168)) %CBMix.cb_h, ptr @CBMix.cb, align 4
+
+// CHECK: define internal void @_init_buffer_CB_A.cb()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %CB_A.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_A, 188, 0, 32, 76, 80, 120, 128, 144, 160, 182))
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB_As_188_0_32_76_80_120_128_144_160_182tt(i32 5, i32 0, i32 1, i32 0, i1 false)
+// CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_A, 188, 0, 32, 76, 80, 120, 128, 144, 160, 182)) %CB_A.cb_h, ptr @CB_A.cb, align 4
+
+// CHECK: define internal void @_init_buffer_CB_B.cb()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %CB_B.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_B, 94, 0, 88))
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB_Bs_94_0_88tt(i32 6, i32 0, i32 1, i32 0, i1 false)
+// CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_B, 94, 0, 88)) %CB_B.cb_h, ptr @CB_B.cb, align 4
+
+// CHECK: define internal void @_init_buffer_CB_C.cb()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %CB_C.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_C, 400, 0, 16, 112, 128, 392))
+// CHECK-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB_Cs_400_0_16_112_128_392tt(i32 7, i32 0, i32 1, i32 0, i1 false)
+// CHECK-NEXT: store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_C, 400, 0, 16, 112, 128, 392)) %CB_C.cb_h, ptr @CB_C.cb, align 4
 
 RWBuffer<float> Buf;
 
@@ -287,8 +335,14 @@ void main() {
 
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer.hlsl()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_init_resource_CBScalars.cb()
-// CHECK-NEXT: call void @_init_resource_CBArrays.cb()
+// CHECK-NEXT: call void @_init_buffer_CBScalars.cb()
+// CHECK-NEXT: call void @_init_buffer_CBVectors.cb()
+// CHECK-NEXT: call void @_init_buffer_CBArrays.cb()
+// CHECK-NEXT: call void @_init_buffer_CBTypedefArray.cb()
+// CHECK-NEXT: call void @_init_buffer_CBStructs.cb()
+// CHECK-NEXT: call void @_init_buffer_CBClasses.cb()
+// CHECK-NEXT: call void @_init_buffer_CBMix.cb()
+// CHECK-NEXT: call void @_init_buffer_CB_A.cb()
 
 // CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBTYPEDEFARRAY:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBCLASSES:[0-9]+]],
 // CHECK-SAME: ![[CBMIX:[0-9]+]], ![[CB_A:[0-9]+]], ![[CB_B:[0-9]+]], ![[CB_C:[0-9]+]]}

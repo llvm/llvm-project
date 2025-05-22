@@ -1959,7 +1959,7 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape"> {
   );
 
   let results = (outs
-    Tosa_RankedTensor:$output
+    Tosa_Tensor:$output
   );
 
   list<Availability> availability = [
@@ -2559,6 +2559,7 @@ def Tosa_IfOp : Tosa_Op<"cond_if",
   );
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2597,6 +2598,7 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   );
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 include "mlir/Dialect/Tosa/IR/TosaUtilOps.td"

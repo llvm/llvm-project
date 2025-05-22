@@ -1130,20 +1130,6 @@ define amdgpu_ps void @v_omod_div2_f16_denormals(half %a) #0 {
 ; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v0, 0.5, v0
 ; GFX12-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX12-FAKE16-NEXT:    s_endpgm
-; GFX11-TRUE16PLUS-LABEL: v_omod_div2_f16_denormals:
-; GFX11-TRUE16PLUS:       ; %bb.0:
-; GFX11-TRUE16PLUS-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
-; GFX11-TRUE16PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16PLUS-NEXT:    v_mul_f16_e32 v0.l, 0.5, v0.l
-; GFX11-TRUE16PLUS-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-TRUE16PLUS-NEXT:    s_endpgm
-; GFX11-FAKE16PLUS-LABEL: v_omod_div2_f16_denormals:
-; GFX11-FAKE16PLUS:       ; %bb.0:
-; GFX11-FAKE16PLUS-NEXT:    v_add_f16_e32 v0, 1.0, v0
-; GFX11-FAKE16PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16PLUS-NEXT:    v_mul_f16_e32 v0, 0.5, v0
-; GFX11-FAKE16PLUS-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-FAKE16PLUS-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
   %div2 = fmul half %add, 0.5
   store half %div2, ptr addrspace(1) poison
@@ -1201,20 +1187,6 @@ define amdgpu_ps void @v_omod_mul2_f16_denormals(half %a) #0 {
 ; GFX12-FAKE16-NEXT:    v_add_f16_e32 v0, v0, v0
 ; GFX12-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX12-FAKE16-NEXT:    s_endpgm
-; GFX11-TRUE16PLUS-LABEL: v_omod_mul2_f16_denormals:
-; GFX11-TRUE16PLUS:       ; %bb.0:
-; GFX11-TRUE16PLUS-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
-; GFX11-TRUE16PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16PLUS-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.l
-; GFX11-TRUE16PLUS-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-TRUE16PLUS-NEXT:    s_endpgm
-; GFX11-FAKE16PLUS-LABEL: v_omod_mul2_f16_denormals:
-; GFX11-FAKE16PLUS:       ; %bb.0:
-; GFX11-FAKE16PLUS-NEXT:    v_add_f16_e32 v0, 1.0, v0
-; GFX11-FAKE16PLUS-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16PLUS-NEXT:    v_add_f16_e32 v0, v0, v0
-; GFX11-FAKE16PLUS-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-FAKE16PLUS-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
   %mul2 = fadd half %add, %add
   store half %mul2, ptr addrspace(1) poison
@@ -1262,16 +1234,6 @@ define amdgpu_ps void @v_omod_div2_f16_no_denormals(half %a) #3 {
 ; GFX12-FAKE16-NEXT:    v_add_f16_e64 v0, v0, 1.0 div:2
 ; GFX12-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX12-FAKE16-NEXT:    s_endpgm
-; GFX11-TRUE16PLUS-LABEL: v_omod_div2_f16_no_denormals:
-; GFX11-TRUE16PLUS:       ; %bb.0:
-; GFX11-TRUE16PLUS-NEXT:    v_add_f16_e64 v0.l, v0.l, 1.0 div:2
-; GFX11-TRUE16PLUS-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-TRUE16PLUS-NEXT:    s_endpgm
-; GFX11-FAKE16PLUS-LABEL: v_omod_div2_f16_no_denormals:
-; GFX11-FAKE16PLUS:       ; %bb.0:
-; GFX11-FAKE16PLUS-NEXT:    v_add_f16_e64 v0, v0, 1.0 div:2
-; GFX11-FAKE16PLUS-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX11-FAKE16PLUS-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
   %div2 = fmul half %add, 0.5
   store half %div2, ptr addrspace(1) poison

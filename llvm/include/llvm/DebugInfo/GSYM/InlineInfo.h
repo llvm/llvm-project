@@ -58,12 +58,12 @@ class GsymReader;
 ///
 struct InlineInfo {
 
-  uint32_t Name; ///< String table offset in the string table.
-  uint32_t CallFile; ///< 1 based file index in the file table.
-  uint32_t CallLine; ///< Source line number.
+  uint32_t Name = 0;     ///< String table offset in the string table.
+  uint32_t CallFile = 0; ///< 1 based file index in the file table.
+  uint32_t CallLine = 0; ///< Source line number.
   AddressRanges Ranges;
   std::vector<InlineInfo> Children;
-  InlineInfo() : Name(0), CallFile(0), CallLine(0) {}
+  InlineInfo() = default;
   void clear() {
     Name = 0;
     CallFile = 0;

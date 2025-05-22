@@ -907,7 +907,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   if (MLTAL.getNumSubstitutedLevels() == 0)
     return ConstrExpr;
 
-  Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/false);
+  Sema::SFINAETrap SFINAE(S);
 
   Sema::InstantiatingTemplate Inst(
       S, DeclInfo.getLocation(),
@@ -1999,8 +1999,9 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
   });
 
   if (NC.getCompoundKind() == FormulaType::Kind) {
+    auto SizeLeft = Left.size();
     Res = std::move(Left);
-    Res.reserve(Left.size() + Right.size());
+    Res.reserve(SizeLeft + Right.size());
     std::for_each(std::make_move_iterator(Right.begin()),
                   std::make_move_iterator(Right.end()), Add);
     return Res;

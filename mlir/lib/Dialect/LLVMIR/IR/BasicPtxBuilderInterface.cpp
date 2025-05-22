@@ -130,7 +130,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
 
   // Tablegen doesn't accept $, so we use %, but inline assembly uses $.
   // Replace all % with $
-  std::replace(ptxInstruction.begin(), ptxInstruction.end(), '%', '$');
+  llvm::replace(ptxInstruction, '%', '$');
 
   return rewriter.create<LLVM::InlineAsmOp>(
       interfaceOp->getLoc(),

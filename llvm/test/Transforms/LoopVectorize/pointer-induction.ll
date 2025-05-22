@@ -38,8 +38,7 @@ define void @a(ptr readnone %b) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i8> [[REVERSE]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP6]], splat (i1 true)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i8> [[REVERSE]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
