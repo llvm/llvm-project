@@ -1558,13 +1558,6 @@ void clang::InitializePreprocessor(Preprocessor &PP,
                                    const PCHContainerReader &PCHContainerRdr,
                                    const FrontendOptions &FEOpts,
                                    const CodeGenOptions &CodeGenOpts) {
-
-  if (all_of(FEOpts.Inputs,
-             [](const FrontendInputFile &FI) { return FI.isPreprocessed(); })) {
-    PP.SetDisableMacroExpansion();
-    return;
-  }
-
   const LangOptions &LangOpts = PP.getLangOpts();
   std::string PredefineBuffer;
   PredefineBuffer.reserve(4080);
