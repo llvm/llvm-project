@@ -2195,19 +2195,13 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         if (!resultTy)
           return failure();
         ArrayAttr operandAttrs = convertAsmInlineOperandAttrs(*callInst);
-        bool hasTailCallKind =
-            callInst->getTailCallKind() != llvm::CallInst::TCK_None;
         return builder
             .create<InlineAsmOp>(
                 loc, resultTy, *operands,
                 builder.getStringAttr(asmI->getAsmString()),
                 builder.getStringAttr(asmI->getConstraintString()),
                 asmI->hasSideEffects(), asmI->isAlignStack(),
-                hasTailCallKind
-                    ? TailCallKindAttr::get(mlirModule.getContext(),
-                                            convertTailCallKindFromLLVM(
-                                                callInst->getTailCallKind()))
-                    : nullptr,
+                convertTailCallKindFromLLVM(callInst->getTailCallKind()),
                 AsmDialectAttr::get(
                     mlirModule.getContext(),
                     convertAsmDialectFromLLVM(asmI->getDialect())),
