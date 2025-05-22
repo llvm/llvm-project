@@ -669,6 +669,21 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
       VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
+
+    if (!S.getLangOpts().CPlusPlus23 && VD == S.EvaluatingDecl) {
+      if (!S.getLangOpts().CPlusPlus14 &&
+          !VD->getType().isConstant(S.getASTContext())) {
+        // Diagnose as non-const read.
+        diagnoseNonConstVariable(S, OpPC, VD);
+      } else {
+        const SourceInfo &Loc = S.Current->getSource(OpPC);
+        // Diagnose as "read of object outside its lifetime".
+        S.FFDiag(Loc, diag::note_constexpr_access_uninit)
+            << AK << /*IsIndeterminate=*/false;
+      }
+      return false;
+    }
+
     if (VD->getAnyInitializer()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
