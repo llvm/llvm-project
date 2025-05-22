@@ -1745,6 +1745,12 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     case AtomicRMWInst::FMin:
       IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin;
       break;
+    case AtomicRMWInst::USubCond:
+      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_usub_cond;
+      break;
+    case AtomicRMWInst::USubSat:
+      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_usub_sat;
+      break;
     case AtomicRMWInst::FSub: {
       reportFatalUsageError(
           "atomic floating point subtraction not supported for "
@@ -1771,13 +1777,10 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     case AtomicRMWInst::UIncWrap:
     case AtomicRMWInst::UDecWrap:
       reportFatalUsageError("wrapping increment/decrement not supported for "
-                            "buffer resources and should've ben expanded away");
+                            "buffer resources and should've been expanded away");
       break;
     case AtomicRMWInst::BAD_BINOP:
       llvm_unreachable("Not sure how we got a bad binop");
-    case AtomicRMWInst::USubCond:
-    case AtomicRMWInst::USubSat:
-      break;
     }
   }
 
