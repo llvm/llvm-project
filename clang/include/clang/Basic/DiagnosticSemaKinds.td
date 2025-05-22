@@ -12445,7 +12445,7 @@ def warn_zero_as_null_pointer_constant : Warning<
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
 def warn_not_eliding_copy_on_return : Warning<
-  "not eliding copy on return">, 
+  "not eliding copy on return">,
   InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
 
 def err_nullability_cs_multilevel : Error<
@@ -13347,6 +13347,8 @@ def err_amdgcn_processor_is_arg_not_literal
 def err_amdgcn_processor_is_arg_invalid_value
     : Error<"the argument to __builtin_amdgcn_processor_is must be a valid "
             "AMDGCN processor identifier; '%0' is not valid">;
+def note_amdgcn_processor_is_valid_options
+    : Note<"valid AMDGCN processor identifiers are: %0">;
 def err_amdgcn_is_invocable_arg_invalid_value
     : Error<"the argument to __builtin_amdgcn_is_invocable must be either a "
             "target agnostic builtin or an AMDGCN target specific builtin; `%0`"

@@ -393,10 +393,18 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
     }
 
     StringRef N = GFX->getString();
-    if (!Ctx.getTargetInfo().isValidCPUName(N) &&
-        (!Ctx.getAuxTargetInfo() ||
-         !Ctx.getAuxTargetInfo()->isValidCPUName(N))) {
+    const TargetInfo &TI = Ctx.getTargetInfo();
+    const TargetInfo *AuxTI = Ctx.getAuxTargetInfo();
+    if (!TI.isValidCPUName(N) && (!AuxTI || !AuxTI->isValidCPUName(N))) {
       Diag(Loc, diag::err_amdgcn_processor_is_arg_invalid_value) << N;
+      SmallVector<StringRef, 32> ValidList;
+      if (TI.getTriple().getVendor() == llvm::Triple::VendorType::AMD)
+        TI.fillValidCPUList(ValidList);
+      else if (AuxTI) // Since the BI is present it must be and AMDGPU triple.
+        AuxTI->fillValidCPUList(ValidList);
+      if (!ValidList.empty())
+        Diag(Loc, diag::note_amdgcn_processor_is_valid_options)
+            << llvm::join(ValidList, ", ");
       return nullptr;
     }
     if (Ctx.getTargetInfo().getTriple().isSPIRV()) {

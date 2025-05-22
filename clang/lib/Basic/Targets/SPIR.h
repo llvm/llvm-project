@@ -453,6 +453,7 @@ public:
   // This is only needed for validating arguments passed to
   // __builtin_amdgcn_processor_is
   bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 };
 
 } // namespace targets

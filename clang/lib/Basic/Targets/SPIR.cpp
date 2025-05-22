@@ -156,3 +156,8 @@ void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
 bool SPIRV64AMDGCNTargetInfo::isValidCPUName(StringRef CPU) const {
   return AMDGPUTI.isValidCPUName(CPU);
 }
+
+void SPIRV64AMDGCNTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  return AMDGPUTI.fillValidCPUList(Values);
+}

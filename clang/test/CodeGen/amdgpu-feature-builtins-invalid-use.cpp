@@ -28,6 +28,7 @@ void invalid_uses(int *p, int x, const __amdgpu_feature_predicate_t &lv,
 
 void invalid_invocations(int x, const char* str) {
     // CHECK: error: the argument to __builtin_amdgcn_processor_is must be a valid AMDGCN processor identifier; 'not_an_amdgcn_gfx_id' is not valid
+    // CHECK-DAG: note: valid AMDGCN processor identifiers are: {{.*}}gfx{{.*}}
     if (__builtin_amdgcn_processor_is("not_an_amdgcn_gfx_id")) return;
     // CHECK: error: the argument to __builtin_amdgcn_processor_is must be a string literal
     if (__builtin_amdgcn_processor_is(str)) return;
