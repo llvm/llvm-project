@@ -8,8 +8,10 @@ from dap_server import Source
 import lldbdap_testcase
 
 
-# @skipIfWindows
 class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
+    # When using PDB, we need to have debug information to break on assembly_func,
+    # but this test relies on us not having debug information for that function.
+    @skipIfWindows
     def test_can_break_in_source_references(self):
         """Tests hitting assembly source breakpoints"""
         program = self.getBuildArtifact("a.out")
