@@ -693,6 +693,52 @@ TEST(RangeSelectorTest, ConstructExprNoArgs) {
   EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue(""));
 }
 
+TEST(RangeSelectorTest, ConstructExprArgsDirectInitialization) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int);
+    };
+    void f() {
+      C c(1, 2);
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxConstructExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1, 2"));
+}
+
+TEST(RangeSelectorTest, ConstructExprArgsDirectBraceInitialization) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int);
+    };
+    void f() {
+      C c{1, 2};
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxConstructExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1, 2"));
+}
+
+TEST(RangeSelectorTest, ConstructExprArgsImplicitConstruction) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int = 42);
+    };
+    void sink(C);
+    void f() {
+      sink(1);
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(
+      Code,
+      cxxConstructExpr(ignoringElidableConstructorCall(cxxConstructExpr()))
+          .bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1"));
+}
+
 TEST(RangeSelectorTest, StatementsOp) {
   StringRef Code = R"cc(
     void g();

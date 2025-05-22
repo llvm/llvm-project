@@ -198,7 +198,7 @@ __device__ int read_pms() {
 
 __device__ void sync() {
 
-// CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
+// CHECK: call void @llvm.nvvm.bar.sync(i32 0)
 
   __nvvm_bar_sync(0);
 
@@ -259,7 +259,7 @@ __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
   __nvvm_membar_gl();
 // CHECK: call void @llvm.nvvm.membar.sys()
   __nvvm_membar_sys();
-// CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
+// CHECK: call void @llvm.nvvm.barrier0()
   __syncthreads();
 }
 

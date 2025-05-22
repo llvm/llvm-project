@@ -1627,7 +1627,7 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
           CmdArgs,
           llvm::memprof::getMemprofOptionsSymbolDarwinLinkageName().data());
 
-  const XRayArgs &XRay = getXRayArgs();
+  const XRayArgs &XRay = getXRayArgs(Args);
   if (XRay.needsXRayRt()) {
     AddLinkRuntimeLib(Args, CmdArgs, "xray");
     AddLinkRuntimeLib(Args, CmdArgs, "xray-basic");

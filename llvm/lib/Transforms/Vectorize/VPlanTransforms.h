@@ -53,9 +53,7 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  static std::unique_ptr<VPlan>
-  buildPlainCFG(Loop *TheLoop, LoopInfo &LI,
-                DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop, LoopInfo &LI);
 
   /// Prepare the plan for vectorization. It will introduce a dedicated
   /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
@@ -224,6 +222,15 @@ struct VPlanTransforms {
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                      unsigned VectorRegWidth);
+
+  /// Predicate and linearize the control-flow in the only loop region of
+  /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
+  /// header, otherwise use all-true for the header mask. Masks for blocks are
+  /// added to a block-to-mask map which is returned in order to be used later
+  /// for wide recipe construction. This argument is temporary and will be
+  /// removed in the future.
+  static DenseMap<VPBasicBlock *, VPValue *>
+  introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
 };
 
 } // namespace llvm

@@ -758,6 +758,10 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return success();
   }
 
+  // check rank and sizes early so later checks can assume shaped operands
+  if (!levelCheckRanksAndSizes(op))
+    return failure();
+
   // additional level checks from spec 0.70
   if (!levelCheckPool<tosa::AvgPool2dOp>(op) ||
       !levelCheckConv<tosa::Conv2DOp>(op) ||
@@ -767,10 +771,6 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
       !levelCheckPool<tosa::MaxPool2dOp>(op) ||
       !levelCheckFFT<tosa::RFFT2dOp>(op) || !levelCheckTransposeConv2d(op) ||
       !levelCheckResize(op)) {
-    return failure();
-  }
-
-  if (!levelCheckRanksAndSizes(op)) {
     return failure();
   }
 
@@ -1248,10 +1248,8 @@ void TosaValidation::runOnOperation() {
       return signalPassFailure();
 
     if (!allowInvalidOpDatatypeCombinations &&
-        failed(profileComp.checkInvalid(op))) {
-      op->emitOpError("illegal: operand/result data types not supported");
+        failed(profileComp.checkInvalid(op)))
       return signalPassFailure();
-    }
 
     // Some uses of TOSA rely on the constant operands of particular
     // operations.

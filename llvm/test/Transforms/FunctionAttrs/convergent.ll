@@ -70,17 +70,17 @@ define i32 @indirect_non_convergent_call(ptr %f) convergent norecurse {
   ret i32 %a
 }
 
-declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32) convergent
+declare void @llvm.nvvm.barrier0() convergent
 
 define i32 @intrinsic() convergent {
   ; Implicitly convergent, because the intrinsic is convergent.
 ; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@intrinsic
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
+; CHECK-NEXT:    call void @llvm.nvvm.barrier0()
 ; CHECK-NEXT:    ret i32 0
 ;
-  call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
+  call void @llvm.nvvm.barrier0()
   ret i32 0
 }
 

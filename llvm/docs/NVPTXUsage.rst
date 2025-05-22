@@ -199,58 +199,21 @@ map in the following way to CUDA builtins:
 Barriers
 --------
 
-'``llvm.nvvm.barrier.cta.*``'
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.nvvm.barrier0``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.barrier.cta.sync(i32 %id, i32 %n)
-  declare void @llvm.nvvm.barrier.cta.sync.all(i32 %id)
-  declare void @llvm.nvvm.barrier.cta.arrive(i32 %id, i32 %n)
-
-  declare void @llvm.nvvm.barrier.cta.sync.aligned(i32 %id, i32 %n)
-  declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %id)
-  declare void @llvm.nvvm.barrier.cta.arrive.aligned(i32 %id, i32 %n)
+  declare void @llvm.nvvm.barrier0()
 
 Overview:
 """""""""
 
-The '``@llvm.nvvm.barrier.cta.*``' family of intrinsics perform barrier
-synchronization and communication within a CTA. They can be used by the threads
-within the CTA for synchronization and communication.
-
-Semantics:
-""""""""""
-
-Operand %id specifies a logical barrier resource and must fall within the range
-0 through 15. When present, operand %n specifies the number of threads
-participating in the barrier. When specifying a thread count, the value must be
-a multiple of the warp size. With the '``@llvm.nvvm.barrier.cta.sync.*``'
-variants, the '``.all``' suffix indicates that all threads in the CTA should
-participate in the barrier and the %n operand is not present.
-
-All forms of the '``@llvm.nvvm.barrier.cta.*``' intrinsic cause the executing
-thread to wait for all non-exited threads from its warp and then marks the
-warp's arrival at the barrier. In addition to signaling its arrival at the 
-barrier, the '``@llvm.nvvm.barrier.cta.sync.*``' intrinsics cause the executing
-thread to wait for non-exited threads of all other warps participating in the
-barrier to arrive. On the other hand, the '``@llvm.nvvm.barrier.cta.arrive.*``'
-intrinsic does not cause the executing thread to wait for threads of other
-participating warps.
-
-When a barrier completes, the waiting threads are restarted without delay,
-and the barrier is reinitialized so that it can be immediately reused.
-
-The '``@llvm.nvvm.barrier.cta.*``' intrinsic has an optional '``.aligned``'
-modifier to indicate textual alignment of the barrier. When specified, it
-indicates that all threads in the CTA will execute the same
-'``@llvm.nvvm.barrier.cta.*``' instruction. In conditionally executed code, an
-aligned '``@llvm.nvvm.barrier.cta.*``' instruction should only be used if it is
-known that all threads in the CTA evaluate the condition identically, otherwise
-behavior is undefined.
+The '``@llvm.nvvm.barrier0()``' intrinsic emits a PTX ``bar.sync 0``
+instruction, equivalent to the ``__syncthreads()`` call in CUDA.
 
 Electing a thread
 -----------------

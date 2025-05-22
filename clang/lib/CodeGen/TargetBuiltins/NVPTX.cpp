@@ -1160,22 +1160,6 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_fence_sc_cluster:
     return Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::nvvm_fence_sc_cluster));
-  case NVPTX::BI__nvvm_bar_sync:
-    return Builder.CreateCall(
-        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_aligned_all),
-        EmitScalarExpr(E->getArg(0)));
-  case NVPTX::BI__syncthreads:
-    return Builder.CreateCall(
-        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_aligned_all),
-        Builder.getInt32(0));
-  case NVPTX::BI__nvvm_barrier_sync:
-    return Builder.CreateCall(
-        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_all),
-        EmitScalarExpr(E->getArg(0)));
-  case NVPTX::BI__nvvm_barrier_sync_cnt:
-    return Builder.CreateCall(
-        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync),
-        {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
   default:
     return nullptr;
   }

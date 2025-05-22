@@ -122,6 +122,17 @@ def generate_report(
             ]
         )
 
+    if failures or return_code != 0:
+        report.extend(
+            [
+                "",
+                "If these failures are unrelated to your changes (for example "
+                "tests are broken or flaky at HEAD), please open an issue at "
+                "https://github.com/llvm/llvm-project/issues and add the "
+                "`infrastructure` label.",
+            ]
+        )
+
     report = "\n".join(report)
     if len(report.encode("utf-8")) > size_limit:
         return generate_report(

@@ -134,6 +134,7 @@ static_library("CodeGen") {
     "MachineDomTreeUpdater.cpp",
     "MachineDominanceFrontier.cpp",
     "MachineDominators.cpp",
+    "MachineFloatingPointPredicateUtils.cpp",
     "MachineFrameInfo.cpp",
     "MachineFunction.cpp",
     "MachineFunctionAnalysis.cpp",

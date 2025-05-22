@@ -1177,7 +1177,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (!RepR && !isa<VPWidenRecipe>(&R))
         continue;
-      if (RepR && RepR->isSingleScalar())
+      if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);

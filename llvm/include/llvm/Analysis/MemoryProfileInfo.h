@@ -13,9 +13,8 @@
 #ifndef LLVM_ANALYSIS_MEMORYPROFILEINFO_H
 #define LLVM_ANALYSIS_MEMORYPROFILEINFO_H
 
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/ProfileData/MemProfCommon.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include <map>
 
 namespace llvm {

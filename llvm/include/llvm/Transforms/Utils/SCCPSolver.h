@@ -143,11 +143,12 @@ public:
 
   /// getTrackedGlobals - Get and return the set of inferred initializers for
   /// global variables.
-  const DenseMap<GlobalVariable *, ValueLatticeElement> &getTrackedGlobals();
+  const DenseMap<GlobalVariable *, ValueLatticeElement> &
+  getTrackedGlobals() const;
 
   /// getMRVFunctionsTracked - Get the set of functions which return multiple
   /// values tracked by the pass.
-  const SmallPtrSet<Function *, 16> &getMRVFunctionsTracked();
+  const SmallPtrSet<Function *, 16> &getMRVFunctionsTracked() const;
 
   /// markOverdefined - Mark the specified value overdefined.  This
   /// works with both scalars and structs.

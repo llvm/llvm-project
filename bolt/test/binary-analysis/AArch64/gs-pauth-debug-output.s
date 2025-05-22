@@ -24,7 +24,7 @@ simple:
         ret
         .size simple, .-simple
 
-// CHECK-LABEL:Analyzing in function simple, AllocatorId 1
+// CHECK-LABEL:Analyzing function simple, AllocatorId = 1
 // CHECK-NEXT: Binary Function "simple"  {
 // CHECK-NEXT:   Number      : 1
 // CHECK-NEXT:   State       : CFG constructed
@@ -129,7 +129,7 @@ clobber:
         ret
         .size clobber, .-clobber
 
-// CHECK-LABEL:Analyzing in function clobber, AllocatorId 1
+// CHECK-LABEL:Analyzing function clobber, AllocatorId = 1
 // ...
 // CHECK:      Running src register safety analysis...
 // CHECK-NEXT:   SrcSafetyAnalysis::ComputeNext(   mov     w30, #0x0, src-state<SafeToDerefRegs: LR W30 W30_HI , TrustedRegs: LR W30 W30_HI , Insts: >)
@@ -174,7 +174,7 @@ nocfg:
         ret
         .size nocfg, .-nocfg
 
-// CHECK-LABEL:Analyzing in function nocfg, AllocatorId 1
+// CHECK-LABEL:Analyzing function nocfg, AllocatorId = 1
 // CHECK-NEXT: Binary Function "nocfg"  {
 // CHECK-NEXT:   Number      : 3
 // CHECK-NEXT:   State       : disassembled
@@ -254,7 +254,7 @@ nocfg:
 // CHECK-EMPTY:
 // CHECK-NEXT:   Attaching clobbering info to:     00000000:   ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: [0]()>
 
-// CHECK-LABEL:Analyzing in function main, AllocatorId 1
+// CHECK-LABEL:Analyzing function main, AllocatorId = 1
         .globl  main
         .type   main,@function
 main:

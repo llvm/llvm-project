@@ -2,9 +2,9 @@
 ; REQUIRES: nvptx-registered-target
 
 ; Make sure LLVM knows about the convergent attribute on the
-; llvm.nvvm.barrier.cta.sync.aligned.all intrinsic.
+; llvm.nvvm.barrier0 intrinsic.
 
-declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32)
+declare void @llvm.nvvm.barrier0()
 
-; CHECK: declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32) #[[ATTRNUM:[0-9]+]]
+; CHECK: declare void @llvm.nvvm.barrier0() #[[ATTRNUM:[0-9]+]]
 ; CHECK: attributes #[[ATTRNUM]] = { convergent nocallback nounwind }

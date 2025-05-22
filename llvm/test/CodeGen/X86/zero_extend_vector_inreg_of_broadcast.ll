@@ -2569,9 +2569,8 @@ define void @vec384_i8_widen_to_i24_factor3_broadcast_to_v16i24_factor16(ptr %in
 ; AVX2-NEXT:    vpaddb 32(%rsi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX2-NEXT:    vpaddb (%rsi), %xmm1, %xmm1
-; AVX2-NEXT:    vpbroadcastb %xmm1, %xmm2
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm1[0],zero,zero,xmm1[0],zero,zero,xmm1[0],zero,zero,xmm1[0],zero,zero,xmm1[0],zero
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpbroadcastb %xmm1, %ymm2
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,255,255,0,255,255,0,255,255,0,255,255,0,255,255,0,0,255,255,0,255,255,0,255,255,0,255,255,0,255,255,0]
 ; AVX2-NEXT:    # ymm3 = mem[0,1,0,1]
@@ -2862,9 +2861,8 @@ define void @vec384_i8_widen_to_i48_factor6_broadcast_to_v8i48_factor8(ptr %in.v
 ; AVX2-NEXT:    vpaddb 32(%rsi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX2-NEXT:    vpaddb (%rsi), %xmm1, %xmm1
-; AVX2-NEXT:    vpbroadcastb %xmm1, %xmm2
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,xmm1[0],zero,zero,zero,zero,zero,xmm1[0],zero,zero,zero,zero,zero,xmm1[0],zero
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpbroadcastb %xmm1, %ymm2
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,255,255,255,255,255,0,255,255,255,255,255,0,255,255,255,0,255,255,255,255,255,0,255,255,255,255,255,0,255,255,255]
 ; AVX2-NEXT:    # ymm3 = mem[0,1,0,1]
@@ -3154,9 +3152,8 @@ define void @vec384_i8_widen_to_i96_factor12_broadcast_to_v4i96_factor4(ptr %in.
 ; AVX2-NEXT:    vpaddb 32(%rsi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX2-NEXT:    vpaddb (%rsi), %xmm1, %xmm1
-; AVX2-NEXT:    vpbroadcastb %xmm1, %xmm2
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0],zero,zero,zero,zero,zero,zero,zero
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpbroadcastb %xmm1, %ymm2
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255]
 ; AVX2-NEXT:    # ymm3 = mem[0,1,0,1]

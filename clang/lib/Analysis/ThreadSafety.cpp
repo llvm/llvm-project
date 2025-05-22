@@ -236,38 +236,34 @@ public:
   }
 
   iterator findLockIter(FactManager &FM, const CapabilityExpr &CapE) {
-    return std::find_if(begin(), end(), [&](FactID ID) {
-      return FM[ID].matches(CapE);
-    });
+    return llvm::find_if(*this,
+                         [&](FactID ID) { return FM[ID].matches(CapE); });
   }
 
   const FactEntry *findLock(FactManager &FM, const CapabilityExpr &CapE) const {
-    auto I = std::find_if(begin(), end(), [&](FactID ID) {
-      return FM[ID].matches(CapE);
-    });
+    auto I =
+        llvm::find_if(*this, [&](FactID ID) { return FM[ID].matches(CapE); });
     return I != end() ? &FM[*I] : nullptr;
   }
 
   const FactEntry *findLockUniv(FactManager &FM,
                                 const CapabilityExpr &CapE) const {
-    auto I = std::find_if(begin(), end(), [&](FactID ID) -> bool {
-      return FM[ID].matchesUniv(CapE);
-    });
+    auto I = llvm::find_if(
+        *this, [&](FactID ID) -> bool { return FM[ID].matchesUniv(CapE); });
     return I != end() ? &FM[*I] : nullptr;
   }
 
   const FactEntry *findPartialMatch(FactManager &FM,
                                     const CapabilityExpr &CapE) const {
-    auto I = std::find_if(begin(), end(), [&](FactID ID) -> bool {
+    auto I = llvm::find_if(*this, [&](FactID ID) -> bool {
       return FM[ID].partiallyMatches(CapE);
     });
     return I != end() ? &FM[*I] : nullptr;
   }
 
   bool containsMutexDecl(FactManager &FM, const ValueDecl* Vd) const {
-    auto I = std::find_if(begin(), end(), [&](FactID ID) -> bool {
-      return FM[ID].valueDecl() == Vd;
-    });
+    auto I = llvm::find_if(
+        *this, [&](FactID ID) -> bool { return FM[ID].valueDecl() == Vd; });
     return I != end();
   }
 };

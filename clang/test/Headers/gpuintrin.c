@@ -887,7 +887,7 @@ __gpu_kernel void foo() {
 // NVPTX-LABEL: define internal void @__gpu_sync_threads(
 // NVPTX-SAME: ) #[[ATTR0]] {
 // NVPTX-NEXT:  [[ENTRY:.*:]]
-// NVPTX-NEXT:    call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
+// NVPTX-NEXT:    call void @llvm.nvvm.barrier0()
 // NVPTX-NEXT:    ret void
 //
 //

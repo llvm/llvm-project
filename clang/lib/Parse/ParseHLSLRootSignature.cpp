@@ -47,6 +47,14 @@ bool RootSignatureParser::parse() {
         return true;
       Elements.push_back(*Table);
     }
+
+    if (tryConsumeExpectedToken(
+            {TokenKind::kw_CBV, TokenKind::kw_SRV, TokenKind::kw_UAV})) {
+      auto Descriptor = parseRootDescriptor();
+      if (!Descriptor.has_value())
+        return true;
+      Elements.push_back(*Descriptor);
+    }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return consumeExpectedToken(TokenKind::end_of_stream,
@@ -153,6 +161,41 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
     return std::nullopt;
 
   return Constants;
+}
+
+std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
+  assert((CurToken.TokKind == TokenKind::kw_CBV ||
+          CurToken.TokKind == TokenKind::kw_SRV ||
+          CurToken.TokKind == TokenKind::kw_UAV) &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind DescriptorKind = CurToken.TokKind;
+
+  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.TokKind))
+    return std::nullopt;
+
+  RootDescriptor Descriptor;
+  switch (DescriptorKind) {
+  default:
+    llvm_unreachable("Switch for consumed token was not provided");
+  case TokenKind::kw_CBV:
+    Descriptor.Type = DescriptorType::CBuffer;
+    break;
+  case TokenKind::kw_SRV:
+    Descriptor.Type = DescriptorType::SRV;
+    break;
+  case TokenKind::kw_UAV:
+    Descriptor.Type = DescriptorType::UAV;
+    break;
+  }
+
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_RootConstants))
+    return std::nullopt;
+
+  return Descriptor;
 }
 
 std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {

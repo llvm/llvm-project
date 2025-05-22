@@ -535,13 +535,8 @@ def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
 
-def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
+def NVVM_Barrier0Op : NVVM_IntrOp<"barrier0"> {
   let assemblyFormat = "attr-dict";
-  string llvmBuilder = [{
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all,
-          {builder.getInt32(0)});
-  }];
 }
 
 def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
@@ -549,14 +544,15 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     Optional<I32>:$barrierId,
     Optional<I32>:$numberOfThreads);
   string llvmBuilder = [{
-    llvm::Value *id = $barrierId ? $barrierId : builder.getInt32(0);
-    if ($numberOfThreads)
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned,
-          {id, $numberOfThreads});
-    else
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all, {id});
+    if ($numberOfThreads && $barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier,
+                {$barrierId, $numberOfThreads});
+    } else if($barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
+                {$barrierId});   
+    } else {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
+    }
   }];
   let hasVerifier = 1;
 

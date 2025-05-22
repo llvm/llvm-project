@@ -3573,7 +3573,8 @@ can read and/or modify state which is not accessible via a regular load
 or store in this module. Volatile operations may use addresses which do
 not point to memory (like MMIO registers). This means the compiler may
 not use a volatile operation to prove a non-volatile access to that
-address has defined behavior.
+address has defined behavior. This includes addresses typically forbidden,
+such as the pointer with bit-value 0.
 
 The allowed side-effects for volatile accesses are limited.  If a
 non-volatile store to a given address would be legal, a volatile
@@ -4292,7 +4293,10 @@ The semantics of non-zero address spaces are target-specific. Memory
 access through a non-dereferenceable pointer is undefined behavior in
 any address space. Pointers with the bit-value 0 are only assumed to
 be non-dereferenceable in address space 0, unless the function is
-marked with the ``null_pointer_is_valid`` attribute.
+marked with the ``null_pointer_is_valid`` attribute. However, *volatile*
+access to any non-dereferenceable address may have defined behavior
+(according to the target), and in this case the attribute is not needed
+even for address 0.
 
 If an object can be proven accessible through a pointer with a
 different address space, the access may be modified to use that

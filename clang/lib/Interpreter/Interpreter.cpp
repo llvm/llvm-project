@@ -654,14 +654,13 @@ void Interpreter::ResetExecutor() { IncrExecutor.reset(); }
 
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
-  LLVM_DEBUG(llvm::dbgs()
-             << "execute-ptu "
-             << ((std::find(PTUs.begin(), PTUs.end(), T) != PTUs.end())
-                     ? std::distance(PTUs.begin(),
-                                     std::find(PTUs.begin(), PTUs.end(), T))
-                     : -1)
-             << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get() << " ("
-             << T.TheModule->getName() << ")]\n");
+  LLVM_DEBUG(
+      llvm::dbgs() << "execute-ptu "
+                   << (llvm::is_contained(PTUs, T)
+                           ? std::distance(PTUs.begin(), llvm::find(PTUs, T))
+                           : -1)
+                   << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get()
+                   << " (" << T.TheModule->getName() << ")]\n");
   if (!IncrExecutor) {
     auto Err = CreateExecutor();
     if (Err)

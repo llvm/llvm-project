@@ -205,10 +205,8 @@ RecordType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
                    llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
                    bool incomplete, bool packed, bool padded,
                    RecordType::RecordKind kind) {
-  if (name && name.getValue().empty()) {
-    emitError() << "identified records cannot have an empty name";
-    return mlir::failure();
-  }
+  if (name && name.getValue().empty())
+    return emitError() << "identified records cannot have an empty name";
   return mlir::success();
 }
 
@@ -421,12 +419,10 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
 mlir::LogicalResult
 IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                 unsigned width, bool isSigned) {
-  if (width < IntType::minBitwidth() || width > IntType::maxBitwidth()) {
-    emitError() << "IntType only supports widths from "
-                << IntType::minBitwidth() << " up to "
-                << IntType::maxBitwidth();
-    return mlir::failure();
-  }
+  if (width < IntType::minBitwidth() || width > IntType::maxBitwidth())
+    return emitError() << "IntType only supports widths from "
+                       << IntType::minBitwidth() << " up to "
+                       << IntType::maxBitwidth();
   return mlir::success();
 }
 
@@ -631,10 +627,9 @@ mlir::LogicalResult
 FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                  llvm::ArrayRef<mlir::Type> argTypes, mlir::Type returnType,
                  bool isVarArg) {
-  if (returnType && mlir::isa<cir::VoidType>(returnType)) {
-    emitError() << "!cir.func cannot have an explicit 'void' return type";
-    return mlir::failure();
-  }
+  if (mlir::isa_and_nonnull<cir::VoidType>(returnType))
+    return emitError()
+           << "!cir.func cannot have an explicit 'void' return type";
   return mlir::success();
 }
 

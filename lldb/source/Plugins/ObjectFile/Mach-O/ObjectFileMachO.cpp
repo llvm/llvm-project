@@ -6649,7 +6649,6 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
 
   offset_t current_string_offset = start_of_filenames;
   offset_t current_segaddrs_offset = start_of_seg_vmaddrs;
-  std::vector<struct image_entry> image_entries;
   for (size_t i = 0; i < modules_count; i++) {
     ModuleSP module_sp = modules.GetModuleAtIndex(i);
 

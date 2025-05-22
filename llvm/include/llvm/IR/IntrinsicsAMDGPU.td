@@ -619,7 +619,7 @@ class AMDGPUCvtScaleFP4FP8BF8ToF1632Intrinsic<LLVMType DstTy, string name> : Def
   [llvm_i32_ty,   // src
    llvm_float_ty, // scale
    llvm_i32_ty],  // src_sel index [0..3]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<2>>]
+  [IntrNoMem, ImmArg<ArgIndex<2>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScale_pk_FromFP8BF8Intrinsic<LLVMType DstTy, string name> : DefaultAttrsIntrinsic<
@@ -646,7 +646,7 @@ class AMDGPUCvtScaleF32ToFP8BF8TiedInputIntrinsic<string name> : DefaultAttrsInt
    llvm_float_ty, // src1
    llvm_float_ty, // scale
    llvm_i1_ty],   // dst_lo_hi_sel[true false]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<4>>]
+  [IntrNoMem, ImmArg<ArgIndex<4>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleFP8BF8ToF16TiedInputIntrinsic<LLVMType DstTy, string name> : DefaultAttrsIntrinsic<
@@ -656,7 +656,7 @@ class AMDGPUCvtScaleFP8BF8ToF16TiedInputIntrinsic<LLVMType DstTy, string name> :
    llvm_float_ty, // scale
    llvm_i32_ty,   // src_sel_index[0..3]
    llvm_i1_ty],   // dst_lo_hi_sel[true false]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]
+  [IntrNoMem, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleF32ToFP4Intrinsic<string name> : DefaultAttrsIntrinsic<
@@ -666,7 +666,7 @@ class AMDGPUCvtScaleF32ToFP4Intrinsic<string name> : DefaultAttrsIntrinsic<
    llvm_float_ty, // src1
    llvm_float_ty, // scale
    llvm_i32_ty],  // dst_sel_index[0..3]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<4>>]
+  [IntrNoMem, ImmArg<ArgIndex<4>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleF16ToFP4TiedInputIntrinsic<LLVMType SrcTy, string name> : DefaultAttrsIntrinsic<
@@ -675,7 +675,7 @@ class AMDGPUCvtScaleF16ToFP4TiedInputIntrinsic<LLVMType SrcTy, string name> : De
    SrcTy,         // src
    llvm_float_ty, // scale
    llvm_i32_ty],  // dest_sel_index [0..3]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]
+  [IntrNoMem, ImmArg<ArgIndex<3>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
@@ -685,7 +685,7 @@ class AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<LLVMType Src0Ty, st
    llvm_i32_ty,   // seed
    llvm_float_ty, // scale
    llvm_i32_ty],  // dst_sel_index[0..3]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<4>>]
+  [IntrNoMem, ImmArg<ArgIndex<4>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 class AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<LLVMType DstTy, string name> : DefaultAttrsIntrinsic<
@@ -694,7 +694,7 @@ class AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<LLVMType DstTy, string name
    llvm_float_ty, // src0
    llvm_i32_ty,   // seed
    llvm_i1_ty],   // dst_lo_hi_sel[true false]
-  [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>]
+  [IntrNoMem, ImmArg<ArgIndex<3>>]
 >, ClangBuiltin<"__builtin_amdgcn_"#name>;
 
 def int_amdgcn_cvt_sr_bf16_f32: AMDGPUCvtScaleSRF32ToBF16F16TiedInputIntrinsic<llvm_v2bf16_ty, "cvt_sr_bf16_f32">;
@@ -1308,7 +1308,7 @@ def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
    llvm_i32_ty],   // flags
   // Attributes lifted from ptrmask + some extra argument attributes.
   [IntrNoMem, ReadNone<ArgIndex<0>>,
-   IntrSpeculatable, IntrWillReturn]>;
+   IntrSpeculatable]>;
 
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
 
@@ -2092,7 +2092,7 @@ def int_amdgcn_s_setreg :
 def int_amdgcn_s_getpc :
   ClangBuiltin<"__builtin_amdgcn_s_getpc">,
   DefaultAttrsIntrinsic<[llvm_i64_ty], [], [NoUndef<RetIndex>, IntrNoMem,
-                                IntrSpeculatable, IntrWillReturn]>;
+                                IntrSpeculatable]>;
 
 // __builtin_amdgcn_interp_mov <param>, <attr_chan>, <attr>, <m0>
 // param values: 0 = P10, 1 = P20, 2 = P0
@@ -2732,7 +2732,7 @@ def int_amdgcn_image_bvh_intersect_ray :
   DefaultAttrsIntrinsic<[llvm_v4i32_ty],
             [llvm_anyint_ty, llvm_float_ty, llvm_v3f32_ty, llvm_anyvector_ty,
              LLVMMatchType<1>, llvm_v4i32_ty],
-            [IntrReadMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+            [IntrReadMem]>;
 
 //===----------------------------------------------------------------------===//
 // GFX11 Intrinsics
@@ -3533,5 +3533,5 @@ def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
 /// backend to allocate the dead lanes for operations within the corresponding
 /// incoming block.
 def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
-    [IntrNoMem, IntrWillReturn, IntrNoCallback]>;
+    [IntrNoMem]>;
 }
