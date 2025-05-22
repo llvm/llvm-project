@@ -562,7 +562,7 @@ TEST_F(FormatTestJS, SpacesInContainerLiterals) {
                "  b: 'bbbbbbbbbbbbbbbbbb'\n"
                "};");
 
-  verifyFormat("f({a: 1, b: 2, c: 3});",
+  verifyFormat("f({a: 1, b: 2, c: 3});\n",
                getChromiumStyle(FormatStyle::LK_JavaScript));
   verifyFormat("f({'a': [{}]});");
 }

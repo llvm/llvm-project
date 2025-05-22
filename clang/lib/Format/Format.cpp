@@ -1892,6 +1892,9 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
   ChromiumStyle.IncludeStyle.IncludeBlocks =
       tooling::IncludeStyle::IBS_Preserve;
 
+  ChromiumStyle.InsertBraces = true;
+  ChromiumStyle.InsertNewlineAtEOF = true;
+
   if (Language == FormatStyle::LK_Java) {
     ChromiumStyle.AllowShortIfStatementsOnASingleLine =
         FormatStyle::SIS_WithoutElse;

@@ -24,6 +24,12 @@ inline FormatStyle getGoogleStyle() {
   return getGoogleStyle(FormatStyle::LK_Cpp);
 }
 
+inline FormatStyle getChromiumStyle() {
+  auto Style = getChromiumStyle(FormatStyle::LK_Cpp);
+  Style.InsertNewlineAtEOF = false;
+  return Style;
+}
+
 // When HandleHash is false, preprocessor directives starting with hash will not
 // be on separate lines.  This is needed because Verilog uses hash for other
 // purposes.

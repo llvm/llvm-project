@@ -5407,7 +5407,7 @@ TEST_F(FormatTest, DoesntRemoveUnknownTokens) {
 }
 
 TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
-  FormatStyle style = getChromiumStyle(FormatStyle::LK_Cpp);
+  FormatStyle style = getChromiumStyle();
   style.IndentWidth = 4;
   style.PPIndentWidth = 1;
 
@@ -5905,7 +5905,7 @@ TEST_F(FormatTest, MacrosWithoutTrailingSemicolon) {
 
   verifyFormat("VISIT_GL_CALL(GenBuffers, void, (GLsizei n, GLuint* buffers), "
                "(n, buffers))",
-               getChromiumStyle(FormatStyle::LK_Cpp));
+               getChromiumStyle());
 
   // See PR41483
   verifyNoChange("/**/ FOO(a)\n"
@@ -11605,7 +11605,7 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   verifyFormat("auto x = [] { A<A<A<A>>> a; };", "auto x=[]{A<A<A<A> >> a;};",
                getGoogleStyle());
 
-  verifyFormat("A<A<int>> a;", getChromiumStyle(FormatStyle::LK_Cpp));
+  verifyFormat("A<A<int>> a;", getChromiumStyle());
 
   // template closer followed by a token that starts with > or =
   verifyFormat("bool b = a<1> > 1;");
@@ -12814,7 +12814,7 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
 }
 
 TEST_F(FormatTest, AttributeClass) {
-  FormatStyle Style = getChromiumStyle(FormatStyle::LK_Cpp);
+  FormatStyle Style = getChromiumStyle();
   verifyFormat("class S {\n"
                "  S(S&&) = default;\n"
                "};",
@@ -15732,7 +15732,7 @@ TEST_F(FormatTest, MergeHandlingInTheFaceOfPreprocessorDirectives) {
                "#define a \\\n"
                "  if      \\\n"
                "  0",
-               getChromiumStyle(FormatStyle::LK_Cpp));
+               getChromiumStyle());
 }
 
 TEST_F(FormatTest, FormatStarDependingOnContext) {
@@ -22542,7 +22542,7 @@ TEST_F(FormatTest, UnderstandsPragmas) {
                "#pragma comment(linker,      \\\n"
                "                 \"argument\" \\\n"
                "                 \"argument\"",
-               getStyleWithColumns(getChromiumStyle(FormatStyle::LK_Cpp), 32));
+               getStyleWithColumns(getChromiumStyle(), 32));
 }
 
 TEST_F(FormatTest, UnderstandsPragmaOmpTarget) {
@@ -26157,7 +26157,7 @@ TEST_F(FormatTest, GoogleDefaultStyle) {
                Style);
 }
 TEST_F(FormatTest, ChromiumDefaultStyle) {
-  FormatStyle Style = getChromiumStyle(FormatStyle::LK_Cpp);
+  FormatStyle Style = getChromiumStyle();
   verifyFormat("extern \"C\" {\n"
                "int foo();\n"
                "}",

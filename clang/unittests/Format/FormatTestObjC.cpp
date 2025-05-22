@@ -951,7 +951,7 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "                styleMask:NSBorderlessWindowMask\n"
       "                  backing:NSBackingStoreBuffered\n"
       "                    defer:NO]);\n"
-      "}");
+      "}\n");
 
   // Respect continuation indent and colon alignment (e.g. when object name is
   // short, and first selector is the longest one)

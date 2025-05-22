@@ -60,7 +60,7 @@ TEST_F(FormatTestJava, Chromium) {
                "        for (;;) f();\n"
                "        if (true) f();\n"
                "    }\n"
-               "}",
+               "}\n",
                getChromiumStyle(FormatStyle::LK_Java));
 }
 
@@ -280,7 +280,7 @@ TEST_F(FormatTestJava, Annotations) {
   verifyFormat("@Partial @Mock DataLoader loader;");
   verifyFormat("@Partial\n"
                "@Mock\n"
-               "DataLoader loader;",
+               "DataLoader loader;\n",
                getChromiumStyle(FormatStyle::LK_Java));
   verifyFormat("@SuppressWarnings(value = \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\")\n"
                "public static int iiiiiiiiiiiiiiiiiiiiiiii;");
