@@ -5315,6 +5315,224 @@ lowerWaveReduceWrtDivergentMask(MachineInstr &MI, MachineBasicBlock &BB,
   return RetBB;
 }
 
+
+static MachineBasicBlock *
+lowerWaveReduceWrtDivergentMask2(MachineInstr &MI, MachineBasicBlock &BB,
+                                const GCNSubtarget &ST, unsigned Opc) {
+  MachineRegisterInfo &MRI = BB.getParent()->getRegInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  // const MachineFunction *MF = BB.getParent();
+  // const TargetRegisterInfo *TrgtRegInfo =
+  // MF->getSubtarget().getRegisterInfo(); Reduction operations depend on
+  // whether the input operand is SGPR or VGPR.
+  Register SrcReg = MI.getOperand(1).getReg();
+  auto SrcRegClass = MRI.getRegClass(SrcReg);
+  // llvm::errs() << TrgtRegInfo->getRegClassName(SrcRegClass) << "\n";
+  bool isSGPR = TRI->isSGPRClass(SrcRegClass);
+  Register DstReg = MI.getOperand(0).getReg();
+  // llvm::errs() << TrgtRegInfo->getRegClassName(MRI.getRegClass(DstReg)) <<
+  // "\n";
+  Register DivergentMaskReg = MI.getOperand(2).getReg();
+  // bool isMaskRegUniform =
+  // TRI->isSGPRClass(MRI.getRegClass(DivergentMaskReg)); llvm::errs() <<
+  // TrgtRegInfo->getRegClassName(MRI.getRegClass(DivergentMaskReg)) << "\n";
+
+  // if (isMaskRegUniform)
+  //   return lowerWaveReduce(MI, BB, ST, Opc);
+
+  MachineBasicBlock *RetBB = nullptr;
+  if (isSGPR) {
+    BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
+    RetBB = &BB;
+  } else {
+
+    MachineBasicBlock::iterator I = BB.end();
+
+    auto [ComputeLoop, ComputeEnd] = splitBlockForLoop(MI, BB, true);
+    auto [InnerLoop, InnerLoopEnd] = splitBlockForLoop(MI, *ComputeLoop, true);
+    auto SReg32XM0RegClass = &AMDGPU::SReg_32_XM0RegClass;
+    auto SReg32RegClass = &AMDGPU::SReg_32RegClass;
+
+    const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
+    const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
+    Register execcopy0 = MRI.createVirtualRegister(WaveMaskRegClass);
+    Register execcopy1 = MRI.createVirtualRegister(WaveMaskRegClass);
+    Register execcopy2 = MRI.createVirtualRegister(WaveMaskRegClass);
+    Register acc0 = MRI.createVirtualRegister(SReg32XM0RegClass);
+    Register acc1 = MRI.createVirtualRegister(SReg32XM0RegClass);
+    Register acc2 = MRI.createVirtualRegister(SReg32XM0RegClass);
+    Register lane0 = MRI.createVirtualRegister(SReg32XM0RegClass);
+    Register lane1 = MRI.createVirtualRegister(SReg32XM0RegClass);
+    Register lane2 = MRI.createVirtualRegister(SReg32XM0RegClass);
+    Register UpdatedAccSGPRReg = MRI.createVirtualRegister(SReg32RegClass);
+    Register AccReg1 = MRI.createVirtualRegister(DstRegClass);
+    Register resultarr0 = MRI.createVirtualRegister(DstRegClass);
+    Register resultarr1 = MRI.createVirtualRegister(DstRegClass);
+    Register resultarr2 = MRI.createVirtualRegister(DstRegClass);
+    Register BPermAddrReg = MRI.createVirtualRegister(DstRegClass);
+    Register UpdatedBPermAddrReg = MRI.createVirtualRegister(DstRegClass);
+    Register addr0 = MRI.createVirtualRegister(DstRegClass);
+    Register addr1 = MRI.createVirtualRegister(DstRegClass);
+    Register addr2 = MRI.createVirtualRegister(DstRegClass);
+    Register UpdatedAccReg = MRI.createVirtualRegister(DstRegClass);
+    Register RemReg = MRI.createVirtualRegister(WaveMaskRegClass);
+    Register UpdatedRemReg =
+        MRI.createVirtualRegister(WaveMaskRegClass);
+    Register index0 = MRI.createVirtualRegister(SReg32RegClass);
+    Register FF1MaskReg = MRI.createVirtualRegister(SReg32RegClass);
+    Register indexlshl4 = MRI.createVirtualRegister(SReg32RegClass);
+    Register ValReg = MRI.createVirtualRegister(SReg32XM0RegClass);
+    Register mask0 = MRI.createVirtualRegister(SReg32XM0RegClass);
+    Register mask1 = MRI.createVirtualRegister(SReg32XM0RegClass);
+    Register mask2 = MRI.createVirtualRegister(SReg32XM0RegClass);
+
+    bool IsWave32 = ST.isWave32();
+
+    uint32_t IdentityValue =
+        (Opc == AMDGPU::S_MIN_U32) ? std::numeric_limits<uint32_t>::max() : 0;
+
+    BuildMI(BB, I, DL,
+            TII->get(IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
+            execcopy0)
+        .addReg(IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC);
+
+    BuildMI(BB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), resultarr0)
+        .addImm(IdentityValue);
+    BuildMI(BB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), addr0)
+        .addImm(0);
+    BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH)).addMBB(ComputeLoop);
+
+    I = ComputeLoop->end();
+
+    auto PhiExecInst =
+        BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::PHI), execcopy1)
+            .addReg(execcopy0)
+            .addMBB(&BB);
+    auto PhiResInst =
+        BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::PHI), resultarr1)
+            .addReg(resultarr0)
+            .addMBB(&BB);
+
+    BuildMI(*ComputeLoop, I, DL,
+            TII->get(IsWave32 ? AMDGPU::S_FF1_I32_B32 : AMDGPU::S_FF1_I32_B64),
+            index0)
+        .addReg(execcopy1);
+
+    BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32), mask0)
+        .addReg(DivergentMaskReg)
+        .addReg(index0);
+        
+    BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_MOV_B32), acc0)
+        .addImm(0);
+
+    BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_MOV_B32), lane0)
+        .addReg(acc0);
+
+    BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_LSHL_B32), indexlshl4)
+        .addReg(index0)
+        .addImm(2);
+
+    BuildMI(*ComputeLoop, ComputeLoop->end(), DL, TII->get(AMDGPU::S_BRANCH)).addMBB(InnerLoop);
+
+    auto PhiLaneInst =
+        BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::PHI), lane1)
+            .addReg(lane0)
+            .addMBB(ComputeLoop);
+    auto PhiMaskInst =
+        BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::PHI), mask1)
+            .addReg(mask0)
+            .addMBB(ComputeLoop);
+    auto PhiAccInst =
+        BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::PHI), acc1)
+            .addReg(acc0)
+            .addMBB(ComputeLoop);
+    auto PhiAddrInst =
+        BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::PHI), addr1)
+            .addReg(addr0)
+            .addMBB(ComputeLoop);
+
+    // unsigned BITSETOpc =
+    //     IsWave32 ? AMDGPU::S_BITSET0_B32 : AMDGPU::S_BITSET0_B64;
+    BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::S_BITSET0_B32), mask2)
+        .addReg(lane1)
+        .addReg(mask1);
+
+    BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::V_READLANE_B32), ValReg)
+          .addReg(SrcReg)
+          .addReg(lane1);
+
+    BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(Opc), acc2)
+        .addReg(acc1)
+        .addReg(ValReg);
+
+    BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+        .addReg(lane1);
+
+    BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::V_WRITELANE_B32),
+            addr2)
+        .addReg(indexlshl4)
+        .addReg(AMDGPU::M0)
+        .addReg(addr1);
+
+    // BuildMI(BB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), resultarr2)
+    //     .addImm(IdentityValue);
+
+    BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::S_FF1_I32_B32), lane2)
+        .addReg(mask1);
+
+    BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::S_CMP_LG_U32))
+        .addReg(mask1)
+        .addImm(0);
+    BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
+        .addMBB(InnerLoop);
+    BuildMI(*InnerLoop, InnerLoop->end(), DL, TII->get(AMDGPU::S_BRANCH)).addMBB(InnerLoopEnd);
+
+    BuildMI(*InnerLoopEnd, InnerLoopEnd->end(), DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+        .addReg(index0);
+    BuildMI(*InnerLoopEnd, InnerLoopEnd->end(), DL, TII->get(AMDGPU::V_WRITELANE_B32),
+            resultarr2)
+        .addReg(acc2)
+        .addReg(AMDGPU::M0)
+        .addReg(resultarr1);
+    BuildMI(*InnerLoopEnd, InnerLoopEnd->end(), DL, TII->get(AMDGPU::S_BITSET0_B64), execcopy2)
+        .addReg(index0)
+        .addReg(execcopy1);
+    unsigned CMPOpc = IsWave32 ? AMDGPU::S_CMP_LG_U32 : AMDGPU::S_CMP_LG_U64;
+    BuildMI(*InnerLoopEnd, InnerLoopEnd->end(), DL, TII->get(CMPOpc))
+        .addReg(execcopy2)
+        .addImm(0);
+    BuildMI(*InnerLoopEnd, InnerLoopEnd->end(), DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
+        .addMBB(ComputeLoop);
+    BuildMI(*InnerLoopEnd, InnerLoopEnd->end(), DL, TII->get(AMDGPU::S_BRANCH)).addMBB(ComputeEnd);
+
+      // BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32), AccSGPRReg)
+      //     .addReg(AccReg1)
+      //     .addReg(FF1MaskReg);
+    // BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+    //     .addReg(FF1MaskReg);
+
+
+    PhiResInst.addReg(resultarr2).addMBB(InnerLoopEnd);
+    PhiExecInst.addReg(execcopy2).addMBB(InnerLoopEnd);
+    PhiLaneInst.addReg(lane2).addMBB(InnerLoop);
+    PhiMaskInst.addReg(mask2).addMBB(InnerLoop);
+    PhiAccInst.addReg(acc2).addMBB(InnerLoop);
+    PhiAddrInst.addReg(addr2).addMBB(InnerLoop);
+
+    BuildMI(*ComputeEnd, ComputeEnd->begin(), DL,
+            TII->get(AMDGPU::DS_BPERMUTE_B32), DstReg)
+        .addReg(addr0)//UpdatedBPermAddrReg)
+        .addReg(resultarr0)
+        .addImm(0);
+
+    RetBB = ComputeEnd;
+  }
+  MI.eraseFromParent();
+  return RetBB;
+}
+
 MachineBasicBlock *
 SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                               MachineBasicBlock *BB) const {
@@ -5342,6 +5560,21 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       return lowerWaveReduce(MI, *BB, *getSubtarget(), Opc);
 
     return lowerWaveReduceWrtDivergentMask(MI, *BB, *getSubtarget(), Opc);
+  }
+  case AMDGPU::WAVE_REDUCE_WRT_DIVERGENT_MASK_2_UMIN_PSEUDO_U32:
+  case AMDGPU::WAVE_REDUCE_WRT_DIVERGENT_MASK_2_UMAX_PSEUDO_U32: {
+    unsigned Opc = (MI.getOpcode() ==
+                    AMDGPU::WAVE_REDUCE_WRT_DIVERGENT_MASK_2_UMIN_PSEUDO_U32)
+                       ? AMDGPU::S_MIN_U32
+                       : AMDGPU::S_MAX_U32;
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    bool isMaskRegUniform = getSubtarget()->getRegisterInfo()->isSGPRClass(
+        MRI.getRegClass(MI.getOperand(2).getReg()));
+
+    if (isMaskRegUniform)
+      return lowerWaveReduce(MI, *BB, *getSubtarget(), Opc);
+
+    return lowerWaveReduceWrtDivergentMask2(MI, *BB, *getSubtarget(), Opc);
   }
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {

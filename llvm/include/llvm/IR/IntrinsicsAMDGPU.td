@@ -2356,6 +2356,8 @@ class AMDGPUWaveReduceWrtDivergentMask<LLVMType data_ty = llvm_anyint_ty> : Intr
 
 def int_amdgcn_wave_reduce_wrt_divergent_mask_umin : AMDGPUWaveReduceWrtDivergentMask;
 def int_amdgcn_wave_reduce_wrt_divergent_mask_umax : AMDGPUWaveReduceWrtDivergentMask;
+def int_amdgcn_wave_reduce_wrt_divergent_mask_2_umax : AMDGPUWaveReduceWrtDivergentMask;
+def int_amdgcn_wave_reduce_wrt_divergent_mask_2_umin : AMDGPUWaveReduceWrtDivergentMask;
 
 def int_amdgcn_readfirstlane :
   Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
