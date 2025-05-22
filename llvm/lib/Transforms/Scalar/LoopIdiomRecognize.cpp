@@ -341,7 +341,7 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
 
   // If this loop executes exactly one time, then it should be peeled, not
   // optimized by this pass.
-  if (match(BECount, m_scev_SpecificInt(0)))
+  if (BECount->isZero())
     return false;
 
   SmallVector<BasicBlock *, 8> ExitBlocks;
@@ -3268,7 +3268,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // Ok, transform appears worthwhile.
   MadeChange = true;
 
-  bool OffsetIsZero = match(ExtraOffsetExpr, m_scev_SpecificInt(0));
+  bool OffsetIsZero = ExtraOffsetExpr->isZero();
 
   // Step 1: Compute the loop's final IV value / trip count.
 
