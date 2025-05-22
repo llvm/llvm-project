@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL1.2 -triple amdgcn-amd-amdhsa -target-cpu gfx942 \
 // RUN:   %s -emit-llvm -o - -disable-llvm-passes | FileCheck %s
 
+// REQUIRES: amdgpu-registered-target
+
 // `Ptr.getElementType()` in `CheckAtomicAlignment` returns
 //      %struct.__half2 = type { %union.anon }
 // Check we do not crash when handling that.
