@@ -132,9 +132,6 @@ static DecodeStatus DecodeFPRRegisterClass(MCInst &Inst, uint64_t RegNo,
 static DecodeStatus DecodeURRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
                                           const MCDisassembler *Decoder) {
-  const llvm::MCSubtargetInfo STI =
-      ((const MCDisassembler *)Decoder)->getSubtargetInfo();
-
   if (RegNo > 255)
     return MCDisassembler::Fail;
 
