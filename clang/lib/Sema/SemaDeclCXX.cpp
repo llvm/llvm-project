@@ -970,9 +970,8 @@ static bool CheckBindingsCount(Sema &S, DecompositionDecl *DD,
                                QualType DecompType,
                                ArrayRef<BindingDecl *> Bindings,
                                unsigned MemberCount) {
-  auto BindingWithPackItr =
-      std::find_if(Bindings.begin(), Bindings.end(),
-                   [](BindingDecl *D) -> bool { return D->isParameterPack(); });
+  auto BindingWithPackItr = llvm::find_if(
+      Bindings, [](BindingDecl *D) -> bool { return D->isParameterPack(); });
   bool HasPack = BindingWithPackItr != Bindings.end();
   bool IsValid;
   if (!HasPack) {
