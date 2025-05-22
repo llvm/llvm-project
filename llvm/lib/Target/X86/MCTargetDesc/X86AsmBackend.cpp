@@ -169,6 +169,9 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
+  bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
+                             const MCValue &, const MCSubtargetInfo *) override;
+
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -685,6 +688,14 @@ static unsigned getFixupKindSize(unsigned Kind) {
   case FK_Data_8:
     return 8;
   }
+}
+
+// Force relocation when there is a specifier. This might be too conservative -
+// GAS doesn't emit a relocation for call local@plt; local:.
+bool X86AsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
+                                          const MCValue &Target,
+                                          const MCSubtargetInfo *) {
+  return Target.getSpecifier();
 }
 
 void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
