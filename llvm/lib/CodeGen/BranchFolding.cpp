@@ -2072,9 +2072,11 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     return false;
 
   // Hoist the instructions from [T.begin, TIB) and then delete [F.begin, FIB).
-  // Merge the debug locations. FIXME: We should do something with the
-  // debug instructions too (from BOTH branches).
-  {
+  // If we're hoisting from a single block then just splice. Else step through
+  // and merge the debug locations.
+  if (TBB == FBB) {
+    MBB->splice(Loc, TBB, TBB->begin(), TIB);
+  } else {
     // TIB and FIB point to the end of the regions to hoist/merge in TBB and
     // FBB.
     MachineBasicBlock::iterator FE = FIB;
@@ -2083,7 +2085,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
          make_early_inc_range(make_range(TBB->begin(), TIB))) {
       // Move debug instructions and pseudo probes without modifying them.
       // FIXME: This is the wrong thing to do for debug locations, which
-      // should at least be killed.
+      // should at least be killed (and hoisted from BOTH blocks).
       if (TI->isDebugOrPseudoInstr()) {
         TI->moveBefore(&*Loc);
         continue;
