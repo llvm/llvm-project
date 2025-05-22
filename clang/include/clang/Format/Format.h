@@ -2259,7 +2259,7 @@ struct FormatStyle {
   ///   true:                             false:
   ///   if constexpr (          vs.       if constexpr (a ||
   ///      a || b                                       b)
-  ///   )              
+  ///   )
   /// \endcode
   /// \version 21
   bool BreakBeforeCloseBracketIf;
@@ -2272,7 +2272,7 @@ struct FormatStyle {
   ///   true:                             false:
   ///   while (                  vs.      while (a &&
   ///      a && b                                b) {
-  ///   ) {       
+  ///   ) {
   /// \endcode
   /// \version 21
   bool BreakBeforeCloseBracketLoop;
@@ -2285,7 +2285,7 @@ struct FormatStyle {
   ///   true:                             false:
   ///   switch (                 vs.      switch (a &&
   ///      a && b                                 b) {
-  ///   ) {   
+  ///   ) {
   /// \endcode
   /// \version 21
   bool BreakBeforeCloseBracketSwitch;
