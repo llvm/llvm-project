@@ -270,7 +270,6 @@ LogicalResult analyzeOp(Operation *op, OneShotAnalysisState &state,
 /// Run One-Shot Bufferize on the given op: Analysis + Bufferization
 LogicalResult
 runOneShotBufferize(Operation *op, const OneShotBufferizationOptions &options,
-                    BufferizationState &state,
                     BufferizationStatistics *statistics = nullptr);
 
 } // namespace bufferization

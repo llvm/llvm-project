@@ -83,8 +83,6 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
   }
 
   auto payloadOps = state.getPayloadOps(getTarget());
-  BufferizationState bufferizationState;
-
   for (Operation *target : payloadOps) {
     if (!isa<ModuleOp, FunctionOpInterface>(target))
       return emitSilenceableError() << "expected module or function target";
@@ -92,12 +90,10 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
     if (options.bufferizeFunctionBoundaries) {
       if (!moduleOp)
         return emitSilenceableError() << "expected module target";
-      if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options,
-                                                          bufferizationState)))
+      if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options)))
         return emitSilenceableError() << "bufferization failed";
     } else {
-      if (failed(bufferization::runOneShotBufferize(target, options,
-                                                    bufferizationState)))
+      if (failed(bufferization::runOneShotBufferize(target, options)))
         return emitSilenceableError() << "bufferization failed";
     }
   }
@@ -166,7 +162,6 @@ public:
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.cpp.inc"
-
         >();
   }
 };
