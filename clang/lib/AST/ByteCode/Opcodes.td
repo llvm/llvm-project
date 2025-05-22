@@ -325,7 +325,7 @@ def GetMemberPtrBasePop : Opcode {
 def FinishInitPop : Opcode;
 def FinishInit    : Opcode;
 
-def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool]; }
+def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool, ArgTypePtr]; }
 
 // [Pointer] -> [Pointer]
 def GetPtrVirtBasePop : Opcode {
