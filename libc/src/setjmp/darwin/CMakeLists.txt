@@ -1,7 +1,7 @@
 add_object_library(
-    sigsetjmp_epilogue
+  sigsetjmp_epilogue
   HDRS
-    ../../sigsetjmp_epilogue.h
+    ../sigsetjmp_epilogue.h
   SRCS
     sigsetjmp_epilogue.cpp
   DEPENDS
