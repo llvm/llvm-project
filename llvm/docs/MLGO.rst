@@ -347,3 +347,96 @@ clang.
     TODO(mtrofin): 
         - logging, and the use in interactive mode.
         - discuss an example (like the inliner)
+
+IR2Vec Embeddings
+=================
+
+IR2Vec is a program embedding approach designed specifically for LLVM IR. It
+is implemented as a function analysis pass in LLVM. The IR2Vec embeddings
+capture syntactic, semantic, and structural properties of the IR through 
+learned representations. These representations are obtained as a JSON 
+vocabulary that maps the entities of the IR (opcodes, types, operands) to 
+n-dimensional floating point vectors (embeddings). 
+
+With IR2Vec, representation at different granularities of IR, such as
+instructions, functions, and basic blocks, can be obtained. Representations 
+of loops and regions can be derived from these representations, which can be
+useful in different scenarios. The representations can be useful for various
+downstream tasks, including ML-guided compiler optimizations.
+
+The core components are:
+  - **Vocabulary**: A mapping from IR entities (opcodes, types, etc.) to their
+    vector representations. This is managed by ``IR2VecVocabAnalysis``.
+  - **Embedder**: A class (``ir2vec::Embedder``) that uses the vocabulary to
+    compute embeddings for instructions, basic blocks, and functions.
+
+Using IR2Vec
+------------
+
+For generating embeddings, first the vocabulary should be obtained. Then, the 
+embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
+
+1. **Get the Vocabulary**:
+   In a ModulePass, get the vocabulary analysis result:
+
+   .. code-block:: c++
+
+      auto &VocabRes = MAM.getResult<IR2VecVocabAnalysis>(M);
+      if (!VocabRes.isValid()) {
+        // Handle error: vocabulary is not available or invalid
+        return;
+      }
+      const ir2vec::Vocab &Vocabulary = VocabRes.getVocabulary();
+      unsigned Dimension = VocabRes.getDimension();
+
+    Note that ``IR2VecVocabAnalysis`` pass is immutable.
+
+2. **Create Embedder instance**:
+   With the vocabulary, create an embedder for a specific function:
+
+   .. code-block:: c++
+
+      // Assuming F is an llvm::Function&
+      // For example, using IR2VecKind::Symbolic:
+      Expected<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
+          ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary, Dimension);
+
+      if (auto Err = EmbOrErr.takeError()) {
+        // Handle error in embedder creation
+        return;
+      }
+      std::unique_ptr<ir2vec::Embedder> Emb = std::move(*EmbOrErr);
+
+3. **Compute and Access Embeddings**:
+   Call ``computeEmbeddings()`` on the embedder instance to compute the 
+   embeddings. Then the embeddings can be accessed using different getter 
+   methods. Currently, ``Embedder`` can generate embeddings at three levels:
+   Instructions, Basic Blocks, and Functions.
+
+   .. code-block:: c++
+
+      Emb->computeEmbeddings();
+      const ir2vec::Embedding &FuncVector = Emb->getFunctionVector();
+      const ir2vec::InstEmbeddingsMap &InstVecMap = Emb->getInstVecMap();
+      const ir2vec::BBEmbeddingsMap &BBVecMap = Emb->getBBVecMap();
+
+      // Example: Iterate over instruction embeddings
+      for (const auto &Entry : InstVecMap) {
+        const Instruction *Inst = Entry.getFirst();
+        const ir2vec::Embedding &InstEmbedding = Entry.getSecond();
+        // Use Inst and InstEmbedding
+      }
+
+4. **Working with Embeddings:**
+   Embeddings are represented as ``std::vector<double>``. These
+   vectors as features for machine learning models, compute similarity scores
+   between different code snippets, or perform other analyses as needed.
+
+Further Details
+---------------
+
+For more detailed information about the IR2Vec algorithm, its parameters, and
+advanced usage, please refer to the original paper:
+`IR2Vec: LLVM IR Based Scalable Program Embeddings <https://doi.org/10.1145/3418463>`_.
+The LLVM source code for ``IR2Vec`` can also be explored to understand the 
+implementation details.
