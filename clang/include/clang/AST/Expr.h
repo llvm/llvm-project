@@ -3031,7 +3031,7 @@ public:
 
   Expr *getCallee() { return cast<Expr>(getTrailingStmts()[FN]); }
   const Expr *getCallee() const { return cast<Expr>(getTrailingStmts()[FN]); }
-  void setCallee(Expr *F) { getTrailingStmts()[FN] = F;}
+  void setCallee(Expr *F) { getTrailingStmts()[FN] = F; }
 
   ADLCallKind getADLCallKind() const {
     return static_cast<ADLCallKind>(CallExprBits.UsesADL);
@@ -3230,7 +3230,7 @@ public:
     // FIXME: Some builtins have no callee begin location
     SourceLocation begin = getCallee()->getBeginLoc();
     if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
-        begin = getArg(0)->getBeginLoc();
+      begin = getArg(0)->getBeginLoc();
     return begin;
   }
 
