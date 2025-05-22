@@ -16,8 +16,10 @@ uint64_t hashBlock(const MachineBasicBlock &MBB, OperandHashFuncTy OperandHashFu
     if (MI.isUnconditionalBranch())
       continue;
     Hash = hashing::detail::hash_16_bytes(Hash, MI.getOpcode());
-    for (unsigned i = 0; i < MI.getNumOperands(); i++) {
-      Hash = OperandHashFunc(Hash, MI.getOperand(i));
+    for (const MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.isDef() && MO.getReg().isVirtual())
+        continue;  // Skip virtual register defs.
+      Hash = OperandHashFunc(Hash, MO);
     }
   }
   return Hash;
