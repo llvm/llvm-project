@@ -71,7 +71,7 @@ def handle_shstrtab(mv, e_shoff):
   _, shstrndx_sh_offset, shstrndx_sh_size = handle_Shdr(shstrndx_sh)
   return mv[shstrndx_sh_offset:shstrndx_sh_offset + shstrndx_sh_size]
 
-def shstrtab_sh_name(mv):
+def read_string(mv):
   name = ""
   for byte in mv:
     char = chr(byte)
@@ -101,14 +101,14 @@ def handle_elf(mv):
   e_shnum, = struct.unpack_from('<H', buffer=mv, offset=e_shnum_offset)
   e_shoff, = struct.unpack_from('<Q', buffer=mv, offset=e_shoff_offset)
 
-  # Section where all the section header names are stored
+  # Section where all the section header names are stored.
   shstr = handle_shstrtab(mv, e_shoff)
 
   for i in range(0, e_shnum):
     start = e_shoff + i * Shdr_size
     sh = mv[start: start + Shdr_size]
     sh_name_offset, sh_offset, sh_size = handle_Shdr(sh)
-    sh_name = shstrtab_sh_name(shstr[sh_name_offset:])
+    sh_name = read_string(shstr[sh_name_offset:])
     sh_type = unpack_sh_type(sh)
 
     if sh_name == ".debug_info":
@@ -315,7 +315,6 @@ class Symbolizer:
           if bid is not None:
             if bid in self.__index:
               print("Duplicate build ID {} for {} and {}".format(bid, self.__index[bid], filename), file=sys.stderr)
-              sys.exit(1)
             self.__index[bid] = filename
 
   def symbolize_line(self, line):
