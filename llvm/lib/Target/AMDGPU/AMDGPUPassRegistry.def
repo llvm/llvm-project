@@ -16,6 +16,8 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("amdgpu-expand-feature-predicates",
+            AMDGPUExpandFeaturePredicatesPass(*this))
 MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
 MODULE_PASS("amdgpu-export-kernel-runtime-handles", AMDGPUExportKernelRuntimeHandlesPass())
 MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
@@ -30,8 +32,6 @@ MODULE_PASS("amdgpu-printf-runtime-binding", AMDGPUPrintfRuntimeBindingPass())
 MODULE_PASS("amdgpu-remove-incompatible-functions", AMDGPURemoveIncompatibleFunctionsPass(*this))
 MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
 MODULE_PASS("amdgpu-unify-metadata", AMDGPUUnifyMetadataPass())
-MODULE_PASS("amdgpu-expand-feature-predicates",
-            AMDGPUExpandFeaturePredicatesPass(*this))
 #undef MODULE_PASS
 
 #ifndef MODULE_PASS_WITH_PARAMS
