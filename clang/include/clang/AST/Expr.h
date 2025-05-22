@@ -3040,7 +3040,15 @@ public:
   bool hasStoredFPFeatures() const { return CallExprBits.HasFPFeatures; }
 
   bool usesMemberSyntax() const { return CallExprBits.ExplicitObjectMemFunUsingMemberSyntax; }
-  void setUsesMemberSyntax(bool V = true) { CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = V; }
+  void setUsesMemberSyntax(bool V = true) {
+      CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = V;
+      // Because the source location may be different for explicit
+      // member, we reset the cached values.
+      if(CallExprBits.HasTrailingSourceLoc) {
+          CallExprBits.HasTrailingSourceLoc = false;
+          setTrailingSourceLocs();
+      }
+  }
 
   bool isCoroElideSafe() const { return CallExprBits.IsCoroElideSafe; }
   void setCoroElideSafe(bool V = true) { CallExprBits.IsCoroElideSafe = V; }
