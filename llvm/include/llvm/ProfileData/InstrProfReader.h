@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Object/BuildID.h"
-#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/MemProf.h"
@@ -704,13 +703,10 @@ private:
   const unsigned char *CallStackBase = nullptr;
   // The number of elements in the radix tree array.
   unsigned RadixTreeSize = 0;
-  /// The data access profiles, deserialized from binary data.
-  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
   Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
   Error deserializeRadixTreeBased(const unsigned char *Start,
-                                  const unsigned char *Ptr,
-                                  memprof::IndexedVersion Version);
+                                  const unsigned char *Ptr);
 
 public:
   IndexedMemProfReader() = default;

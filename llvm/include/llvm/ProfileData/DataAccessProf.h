@@ -17,8 +17,10 @@
 #ifndef LLVM_PROFILEDATA_DATAACCESSPROF_H_
 #define LLVM_PROFILEDATA_DATAACCESSPROF_H_
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -33,15 +35,12 @@
 
 namespace llvm {
 
-namespace memprof {
+namespace data_access_prof {
 
 /// The location of data in the source code. Used by profile lookup API.
 struct SourceLocation {
   SourceLocation(StringRef FileNameRef, uint32_t Line)
       : FileName(FileNameRef.str()), Line(Line) {}
-
-  // Empty constructor is used in yaml conversion.
-  SourceLocation() {}
   /// The filename where the data is located.
   std::string FileName;
   /// The line number in the source code.
@@ -54,8 +53,6 @@ namespace internal {
 // which strings are owned by `DataAccessProfData`. Used by `DataAccessProfData`
 // to represent data locations internally.
 struct SourceLocationRef {
-  SourceLocationRef(StringRef FileNameRef, uint32_t Line)
-      : FileName(FileNameRef), Line(Line) {}
   // The filename where the data is located.
   StringRef FileName;
   // The line number in the source code.
@@ -103,21 +100,18 @@ using SymbolHandle = std::variant<std::string, uint64_t>;
 /// The data access profiles for a symbol.
 struct DataAccessProfRecord {
 public:
-  DataAccessProfRecord(SymbolHandleRef SymHandleRef, uint64_t AccessCount,
-                       ArrayRef<internal::SourceLocationRef> LocRefs)
-      : AccessCount(AccessCount) {
+  DataAccessProfRecord(SymbolHandleRef SymHandleRef,
+                       ArrayRef<internal::SourceLocationRef> LocRefs) {
     if (std::holds_alternative<StringRef>(SymHandleRef)) {
       SymHandle = std::get<StringRef>(SymHandleRef).str();
     } else
       SymHandle = std::get<uint64_t>(SymHandleRef);
 
     for (auto Loc : LocRefs)
-      Locations.emplace_back(Loc.FileName, Loc.Line);
+      Locations.push_back(SourceLocation(Loc.FileName, Loc.Line));
   }
-  // Empty constructor is used in yaml conversion.
-  DataAccessProfRecord() {}
   SymbolHandle SymHandle;
-  uint64_t AccessCount;
+
   // The locations of data in the source code. Optional.
   SmallVector<SourceLocation> Locations;
 };
@@ -214,7 +208,7 @@ private:
   llvm::SetVector<StringRef> KnownColdSymbols;
 };
 
-} // namespace memprof
+} // namespace data_access_prof
 } // namespace llvm
 
 #endif // LLVM_PROFILEDATA_DATAACCESSPROF_H_
