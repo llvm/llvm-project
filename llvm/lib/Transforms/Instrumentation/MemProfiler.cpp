@@ -46,7 +46,6 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <map>
 #include <set>
-#include <unordered_set>
 
 using namespace llvm;
 using namespace llvm::memprof;
