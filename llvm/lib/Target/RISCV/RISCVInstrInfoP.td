@@ -25,13 +25,14 @@ def simm10 : RISCVSImmLeafOp<10>;
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnaryImm9<bits<7> funct7, string opcodestr>
+class RVPUnaryImm10<bits<7> funct7, string opcodestr>
     : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins simm10:$simm10),
                   opcodestr, "$rd, $simm10"> {
   bits<10> simm10;
 
   let Inst{31-25} = funct7;
-  let Inst{24-15} = simm10;
+  let Inst{24-16} = simm10{8-0};
+  let Inst{15}    = simm10{9};
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -103,7 +104,7 @@ def REV_RV32  : Unary_r<0b011010011111, 0b101, "rev">;
 
 let Predicates = [HasStdExtP, IsRV64] in {
 def REV16      : Unary_r<0b011010110000, 0b101, "rev16">;
-def REV_RV64   : Unary_r<0b011110111111, 0b101, "rev">;
+def REV_RV64   : Unary_r<0b011010111111, 0b101, "rev">;
 
 def CLSW  : UnaryW_r<0b011000000011, 0b001, "clsw">;
 def ABSW  : UnaryW_r<0b011000000111, 0b001, "absw">;
@@ -123,9 +124,9 @@ def PSSLAI_W : RVPUnaryImm5<0b101, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
-def PLI_H : RVPUnaryImm9<0b1011000, "pli.h">;
+def PLI_H : RVPUnaryImm10<0b1011000, "pli.h">;
 let Predicates = [HasStdExtP, IsRV64] in
-def PLI_W : RVPUnaryImm9<0b1011001, "pli.w">;
+def PLI_W : RVPUnaryImm10<0b1011001, "pli.w">;
 let Predicates = [HasStdExtP] in
 def PLI_B : RVPUnaryImm8<0b10110100, "pli.b">;
 
@@ -140,6 +141,6 @@ def PSEXT_W_H      : RVPUnaryWUF<0b01, 0b00101, "psext.w.h">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
-def PLUI_H : RVPUnaryImm9<0b1111000, "plui.h">;
+def PLUI_H : RVPUnaryImm10<0b1111000, "plui.h">;
 let Predicates = [HasStdExtP, IsRV64] in
-def PLUI_W : RVPUnaryImm9<0b1111001, "plui.w">;
+def PLUI_W : RVPUnaryImm10<0b1111001, "plui.w">;

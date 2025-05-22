@@ -56,7 +56,7 @@ psslai.h t0, t1, 2
 # CHECK-ASM: encoding: [0x1b,0xa7,0x37,0xd2]
 sslai a4, a5, 3
 # CHECK-ASM-AND-OBJ: pli.h a5, 16
-# CHECK-ASM: encoding: [0x9b,0x27,0x08,0xb0]
+# CHECK-ASM: encoding: [0x9b,0x27,0x10,0xb0]
 pli.h a5, 16
 # CHECK-ASM-AND-OBJ: pli.b a6, 16
 # CHECK-ASM: encoding: [0x1b,0x28,0x10,0xb4]
@@ -71,5 +71,5 @@ psabs.h a1, a2
 # CHECK-ASM: encoding: [0x9b,0x22,0x73,0xe4]
 psabs.b t0, t1
 # CHECK-ASM-AND-OBJ: plui.h gp, 32
-# CHECK-ASM: encoding: [0x9b,0x21,0x10,0xf0]
+# CHECK-ASM: encoding: [0x9b,0x21,0x20,0xf0]
 plui.h gp, 32
