@@ -433,13 +433,15 @@ static Slab *find_slab(uint32_t chunk_size) {
           lane_mask, cpp::countr_zero(available & uniform), candidate);
 
       // Each uniform group will use the first empty slot they find.
-      if (offset >= ARRAY_SIZE ||
-          (index == cpp::numeric_limits<uint32_t>::max() &&
+      if ((index == cpp::numeric_limits<uint32_t>::max() &&
            (available & uniform)))
         index = new_index;
 
-      if (offset >= ARRAY_SIZE)
+      // Guaruntees that this loop will eventuall exit if there is no space.
+      if (offset >= ARRAY_SIZE) {
         result = reinterpret_cast<Slab *>(SENTINEL);
+        index = 0;
+      }
     }
 
     // Try to claim a slot for the found slot.
