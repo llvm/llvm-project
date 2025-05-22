@@ -35,6 +35,14 @@ static Value createConst(Location loc, Type type, int value,
   return rewriter.create<arith::ConstantOp>(loc, attr);
 }
 
+/// Creates shapedType using shape from cloneFrom and base type from cloneTo
+static Type cloneToShapedType(Type cloneFrom, Type cloneTo) {
+  if (auto shapedTy = dyn_cast<ShapedType>(cloneFrom)) {
+    return shapedTy.clone(cloneTo);
+  }
+  return cloneTo;
+}
+
 namespace {
 
 /// Expands CeilDivUIOp (n, m) into
@@ -225,12 +233,8 @@ struct BFloat16ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
       return rewriter.notifyMatchFailure(op, "not a ext of bf16 to f32.");
     }
 
-    Type i16Ty = b.getI16Type();
-    Type i32Ty = b.getI32Type();
-    if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
-      i16Ty = shapedTy.clone(i16Ty);
-      i32Ty = shapedTy.clone(i32Ty);
-    }
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
 
     Value bitcast = b.create<arith::BitcastOp>(i16Ty, operand);
     Value exti = b.create<arith::ExtUIOp>(i32Ty, bitcast);
@@ -264,14 +268,8 @@ struct BFloat16TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
           op, "only applicable to default rounding mode.");
     }
 
-    Type i16Ty = b.getI16Type();
-    Type i32Ty = b.getI32Type();
-    Type f32Ty = b.getF32Type();
-    if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
-      i16Ty = shapedTy.clone(i16Ty);
-      i32Ty = shapedTy.clone(i32Ty);
-      f32Ty = shapedTy.clone(f32Ty);
-    }
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
 
     // Algorithm borrowed from this excellent code:
     // https://github.com/pytorch/pytorch/blob/e1502c0cdbfd17548c612f25d5a65b1e4b86224d/c10/util/BFloat16.h#L60-L79
@@ -340,14 +338,9 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
       return rewriter.notifyMatchFailure(op, "not a ext of F8E8M0FNU");
     }
 
-    Type i8Ty = b.getI8Type();
-    Type i32Ty = b.getI32Type();
-    Type f32Ty = b.getF32Type();
-    if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
-      i8Ty = shapedTy.clone(i8Ty);
-      i32Ty = shapedTy.clone(i32Ty);
-      f32Ty = shapedTy.clone(f32Ty);
-    }
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
+    Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     Value bitcast = b.create<arith::BitcastOp>(i8Ty, operand);
     // create constants for NaNs
@@ -397,14 +390,10 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
           op, "only applicable to default rounding mode.");
     }
 
-    Type i8Ty = b.getI8Type();
-    Type i32Ty = b.getI32Type();
-    Type f32Ty = b.getF32Type();
-    if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
-      i8Ty = shapedTy.clone(i8Ty);
-      i32Ty = shapedTy.clone(i32Ty);
-      f32Ty = shapedTy.clone(f32Ty);
-    }
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
+    Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
+
     if (operandETy.getIntOrFloatBitWidth() < 32) {
       operand = b.create<arith::ExtFOp>(f32Ty, operand);
     } else if (operandETy.getIntOrFloatBitWidth() > 32) {
