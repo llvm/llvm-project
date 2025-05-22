@@ -106,7 +106,7 @@ public:
   };
 
 private:
-  std::shared_ptr<LangOptions>            LangOpts;
+  std::unique_ptr<LangOptions> LangOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
@@ -116,7 +116,7 @@ private:
   std::shared_ptr<Preprocessor>           PP;
   IntrusiveRefCntPtr<ASTContext>          Ctx;
   std::shared_ptr<TargetOptions>          TargetOpts;
-  std::shared_ptr<HeaderSearchOptions>    HSOpts;
+  std::unique_ptr<HeaderSearchOptions> HSOpts;
   std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
   bool HadModuleLoaderFatalFailure = false;
@@ -142,6 +142,10 @@ private:
   /// Optional owned invocation, just used to make the invocation used in
   /// Parse available.
   std::shared_ptr<CompilerInvocation> CCInvocation;
+
+  /// Optional owned invocation, just used to keep the invocation alive for the
+  /// members initialized in transferASTDataFromCompilerInstance.
+  std::shared_ptr<CompilerInvocation> ModifiedInvocation;
 
   /// Fake module loader: the AST unit doesn't need to load any modules.
   TrivialModuleLoader ModuleLoader;
@@ -694,19 +698,17 @@ public:
   /// lifetime is expected to extend past that of the returned ASTUnit.
   ///
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
-  static std::unique_ptr<ASTUnit>
-  LoadFromASTFile(StringRef Filename, const PCHContainerReader &PCHContainerRdr,
-                  WhatToLoad ToLoad,
-                  IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-                  const FileSystemOptions &FileSystemOpts,
-                  std::shared_ptr<HeaderSearchOptions> HSOpts,
-                  std::shared_ptr<LangOptions> LangOpts = nullptr,
-                  bool OnlyLocalDecls = false,
-                  CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-                  bool AllowASTWithCompilerErrors = false,
-                  bool UserFilesAreVolatile = false,
-                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-                      llvm::vfs::getRealFileSystem());
+  static std::unique_ptr<ASTUnit> LoadFromASTFile(
+      StringRef Filename, const PCHContainerReader &PCHContainerRdr,
+      WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+      const FileSystemOptions &FileSystemOpts,
+      const HeaderSearchOptions &HSOpts, const LangOptions *LangOpts = nullptr,
+      bool OnlyLocalDecls = false,
+      CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
+      bool AllowASTWithCompilerErrors = false,
+      bool UserFilesAreVolatile = false,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+          llvm::vfs::getRealFileSystem());
 
 private:
   /// Helper function for \c LoadFromCompilerInvocation() and

@@ -145,11 +145,10 @@ static bool isConstant(const Fortran::semantics::Symbol &sym) {
          sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
 }
 
-static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
-                                  const Fortran::lower::pft::Variable &var,
-                                  llvm::StringRef globalName,
-                                  mlir::StringAttr linkage,
-                                  cuf::DataAttributeAttr dataAttr = {});
+/// Call \p genInit to generate code inside \p global initializer region.
+static void
+createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
+                           std::function<void(fir::FirOpBuilder &)> genInit);
 
 static mlir::Location genLocation(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::semantics::Symbol &sym) {
@@ -467,9 +466,9 @@ static bool globalIsInitialized(fir::GlobalOp global) {
 }
 
 /// Call \p genInit to generate code inside \p global initializer region.
-void Fortran::lower::createGlobalInitialization(
-    fir::FirOpBuilder &builder, fir::GlobalOp global,
-    std::function<void(fir::FirOpBuilder &)> genInit) {
+static void
+createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
+                           std::function<void(fir::FirOpBuilder &)> genInit) {
   mlir::Region &region = global.getRegion();
   region.push_back(new mlir::Block);
   mlir::Block &block = region.back();
@@ -479,7 +478,7 @@ void Fortran::lower::createGlobalInitialization(
   builder.restoreInsertionPoint(insertPt);
 }
 
-static unsigned getAllocatorIdx(cuf::DataAttributeAttr dataAttr) {
+static unsigned getAllocatorIdxFromDataAttr(cuf::DataAttributeAttr dataAttr) {
   if (dataAttr) {
     if (dataAttr.getValue() == cuf::DataAttribute::Pinned)
       return kPinnedAllocatorPos;
@@ -494,11 +493,10 @@ static unsigned getAllocatorIdx(cuf::DataAttributeAttr dataAttr) {
 }
 
 /// Create the global op and its init if it has one
-static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
-                                  const Fortran::lower::pft::Variable &var,
-                                  llvm::StringRef globalName,
-                                  mlir::StringAttr linkage,
-                                  cuf::DataAttributeAttr dataAttr) {
+fir::GlobalOp Fortran::lower::defineGlobal(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::pft::Variable &var, llvm::StringRef globalName,
+    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   mlir::Location loc = genLocation(converter, sym);
@@ -545,27 +543,25 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
     if (details && details->init()) {
       auto expr = *details->init();
-      Fortran::lower::createGlobalInitialization(
-          builder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value box = Fortran::lower::genInitialDataTarget(
-                converter, loc, symTy, expr);
-            b.create<fir::HasValueOp>(loc, box);
-          });
+      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+        mlir::Value box =
+            Fortran::lower::genInitialDataTarget(converter, loc, symTy, expr);
+        b.create<fir::HasValueOp>(loc, box);
+      });
     } else {
       // Create unallocated/disassociated descriptor if no explicit init
-      Fortran::lower::createGlobalInitialization(
-          builder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value box = fir::factory::createUnallocatedBox(
-                b, loc, symTy,
-                /*nonDeferredParams=*/std::nullopt,
-                /*typeSourceBox=*/{}, getAllocatorIdx(dataAttr));
-            b.create<fir::HasValueOp>(loc, box);
-          });
+      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+        mlir::Value box = fir::factory::createUnallocatedBox(
+            b, loc, symTy,
+            /*nonDeferredParams=*/std::nullopt,
+            /*typeSourceBox=*/{}, getAllocatorIdxFromDataAttr(dataAttr));
+        b.create<fir::HasValueOp>(loc, box);
+      });
     }
   } else if (const auto *details =
                  sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
     if (details->init()) {
-      Fortran::lower::createGlobalInitialization(
+      createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &builder) {
             Fortran::lower::StatementContext stmtCtx(
                 /*cleanupProhibited=*/true);
@@ -576,7 +572,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             builder.create<fir::HasValueOp>(loc, castTo);
           });
     } else if (Fortran::lower::hasDefaultInitialization(sym)) {
-      Fortran::lower::createGlobalInitialization(
+      createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &builder) {
             Fortran::lower::StatementContext stmtCtx(
                 /*cleanupProhibited=*/true);
@@ -591,7 +587,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     if (details && details->init()) {
       auto sym{*details->init()};
       if (sym) // Has a procedure target.
-        Fortran::lower::createGlobalInitialization(
+        createGlobalInitialization(
             builder, global, [&](fir::FirOpBuilder &b) {
               Fortran::lower::StatementContext stmtCtx(
                   /*cleanupProhibited=*/true);
@@ -601,19 +597,17 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
               b.create<fir::HasValueOp>(loc, castTo);
             });
       else { // Has NULL() target.
-        Fortran::lower::createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &b) {
-              auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
-              b.create<fir::HasValueOp>(loc, box);
-            });
+        createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+          auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
+          b.create<fir::HasValueOp>(loc, box);
+        });
       }
     } else {
       // No initialization.
-      Fortran::lower::createGlobalInitialization(
-          builder, global, [&](fir::FirOpBuilder &b) {
-            auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
-            b.create<fir::HasValueOp>(loc, box);
-          });
+      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+        auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
+        b.create<fir::HasValueOp>(loc, box);
+      });
     }
   } else if (sym.has<Fortran::semantics::CommonBlockDetails>()) {
     mlir::emitError(loc, "COMMON symbol processed elsewhere");
@@ -634,7 +628,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     // file.
     if (sym.attrs().test(Fortran::semantics::Attr::BIND_C))
       global.setLinkName(builder.createCommonLinkage());
-    Fortran::lower::createGlobalInitialization(
+    createGlobalInitialization(
         builder, global, [&](fir::FirOpBuilder &builder) {
           mlir::Value initValue;
           if (converter.getLoweringOptions().getInitGlobalZero())
@@ -826,7 +820,7 @@ void Fortran::lower::defaultInitializeAtRuntime(
                                       /*isConst=*/true,
                                       /*isTarget=*/false,
                                       /*dataAttr=*/{});
-        Fortran::lower::createGlobalInitialization(
+        createGlobalInitialization(
             builder, global, [&](fir::FirOpBuilder &builder) {
               Fortran::lower::StatementContext stmtCtx(
                   /*cleanupProhibited=*/true);
@@ -842,7 +836,7 @@ void Fortran::lower::defaultInitializeAtRuntime(
                                       /*isConst=*/true,
                                       /*isTarget=*/false,
                                       /*dataAttr=*/{});
-        Fortran::lower::createGlobalInitialization(
+        createGlobalInitialization(
             builder, global, [&](fir::FirOpBuilder &builder) {
               Fortran::lower::StatementContext stmtCtx(
                   /*cleanupProhibited=*/true);
@@ -1207,7 +1201,7 @@ static fir::GlobalOp defineGlobalAggregateStore(
     if (const auto *objectDetails =
             initSym->detailsIf<Fortran::semantics::ObjectEntityDetails>())
       if (objectDetails->init()) {
-        Fortran::lower::createGlobalInitialization(
+        createGlobalInitialization(
             builder, global, [&](fir::FirOpBuilder &builder) {
               Fortran::lower::StatementContext stmtCtx;
               mlir::Value initVal = fir::getBase(genInitializerExprValue(
@@ -1219,12 +1213,11 @@ static fir::GlobalOp defineGlobalAggregateStore(
   // Equivalence has no Fortran initial value. Create an undefined FIR initial
   // value to ensure this is consider an object definition in the IR regardless
   // of the linkage.
-  Fortran::lower::createGlobalInitialization(
-      builder, global, [&](fir::FirOpBuilder &builder) {
-        Fortran::lower::StatementContext stmtCtx;
-        mlir::Value initVal = builder.create<fir::ZeroOp>(loc, aggTy);
-        builder.create<fir::HasValueOp>(loc, initVal);
-      });
+  createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &builder) {
+    Fortran::lower::StatementContext stmtCtx;
+    mlir::Value initVal = builder.create<fir::ZeroOp>(loc, aggTy);
+    builder.create<fir::HasValueOp>(loc, initVal);
+  });
   return global;
 }
 
@@ -1543,7 +1536,7 @@ static void finalizeCommonBlockDefinition(
     LLVM_DEBUG(llvm::dbgs() << "}\n");
     builder.create<fir::HasValueOp>(loc, cb);
   };
-  Fortran::lower::createGlobalInitialization(builder, global, initFunc);
+  createGlobalInitialization(builder, global, initFunc);
 }
 
 void Fortran::lower::defineCommonBlocks(

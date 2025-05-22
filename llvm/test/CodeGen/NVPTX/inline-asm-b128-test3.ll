@@ -19,7 +19,7 @@ define void @test_b128_in_loop() {
 ; CHECK-NEXT:    setp.eq.s64 %p1, %rd1, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB0_3;
 ; CHECK-NEXT:  // %bb.1: // %BB1
-; CHECK-NEXT:    ld.global.v2.u64 {%rd12, %rd13}, [x];
+; CHECK-NEXT:    ld.global.v2.b64 {%rd12, %rd13}, [x];
 ; CHECK-NEXT:    mov.b64 %rd14, 0;
 ; CHECK-NEXT:  $L__BB0_2: // %BB2
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -34,7 +34,7 @@ define void @test_b128_in_loop() {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    // end inline asm
 ; CHECK-NEXT:    mov.b128 {%rd12, %rd13}, %rq1;
-; CHECK-NEXT:    st.global.v2.u64 [x], {%rd12, %rd13};
+; CHECK-NEXT:    st.global.v2.b64 [x], {%rd12, %rd13};
 ; CHECK-NEXT:    add.s64 %rd14, %rd14, 1;
 ; CHECK-NEXT:    setp.ne.s64 %p2, %rd1, %rd14;
 ; CHECK-NEXT:    @%p2 bra $L__BB0_2;

@@ -45,10 +45,9 @@ exit:
 define void @different_non_constant_strides_known_backward_distance_larger_than_trip_count(ptr %A) {
 ; CHECK-LABEL: 'different_non_constant_strides_known_backward_distance_larger_than_trip_count'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 4096 bits
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %gep.mul.2, align 4
 ; CHECK-EMPTY:
@@ -83,10 +82,9 @@ exit:
 define void @different_non_constant_strides_known_backward_min_distance_16(ptr %A) {
 ; CHECK-LABEL: 'different_non_constant_strides_known_backward_min_distance_16'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %gep.mul.2, align 4
 ; CHECK-EMPTY:

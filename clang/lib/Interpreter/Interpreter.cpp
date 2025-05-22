@@ -125,7 +125,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   Clang->getPreprocessorOpts().addRemappedFile("<<< inputs >>>", MB);
 
   Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
+      Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
   if (!Clang->hasTarget())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
@@ -416,6 +416,10 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 Interpreter::~Interpreter() {
   IncrParser.reset();
   Act->FinalizeAction();
+  if (DeviceParser)
+    DeviceParser.reset();
+  if (DeviceAct)
+    DeviceAct->FinalizeAction();
   if (IncrExecutor) {
     if (llvm::Error Err = IncrExecutor->cleanUp())
       llvm::report_fatal_error(
@@ -481,20 +485,37 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   OverlayVFS->pushOverlay(IMVFS);
   CI->createFileManager(OverlayVFS);
 
-  auto Interp = Interpreter::create(std::move(CI));
-  if (auto E = Interp.takeError())
-    return std::move(E);
+  llvm::Expected<std::unique_ptr<Interpreter>> InterpOrErr =
+      Interpreter::create(std::move(CI));
+  if (!InterpOrErr)
+    return InterpOrErr;
+
+  std::unique_ptr<Interpreter> Interp = std::move(*InterpOrErr);
 
   llvm::Error Err = llvm::Error::success();
-  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      std::move(DCI), *(*Interp)->getCompilerInstance(), IMVFS, Err,
-      (*Interp)->PTUs);
+  llvm::LLVMContext &LLVMCtx = *Interp->TSCtx->getContext();
+
+  auto DeviceAct =
+      std::make_unique<IncrementalAction>(*DCI, LLVMCtx, Err, *Interp);
+
   if (Err)
     return std::move(Err);
 
-  (*Interp)->DeviceParser = std::move(DeviceParser);
+  Interp->DeviceAct = std::move(DeviceAct);
 
-  return Interp;
+  DCI->ExecuteAction(*Interp->DeviceAct);
+
+  Interp->DeviceCI = std::move(DCI);
+
+  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+      *Interp->DeviceCI, *Interp->getCompilerInstance(), IMVFS, Err,
+      Interp->PTUs);
+
+  if (Err)
+    return std::move(Err);
+
+  Interp->DeviceParser = std::move(DeviceParser);
+  return std::move(Interp);
 }
 
 const CompilerInstance *Interpreter::getCompilerInstance() const {
@@ -532,15 +553,17 @@ size_t Interpreter::getEffectivePTUSize() const {
 
 PartialTranslationUnit &
 Interpreter::RegisterPTU(TranslationUnitDecl *TU,
-                         std::unique_ptr<llvm::Module> M /*={}*/) {
+                         std::unique_ptr<llvm::Module> M /*={}*/,
+                         IncrementalAction *Action) {
   PTUs.emplace_back(PartialTranslationUnit());
   PartialTranslationUnit &LastPTU = PTUs.back();
   LastPTU.TUPart = TU;
 
   if (!M)
-    M = GenModule();
+    M = GenModule(Action);
 
-  assert((!getCodeGen() || M) && "Must have a llvm::Module at this point");
+  assert((!getCodeGen(Action) || M) &&
+         "Must have a llvm::Module at this point");
 
   LastPTU.TheModule = std::move(M);
   LLVM_DEBUG(llvm::dbgs() << "compile-ptu " << PTUs.size() - 1
@@ -560,6 +583,16 @@ Interpreter::Parse(llvm::StringRef Code) {
     llvm::Expected<TranslationUnitDecl *> DeviceTU = DeviceParser->Parse(Code);
     if (auto E = DeviceTU.takeError())
       return std::move(E);
+
+    RegisterPTU(*DeviceTU, nullptr, DeviceAct.get());
+
+    llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
+    if (!PTX)
+      return PTX.takeError();
+
+    llvm::Error Err = DeviceParser->GenerateFatbinary();
+    if (Err)
+      return std::move(Err);
   }
 
   // Tell the interpreter sliently ignore unused expressions since value
@@ -736,9 +769,10 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
   return llvm::Error::success();
 }
 
-std::unique_ptr<llvm::Module> Interpreter::GenModule() {
+std::unique_ptr<llvm::Module>
+Interpreter::GenModule(IncrementalAction *Action) {
   static unsigned ID = 0;
-  if (CodeGenerator *CG = getCodeGen()) {
+  if (CodeGenerator *CG = getCodeGen(Action)) {
     // Clang's CodeGen is designed to work with a single llvm::Module. In many
     // cases for convenience various CodeGen parts have a reference to the
     // llvm::Module (TheModule or Module) which does not change when a new
@@ -760,8 +794,10 @@ std::unique_ptr<llvm::Module> Interpreter::GenModule() {
   return nullptr;
 }
 
-CodeGenerator *Interpreter::getCodeGen() const {
-  FrontendAction *WrappedAct = Act->getWrapped();
+CodeGenerator *Interpreter::getCodeGen(IncrementalAction *Action) const {
+  if (!Action)
+    Action = Act.get();
+  FrontendAction *WrappedAct = Action->getWrapped();
   if (!WrappedAct->hasIRSupport())
     return nullptr;
   return static_cast<CodeGenAction *>(WrappedAct)->getCodeGenerator();

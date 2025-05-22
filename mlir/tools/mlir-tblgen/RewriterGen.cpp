@@ -1847,7 +1847,6 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 
     const auto *operand =
         cast<NamedTypeConstraint *>(resultOp.getArg(argIndex));
-    std::string varName;
     if (operand->isVariadic()) {
       ++numVariadic;
       std::string range;

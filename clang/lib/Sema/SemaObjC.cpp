@@ -1245,8 +1245,9 @@ bool SemaObjC::CheckObjCString(Expr *Arg) {
 
 bool SemaObjC::CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation lbrac,
                                    ArrayRef<const Expr *> Args) {
-  Sema::VariadicCallType CallType =
-      Method->isVariadic() ? Sema::VariadicMethod : Sema::VariadicDoesNotApply;
+  VariadicCallType CallType = Method->isVariadic()
+                                  ? VariadicCallType::Method
+                                  : VariadicCallType::DoesNotApply;
 
   SemaRef.checkCall(Method, nullptr, /*ThisArg=*/nullptr, Args,
                     /*IsMemberFunction=*/false, lbrac, Method->getSourceRange(),
@@ -2259,7 +2260,7 @@ void SemaObjC::handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL) {
 
 bool SemaObjC::GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx) {
   Sema::FormatStringInfo FSI;
-  if ((SemaRef.GetFormatStringType(Format) == Sema::FST_NSString) &&
+  if ((SemaRef.GetFormatStringType(Format) == FormatStringType::NSString) &&
       SemaRef.getFormatStringInfo(Format->getFormatIdx(), Format->getFirstArg(),
                                   false, true, &FSI)) {
     Idx = FSI.FormatIdx;

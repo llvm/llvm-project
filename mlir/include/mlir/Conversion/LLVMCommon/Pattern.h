@@ -30,6 +30,32 @@ LogicalResult oneToOneRewrite(
     const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
     IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
 
+/// Replaces the given operation "op" with a call to an LLVM intrinsic with the
+/// specified name "intrinsic" and operands.
+///
+/// The rewrite performs a simple one-to-one matching between the op and LLVM
+/// intrinsic. For example:
+///
+/// ```mlir
+/// %res = intr.op %val : vector<16xf32>
+/// ```
+///
+/// can be converted to
+///
+/// ```mlir
+/// %res = llvm.call_intrinsic "intrinsic"(%val)
+/// ```
+///
+/// The provided operands must be LLVM-compatible.
+///
+/// Upholds a convention that multi-result operations get converted into an
+/// operation returning the LLVM IR structure type, in which case individual
+/// values are first extracted before replacing the original results.
+LogicalResult intrinsicRewrite(Operation *op, StringRef intrinsic,
+                               ValueRange operands,
+                               const LLVMTypeConverter &typeConverter,
+                               RewriterBase &rewriter);
+
 } // namespace detail
 
 /// Decomposes a `src` value into a set of values of type `dstType` through
@@ -83,9 +109,10 @@ protected:
 
   // This is a strided getElementPtr variant that linearizes subscripts as:
   //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
-  Value getStridedElementPtr(Location loc, MemRefType type, Value memRefDesc,
-                             ValueRange indices,
-                             ConversionPatternRewriter &rewriter) const;
+  Value getStridedElementPtr(
+      ConversionPatternRewriter &rewriter, Location loc, MemRefType type,
+      Value memRefDesc, ValueRange indices,
+      LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none) const;
 
   /// Returns if the given memref type is convertible to LLVM and has an
   /// identity layout map.

@@ -234,9 +234,11 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
 def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
     IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
 
-def int_amdgcn_wavefrontsize :
-  ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
+def int_amdgcn_wavefrontsize
+    : ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+                            [NoUndef<RetIndex>, Range<RetIndex, 32, 65>,
+                             IntrNoMem, IntrSpeculatable]>;
 
 // Represent a relocation constant.
 def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
@@ -2638,6 +2640,28 @@ def int_amdgcn_perm :
 //===----------------------------------------------------------------------===//
 // GFX9 Intrinsics
 //===----------------------------------------------------------------------===//
+
+/// This is a general-purpose intrinsic for all operations that take a pointer
+/// a base location in LDS, and a data size and use it to perform a gather to LDS.
+/// This allows abstracting over both global pointers (address space 1) and
+/// the buffer-resource-wrapper pointers (address space 7 and 9).
+/// TODO: add support for address space 5 and scratch_load_lds.
+class AMDGPULoadToLDS :
+  Intrinsic <
+    [],
+    [llvm_anyptr_ty,                    // Base pointer to load from. Varies per lane.
+     LLVMQualPointerType<3>,            // LDS base pointer to store to. Must be wave-uniform.
+     llvm_i32_ty,                       // Data byte size: 1/2/4 (/12/16 for gfx950)
+     llvm_i32_ty,                       // imm offset (applied to both input and LDS address)
+     llvm_i32_ty],                      // auxiliary data (imm, cachepolicy (bit 0 = sc0,
+                                        //                                   bit 1 = sc1,
+                                        //                                   bit 4 = scc))
+    [IntrWillReturn, IntrArgMemOnly,
+     NoCapture<ArgIndex<0>>, ReadOnly<ArgIndex<0>>,
+     NoCapture<ArgIndex<1>>, WriteOnly<ArgIndex<1>>,
+     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
+     "", [SDNPMemOperand]>;
+def int_amdgcn_load_to_lds : AMDGPULoadToLDS;
 
 class AMDGPUGlobalLoadLDS :
   ClangBuiltin<"__builtin_amdgcn_global_load_lds">,

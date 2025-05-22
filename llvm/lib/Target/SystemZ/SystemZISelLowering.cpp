@@ -6930,10 +6930,9 @@ SDValue SystemZTargetLowering::lowerLoadF16(SDValue Op,
   } else {
     LoadSDNode *Ld = cast<LoadSDNode>(Op.getNode());
     assert(EVT(RegVT) == Ld->getMemoryVT() && "Unhandled f16 load");
-    NewLd =
-        DAG.getExtLoad(ISD::EXTLOAD, DL, MVT::i64, Ld->getChain(),
-                       Ld->getBasePtr(), Ld->getPointerInfo(), MVT::i16,
-                       Ld->getOriginalAlign(), Ld->getMemOperand()->getFlags());
+    NewLd = DAG.getExtLoad(ISD::EXTLOAD, DL, MVT::i64, Ld->getChain(),
+                           Ld->getBasePtr(), Ld->getPointerInfo(), MVT::i16,
+                           Ld->getBaseAlign(), Ld->getMemOperand()->getFlags());
   }
   SDValue F16Val = convertToF16(NewLd, DAG);
   return DAG.getMergeValues({F16Val, NewLd.getValue(1)}, DL);
@@ -7949,7 +7948,7 @@ SDValue SystemZTargetLowering::combineLOAD(
       if (HiPart) {
         SDValue EltLoad = DAG.getLoad(
             HiPart->getValueType(0), DL, LD->getChain(), LD->getBasePtr(),
-            LD->getPointerInfo(), LD->getOriginalAlign(),
+            LD->getPointerInfo(), LD->getBaseAlign(),
             LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
         DCI.CombineTo(HiPart, EltLoad, true);
@@ -7959,7 +7958,7 @@ SDValue SystemZTargetLowering::combineLOAD(
         SDValue EltLoad = DAG.getLoad(
             LoPart->getValueType(0), DL, LD->getChain(),
             DAG.getObjectPtrOffset(DL, LD->getBasePtr(), TypeSize::getFixed(8)),
-            LD->getPointerInfo().getWithOffset(8), LD->getOriginalAlign(),
+            LD->getPointerInfo().getWithOffset(8), LD->getBaseAlign(),
             LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
         DCI.CombineTo(LoPart, EltLoad, true);
@@ -8109,7 +8108,7 @@ SDValue SystemZTargetLowering::combineSTORE(
       SDValue AddrSpaceCast = DAG.getAddrSpaceCast(DL, PtrVT, SN->getBasePtr(),
                                                    SYSTEMZAS::PTR32, 0);
       return DAG.getStore(SN->getChain(), DL, SN->getValue(), AddrSpaceCast,
-                          SN->getPointerInfo(), SN->getOriginalAlign(),
+                          SN->getPointerInfo(), SN->getBaseAlign(),
                           SN->getMemOperand()->getFlags(), SN->getAAInfo());
     }
   }
@@ -8183,17 +8182,14 @@ SDValue SystemZTargetLowering::combineSTORE(
     if ((MemVT == MVT::i128 && isI128MovedFromParts(Op1, LoPart, HiPart)) ||
         (MemVT == MVT::f128 && isF128MovedFromParts(Op1, LoPart, HiPart))) {
       SDLoc DL(SN);
-      SDValue Chain0 =
-        DAG.getStore(SN->getChain(), DL, HiPart, SN->getBasePtr(),
-                     SN->getPointerInfo(), SN->getOriginalAlign(),
-                     SN->getMemOperand()->getFlags(), SN->getAAInfo());
-      SDValue Chain1 =
-        DAG.getStore(SN->getChain(), DL, LoPart,
-                     DAG.getObjectPtrOffset(DL, SN->getBasePtr(),
-                                                TypeSize::getFixed(8)),
-                     SN->getPointerInfo().getWithOffset(8),
-                     SN->getOriginalAlign(),
-                     SN->getMemOperand()->getFlags(), SN->getAAInfo());
+      SDValue Chain0 = DAG.getStore(
+          SN->getChain(), DL, HiPart, SN->getBasePtr(), SN->getPointerInfo(),
+          SN->getBaseAlign(), SN->getMemOperand()->getFlags(), SN->getAAInfo());
+      SDValue Chain1 = DAG.getStore(
+          SN->getChain(), DL, LoPart,
+          DAG.getObjectPtrOffset(DL, SN->getBasePtr(), TypeSize::getFixed(8)),
+          SN->getPointerInfo().getWithOffset(8), SN->getBaseAlign(),
+          SN->getMemOperand()->getFlags(), SN->getAAInfo());
 
       return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chain0, Chain1);
     }

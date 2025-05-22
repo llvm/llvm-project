@@ -221,6 +221,13 @@ inline bool hasBindcAttr(mlir::Operation *op) {
   return hasProcedureAttr<fir::FortranProcedureFlagsEnum::bind_c>(op);
 }
 
+/// Return true, if \p rebox operation keeps the input array
+/// continuous if it is initially continuous.
+/// When \p checkWhole is false, then the checking is only done
+/// for continuity in the innermost dimension, otherwise,
+/// the checking is done for continuity of the whole result of rebox.
+bool reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole = true);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPSSUPPORT_H

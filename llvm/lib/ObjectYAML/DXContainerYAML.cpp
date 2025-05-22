@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/Object/DXContainer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <cstdint>
@@ -100,59 +99,6 @@ DXContainerYAML::RootSignatureYamlDesc::create(
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
       NewP.Data = YamlDescriptor;
-    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
-                   dxbc::RTS0::v1::DescriptorRange>>(&ParamView)) {
-      llvm::Expected<
-          object::DirectX::DescriptorTable<dxbc::RTS0::v1::DescriptorRange>>
-          TableOrErr = TDV->read();
-      if (Error E = TableOrErr.takeError())
-        return std::move(E);
-      auto Table = *TableOrErr;
-      DescriptorTableYaml YamlTable;
-      YamlTable.NumRanges = Table.NumRanges;
-      YamlTable.RangesOffset = Table.RangesOffset;
-
-      for (const auto &R : Table) {
-        DescriptorRangeYaml NewR;
-
-        NewR.OffsetInDescriptorsFromTableStart =
-            R.OffsetInDescriptorsFromTableStart;
-        NewR.NumDescriptors = R.NumDescriptors;
-        NewR.BaseShaderRegister = R.BaseShaderRegister;
-        NewR.RegisterSpace = R.RegisterSpace;
-        NewR.RangeType = R.RangeType;
-
-        YamlTable.Ranges.push_back(NewR);
-      }
-      NewP.Data = YamlTable;
-    } else if (auto *TDV = dyn_cast<object::DirectX::DescriptorTableView<
-                   dxbc::RTS0::v2::DescriptorRange>>(&ParamView)) {
-      llvm::Expected<
-          object::DirectX::DescriptorTable<dxbc::RTS0::v2::DescriptorRange>>
-          TableOrErr = TDV->read();
-      if (Error E = TableOrErr.takeError())
-        return std::move(E);
-      auto Table = *TableOrErr;
-      DescriptorTableYaml YamlTable;
-      YamlTable.NumRanges = Table.NumRanges;
-      YamlTable.RangesOffset = Table.RangesOffset;
-
-      for (const auto &R : Table) {
-        DescriptorRangeYaml NewR;
-
-        NewR.OffsetInDescriptorsFromTableStart =
-            R.OffsetInDescriptorsFromTableStart;
-        NewR.NumDescriptors = R.NumDescriptors;
-        NewR.BaseShaderRegister = R.BaseShaderRegister;
-        NewR.RegisterSpace = R.RegisterSpace;
-        NewR.RangeType = R.RangeType;
-#define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
-  NewR.Val = (R.Flags &                                                        \
-              llvm::to_underlying(dxbc::RTS0::DescriptorRangeFlag::Val)) > 0;
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-        YamlTable.Ranges.push_back(NewR);
-      }
-      NewP.Data = YamlTable;
     }
 
     RootSigDesc.Parameters.push_back(NewP);
@@ -178,15 +124,6 @@ uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   if (Val)                                                                     \
     Flag |= (uint32_t)dxbc::RTS0::RootElementFlag::Val;
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-  return Flag;
-}
-
-uint32_t DXContainerYAML::DescriptorRangeYaml::getEncodedFlags() const {
-  uint64_t Flag = 0;
-#define DESCRIPTOR_RANGE_FLAG(Num, Val)                                        \
-  if (Val)                                                                     \
-    Flag |= (uint32_t)dxbc::RTS0::DescriptorRangeFlag::Val;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   return Flag;
 }
@@ -377,25 +314,6 @@ void MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml>::mapping(
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-void MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml>::mapping(
-    IO &IO, llvm::DXContainerYAML::DescriptorRangeYaml &R) {
-  IO.mapRequired("RangeType", R.RangeType);
-  IO.mapRequired("NumDescriptors", R.NumDescriptors);
-  IO.mapRequired("BaseShaderRegister", R.BaseShaderRegister);
-  IO.mapRequired("RegisterSpace", R.RegisterSpace);
-  IO.mapRequired("OffsetInDescriptorsFromTableStart",
-                 R.OffsetInDescriptorsFromTableStart);
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) IO.mapOptional(#Val, R.Val, false);
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-}
-
-void MappingTraits<llvm::DXContainerYAML::DescriptorTableYaml>::mapping(
-    IO &IO, llvm::DXContainerYAML::DescriptorTableYaml &T) {
-  IO.mapRequired("NumRanges", T.NumRanges);
-  IO.mapOptional("RangesOffset", T.RangesOffset);
-  IO.mapRequired("Ranges", T.Ranges);
-}
-
 void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
     IO &IO, llvm::DXContainerYAML::RootParameterYamlDesc &P) {
   IO.mapRequired("ParameterType", P.Type);
@@ -417,13 +335,6 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
       Descriptor = std::get<DXContainerYAML::RootDescriptorYaml>(P.Data);
     IO.mapRequired("Descriptor", Descriptor);
     P.Data = Descriptor;
-  } break;
-  case llvm::to_underlying(dxbc::RTS0::RootParameterType::DescriptorTable): {
-    DXContainerYAML::DescriptorTableYaml Table;
-    if (IO.outputting())
-      Table = std::get<DXContainerYAML::DescriptorTableYaml>(P.Data);
-    IO.mapRequired("Table", Table);
-    P.Data = Table;
   } break;
   }
 }

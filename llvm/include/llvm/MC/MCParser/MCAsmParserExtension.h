@@ -100,6 +100,8 @@ public:
 
   bool parseDirectiveCGProfile(StringRef, SMLoc);
 
+  bool maybeParseUniqueID(int64_t &UniqueID);
+
   bool check(bool P, const Twine &Msg) {
     return getParser().check(P, Msg);
   }

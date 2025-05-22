@@ -455,7 +455,7 @@ static std::unique_ptr<TagNode> writeSourceFileRef(const ClangDocContext &CDCtx,
 
   if (!L.IsFileInRootDir && !CDCtx.RepositoryUrl)
     return std::make_unique<TagNode>(
-        HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
+        HTMLTag::TAG_P, "Defined at line " + std::to_string(L.StartLineNumber) +
                             " of file " + L.Filename);
 
   SmallString<128> FileURL(CDCtx.RepositoryUrl.value_or(""));
@@ -472,13 +472,14 @@ static std::unique_ptr<TagNode> writeSourceFileRef(const ClangDocContext &CDCtx,
           llvm::sys::path::Style::windows));
   auto Node = std::make_unique<TagNode>(HTMLTag::TAG_P);
   Node->Children.emplace_back(std::make_unique<TextNode>("Defined at line "));
-  auto LocNumberNode =
-      std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
+  auto LocNumberNode = std::make_unique<TagNode>(
+      HTMLTag::TAG_A, std::to_string(L.StartLineNumber));
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
   LocNumberNode->Attributes.emplace_back(
-      "href", formatv("{0}#{1}{2}", FileURL,
-                      CDCtx.RepositoryLinePrefix.value_or(""), L.LineNumber));
+      "href",
+      formatv("{0}#{1}{2}", FileURL, CDCtx.RepositoryLinePrefix.value_or(""),
+              L.StartLineNumber));
   Node->Children.emplace_back(std::move(LocNumberNode));
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
   auto LocFileNode = std::make_unique<TagNode>(
@@ -1021,12 +1022,12 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   // JavaScript from escaping characters incorrectly, and introducing  bad paths
   // in the URLs.
   std::string RootPathEscaped = RootPath.str().str();
-  std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
+  llvm::replace(RootPathEscaped, '\\', '/');
   OS << "var RootPath = \"" << RootPathEscaped << "\";\n";
 
   llvm::SmallString<128> Base(CDCtx.Base);
   std::string BaseEscaped = Base.str().str();
-  std::replace(BaseEscaped.begin(), BaseEscaped.end(), '\\', '/');
+  llvm::replace(BaseEscaped, '\\', '/');
   OS << "var Base = \"" << BaseEscaped << "\";\n";
 
   CDCtx.Idx.sort();

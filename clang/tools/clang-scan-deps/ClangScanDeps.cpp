@@ -346,8 +346,21 @@ template <typename Container>
 static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
   return [&JOS, Strings = std::forward<Container>(Strings)] {
     for (StringRef Str : Strings)
-      JOS.value(Str);
+      // Not reporting SDKSettings.json so that test checks can remain (mostly)
+      // platform-agnostic.
+      if (!Str.ends_with("SDKSettings.json"))
+        JOS.value(Str);
   };
+}
+
+static auto toJSONModuleID(llvm::json::OStream &JOS, StringRef ContextHash,
+                           StringRef ModuleName, bool Exported) {
+  return JOS.object([&] {
+    JOS.attribute("context-hash", StringRef(ContextHash));
+    JOS.attribute("module-name", StringRef(ModuleName));
+    if (Exported)
+      JOS.attribute("exported", StringRef("true"));
+  });
 }
 
 // Technically, we don't need to sort the dependency list to get determinism.
@@ -355,11 +368,17 @@ static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
 static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
   llvm::sort(V);
   return [&JOS, V = std::move(V)] {
-    for (const ModuleID &MID : V)
-      JOS.object([&] {
-        JOS.attribute("context-hash", StringRef(MID.ContextHash));
-        JOS.attribute("module-name", StringRef(MID.ModuleName));
-      });
+    for (const auto &MID : V)
+      toJSONModuleID(JOS, MID.ContextHash, MID.ModuleName, false);
+  };
+}
+
+static auto toJSONSorted(llvm::json::OStream &JOS,
+                         std::vector<ModuleDeps::DepInfo> V) {
+  llvm::sort(V);
+  return [&JOS, V = std::move(V)] {
+    for (const ModuleDeps::DepInfo &MID : V)
+      toJSONModuleID(JOS, MID.ID.ContextHash, MID.ID.ModuleName, MID.Exported);
   };
 }
 
@@ -482,7 +501,12 @@ public:
                                toJSONStrings(JOS, MD.getBuildArguments()));
             JOS.attribute("context-hash", StringRef(MD.ID.ContextHash));
             JOS.attributeArray("file-deps", [&] {
-              MD.forEachFileDep([&](StringRef FileDep) { JOS.value(FileDep); });
+              MD.forEachFileDep([&](StringRef FileDep) {
+                // Not reporting SDKSettings.json so that test checks can remain
+                // (mostly) platform-agnostic.
+                if (!FileDep.ends_with("SDKSettings.json"))
+                  JOS.value(FileDep);
+              });
             });
             JOS.attributeArray("link-libraries",
                                toJSONSorted(JOS, MD.LinkLibraries));

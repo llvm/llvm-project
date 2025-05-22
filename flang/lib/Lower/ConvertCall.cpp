@@ -960,9 +960,26 @@ struct CallCleanUp {
     mlir::Value tempVar;
     mlir::Value mustFree;
   };
-  void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
-    Fortran::common::visit([&](auto &c) { c.genCleanUp(loc, builder); },
+
+  /// Generate clean-up code.
+  /// If \p postponeAssociates is true, the ExprAssociate clean-up
+  /// is not generated, and instead the corresponding CallCleanUp
+  /// object is returned as the result.
+  std::optional<CallCleanUp> genCleanUp(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        bool postponeAssociates) {
+    std::optional<CallCleanUp> postponed;
+    Fortran::common::visit(Fortran::common::visitors{
+                               [&](CopyIn &c) { c.genCleanUp(loc, builder); },
+                               [&](ExprAssociate &c) {
+                                 if (postponeAssociates)
+                                   postponed = CallCleanUp{c};
+                                 else
+                                   c.genCleanUp(loc, builder);
+                               },
+                           },
                            cleanUp);
+    return postponed;
   }
   std::variant<CopyIn, ExprAssociate> cleanUp;
 };
@@ -1369,7 +1386,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // it according to the interface.
   mlir::Value addr;
   if (mlir::isa<fir::BoxCharType>(dummyTypeWithActualRank)) {
-    addr = hlfir::genVariableBoxChar(loc, builder, entity);
+    // Cast the argument to match the volatility of the dummy argument.
+    auto nonVolatileEntity = hlfir::Entity{builder.createVolatileCast(
+        loc, fir::isa_volatile_type(dummyType), entity)};
+    addr = hlfir::genVariableBoxChar(loc, builder, nonVolatileEntity);
   } else if (mlir::isa<fir::BaseBoxType>(dummyTypeWithActualRank)) {
     entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an
@@ -1726,10 +1746,23 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       caller, callSiteType, callContext.resultType,
       callContext.isElementalProcWithArrayArgs());
 
-  /// Clean-up associations and copy-in.
-  for (auto cleanUp : callCleanUps)
-    cleanUp.genCleanUp(loc, builder);
+  // Clean-up associations and copy-in.
+  // The association clean-ups are postponed to the end of the statement
+  // lowering. The copy-in clean-ups may be delayed as well,
+  // but they are done immediately after the call currently.
+  llvm::SmallVector<CallCleanUp> associateCleanups;
+  for (auto cleanUp : callCleanUps) {
+    auto postponed =
+        cleanUp.genCleanUp(loc, builder, /*postponeAssociates=*/true);
+    if (postponed)
+      associateCleanups.push_back(*postponed);
+  }
 
+  fir::FirOpBuilder *bldr = &builder;
+  callContext.stmtCtx.attachCleanup([=]() {
+    for (auto cleanUp : associateCleanups)
+      (void)cleanUp.genCleanUp(loc, *bldr, /*postponeAssociates=*/false);
+  });
   if (auto *entity = std::get_if<hlfir::EntityWithAttributes>(&loweredResult))
     return *entity;
 

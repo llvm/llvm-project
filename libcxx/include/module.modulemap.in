@@ -232,10 +232,6 @@ module std_core [system] {
       header "__type_traits/is_nothrow_constructible.h"
       export std_core.type_traits.integral_constant
     }
-    module is_nothrow_convertible {
-      header "__type_traits/is_nothrow_convertible.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_nothrow_destructible {
       header "__type_traits/is_nothrow_destructible.h"
       export std_core.type_traits.integral_constant
@@ -274,6 +270,10 @@ module std_core [system] {
     }
     module is_referenceable {
       header "__type_traits/is_referenceable.h"
+      export std_core.type_traits.integral_constant
+    }
+    module is_replaceable {
+      header "__type_traits/is_replaceable.h"
       export std_core.type_traits.integral_constant
     }
     module is_same {
