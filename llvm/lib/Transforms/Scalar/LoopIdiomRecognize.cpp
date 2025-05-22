@@ -453,13 +453,10 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   // See if the pointer expression is an AddRec like {base,+,1} on the current
   // loop, which indicates a strided store.  If we have something else, it's a
   // random store we can't handle.
-  const SCEVAddRecExpr *StoreEv =
-      dyn_cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
-  if (!StoreEv || StoreEv->getLoop() != CurLoop || !StoreEv->isAffine())
-    return LegalStoreKind::None;
-
-  // Check to see if we have a constant stride.
-  if (!isa<SCEVConstant>(StoreEv->getOperand(1)))
+  const SCEV *StoreEv = SE->getSCEV(StorePtr);
+  const SCEVConstant *Stride;
+  if (!match(StoreEv, m_scev_AffineAddRec(m_SCEV(), m_SCEVConstant(Stride))) ||
+      cast<SCEVAddRecExpr>(StoreEv)->getLoop() != CurLoop)
     return LegalStoreKind::None;
 
   // See if the store can be turned into a memset.
@@ -494,9 +491,9 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   if (HasMemcpy && !DisableLIRP::Memcpy) {
     // Check to see if the stride matches the size of the store.  If so, then we
     // know that every byte is touched in the loop.
-    APInt Stride = getStoreStride(StoreEv);
     unsigned StoreSize = DL->getTypeStoreSize(SI->getValueOperand()->getType());
-    if (StoreSize != Stride && StoreSize != -Stride)
+    APInt StrideAP = Stride->getAPInt();
+    if (StoreSize != StrideAP && StoreSize != -StrideAP)
       return LegalStoreKind::None;
 
     // The store must be feeding a non-volatile load.
@@ -512,13 +509,12 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
     // See if the pointer expression is an AddRec like {base,+,1} on the current
     // loop, which indicates a strided load.  If we have something else, it's a
     // random load we can't handle.
-    const SCEVAddRecExpr *LoadEv =
-        dyn_cast<SCEVAddRecExpr>(SE->getSCEV(LI->getPointerOperand()));
-    if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
-      return LegalStoreKind::None;
+    const SCEV *LoadEv = SE->getSCEV(LI->getPointerOperand());
 
     // The store and load must share the same stride.
-    if (StoreEv->getOperand(1) != LoadEv->getOperand(1))
+    if (!match(LoadEv,
+               m_scev_AffineAddRec(m_SCEV(), m_scev_Specific(Stride))) ||
+        cast<SCEVAddRecExpr>(LoadEv)->getLoop() != CurLoop)
       return LegalStoreKind::None;
 
     // Success.  This store can be converted into a memcpy.
@@ -854,15 +850,15 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   // See if the pointer expression is an AddRec like {base,+,1} on the current
   // loop, which indicates a strided store.  If we have something else, it's a
   // random store we can't handle.
-  const SCEVAddRecExpr *Ev = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Pointer));
-  if (!Ev || Ev->getLoop() != CurLoop)
-    return false;
-  if (!Ev->isAffine()) {
+  const SCEV *Ev = SE->getSCEV(Pointer);
+  const SCEV *PointerStrideSCEV;
+  if (!match(Ev, m_scev_AffineAddRec(m_SCEV(), m_SCEV(PointerStrideSCEV)))) {
     LLVM_DEBUG(dbgs() << "  Pointer is not affine, abort\n");
     return false;
   }
+  if (cast<SCEVAddRecExpr>(Ev)->getLoop() != CurLoop)
+    return false;
 
-  const SCEV *PointerStrideSCEV = Ev->getOperand(1);
   const SCEV *MemsetSizeSCEV = SE->getSCEV(MSI->getLength());
   if (!PointerStrideSCEV || !MemsetSizeSCEV)
     return false;
@@ -877,7 +873,7 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
     LLVM_DEBUG(dbgs() << "  memset size is constant\n");
     uint64_t SizeInBytes = cast<ConstantInt>(MSI->getLength())->getZExtValue();
     const APInt *Stride;
-    if (!match(Ev->getOperand(1), m_scev_APInt(Stride)))
+    if (!match(PointerStrideSCEV, m_scev_APInt(Stride)))
       return false;
 
     if (SizeInBytes != *Stride && SizeInBytes != -*Stride)
@@ -940,8 +936,9 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   SmallPtrSet<Instruction *, 1> MSIs;
   MSIs.insert(MSI);
   return processLoopStridedStore(Pointer, SE->getSCEV(MSI->getLength()),
-                                 MSI->getDestAlign(), SplatValue, MSI, MSIs, Ev,
-                                 BECount, IsNegStride, /*IsLoopMemset=*/true);
+                                 MSI->getDestAlign(), SplatValue, MSI, MSIs,
+                                 cast<SCEVAddRecExpr>(Ev), BECount, IsNegStride,
+                                 /*IsLoopMemset=*/true);
 }
 
 /// mayLoopAccessLocation - Return true if the specified loop might access the
@@ -1575,17 +1572,13 @@ public:
     // See if the pointer expression is an AddRec with constant step a of form
     // ({n,+,a}) where a is the width of the char type.
     Value *IncPtr = LoopLoad->getPointerOperand();
-    const SCEVAddRecExpr *LoadEv =
-        dyn_cast<SCEVAddRecExpr>(SE->getSCEV(IncPtr));
-    if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
+    const SCEV *LoadEv = SE->getSCEV(IncPtr);
+    const APInt *Step;
+    if (!match(LoadEv,
+               m_scev_AffineAddRec(m_SCEV(LoadBaseEv), m_scev_APInt(Step))))
       return false;
-    LoadBaseEv = LoadEv->getStart();
 
     LLVM_DEBUG(dbgs() << "pointer load scev: " << *LoadEv << "\n");
-
-    const APInt *Step;
-    if (!match(LoadEv->getStepRecurrence(*SE), m_scev_APInt(Step)))
-      return false;
 
     unsigned StepSize = Step->getZExtValue();
 
