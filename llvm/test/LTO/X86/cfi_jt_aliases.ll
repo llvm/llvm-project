@@ -27,14 +27,14 @@
 ; CHECK-THIN-RE-NEXT: FUNC GLOBAL HIDDEN {{[0-9]+}} c.cfi_jt
 
 ; CHECK-FULL-OD:      a.cfi_jt>:
-; CHECK-FULL-OD:      jmp {{.*}} <a.cfi_jt
-; CHECK-FULL-OD-NEXT: R_X86_64_PLT32 .La$local
+; CHECK-FULL-OD-NEXT: jmp {{.*}} <a>
+; CHECK-FULL-OD-NEXT: int3
 ; CHECK-FULL-OD:      b.cfi_jt>:
-; CHECK-FULL-OD:      jmp {{.*}} <b.cfi_jt
-; CHECK-FULL-OD-NEXT: R_X86_64_PLT32 .Lb$local
+; CHECK-FULL-OD-NEXT: jmp {{.*}} <b>
+; CHECK-FULL-OD-NEXT: int3
 ; CHECK-FULL-OD:      c.cfi_jt>:
-; CHECK-FULL-OD:      jmp {{.*}} <c.cfi_jt
-; CHECK-FULL-OD-NEXT: R_X86_64_PLT32 .Lc$local
+; CHECK-FULL-OD-NEXT: jmp {{.*}} <c>
+; CHECK-FULL-OD-NEXT: int3
 
 ; CHECK-THIN-OD:      a.cfi_jt>:
 ; CHECK-THIN-OD:      jmp {{.*}} <a.cfi_jt
