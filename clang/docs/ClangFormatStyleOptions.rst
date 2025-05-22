@@ -3420,8 +3420,8 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:                             false:
-    if constexpr (          vs.       if constexpr (a ||
-       a || b                                       b)
+    if constexpr (          vs.       if constexpr (
+       a || b                            a || b )
     )
 
 .. _BreakBeforeCloseBracketLoop:
@@ -3435,8 +3435,8 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:                             false:
-    while (                  vs.      while (a &&
-       a && b                                b) {
+    while (                  vs.      while (
+       a && b                            a && b) {
     ) {
 
 .. _BreakBeforeCloseBracketSwitch:
@@ -3450,8 +3450,8 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:                             false:
-    switch (                 vs.      switch (a &&
-       a && b                                 b) {
+    switch (                 vs.      switch (
+       a && b                            a && b) {
     ) {
 
 .. _BreakBeforeConceptDeclarations:
