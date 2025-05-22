@@ -239,6 +239,12 @@ public:
     return *this;
   }
 
+  // Set all the properties.
+  MachineFunctionProperties &set() {
+    Properties.set();
+    return *this;
+  }
+
   MachineFunctionProperties &set(const MachineFunctionProperties &MFP) {
     Properties |= MFP.Properties;
     return *this;
