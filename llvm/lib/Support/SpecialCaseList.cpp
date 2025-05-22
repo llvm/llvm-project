@@ -67,9 +67,11 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
 }
 
 unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
-  for (const auto &[Pattern, Pair] : Globs)
-    if (Pair.first.match(Query))
-      return Pair.second;
+  for (const auto &glob : this->Globs) {
+    llvm::outs() << "Match: " << glob.first << " Line number: " << glob.second.second << "\n";
+    if (glob.second.first.match(Query))
+      return glob.second.second;
+  }
   for (const auto &[Regex, LineNumber] : RegExes)
     if (Regex->match(Query))
       return LineNumber;
@@ -227,13 +229,19 @@ unsigned SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
 unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
                                          StringRef Prefix, StringRef Query,
                                          StringRef Category) const {
+  llvm::outs() << "Input Arguments. Prefix:  " << Prefix << " Query: " << Query
+               << " Category: " << Category << " \n";
   SectionEntries::const_iterator I = Entries.find(Prefix);
   if (I == Entries.end())
     return 0;
   StringMap<Matcher>::const_iterator II = I->second.find(Category);
+
   if (II == I->second.end())
     return 0;
 
+  for (const auto& glob : II->getValue().Globs) {
+    llvm::outs() << "glob pattern: " << glob.first << " line number: " << glob.second.second << "\n";
+  }
   return II->getValue().match(Query);
 }
 
