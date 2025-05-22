@@ -739,6 +739,96 @@ define i32 @test_atomicrmw_udec_wrap_i32_global_system__amdgpu_no_fine_grained_m
   ret i32 %res
 }
 
+;---------------------------------------------------------------------
+; atomicrmw usub_cond
+;---------------------------------------------------------------------
+
+; expansion is necessary, operation not supported over PCIe
+define i32 @test_atomicrmw_usub_cond_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
+; COMMON-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw usub_cond ptr addrspace(1) [[PTR]], i32 [[VALUE]] seq_cst, align 4
+; COMMON-NEXT:    ret i32 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i32 %value seq_cst
+  ret i32 %res
+}
+
+define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i32 %value) {
+; COMMON-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw usub_cond ptr addrspace(1) [[PTR]], i32 [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    ret i32 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i32 %value seq_cst, !amdgpu.no.fine.grained.memory !0
+  ret i32 %res
+}
+
+define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
+; COMMON-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw usub_cond ptr addrspace(1) [[PTR]], i32 [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    ret i32 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i32 %value seq_cst, !amdgpu.no.remote.memory !0
+  ret i32 %res
+}
+
+define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
+; COMMON-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw usub_cond ptr addrspace(1) [[PTR]], i32 [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    ret i32 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_cond ptr addrspace(1) %ptr, i32 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+  ret i32 %res
+}
+
+;---------------------------------------------------------------------
+; atomicrmw usub_sat
+;---------------------------------------------------------------------
+
+; expansion is necessary, operation not supported over PCIe
+define i32 @test_atomicrmw_usub_sat_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
+; COMMON-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw usub_sat ptr addrspace(1) [[PTR]], i32 [[VALUE]] seq_cst, align 4
+; COMMON-NEXT:    ret i32 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %value seq_cst
+  ret i32 %res
+}
+
+define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i32 %value) {
+; COMMON-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw usub_sat ptr addrspace(1) [[PTR]], i32 [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    ret i32 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %value seq_cst, !amdgpu.no.fine.grained.memory !0
+  ret i32 %res
+}
+
+define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
+; COMMON-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw usub_sat ptr addrspace(1) [[PTR]], i32 [[VALUE]] seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    ret i32 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %value seq_cst, !amdgpu.no.remote.memory !0
+  ret i32 %res
+}
+
+define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
+; COMMON-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw usub_sat ptr addrspace(1) [[PTR]], i32 [[VALUE]] seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    ret i32 [[NEWLOADED]]
+;
+  %res = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+  ret i32 %res
+}
+
 !0 = !{}
 ;.
 ; GFX803: [[META0]] = !{}
