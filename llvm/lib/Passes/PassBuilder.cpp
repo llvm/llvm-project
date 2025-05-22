@@ -465,7 +465,18 @@ public:
   }
 
   static MachineFunctionProperties getRequiredProperties() {
-    return MachineFunctionProperties().set();
+    return MachineFunctionProperties()
+        .setFailedISel()
+        .setFailsVerification()
+        .setIsSSA()
+        .setLegalized()
+        .setNoPHIs()
+        .setNoVRegs()
+        .setRegBankSelected()
+        .setSelected()
+        .setTiedOpsRewritten()
+        .setTracksDebugUserValues()
+        .setTracksLiveness();
   }
   static StringRef name() { return "RequireAllMachineFunctionPropertiesPass"; }
 };
