@@ -1248,10 +1248,8 @@ void TosaValidation::runOnOperation() {
       return signalPassFailure();
 
     if (!allowInvalidOpDatatypeCombinations &&
-        failed(profileComp.checkInvalid(op))) {
-      op->emitOpError("illegal: operand/result data types not supported");
+        failed(profileComp.checkInvalid(op)))
       return signalPassFailure();
-    }
 
     // Some uses of TOSA rely on the constant operands of particular
     // operations.
