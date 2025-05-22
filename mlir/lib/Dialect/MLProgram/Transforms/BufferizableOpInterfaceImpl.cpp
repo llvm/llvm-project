@@ -9,6 +9,7 @@
 #include "mlir/Dialect/MLProgram/Transforms/BufferizableOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 
@@ -52,15 +53,18 @@ struct GlobalOpInterface
   bool hasTensorSemantics(Operation *) const { return true; }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &) const {
+                          const BufferizationOptions &,
+                          BufferizationState &state) const {
     auto globalOp = cast<GlobalOp>(op);
     if (!globalOp.getValue().has_value())
       return globalOp.emitError("global op must have a value");
 
+    bufferization::removeSymbol(globalOp, state);
+
     auto tensorType = cast<TensorType>(globalOp.getType());
     auto memrefType = getMemRefTypeWithStaticIdentityLayout(tensorType);
 
-    replaceOpWithNewBufferizedOp<memref::GlobalOp>(
+    auto replacement = replaceOpWithNewBufferizedOp<memref::GlobalOp>(
         rewriter, globalOp, globalOp.getSymName(),
         /*sym_visibility=*/globalOp.getSymVisibilityAttr(),
         /*type=*/cast<MemRefType>(memrefType),
@@ -68,6 +72,7 @@ struct GlobalOpInterface
         /*constant=*/!globalOp.getIsMutable(),
         /*alignment=*/nullptr);
 
+    bufferization::insertSymbol(replacement, state);
     return success();
   }
 };
@@ -91,7 +96,8 @@ struct GlobalLoadOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &) const {
+                          const BufferizationOptions &,
+                          BufferizationState &state) const {
     auto globalLoadOp = cast<GlobalLoadOp>(op);
 
     auto tensorType = cast<TensorType>(globalLoadOp.getType());
@@ -121,7 +127,8 @@ struct GlobalStoreOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto globalStoreOp = cast<GlobalStoreOp>(op);
 
     auto tensorType = cast<TensorType>(globalStoreOp.getValue().getType());
