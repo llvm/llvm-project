@@ -22,15 +22,19 @@ struct __half2 {
 };
 
 // CHECK-LABEL: define dso_local <2 x half> @test_flat_add_2f16(
-// CHECK-SAME: ptr addrspace(5) noundef [[ADDR:%.*]], <2 x half> noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef [[ADDR:%.*]], <2 x half> noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x half>, align 4, addrspace(5)
+// CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
-// CHECK-NEXT:    store ptr addrspace(5) [[ADDR]], ptr addrspace(5) [[ADDR_ADDR]], align 4
-// CHECK-NEXT:    store <2 x half> [[VAL]], ptr addrspace(5) [[VAL_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(5), ptr addrspace(5) [[ADDR_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(5) [[VAL_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(5) [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]]
+// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
+// CHECK-NEXT:    [[VAL_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VAL_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x half> [[VAL]], ptr [[VAL_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[VAL_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], <2 x half> [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]]
 // CHECK-NEXT:    ret <2 x half> [[TMP2]]
 //
 half2 test_flat_add_2f16(short2 *addr, half2 val) {
