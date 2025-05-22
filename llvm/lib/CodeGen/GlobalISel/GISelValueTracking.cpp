@@ -14,13 +14,13 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/CodeGen/GlobalISel/MachineFloatingPointPredicateUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/MachineFloatingPointPredicateUtils.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -957,7 +957,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXIMUM:
   case TargetOpcode::G_FMINIMUM:
-  case TargetOpcode::G_FMAXNUM_IEEE: {
+  case TargetOpcode::G_FMAXNUM_IEEE:
+  case TargetOpcode::G_FMAXIMUMNUM:
+  case TargetOpcode::G_FMINIMUMNUM: {
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
     KnownFPClass KnownLHS, KnownRHS;
@@ -972,10 +974,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     // If either operand is not NaN, the result is not NaN.
     if (NeverNaN && (Opcode == TargetOpcode::G_FMINNUM ||
-                     Opcode == TargetOpcode::G_FMAXNUM))
+                     Opcode == TargetOpcode::G_FMAXNUM ||
+                     Opcode == TargetOpcode::G_FMINIMUMNUM ||
+                     Opcode == TargetOpcode::G_FMAXIMUMNUM))
       Known.knownNot(fcNan);
 
-    if (Opcode == TargetOpcode::G_FMAXNUM) {
+    if (Opcode == TargetOpcode::G_FMAXNUM ||
+        Opcode == TargetOpcode::G_FMAXIMUMNUM ||
+        Opcode == TargetOpcode::G_FMAXNUM_IEEE) {
       // If at least one operand is known to be positive, the result must be
       // positive.
       if ((KnownLHS.cannotBeOrderedLessThanZero() &&
@@ -989,7 +995,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (KnownLHS.cannotBeOrderedLessThanZero() ||
           KnownRHS.cannotBeOrderedLessThanZero())
         Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-    } else if (Opcode == TargetOpcode::G_FMINNUM) {
+    } else if (Opcode == TargetOpcode::G_FMINNUM ||
+               Opcode == TargetOpcode::G_FMINIMUMNUM ||
+               Opcode == TargetOpcode::G_FMINNUM_IEEE) {
       // If at least one operand is known to be negative, the result must be
       // negative.
       if ((KnownLHS.cannotBeOrderedGreaterThanZero() &&
@@ -997,16 +1005,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
           (KnownRHS.cannotBeOrderedGreaterThanZero() &&
            KnownRHS.isKnownNeverNaN()))
         Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-    } else if (Opcode == TargetOpcode::G_FMINNUM_IEEE) {
-      // TODO:
-    } else if (Opcode == TargetOpcode::G_FMAXNUM_IEEE) {
-      // TODO:
-    } else {
+    } else if (Opcode == TargetOpcode::G_FMINIMUM) {
       // If at least one operand is known to be negative, the result must be
       // negative.
       if (KnownLHS.cannotBeOrderedGreaterThanZero() ||
           KnownRHS.cannotBeOrderedGreaterThanZero())
         Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+    } else {
+      llvm_unreachable("unhandled intrinsic");
     }
 
     // Fixup zero handling if denormals could be returned as a zero.
@@ -1032,16 +1038,25 @@ void GISelValueTracking::computeKnownFPClass(Register R,
           Known.signBitMustBeZero();
       } else if ((Opcode == TargetOpcode::G_FMAXIMUM ||
                   Opcode == TargetOpcode::G_FMINIMUM) ||
+                 Opcode == TargetOpcode::G_FMAXIMUMNUM ||
+                 Opcode == TargetOpcode::G_FMINIMUMNUM ||
+                 Opcode == TargetOpcode::G_FMAXNUM_IEEE ||
+                 Opcode == TargetOpcode::G_FMINNUM_IEEE ||
+                 // FIXME: Should be using logical zero versions
                  ((KnownLHS.isKnownNeverNegZero() ||
                    KnownRHS.isKnownNeverPosZero()) &&
                   (KnownLHS.isKnownNeverPosZero() ||
                    KnownRHS.isKnownNeverNegZero()))) {
         if ((Opcode == TargetOpcode::G_FMAXIMUM ||
-             Opcode == TargetOpcode::G_FMAXNUM) &&
+             Opcode == TargetOpcode::G_FMAXNUM ||
+             Opcode == TargetOpcode::G_FMAXIMUMNUM ||
+             Opcode == TargetOpcode::G_FMAXNUM_IEEE) &&
             (KnownLHS.SignBit == false || KnownRHS.SignBit == false))
           Known.signBitMustBeZero();
         else if ((Opcode == TargetOpcode::G_FMINIMUM ||
-                  Opcode == TargetOpcode::G_FMINNUM) &&
+                  Opcode == TargetOpcode::G_FMINNUM ||
+                  Opcode == TargetOpcode::G_FMINIMUMNUM ||
+                  Opcode == TargetOpcode::G_FMINNUM_IEEE) &&
                  (KnownLHS.SignBit == true || KnownRHS.SignBit == true))
           Known.signBitMustBeOne();
       }
