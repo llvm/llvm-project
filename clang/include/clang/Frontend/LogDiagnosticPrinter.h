@@ -51,7 +51,6 @@ class LogDiagnosticPrinter : public DiagnosticConsumer {
   raw_ostream &OS;
   std::unique_ptr<raw_ostream> StreamOwner;
   const LangOptions *LangOpts;
-  DiagnosticOptions &DiagOpts;
 
   SourceLocation LastWarningLoc;
   FullSourceLoc LastLoc;
