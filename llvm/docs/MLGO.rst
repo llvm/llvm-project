@@ -314,7 +314,7 @@ features.
 ``MLModelRunner`` implementations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We currently feature 3 implementations:
+We currently feature 4 implementations:
 
 - ``ModelUnderTrainingRunner``. This requires the compiler be built with TFLite
   support. It allows loading a TFLite model dynamically and is primarily
@@ -338,15 +338,97 @@ requiring no out of tree build-time dependencies.
   presumably a python training algorithm. We do not envision using this in a
   production environment.
 
+- ``NoInferenceModelRunner``. This serves as a store for feature values, and its
+  ``evaluate`` should never be called. It's used for training scenarios, when we
+  want to capture the behavior of the default (non-ML) heuristic.
+
 Note that training leaves it to the training infrastructure to handle
 distributed computing. The assumed architecture has python processes
 communicating remotely between themselves, but managing local communication with
 clang.
 
-..
-    TODO(mtrofin): 
-        - logging, and the use in interactive mode.
-        - discuss an example (like the inliner)
+Logging Facility
+----------------
+
+When training models, we need to expose the features we will want to use during
+inference, as well as outcomes, to guide reward-based learning techniques. This
+can happen in 2 forms:
+
+- when running the compiler on some input, as a capture of the features and
+  actions taken by some policy or a model currently being used.
+  For example, see ``DevelopmentModeInlineAdvisor`` or ``DevelopmentModeEvictAdvisor``
+  in ``MLRegallocEvictAdvisor.cpp``. In more detail, in the former case, if
+  ``-training-log`` is specified, the features and actions (inline/no inline)
+  from each inlining decision are saved to the specified file. Since
+  ``MLModelRunner`` implementations hold on to feature values (they don't get
+  cleared by ``evaluate``), logging is easily supported by just looping over the
+  model runner's features and passing the tensor buffers to the logger. Note how
+  we use the ``NoInferenceModelRunner`` to capture the features observed when
+  using the default policy.
+
+- as a serialization mechanism for the ``InteractiveModelRunner``. Here, we need
+  to pass the observed features over IPC (a file descriptor, likely a named
+  pipe).
+
+Both cases require serializing the same kind of data and we support both with
+``Analysis/Utils/TrainingLogger``.
+
+The goal of the logger design was avoiding any new dependency, and optimizing
+for the tensor scenario - i.e. exchanging potentially large buffers of fixed
+size, containing scalars. We explicitly assume the reader of the format has the
+same endianness as the compiler host, and we further expect the reader and the
+compiler run on the same host. This is because we expect the training scenarios
+have a (typically python) process managing the compiler process, and we leave to
+the training side to handle remoting.
+
+The logger produces the following sequence:
+
+- a header describing the structure of the log. This is a one-line textual JSON
+  dictionary with the following elements:
+  
+  - ``features``: a list of JSON-serialized ``TensorSpec`` values. The position
+    in the list matters, as it will be the order in which values will be
+    subsequently recorded. If we are just logging (i.e. not using the
+    ``InteractiveModelRunner``), the last feature should be that of the action
+    (e.g. "inline/no inline", or "index of evicted live range")
+  - (optional) ``score``: a ``TensorSpec`` describing a value we will include to
+    help formulate a reward. This could be a size estimate or a latency estimate.
+  - (optional) ``advice``: a ``TensorSpec`` describing the action. This is used
+    for the ``InteractiveModelRunner``, in which case it shouldn't be in the 
+    ``features`` list.
+- a sequence of ``contexts``. Contexts are independent traces of the optimization
+  problem. For module passes, there is only one context, for function passes,
+  there is a context per function. The start of a context is marked with a
+  one-line JSON dictionary of the form ``{"context": <context name, a string>}``
+  
+  Each context has a sequence of:
+
+  - ``observations``. An observation is:
+    
+    - one-line JSON ``{"observation": <observation number. 0-indexed>}``
+    - a binary dump of the tensor buffers, in the order in which they were
+      specified in the header.
+    - a new line character
+    - if ``score`` was specified in the header:
+    
+      - a one-line JSON object ``{"outcome": <value>}``, where the ``value``
+        conforms to the ``TensorSpec`` in defined for the ``score`` in the header.
+      - the outcome value, as a binary dump
+      - a new line character.
+
+The format uses a mix of textual JSON (for headers) and binary dumps (for tensors)
+because the headers are not expected to dominate the payload - the tensor values
+are. We wanted to avoid overburdening the log reader - likely python - from
+additional dependencies; and the one-line JSON makes it rudimentarily possible
+to inspect a log without additional tooling.
+
+A python utility for reading logs, used for tests, is available at
+``Analysis/models/log_reader.py``. A utility showcasing the ``InteractiveModelRunner``,
+which uses this reader as well, is at ``Analysis/models/interactive_host.py``.
+The latter is also used in tests.
+
+There is no C++ implementation of a log reader. We do not have a scenario
+motivating one.
 
 IR2Vec Embeddings
 =================
