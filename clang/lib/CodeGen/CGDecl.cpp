@@ -1944,6 +1944,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
 
   const VarDecl &D = *emission.Variable;
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(*this, D.getLocation());
+  ApplyAtomGroup Grp(getDebugInfo());
   QualType type = D.getType();
 
   // If this local has an initializer, emit it now.
