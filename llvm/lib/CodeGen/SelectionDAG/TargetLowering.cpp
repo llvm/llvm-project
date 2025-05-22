@@ -3817,7 +3817,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     return false;
   default: {
     if (Op.getOpcode() >= ISD::BUILTIN_OP_END) {
-      if (SimplifyDemandedVectorEltsForTargetNode(Op, DemandedElts | DoNotPoisonEltMask, KnownUndef,
+      if (SimplifyDemandedVectorEltsForTargetNode(Op, DemandedElts,
+                                                  DoNotPoisonEltMask,
+                                                  KnownUndef,
                                                   KnownZero, TLO, Depth))
         return true;
     } else {
@@ -3898,7 +3900,8 @@ unsigned TargetLowering::computeNumSignBitsForTargetInstr(
 }
 
 bool TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
-    SDValue Op, const APInt &DemandedElts, APInt &KnownUndef, APInt &KnownZero,
+    SDValue Op, const APInt &DemandedElts, const APInt &DoNotPoisonEltMask,
+    APInt &KnownUndef, APInt &KnownZero,
     TargetLoweringOpt &TLO, unsigned Depth) const {
   assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
           Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||

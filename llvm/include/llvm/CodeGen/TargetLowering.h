@@ -4278,7 +4278,8 @@ public:
   /// (used to simplify the caller). The KnownUndef/Zero elements may only be
   /// accurate for those bits in the DemandedMask.
   virtual bool SimplifyDemandedVectorEltsForTargetNode(
-      SDValue Op, const APInt &DemandedElts, APInt &KnownUndef,
+      SDValue Op, const APInt &DemandedElts, const APInt &DoNotPoisonEltMask,
+      APInt &KnownUndef,
       APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth = 0) const;
 
   /// Attempt to simplify any target nodes based on the demanded bits/elts,

@@ -1302,6 +1302,7 @@ namespace llvm {
 
     bool SimplifyDemandedVectorEltsForTargetNode(SDValue Op,
                                                  const APInt &DemandedElts,
+                                                 const APInt &DoNotPoisonElts,
                                                  APInt &KnownUndef,
                                                  APInt &KnownZero,
                                                  TargetLoweringOpt &TLO,
