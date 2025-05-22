@@ -820,6 +820,18 @@ def FeatureCvtFP8VOP1Bug : SubtargetFeature<"cvt-fp8-vop1-bug",
   [FeatureFP8ConversionInsts]
 >;
 
+def FeatureWMMA256bInsts : SubtargetFeature<"wmma-256b-insts",
+  "HasWMMA256bInsts",
+  "true",
+  "Has WMMA instructions where A and B matrices have duplicated data"
+>;
+
+def FeatureWMMA128bInsts : SubtargetFeature<"wmma-128b-insts",
+  "HasWMMA128bInsts",
+  "true",
+  "Has WMMA instructions where A and B matrices do not have duplicated data"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -1792,14 +1804,16 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureMADIntraFwdBug,
-     FeaturePrivEnabledTrap2NopBug])>;
+     FeaturePrivEnabledTrap2NopBug,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1823,7 +1837,8 @@ def FeatureISAVersion11_5_0 : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
-     FeaturePointSampleAccel])>;
+     FeaturePointSampleAccel,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
@@ -1831,20 +1846,23 @@ def FeatureISAVersion11_5_1 : FeatureSet<
      FeatureDPPSrc1SGPR,
      Feature1_5xVGPRs,
      FeatureRequiredExportPriority,
-     FeaturePointSampleAccel])>;
+     FeaturePointSampleAccel,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_5_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
-     FeaturePointSampleAccel])>;
+     FeaturePointSampleAccel,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_5_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_7_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
@@ -1852,7 +1870,8 @@ def FeatureISAVersion11_7_0 : FeatureSet<
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
      FeatureFP8ConversionInsts,
-     FeatureDot11Insts])>;
+     FeatureDot11Insts,
+     FeatureWMMA128bInsts])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -1880,6 +1899,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureImageInsts,
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
+   FeatureWMMA128bInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -2474,6 +2494,12 @@ def HasFP8Insts : Predicate<"Subtarget->hasFP8Insts()">,
 
 def HasFP8ConversionInsts : Predicate<"Subtarget->hasFP8ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionInsts)>;
+
+def HasWMMA256bInsts : Predicate<"Subtarget->hasWMMA256bInsts()">,
+  AssemblerPredicate<(all_of FeatureWMMA256bInsts)>;
+
+def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
+  AssemblerPredicate<(all_of FeatureWMMA128bInsts)>;
 
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;
