@@ -115,8 +115,8 @@ define amdgpu_kernel void @global_atomic_usub_cond_no_rtn_u32(ptr addrspace(1) %
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX12-SDAG-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    global_atomic_cond_sub_u32 v0, v0, v1, s[0:1] offset:-16 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_atomic_cond_sub_u32 v0, v1, s[0:1] offset:-16 scope:SCOPE_SYS
+; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -127,8 +127,8 @@ define amdgpu_kernel void @global_atomic_usub_cond_no_rtn_u32(ptr addrspace(1) %
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX12-GISEL-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    global_atomic_cond_sub_u32 v0, v1, v0, s[0:1] offset:-16 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    global_atomic_cond_sub_u32 v1, v0, s[0:1] offset:-16 scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
@@ -212,7 +212,7 @@ define amdgpu_kernel void @ds_usub_cond_no_rtn_u32(ptr addrspace(3) %addr, i32 %
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s0, s0, -16
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v0, s0
-; GFX12-SDAG-NEXT:    ds_cond_sub_rtn_u32 v0, v0, v1
+; GFX12-SDAG-NEXT:    ds_cond_sub_u32 v0, v1
 ; GFX12-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -224,7 +224,7 @@ define amdgpu_kernel void @ds_usub_cond_no_rtn_u32(ptr addrspace(3) %addr, i32 %
 ; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, -16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v0, s0
-; GFX12-GISEL-NEXT:    ds_cond_sub_rtn_u32 v0, v0, v1
+; GFX12-GISEL-NEXT:    ds_cond_sub_u32 v0, v1
 ; GFX12-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -369,8 +369,8 @@ define void @global_atomic_usub_cond_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    global_atomic_cond_sub_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_atomic_cond_sub_u32 v[0:1], v2, off scope:SCOPE_DEV
+; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -383,8 +383,8 @@ define void @global_atomic_usub_cond_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    global_atomic_cond_sub_u32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    global_atomic_cond_sub_u32 v[0:1], v2, off scope:SCOPE_DEV
+; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -401,8 +401,8 @@ define void @global_atomic_usub_cond_offset_nortn(ptr addrspace(1) %ptr, i32 %da
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
-; GFX12-SDAG-NEXT:    global_atomic_cond_sub_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_atomic_cond_sub_u32 v[0:1], v2, off offset:4096 scope:SCOPE_DEV
+; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -415,8 +415,8 @@ define void @global_atomic_usub_cond_offset_nortn(ptr addrspace(1) %ptr, i32 %da
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX12-GISEL-NEXT:    global_atomic_cond_sub_u32 v0, v[0:1], v2, off offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    global_atomic_cond_sub_u32 v[0:1], v2, off offset:4096 scope:SCOPE_DEV
+; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -459,8 +459,8 @@ define amdgpu_kernel void @global_atomic_usub_cond_sgpr_base_offset_nortn(ptr ad
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX12-SDAG-NEXT:    global_atomic_cond_sub_u32 v0, v0, v1, s[0:1] offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_atomic_cond_sub_u32 v0, v1, s[0:1] offset:4096 scope:SCOPE_DEV
+; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -469,8 +469,8 @@ define amdgpu_kernel void @global_atomic_usub_cond_sgpr_base_offset_nortn(ptr ad
 ; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
-; GFX12-GISEL-NEXT:    global_atomic_cond_sub_u32 v0, v1, v0, s[0:1] offset:4096 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
-; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    global_atomic_cond_sub_u32 v1, v0, s[0:1] offset:4096 scope:SCOPE_DEV
+; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-GISEL-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
