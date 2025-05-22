@@ -243,6 +243,10 @@ public:
   bool isGFX10() const;
   bool isGFX10Plus() const;
   bool isGFX11() const;
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+  bool isGFX1170() const;
+#endif /* LLPC_BUILD_NPI */
   bool isGFX11Plus() const;
   bool isGFX12() const;
   bool isGFX12Plus() const;

@@ -497,12 +497,42 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["atomic-fadd-rtn-insts"] = true;
       Features["image-insts"] = true;
       Features["fp8-conversion-insts"] = true;
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+      Features["wmma-128b-insts"] = true;
+#endif /* LLPC_BUILD_NPI */
       break;
     case GK_GFX1170:
+#if LLPC_BUILD_NPI
       // TODO-GFX1170: Update features map for gfx1170
+#else /* LLPC_BUILD_NPI */
+      Features["ci-insts"] = true;
+      Features["dot5-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot8-insts"] = true;
+      Features["dot9-insts"] = true;
+      Features["dot10-insts"] = true;
+      Features["dot12-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["gfx10-3-insts"] = true;
+      Features["gfx11-insts"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
+      Features["image-insts"] = true;
+      Features["gws"] = true;
+#endif /* LLPC_BUILD_NPI */
       Features["dot11-insts"] = true;
       Features["fp8-conversion-insts"] = true;
+#if LLPC_BUILD_NPI
       [[fallthrough]];
+#else /* LLPC_BUILD_NPI */
+      Features["wmma-128b-insts"] = true;
+      break;
+#endif /* LLPC_BUILD_NPI */
     case GK_GFX115F:
     case GK_GFX115E:
     case GK_GFX1153:
@@ -532,6 +562,10 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["atomic-fadd-rtn-insts"] = true;
       Features["image-insts"] = true;
       Features["gws"] = true;
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+      Features["wmma-256b-insts"] = true;
+#endif /* LLPC_BUILD_NPI */
       break;
     case GK_GFX1036:
     case GK_GFX1035:

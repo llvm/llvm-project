@@ -173,6 +173,9 @@ protected:
   bool HasFP8ConversionInsts = false;
 #if LLPC_BUILD_NPI
   bool HasFP8E5M3Insts = false;
+#else /* LLPC_BUILD_NPI */
+  bool HasWMMA128bInsts = false;
+  bool HasWMMA256bInsts = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
@@ -959,8 +962,12 @@ public:
 
 #if LLPC_BUILD_NPI
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
+#else /* LLPC_BUILD_NPI */
+  bool hasWMMA256bInsts() const { return HasWMMA256bInsts; }
 
+  bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
 #endif /* LLPC_BUILD_NPI */
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }

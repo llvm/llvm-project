@@ -57,9 +57,10 @@ def GFX11Not12_50Gen : GFXGen<isGFX11Not12_50, "GFX11", "_gfx11", SIEncodingFami
 def GFX11Gen         : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
 #else /* LLPC_BUILD_NPI */
-def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX11Gen : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
-def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
+def GFX12Gen   : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX1170Gen : GFXGen<isGFX11Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX11>;
+def GFX11Gen   : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
+def GFX10Gen   : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
 #endif /* LLPC_BUILD_NPI */
 
 //===----------------------------------------------------------------------===//

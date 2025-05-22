@@ -819,11 +819,25 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         Address, CS))
         break;
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX117064, MI, QW, Address, CS))
+        break;
+
+#endif /* LLPC_BUILD_NPI */
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
                         Address, CS))
         break;
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX1170W6464, MI, QW, Address, CS))
+        break;
+
+#endif /* LLPC_BUILD_NPI */
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX11W6464, MI, QW, Address, CS))
         break;
@@ -2406,6 +2420,11 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
   return AMDGPU::isGFX11Plus(STI);
 }
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+bool AMDGPUDisassembler::isGFX1170() const { return AMDGPU::isGFX1170(STI); }
+
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPUDisassembler::isGFX12() const {
   return STI.hasFeature(AMDGPU::FeatureGFX12);
 }
