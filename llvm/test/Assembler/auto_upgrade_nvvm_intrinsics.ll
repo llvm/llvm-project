@@ -78,13 +78,6 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %d, 
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
 
-declare void @llvm.nvvm.barrier0()
-declare void @llvm.nvvm.barrier.n(i32)
-declare void @llvm.nvvm.bar.sync(i32)
-declare void @llvm.nvvm.barrier(i32, i32)
-declare void @llvm.nvvm.barrier.sync(i32)
-declare void @llvm.nvvm.barrier.sync.cnt(i32, i32)
-
 ; CHECK-LABEL: @simple_upgrade
 define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
 ; CHECK: call i32 @llvm.bitreverse.i32(i32 %a)
@@ -331,18 +324,3 @@ define void @nvvm_cp_async_bulk_tensor_g2s_tile(ptr addrspace(3) %d, ptr addrspa
   ret void
 }
 
-define void @cta_barriers(i32 %x, i32 %y) {
-; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
-; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %x)
-; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %x)
-; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned(i32 %x, i32 %y)
-; CHECK: call void @llvm.nvvm.barrier.cta.sync.all(i32 %x)
-; CHECK: call void @llvm.nvvm.barrier.cta.sync(i32 %x, i32 %y)
-  call void @llvm.nvvm.barrier0()
-  call void @llvm.nvvm.barrier.n(i32 %x)
-  call void @llvm.nvvm.bar.sync(i32 %x)
-  call void @llvm.nvvm.barrier(i32 %x, i32 %y)
-  call void @llvm.nvvm.barrier.sync(i32 %x)
-  call void @llvm.nvvm.barrier.sync.cnt(i32 %x, i32 %y)
-  ret void
-}

@@ -67,6 +67,15 @@ class THREADMASK_INFO<bit sync> {
 // Synchronization and shuffle functions
 //-----------------------------------
 let isConvergent = true in {
+def INT_BARRIER0 : NVPTXInst<(outs), (ins),
+                  "bar.sync \t0;",
+      [(int_nvvm_barrier0)]>;
+def INT_BARRIERN : NVPTXInst<(outs), (ins Int32Regs:$src1),
+                  "bar.sync \t$src1;",
+      [(int_nvvm_barrier_n i32:$src1)]>;
+def INT_BARRIER : NVPTXInst<(outs), (ins Int32Regs:$src1, Int32Regs:$src2),
+                  "bar.sync \t$src1, $src2;",
+      [(int_nvvm_barrier i32:$src1, i32:$src2)]>;
 def INT_BARRIER0_POPC : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
   !strconcat("{{ \n\t",
              ".reg .pred \t%p1; \n\t",
@@ -93,6 +102,9 @@ def INT_BARRIER0_OR : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
              "}}"),
       [(set i32:$dst, (int_nvvm_barrier0_or i32:$pred))]>;
 
+def INT_BAR_SYNC : NVPTXInst<(outs), (ins i32imm:$i), "bar.sync \t$i;",
+                             [(int_nvvm_bar_sync imm:$i)]>;
+
 def INT_BAR_WARP_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "bar.warp.sync \t$i;",
                              [(int_nvvm_bar_warp_sync imm:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
@@ -100,44 +112,29 @@ def INT_BAR_WARP_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "bar.warp.sync \
                              [(int_nvvm_bar_warp_sync i32:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 
-multiclass BARRIER1<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
-  def _i : BasicNVPTXInst<(outs), (ins i32imm:$i), asmstr,
-                          [(intrinsic imm:$i)]>,
-           Requires<requires>;
+def INT_BARRIER_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "barrier.sync \t$i;",
+                                   [(int_nvvm_barrier_sync imm:$i)]>,
+        Requires<[hasPTX<60>, hasSM<30>]>;
+def INT_BARRIER_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "barrier.sync \t$i;",
+                                   [(int_nvvm_barrier_sync i32:$i)]>,
+        Requires<[hasPTX<60>, hasSM<30>]>;
 
-  def _r : BasicNVPTXInst<(outs), (ins Int32Regs:$i), asmstr,
-                          [(intrinsic i32:$i)]>,
-           Requires<requires>;
-}
-
-multiclass BARRIER2<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
-  def _rr : BasicNVPTXInst<(outs), (ins Int32Regs:$i, Int32Regs:$j), asmstr,
-                          [(intrinsic i32:$i, i32:$j)]>,
-            Requires<requires>;
-
-  def _ri : BasicNVPTXInst<(outs), (ins Int32Regs:$i, i32imm:$j), asmstr,
-                          [(intrinsic i32:$i, imm:$j)]>,
-            Requires<requires>;
-
-  def _ir : BasicNVPTXInst<(outs), (ins i32imm:$i, Int32Regs:$j), asmstr,
-                          [(intrinsic imm:$i, i32:$j)]>,
-            Requires<requires>;
-
-  def _ii : BasicNVPTXInst<(outs), (ins i32imm:$i, i32imm:$j), asmstr,
-                          [(intrinsic imm:$i, imm:$j)]>,
-            Requires<requires>;
-}
-
-// Note the "bar.sync" variants could be renamed to the equivalent corresponding
-// "barrier.*.aligned" variants. We use the older syntax for compatibility with
-// older versions of the PTX ISA.
-defm BARRIER_CTA_SYNC_ALIGNED_ALL : BARRIER1<"bar.sync", int_nvvm_barrier_cta_sync_aligned_all>;
-defm BARRIER_CTA_SYNC_ALIGNED : BARRIER2<"bar.sync", int_nvvm_barrier_cta_sync_aligned>;
-defm BARRIER_CTA_ARRIVE_ALIGNED : BARRIER2<"bar.arrive", int_nvvm_barrier_cta_arrive_aligned>;
-
-defm BARRIER_CTA_SYNC_ALL : BARRIER1<"barrier.sync", int_nvvm_barrier_cta_sync_all, [hasPTX<60>]>;
-defm BARRIER_CTA_SYNC : BARRIER2<"barrier.sync", int_nvvm_barrier_cta_sync, [hasPTX<60>]>;
-defm BARRIER_CTA_ARRIVE : BARRIER2<"barrier.arrive", int_nvvm_barrier_cta_arrive, [hasPTX<60>]>;
+def INT_BARRIER_SYNC_CNT_RR : NVPTXInst<(outs), (ins Int32Regs:$id, Int32Regs:$cnt),
+                 "barrier.sync \t$id, $cnt;",
+                 [(int_nvvm_barrier_sync_cnt i32:$id, i32:$cnt)]>,
+        Requires<[hasPTX<60>, hasSM<30>]>;
+def INT_BARRIER_SYNC_CNT_RI : NVPTXInst<(outs), (ins Int32Regs:$id, i32imm:$cnt),
+                 "barrier.sync \t$id, $cnt;",
+                 [(int_nvvm_barrier_sync_cnt i32:$id, imm:$cnt)]>,
+        Requires<[hasPTX<60>, hasSM<30>]>;
+def INT_BARRIER_SYNC_CNT_IR : NVPTXInst<(outs), (ins i32imm:$id, Int32Regs:$cnt),
+                 "barrier.sync \t$id, $cnt;",
+                 [(int_nvvm_barrier_sync_cnt imm:$id, i32:$cnt)]>,
+        Requires<[hasPTX<60>, hasSM<30>]>;
+def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
+                 "barrier.sync \t$id, $cnt;",
+                 [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
+        Requires<[hasPTX<60>, hasSM<30>]>;
 
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
