@@ -277,29 +277,27 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         auto Header = dxbc::RootParameterHeader{Param.Type, Param.Visibility,
                                                 Param.Offset};
 
-        if (std::holds_alternative<DXContainerYAML::RootConstantsYaml>(
-                Param.Data)) {
-          auto ConstantYaml =
-              std::get<DXContainerYAML::RootConstantsYaml>(Param.Data);
-
+        if (auto *ConstantYaml =
+                std::get_if<DXContainerYAML::RootConstantsYaml>(&Param.Data)) {
           dxbc::RootConstants Constants;
-          Constants.Num32BitValues = ConstantYaml.Num32BitValues;
-          Constants.RegisterSpace = ConstantYaml.RegisterSpace;
-          Constants.ShaderRegister = ConstantYaml.ShaderRegister;
+          Constants.Num32BitValues = ConstantYaml->Num32BitValues;
+          Constants.RegisterSpace = ConstantYaml->RegisterSpace;
+          Constants.ShaderRegister = ConstantYaml->ShaderRegister;
           RS.ParametersContainer.addParameter(Header, Constants);
-        } else if (std::holds_alternative<DXContainerYAML::RootDescriptorYaml>(
-                       Param.Data)) {
-          auto DescriptorYaml =
-              std::get<DXContainerYAML::RootDescriptorYaml>(Param.Data);
+        } else if (auto *DescriptorYaml =
+                       std::get_if<DXContainerYAML::RootDescriptorYaml>(
+                           &Param.Data)) {
           dxbc::RTS0::v2::RootDescriptor Descriptor;
-          Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
-          Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
+          Descriptor.RegisterSpace = DescriptorYaml->RegisterSpace;
+          Descriptor.ShaderRegister = DescriptorYaml->ShaderRegister;
           if (RS.Version > 1)
-            Descriptor.Flags = DescriptorYaml.getEncodedFlags();
+            Descriptor.Flags = DescriptorYaml->getEncodedFlags();
           RS.ParametersContainer.addParameter(Header, Descriptor);
         } else {
-          // Handling invalid parameter type edge case
-          RS.ParametersContainer.addInfo(Header, -1);
+          // Handling invalid parameter type edge case. We intentionally let
+          // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
+          // for that to be used as a testing tool more effectively.
+          RS.ParametersContainer.addInvalidParameter(Header);
         }
       }
 
