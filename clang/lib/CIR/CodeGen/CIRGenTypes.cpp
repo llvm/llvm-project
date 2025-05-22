@@ -15,7 +15,7 @@ using namespace clang::CIRGen;
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &genModule)
     : cgm(genModule), astContext(genModule.getASTContext()),
-      builder(cgm.getBuilder()),
+      builder(cgm.getBuilder()), theCXXABI(cgm.getCXXABI()),
       theABIInfo(cgm.getTargetCIRGenInfo().getABIInfo()) {}
 
 CIRGenTypes::~CIRGenTypes() {
@@ -542,8 +542,15 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
-  if (fi)
+  if (fi) {
+    // We found a matching function info based on id. These asserts verify that
+    // it really is a match.
+    assert(
+        fi->getReturnType() == returnType &&
+        std::equal(fi->argTypesBegin(), fi->argTypesEnd(), argTypes.begin()) &&
+        "Bad match based on CIRGenFunctionInfo folding set id");
     return *fi;
+  }
 
   assert(!cir::MissingFeatures::opCallCallConv());
 
@@ -552,4 +559,18 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;
+}
+
+const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
+  assert(!dyn_cast<ObjCMethodDecl>(gd.getDecl()) &&
+         "This is reported as a FIXME in LLVM codegen");
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+
+  if (isa<CXXConstructorDecl>(gd.getDecl()) ||
+      isa<CXXDestructorDecl>(gd.getDecl())) {
+    cgm.errorNYI(SourceLocation(),
+                 "arrangeGlobalDeclaration for C++ constructor or destructor");
+  }
+
+  return arrangeFunctionDeclaration(fd);
 }

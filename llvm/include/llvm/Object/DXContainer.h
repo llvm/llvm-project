@@ -237,7 +237,8 @@ private:
   ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
   StringRef PartData;
 
-  using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
+  using param_header_iterator =
+      ViewArray<dxbc::RootParameterHeader>::iterator;
 
 public:
   RootSignature(StringRef PD) : PartData(PD) {}

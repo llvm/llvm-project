@@ -674,8 +674,15 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
         converter->convertType(fn.getFunctionType()));
   } else { // indirect call
-    assert(!cir::MissingFeatures::opCallIndirect());
-    return op->emitError("Indirect calls are NYI");
+    assert(!op->getOperands().empty() &&
+           "operands list must no be empty for the indirect call");
+    auto calleeTy = op->getOperands().front().getType();
+    auto calleePtrTy = cast<cir::PointerType>(calleeTy);
+    auto calleeFuncTy = cast<cir::FuncType>(calleePtrTy.getPointee());
+    calleeFuncTy.dump();
+    converter->convertType(calleeFuncTy).dump();
+    llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
+        converter->convertType(calleeFuncTy));
   }
 
   assert(!cir::MissingFeatures::opCallLandingPad());
@@ -1044,9 +1051,8 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
   assert(op.getType() == op.getInput().getType() &&
          "Unary operation's operand type and result type are different");
   mlir::Type type = op.getType();
-  mlir::Type elementType = type;
-  bool isVector = false;
-  assert(!cir::MissingFeatures::vectorType());
+  mlir::Type elementType = elementTypeIfVector(type);
+  bool isVector = mlir::isa<cir::VectorType>(type);
   mlir::Type llvmType = getTypeConverter()->convertType(type);
   mlir::Location loc = op.getLoc();
 
@@ -1076,20 +1082,30 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
       rewriter.replaceOp(op, adaptor.getInput());
       return mlir::success();
     case cir::UnaryOpKind::Minus: {
-      assert(!isVector &&
-             "Add vector handling when vector types are supported");
-      mlir::LLVM::ConstantOp zero = rewriter.create<mlir::LLVM::ConstantOp>(
-          loc, llvmType, mlir::IntegerAttr::get(llvmType, 0));
+      mlir::Value zero;
+      if (isVector)
+        zero = rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmType);
+      else
+        zero = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmType, mlir::IntegerAttr::get(llvmType, 0));
       rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(
           op, llvmType, zero, adaptor.getInput(), maybeNSW);
       return mlir::success();
     }
     case cir::UnaryOpKind::Not: {
       // bit-wise compliment operator, implemented as an XOR with -1.
-      assert(!isVector &&
-             "Add vector handling when vector types are supported");
-      mlir::LLVM::ConstantOp minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
-          loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
+      mlir::Value minusOne;
+      if (isVector) {
+        const uint64_t numElements =
+            mlir::dyn_cast<cir::VectorType>(type).getSize();
+        std::vector<int32_t> values(numElements, -1);
+        mlir::DenseIntElementsAttr denseVec = rewriter.getI32VectorAttr(values);
+        minusOne =
+            rewriter.create<mlir::LLVM::ConstantOp>(loc, llvmType, denseVec);
+      } else {
+        minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
+      }
       rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(
           op, llvmType, adaptor.getInput(), minusOne);
       return mlir::success();
@@ -1189,19 +1205,15 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
     return op.emitError() << "inconsistent operands' types not supported yet";
 
   mlir::Type type = op.getRhs().getType();
-  assert(!cir::MissingFeatures::vectorType());
   if (!mlir::isa<cir::IntType, cir::BoolType, cir::CIRFPTypeInterface,
-                 mlir::IntegerType>(type))
+                 mlir::IntegerType, cir::VectorType>(type))
     return op.emitError() << "operand type not supported yet";
 
-  auto llvmTy = getTypeConverter()->convertType(op.getType());
-  mlir::Type llvmEltTy =
-      mlir::isa<mlir::VectorType>(llvmTy)
-          ? mlir::cast<mlir::VectorType>(llvmTy).getElementType()
-          : llvmTy;
-  auto rhs = adaptor.getRhs();
-  auto lhs = adaptor.getLhs();
+  const mlir::Type llvmTy = getTypeConverter()->convertType(op.getType());
+  const mlir::Type llvmEltTy = elementTypeIfVector(llvmTy);
 
+  const mlir::Value rhs = adaptor.getRhs();
+  const mlir::Value lhs = adaptor.getLhs();
   type = elementTypeIfVector(type);
 
   switch (op.getKind()) {
@@ -1285,7 +1297,6 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
     }
     break;
   }
-
   return mlir::LogicalResult::success();
 }
 
@@ -1500,6 +1511,15 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::BF16Type type) -> mlir::Type {
     return mlir::BFloat16Type::get(type.getContext());
+  });
+  converter.addConversion([&](cir::FuncType type) -> std::optional<mlir::Type> {
+    auto result = converter.convertType(type.getReturnType());
+    llvm::SmallVector<mlir::Type> arguments;
+    arguments.reserve(type.getNumInputs());
+    if (converter.convertTypes(type.getInputs(), arguments).failed())
+      return std::nullopt;
+    auto varArg = type.isVarArg();
+    return mlir::LLVM::LLVMFunctionType::get(result, arguments, varArg);
   });
   converter.addConversion([&](cir::RecordType type) -> mlir::Type {
     // Convert struct members.

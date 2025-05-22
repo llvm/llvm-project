@@ -409,6 +409,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     case RISCV::LHU:
     case RISCV::LWU:
     case RISCV::LD:
+    case RISCV::LD_RV32:
     case RISCV::FLH:
     case RISCV::FLW:
     case RISCV::FLD:
@@ -418,6 +419,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     case RISCV::SW:
     case RISCV::SW_INX:
     case RISCV::SD:
+    case RISCV::SD_RV32:
     case RISCV::FSH:
     case RISCV::FSW:
     case RISCV::FSD: {
