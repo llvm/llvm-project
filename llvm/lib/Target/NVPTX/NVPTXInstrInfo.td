@@ -238,6 +238,48 @@ def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
 def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 
 
+// This class provides a basic wrapper around an NVPTXInst that abstracts the
+// specific syntax of most PTX instructions. It automatically handles the
+// construction of the asm string based on the provided dag arguments.
+// For example, the following asm-strings would be computed:
+//
+//   * BasicFlagsNVPTXInst<(outs Int32Regs:$dst),
+//                         (ins Int32Regs:$a, Int32Regs:$b), (ins),
+//                         "add.s32">;
+//         ---> "add.s32 \t$dst, $a, $b;"
+//
+//   * BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+//                         (ins Int32Regs:$a, Int32Regs:$b, Hexu32imm:$c),
+//                         (ins PrmtMode:$mode),
+//                         "prmt.b32${mode}">;
+//         ---> "prmt.b32${mode} \t$d, $a, $b, $c;"
+//
+class BasicFlagsNVPTXInst<dag outs_dag, dag ins_dag, dag flags_dag, string asmstr,
+                          list<dag> pattern = []>
+  : NVPTXInst<
+      outs_dag,
+      !con(ins_dag, flags_dag),
+      !strconcat(
+        asmstr,
+        !if(!and(!empty(ins_dag), !empty(outs_dag)), "",
+          !strconcat(
+            " \t",
+            !interleave(
+              !foreach(i, !range(!size(outs_dag)),
+                "$" # !getdagname(outs_dag, i)),
+              "|"),
+            !if(!or(!empty(ins_dag), !empty(outs_dag)), "", ", "),
+            !interleave(
+              !foreach(i, !range(!size(ins_dag)),
+                "$" # !getdagname(ins_dag, i)),
+              ", "))),
+        ";"),
+      pattern>;
+
+class BasicNVPTXInst<dag outs, dag insv, string asmstr, list<dag> pattern = []>
+  : BasicFlagsNVPTXInst<outs, insv, (ins), asmstr, pattern>;
+
+
 multiclass I3Inst<string op_str, SDPatternOperator op_node, RegTyInfo t,
                   bit commutative, list<Predicate> requires = []> {
   defvar asmstr = op_str # " \t$dst, $a, $b;";
@@ -1581,24 +1623,6 @@ def Hexu32imm : Operand<i32> {
   let PrintMethod = "printHexu32imm";
 }
 
-multiclass PRMT<ValueType T, RegisterClass RC> {
-  def rrr
-    : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, Int32Regs:$b, Int32Regs:$c, PrmtMode:$mode),
-                !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
-                [(set T:$d, (prmt T:$a, T:$b, i32:$c, imm:$mode))]>;
-  def rri
-    : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, Int32Regs:$b, Hexu32imm:$c, PrmtMode:$mode),
-                !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
-                [(set T:$d, (prmt T:$a, T:$b, imm:$c, imm:$mode))]>;
-  def rii
-    : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, i32imm:$b, Hexu32imm:$c, PrmtMode:$mode),
-                !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
-                [(set T:$d, (prmt T:$a, imm:$b, imm:$c, imm:$mode))]>;
-}
-
 let hasSideEffects = false in {
   // order is somewhat important here. signed/unsigned variants match
   // the same patterns, so the first one wins. Having unsigned byte extraction
@@ -1612,7 +1636,31 @@ let hasSideEffects = false in {
   defm BFI_B32 : BFI<"bfi.b32", i32, Int32Regs, i32imm>;
   defm BFI_B64 : BFI<"bfi.b64", i64, Int64Regs, i64imm>;
 
-  defm PRMT_B32 : PRMT<i32, Int32Regs>;
+  def PRMT_B32rrr
+    : BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+                (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt i32:$a, i32:$b, i32:$c, imm:$mode))]>;
+  def PRMT_B32rri
+    : BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+                (ins Int32Regs:$a, Int32Regs:$b, Hexu32imm:$c),
+                (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt i32:$a, i32:$b, imm:$c, imm:$mode))]>;
+  def PRMT_B32rii
+    : BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+                (ins Int32Regs:$a, i32imm:$b, Hexu32imm:$c),
+                (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt i32:$a, imm:$b, imm:$c, imm:$mode))]>;
+  def PRMT_B32rir
+    : BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+                (ins Int32Regs:$a, i32imm:$b, Int32Regs:$c),
+                (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt i32:$a, imm:$b, i32:$c, imm:$mode))]>;
+
 }
 
 
@@ -3265,25 +3313,25 @@ include "NVPTXIntrinsics.td"
 
 def : Pat <
   (i32 (bswap i32:$a)),
-  (INT_NVVM_PRMT $a, (i32 0), (i32 0x0123))>;
+  (PRMT_B32rii $a, (i32 0), (i32 0x0123), PrmtNONE)>;
 
 def : Pat <
   (v2i16 (bswap v2i16:$a)),
-  (INT_NVVM_PRMT $a, (i32 0), (i32 0x2301))>;
+  (PRMT_B32rii $a, (i32 0), (i32 0x2301), PrmtNONE)>;
 
 def : Pat <
   (i64 (bswap i64:$a)),
   (V2I32toI64
-    (INT_NVVM_PRMT (I64toI32H_Sink $a), (i32 0), (i32 0x0123)),
-    (INT_NVVM_PRMT (I64toI32L_Sink $a), (i32 0), (i32 0x0123)))>,
+    (PRMT_B32rii (I64toI32H_Sink $a), (i32 0), (i32 0x0123), PrmtNONE),
+    (PRMT_B32rii (I64toI32L_Sink $a), (i32 0), (i32 0x0123), PrmtNONE))>,
   Requires<[hasPTX<71>]>;
 
 // Fall back to the old way if we don't have PTX 7.1.
 def : Pat <
   (i64 (bswap i64:$a)),
   (V2I32toI64
-    (INT_NVVM_PRMT (I64toI32H $a), (i32 0), (i32 0x0123)),
-    (INT_NVVM_PRMT (I64toI32L $a), (i32 0), (i32 0x0123)))>;
+    (PRMT_B32rii (I64toI32H $a), (i32 0), (i32 0x0123), PrmtNONE),
+    (PRMT_B32rii (I64toI32L $a), (i32 0), (i32 0x0123), PrmtNONE))>;
 
 
 ////////////////////////////////////////////////////////////////////////////////
