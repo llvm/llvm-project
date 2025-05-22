@@ -660,8 +660,6 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     // Therefore, the inferred address space must be the source space, according
     // to our algorithm.
     assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
-    if (Src->getType() != NewPtrType)
-      return new BitCastInst(Src, NewPtrType);
     return Src;
   }
 
@@ -739,7 +737,7 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     // If we had a no-op inttoptr/ptrtoint pair, we may still have inferred a
     // source address space from a generic pointer source need to insert a cast
     // back.
-    return CastInst::CreatePointerBitCastOrAddrSpaceCast(Src, NewPtrType);
+    return new AddrSpaceCastInst(Src, NewPtrType);
   }
   default:
     llvm_unreachable("Unexpected opcode");
@@ -764,7 +762,7 @@ static Value *cloneConstantExprWithNewAddressSpace(
     // to our algorithm.
     assert(CE->getOperand(0)->getType()->getPointerAddressSpace() ==
            NewAddrSpace);
-    return ConstantExpr::getBitCast(CE->getOperand(0), TargetType);
+    return CE->getOperand(0);
   }
 
   if (CE->getOpcode() == Instruction::BitCast) {
@@ -777,7 +775,7 @@ static Value *cloneConstantExprWithNewAddressSpace(
     assert(isNoopPtrIntCastPair(cast<Operator>(CE), *DL, TTI));
     Constant *Src = cast<ConstantExpr>(CE->getOperand(0))->getOperand(0);
     assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
-    return ConstantExpr::getBitCast(Src, TargetType);
+    return Src;
   }
 
   // Computes the operands of the new constant expression.
@@ -1123,14 +1121,10 @@ static bool replaceIfSimplePointerUse(const TargetTransformInfo &TTI,
 static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
                                      Value *NewV) {
   IRBuilder<> B(MI);
-  MDNode *TBAA = MI->getMetadata(LLVMContext::MD_tbaa);
-  MDNode *ScopeMD = MI->getMetadata(LLVMContext::MD_alias_scope);
-  MDNode *NoAliasMD = MI->getMetadata(LLVMContext::MD_noalias);
-
   if (auto *MSI = dyn_cast<MemSetInst>(MI)) {
     B.CreateMemSet(NewV, MSI->getValue(), MSI->getLength(), MSI->getDestAlign(),
                    false, // isVolatile
-                   TBAA, ScopeMD, NoAliasMD);
+                   MI->getAAMetadata());
   } else if (auto *MTI = dyn_cast<MemTransferInst>(MI)) {
     Value *Src = MTI->getRawSource();
     Value *Dest = MTI->getRawDest();
@@ -1143,23 +1137,22 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
       Dest = NewV;
 
     if (auto *MCI = dyn_cast<MemCpyInst>(MTI)) {
-      MDNode *TBAAStruct = MTI->getMetadata(LLVMContext::MD_tbaa_struct);
       if (MCI->isForceInlined())
         B.CreateMemCpyInline(Dest, MTI->getDestAlign(), Src,
                              MTI->getSourceAlign(), MTI->getLength(),
                              false, // isVolatile
-                             TBAA, TBAAStruct, ScopeMD, NoAliasMD);
+                             MI->getAAMetadata());
       else
         B.CreateMemCpy(Dest, MTI->getDestAlign(), Src, MTI->getSourceAlign(),
                        MTI->getLength(),
                        false, // isVolatile
-                       TBAA, TBAAStruct, ScopeMD, NoAliasMD);
+                       MI->getAAMetadata());
     } else {
       assert(isa<MemMoveInst>(MTI));
       B.CreateMemMove(Dest, MTI->getDestAlign(), Src, MTI->getSourceAlign(),
                       MTI->getLength(),
                       false, // isVolatile
-                      TBAA, ScopeMD, NoAliasMD);
+                      MI->getAAMetadata());
     }
   } else
     llvm_unreachable("unhandled MemIntrinsic");

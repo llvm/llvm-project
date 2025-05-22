@@ -416,9 +416,11 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
   } else {
     object.try_emplace("symbolStatus", "Symbols not found.");
   }
-  std::string loaded_addr = std::to_string(
-      module.GetObjectFileHeaderAddress().GetLoadAddress(target));
-  object.try_emplace("addressRange", loaded_addr);
+  std::string load_address =
+      llvm::formatv("{0:x}",
+                    module.GetObjectFileHeaderAddress().GetLoadAddress(target))
+          .str();
+  object.try_emplace("addressRange", load_address);
   std::string version_str;
   uint32_t version_nums[3];
   uint32_t num_versions =
@@ -488,6 +490,13 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   return filter;
 }
 
+static std::string GetLoadAddressString(const lldb::addr_t addr) {
+  std::string result;
+  llvm::raw_string_ostream os(result);
+  os << llvm::format_hex(addr, 18);
+  return result;
+}
+
 protocol::Source CreateSource(const lldb::SBFileSpec &file) {
   protocol::Source source;
   if (file.IsValid()) {
@@ -511,6 +520,41 @@ protocol::Source CreateSource(llvm::StringRef source_path) {
   llvm::StringRef name = llvm::sys::path::filename(source_path);
   source.name = name;
   source.path = source_path;
+  return source;
+}
+
+protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
+                                      lldb::SBAddress &address) {
+  protocol::Source source;
+
+  auto symbol = address.GetSymbol();
+  std::string name;
+  if (symbol.IsValid()) {
+    source.sourceReference = symbol.GetStartAddress().GetLoadAddress(target);
+    name = symbol.GetName();
+  } else {
+    const auto load_addr = address.GetLoadAddress(target);
+    source.sourceReference = load_addr;
+    name = GetLoadAddressString(load_addr);
+  }
+
+  lldb::SBModule module = address.GetModule();
+  if (module.IsValid()) {
+    lldb::SBFileSpec file_spec = module.GetFileSpec();
+    if (file_spec.IsValid()) {
+      std::string path = GetSBFileSpecPath(file_spec);
+      if (!path.empty())
+        source.path = path + '`' + name;
+    }
+  }
+
+  source.name = std::move(name);
+
+  // Mark the source as deemphasized since users will only be able to view
+  // assembly for these frames.
+  source.presentationHint =
+      protocol::Source::PresentationHint::eSourcePresentationHintDeemphasize;
+
   return source;
 }
 
@@ -620,8 +664,7 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
   if (frame_name.empty()) {
     // If the function name is unavailable, display the pc address as a 16-digit
     // hex string, e.g. "0x0000000000012345"
-    llvm::raw_string_ostream os(frame_name);
-    os << llvm::format_hex(frame.GetPC(), 18);
+    frame_name = GetLoadAddressString(frame.GetPC());
   }
 
   // We only include `[opt]` if a custom frame format is not specified.
@@ -639,17 +682,10 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
   } else if (frame.GetSymbol().IsValid()) {
     // If no source is associated with the frame, use the DAPFrameID to track
     // the 'source' and generate assembly.
-    llvm::json::Object source;
-    EmplaceSafeString(source, "name", frame_name);
-    char buf[PATH_MAX] = {0};
-    size_t size = frame.GetModule().GetFileSpec().GetPath(buf, PATH_MAX);
-    EmplaceSafeString(source, "path",
-                      std::string(buf, size) + '`' + frame_name);
-    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
-    // Mark the source as deemphasized since users will only be able to view
-    // assembly for these frames.
-    EmplaceSafeString(source, "presentationHint", "deemphasize");
-    object.try_emplace("source", std::move(source));
+    auto frame_address = frame.GetPCAddress();
+    object.try_emplace("source", CreateAssemblySource(
+                                     frame.GetThread().GetProcess().GetTarget(),
+                                     frame_address));
 
     // Calculate the line of the current PC from the start of the current
     // symbol.
@@ -663,12 +699,10 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
     object.try_emplace("column", 1);
   } else {
     // No valid line entry or symbol.
-    llvm::json::Object source;
-    EmplaceSafeString(source, "name", frame_name);
-    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
-    EmplaceSafeString(source, "presentationHint", "deemphasize");
-    object.try_emplace("source", std::move(source));
-
+    auto frame_address = frame.GetPCAddress();
+    object.try_emplace("source", CreateAssemblySource(
+                                     frame.GetThread().GetProcess().GetTarget(),
+                                     frame_address));
     object.try_emplace("line", 1);
     object.try_emplace("column", 1);
   }
@@ -903,7 +937,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   if (!ObjectContainsKey(body, "description")) {
     char description[1024];
     if (thread.GetStopDescription(description, sizeof(description))) {
-      EmplaceSafeString(body, "description", std::string(description));
+      EmplaceSafeString(body, "description", description);
     }
   }
   // "threadCausedFocus" is used in tests to validate breaking behavior.

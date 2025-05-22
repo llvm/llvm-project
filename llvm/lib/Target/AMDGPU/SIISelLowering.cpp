@@ -919,6 +919,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
+  if (Subtarget->hasCvtPkF16F32Inst())
+    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Custom);
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -1456,6 +1459,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.flags |= MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds: {
     Info.opc = ISD::INTRINSIC_VOID;
     unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
@@ -1537,6 +1541,7 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_load_tr_b128:
     Ptr = II->getArgOperand(0);
     break;
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds:
     Ptr = II->getArgOperand(1);
     break;
@@ -3717,9 +3722,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     // followed by the flags and any other arguments with special meanings.
     // Pop them out of CLI.Outs and CLI.OutVals before we do any processing so
     // we don't treat them like the "real" arguments.
-    auto RequestedExecIt = std::find_if(
-        CLI.Outs.begin(), CLI.Outs.end(),
-        [](const ISD::OutputArg &Arg) { return Arg.OrigArgIndex == 2; });
+    auto RequestedExecIt =
+        llvm::find_if(CLI.Outs, [](const ISD::OutputArg &Arg) {
+          return Arg.OrigArgIndex == 2;
+        });
     assert(RequestedExecIt != CLI.Outs.end() && "No node for EXEC");
 
     size_t SpecialArgsBeginIdx = RequestedExecIt - CLI.Outs.begin();
@@ -6899,10 +6905,16 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
+  EVT DstVT = Op.getValueType();
+
+  if (DstVT == MVT::v2f16) {
+    assert(Subtarget->hasCvtPkF16F32Inst() && "support v_cvt_pk_f16_f32");
+    return SrcVT == MVT::v2f32 ? Op : SDValue();
+  }
+
   if (SrcVT.getScalarType() != MVT::f64)
     return Op;
 
-  EVT DstVT = Op.getValueType();
   SDLoc DL(Op);
   if (DstVT == MVT::f16) {
     // TODO: Handle strictfp
@@ -10245,6 +10257,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     return SDValue(Load, 0);
   }
+  // Buffers are handled by LowerBufferFatPointers, and we're going to go
+  // for "trust me" that the remaining cases are global pointers until
+  // such time as we can put two mem operands on an intrinsic.
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds: {
     if (!Subtarget->hasVMemToLDSLoad())
       return SDValue();
@@ -10275,7 +10291,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       break;
     }
 
-    auto *M = cast<MemSDNode>(Op);
     SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(3));
 
     SmallVector<SDValue, 6> Ops;
@@ -10315,6 +10330,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     Ops.push_back(M0Val.getValue(0)); // Chain
     Ops.push_back(M0Val.getValue(1)); // Glue
 
+    auto *M = cast<MemSDNode>(Op);
     MachineMemOperand *LoadMMO = M->getMemOperand();
     MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
     LoadPtrI.Offset = Op->getConstantOperandVal(5);
@@ -16046,7 +16062,8 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
     case 'v':
       switch (BitWidth) {
       case 16:
-        RC = &AMDGPU::VGPR_32RegClass;
+        RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
+                                             : &AMDGPU::VGPR_32RegClass;
         break;
       default:
         RC = TRI->getVGPRClassForBitWidth(BitWidth);

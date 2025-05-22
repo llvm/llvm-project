@@ -1906,7 +1906,7 @@ Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
 
   SmallVector<int, 32> Indices;
   for (unsigned i = 2; i < E->getNumSubExprs(); ++i) {
-    llvm::APSInt Idx = E->getShuffleMaskIdx(CGF.getContext(), i-2);
+    llvm::APSInt Idx = E->getShuffleMaskIdx(i - 2);
     // Check for -1 and output it as undef in the IR.
     if (Idx.isSigned() && Idx.isAllOnes())
       Indices.push_back(-1);
@@ -2491,18 +2491,22 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         // If we are casting a fixed i8 vector to a scalable i1 predicate
         // vector, use a vector insert and bitcast the result.
         if (ScalableDstTy->getElementType()->isIntegerTy(1) &&
-            ScalableDstTy->getElementCount().isKnownMultipleOf(8) &&
             FixedSrcTy->getElementType()->isIntegerTy(8)) {
           ScalableDstTy = llvm::ScalableVectorType::get(
               FixedSrcTy->getElementType(),
-              ScalableDstTy->getElementCount().getKnownMinValue() / 8);
+              llvm::divideCeil(
+                  ScalableDstTy->getElementCount().getKnownMinValue(), 8));
         }
         if (FixedSrcTy->getElementType() == ScalableDstTy->getElementType()) {
           llvm::Value *PoisonVec = llvm::PoisonValue::get(ScalableDstTy);
           llvm::Value *Result = Builder.CreateInsertVector(
               ScalableDstTy, PoisonVec, Src, uint64_t(0), "cast.scalable");
+          ScalableDstTy = cast<llvm::ScalableVectorType>(
+              llvm::VectorType::getWithSizeAndScalar(ScalableDstTy, DstTy));
+          if (Result->getType() != ScalableDstTy)
+            Result = Builder.CreateBitCast(Result, ScalableDstTy);
           if (Result->getType() != DstTy)
-            Result = Builder.CreateBitCast(Result, DstTy);
+            Result = Builder.CreateExtractVector(DstTy, Result, uint64_t(0));
           return Result;
         }
       }
@@ -2516,8 +2520,17 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         // If we are casting a scalable i1 predicate vector to a fixed i8
         // vector, bitcast the source and use a vector extract.
         if (ScalableSrcTy->getElementType()->isIntegerTy(1) &&
-            ScalableSrcTy->getElementCount().isKnownMultipleOf(8) &&
             FixedDstTy->getElementType()->isIntegerTy(8)) {
+          if (!ScalableSrcTy->getElementCount().isKnownMultipleOf(8)) {
+            ScalableSrcTy = llvm::ScalableVectorType::get(
+                ScalableSrcTy->getElementType(),
+                llvm::alignTo<8>(
+                    ScalableSrcTy->getElementCount().getKnownMinValue()));
+            llvm::Value *ZeroVec = llvm::Constant::getNullValue(ScalableSrcTy);
+            Src = Builder.CreateInsertVector(ScalableSrcTy, ZeroVec, Src,
+                                             uint64_t(0));
+          }
+
           ScalableSrcTy = llvm::ScalableVectorType::get(
               FixedDstTy->getElementType(),
               ScalableSrcTy->getElementCount().getKnownMinValue() / 8);

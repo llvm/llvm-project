@@ -238,27 +238,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 protocol::ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 
-/// Create a "Scope" JSON object as described in the debug adapter definition.
-///
-/// \param[in] name
-///     The value to place into the "name" key
-//
-/// \param[in] variablesReference
-///     The value to place into the "variablesReference" key
-//
-/// \param[in] namedVariables
-///     The value to place into the "namedVariables" key
-//
-/// \param[in] expensive
-///     The value to place into the "expensive" key
-///
-/// \return
-///     A "Scope" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateScope(const llvm::StringRef name,
-                              int64_t variablesReference,
-                              int64_t namedVariables, bool expensive);
-
 /// Create a "Source" JSON object as described in the debug adapter definition.
 ///
 /// \param[in] file
@@ -289,6 +268,20 @@ protocol::Source CreateSource(const lldb::SBLineEntry &line_entry);
 ///     A "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
 protocol::Source CreateSource(llvm::StringRef source_path);
+
+/// Create a "Source" object for a given frame, using its assembly for source.
+///
+/// \param[in] target
+///     The relevant target.
+///
+/// \param[in] address
+///     The address to use when creating the "Source" object.
+///
+/// \return
+///     A "Source" JSON object that follows the formal JSON
+///     definition outlined by Microsoft.
+protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
+                                      lldb::SBAddress &address);
 
 /// Return true if the given line entry should be displayed as assembly.
 ///

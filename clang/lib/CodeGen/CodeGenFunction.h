@@ -1740,6 +1740,14 @@ public:
   /// recently incremented counter.
   uint64_t getCurrentProfileCount() { return PGO.getCurrentRegionCount(); }
 
+  /// See CGDebugInfo::addInstToCurrentSourceAtom.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup);
+
+  /// See CGDebugInfo::addInstToSpecificSourceAtom.
+  void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                   llvm::Value *Backup, uint64_t Atom);
+
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if
   /// current context is not in a switch.
@@ -3362,12 +3370,24 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
+  /// Returns debug info, with additional annotation if enabled by
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
+  llvm::DILocation *
+  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
+
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
 
   /// Build an expression accessing the "counted_by" field.
   llvm::Value *EmitLoadOfCountedByField(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
+
+  // Emit bounds checking for flexible array and pointer members with the
+  // counted_by attribute.
+  void EmitCountedByBoundsChecking(const Expr *E, llvm::Value *Idx,
+                                   Address Addr, QualType IdxTy,
+                                   QualType ArrayTy, bool Accessed,
+                                   bool FlexibleArray);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
@@ -5422,9 +5442,20 @@ private:
                                      llvm::IntegerType *ResType,
                                      llvm::Value *EmittedE, bool IsDynamic);
 
-  llvm::Value *emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
+  llvm::Value *emitCountedBySize(const Expr *E, llvm::Value *EmittedE,
+                                 unsigned Type, llvm::IntegerType *ResType);
+
+  llvm::Value *emitCountedByMemberSize(const MemberExpr *E, const Expr *Idx,
+                                       llvm::Value *EmittedE,
+                                       QualType CastedArrayElementTy,
                                        unsigned Type,
                                        llvm::IntegerType *ResType);
+
+  llvm::Value *emitCountedByPointerSize(const ImplicitCastExpr *E,
+                                        const Expr *Idx, llvm::Value *EmittedE,
+                                        QualType CastedArrayElementTy,
+                                        unsigned Type,
+                                        llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
