@@ -1049,7 +1049,6 @@ class DebugCommunication(object):
         bytes_: int = None,
         asAddress: bool = None,
     ):
-
         args_dict = {}
         if asAddress is not None:
             args_dict = {
