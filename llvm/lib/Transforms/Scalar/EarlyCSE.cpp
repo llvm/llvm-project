@@ -1704,7 +1704,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         // In that case, LastStore should keep its present value since we're
         // removing the current store.
         assert((!LastStore ||
-                ParseMemoryInst(LastStore, TTI).getPointerOperand() ==
+                ParseMemoryInst(LastStore, TTI).getPointerOperand() !=
                     MemInst.getPointerOperand() ||
                 MSSA) &&
                "can't have an intervening store if not using MemorySSA!");
