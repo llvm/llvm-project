@@ -10,7 +10,7 @@
 
 int g;
 void a() {
-// CHECK: call void @llvm.memcpy{{.*}}, !dbg [[G1R1:!.*]]
+// CHECK: call void @llvm.memcpy{{.*}}%A{{.*}}, !dbg [[G1R1:!.*]]
     int A[] = { 1, 2, 3 };
 
 // CHECK: store i32 1, ptr %{{.*}}, !dbg [[G2R1:!.*]]
@@ -19,14 +19,14 @@ void a() {
 // CHECK: store i32 %0, ptr %{{.*}}, !dbg [[G2R1]]
     int B[] = { 1, 2, g };
 
-// CHECK: call void @llvm.memset{{.*}}, !dbg [[G3R1:!.*]]
+// CHECK: call void @llvm.memset{{.*}}%big{{.*}}, !dbg [[G3R1:!.*]]
 // CHECK: store i8 97{{.*}}, !dbg [[G3R1]]
 // CHECK: store i8 98{{.*}}, !dbg [[G3R1]]
 // CHECK: store i8 99{{.*}}, !dbg [[G3R1]]
 // CHECK: store i8 100{{.*}}, !dbg [[G3R1]]
     char big[65536] = { 'a', 'b', 'c', 'd' };
 
-// CHECK: call void @llvm.memset{{.*}}, !dbg [[G4R1:!.*]]
+// CHECK: call void @llvm.memset{{.*}}%arr{{.*}}, !dbg [[G4R1:!.*]]
     char arr[] = { 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, };
 
 // CHECK: store i8 -86, ptr %uninit{{.*}}, !dbg [[G5R1:!.*]], !annotation
