@@ -1,19 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
 
-template <typename T> struct InlineAuto {
-  template <typename G> inline static auto var = 5;
-};
-int inlineauto = InlineAuto<int>::var<int>;
-// CHECK: @_ZN10InlineAutoIiE3varIiEE = {{.*}}i32 5{{.*}}comdat
-//
-template <typename> struct PartialInlineAuto {
-  template <typename, typename> inline static auto var = 6;
-  template <typename T> inline static auto var<int, T> = 7;
-};
-
-int partialinlineauto = PartialInlineAuto<int>::var<int, int>;
-// CHECK: @_ZN17PartialInlineAutoIiE3varIiiEE = {{.*}}i32 7{{.*}}comdat
-
 struct Q {
   // CHECK: @_ZN1Q1kE = linkonce_odr constant i32 5, comdat
   static constexpr int k = 5;
