@@ -1571,6 +1571,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setIndexedStoreAction(ISD::POST_INC, MVT::i32, Legal);
   }
 
+  // zve32x is broken for partial_reduce_umla, but let's not make it worse.
+  if (Subtarget.hasStdExtZvqdotq() && Subtarget.getELen() >= 64) {
+    setPartialReduceMLAAction(MVT::nxv1i32, MVT::nxv4i8, Custom);
+    setPartialReduceMLAAction(MVT::nxv2i32, MVT::nxv8i8, Custom);
+    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Custom);
+    setPartialReduceMLAAction(MVT::nxv8i32, MVT::nxv32i8, Custom);
+    setPartialReduceMLAAction(MVT::nxv16i32, MVT::nxv64i8, Custom);
+  }
+
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtCOrZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
@@ -8229,6 +8238,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:
     return lowerADJUST_TRAMPOLINE(Op, DAG);
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    return lowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
 
@@ -8362,6 +8374,27 @@ SDValue RISCVTargetLowering::lowerADJUST_TRAMPOLINE(SDValue Op,
     llvm::report_fatal_error("Trampolines only implemented for RV64");
 
   return Op.getOperand(0);
+}
+
+SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  // Currently, only the vqdot and vqdotu case (from zvqdotq) should be legal.
+  // TODO: There are many other sub-cases we could potentially lower, are
+  // any of them worthwhile?  Ex: via vredsum, vwredsum, vwwmaccu, etc..
+  // TODO: PARTIAL_REDUCE_*MLA can't represent a vqdotsu currently.
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue Accum = Op.getOperand(0);
+  assert(Accum.getSimpleValueType() == VT &&
+         VT.getVectorElementType() == MVT::i32);
+  SDValue A = Op.getOperand(1);
+  SDValue B = Op.getOperand(2);
+  assert(A.getSimpleValueType() == B.getSimpleValueType() &&
+         A.getSimpleValueType().getVectorElementType() == MVT::i8);
+  bool IsSigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
+  unsigned Opc = IsSigned ? RISCVISD::VQDOT_VL : RISCVISD::VQDOTU_VL;
+  auto [Mask, VL] = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
+  return DAG.getNode(Opc, DL, VT, {A, B, Accum, Mask, VL});
 }
 
 static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,
