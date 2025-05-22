@@ -46,7 +46,6 @@ __attribute__((amdgpu_num_sgpr(4294967296))) kernel void kernel_num_sgpr_L() {} 
 __attribute__((amdgpu_num_vgpr(4294967296))) kernel void kernel_num_vgpr_L() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
 
 __attribute__((amdgpu_flat_work_group_size(0, 64))) kernel void kernel_flat_work_group_size_0_64() {} // expected-error {{'amdgpu_flat_work_group_size' attribute argument is invalid: max must be 0 since min is 0}}
-__attribute__((amdgpu_waves_per_eu(0, 4))) kernel void kernel_waves_per_eu_0_4() {} // expected-error {{'amdgpu_waves_per_eu' attribute argument is invalid: max must be 0 since min is 0}}
 
 __attribute__((amdgpu_flat_work_group_size(64, 32))) kernel void kernel_flat_work_group_size_64_32() {} // expected-error {{'amdgpu_flat_work_group_size' attribute argument is invalid: min must not be greater than max}}
 __attribute__((amdgpu_waves_per_eu(4, 2))) kernel void kernel_waves_per_eu_4_2() {} // expected-error {{'amdgpu_waves_per_eu' attribute argument is invalid: min must not be greater than max}}

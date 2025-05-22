@@ -1365,6 +1365,10 @@ static bool updateWavesPerEU(Module &M, TargetMachine &TM) {
   return Changed;
 }
 
+// 14 ==> 15
+// 15 ==> 16
+// 16 ==> 17
+
 static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
                     AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {

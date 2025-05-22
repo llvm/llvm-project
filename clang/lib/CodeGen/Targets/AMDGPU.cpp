@@ -743,20 +743,21 @@ void CodeGenModule::handleAMDGPUWavesPerEUAttr(
     llvm::Function *F, const AMDGPUWavesPerEUAttr *Attr) {
   unsigned Min =
       Attr->getMin()->EvaluateKnownConstInt(getContext()).getExtValue();
-  unsigned Max =
-      Attr->getMax()
-          ? Attr->getMax()->EvaluateKnownConstInt(getContext()).getExtValue()
-          : 0;
 
-  if (Min != 0) {
-    assert((Max == 0 || Min <= Max) && "Min must be less than or equal Max");
-
-    std::string AttrVal = llvm::utostr(Min);
-    if (Max != 0)
-      AttrVal = AttrVal + "," + llvm::utostr(Max);
-    F->addFnAttr("amdgpu-waves-per-eu", AttrVal);
-  } else
-    assert(Max == 0 && "Max must be zero");
+  if (Attr->getMax()) {
+    unsigned Max =
+        Attr->getMax()->EvaluateKnownConstInt(getContext()).getExtValue();
+    assert(Min == 0 || (Min != 0 && Max != 0) &&
+                           "Min must be non-zero when Max is non-zero");
+    assert(Min <= Max && "Min must be less than or equal to Max");
+    // Do not add the attribute if min,max=0,0.
+    if (Min != 0) {
+      std::string AttrVal = llvm::utostr(Min) + "," + llvm::utostr(Max);
+      F->addFnAttr("amdgpu-waves-per-eu", AttrVal);
+    }
+  } else if (Min != 0) {
+    F->addFnAttr("amdgpu-waves-per-eu", llvm::utostr(Min));
+  }
 }
 
 std::unique_ptr<TargetCodeGenInfo>

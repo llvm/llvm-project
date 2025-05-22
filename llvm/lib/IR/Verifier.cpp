@@ -2517,6 +2517,29 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'denormal-fp-math-f32' attribute: " + S,
                   V);
   }
+
+  if (TT.isAMDGPU()) {
+    if (auto A = Attrs.getFnAttr("amdgpu-waves-per-eu"); A.isValid()) {
+      std::pair<StringRef, StringRef> Strs = A.getValueAsString().split(',');
+      unsigned Min = 0;
+      StringRef MinStr = Strs.first.trim();
+      Check(!MinStr.getAsInteger(0, Min),
+            "minimum for 'amdgpu-waves-per-eu' must be integer: " + MinStr);
+      if (!Strs.second.empty()) {
+        unsigned Max = 0;
+        StringRef MaxStr = Strs.second.trim();
+        Check(!MaxStr.getAsInteger(0, Max),
+              "maximum for 'amdgpu-waves-per-eu' must be integer: " + MaxStr);
+        Check(Max, "maximum for 'amdgpu-waves-per-eu' must be non-zero");
+        Check(Min <= Max, "minimum must be less than or equal to maximum for "
+                          "'amdgpu-waves-per-eu': " +
+                              MinStr + " > " + MaxStr);
+      } else {
+        Check(Min, "minimum for 'amdgpu-waves-per-eu' must be non-zero when "
+                   "maximum is not provided");
+      }
+    }
+  }
 }
 
 void Verifier::verifyFunctionMetadata(
