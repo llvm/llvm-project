@@ -112,7 +112,7 @@ public:
       SymHandle = std::get<uint64_t>(SymHandleRef);
 
     for (auto Loc : LocRefs)
-      Locations.emplace_back(SourceLocation(Loc.FileName, Loc.Line));
+      Locations.emplace_back(Loc.FileName, Loc.Line);
   }
   // Empty constructor is used in yaml conversion.
   DataAccessProfRecord() {}

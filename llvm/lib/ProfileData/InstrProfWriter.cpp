@@ -29,7 +29,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <ctime>
-#include <functional>
 #include <memory>
 #include <string>
 #include <tuple>

@@ -89,8 +89,7 @@ private:
 Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
-    std::unique_ptr<memprof::DataAccessProfData>
-        DataAccessProfileData);
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData);
 
 } // namespace llvm
 #endif

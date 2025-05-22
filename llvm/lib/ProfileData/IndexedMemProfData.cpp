@@ -219,7 +219,8 @@ static Error writeMemProfV2(ProfOStream &OS,
 static Error writeMemProfRadixTreeBased(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion Version, bool MemProfFullSchema,
-    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData) {
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData =
+        nullptr) {
   assert((Version == memprof::Version3 || Version == memprof::Version4) &&
          "Unsupported version for radix tree format");
 
@@ -289,7 +290,7 @@ static Error writeMemProfV3(ProfOStream &OS,
                             memprof::IndexedMemProfData &MemProfData,
                             bool MemProfFullSchema) {
   return writeMemProfRadixTreeBased(OS, MemProfData, memprof::Version3,
-                                    MemProfFullSchema, nullptr);
+                                    MemProfFullSchema);
 }
 
 // Write out MemProf Version4
