@@ -471,7 +471,7 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
       const ir2vec::Vocab &Vocabulary = VocabRes.getVocabulary();
       unsigned Dimension = VocabRes.getDimension();
 
-    Note that ``IR2VecVocabAnalysis`` pass is immutable.
+   Note that ``IR2VecVocabAnalysis`` pass is immutable.
 
 2. **Create Embedder instance**:
    With the vocabulary, create an embedder for a specific function:
