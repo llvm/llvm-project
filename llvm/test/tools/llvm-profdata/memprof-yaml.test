@@ -8,7 +8,7 @@
 ; RUN: diff -b %t/memprof-in.yaml %t/memprof-out.yaml
 
 ; Merge text profile as v3 binary profile. Test that the merged v3 profile
-; are identical to memprof-in-v3.ymal, and doesn't have callee guids or dap.
+; are identical to memprof-in-v3.yaml, and doesn't have callee guids or dap.
 ; RUN: llvm-profdata merge --memprof-version=3 %t/memprof-in.yaml -o %t/memprof-out-v3.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out-v3.indexed > %t/memprof-out-v3.yaml
 ; RUN: diff -b %t/memprof-out-v3.yaml %t/memprof-in-v3.yaml
