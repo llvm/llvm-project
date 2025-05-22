@@ -125,8 +125,6 @@ void AnalysisState::resetCache() {
   insideMutuallyExclusiveRegionsCache.clear();
 }
 
-BufferizationState::Extension::~Extension() = default;
-
 SymbolTableCollection &BufferizationState::getSymbolTables() {
   return symbolTables;
 }
