@@ -89,6 +89,7 @@ using DescriptorType = llvm::dxil::ResourceClass;
 // Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
 struct RootDescriptor {
   DescriptorType Type;
+  Register Reg;
 };
 
 // Models the end of a descriptor table and stores its visibility
