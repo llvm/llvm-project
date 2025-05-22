@@ -84,6 +84,15 @@ struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
 
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
+    const auto &typeConverter = *this->getTypeConverter();
+    if (!LLVM::isCompatibleType(resultType)) {
+      resultType = typeConverter.convertType(resultType);
+      if (!resultType)
+        return failure();
+    }
+    if (operandType != resultType)
+      return rewriter.notifyMatchFailure(
+          op, "compatible result type doesn't match operand type");
 
     if (!isa<LLVM::LLVMArrayType>(operandType)) {
       rewriter.replaceOpWithNewOp<LLVMOp>(op, resultType, adaptor.getOperand(),
@@ -96,7 +105,7 @@ struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
       return failure();
 
     return LLVM::detail::handleMultidimensionalVectors(
-        op.getOperation(), adaptor.getOperands(), *this->getTypeConverter(),
+        op.getOperation(), adaptor.getOperands(), typeConverter,
         [&](Type llvm1DVectorTy, ValueRange operands) {
           return rewriter.create<LLVMOp>(loc, llvm1DVectorTy, operands[0],
                                          false);
