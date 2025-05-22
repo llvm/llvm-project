@@ -27,15 +27,3 @@ template <typename T> constexpr int A<T>::n = sizeof(A) + sizeof(T);
 template <typename T> inline constexpr int A<T>::m = sizeof(A) + sizeof(T);
 static_assert(A<int>().f() == 5);
 static_assert(A<int>().g() == 5);
-
-template <typename T> struct InlineAuto {
-  template <typename G> inline static auto var = 5;
-};
-
-template <typename> struct PartialInlineAuto {
-  template <typename, typename> inline static auto var = 6;
-  template <typename T> inline static auto var<int, T> = 7;
-};
-
-int inlineauto = InlineAuto<int>::var<int>;
-int partialinlineauto = PartialInlineAuto<int>::var<int, int>;
