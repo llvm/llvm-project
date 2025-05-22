@@ -162,7 +162,7 @@ OPTIONS
 
 .. option:: --verify-json=<path>
 
-            Output JSON-formatted error summary to the a file specfied by
+            Output JSON-formatted error summary to the a file specified by
             <path>. Implies :option:`--verify`.  The output format is described
             in the section below (:ref:`verify-json-format`).
 
