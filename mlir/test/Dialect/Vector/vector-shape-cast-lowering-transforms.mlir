@@ -141,17 +141,19 @@ func.func @shape_cast_1d0d(%arg0 : vector<1xf32>) -> vector<f32> {
 }
 
 
-// CHECK-LABEL:  func.func @shape_cast_squeeze_leading_one(
+// The shapes have 2 inner dimension sizes in common, so the extract result is rank-2.
+// CHECK-LABEL:  func.func @squeeze_out_prefix_unit_dim(
 // CHECK-SAME:               %[[ARG0:.*]]: vector<1x2x3xf32>) -> vector<2x3xf32> {
 // CHECK:          %[[EXTRACTED:.*]] = vector.extract %[[ARG0]][0] :
 // CHECK-SAME:               vector<2x3xf32> from vector<1x2x3xf32>
 // CHECK:          return %[[EXTRACTED]] : vector<2x3xf32>
-func.func @shape_cast_squeeze_leading_one(%arg0 : vector<1x2x3xf32>) -> vector<2x3xf32> {
+func.func @squeeze_out_prefix_unit_dim(%arg0 : vector<1x2x3xf32>) -> vector<2x3xf32> {
   %s = vector.shape_cast %arg0 : vector<1x2x3xf32> to vector<2x3xf32>
   return %s : vector<2x3xf32>
 }
 
-// CHECK-LABEL:  func.func @shape_cast_squeeze_middle_one(
+// The shapes have 1 inner dimension size in common, so the extract results are rank-1.
+// CHECK-LABEL:  func.func @squeeze_out_middle_unit_dim(
 // CHECK-SAME:               %[[ARG0:.*]]: vector<2x1x3xf32>) -> vector<2x3xf32> {
 // CHECK:         %[[UB:.*]] = ub.poison : vector<2x3xf32>
 // CHECK:         %[[E0:.*]] = vector.extract %[[ARG0]][0, 0] : vector<3xf32>
@@ -161,23 +163,23 @@ func.func @shape_cast_squeeze_leading_one(%arg0 : vector<1x2x3xf32>) -> vector<2
 // CHECK:         %[[I1:.*]] = vector.insert %[[E1]], %[[I0]] [1] : vector<3xf32>
 // CHECK-SAME:                 into vector<2x3xf32>
 // CHECK:         return %[[I1]] : vector<2x3xf32>
-func.func @shape_cast_squeeze_middle_one(%arg0 : vector<2x1x3xf32>) -> vector<2x3xf32> {
+func.func @squeeze_out_middle_unit_dim(%arg0 : vector<2x1x3xf32>) -> vector<2x3xf32> {
   %s = vector.shape_cast %arg0 : vector<2x1x3xf32> to vector<2x3xf32>
   return %s : vector<2x3xf32>
 }
 
-// CHECK-LABEL:  func.func @shape_cast_unsqueeze_leading_one(
+// CHECK-LABEL:  func.func @prepend_unit_dim(
 // CHECK-SAME:               %[[ARG0:.*]]: vector<2x3xf32>) -> vector<1x2x3xf32> {
 // CHECK:          %[[UB:.*]] = ub.poison : vector<1x2x3xf32>
 // CHECK:          %[[INSERTED:.*]] = vector.insert %[[ARG0]], %[[UB]] [0]
 // CHECK-SAME:               : vector<2x3xf32> into vector<1x2x3xf32>
 // CHECK:        return %[[INSERTED]] : vector<1x2x3xf32>
-func.func @shape_cast_unsqueeze_leading_one(%arg0 : vector<2x3xf32>) -> vector<1x2x3xf32> {
+func.func @prepend_unit_dim(%arg0 : vector<2x3xf32>) -> vector<1x2x3xf32> {
   %s = vector.shape_cast %arg0 : vector<2x3xf32> to vector<1x2x3xf32>
   return %s : vector<1x2x3xf32>
 }
 
-// CHECK-LABEL:  func.func @shape_cast_unsqueeze_middle_one(
+// CHECK-LABEL:  func.func @insert_middle_unit_dim(
 // CHECK-SAME:               %[[ARG0:.*]]: vector<2x3xf32>) -> vector<2x1x3xf32> {
 // CHECK:           %[[UB:.*]] = ub.poison : vector<2x1x3xf32>
 // CHECK:           %[[E0:.*]] = vector.extract %[[ARG0]][0] : vector<3xf32>
@@ -185,7 +187,7 @@ func.func @shape_cast_unsqueeze_leading_one(%arg0 : vector<2x3xf32>) -> vector<1
 // CHECK:           %[[E1:.*]] = vector.extract %[[ARG0]][1] : vector<3xf32>
 // CHECK:           %[[I1:.*]] = vector.insert %[[E1]], %[[I0]] [1, 0] : vector<3xf32>
 // CHECK:           return %[[I1]] : vector<2x1x3xf32>
-func.func @shape_cast_unsqueeze_middle_one(%arg0 : vector<2x3xf32>) -> vector<2x1x3xf32> {
+func.func @insert_middle_unit_dim(%arg0 : vector<2x3xf32>) -> vector<2x1x3xf32> {
   %s = vector.shape_cast %arg0 : vector<2x3xf32> to vector<2x1x3xf32>
   return %s : vector<2x1x3xf32>
 }
