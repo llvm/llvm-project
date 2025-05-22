@@ -1476,7 +1476,7 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   unsigned NumPreArgs = PreArgs.size();
   CallExprBits.NumPreArgs = NumPreArgs;
   assert((NumPreArgs == getNumPreArgs()) && "NumPreArgs overflow!");
-  assert(SizeOfCallExprInstance(SC) <= offsetToTrailingObjects &&
+  assert(SizeOfCallExprInstance(SC) <= OffsetToTrailingObjects &&
          "This CallExpr subclass is too big or unsupported");
 
   CallExprBits.UsesADL = static_cast<bool>(UsesADL);
@@ -1544,7 +1544,7 @@ Decl *Expr::getReferencedDeclOfCallee() {
 
   // Optimize for the common case first
   // (simple function or member function call)
-  // then try more exotic possibilities
+  // then try more exotic possibilities.
   Expr *CEE = IgnoreImpCasts();
 
   if (auto *DRE = dyn_cast<DeclRefExpr>(CEE))

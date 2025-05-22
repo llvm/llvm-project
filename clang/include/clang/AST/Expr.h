@@ -2919,19 +2919,19 @@ class CallExpr : public Expr {
   // A bit in CallExprBitfields indicates if source locations are presents.
 
 protected:
-  static constexpr unsigned offsetToTrailingObjects = 32;
+  static constexpr unsigned OffsetToTrailingObjects = 32;
   template <typename T>
   static constexpr unsigned
   sizeToAllocateForCallExprSubclass(unsigned SizeOfTrailingObjects) {
-    static_assert(sizeof(T) <= CallExpr::offsetToTrailingObjects);
-    return SizeOfTrailingObjects + CallExpr::offsetToTrailingObjects;
+    static_assert(sizeof(T) <= CallExpr::OffsetToTrailingObjects);
+    return SizeOfTrailingObjects + CallExpr::OffsetToTrailingObjects;
   }
 
 private:
   /// Return a pointer to the start of the trailing array of "Stmt *".
   Stmt **getTrailingStmts() {
     return reinterpret_cast<Stmt **>(reinterpret_cast<char *>(this) +
-                                     offsetToTrailingObjects);
+                                     OffsetToTrailingObjects);
   }
   Stmt *const *getTrailingStmts() const {
     return const_cast<CallExpr *>(this)->getTrailingStmts();
@@ -2943,7 +2943,7 @@ private:
 
   size_t getOffsetOfTrailingFPFeatures() const {
     assert(hasStoredFPFeatures());
-    return offsetToTrailingObjects + getSizeOfTrailingStmts();
+    return OffsetToTrailingObjects + getSizeOfTrailingStmts();
   }
 
 public:
@@ -2990,13 +2990,13 @@ protected:
   FPOptionsOverride *getTrailingFPFeatures() {
     assert(hasStoredFPFeatures());
     return reinterpret_cast<FPOptionsOverride *>(
-        reinterpret_cast<char *>(this) + offsetToTrailingObjects +
+        reinterpret_cast<char *>(this) + OffsetToTrailingObjects +
         getSizeOfTrailingStmts());
   }
   const FPOptionsOverride *getTrailingFPFeatures() const {
     assert(hasStoredFPFeatures());
     return reinterpret_cast<const FPOptionsOverride *>(
-        reinterpret_cast<const char *>(this) + offsetToTrailingObjects +
+        reinterpret_cast<const char *>(this) + OffsetToTrailingObjects +
         getSizeOfTrailingStmts());
   }
 
@@ -3217,11 +3217,11 @@ public:
 
   SourceLocation getBeginLoc() const {
     if (CallExprBits.HasTrailingSourceLoc) {
-        assert(CallExprBits.HasTrailingSourceLoc && "No trailing source loc");
-        static_assert(sizeof(CallExpr) <=
-                      offsetToTrailingObjects + sizeof(SourceLocation));
-        return *reinterpret_cast<const SourceLocation *>(
-            reinterpret_cast<const char *>(this) + sizeof(CallExpr));
+      assert(CallExprBits.HasTrailingSourceLoc && "No trailing source loc");
+      static_assert(sizeof(CallExpr) <=
+                    OffsetToTrailingObjects + sizeof(SourceLocation));
+      return *reinterpret_cast<const SourceLocation *>(
+          reinterpret_cast<const char *>(this + 1));
     }
 
     if (usesMemberSyntax()) {
@@ -3232,9 +3232,7 @@ public:
     return getCallee()->getBeginLoc();
   }
 
-  SourceLocation getEndLoc() const {
-    return getRParenLoc();
-  }
+  SourceLocation getEndLoc() const { return getRParenLoc(); }
 
 private:
   friend class ASTStmtReader;
@@ -3248,10 +3246,10 @@ private:
     assert(getStmtClass() == CallExprClass &&
            "Calling setTrailingSourceLocs on a subclass of CallExpr");
     static_assert(sizeof(CallExpr) <=
-                  offsetToTrailingObjects + 2 * sizeof(SourceLocation));
+                  OffsetToTrailingObjects + sizeof(SourceLocation));
 
-    SourceLocation *Locs = reinterpret_cast<SourceLocation *>(
-        reinterpret_cast<char *>(this) + sizeof(CallExpr));
+    SourceLocation *Locs =
+        reinterpret_cast<SourceLocation *>(reinterpret_cast<char *>(this + 1));
     new (Locs) SourceLocation(getBeginLoc());
     CallExprBits.HasTrailingSourceLoc = true;
   }
