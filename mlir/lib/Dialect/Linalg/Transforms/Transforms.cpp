@@ -1204,16 +1204,23 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   //    %init = tensor.empty()
   //    %transposed_tile = linalg.transpose ins(%source_or_padded_source),
   //                                        outs(%init)
-  // Two assumptions are made:
-  //  1. All outer dims are 1 - the corresponding transposition doesn't matter.
-  //  2. Inner dims position correspond to the trailing `numTiles` dims.
-  SmallVector<int64_t> tilesPermNormalized =
-      getPackUnpackNormalizedPerm(srcRank, packOp.getInnerDimsPos());
+  // Assumptions made:
+  //  1. Inner dims position correspond to the trailing `numTiles` dims.
   SmallVector<int64_t> srcPermForTranspose;
-  for (int64_t i = 0; i < (srcRank - numTiles); i++)
+  ArrayRef<int64_t> innerDimPos(packOp.getInnerDimsPos());
+  for (int64_t i = 0; i < srcRank; i++) {
+    // As we assume the trailing dimensions of the inner dim position correspond
+    // to the trailing indices of the transpose permutation, we need to
+    // calculate the remaining indicies of the transpose permutation. This is
+    // done by adding the indices not contained in the inner dimension position.
+    //   For example if we have a source tensor of dimensions [0, 1, 2, 3]
+    //   and inner dim position of [3, 0], the remaining indices are [1, 2].
+    //   and the transpose will be [1, 2, 3, 0].
+    if (llvm::is_contained(innerDimPos, i))
+      continue;
     srcPermForTranspose.push_back(i);
-
-  srcPermForTranspose.append(SmallVector<int64_t>(packOp.getInnerDimsPos()));
+  }
+  srcPermForTranspose.append(innerDimPos.begin(), innerDimPos.end());
 
   LLVM_DEBUG(DBGS() << "Pack permutation: " << packOp << "\n"
                     << "perm: " << llvm::interleaved(srcPermForTranspose)
