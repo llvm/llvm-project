@@ -6661,7 +6661,9 @@ LogicalResult MaskOp::verify() {
 ///
 ///   %0 = user_op %a : vector<8xf32>
 ///
-/// Empty `vector.mask` with passthru operand are handled by the canonicalizer.
+/// Empty `vector.mask` with passthru operand are handled by the canonicalizer
+/// as it requires creating new operations.
+
 static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
                                      SmallVectorImpl<OpFoldResult> &results) {
   if (!maskOp.isEmpty() || maskOp.hasPassthru())
@@ -6697,18 +6699,18 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
   return success();
 }
 
-// Canonialize empty `vector.mask` operations that can't be handled in
-// `VectorMask::fold`.
-//
-// Example 1: Empty `vector.mask` with passthru operand.
-//
-//   %0 = vector.mask %mask, %passthru { vector.yield %a : vector<8xf32> } :
-//     vector<8xi1> -> vector<8xf32>
-//
-// becomes:
-//
-//   %0 = arith.select %mask, %a, %passthru : vector<8xf32>
-//
+/// Canonialize empty `vector.mask` operations that can't be handled in
+/// `VectorMask::fold` as they require creating new operations.
+///
+/// Example 1: Empty `vector.mask` with passthru operand.
+///
+///   %0 = vector.mask %mask, %passthru { vector.yield %a : vector<8xf32> } :
+///     vector<8xi1> -> vector<8xf32>
+///
+/// becomes:
+///
+///   %0 = arith.select %mask, %a, %passthru : vector<8xf32>
+///
 class CanonializeEmptyMaskOp : public OpRewritePattern<MaskOp> {
   using OpRewritePattern::OpRewritePattern;
 
