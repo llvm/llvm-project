@@ -1,6 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces %s | FileCheck %s
 
-
 define i32 @lifetime_flat_pointer() {
 ; CHECK-LABEL: define i32 @lifetime_flat_pointer() {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
