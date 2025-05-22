@@ -290,8 +290,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.AAPipeline.empty()) {
     AAManager AA;
     if (auto Err = PB.parseAAPipeline(AA, Conf.AAPipeline)) {
-      report_fatal_error(Twine("unable to parse AA pipeline description '") +
-                         Conf.AAPipeline + "': " + toString(std::move(Err)));
+      reportFatalUsageError(Twine("unable to parse AA pipeline description '") +
+                            Conf.AAPipeline + "': " + toString(std::move(Err)));
     }
     // Register the AA manager first so that our version is the one used.
     FAM.registerPass([&] { return std::move(AA); });
@@ -331,8 +331,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   // Parse a custom pipeline if asked to.
   if (!Conf.OptPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, Conf.OptPipeline)) {
-      report_fatal_error(Twine("unable to parse pass pipeline description '") +
-                         Conf.OptPipeline + "': " + toString(std::move(Err)));
+      reportFatalUsageError(
+          Twine("unable to parse pass pipeline description '") +
+          Conf.OptPipeline + "': " + toString(std::move(Err)));
     }
   } else if (IsThinLTO) {
     MPM.addPass(PB.buildThinLTODefaultPipeline(OL, ImportSummary));
@@ -415,8 +416,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   if (!Conf.DwoDir.empty()) {
     std::error_code EC;
     if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
-      report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
-                         ": " + EC.message());
+      reportFatalUsageError(Twine("Failed to create directory ") + Conf.DwoDir +
+                            ": " + EC.message());
 
     DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
@@ -428,14 +429,14 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     std::error_code EC;
     DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
     if (EC)
-      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
-                         EC.message());
+      reportFatalUsageError(Twine("Failed to open ") + DwoFile + ": " +
+                            EC.message());
   }
 
   Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
       AddStream(Task, Mod.getModuleIdentifier());
   if (Error Err = StreamOrErr.takeError())
-    report_fatal_error(std::move(Err));
+    reportFatalUsageError(std::move(Err));
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
