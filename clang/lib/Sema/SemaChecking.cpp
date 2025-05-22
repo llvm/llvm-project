@@ -9358,10 +9358,10 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
 ///
 /// This is to catch typos like `if (memcmp(&a, &b, sizeof(a) > 0))`.
 static bool CheckMemorySizeofForComparison(Sema &S, const Expr *E,
-                                           IdentifierInfo *FnName,
+                                           const IdentifierInfo *FnName,
                                            SourceLocation FnLoc,
                                            SourceLocation RParenLoc) {
-  const BinaryOperator *Size = dyn_cast<BinaryOperator>(E);
+  const auto *Size = dyn_cast<BinaryOperator>(E);
   if (!Size)
     return false;
 
@@ -9955,7 +9955,7 @@ static const Expr *getStrlenExprArg(const Expr *E) {
 }
 
 void Sema::CheckStrncatArguments(const CallExpr *CE,
-                                 IdentifierInfo *FnName) {
+                                 const IdentifierInfo *FnName) {
   // Don't crash if the user has the wrong number of arguments.
   if (CE->getNumArgs() < 3)
     return;
@@ -10050,7 +10050,7 @@ void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
                                  const UnaryOperator *UnaryExpr) {
   if (const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr())) {
     const Decl *D = Lvalue->getDecl();
-    if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
+    if (const auto *DD = dyn_cast<DeclaratorDecl>(D)) {
       if (!DD->getType()->isReferenceType())
         return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr, D);
     }
@@ -10190,15 +10190,15 @@ Sema::CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
     PPC().CheckPPCMMAType(RetValExp->getType(), ReturnLoc);
 }
 
-void Sema::CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
-                                BinaryOperatorKind Opcode) {
+void Sema::CheckFloatComparison(SourceLocation Loc, const Expr *LHS,
+                                const Expr *RHS, BinaryOperatorKind Opcode) {
   if (!BinaryOperator::isEqualityOp(Opcode))
     return;
 
   // Match and capture subexpressions such as "(float) X == 0.1".
-  FloatingLiteral *FPLiteral;
-  CastExpr *FPCast;
-  auto getCastAndLiteral = [&FPLiteral, &FPCast](Expr *L, Expr *R) {
+  const FloatingLiteral *FPLiteral;
+  const CastExpr *FPCast;
+  auto getCastAndLiteral = [&FPLiteral, &FPCast](const Expr *L, const Expr *R) {
     FPLiteral = dyn_cast<FloatingLiteral>(L->IgnoreParens());
     FPCast = dyn_cast<CastExpr>(R->IgnoreParens());
     return FPLiteral && FPCast;
@@ -10225,13 +10225,13 @@ void Sema::CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
   }
 
   // Match a more general floating-point equality comparison (-Wfloat-equal).
-  Expr* LeftExprSansParen = LHS->IgnoreParenImpCasts();
-  Expr* RightExprSansParen = RHS->IgnoreParenImpCasts();
+  const Expr *LeftExprSansParen = LHS->IgnoreParenImpCasts();
+  const Expr *RightExprSansParen = RHS->IgnoreParenImpCasts();
 
   // Special case: check for x == x (which is OK).
   // Do not emit warnings for such cases.
-  if (auto *DRL = dyn_cast<DeclRefExpr>(LeftExprSansParen))
-    if (auto *DRR = dyn_cast<DeclRefExpr>(RightExprSansParen))
+  if (const auto *DRL = dyn_cast<DeclRefExpr>(LeftExprSansParen))
+    if (const auto *DRR = dyn_cast<DeclRefExpr>(RightExprSansParen))
       if (DRL->getDecl() == DRR->getDecl())
         return;
 
@@ -10240,22 +10240,21 @@ void Sema::CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
   //  is a heuristic: often comparison against such literals are used to
   //  detect if a value in a variable has not changed.  This clearly can
   //  lead to false negatives.
-  if (FloatingLiteral* FLL = dyn_cast<FloatingLiteral>(LeftExprSansParen)) {
+  if (const auto *FLL = dyn_cast<FloatingLiteral>(LeftExprSansParen)) {
     if (FLL->isExact())
       return;
-  } else
-    if (FloatingLiteral* FLR = dyn_cast<FloatingLiteral>(RightExprSansParen))
-      if (FLR->isExact())
-        return;
+  } else if (const auto *FLR = dyn_cast<FloatingLiteral>(RightExprSansParen))
+    if (FLR->isExact())
+      return;
 
   // Check for comparisons with builtin types.
-  if (CallExpr* CL = dyn_cast<CallExpr>(LeftExprSansParen))
-    if (CL->getBuiltinCallee())
-      return;
+  if (const auto *CL = dyn_cast<CallExpr>(LeftExprSansParen);
+      CL && CL->getBuiltinCallee())
+    return;
 
-  if (CallExpr* CR = dyn_cast<CallExpr>(RightExprSansParen))
-    if (CR->getBuiltinCallee())
-      return;
+  if (const auto *CR = dyn_cast<CallExpr>(RightExprSansParen);
+      CR && CR->getBuiltinCallee())
+    return;
 
   // Emit the diagnostic.
   Diag(Loc, diag::warn_floatingpoint_eq)
@@ -10302,18 +10301,18 @@ struct IntRange {
   static IntRange forValueOfCanonicalType(ASTContext &C, const Type *T) {
     assert(T->isCanonicalUnqualified());
 
-    if (const VectorType *VT = dyn_cast<VectorType>(T))
+    if (const auto *VT = dyn_cast<VectorType>(T))
       T = VT->getElementType().getTypePtr();
-    if (const ComplexType *CT = dyn_cast<ComplexType>(T))
+    if (const auto *CT = dyn_cast<ComplexType>(T))
       T = CT->getElementType().getTypePtr();
-    if (const AtomicType *AT = dyn_cast<AtomicType>(T))
+    if (const auto *AT = dyn_cast<AtomicType>(T))
       T = AT->getValueType().getTypePtr();
 
     if (!C.getLangOpts().CPlusPlus) {
       // For enum types in C code, use the underlying datatype.
-      if (const EnumType *ET = dyn_cast<EnumType>(T))
+      if (const auto *ET = dyn_cast<EnumType>(T))
         T = ET->getDecl()->getIntegerType().getDesugaredType(C).getTypePtr();
-    } else if (const EnumType *ET = dyn_cast<EnumType>(T)) {
+    } else if (const auto *ET = dyn_cast<EnumType>(T)) {
       // For enum types in C++, use the known bit width of the enumerators.
       EnumDecl *Enum = ET->getDecl();
       // In C++11, enums can have a fixed underlying type. Use this type to
@@ -10432,8 +10431,7 @@ struct IntRange {
 
 } // namespace
 
-static IntRange GetValueRange(ASTContext &C, llvm::APSInt &value,
-                              unsigned MaxWidth) {
+static IntRange GetValueRange(llvm::APSInt &value, unsigned MaxWidth) {
   if (value.isSigned() && value.isNegative())
     return IntRange(value.getSignificantBits(), false);
 
@@ -10445,23 +10443,22 @@ static IntRange GetValueRange(ASTContext &C, llvm::APSInt &value,
   return IntRange(value.getActiveBits(), true);
 }
 
-static IntRange GetValueRange(ASTContext &C, APValue &result, QualType Ty,
-                              unsigned MaxWidth) {
+static IntRange GetValueRange(APValue &result, QualType Ty, unsigned MaxWidth) {
   if (result.isInt())
-    return GetValueRange(C, result.getInt(), MaxWidth);
+    return GetValueRange(result.getInt(), MaxWidth);
 
   if (result.isVector()) {
-    IntRange R = GetValueRange(C, result.getVectorElt(0), Ty, MaxWidth);
+    IntRange R = GetValueRange(result.getVectorElt(0), Ty, MaxWidth);
     for (unsigned i = 1, e = result.getVectorLength(); i != e; ++i) {
-      IntRange El = GetValueRange(C, result.getVectorElt(i), Ty, MaxWidth);
+      IntRange El = GetValueRange(result.getVectorElt(i), Ty, MaxWidth);
       R = IntRange::join(R, El);
     }
     return R;
   }
 
   if (result.isComplexInt()) {
-    IntRange R = GetValueRange(C, result.getComplexIntReal(), MaxWidth);
-    IntRange I = GetValueRange(C, result.getComplexIntImag(), MaxWidth);
+    IntRange R = GetValueRange(result.getComplexIntReal(), MaxWidth);
+    IntRange I = GetValueRange(result.getComplexIntImag(), MaxWidth);
     return IntRange::join(R, I);
   }
 
@@ -10476,7 +10473,7 @@ static IntRange GetValueRange(ASTContext &C, APValue &result, QualType Ty,
 
 static QualType GetExprType(const Expr *E) {
   QualType Ty = E->getType();
-  if (const AtomicType *AtomicRHS = Ty->getAs<AtomicType>())
+  if (const auto *AtomicRHS = Ty->getAs<AtomicType>())
     Ty = AtomicRHS->getValueType();
   return Ty;
 }
@@ -10503,7 +10500,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
   // Try a full evaluation first.
   Expr::EvalResult result;
   if (E->EvaluateAsRValue(result, C, InConstantContext))
-    return GetValueRange(C, result.Val, GetExprType(E), MaxWidth);
+    return GetValueRange(result.Val, GetExprType(E), MaxWidth);
 
   // I think we only want to look through implicit casts here; if the
   // user has an explicit widening cast, we should treat the value as
@@ -10856,10 +10853,9 @@ static bool IsSameFloatAfterCast(const APValue &value,
 static void AnalyzeImplicitConversions(Sema &S, Expr *E, SourceLocation CC,
                                        bool IsListInit = false);
 
-static bool IsEnumConstOrFromMacro(Sema &S, Expr *E) {
+static bool IsEnumConstOrFromMacro(Sema &S, const Expr *E) {
   // Suppress cases where we are comparing against an enum constant.
-  if (const DeclRefExpr *DR =
-      dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
+  if (const auto *DR = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
     if (isa<EnumConstantDecl>(DR->getDecl()))
       return true;
 
@@ -10877,7 +10873,7 @@ static bool IsEnumConstOrFromMacro(Sema &S, Expr *E) {
   return false;
 }
 
-static bool isKnownToHaveUnsignedValue(Expr *E) {
+static bool isKnownToHaveUnsignedValue(const Expr *E) {
   return E->getType()->isIntegerType() &&
          (!E->getType()->isSignedIntegerType() ||
           !E->IgnoreParenImpCasts()->getType()->isSignedIntegerType());
@@ -11008,9 +11004,9 @@ struct PromotedRange {
 };
 }
 
-static bool HasEnumType(Expr *E) {
+static bool HasEnumType(const Expr *E) {
   // Strip off implicit integral promotions.
-  while (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+  while (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
     if (ICE->getCastKind() != CK_IntegralCast &&
         ICE->getCastKind() != CK_NoOp)
       break;
@@ -11128,7 +11124,7 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   // If this is a comparison to an enum constant, include that
   // constant in the diagnostic.
   const EnumConstantDecl *ED = nullptr;
-  if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Constant))
+  if (const auto *DR = dyn_cast<DeclRefExpr>(Constant))
     ED = dyn_cast<EnumConstantDecl>(DR->getDecl());
 
   // Should be enough for uint128 (39 decimal digits)
@@ -11503,9 +11499,9 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
 }
 
 /// Diagnose an implicit cast;  purely a helper for CheckImplicitConversion.
-static void DiagnoseImpCast(Sema &S, Expr *E, QualType SourceType, QualType T,
-                            SourceLocation CContext, unsigned diag,
-                            bool pruneControlFlow = false) {
+static void DiagnoseImpCast(Sema &S, const Expr *E, QualType SourceType,
+                            QualType T, SourceLocation CContext, unsigned diag,
+                            bool PruneControlFlow = false) {
   // For languages like HLSL and OpenCL, implicit conversion diagnostics listing
   // address space annotations isn't really useful. The warnings aren't because
   // you're converting a `private int` to `unsigned int`, it is because you're
@@ -11514,7 +11510,7 @@ static void DiagnoseImpCast(Sema &S, Expr *E, QualType SourceType, QualType T,
     SourceType = S.getASTContext().removeAddrSpaceQualType(SourceType);
   if (T.hasAddressSpace())
     T = S.getASTContext().removeAddrSpaceQualType(T);
-  if (pruneControlFlow) {
+  if (PruneControlFlow) {
     S.DiagRuntimeBehavior(E->getExprLoc(), E,
                           S.PDiag(diag)
                               << SourceType << T << E->getSourceRange()
@@ -11526,26 +11522,25 @@ static void DiagnoseImpCast(Sema &S, Expr *E, QualType SourceType, QualType T,
 }
 
 /// Diagnose an implicit cast;  purely a helper for CheckImplicitConversion.
-static void DiagnoseImpCast(Sema &S, Expr *E, QualType T,
-                            SourceLocation CContext,
-                            unsigned diag, bool pruneControlFlow = false) {
-  DiagnoseImpCast(S, E, E->getType(), T, CContext, diag, pruneControlFlow);
+static void DiagnoseImpCast(Sema &S, const Expr *E, QualType T,
+                            SourceLocation CContext, unsigned diag,
+                            bool PruneControlFlow = false) {
+  DiagnoseImpCast(S, E, E->getType(), T, CContext, diag, PruneControlFlow);
 }
 
 /// Diagnose an implicit cast from a floating point value to an integer value.
-static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
+static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
                                     SourceLocation CContext) {
-  const bool IsBool = T->isSpecificBuiltinType(BuiltinType::Bool);
-  const bool PruneWarnings = S.inTemplateInstantiation();
+  bool IsBool = T->isSpecificBuiltinType(BuiltinType::Bool);
+  bool PruneWarnings = S.inTemplateInstantiation();
 
-  Expr *InnerE = E->IgnoreParenImpCasts();
+  const Expr *InnerE = E->IgnoreParenImpCasts();
   // We also want to warn on, e.g., "int i = -1.234"
-  if (UnaryOperator *UOp = dyn_cast<UnaryOperator>(InnerE))
+  if (const auto *UOp = dyn_cast<UnaryOperator>(InnerE))
     if (UOp->getOpcode() == UO_Minus || UOp->getOpcode() == UO_Plus)
       InnerE = UOp->getSubExpr()->IgnoreParenImpCasts();
 
-  const bool IsLiteral =
-      isa<FloatingLiteral>(E) || isa<FloatingLiteral>(InnerE);
+  bool IsLiteral = isa<FloatingLiteral>(E) || isa<FloatingLiteral>(InnerE);
 
   llvm::APFloat Value(0.0);
   bool IsConstant =
@@ -11703,37 +11698,37 @@ static std::string PrettyPrintInRange(const llvm::APSInt &Value,
   return toString(ValueInRange, 10);
 }
 
-static bool IsImplicitBoolFloatConversion(Sema &S, Expr *Ex, bool ToBool) {
+static bool IsImplicitBoolFloatConversion(Sema &S, const Expr *Ex,
+                                          bool ToBool) {
   if (!isa<ImplicitCastExpr>(Ex))
     return false;
 
-  Expr *InnerE = Ex->IgnoreParenImpCasts();
+  const Expr *InnerE = Ex->IgnoreParenImpCasts();
   const Type *Target = S.Context.getCanonicalType(Ex->getType()).getTypePtr();
   const Type *Source =
     S.Context.getCanonicalType(InnerE->getType()).getTypePtr();
   if (Target->isDependentType())
     return false;
 
-  const BuiltinType *FloatCandidateBT =
-    dyn_cast<BuiltinType>(ToBool ? Source : Target);
+  const auto *FloatCandidateBT =
+      dyn_cast<BuiltinType>(ToBool ? Source : Target);
   const Type *BoolCandidateType = ToBool ? Target : Source;
 
   return (BoolCandidateType->isSpecificBuiltinType(BuiltinType::Bool) &&
           FloatCandidateBT && (FloatCandidateBT->isFloatingPoint()));
 }
 
-static void CheckImplicitArgumentConversions(Sema &S, CallExpr *TheCall,
+static void CheckImplicitArgumentConversions(Sema &S, const CallExpr *TheCall,
                                              SourceLocation CC) {
-  unsigned NumArgs = TheCall->getNumArgs();
-  for (unsigned i = 0; i < NumArgs; ++i) {
-    Expr *CurrA = TheCall->getArg(i);
+  for (unsigned I = 0, N = TheCall->getNumArgs(); I < N; ++I) {
+    const Expr *CurrA = TheCall->getArg(I);
     if (!IsImplicitBoolFloatConversion(S, CurrA, true))
       continue;
 
-    bool IsSwapped = ((i > 0) &&
-        IsImplicitBoolFloatConversion(S, TheCall->getArg(i - 1), false));
-    IsSwapped |= ((i < (NumArgs - 1)) &&
-        IsImplicitBoolFloatConversion(S, TheCall->getArg(i + 1), false));
+    bool IsSwapped = ((I > 0) && IsImplicitBoolFloatConversion(
+                                     S, TheCall->getArg(I - 1), false));
+    IsSwapped |= ((I < (N - 1)) && IsImplicitBoolFloatConversion(
+                                       S, TheCall->getArg(I + 1), false));
     if (IsSwapped) {
       // Warn on this floating-point to bool conversion.
       DiagnoseImpCast(S, CurrA->IgnoreParenImpCasts(),
@@ -12568,7 +12563,7 @@ static void AnalyzeImplicitConversions(
   }
 
   // Check implicit argument conversions for function calls.
-  if (CallExpr *Call = dyn_cast<CallExpr>(SourceExpr))
+  if (const auto *Call = dyn_cast<CallExpr>(SourceExpr))
     CheckImplicitArgumentConversions(S, Call, CC);
 
   // Go ahead and check any implicit conversions we might have skipped.
