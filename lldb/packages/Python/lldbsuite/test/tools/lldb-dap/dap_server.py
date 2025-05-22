@@ -1042,16 +1042,31 @@ class DebugCommunication(object):
         return self.send_recv(command_dict)
 
     def request_dataBreakpointInfo(
-        self, variablesReference, name, frameIndex=0, threadId=None
+            self,
+            name: str,
+            variablesReference: int = None,
+            frameIndex: int = 0,
+            bytes_: int = None,
+            asAddress: bool = None,
     ):
-        stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
-        if stackFrame is None:
-            return []
-        args_dict = {
-            "variablesReference": variablesReference,
-            "name": name,
-            "frameId": stackFrame["id"],
-        }
+
+        args_dict = {}
+        if asAddress is not None:
+            args_dict = {
+                "name": name,
+                "asAddress": asAddress,
+                "bytes": bytes_,
+            }
+        else:
+            stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=None)
+            if stackFrame is None:
+                return []
+            args_dict = {
+                "variablesReference": variablesReference,
+                "name": name,
+                "frameId": stackFrame["id"],
+            }
+
         command_dict = {
             "command": "dataBreakpointInfo",
             "type": "request",
