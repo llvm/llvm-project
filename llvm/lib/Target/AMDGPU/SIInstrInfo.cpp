@@ -591,8 +591,7 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
         return false;
 
       // Don't cluster scalar and vector memory ops
-      if ((isVMEM(FirstLdSt) && isSMRD(SecondLdSt)) ||
-          (isSMRD(FirstLdSt) && isVMEM(SecondLdSt)))
+      if (isVMEM(FirstLdSt) != isVMEM(SecondLdSt))
         return false;
     } else {
       // If the mem ops (to be clustered) do not have the same base ptr, then
