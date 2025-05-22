@@ -12419,6 +12419,13 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("SomeType s __unused{InitValue};", CustomAttrs);
   verifyFormat("SomeType *__capability s(InitValue);", CustomAttrs);
   verifyFormat("SomeType *__capability s{InitValue};", CustomAttrs);
+
+  auto Style = getLLVMStyleWithColumns(60);
+  Style.AttributeMacros.push_back("my_fancy_attr");
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("void foo(const MyLongTypeNameeeeeeeeeeeee* my_fancy_attr\n"
+               "             testttttttttt);",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
