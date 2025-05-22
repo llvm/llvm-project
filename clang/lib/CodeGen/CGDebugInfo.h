@@ -892,20 +892,6 @@ private:
   }
 };
 
-/// A scoped helper to set the current source atom group for
-/// CGDebugInfo::addInstToCurrentSourceAtom. A source atom is a source construct
-/// that is "interesting" for debug stepping purposes. We use an atom group
-/// number to track the instruction(s) that implement the functionality for the
-/// atom, plus backup instructions/source locations.
-class ApplyAtomGroup {
-  uint64_t OriginalAtom = 0;
-  CGDebugInfo *DI = nullptr;
-
-public:
-  ApplyAtomGroup(CGDebugInfo *DI);
-  ~ApplyAtomGroup();
-};
-
 /// A scoped helper to set the current debug location to the specified
 /// location or preferred location of the specified Expr.
 class ApplyDebugLocation {
