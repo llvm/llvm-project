@@ -68,7 +68,8 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
 
 unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
   for (const auto &glob : this->Globs) {
-    llvm::outs() << "Match: " << glob.first << " Line number: " << glob.second.second << "\n";
+    llvm::outs() << "Inside match: " << glob.first
+                 << " Line number: " << glob.second.second << "\n";
     if (glob.second.first.match(Query))
       return glob.second.second;
   }
@@ -235,14 +236,15 @@ unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
   if (I == Entries.end())
     return 0;
   StringMap<Matcher>::const_iterator II = I->second.find(Category);
-
   if (II == I->second.end())
     return 0;
 
-  for (const auto& glob : II->getValue().Globs) {
-    llvm::outs() << "glob pattern: " << glob.first << " line number: " << glob.second.second << "\n";
+  const llvm::SpecialCaseList::Matcher &matcher = II->getValue();
+  for (const auto &glob : matcher.Globs) {
+    llvm::outs() << "Outside match: " << glob.first
+                 << " line number: " << glob.second.second << "\n";
   }
-  return II->getValue().match(Query);
+  return matcher.match(Query);
 }
 
 } // namespace llvm
