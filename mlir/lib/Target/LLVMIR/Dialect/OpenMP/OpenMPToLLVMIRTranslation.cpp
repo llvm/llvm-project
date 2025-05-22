@@ -5741,21 +5741,23 @@ static void addAllocasForDeclareTargetFunctionPointerArgs(
   // below. The users are updated accordingly.
   for (auto &Arg : Fn->args()) {
     if (Arg.getType()->isPointerTy()) {
-      llvm::Value *V = builder.CreateAlloca(Arg.getType(), allocaAS, nullptr);
-      if (allocaAS != defaultAS)
-        V = ompBuilder->Builder.CreateAddrSpaceCast(
-            V, builder.getPtrTy(defaultAS));
-      llvm::StoreInst *Store = builder.CreateStore(&Arg, V);
-      llvm::Value *Load = builder.CreateLoad(Arg.getType(), V);
+      llvm::Value *AllocaV =
+          builder.CreateAlloca(Arg.getType(), allocaAS, nullptr);
+      llvm::Value *GenericV = allocaAS == defaultAS
+                                  ? AllocaV
+                                  : ompBuilder->Builder.CreateAddrSpaceCast(
+                                        AllocaV, builder.getPtrTy(defaultAS));
+      llvm::StoreInst *Store = builder.CreateStore(&Arg, GenericV);
+      llvm::Value *Load = builder.CreateLoad(Arg.getType(), GenericV);
       llvm::SmallVector<llvm::DbgVariableIntrinsic *> DbgUsers;
       llvm::SmallVector<llvm::DbgVariableRecord *> DPUsers;
       llvm::findDbgUsers(DbgUsers, &Arg, &DPUsers);
       for (auto *DVI : DbgUsers) {
-        DVI->replaceVariableLocationOp(&Arg, V);
+        DVI->replaceVariableLocationOp(&Arg, AllocaV);
         DVI->setExpression(Expr);
       }
       for (auto *DVR : DPUsers) {
-        DVR->replaceVariableLocationOp(&Arg, V);
+        DVR->replaceVariableLocationOp(&Arg, AllocaV);
         DVR->setExpression(Expr);
       }
       Arg.replaceUsesWithIf(Load, [&](const llvm::Use &U) -> bool {
@@ -5785,16 +5787,21 @@ static void updateDebugInfoForDeclareTargetFunctions(
     // Skip if an expression is already present.
     if ((Old != nullptr) && (Old->getNumElements() != 0))
       return;
-    for (auto Loc : DR->location_ops()) {
-      llvm::Type *Ty = Loc->getType();
-      if (auto *Ref = dyn_cast<llvm::AddrSpaceCastInst>(Loc))
-        Ty = Ref->getPointerOperand()->getType();
-      llvm::DIExprBuilder EB(Fn->getContext());
-      EB.append<llvm::DIOp::Arg>(0u, Ty);
-      EB.append<llvm::DIOp::Deref>(Loc->getType());
-      DR->setExpression(EB.intoExpression());
-      break;
-    }
+    // Skip if the there are multiple inputs.
+    // FIXME: Could this be an assert? More to the point, can we do this at the
+    // point of generating the intrinsics to begin with, rather than fixing them
+    // up here?
+    if (DR->getNumVariableLocationOps() != 1u)
+      return;
+    auto Loc = DR->getVariableLocationOp(0u);
+    if (!isa<llvm::AllocaInst>(Loc->stripPointerCasts()))
+      return;
+    llvm::AllocaInst *AI = cast<llvm::AllocaInst>(Loc->stripPointerCasts());
+    DR->replaceVariableLocationOp(0u, AI);
+    llvm::DIExprBuilder EB(Fn->getContext());
+    EB.append<llvm::DIOp::Arg>(0u, AI->getType());
+    EB.append<llvm::DIOp::Deref>(AI->getAllocatedType());
+    DR->setExpression(EB.intoExpression());
   };
 
   for (llvm::Instruction &I : instructions(Fn)) {
