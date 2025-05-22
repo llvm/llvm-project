@@ -2164,15 +2164,29 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
           bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
           SourceRange FixItRange;
           if (CaptureRange.isValid()) {
+            auto GetTrailingEndLocation = [&](SourceLocation StartPoint) {
+              SourceRange NextToken =
+                  getRangeForNextToken(StartPoint, /*IncludeComments=*/true);
+              if (!NextToken.isValid())
+                return SourceLocation();
+              // Return the last location preceding the next token
+              return NextToken.getBegin().getLocWithOffset(-1);
+            };
             if (!CurHasPreviousCapture && !IsLast) {
               // If there are no captures preceding this capture, remove the
-              // following comma.
-              FixItRange = SourceRange(CaptureRange.getBegin(),
-                                       getLocForEndOfToken(CaptureRange.getEnd()));
+              // trailing comma and anything up to the next token
+              SourceRange CommaRange =
+                  getRangeForNextToken(CaptureRange.getEnd());
+              SourceLocation FixItEnd =
+                  GetTrailingEndLocation(CommaRange.getBegin());
+              FixItRange = SourceRange(CaptureRange.getBegin(), FixItEnd);
             } else {
-              // Otherwise, remove the comma since the last used capture.
-              FixItRange = SourceRange(getLocForEndOfToken(PrevCaptureLoc),
-                                       CaptureRange.getEnd());
+              // Otherwise, remove the comma since the last used capture, and
+              // anything up to the next token
+              SourceLocation FixItStart = getLocForEndOfToken(PrevCaptureLoc);
+              SourceLocation FixItEnd =
+                  GetTrailingEndLocation(CaptureRange.getEnd());
+              FixItRange = SourceRange(FixItStart, FixItEnd);
             }
           }
 
