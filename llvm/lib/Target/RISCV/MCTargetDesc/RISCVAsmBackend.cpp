@@ -123,7 +123,7 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
     break;
   }
 
-  return STI->hasFeature(RISCV::FeatureRelax);
+  return Fixup.needsRelax();
 }
 
 bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,

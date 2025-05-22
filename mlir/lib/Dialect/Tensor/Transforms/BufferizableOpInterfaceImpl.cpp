@@ -646,7 +646,7 @@ static bool insertSliceOpRequiresRead(InsertOpTy insertSliceOp,
   // Dest is not read if it is entirely overwritten. E.g.:
   // tensor.insert_slice %a into %t[0][10][1] : ... into tensor<10xf32>
   bool allOffsetsZero =
-      llvm::all_of(insertSliceOp.getMixedOffsets(), isZeroIndex);
+      llvm::all_of(insertSliceOp.getMixedOffsets(), isZeroInteger);
   RankedTensorType destType = insertSliceOp.getDestType();
   bool sizesMatchDestSizes =
       areConstantIntValues(insertSliceOp.getMixedSizes(), destType.getShape());

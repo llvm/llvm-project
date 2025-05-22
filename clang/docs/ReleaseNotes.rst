@@ -628,6 +628,7 @@ Bug Fixes in This Version
 - Fix crash due to unknown references and pointer implementation and handling of
   base classes. (GH139452)
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
+- Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -683,6 +684,19 @@ Bug Fixes to C++ Support
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed
   by template argument deduction.
+- Errors that occur during evaluation of certain type traits and builtins are
+  no longer incorrectly emitted when they are used in an SFINAE context. The
+  type traits are:
+
+  - ``__is_constructible`` and variants,
+  - ``__is_convertible`` and variants,
+  - ``__is_assignable`` and variants,
+  - ``__reference_binds_to_temporary``,
+    ``__reference_constructs_from_temporary``,
+    ``__reference_converts_from_temporary``,
+  - ``__is_trivially_equality_comparable``.
+
+  The builtin is ``__builtin_common_type``. (#GH132044)
 - Clang is now better at instantiating the function definition after its use inside
   of a constexpr lambda. (#GH125747)
 - Fixed a local class member function instantiation bug inside dependent lambdas. (#GH59734), (#GH132208)
@@ -690,6 +704,7 @@ Bug Fixes to C++ Support
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
 - Fixed type alias CTAD issues involving default template arguments. (#GH134471)
+- Fixed CTAD issues when initializing anonymous fields with designated initializers. (#GH67173)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
@@ -728,7 +743,6 @@ Bug Fixes to C++ Support
   in a ``constexpr`` function. (#GH131432)
 - Fixed an incorrect TreeTransform for calls to ``consteval`` functions if a conversion template is present. (#GH137885)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
-- Fix missed initializer instantiation bug for variable templates. (#GH138122)
 - Fix a crash when checking the template template parameters of a dependent lambda appearing in an alias declaration.
   (#GH136432), (#GH137014), (#GH138018)
 - Fixed an assertion when trying to constant-fold various builtins when the argument
@@ -747,6 +761,7 @@ Bug Fixes to C++ Support
   reference in its own initializer in C++23 mode (#GH131330).
 - Clang could incorrectly instantiate functions in discarded contexts (#GH140449)
 - Fix instantiation of default-initialized variable template specialization. (#GH140632) (#GH140622)
+- Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

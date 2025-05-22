@@ -16705,10 +16705,11 @@ static SDValue lowerV8F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to match an interleave of two v8f32s and lower them as unpck and
   // permutes using ymms. This needs to go before we try to split the vectors.
-  //
-  // TODO: Expand this to AVX1. Currently v8i32 is casted to v8f32 and hits
-  // this path inadvertently.
-  if (Subtarget.hasAVX2() && !Subtarget.hasAVX512())
+  // Don't attempt on AVX1 if we're likely to split vectors anyway.
+  if ((Subtarget.hasAVX2() ||
+       !(isFreeToSplitVector(peekThroughBitcasts(V1), DAG) ||
+         isFreeToSplitVector(peekThroughBitcasts(V2), DAG))) &&
+      !Subtarget.hasAVX512())
     if (SDValue V = lowerShufflePairAsUNPCKAndPermute(DL, MVT::v8f32, V1, V2,
                                                       Mask, DAG))
       return V;
@@ -19179,7 +19180,7 @@ SDValue X86TargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue X86TargetLowering::LowerExternalSymbol(SDValue Op,
                                                SelectionDAG &DAG) const {
-  return LowerGlobalOrExternal(Op, DAG, /*ForCall=*/false);
+  return LowerGlobalOrExternal(Op, DAG, /*ForCall=*/false, nullptr);
 }
 
 SDValue
@@ -19207,7 +19208,8 @@ X86TargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
 /// Creates target global address or external symbol nodes for calls or
 /// other uses.
 SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
-                                                 bool ForCall) const {
+                                                 bool ForCall,
+                                                 bool *IsImpCall) const {
   // Unpack the global address or external symbol.
   SDLoc dl(Op);
   const GlobalValue *GV = nullptr;
@@ -19257,6 +19259,16 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
   if (ForCall && !NeedsLoad && !HasPICReg && Offset == 0)
     return Result;
 
+  // If Import Call Optimization is enabled and this is an imported function
+  // then make a note of it and return the global address without wrapping.
+  if (IsImpCall && (OpFlags == X86II::MO_DLLIMPORT) &&
+      Mod.getModuleFlag("import-call-optimization")) {
+    assert(ForCall && "Should only enable import call optimization if we are "
+                      "lowering a call");
+    *IsImpCall = true;
+    return Result;
+  }
+
   Result = DAG.getNode(getGlobalWrapperKind(GV, OpFlags), dl, PtrVT, Result);
 
   // With PIC, the address is actually $g + Offset.
@@ -19282,7 +19294,7 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
 
 SDValue
 X86TargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
-  return LowerGlobalOrExternal(Op, DAG, /*ForCall=*/false);
+  return LowerGlobalOrExternal(Op, DAG, /*ForCall=*/false, nullptr);
 }
 
 static SDValue GetTLSADDR(SelectionDAG &DAG, GlobalAddressSDNode *GA,
@@ -34821,6 +34833,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FST)
   NODE_NAME_CASE(CALL)
   NODE_NAME_CASE(CALL_RVMARKER)
+  NODE_NAME_CASE(IMP_CALL)
   NODE_NAME_CASE(BT)
   NODE_NAME_CASE(CMP)
   NODE_NAME_CASE(FCMP)
@@ -59272,36 +59285,33 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
        !(Vec.isUndef() || ISD::isBuildVectorAllZeros(Vec.getNode())))) {
     SDValue ExtSrc = SubVec.getOperand(0);
     int ExtIdxVal = SubVec.getConstantOperandVal(1);
-    if (ExtIdxVal != 0) {
-      SmallVector<int, 64> Mask(VecNumElts);
-      // First create an identity shuffle mask.
-      for (int i = 0; i != VecNumElts; ++i)
-        Mask[i] = i;
-      // Now insert the extracted portion.
-      for (int i = 0; i != SubVecNumElts; ++i)
-        Mask[i + IdxVal] = i + ExtIdxVal + VecNumElts;
+    // Create a shuffle mask matching the extraction and insertion.
+    SmallVector<int, 64> Mask(VecNumElts);
+    std::iota(Mask.begin(), Mask.end(), 0);
+    std::iota(Mask.begin() + IdxVal, Mask.begin() + IdxVal + SubVecNumElts,
+              ExtIdxVal + VecNumElts);
+    if (ExtIdxVal != 0)
       return DAG.getVectorShuffle(OpVT, dl, Vec, ExtSrc, Mask);
-    }
-    // If we're broadcasting, see if we can use a blend instead of
-    // extract/insert pair. Ensure that the subvector is aligned with the
-    // insertion/extractions.
-    if ((ExtIdxVal % SubVecNumElts) == 0 && (IdxVal % SubVecNumElts) == 0 &&
-        (ExtSrc.getOpcode() == X86ISD::VBROADCAST ||
-         ExtSrc.getOpcode() == X86ISD::VBROADCAST_LOAD ||
-         (ExtSrc.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-          cast<MemIntrinsicSDNode>(ExtSrc)->getMemoryVT() == SubVecVT))) {
+    // See if we can use a blend instead of extract/insert pair.
+    SmallVector<int, 64> BlendMask(VecNumElts);
+    std::iota(BlendMask.begin(), BlendMask.end(), 0);
+    std::iota(BlendMask.begin() + IdxVal,
+              BlendMask.begin() + IdxVal + SubVecNumElts, VecNumElts + IdxVal);
+    if (isShuffleEquivalent(Mask, BlendMask, Vec, ExtSrc) &&
+        VecNumElts == (2 * SubVecNumElts)) {
+      assert((IdxVal % SubVecNumElts) == 0 && "Unaligned subvector insertion");
       if (OpVT.is256BitVector() && SubVecVT.is128BitVector()) {
-        uint64_t BlendMask = IdxVal == 0 ? 0x0F : 0xF0;
         SDValue Blend = DAG.getNode(
             X86ISD::BLENDI, dl, MVT::v8f32, DAG.getBitcast(MVT::v8f32, Vec),
             DAG.getBitcast(MVT::v8f32, ExtSrc),
-            DAG.getTargetConstant(BlendMask, dl, MVT::i8));
+            DAG.getTargetConstant(IdxVal == 0 ? 0x0F : 0xF0, dl, MVT::i8));
         return DAG.getBitcast(OpVT, Blend);
       } else if (OpVT.is512BitVector() && SubVecVT.is256BitVector()) {
-        SDValue Lo = DAG.getBitcast(MVT::v8f64, IdxVal == 0 ? ExtSrc : Vec);
-        SDValue Hi = DAG.getBitcast(MVT::v8f64, IdxVal == 0 ? Vec : ExtSrc);
+        MVT ShufVT = OpVT.isInteger() ? MVT::v8i64 : MVT::v8f64;
+        SDValue Lo = DAG.getBitcast(ShufVT, IdxVal == 0 ? ExtSrc : Vec);
+        SDValue Hi = DAG.getBitcast(ShufVT, IdxVal == 0 ? Vec : ExtSrc);
         SDValue Shuffle =
-            DAG.getNode(X86ISD::SHUF128, dl, MVT::v8f64, Lo, Hi,
+            DAG.getNode(X86ISD::SHUF128, dl, ShufVT, Lo, Hi,
                         getV4X86ShuffleImm8ForMask({0, 1, 2, 3}, dl, DAG));
         return DAG.getBitcast(OpVT, Shuffle);
       }
@@ -59350,7 +59360,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   }
 
   // If we're splatting the lower half subvector of a full vector load into the
-  // upper half, attempt to create a subvector broadcast.
+  // upper half, just splat the subvector directly, potentially creating a
+  // subvector broadcast.
   // TODO: Drop hasOneUse checks.
   if ((int)IdxVal == (VecNumElts / 2) &&
       Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits()) &&
@@ -59360,12 +59371,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     if (VecLd && SubLd &&
         DAG.areNonVolatileConsecutiveLoads(
             SubLd, VecLd, SubVec.getValueSizeInBits() / 8, 0)) {
-      SDValue BcastLd = getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, dl, OpVT,
-                                          SubVecVT, SubLd, 0, DAG);
-      SDValue NewSubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVecVT,
-                                      BcastLd, DAG.getVectorIdxConstant(0, dl));
-      DCI.CombineTo(SubLd, NewSubVec, BcastLd.getValue(1));
-      return BcastLd;
+      return concatSubVectors(SubVec, SubVec, DAG, dl);
     }
   }
 
@@ -62092,6 +62098,7 @@ X86TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
   Register TargetReg;
   switch (MBBI->getOpcode()) {
   case X86::CALL64r:
+  case X86::CALL64r_ImpCall:
   case X86::CALL64r_NT:
   case X86::TAILJMPr64:
   case X86::TAILJMPr64_REX:

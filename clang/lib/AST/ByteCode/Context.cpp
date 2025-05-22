@@ -21,7 +21,12 @@
 using namespace clang;
 using namespace clang::interp;
 
-Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {}
+Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {
+  this->IntWidth = Ctx.getTargetInfo().getIntWidth();
+  this->LongWidth = Ctx.getTargetInfo().getLongWidth();
+  assert(Ctx.getTargetInfo().getCharWidth() == 8 &&
+         "We're assuming 8 bit chars");
+}
 
 Context::~Context() {}
 
@@ -216,55 +221,91 @@ bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
 
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
+static PrimType integralTypeToPrimTypeS(unsigned BitWidth) {
+  switch (BitWidth) {
+  case 64:
+    return PT_Sint64;
+  case 32:
+    return PT_Sint32;
+  case 16:
+    return PT_Sint16;
+  case 8:
+    return PT_Sint8;
+  default:
+    return PT_IntAPS;
+  }
+  llvm_unreachable("Unhandled BitWidth");
+}
+
+static PrimType integralTypeToPrimTypeU(unsigned BitWidth) {
+  switch (BitWidth) {
+  case 64:
+    return PT_Uint64;
+  case 32:
+    return PT_Uint32;
+  case 16:
+    return PT_Uint16;
+  case 8:
+    return PT_Uint8;
+  default:
+    return PT_IntAP;
+  }
+  llvm_unreachable("Unhandled BitWidth");
+}
+
 std::optional<PrimType> Context::classify(QualType T) const {
-  if (T->isBooleanType())
-    return PT_Bool;
 
-  if (T->isSignedIntegerOrEnumerationType()) {
-    switch (Ctx.getIntWidth(T)) {
-    case 64:
-      return PT_Sint64;
-    case 32:
-      return PT_Sint32;
-    case 16:
-      return PT_Sint16;
-    case 8:
-      return PT_Sint8;
-    default:
-      return PT_IntAPS;
-    }
-  }
-
-  if (T->isUnsignedIntegerOrEnumerationType()) {
-    switch (Ctx.getIntWidth(T)) {
-    case 64:
-      return PT_Uint64;
-    case 32:
-      return PT_Uint32;
-    case 16:
-      return PT_Uint16;
-    case 8:
-      return PT_Uint8;
-    case 1:
-      // Might happen for enum types.
+  if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
+    auto Kind = BT->getKind();
+    if (Kind == BuiltinType::Bool)
       return PT_Bool;
-    default:
-      return PT_IntAP;
-    }
+    if (Kind == BuiltinType::NullPtr)
+      return PT_Ptr;
+    if (Kind == BuiltinType::BoundMember)
+      return PT_MemberPtr;
+
+    // Just trying to avoid the ASTContext::getIntWidth call below.
+    if (Kind == BuiltinType::Int)
+      return integralTypeToPrimTypeS(this->IntWidth);
+    if (Kind == BuiltinType::UInt)
+      return integralTypeToPrimTypeU(this->IntWidth);
+    if (Kind == BuiltinType::Long)
+      return integralTypeToPrimTypeS(this->LongWidth);
+    if (Kind == BuiltinType::ULong)
+      return integralTypeToPrimTypeU(this->LongWidth);
+    if (Kind == BuiltinType::SChar || Kind == BuiltinType::Char_S)
+      return integralTypeToPrimTypeS(8);
+    if (Kind == BuiltinType::UChar || Kind == BuiltinType::Char_U ||
+        Kind == BuiltinType::Char8)
+      return integralTypeToPrimTypeU(8);
+
+    if (BT->isSignedInteger())
+      return integralTypeToPrimTypeS(Ctx.getIntWidth(T));
+    if (BT->isUnsignedInteger())
+      return integralTypeToPrimTypeU(Ctx.getIntWidth(T));
+
+    if (BT->isFloatingPoint())
+      return PT_Float;
   }
 
-  if (T->isNullPtrType())
+  if (T->isPointerOrReferenceType())
     return PT_Ptr;
 
-  if (T->isRealFloatingType())
-    return PT_Float;
+  if (T->isMemberPointerType())
+    return PT_MemberPtr;
 
-  if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
-      T->isFunctionType() || T->isBlockPointerType())
-    return PT_Ptr;
+  if (const auto *BT = T->getAs<BitIntType>()) {
+    if (BT->isSigned())
+      return integralTypeToPrimTypeS(BT->getNumBits());
+    return integralTypeToPrimTypeU(BT->getNumBits());
+  }
 
-  if (T->isPointerOrReferenceType() || T->isObjCObjectPointerType())
-    return PT_Ptr;
+  if (const auto *ET = T->getAs<EnumType>()) {
+    const auto *D = ET->getDecl();
+    if (!D->isComplete())
+      return std::nullopt;
+    return classify(D->getIntegerType());
+  }
 
   if (const auto *AT = T->getAs<AtomicType>())
     return classify(AT->getValueType());
@@ -272,9 +313,8 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
 
-  if (T->isSpecificBuiltinType(BuiltinType::BoundMember) ||
-      T->isMemberPointerType())
-    return PT_MemberPtr;
+  if (T->isObjCObjectPointerType() || T->isBlockPointerType())
+    return PT_Ptr;
 
   if (T->isFixedPointType())
     return PT_FixedPoint;

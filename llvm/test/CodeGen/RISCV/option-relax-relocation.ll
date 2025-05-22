@@ -14,17 +14,18 @@
 ; CHECK-NEXT:   jalr    ra
 ; CHECK-NEXT:   j       {{.*}}
 ; CHECK-NEXT:   j       {{.*}}
-; NORELAX-NEXT: li      a0, 0x0
 ; RELAX-NEXT:           R_RISCV_JAL  .L0
+; NORELAX-NEXT: li      a0, 0x0
+; RELAX-EMPTY:
 
 define dso_local noundef signext i32 @main() local_unnamed_addr #0 {
 entry:
-  callbr void asm sideeffect ".option push\0A.option norvc\0A.option norelax\0Aj $0\0A.option pop\0A", "!i"()
+  callbr void asm sideeffect ".option push\0A.option norelax\0Aj $0\0A.option pop\0A", "!i"()
           to label %asm.fallthrough [label %label]
 
 asm.fallthrough:                                  ; preds = %entry
   tail call void @f()
-  callbr void asm sideeffect ".option push\0A.option norvc\0A.option norelax\0Aj $0\0A.option pop\0A", "!i"()
+  callbr void asm sideeffect ".option push\0A.option norelax\0Aj $0\0A.option pop\0A", "!i"()
           to label %asm.fallthrough [label %label]
   br label %label
 
