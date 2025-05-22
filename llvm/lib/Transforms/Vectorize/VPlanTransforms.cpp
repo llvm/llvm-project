@@ -28,6 +28,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
@@ -938,9 +939,86 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
   }
 }
 
+/// Try to fold \p R using TargetFolder to a constant. Will succeed and return a
+/// non-nullptr Value for a handled \p Opcode if all \p Operands are constant.
+static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
+                                ArrayRef<VPValue *> Operands,
+                                const DataLayout &DL,
+                                VPTypeAnalysis &TypeInfo) {
+  SmallVector<Value *, 4> Ops;
+  for (VPValue *Op : Operands) {
+    if (!Op->isLiveIn() || !Op->getLiveInIRValue())
+      return nullptr;
+    Ops.push_back(Op->getLiveInIRValue());
+  }
+
+  TargetFolder Folder(DL);
+  if (Instruction::isBinaryOp(Opcode))
+    return Folder.FoldBinOp(static_cast<Instruction::BinaryOps>(Opcode), Ops[0],
+                            Ops[1]);
+  if (Instruction::isCast(Opcode))
+    return Folder.FoldCast(static_cast<Instruction::CastOps>(Opcode), Ops[0],
+                           TypeInfo.inferScalarType(R.getVPSingleValue()));
+  switch (Opcode) {
+  case VPInstruction::LogicalAnd:
+    return Folder.FoldSelect(Ops[0], Ops[1],
+                             ConstantInt::getNullValue(Ops[1]->getType()));
+  case VPInstruction::Not:
+    return Folder.FoldBinOp(Instruction::BinaryOps::Xor, Ops[0],
+                            Constant::getAllOnesValue(Ops[0]->getType()));
+  case Instruction::Select:
+    return Folder.FoldSelect(Ops[0], Ops[1], Ops[2]);
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+    return Folder.FoldCmp(cast<VPRecipeWithIRFlags>(R).getPredicate(), Ops[0],
+                          Ops[1]);
+  case Instruction::GetElementPtr: {
+    auto &RFlags = cast<VPRecipeWithIRFlags>(R);
+    auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
+    return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0], drop_begin(Ops),
+                          RFlags.getGEPNoWrapFlags());
+  }
+  case VPInstruction::PtrAdd:
+    return Folder.FoldGEP(IntegerType::getInt8Ty(TypeInfo.getContext()), Ops[0],
+                          Ops[1],
+                          cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
+  case Instruction::InsertElement:
+    return Folder.FoldInsertElement(Ops[0], Ops[1], Ops[2]);
+  case Instruction::ExtractElement:
+    return Folder.FoldExtractElement(Ops[0], Ops[1]);
+  }
+  return nullptr;
+}
+
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
+
+  // Constant folding.
+  if (TypeSwitch<VPRecipeBase *, bool>(&R)
+          .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+                VPReplicateRecipe>([&](auto *I) {
+            VPlan *Plan = R.getParent()->getPlan();
+            const DataLayout &DL =
+                Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
+            Value *V = tryToConstantFold(*I, I->getOpcode(), I->operands(), DL,
+                                         TypeInfo);
+            if (V)
+              I->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
+            return V;
+          })
+          .Default([](auto *) { return false; }))
+    return;
+
+  // Fold PredPHI constant -> constant.
+  if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
+    VPlan *Plan = R.getParent()->getPlan();
+    VPValue *Op = PredPHI->getOperand(0);
+    if (!Op->isLiveIn() || !Op->getLiveInIRValue())
+      return;
+    if (auto *C = dyn_cast<Constant>(Op->getLiveInIRValue()))
+      PredPHI->replaceAllUsesWith(Plan->getOrAddLiveIn(C));
+  }
 
   // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
   // part 0 can be replaced by their start value, if only the first lane is

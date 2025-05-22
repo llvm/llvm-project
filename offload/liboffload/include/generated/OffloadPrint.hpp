@@ -52,17 +52,23 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   case OL_ERRC_UNKNOWN:
     os << "OL_ERRC_UNKNOWN";
     break;
+  case OL_ERRC_HOST_IO:
+    os << "OL_ERRC_HOST_IO";
+    break;
+  case OL_ERRC_INVALID_BINARY:
+    os << "OL_ERRC_INVALID_BINARY";
+    break;
   case OL_ERRC_INVALID_NULL_POINTER:
     os << "OL_ERRC_INVALID_NULL_POINTER";
     break;
   case OL_ERRC_INVALID_ARGUMENT:
     os << "OL_ERRC_INVALID_ARGUMENT";
     break;
+  case OL_ERRC_NOT_FOUND:
+    os << "OL_ERRC_NOT_FOUND";
+    break;
   case OL_ERRC_OUT_OF_RESOURCES:
     os << "OL_ERRC_OUT_OF_RESOURCES";
-    break;
-  case OL_ERRC_UNSUPPORTED:
-    os << "OL_ERRC_UNSUPPORTED";
     break;
   case OL_ERRC_INVALID_SIZE:
     os << "OL_ERRC_INVALID_SIZE";
@@ -70,11 +76,29 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   case OL_ERRC_INVALID_ENUMERATION:
     os << "OL_ERRC_INVALID_ENUMERATION";
     break;
-  case OL_ERRC_INVALID_KERNEL_NAME:
-    os << "OL_ERRC_INVALID_KERNEL_NAME";
+  case OL_ERRC_HOST_TOOL_NOT_FOUND:
+    os << "OL_ERRC_HOST_TOOL_NOT_FOUND";
     break;
   case OL_ERRC_INVALID_VALUE:
     os << "OL_ERRC_INVALID_VALUE";
+    break;
+  case OL_ERRC_UNIMPLEMENTED:
+    os << "OL_ERRC_UNIMPLEMENTED";
+    break;
+  case OL_ERRC_UNSUPPORTED:
+    os << "OL_ERRC_UNSUPPORTED";
+    break;
+  case OL_ERRC_ASSEMBLE_FAILURE:
+    os << "OL_ERRC_ASSEMBLE_FAILURE";
+    break;
+  case OL_ERRC_LINK_FAILURE:
+    os << "OL_ERRC_LINK_FAILURE";
+    break;
+  case OL_ERRC_BACKEND_FAILURE:
+    os << "OL_ERRC_BACKEND_FAILURE";
+    break;
+  case OL_ERRC_INVALID_NULL_HANDLE:
+    os << "OL_ERRC_INVALID_NULL_HANDLE";
     break;
   case OL_ERRC_INVALID_PLATFORM:
     os << "OL_ERRC_INVALID_PLATFORM";
@@ -87,9 +111,6 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
     break;
   case OL_ERRC_INVALID_EVENT:
     os << "OL_ERRC_INVALID_EVENT";
-    break;
-  case OL_ERRC_INVALID_NULL_HANDLE:
-    os << "OL_ERRC_INVALID_NULL_HANDLE";
     break;
   default:
     os << "unknown enumerator";

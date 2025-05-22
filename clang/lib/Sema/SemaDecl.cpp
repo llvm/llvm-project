@@ -15870,24 +15870,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   // Do not push if it is a lambda because one is already pushed when building
   // the lambda in ActOnStartOfLambdaDefinition().
   if (!isLambdaCallOperator(FD))
-    // [expr.const]/p14.1
-    // An expression or conversion is in an immediate function context if it is
-    // potentially evaluated and either: its innermost enclosing non-block scope
-    // is a function parameter scope of an immediate function.
-    PushExpressionEvaluationContext(
-        FD->isConsteval() ? ExpressionEvaluationContext::ImmediateFunctionContext
-                          : ExprEvalContexts.back().Context);
-
-  // Each ExpressionEvaluationContextRecord also keeps track of whether the
-  // context is nested in an immediate function context, so smaller contexts
-  // that appear inside immediate functions (like variable initializers) are
-  // considered to be inside an immediate function context even though by
-  // themselves they are not immediate function contexts. But when a new
-  // function is entered, we need to reset this tracking, since the entered
-  // function might be not an immediate function.
-  ExprEvalContexts.back().InImmediateFunctionContext = FD->isConsteval();
-  ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
-      getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
+    PushExpressionEvaluationContextForFunction(ExprEvalContexts.back().Context,
+                                               FD);
 
   // Check for defining attributes before the check for redefinition.
   if (const auto *Attr = FD->getAttr<AliasAttr>()) {

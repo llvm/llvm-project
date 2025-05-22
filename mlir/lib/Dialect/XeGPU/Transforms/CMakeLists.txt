@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRXeGPUTransforms
   LINK_LIBS PUBLIC
   MLIRAffineUtils
   MLIRIR
+  MLIRIndexDialect
   MLIRMemRefDialect
   MLIRXeGPUDialect
   MLIRPass
