@@ -95,9 +95,8 @@ TEST_F(InterpreterTest, Errors) {
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  DiagnosticOptions DiagOpts;
-  auto DiagPrinter =
-      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
+  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
+      DiagnosticsOS, new DiagnosticOptions());
 
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
   auto Err = Interp->Parse("intentional_error v1 = 42; ").takeError();
@@ -127,9 +126,8 @@ TEST_F(InterpreterTest, DeclsAndStatements) {
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  DiagnosticOptions DiagOpts;
-  auto DiagPrinter =
-      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
+  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
+      DiagnosticsOS, new DiagnosticOptions());
 
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
   auto R1 = Interp->Parse(
@@ -150,9 +148,8 @@ TEST_F(InterpreterTest, UndoCommand) {
   // Create the diagnostic engine with unowned consumer.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
-  DiagnosticOptions DiagOpts;
-  auto DiagPrinter =
-      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
+  auto DiagPrinter = std::make_unique<TextDiagnosticPrinter>(
+      DiagnosticsOS, new DiagnosticOptions());
 
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
 

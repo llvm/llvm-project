@@ -92,9 +92,8 @@ export namespace Fibonacci
 
   CreateInvocationOptions CIOpts;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
-  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
+      CompilerInstance::createDiagnostics(*CIOpts.VFS, new DiagnosticOptions());
   CIOpts.Diags = Diags;
 
   const char *Args[] = {"clang++",       "-std=c++20",

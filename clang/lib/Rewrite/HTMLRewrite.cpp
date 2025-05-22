@@ -636,8 +636,8 @@ static void HighlightMacrosImpl(
   // Temporarily change the diagnostics object so that we ignore any generated
   // diagnostics from this pass.
   DiagnosticsEngine TmpDiags(PP.getDiagnostics().getDiagnosticIDs(),
-                             PP.getDiagnostics().getDiagnosticOptions(),
-                             new IgnoringDiagConsumer);
+                             &PP.getDiagnostics().getDiagnosticOptions(),
+                      new IgnoringDiagConsumer);
 
   // FIXME: This is a huge hack; we reuse the input preprocessor because we want
   // its state, but we aren't actually changing it (we hope). This should really

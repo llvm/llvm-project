@@ -44,7 +44,7 @@ public:
       std::string Text;
       llvm::raw_string_ostream OS(Text);
       TextDiagnostic Renderer(OS, LangOpts,
-                              Info.getDiags()->getDiagnosticOptions());
+                              &Info.getDiags()->getDiagnosticOptions());
       Renderer.emitStoredDiagnostic(Out.back());
       ADD_FAILURE() << Text;
     }

@@ -618,8 +618,8 @@ TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
                  llvm::MemoryBuffer::getMemBufferCopy(Extra.getValue(),
                                                       /*BufferName=*/""));
 
-  DiagnosticOptions DiagOpts;
-  auto Diags = CompilerInstance::createDiagnostics(*VFS, DiagOpts);
+  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  auto Diags = CompilerInstance::createDiagnostics(*VFS, DiagOpts.get());
   auto Invocation = std::make_unique<CompilerInvocation>();
   ASSERT_TRUE(CompilerInvocation::CreateFromArgs(*Invocation, {Filename.data()},
                                                  *Diags, "clang"));

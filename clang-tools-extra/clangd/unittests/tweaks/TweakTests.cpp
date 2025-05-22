@@ -44,8 +44,7 @@ TEST(FileEdits, AbsolutePath) {
   for (const auto *Path : RelPaths)
     MemFS->addFile(Path, 0, llvm::MemoryBuffer::getMemBuffer("", Path));
   FileManager FM(FileSystemOptions(), MemFS);
-  DiagnosticOptions DiagOpts;
-  DiagnosticsEngine DE(new DiagnosticIDs, DiagOpts);
+  DiagnosticsEngine DE(new DiagnosticIDs, new DiagnosticOptions);
   SourceManager SM(DE, FM);
 
   for (const auto *Path : RelPaths) {

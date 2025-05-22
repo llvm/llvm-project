@@ -556,8 +556,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
         *AllCTFactories, Cfg.Diagnostics.ClangTidy.FastCheckFilter);
     CTContext.emplace(std::make_unique<tidy::DefaultOptionsProvider>(
         tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
-    // The lifetime of DiagnosticOptions is managed by \c Clang.
-    CTContext->setDiagnosticsEngine(nullptr, &Clang->getDiagnostics());
+    CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);

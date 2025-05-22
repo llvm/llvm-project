@@ -52,9 +52,10 @@ protected:
                                           std::vector<std::string> ExtraFiles) {
     assert(!DriverInstance && "Running twice is not allowed");
 
-    DiagnosticOptions DiagOpts;
-    DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts,
-                            new TextDiagnosticPrinter(llvm::errs(), DiagOpts));
+    llvm::IntrusiveRefCntPtr<DiagnosticOptions> Opts = new DiagnosticOptions;
+    DiagnosticsEngine Diags(
+        new DiagnosticIDs, Opts,
+        new TextDiagnosticPrinter(llvm::errs(), Opts.get()));
     DriverInstance.emplace(ClangBinary, "x86_64-unknown-linux-gnu", Diags,
                            "clang LLVM compiler", prepareFS(ExtraFiles));
 

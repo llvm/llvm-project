@@ -162,10 +162,10 @@ private:
 };
 
 std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
-  DiagnosticOptions DiagOpts;
+  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
   auto DC = std::make_unique<TestDiagnosticConsumer>();
   auto Diags = CompilerInstance::createDiagnostics(
-      *llvm::vfs::getRealFileSystem(), DiagOpts, DC.get(),
+      *llvm::vfs::getRealFileSystem(), DiagOpts.get(), DC.get(),
       /*ShouldOwnClient=*/false);
 
   auto Inv = std::make_unique<CompilerInvocation>();

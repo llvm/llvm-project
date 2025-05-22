@@ -70,16 +70,16 @@ static bool runFrontend(StringRef ProgName, Twine Label, bool Verbose,
 
 static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   // Setup Diagnostics engine.
-  DiagnosticOptions DiagOpts;
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   const llvm::opt::OptTable &ClangOpts = clang::driver::getDriverOptTable();
   unsigned MissingArgIndex, MissingArgCount;
   llvm::opt::InputArgList ParsedArgs = ClangOpts.ParseArgs(
       ArrayRef(Args).slice(1), MissingArgIndex, MissingArgCount);
-  ParseDiagnosticArgs(DiagOpts, ParsedArgs);
+  ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diag = new clang::DiagnosticsEngine(
-      new clang::DiagnosticIDs(), DiagOpts,
-      new clang::TextDiagnosticPrinter(llvm::errs(), DiagOpts));
+      new clang::DiagnosticIDs(), DiagOpts.get(),
+      new clang::TextDiagnosticPrinter(llvm::errs(), DiagOpts.get()));
 
   // Create file manager for all file operations and holding in-memory generated
   // inputs.

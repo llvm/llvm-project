@@ -187,9 +187,9 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   HSOpts.ValidateASTInputFilesContent = true;
 
   clang::clangd::IgnoreDiagnostics IgnoreDiags;
-  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*VFS, DiagOpts, &IgnoreDiags,
+      CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions,
+                                          &IgnoreDiags,
                                           /*ShouldOwnClient=*/false);
 
   LangOptions LangOpts;

@@ -49,8 +49,9 @@ struct RewriterDiagnosticConsumer : public DiagnosticConsumer {
 class RewriterTestContext {
  public:
    RewriterTestContext()
-       : Diagnostics(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-                     DiagOpts),
+       : DiagOpts(new DiagnosticOptions()),
+         Diagnostics(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
+                     &*DiagOpts),
          InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
          OverlayFileSystem(
              new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem())),
@@ -60,7 +61,7 @@ class RewriterTestContext {
      // FIXME: To make these tests truly in-memory, we need to overlay the
      // builtin headers.
      OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-   }
+  }
 
   ~RewriterTestContext() {}
 
@@ -123,7 +124,7 @@ class RewriterTestContext {
     return std::string((*FileBuffer)->getBuffer());
   }
 
-  DiagnosticOptions DiagOpts;
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   DiagnosticsEngine Diagnostics;
   RewriterDiagnosticConsumer DiagnosticPrinter;
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;

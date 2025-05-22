@@ -674,7 +674,7 @@ public:
   ///
   /// \return The new object on success, or null on failure.
   static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions &Opts,
+  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
                     DiagnosticConsumer *Client = nullptr,
                     bool ShouldOwnClient = true,
                     const CodeGenOptions *CodeGenOpts = nullptr);

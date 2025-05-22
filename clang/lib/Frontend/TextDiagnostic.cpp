@@ -654,7 +654,7 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
 }
 
 TextDiagnostic::TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
-                               DiagnosticOptions &DiagOpts,
+                               DiagnosticOptions *DiagOpts,
                                const Preprocessor *PP)
     : DiagnosticRenderer(LangOpts, DiagOpts), OS(OS), PP(PP) {}
 
@@ -670,15 +670,15 @@ void TextDiagnostic::emitDiagnosticMessage(
   if (Loc.isValid())
     emitDiagnosticLoc(Loc, PLoc, Level, Ranges);
 
-  if (DiagOpts.ShowColors)
+  if (DiagOpts->ShowColors)
     OS.resetColor();
 
-  if (DiagOpts.ShowLevel)
-    printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
+  if (DiagOpts->ShowLevel)
+    printDiagnosticLevel(OS, Level, DiagOpts->ShowColors);
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
                          Message, OS.tell() - StartOfLocationInfo,
-                         DiagOpts.MessageLength, DiagOpts.ShowColors);
+                         DiagOpts->MessageLength, DiagOpts->ShowColors);
 }
 
 /*static*/ void
@@ -743,7 +743,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
 #ifdef _WIN32
   SmallString<4096> TmpFilename;
 #endif
-  if (DiagOpts.AbsolutePath) {
+  if (DiagOpts->AbsolutePath) {
     auto File = SM.getFileManager().getOptionalFileRef(Filename);
     if (File) {
       // We want to print a simplified absolute path, i. e. without "dots".
@@ -796,27 +796,27 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
   }
   unsigned LineNo = PLoc.getLine();
 
-  if (!DiagOpts.ShowLocation)
+  if (!DiagOpts->ShowLocation)
     return;
 
-  if (DiagOpts.ShowColors)
+  if (DiagOpts->ShowColors)
     OS.changeColor(savedColor, true);
 
   emitFilename(PLoc.getFilename(), Loc.getManager());
-  switch (DiagOpts.getFormat()) {
+  switch (DiagOpts->getFormat()) {
   case DiagnosticOptions::SARIF:
   case DiagnosticOptions::Clang:
-    if (DiagOpts.ShowLine)
+    if (DiagOpts->ShowLine)
       OS << ':' << LineNo;
     break;
   case DiagnosticOptions::MSVC:  OS << '('  << LineNo; break;
   case DiagnosticOptions::Vi:    OS << " +" << LineNo; break;
   }
 
-  if (DiagOpts.ShowColumn)
+  if (DiagOpts->ShowColumn)
     // Compute the column number.
     if (unsigned ColNo = PLoc.getColumn()) {
-      if (DiagOpts.getFormat() == DiagnosticOptions::MSVC) {
+      if (DiagOpts->getFormat() == DiagnosticOptions::MSVC) {
         OS << ',';
         // Visual Studio 2010 or earlier expects column number to be off by one
         if (LangOpts.MSCompatibilityVersion &&
@@ -826,7 +826,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
         OS << ':';
       OS << ColNo;
     }
-  switch (DiagOpts.getFormat()) {
+  switch (DiagOpts->getFormat()) {
   case DiagnosticOptions::SARIF:
   case DiagnosticOptions::Clang:
   case DiagnosticOptions::Vi:    OS << ':';    break;
@@ -841,7 +841,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
     break;
   }
 
-  if (DiagOpts.ShowSourceRanges && !Ranges.empty()) {
+  if (DiagOpts->ShowSourceRanges && !Ranges.empty()) {
     FileID CaretFileID = Loc.getExpansionLoc().getFileID();
     bool PrintedRange = false;
     const SourceManager &SM = Loc.getManager();
@@ -881,7 +881,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
 }
 
 void TextDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
-  if (DiagOpts.ShowLocation && PLoc.isValid()) {
+  if (DiagOpts->ShowLocation && PLoc.isValid()) {
     OS << "In file included from ";
     emitFilename(PLoc.getFilename(), Loc.getManager());
     OS << ':' << PLoc.getLine() << ":\n";
@@ -891,7 +891,7 @@ void TextDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
 
 void TextDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
                                         StringRef ModuleName) {
-  if (DiagOpts.ShowLocation && PLoc.isValid())
+  if (DiagOpts->ShowLocation && PLoc.isValid())
     OS << "In module '" << ModuleName << "' imported from "
        << PLoc.getFilename() << ':' << PLoc.getLine() << ":\n";
   else
@@ -901,7 +901,7 @@ void TextDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
 void TextDiagnostic::emitBuildingModuleLocation(FullSourceLoc Loc,
                                                 PresumedLoc PLoc,
                                                 StringRef ModuleName) {
-  if (DiagOpts.ShowLocation && PLoc.isValid())
+  if (DiagOpts->ShowLocation && PLoc.isValid())
     OS << "While building module '" << ModuleName << "' imported from "
       << PLoc.getFilename() << ':' << PLoc.getLine() << ":\n";
   else
@@ -998,13 +998,14 @@ static void highlightRange(const LineRange &R, const SourceColumnMap &Map,
   std::fill(CaretLine.begin() + StartColNo, CaretLine.begin() + EndColNo, '~');
 }
 
-static std::string buildFixItInsertionLine(FileID FID, unsigned LineNo,
+static std::string buildFixItInsertionLine(FileID FID,
+                                           unsigned LineNo,
                                            const SourceColumnMap &map,
                                            ArrayRef<FixItHint> Hints,
                                            const SourceManager &SM,
-                                           const DiagnosticOptions &DiagOpts) {
+                                           const DiagnosticOptions *DiagOpts) {
   std::string FixItInsertionLine;
-  if (Hints.empty() || !DiagOpts.ShowFixits)
+  if (Hints.empty() || !DiagOpts->ShowFixits)
     return FixItInsertionLine;
   unsigned PrevHintEndCol = 0;
 
@@ -1056,7 +1057,7 @@ static std::string buildFixItInsertionLine(FileID FID, unsigned LineNo,
     }
   }
 
-  expandTabs(FixItInsertionLine, DiagOpts.TabStop);
+  expandTabs(FixItInsertionLine, DiagOpts->TabStop);
 
   return FixItInsertionLine;
 }
@@ -1295,7 +1296,7 @@ void TextDiagnostic::emitSnippetAndCaret(
   // was part of a different warning or error diagnostic, or if the
   // diagnostic has ranges.  We don't want to emit the same caret
   // multiple times if one loc has multiple diagnostics.
-  if (!DiagOpts.ShowCarets)
+  if (!DiagOpts->ShowCarets)
     return;
   if (Loc == LastLoc && Ranges.empty() && Hints.empty() &&
       (LastLevel != DiagnosticsEngine::Note || Level == LastLevel))
@@ -1321,7 +1322,7 @@ void TextDiagnostic::emitSnippetAndCaret(
     return;
 
   // Find the set of lines to include.
-  const unsigned MaxLines = DiagOpts.SnippetLineLimit;
+  const unsigned MaxLines = DiagOpts->SnippetLineLimit;
   std::pair<unsigned, unsigned> Lines = {CaretLineNo, CaretLineNo};
   unsigned DisplayLineNo = Loc.getPresumedLoc().getLine();
   for (const auto &I : Ranges) {
@@ -1337,7 +1338,7 @@ void TextDiagnostic::emitSnippetAndCaret(
   // Where [number] is MaxLineNoDisplayWidth columns
   // and the full thing is therefore MaxLineNoDisplayWidth + 4 columns.
   unsigned MaxLineNoDisplayWidth =
-      DiagOpts.ShowLineNumbers
+      DiagOpts->ShowLineNumbers
           ? std::max(4u, getNumDisplayWidth(DisplayLineNo + MaxLines))
           : 0;
   auto indentForLineNumbers = [&] {
@@ -1349,7 +1350,7 @@ void TextDiagnostic::emitSnippetAndCaret(
   // emit, starting from the first line.
   std::unique_ptr<SmallVector<StyleRange>[]> SourceStyles =
       highlightLines(BufData, Lines.first, Lines.second, PP, LangOpts,
-                     DiagOpts.ShowColors, FID, SM);
+                     DiagOpts->ShowColors, FID, SM);
 
   SmallVector<LineRange> LineRanges =
       prepareAndFilterRanges(Ranges, SM, Lines, FID, LangOpts);
@@ -1381,7 +1382,7 @@ void TextDiagnostic::emitSnippetAndCaret(
       SourceLine.pop_back();
 
     // Build the byte to column map.
-    const SourceColumnMap sourceColMap(SourceLine, DiagOpts.TabStop);
+    const SourceColumnMap sourceColMap(SourceLine, DiagOpts->TabStop);
 
     std::string CaretLine;
     // Highlight all of the characters covered by Ranges with ~ characters.
@@ -1397,12 +1398,12 @@ void TextDiagnostic::emitSnippetAndCaret(
       CaretLine[Col] = '^';
     }
 
-    std::string FixItInsertionLine =
-        buildFixItInsertionLine(FID, LineNo, sourceColMap, Hints, SM, DiagOpts);
+    std::string FixItInsertionLine = buildFixItInsertionLine(
+        FID, LineNo, sourceColMap, Hints, SM, DiagOpts.get());
 
     // If the source line is too long for our terminal, select only the
     // "interesting" source region within that line.
-    unsigned Columns = DiagOpts.MessageLength;
+    unsigned Columns = DiagOpts->MessageLength;
     if (Columns)
       selectInterestingSourceRegion(SourceLine, CaretLine, FixItInsertionLine,
                                     Columns, sourceColMap);
@@ -1411,7 +1412,7 @@ void TextDiagnostic::emitSnippetAndCaret(
     // to produce easily machine parsable output.  Add a space before the
     // source line and the caret to make it trivial to tell the main diagnostic
     // line from what the user is intended to see.
-    if (DiagOpts.ShowSourceRanges && !SourceLine.empty()) {
+    if (DiagOpts->ShowSourceRanges && !SourceLine.empty()) {
       SourceLine = ' ' + SourceLine;
       CaretLine = ' ' + CaretLine;
     }
@@ -1422,22 +1423,22 @@ void TextDiagnostic::emitSnippetAndCaret(
 
     if (!CaretLine.empty()) {
       indentForLineNumbers();
-      if (DiagOpts.ShowColors)
+      if (DiagOpts->ShowColors)
         OS.changeColor(caretColor, true);
       OS << CaretLine << '\n';
-      if (DiagOpts.ShowColors)
+      if (DiagOpts->ShowColors)
         OS.resetColor();
     }
 
     if (!FixItInsertionLine.empty()) {
       indentForLineNumbers();
-      if (DiagOpts.ShowColors)
+      if (DiagOpts->ShowColors)
         // Print fixit line in color
         OS.changeColor(fixitColor, false);
-      if (DiagOpts.ShowSourceRanges)
+      if (DiagOpts->ShowSourceRanges)
         OS << ' ';
       OS << FixItInsertionLine << '\n';
-      if (DiagOpts.ShowColors)
+      if (DiagOpts->ShowColors)
         OS.resetColor();
     }
   }
@@ -1463,10 +1464,10 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
   size_t I = 0;
   while (I < SourceLine.size()) {
     auto [Str, WasPrintable] =
-        printableTextForNextCharacter(SourceLine, &I, DiagOpts.TabStop);
+        printableTextForNextCharacter(SourceLine, &I, DiagOpts->TabStop);
 
     // Toggle inverted colors on or off for this character.
-    if (DiagOpts.ShowColors) {
+    if (DiagOpts->ShowColors) {
       if (WasPrintable == PrintReversed) {
         PrintReversed = !PrintReversed;
         if (PrintReversed)
@@ -1497,7 +1498,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
     OS << Str;
   }
 
-  if (DiagOpts.ShowColors)
+  if (DiagOpts->ShowColors)
     OS.resetColor();
 
   OS << '\n';
@@ -1505,7 +1506,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
 
 void TextDiagnostic::emitParseableFixits(ArrayRef<FixItHint> Hints,
                                          const SourceManager &SM) {
-  if (!DiagOpts.ShowParseableFixits)
+  if (!DiagOpts->ShowParseableFixits)
     return;
 
   // We follow FixItRewriter's example in not (yet) handling
