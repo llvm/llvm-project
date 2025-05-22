@@ -50,6 +50,7 @@ struct hash<type_index>
 #else
 #  include <__config>
 #  include <__functional/unary_function.h>
+#  include <__fwd/functional.h>
 #  include <typeinfo>
 #  include <version>
 
@@ -89,9 +90,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI size_t hash_code() const _NOEXCEPT { return __t_->hash_code(); }
   _LIBCPP_HIDE_FROM_ABI const char* name() const _NOEXCEPT { return __t_->name(); }
 };
-
-template <class _Tp>
-struct hash;
 
 template <>
 struct hash<type_index> : public __unary_function<type_index, size_t> {

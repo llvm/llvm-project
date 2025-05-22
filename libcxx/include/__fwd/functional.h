@@ -15,6 +15,15 @@
 #  pragma GCC system_header
 #endif
 
+// Work around the visibility on a namespace bleed into user specializations.
+// TODO: Remove this workaround once all supported compilers are fixed
+namespace std {
+inline namespace _LIBCPP_ABI_NAMESPACE {
+template <class>
+struct hash;
+} // namespace _LIBCPP_ABI_NAMESPACE
+} // namespace std
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 14
@@ -23,9 +32,6 @@ template <class _Tp = void>
 template <class _Tp>
 #endif
 struct less;
-
-template <class>
-struct hash;
 
 template <class>
 class reference_wrapper;

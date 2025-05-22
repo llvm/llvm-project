@@ -642,11 +642,6 @@ inline _LIBCPP_CONSTEXPR __bitset<0, 0>::__bitset() _NOEXCEPT {}
 inline _LIBCPP_CONSTEXPR __bitset<0, 0>::__bitset(unsigned long long) _NOEXCEPT {}
 
 template <size_t _Size>
-class bitset;
-template <size_t _Size>
-struct hash<bitset<_Size> >;
-
-template <size_t _Size>
 class bitset : private __bitset<_Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1, _Size> {
 public:
   static const unsigned __n_words = _Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1;

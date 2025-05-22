@@ -517,9 +517,6 @@ struct __enum_hash<_Tp, false> {
   __enum_hash& operator=(__enum_hash const&) = delete;
 };
 
-template <class _Tp>
-struct hash : public __enum_hash<_Tp> {};
-
 #if _LIBCPP_STD_VER >= 17
 
 template <>
@@ -554,5 +551,14 @@ using __enable_hash_helper _LIBCPP_NODEBUG = _Type;
 #endif // !_LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
+
+// Work around the visibility on a namespace bleed into user specializations.
+// TODO: Remove this workaround once all supported compilers are fixed
+namespace std {
+inline namespace _LIBCPP_ABI_NAMESPACE {
+template <class _Tp>
+struct hash : public __enum_hash<_Tp> {};
+} // namespace _LIBCPP_ABI_NAMESPACE
+} // namespace std
 
 #endif // _LIBCPP___FUNCTIONAL_HASH_H
