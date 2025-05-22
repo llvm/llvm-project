@@ -141,9 +141,9 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
   return success(succeeded);
 }
 
-LogicalResult
-mlir::getBackwardSlice(Operation *op, SetVector<Operation *> *backwardSlice,
-                       const BackwardSliceOptions &options) {
+LogicalResult mlir::getBackwardSlice(Operation *op,
+                                     SetVector<Operation *> *backwardSlice,
+                                     const BackwardSliceOptions &options) {
   LogicalResult result = getBackwardSliceImpl(op, backwardSlice, options);
 
   if (!options.inclusive) {
