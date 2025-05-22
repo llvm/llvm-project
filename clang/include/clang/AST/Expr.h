@@ -2916,7 +2916,7 @@ class CallExpr : public Expr {
   // The layourt is as follow:
   // CallExpr | Begin | 4 bytes left | Trailing Objects
   // CXXMemberCallExpr | Trailing Objects
-  // A bit in CallExprBitfields indicates if source locations are presents.
+  // A bit in CallExprBitfields indicates if source locations are present.
 
 protected:
   static constexpr unsigned OffsetToTrailingObjects = 32;
@@ -3031,7 +3031,7 @@ public:
 
   Expr *getCallee() { return cast<Expr>(getTrailingStmts()[FN]); }
   const Expr *getCallee() const { return cast<Expr>(getTrailingStmts()[FN]); }
-  void setCallee(Expr *F) { getTrailingStmts()[FN] = F; }
+  void setCallee(Expr *F) { getTrailingStmts()[FN] = F;}
 
   ADLCallKind getADLCallKind() const {
     return static_cast<ADLCallKind>(CallExprBits.UsesADL);
@@ -3217,19 +3217,21 @@ public:
 
   SourceLocation getBeginLoc() const {
     if (CallExprBits.HasTrailingSourceLoc) {
-      assert(CallExprBits.HasTrailingSourceLoc && "No trailing source loc");
       static_assert(sizeof(CallExpr) <=
                     OffsetToTrailingObjects + sizeof(SourceLocation));
       return *reinterpret_cast<const SourceLocation *>(
           reinterpret_cast<const char *>(this + 1));
     }
 
-    if (usesMemberSyntax()) {
-      if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
+    if (usesMemberSyntax())
+      if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid())
         return FirstArgLoc;
-      }
-    }
-    return getCallee()->getBeginLoc();
+
+    // FIXME: Some builtins have no callee begin location
+    SourceLocation begin = getCallee()->getBeginLoc();
+    if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
+        begin = getArg(0)->getBeginLoc();
+    return begin;
   }
 
   SourceLocation getEndLoc() const { return getRParenLoc(); }

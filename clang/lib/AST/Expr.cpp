@@ -1449,7 +1449,7 @@ OverloadedOperatorKind UnaryOperator::getOverloadedOperator(Opcode Opc) {
 //===----------------------------------------------------------------------===//
 // Postfix Operators.
 //===----------------------------------------------------------------------===//
-
+#ifndef NDEBUG
 static unsigned SizeOfCallExprInstance(Expr::StmtClass SC) {
   switch (SC) {
   case Expr::CallExprClass:
@@ -1466,6 +1466,7 @@ static unsigned SizeOfCallExprInstance(Expr::StmtClass SC) {
     llvm_unreachable("unexpected class deriving from CallExpr!");
   }
 }
+#endif
 
 CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
                    ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,

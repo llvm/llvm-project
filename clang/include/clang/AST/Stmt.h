@@ -566,7 +566,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsCoroElideSafe : 1;
 
-    /// Tracks When CallExpr is used to represent an explicit object
+    /// Tracks when CallExpr is used to represent an explicit object
     /// member function, in order to adjust the begin location.
     LLVM_PREFERRED_TYPE(bool)
     unsigned ExplicitObjectMemFunUsingMemberSyntax : 1;
