@@ -1447,10 +1447,7 @@ public:
   bool hasIEEEMode() const { return getGeneration() < GFX12; }
 
   // \returns true if the target has IEEE fminimum/fmaximum instructions
-  bool hasIEEEMinMax() const { return getGeneration() >= GFX12; }
-
-  // \returns true if the target has IEEE fminimum3/fmaximum3 instructions
-  bool hasIEEEMinMax3() const { return hasIEEEMinMax(); }
+  bool hasIEEEMinMaxInsts() const { return getGeneration() >= GFX12; }
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
