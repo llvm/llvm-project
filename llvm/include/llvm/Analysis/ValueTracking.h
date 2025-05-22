@@ -213,49 +213,6 @@ Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                     bool &TrueIfSigned);
 
-/// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
-/// same result as an fcmp with the given operands.
-///
-/// If \p LookThroughSrc is true, consider the input value when computing the
-/// mask.
-///
-/// If \p LookThroughSrc is false, ignore the source value (i.e. the first pair
-/// element will always be LHS.
-std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
-                                                const Function &F, Value *LHS,
-                                                Value *RHS,
-                                                bool LookThroughSrc = true);
-std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
-                                                const Function &F, Value *LHS,
-                                                const APFloat *ConstRHS,
-                                                bool LookThroughSrc = true);
-
-/// Compute the possible floating-point classes that \p LHS could be based on
-/// fcmp \Pred \p LHS, \p RHS.
-///
-/// \returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
-///
-/// If the compare returns an exact class test, ClassesIfTrue == ~ClassesIfFalse
-///
-/// This is a less exact version of fcmpToClassTest (e.g. fcmpToClassTest will
-/// only succeed for a test of x > 0 implies positive, but not x > 1).
-///
-/// If \p LookThroughSrc is true, consider the input value when computing the
-/// mask. This may look through sign bit operations.
-///
-/// If \p LookThroughSrc is false, ignore the source value (i.e. the first pair
-/// element will always be LHS.
-///
-std::tuple<Value *, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 Value *RHS, bool LookThroughSrc = true);
-std::tuple<Value *, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 FPClassTest RHS, bool LookThroughSrc = true);
-std::tuple<Value *, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 const APFloat &RHS, bool LookThroughSrc = true);
-
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
 ///
