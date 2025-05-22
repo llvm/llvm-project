@@ -37,8 +37,8 @@ define i32 @add_select_cmp_and2(i32 %in) {
 define i32 @add_select_cmp_and3(i32 %in) {
 ; CHECK-LABEL: @add_select_cmp_and3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 7
-; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[TMP1]], 72
-; CHECK-NEXT:    ret i32 [[TEMP]]
+; CHECK-NEXT:    [[TEMP1:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    ret i32 [[TEMP1]]
 ;
   %bitop0 = and i32 %in, 1
   %cmp0 = icmp eq i32 %bitop0, 0
@@ -57,8 +57,8 @@ define i32 @add_select_cmp_and3(i32 %in) {
 define i32 @add_select_cmp_and4(i32 %in) {
 ; CHECK-LABEL: @add_select_cmp_and4(
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[IN:%.*]], 15
-; CHECK-NEXT:    [[TEMP3:%.*]] = mul nuw nsw i32 [[TMP2]], 72
-; CHECK-NEXT:    ret i32 [[TEMP3]]
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[TMP2]], 72
+; CHECK-NEXT:    ret i32 [[TEMP2]]
 ;
   %bitop0 = and i32 %in, 1
   %cmp0 = icmp eq i32 %bitop0, 0
