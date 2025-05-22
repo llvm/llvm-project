@@ -847,10 +847,10 @@ void StructurizeCFG::setPhiValues() {
     PhiMap &Map = It->second;
     SmallVector<BasicBlock *> &UndefBlks = UndefBlksMap[To];
     for (const auto &[Phi, Incoming] : Map) {
-      Value *Poison = PoisonValue::get(Phi->getType());
+      Value *Undef = UndefValue::get(Phi->getType());
       Updater.Initialize(Phi->getType(), "");
-      Updater.AddAvailableValue(&Func->getEntryBlock(), Poison);
-      Updater.AddAvailableValue(To, Poison);
+      Updater.AddAvailableValue(&Func->getEntryBlock(), Undef);
+      Updater.AddAvailableValue(To, Undef);
 
       // Use leader phi's incoming if there is.
       auto LeaderIt = PhiClasses.findLeader(Phi);
@@ -879,7 +879,7 @@ void StructurizeCFG::setPhiValues() {
         if (Updater.HasValueForBlock(UB))
           continue;
 
-        Updater.AddAvailableValue(UB, Poison);
+        Updater.AddAvailableValue(UB, Undef);
       }
 
       for (BasicBlock *FI : From)
@@ -1168,9 +1168,9 @@ void StructurizeCFG::rebuildSSA() {
           continue;
 
         if (!Initialized) {
-          Value *Poison = PoisonValue::get(I.getType());
+          Value *Undef = UndefValue::get(I.getType());
           Updater.Initialize(I.getType(), "");
-          Updater.AddAvailableValue(&Func->getEntryBlock(), Poison);
+          Updater.AddAvailableValue(&Func->getEntryBlock(), Undef);
           Updater.AddAvailableValue(BB, &I);
           Initialized = true;
         }
