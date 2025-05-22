@@ -354,8 +354,8 @@ When training models, we need to expose the features we will want to use during
 inference, as well as outcomes, to guide reward-based learning techniques. This
 can happen in 2 forms:
 
-- as an effect of running the compiler on some input, as a capture of the
-  features and actions taken by some policy or a model currently being used.
+- when running the compiler on some input, as a capture of the features and
+  actions taken by some policy or a model currently being used.
   For example, see ``DevelopmentModeInlineAdvisor`` or ``DevelopmentModeEvictAdvisor``
   in ``MLRegallocEvictAdvisor.cpp``. In more detail, in the former case, if
   ``-training-log`` is specified, the features and actions (inline/no inline)
@@ -424,7 +424,7 @@ to inspect a log without additional tooling.
 
 A python utility for reading logs, used for tests, is available at
 ``Analysis/models/log_reader.py``. A utility showcasing the ``InteractiveModelRunner``,
-which uses this reader as well, is at ``Analysis/models/``Analysis/models/interactive_host.py``.
+which uses this reader as well, is at ``Analysis/models/interactive_host.py``.
 The latter is also used in tests.
 
 There is no C++ implementation of a log reader. We do not have a scenario

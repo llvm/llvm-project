@@ -40,6 +40,7 @@ LLVM and API reference documentation.
    PCSectionsMetadata
    PDB/index
    PointerAuth
+   MLGO
    ScudoHardenedAllocator
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
