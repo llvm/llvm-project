@@ -1433,7 +1433,7 @@ LogicalResult cir::ShiftOp::verify() {
     return emitOpError() << "input types cannot be one vector and one scalar";
 
   if (isOp1Vec && !mlir::isa<cir::VectorType>(getResult().getType())) {
-    return emitOpError() << "shift amount must have the type of the result "
+    return emitOpError() << "the type of the result must be a vector "
                          << "if it is vector shift";
   }
   return mlir::success();
