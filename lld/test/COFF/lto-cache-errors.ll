@@ -7,8 +7,8 @@
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; RUN: chmod 444 %t.cache
 
-;; Check emit warnings when we can't create the cache dir
-; RUN: not --crash lld-link /lldltocache:%t.cache/nonexistant/ /out:%t3 /entry:main %t2.o %t.o 2>&1 | FileCheck %s
+;; Check fatal usage error emitted when the cache dir can't be created.
+; RUN: not lld-link /lldltocache:%t.cache/nonexistant/ /out:%t3 /entry:main %t2.o %t.o 2>&1 | FileCheck %s
 ; CHECK: LLVM ERROR: can't create cache directory {{.*}}/nonexistant/: Permission denied
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
