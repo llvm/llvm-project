@@ -1933,8 +1933,9 @@ def GPU_SubgroupMmaExtractOp : GPU_Op<"subgroup_mma_extract",
 
     This operation takes `!gpu.mma_matrix` as its first operand. It is the source
     matrix across a subgroup. The op returns a scalar value stored in the invocation
-    in the subgroup. If there are multiple values packed in an invocation, use
-    `indices` to specify the element to extract.
+    in the subgroup. The values of !gpu.mma_matrix are stored across multiple
+    threads in the subgroup. If there are multiple values packed in a thread, use
+    `indices` to specify the element in the local thread to extract.
 
     Example:
 
@@ -1967,7 +1968,8 @@ def GPU_SubgroupMmaInsertOp : GPU_Op<"subgroup_mma_insert",
 
     This operation takes scalar value as its first operand and `!gpu.mma_matrix`
     as its second operand. It is the matrix across a subgroup. The op inserts the
-    scalar value stored in the invocation in the subgroup to the matrix. If there
+    scalar value stored in the invocation in the subgroup to the matrix. The values
+    of !gpu.mma_matrix are stored across multiple threads in the subgroup. If there
     are multiple values packed in an invocation, use `indices` to specify the
     location to insert in the packing.
 
