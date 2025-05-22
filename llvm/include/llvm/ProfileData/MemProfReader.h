@@ -229,20 +229,6 @@ public:
   create(std::unique_ptr<MemoryBuffer> Buffer);
 
   void parse(StringRef YAMLData);
-
-  std::unique_ptr<memprof::DataAccessProfData> takeDataAccessProfData() {
-    return std::move(DataAccessProfileData);
-  }
-
-private:
-  // Called by `parse` to set data access profiles after parsing them from Yaml
-  // files.
-  void
-  setDataAccessProfileData(std::unique_ptr<memprof::DataAccessProfData> Data) {
-    DataAccessProfileData = std::move(Data);
-  }
-
-  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 };
 } // namespace memprof
 } // namespace llvm
