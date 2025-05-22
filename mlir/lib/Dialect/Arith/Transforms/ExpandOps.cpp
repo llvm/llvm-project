@@ -458,9 +458,9 @@ struct ArithExpandOpsPass
         Type inETy = getElementTypeOrSelf(op.getOperand().getType());
         Type outETy = getElementTypeOrSelf(op.getType());
         bool legalTypes = true;
-        if(includeBf16) 
+        if (includeBf16) 
           legalTypes &= !(inETy.isBF16() && outETy.isF32());
-        if(includeF8E8M0)
+        if (includeF8E8M0)
           legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
         return legalTypes;
       });
@@ -470,9 +470,9 @@ struct ArithExpandOpsPass
         Type inETy = getElementTypeOrSelf(op.getOperand().getType());
         Type outETy = getElementTypeOrSelf(op.getType());
         bool legalTypes = true;
-        if(includeBf16) 
+        if (includeBf16) 
           legalTypes &= !(inETy.isF32() && outETy.isBF16());
-        if(includeF8E8M0) 
+        if (includeF8E8M0) 
           legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy)); 
         return legalTypes;
       });
