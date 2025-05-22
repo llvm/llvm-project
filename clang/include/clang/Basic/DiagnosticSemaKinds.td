@@ -105,7 +105,6 @@ def note_replace_abs_function : Note<"use function '%0' instead">;
 def warn_pointer_abs : Warning<
   "taking the absolute value of %select{pointer|function|array}0 type %1 is suspicious">,
   InGroup<AbsoluteValue>;
-  
 def warn_max_unsigned_zero : Warning<
   "taking the max of "
   "%select{a value and unsigned zero|unsigned zero and a value}0 "
