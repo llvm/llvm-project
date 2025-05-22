@@ -2746,8 +2746,7 @@ the configuration (without a prefix: ``Auto``).
 
     true:                             false:
     if constexpr (          vs.       if constexpr (a ||
-                  a ||                              b)
-                  b)
+       a || b)                                      b)
 
 .. _BreakAfterOpenBracketLoop:
 
@@ -2759,8 +2758,7 @@ the configuration (without a prefix: ``Auto``).
 
     true:                             false:
     while (                  vs.      while (a &&
-           a &&                              b) {
-           b) {
+       a && b) {                             b) {
 
 .. _BreakAfterOpenBracketSwitch:
 
@@ -2772,8 +2770,7 @@ the configuration (without a prefix: ``Auto``).
 
     true:                             false:
     switch (                 vs.      switch (a &&
-            a &&                              b) {
-            b) {
+       a && b) {                              b) {
 
 .. _BreakAfterReturnType:
 
@@ -3416,40 +3413,46 @@ the configuration (without a prefix: ``Auto``).
 
 **BreakBeforeCloseBracketIf** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeCloseBracketIf>`
   Force break before the right parenthesis of an if control statement
-  when the expression exceeds the column limit.
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
 
   .. code-block:: c++
 
     true:                             false:
-    if constexpr (a ||      vs.       if constexpr (a ||
-                  b                                 b)
-                  )
+    if constexpr (          vs.       if constexpr (a ||
+       a || b                                       b)
+    )
 
 .. _BreakBeforeCloseBracketLoop:
 
 **BreakBeforeCloseBracketLoop** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeCloseBracketLoop>`
   Force break before the right parenthesis of a loop control statement
-  when the expression exceeds the column limit.
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
 
   .. code-block:: c++
 
     true:                             false:
-    while (a &&              vs.      while (a &&
-           b                                 b) {
-           ) {
+    while (                  vs.      while (a &&
+       a && b                                b) {
+    ) {
 
 .. _BreakBeforeCloseBracketSwitch:
 
 **BreakBeforeCloseBracketSwitch** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeCloseBracketSwitch>`
   Force break before the right parenthesis of a switch control statement
-  when the expression exceeds the column limit.
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
 
   .. code-block:: c++
 
     true:                             false:
-    switch (a &&             vs.      switch (a &&
-            b                                 b) {
-            ) {
+    switch (                 vs.      switch (a &&
+       a && b                                 b) {
+    ) {
 
 .. _BreakBeforeConceptDeclarations:
 
