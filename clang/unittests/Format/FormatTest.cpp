@@ -9483,6 +9483,9 @@ TEST_F(FormatTest, AlignAfterConditionalStatements) {
   Style.BreakAfterOpenBracketIf = true;
   Style.BreakAfterOpenBracketLoop = true;
   Style.BreakAfterOpenBracketSwitch = true;
+  Style.BreakBeforeCloseBracketIf = false;
+  Style.BreakBeforeCloseBracketLoop = false;
+  Style.BreakBeforeCloseBracketSwitch = false;
 
   verifyFormat("void foo() {\n"
                "  if constexpr (\n"
