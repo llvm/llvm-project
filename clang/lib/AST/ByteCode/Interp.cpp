@@ -670,7 +670,8 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
       VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
 
-    if (!S.getLangOpts().CPlusPlus23 && VD == S.EvaluatingDecl) {
+    if (VD == S.EvaluatingDecl &&
+        !(S.getLangOpts().CPlusPlus23 && VD->getType()->isReferenceType())) {
       if (!S.getLangOpts().CPlusPlus14 &&
           !VD->getType().isConstant(S.getASTContext())) {
         // Diagnose as non-const read.
