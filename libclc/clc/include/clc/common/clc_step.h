@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_GENTYPE edge, __CLC_GENTYPE x);
+#ifndef __CLC_COMMON_CLC_STEP_H__
+#define __CLC_COMMON_CLC_STEP_H__
 
-#ifndef __CLC_SCALAR
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_SCALAR_GENTYPE edge,
-                                           __CLC_GENTYPE x);
-#endif
+#define __CLC_FUNCTION __clc_step
+#define __CLC_BODY <clc/shared/binary_decl.inc>
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION
+
+#endif // __CLC_COMMON_CLC_STEP_H__

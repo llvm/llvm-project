@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_GENTYPE edge, __CLC_GENTYPE x);
+#include <clc/clcmacro.h>
 
-#ifndef __CLC_SCALAR
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_SCALAR_GENTYPE edge,
-                                           __CLC_GENTYPE x);
-#endif
+#define __CLC_BODY <clc_step.inc>
+#include <clc/math/gentype.inc>

@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_GENTYPE edge, __CLC_GENTYPE x);
-
-#ifndef __CLC_SCALAR
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_SCALAR_GENTYPE edge,
-                                           __CLC_GENTYPE x);
-#endif
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_step(__CLC_GENTYPE edge,
+                                                __CLC_GENTYPE x) {
+  return x < edge ? __CLC_FP_LIT(0.0) : __CLC_FP_LIT(1.0);
+}
