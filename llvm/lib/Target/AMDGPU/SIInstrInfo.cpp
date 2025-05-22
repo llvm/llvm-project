@@ -590,17 +590,10 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
       if (!memOpsHaveSameAddrspace(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
         return false;
 
-      // Don't cluster scalar and vecter memory ops
-      const MachineFunction &MF = *FirstLdSt.getParent()->getParent();
-      const MachineRegisterInfo &MRI = MF.getRegInfo();
-      if (FirstLdSt.getOperand(0).isReg() && SecondLdSt.getOperand(0).isReg()) {
-        bool isFirstVecReg =
-            RI.isVectorRegister(MRI, FirstLdSt.getOperand(0).getReg());
-        bool isSecondVecReg =
-            RI.isVectorRegister(MRI, SecondLdSt.getOperand(0).getReg());
-        if (isFirstVecReg ^ isSecondVecReg)
-          return false;
-      }
+      // Don't cluster scalar and vector memory ops
+      if ((isVMEM(FirstLdSt) && isSMRD(SecondLdSt)) ||
+          (isSMRD(FirstLdSt) && isVMEM(SecondLdSt)))
+        return false;
     } else {
       // If the mem ops (to be clustered) do not have the same base ptr, then
       // they should not be clustered
