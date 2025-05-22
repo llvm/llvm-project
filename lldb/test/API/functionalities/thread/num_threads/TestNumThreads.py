@@ -139,13 +139,19 @@ class NumberOfThreadsTestCase(TestBase):
         setting_data = self.dbg.GetSetting("frame-format-unique")
         setting_str = setting_data.GetStringValue(1000)
         setting_str = "UNIQUE: " + setting_str
-        lldb.SBDebugger.SetInternalVariable("frame-format-unique", setting_str, self.dbg.GetInstanceName())
+        lldb.SBDebugger.SetInternalVariable(
+            "frame-format-unique", setting_str, self.dbg.GetInstanceName()
+        )
         # Now that we are stopped, we should have 10 threads waiting in the
         # thread3 function. All of these threads should show as one stack.
         self.expect(
             "thread backtrace unique",
             "Backtrace with unique stack shown correctly",
-            substrs=[expect_string, "UNIQUE:", "main.cpp:%d" % self.thread3_before_lock_line],
+            substrs=[
+                expect_string,
+                "UNIQUE:",
+                "main.cpp:%d" % self.thread3_before_lock_line,
+            ],
         )
         # Make sure setting the unique flag in the command isn't
         # persistent:
@@ -153,5 +159,5 @@ class NumberOfThreadsTestCase(TestBase):
             "thread backtrace",
             "Backtrace unique is not sticky",
             substrs=["UNIQUE:"],
-            matching=False
+            matching=False,
         )
