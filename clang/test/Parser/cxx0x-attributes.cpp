@@ -344,7 +344,7 @@ enum class [[]] EvenMoreSecrets {};
 
 namespace arguments {
   void f[[gnu::format(printf, 1, 2)]](const char*, ...);
-  void g() [[unknown::foo(ignore arguments for unknown attributes, even with symbols!)]]; // expected-warning {{unknown attribute 'foo' ignored}}
+  void g() [[unknown::foo(ignore arguments for unknown attributes, even with symbols!)]]; // expected-warning {{unknown attribute 'unknown::foo' ignored}}
   [[deprecated("with argument")]] int i;
   // expected-warning@-1 {{use of the 'deprecated' attribute is a C++14 extension}}
 }

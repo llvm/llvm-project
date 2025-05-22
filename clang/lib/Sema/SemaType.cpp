@@ -8788,9 +8788,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::UnknownAttribute:
       if (attr.isStandardAttributeSyntax()) {
-        state.getSema().Diag(attr.getLoc(),
-                             diag::warn_unknown_attribute_ignored)
-            << attr << attr.getRange();
+        state.getSema().DiagnoseUnknownAttribute(attr);
         // Mark the attribute as invalid so we don't emit the same diagnostic
         // multiple times.
         attr.setInvalid();

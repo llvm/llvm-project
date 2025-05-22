@@ -4125,6 +4125,37 @@ void EmitClangAttrParsedAttrList(const RecordKeeper &Records, raw_ostream &OS) {
   }
 }
 
+void EmitAttributeSpellingList(const RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader("List of attribute names", OS, Records);
+
+  std::set<StringRef> AttrSpellingList;
+  std::set<StringRef> AttrScopeSpellingList;
+
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    for (const auto &S : GetFlattenedSpellings(*A)) {
+      AttrSpellingList.insert(S.name());
+      if (S.nameSpace().size())
+        AttrScopeSpellingList.insert(S.nameSpace());
+    }
+  }
+
+  OS << "#ifndef ATTR_NAME" << "\n";
+  OS << "#define ATTR_NAME(NAME) NAME" << "\n";
+  OS << "#endif" << "\n" << "\n";
+  for (const auto &AttrName : AttrSpellingList) {
+    OS << "ATTR_NAME(\"" << AttrName << "\")\n";
+  }
+  OS << "\n";
+
+  OS << "#ifndef ATTR_SCOPE_SCOPE" << "\n";
+  OS << "#define ATTR_SCOPE_SCOPE(SCOPE_NAME) SCOPE_NAME" << "\n";
+  OS << "#endif" << "\n" << "\n";
+  for (const auto &AttrScopeName : AttrScopeSpellingList) {
+    OS << "ATTR_SCOPE_SCOPE(\"" << AttrScopeName << "\")\n";
+  }
+  OS << "\n";
+}
+
 static bool isArgVariadic(const Record &R, StringRef AttrName) {
   return createArgument(R, AttrName)->isVariadic();
 }
