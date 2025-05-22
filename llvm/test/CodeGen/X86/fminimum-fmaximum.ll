@@ -1258,19 +1258,19 @@ define <2 x double> @test_fminimum_vector_different_zeros(<2 x double> %x) {
 ; SSE2-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; SSE2-NEXT:    movdqa %xmm3, %xmm1
 ; SSE2-NEXT:    pandn %xmm2, %xmm1
-; SSE2-NEXT:    movaps %xmm0, %xmm4
-; SSE2-NEXT:    andps %xmm3, %xmm4
-; SSE2-NEXT:    orps %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm0, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm3
-; SSE2-NEXT:    por %xmm2, %xmm3
-; SSE2-NEXT:    movdqa %xmm3, %xmm1
-; SSE2-NEXT:    minpd %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm3, %xmm0
-; SSE2-NEXT:    cmpunordpd %xmm3, %xmm0
-; SSE2-NEXT:    andpd %xmm0, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    pandn %xmm0, %xmm4
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pand %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm4, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    minpd %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    cmpunordpd %xmm2, %xmm0
+; SSE2-NEXT:    andpd %xmm0, %xmm2
 ; SSE2-NEXT:    andnpd %xmm1, %xmm0
-; SSE2-NEXT:    orpd %xmm3, %xmm0
+; SSE2-NEXT:    orpd %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fminimum_vector_different_zeros:
