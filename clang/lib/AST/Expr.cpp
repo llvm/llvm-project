@@ -1475,6 +1475,7 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   CallExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   CallExprBits.IsCoroElideSafe = false;
   CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = false;
+  CallExprBits.HasTrailingSourceLoc = false;
 
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
@@ -1487,6 +1488,9 @@ CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
   assert((NumPreArgs == getNumPreArgs()) && "NumPreArgs overflow!");
   CallExprBits.HasFPFeatures = HasFPFeatures;
   CallExprBits.IsCoroElideSafe = false;
+  CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = false;
+  CallExprBits.HasTrailingSourceLoc = false;
+
 }
 
 CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
@@ -1500,8 +1504,10 @@ CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
   void *Mem =
       Ctx.Allocate(sizeToAllocateForCallExprSubclass<CallExpr>(SizeOfTrailingObjects),
                    alignof(CallExpr));
-  return new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
+  CallExpr* E = new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
                             RParenLoc, FPFeatures, MinNumArgs, UsesADL);
+  E->setTrailingSourceLocs();
+  return E;
 }
 
 CallExpr *CallExpr::CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,

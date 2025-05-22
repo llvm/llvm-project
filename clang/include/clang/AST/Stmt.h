@@ -568,9 +568,12 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned ExplicitObjectMemFunUsingMemberSyntax : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasTrailingSourceLoc : 1;
   };
 
-  enum { NumCallExprBits = 24 };
+  enum { NumCallExprBits = 25 };
 
   class MemberExprBitfields {
     friend class ASTStmtReader;

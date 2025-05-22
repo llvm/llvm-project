@@ -3202,6 +3202,12 @@ public:
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
   SourceLocation getBeginLoc() const {
+    if(CallExprBits.HasTrailingSourceLoc) {
+        static_assert(sizeof(CallExpr) <= offsetToTrailingObjects + 2 * sizeof(SourceLocation));
+        return *reinterpret_cast<const SourceLocation*>(reinterpret_cast<const char *>(this) +
+                                                        sizeof(CallExpr));
+    }
+
     //if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
     //    return OCE->getBeginLoc();
 
@@ -3222,6 +3228,23 @@ public:
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY;
+
+private:
+  friend class ASTStmtReader;
+  bool hasTrailingSourceLoc() const {
+      return CallExprBits.HasTrailingSourceLoc;
+  }
+  void setTrailingSourceLocs() {
+      assert(!CallExprBits.HasTrailingSourceLoc);
+      static_assert(sizeof(CallExpr) <= offsetToTrailingObjects + 2 * sizeof(SourceLocation));
+      SourceLocation* Locs = reinterpret_cast<SourceLocation*>(reinterpret_cast<char *>(this) +
+                                                               sizeof(CallExpr));
+      Locs[0] = getBeginLoc();
+      Locs[1] = getEndLoc();
+      CallExprBits.HasTrailingSourceLoc = true;
+  }
+
+public:
 
   /// Return true if this is a call to __assume() or __builtin_assume() with
   /// a non-value-dependent constant parameter evaluating as false.
