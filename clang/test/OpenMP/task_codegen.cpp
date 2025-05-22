@@ -10271,7 +10271,7 @@ void test_threadset()
 // CHECK6-NEXT:       call i32 @__kmpc_global_thread_num(ptr @[[GLOB_PTR:[0-9]+]])
 // CHECK6-NEXT:       call i32 @__kmpc_omp_task(ptr @1, i32 %omp_global_thread_num1, ptr %0)
 // CHECK6-NEXT:       call i32 @__kmpc_global_thread_num(ptr @[[GLOB_PTR2:[0-9]+]])
-// CHECK6-NEXT:       [[TMP3:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %omp_global_thread_num3, i32 129, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY2:[0-9]+]])
+// CHECK6-NEXT:       [[TMP3:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %omp_global_thread_num3, i32 257, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY2:[0-9]+]])
 // CHECK6-NEXT:       getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr %3, i32 0, i32 0
 // CHECK6-NEXT:       call i32 @__kmpc_global_thread_num(ptr @[[GLOB_PTR2:[0-9]+]])
 // CHECK6-NEXT:       call i32 @__kmpc_omp_task(ptr @1, i32 %omp_global_thread_num4, ptr %3)

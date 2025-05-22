@@ -2726,9 +2726,15 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned priority_specified : 1; /* set if the compiler provides priority
                                       setting for the task */
   unsigned detachable : 1; /* 1 == can detach */
+<<<<<<< HEAD
   unsigned free_agent_eligible : 1; /* set if task can be executed by a
                                        free-agent thread */
   unsigned reserved : 8; /* reserved for compiler use */
+=======
+  unsigned hidden_helper : 1; /* 1 == hidden helper task */
+  unsigned free_agent_eligible : 1; /* set if task can be executed by a free-agent thread */
+  unsigned reserved : 7; /* reserved for compiler use */
+>>>>>>> 11deb35b539c (Adding basic runtime support)
 
   /* Library flags */ /* Total library flags must be 16 bits */
   unsigned tasktype : 1; /* task is either explicit(1) or implicit (0) */

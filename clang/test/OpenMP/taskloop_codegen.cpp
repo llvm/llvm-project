@@ -279,7 +279,7 @@ void test_threadset()
 // CHECK6-NEXT:       call void @__kmpc_taskloop(ptr @1, i32 %[[TID0:.*]], ptr %[[TID1:.*]], i32 1, ptr %[[TID3:.*]], ptr %4, i64 %[[TID7:.*]], i32 1, i32 0, i64 0, ptr null)
 // CHECK6-NEXT:       call void @__kmpc_end_taskgroup(ptr @1, i32 %[[TID0:.*]])
 // CHECK6-NEXT:       call void @__kmpc_taskgroup(ptr @1, i32 %[[TID0:.*]])
-// CHECK6-NEXT:       %[[TID8:.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %[[TID0:.*]], i32 129, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY1:[0-9]+]])
+// CHECK6-NEXT:       %[[TID8:.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %[[TID0:.*]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY1:[0-9]+]])
 // CHECK6-NEXT:       %[[TID9:.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr %[[TID8:.*]], i32 0, i32 0
 // CHECK6-NEXT:       %[[TID10:.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr %[[TID9:.*]], i32 0, i32 5
 // CHECK6-NEXT:       store i64 0, ptr %[[TID10:.*]], align 8
