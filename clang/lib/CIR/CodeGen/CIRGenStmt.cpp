@@ -533,12 +533,6 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
     value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal),
                                   cir::IntAttr::get(condType, endVal)});
     kind = cir::CaseOpKind::Range;
-
-    // We don't currently fold case range statements with other case statements.
-    // TODO(cir): Add this capability. Folding these cases is going to be
-    // implemented in CIRSimplify when it is upstreamed.
-    assert(!cir::MissingFeatures::foldRangeCase());
-    assert(!cir::MissingFeatures::foldCascadingCases());
   } else {
     value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal)});
     kind = cir::CaseOpKind::Equal;
