@@ -85,6 +85,8 @@ struct RootConstants {
   ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
+raw_ostream &operator<<(raw_ostream &OS, const RootConstants &Constants);
+
 using DescriptorType = llvm::dxil::ResourceClass;
 // Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
 struct RootDescriptor {
