@@ -31,32 +31,34 @@ class StoreInst;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
-  None,        ///< Not a recurrence.
-  Add,         ///< Sum of integers.
-  Mul,         ///< Product of integers.
-  Or,          ///< Bitwise or logical OR of integers.
-  And,         ///< Bitwise or logical AND of integers.
-  Xor,         ///< Bitwise or logical XOR of integers.
-  SMin,        ///< Signed integer min implemented in terms of select(cmp()).
-  SMax,        ///< Signed integer max implemented in terms of select(cmp()).
-  UMin,        ///< Unsigned integer min implemented in terms of select(cmp()).
-  UMax,        ///< Unsigned integer max implemented in terms of select(cmp()).
-  FAdd,        ///< Sum of floats.
-  FMul,        ///< Product of floats.
-  FMin,        ///< FP min implemented in terms of select(cmp()).
-  FMax,        ///< FP max implemented in terms of select(cmp()).
-  FMinimum,    ///< FP min with llvm.minimum semantics
-  FMaximum,    ///< FP max with llvm.maximum semantics
+  // clang-format off
+  None,     ///< Not a recurrence.
+  Add,      ///< Sum of integers.
+  Mul,      ///< Product of integers.
+  Or,       ///< Bitwise or logical OR of integers.
+  And,      ///< Bitwise or logical AND of integers.
+  Xor,      ///< Bitwise or logical XOR of integers.
+  SMin,     ///< Signed integer min implemented in terms of select(cmp()).
+  SMax,     ///< Signed integer max implemented in terms of select(cmp()).
+  UMin,     ///< Unsigned integer min implemented in terms of select(cmp()).
+  UMax,     ///< Unsigned integer max implemented in terms of select(cmp()).
+  FAdd,     ///< Sum of floats.
+  FMul,     ///< Product of floats.
+  FMin,     ///< FP min implemented in terms of select(cmp()).
+  FMax,     ///< FP max implemented in terms of select(cmp()).
+  FMinimum, ///< FP min with llvm.minimum semantics
+  FMaximum, ///< FP max with llvm.maximum semantics
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
   FMaximumNum, ///< FP max with llvm.maximumnum semantics
-  FMulAdd,     ///< Sum of float products with llvm.fmuladd(a * b + sum).
-  IAnyOf, ///< Any_of reduction with select(icmp(),x,y) where one of (x,y) is
-          ///< loop invariant, and both x and y are integer type.
-  FAnyOf, ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
-          ///< loop invariant, and both x and y are integer type.
+  FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
+  IAnyOf,   ///< Any_of reduction with select(icmp(),x,y) where one of (x,y) is
+            ///< loop invariant, and both x and y are integer type.
+  FAnyOf,   ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
+            ///< loop invariant, and both x and y are integer type.
   FindLastIV, ///< FindLast reduction with select(cmp(),x,y) where one of
               ///< (x,y) is increasing loop induction, and both x and y are
               ///< integer type.
+  // clang-format on
   // TODO: Any_of and FindLast reduction need not be restricted to integer type
   // only.
 };
