@@ -1627,15 +1627,6 @@ CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
   return {nullptr, nullptr};
 }
 
-SourceLocation CallExpr::getEndLoc() const {
-  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
-    return OCE->getEndLoc();
-
-  SourceLocation end = getRParenLoc();
-  if (end.isInvalid() && getNumArgs() > 0 && getArg(getNumArgs() - 1))
-    end = getArg(getNumArgs() - 1)->getEndLoc();
-  return end;
-}
 
 OffsetOfExpr *OffsetOfExpr::Create(const ASTContext &C, QualType type,
                                    SourceLocation OperatorLoc,

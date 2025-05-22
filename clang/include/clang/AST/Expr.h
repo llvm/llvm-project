@@ -3227,7 +3227,19 @@ public:
     return getCallee()->getBeginLoc();
   }
 
-  SourceLocation getEndLoc() const LLVM_READONLY;
+  SourceLocation getEndLoc() const {
+      if(CallExprBits.HasTrailingSourceLoc) {
+          static_assert(sizeof(CallExpr) <= offsetToTrailingObjects + 2 * sizeof(SourceLocation));
+          return *reinterpret_cast<const SourceLocation*>(reinterpret_cast<const char *>(this) +
+                                                          sizeof(CallExpr) + sizeof(SourceLocation));
+      }
+
+    SourceLocation end = getRParenLoc();
+    if (end.isInvalid() && getNumArgs() > 0 && getArg(getNumArgs() - 1))
+      end = getArg(getNumArgs() - 1)->getEndLoc();
+    return end;
+  }
+
 
 private:
   friend class ASTStmtReader;
@@ -3239,8 +3251,8 @@ private:
       static_assert(sizeof(CallExpr) <= offsetToTrailingObjects + 2 * sizeof(SourceLocation));
       SourceLocation* Locs = reinterpret_cast<SourceLocation*>(reinterpret_cast<char *>(this) +
                                                                sizeof(CallExpr));
-      Locs[0] = getBeginLoc();
-      Locs[1] = getEndLoc();
+      new (Locs) SourceLocation(getBeginLoc());
+      new (Locs+1) SourceLocation(getEndLoc());
       CallExprBits.HasTrailingSourceLoc = true;
   }
 
