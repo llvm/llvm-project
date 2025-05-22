@@ -209,10 +209,10 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
 
   // Fill in optional values
   if (Params->Space.has_value())
-    Param.Space = Params->Space.value();
+    Descriptor.Space = Params->Space.value();
 
   if (Params->Visibility.has_value())
-    Param.Visibility = Params->Visibility.value();
+    Descriptor.Visibility = Params->Visibility.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
