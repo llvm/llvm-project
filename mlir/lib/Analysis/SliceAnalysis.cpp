@@ -27,7 +27,8 @@
 using namespace mlir;
 
 static void
-getForwardSliceImpl(Operation *op, SetVector<Operation *> *forwardSlice,
+getForwardSliceImpl(Operation *op, DenseSet<Operation *> &visited,
+                    SetVector<Operation *> *forwardSlice,
                     const SliceOptions::TransitiveFilter &filter = nullptr) {
   if (!op)
     return;
@@ -41,20 +42,41 @@ getForwardSliceImpl(Operation *op, SetVector<Operation *> *forwardSlice,
   for (Region &region : op->getRegions())
     for (Block &block : region)
       for (Operation &blockOp : block)
-        if (forwardSlice->count(&blockOp) == 0)
-          getForwardSliceImpl(&blockOp, forwardSlice, filter);
-  for (Value result : op->getResults()) {
-    for (Operation *userOp : result.getUsers())
-      if (forwardSlice->count(userOp) == 0)
-        getForwardSliceImpl(userOp, forwardSlice, filter);
-  }
+        if (forwardSlice->count(&blockOp) == 0) {
+          // We don't have to check if the 'blockOp' is already visited because
+          // there cannot be a traversal path from this nested op to the parent
+          // and thus a cycle cannot be closed here. We still have to mark it
+          // as visited to stop before visiting this operation again if it is
+          // part of a cycle.
+          visited.insert(&blockOp);
+          getForwardSliceImpl(&blockOp, visited, forwardSlice, filter);
+          visited.erase(&blockOp);
+        }
+
+  for (Value result : op->getResults())
+    for (Operation *userOp : result.getUsers()) {
+      // A cycle can only occur within a basic block (not across regions or
+      // basic blocks) because the parent region must be a graph region, graph
+      // regions are restricted to always have 0 or 1 blocks, and there cannot
+      // be a def-use edge from a nested operation to an operation in an
+      // ancestor region. Therefore, we don't have to but may use the same
+      // 'visited' set across regions/blocks as long as we remove operations
+      // from the set again when the DFS traverses back from the leaf to the
+      // root.
+      if (forwardSlice->count(userOp) == 0 && visited.insert(userOp).second)
+        getForwardSliceImpl(userOp, visited, forwardSlice, filter);
+
+      visited.erase(userOp);
+    }
 
   forwardSlice->insert(op);
 }
 
 void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
                            const ForwardSliceOptions &options) {
-  getForwardSliceImpl(op, forwardSlice, options.filter);
+  DenseSet<Operation *> visited;
+  visited.insert(op);
+  getForwardSliceImpl(op, visited, forwardSlice, options.filter);
   if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
     // want it in the results.
@@ -70,8 +92,12 @@ void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
 
 void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
                            const SliceOptions &options) {
-  for (Operation *user : root.getUsers())
-    getForwardSliceImpl(user, forwardSlice, options.filter);
+  DenseSet<Operation *> visited;
+  for (Operation *user : root.getUsers()) {
+    visited.insert(user);
+    getForwardSliceImpl(user, visited, forwardSlice, options.filter);
+    visited.erase(user);
+  }
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
@@ -80,7 +106,7 @@ void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
   forwardSlice->insert(v.rbegin(), v.rend());
 }
 
-static void getBackwardSliceImpl(Operation *op,
+static void getBackwardSliceImpl(Operation *op, DenseSet<Operation *> &visited,
                                  SetVector<Operation *> *backwardSlice,
                                  const BackwardSliceOptions &options) {
   if (!op || op->hasTrait<OpTrait::IsIsolatedFromAbove>())
@@ -94,8 +120,11 @@ static void getBackwardSliceImpl(Operation *op,
 
   auto processValue = [&](Value value) {
     if (auto *definingOp = value.getDefiningOp()) {
-      if (backwardSlice->count(definingOp) == 0)
-        getBackwardSliceImpl(definingOp, backwardSlice, options);
+      if (backwardSlice->count(definingOp) == 0 &&
+          visited.insert(definingOp).second)
+        getBackwardSliceImpl(definingOp, visited, backwardSlice, options);
+
+      visited.erase(definingOp);
     } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
       if (options.omitBlockArguments)
         return;
@@ -108,7 +137,7 @@ static void getBackwardSliceImpl(Operation *op,
       if (parentOp && backwardSlice->count(parentOp) == 0) {
         assert(parentOp->getNumRegions() == 1 &&
                llvm::hasSingleElement(parentOp->getRegion(0).getBlocks()));
-        getBackwardSliceImpl(parentOp, backwardSlice, options);
+        getBackwardSliceImpl(parentOp, visited, backwardSlice, options);
       }
     } else {
       llvm_unreachable("No definingOp and not a block argument.");
@@ -138,7 +167,9 @@ static void getBackwardSliceImpl(Operation *op,
 void mlir::getBackwardSlice(Operation *op,
                             SetVector<Operation *> *backwardSlice,
                             const BackwardSliceOptions &options) {
-  getBackwardSliceImpl(op, backwardSlice, options);
+  DenseSet<Operation *> visited;
+  visited.insert(op);
+  getBackwardSliceImpl(op, visited, backwardSlice, options);
 
   if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
