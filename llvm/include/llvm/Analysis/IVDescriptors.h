@@ -31,6 +31,7 @@ class StoreInst;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
+  // clang-format off
   None,     ///< Not a recurrence.
   Add,      ///< Sum of integers.
   Mul,      ///< Product of integers.
@@ -54,12 +55,10 @@ enum class RecurKind {
             ///< loop invariant, and both x and y are integer type.
   FAnyOf,   ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
             ///< loop invariant, and both x and y are integer type.
-  IFindLastIV, ///< FindLast reduction with select(icmp(),x,y) where one of
-               ///< (x,y) is increasing loop induction, and both x and y are
-               ///< integer type.
-  FFindLastIV ///< FindLast reduction with select(fcmp(),x,y) where one of (x,y)
-              ///< is increasing loop induction, and both x and y are integer
-              ///< type.
+  FindLastIV, ///< FindLast reduction with select(cmp(),x,y) where one of
+              ///< (x,y) is increasing loop induction, and both x and y are
+              ///< integer type.
+  // clang-format on
   // TODO: Any_of and FindLast reduction need not be restricted to integer type
   // only.
 };
@@ -259,7 +258,7 @@ public:
   /// Returns true if the recurrence kind is of the form
   ///   select(cmp(),x,y) where one of (x,y) is increasing loop induction.
   static bool isFindLastIVRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::IFindLastIV || Kind == RecurKind::FFindLastIV;
+    return Kind == RecurKind::FindLastIV;
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the
