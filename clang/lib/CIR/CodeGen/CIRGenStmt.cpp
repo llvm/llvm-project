@@ -26,7 +26,9 @@ using namespace cir;
 void CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s) {
   for (auto *curStmt : s.body()) {
     if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
-      getCIRGenModule().errorNYI(curStmt->getSourceRange(), "statement");
+      getCIRGenModule().errorNYI(curStmt->getSourceRange(),
+                                 std::string("emitCompoundStmtWithoutScope: ") +
+                                     curStmt->getStmtClassName());
   }
 }
 
