@@ -577,7 +577,7 @@ public:
 #endif
 };
 
-/// Class to record LLVM IR flags.
+/// Class to record and manage LLVM IR flags.
 class VPIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
@@ -812,8 +812,9 @@ public:
 #endif
 };
 
-class VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
-public:
+/// A pure-virtual common base class for recipes defining a single VPValue and
+/// using IR flags.
+struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
   VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
                       DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags() {}
@@ -826,7 +827,6 @@ public:
                       const VPIRFlags &Flags, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags(Flags) {}
 
-public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
@@ -852,6 +852,8 @@ public:
     auto *R = dyn_cast_or_null<VPRecipeBase>(V->getDefiningRecipe());
     return R && classof(R);
   }
+
+  void execute(VPTransformState &State) override = 0;
 };
 
 /// Helper to access the operand that contains the unroll part for this recipe
