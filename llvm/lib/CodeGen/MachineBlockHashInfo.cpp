@@ -10,7 +10,7 @@ using OperandHashFuncTy = function_ref<uint64_t(uint64_t &, const MachineOperand
 uint64_t hashBlock(const MachineBasicBlock &MBB, OperandHashFuncTy OperandHashFunc) {
   uint64_t Hash = 0;
   for (const MachineInstr &MI : MBB) {
-    if (MI.isPseudo())
+    if (MI.isMetaInstruction())
       continue;
     // Ignore unconditional jumps
     if (MI.isUnconditionalBranch())
