@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class AddressSpacesImpl {
+def AddrSpaces {
   int Flat = 0;
   int Global = 1;
   int Region = 2;
@@ -21,8 +21,6 @@ class AddressSpacesImpl {
   int Constant32Bit = 6;
   int LaneShared = 10;
 }
-
-def AddrSpaces : AddressSpacesImpl;
 
 
 class AMDGPUInst <dag outs, dag ins, string asm = "",
