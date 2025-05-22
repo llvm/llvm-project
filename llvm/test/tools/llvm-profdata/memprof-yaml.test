@@ -1,11 +1,100 @@
 ; RUN: split-file %s %t
 ; COM: The text format only supports the latest version.
+
+; Verify that the YAML output is identical to the YAML input.
+; memprof-in.yaml has both heap profile records and data access profiles.
 ; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in.yaml -o %t/memprof-out.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out.yaml
 ; RUN: diff -b %t/memprof-in.yaml %t/memprof-out.yaml
 
-; Verify that the YAML output is identical to the YAML input.
+; Merge text profile as v3 binary profile. Test that the merged v3 profile
+; are identical to memprof-in-v3.yaml, and doesn't have callee guids or dap.
+; RUN: llvm-profdata merge --memprof-version=3 %t/memprof-in.yaml -o %t/memprof-out-v3.indexed
+; RUN: llvm-profdata show --memory %t/memprof-out-v3.indexed > %t/memprof-out-v3.yaml
+; RUN: diff -b %t/memprof-out-v3.yaml %t/memprof-in-v3.yaml
+
+; memprof-in-no-dap.yaml has empty data access profiles.
+; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-no-dap.yaml -o %t/memprof-out.indexed
+; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out-no-dap.yaml
+; RUN: diff -b %t/memprof-in-no-dap.yaml %t/memprof-out-no-dap.yaml
+
 ;--- memprof-in.yaml
+---
+HeapProfileRecords:
+  - GUID:            0xdeadbeef12345678
+    AllocSites:
+      - Callstack:
+          - { Function: 0x1111111111111111, LineOffset: 11, Column: 10, IsInlineFrame: true }
+          - { Function: 0x2222222222222222, LineOffset: 22, Column: 20, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      111
+          TotalSize:       222
+          TotalLifetime:   333
+          TotalLifetimeAccessDensity: 444
+      - Callstack:
+          - { Function: 0x3333333333333333, LineOffset: 33, Column: 30, IsInlineFrame: false }
+          - { Function: 0x4444444444444444, LineOffset: 44, Column: 40, IsInlineFrame: true }
+        MemInfoBlock:
+          AllocCount:      555
+          TotalSize:       666
+          TotalLifetime:   777
+          TotalLifetimeAccessDensity: 888
+    CallSites:
+      - Frames:
+        - { Function: 0x5555555555555555, LineOffset: 55, Column: 50, IsInlineFrame: true }
+        - { Function: 0x6666666666666666, LineOffset: 66, Column: 60, IsInlineFrame: false }
+        CalleeGuids: [ 0x100, 0x200 ]
+      - Frames:
+        - { Function: 0x7777777777777777, LineOffset: 77, Column: 70, IsInlineFrame: true }
+        - { Function: 0x8888888888888888, LineOffset: 88, Column: 80, IsInlineFrame: false }
+        CalleeGuids: [ 0x300 ]
+DataAccessProfiles:
+  SampledRecords:
+    - Symbol:          abcde
+      Locations:
+      - FileName:      file2.h
+        Line:          123
+      - FileName:      file3.cpp
+        Line:          456
+    - Hash:            101010
+      Locations:
+        - FileName:        file.cpp
+          Line:            233
+  KnownColdSymbols:
+    - foo
+    - bar
+  KnownColdStrHashes: [ 999, 1001 ]
+...
+;--- memprof-in-v3.yaml
+---
+HeapProfileRecords:
+  - GUID:            0xdeadbeef12345678
+    AllocSites:
+      - Callstack:
+          - { Function: 0x1111111111111111, LineOffset: 11, Column: 10, IsInlineFrame: true }
+          - { Function: 0x2222222222222222, LineOffset: 22, Column: 20, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      111
+          TotalSize:       222
+          TotalLifetime:   333
+          TotalLifetimeAccessDensity: 444
+      - Callstack:
+          - { Function: 0x3333333333333333, LineOffset: 33, Column: 30, IsInlineFrame: false }
+          - { Function: 0x4444444444444444, LineOffset: 44, Column: 40, IsInlineFrame: true }
+        MemInfoBlock:
+          AllocCount:      555
+          TotalSize:       666
+          TotalLifetime:   777
+          TotalLifetimeAccessDensity: 888
+    CallSites:
+      - Frames:
+        - { Function: 0x5555555555555555, LineOffset: 55, Column: 50, IsInlineFrame: true }
+        - { Function: 0x6666666666666666, LineOffset: 66, Column: 60, IsInlineFrame: false }
+      - Frames:
+        - { Function: 0x7777777777777777, LineOffset: 77, Column: 70, IsInlineFrame: true }
+        - { Function: 0x8888888888888888, LineOffset: 88, Column: 80, IsInlineFrame: false }
+...
+;--- memprof-in-no-dap.yaml
 ---
 HeapProfileRecords:
   - GUID:            0xdeadbeef12345678
