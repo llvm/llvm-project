@@ -52,7 +52,6 @@ static_library("Analysis") {
     "DomTreeUpdater.cpp",
     "DominanceFrontier.cpp",
     "EphemeralValuesCache.cpp",
-    "FloatingPointPredicateUtils.cpp",
     "FunctionPropertiesAnalysis.cpp",
     "GlobalsModRef.cpp",
     "GuardUtils.cpp",
