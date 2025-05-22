@@ -6357,17 +6357,10 @@ std::optional<bool> llvm::computeKnownFPSignBit(const Value *V, unsigned Depth,
   return Known.SignBit;
 }
 
-/// Return true if the sign bit of result can be ignored when the result is
-/// zero.
-bool llvm::ignoreSignBitOfZero(Instruction &I) {
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
-    if (FPOp->hasNoSignedZeros())
-      return true;
-
-  // Check if the sign bit is ignored by the only user.
-  if (!I.hasOneUse())
-    return false;
-  Instruction *User = I.user_back();
+/// Return true if the sign bit of result can be ignored by the user when the
+/// result is zero.
+bool llvm::ignoreSignBitOfZero(const Use &U) {
+  auto *User = cast<Instruction>(U.getUser());
   if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
     if (FPOp->hasNoSignedZeros())
       return true;
@@ -6386,7 +6379,7 @@ bool llvm::ignoreSignBitOfZero(Instruction &I) {
       case Intrinsic::fabs:
         return true;
       case Intrinsic::copysign:
-        return II->getArgOperand(0) == &I;
+        return U.getOperandNo() == 0;
       case Intrinsic::is_fpclass:
       case Intrinsic::vp_is_fpclass: {
         auto Test =
@@ -6405,15 +6398,10 @@ bool llvm::ignoreSignBitOfZero(Instruction &I) {
   }
 }
 
-bool llvm::ignoreSignBitOfNaN(Instruction &I) {
-  if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
-    if (FPOp->hasNoNaNs())
-      return true;
-
-  // Check if the sign bit is ignored by the only user.
-  if (!I.hasOneUse())
-    return false;
-  Instruction *User = I.user_back();
+/// Return true if the sign bit of result can be ignored by the user when the
+/// result is NaN.
+bool llvm::ignoreSignBitOfNaN(const Use &U) {
+  auto *User = cast<Instruction>(U.getUser());
   if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
     if (FPOp->hasNoNaNs())
       return true;
@@ -6439,7 +6427,7 @@ bool llvm::ignoreSignBitOfNaN(Instruction &I) {
   case Instruction::PHI:
     return false;
   case Instruction::Ret:
-    return I.getFunction()->getAttributes().getRetNoFPClass() &
+    return User->getFunction()->getAttributes().getRetNoFPClass() &
            FPClassTest::fcNan;
   case Instruction::Call:
   case Instruction::Invoke: {
@@ -6448,7 +6436,7 @@ bool llvm::ignoreSignBitOfNaN(Instruction &I) {
       case Intrinsic::fabs:
         return true;
       case Intrinsic::copysign:
-        return II->getArgOperand(0) == &I;
+        return U.getOperandNo() == 0;
       // Other proper FP math intrinsics ignore the sign bit of NaN.
       case Intrinsic::maxnum:
       case Intrinsic::minnum:
@@ -6472,8 +6460,8 @@ bool llvm::ignoreSignBitOfNaN(Instruction &I) {
       }
     }
 
-    FPClassTest NoFPClass = cast<CallBase>(User)->getParamNoFPClass(
-        I.uses().begin()->getOperandNo());
+    FPClassTest NoFPClass =
+        cast<CallBase>(User)->getParamNoFPClass(U.getOperandNo());
     return NoFPClass & FPClassTest::fcNan;
   }
   default:
