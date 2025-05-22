@@ -1094,27 +1094,24 @@ multiclass DSAtomicRetNoRetPatCondSub_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
   let OtherPredicates = [LDSRequiresM0Init] in {
     def : DSAtomicRetPat<inst, vt,
                          !cast<PatFrag>(frag#"_local_m0_"#vt)>;
-    let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-      def : DSAtomicRetPat<noRetInst, vt,
-                           !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
+    def : DSAtomicRetPat<noRetInst, vt,
+                         !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
                          !cast<PatFrag>(frag#"_local_"#vt)>;
-    let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-      def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
-                           !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
+    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
+                         !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
   }
 
   let OtherPredicates = [HasGDS] in {
     def : DSAtomicRetPat<inst, vt,
                          !cast<PatFrag>(frag#"_region_m0_"#vt),
                          /* complexity */ 0, /* gds */ 1>;
-    let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-      def : DSAtomicRetPat<noRetInst, vt,
-                           !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
-                           /* complexity */ 1, /* gds */ 1>;
+    def : DSAtomicRetPat<noRetInst, vt,
+                         !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
+                         /* complexity */ 1, /* gds */ 1>;
   }
 }
 
