@@ -92,7 +92,7 @@ define <4 x float> @concat_of_broadcast_v4f32_v8f32(ptr %a0, ptr %a1, ptr %a2) {
 ; AVX1-NEXT:    vmovaps (%rdx), %ymm2
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX1-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4],ymm2[5,6],ymm0[7]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[3,0],xmm0[0,0]
