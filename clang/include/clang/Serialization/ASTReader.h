@@ -151,9 +151,8 @@ public:
   ///
   /// \returns true to indicate the diagnostic options are invalid, or false
   /// otherwise.
-  virtual bool
-  ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                        StringRef ModuleFilename, bool Complain) {
+  virtual bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
+                                     StringRef ModuleFilename, bool Complain) {
     return false;
   }
 
@@ -305,7 +304,7 @@ public:
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
-  bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+  bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                              StringRef ModuleFilename, bool Complain) override;
   bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                              bool Complain) override;
@@ -350,7 +349,7 @@ public:
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
-  bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+  bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                              StringRef ModuleFilename, bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                StringRef ModuleFilename, bool ReadMacros,

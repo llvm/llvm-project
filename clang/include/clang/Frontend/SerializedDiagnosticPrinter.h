@@ -38,7 +38,7 @@ namespace serialized_diags {
 /// explicitly for caching purposes and the changes to add \p OS in this
 /// function should be reverted.
 std::unique_ptr<DiagnosticConsumer>
-create(StringRef OutputFile, DiagnosticOptions *Diags,
+create(StringRef OutputFile, DiagnosticOptions &DiagOpts,
        bool MergeChildRecords = false,
        std::unique_ptr<raw_ostream> OS = nullptr);
 
