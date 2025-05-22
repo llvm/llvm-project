@@ -437,8 +437,62 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
   SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
-  if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
-      !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
+
+  // Walk backwards through nested GEPs to collect both constant and variable
+  // offsets, so that nested vector GEP chains can be lowered in one step.
+  //
+  // Given this IR fragment as input:
+  //
+  //   %0 = alloca [10 x <2 x i32>], align 8, addrspace(5)
+  //   %1 = getelementptr [10 x <2 x i32>], ptr addrspace(5) %0, i32 0, i32 %j
+  //   %2 = getelementptr i8, ptr addrspace(5) %1, i32 4
+  //   %3 = load  i32, ptr addrspace(5) %2, align 4
+  //
+  // Combine both GEP operations in a single pass, producing:
+  //   BasePtr      = %0
+  //   ConstOffset  = 4
+  //   VarOffsets   = { %j → element_size(<2 x i32>) }
+  //
+  // That lets us emit a single buffer_load directly into a VGPR, without ever
+  // allocating scratch memory for the intermediate pointer.
+  Value *CurPtr = GEP;
+  while (auto *CurGEP = dyn_cast<GetElementPtrInst>(CurPtr)) {
+    SmallMapVector<Value *, APInt, 4> LocalVarsOffsets;
+    APInt LocalConstOffset(BW, 0);
+
+    if (!CurGEP->collectOffset(DL, BW, LocalVarsOffsets, LocalConstOffset))
+      return nullptr;
+
+    // Merge any variable-index contributions into the accumulated VarOffsets
+    // map.
+    // Only a single pointer variable is allowed in the entire GEP chain.
+    // If VarOffsets already holds a different pointer, abort.
+    //
+    // Example:
+    //   Suppose LocalVarsOffsets = { (%ptr → 4) } from this GEP, and
+    //   VarOffsets already has { (%ptr → 8) } from an inner GEP.
+    //   After this loop, VarOffsets should become { (%ptr → 12) }.
+    for (auto &VarEntry : LocalVarsOffsets) {
+      // If VarOffsets already records a different pointer, abort.
+      if (!VarOffsets.empty() && !VarOffsets.count(VarEntry.first))
+        return nullptr;
+
+      // Look up whether we’ve seen this pointer before.
+      auto *Existing = VarOffsets.find(VarEntry.first);
+      if (Existing == VarOffsets.end())
+        VarOffsets.insert({VarEntry.first, VarEntry.second});
+      else
+        Existing->second += VarEntry.second;
+    }
+
+    ConstOffset += LocalConstOffset;
+
+    // Move to the next outer pointer
+    CurPtr = CurGEP->getPointerOperand()->stripPointerCasts();
+  }
+
+  // Only proceed if this GEP stems from the same alloca.
+  if (CurPtr->stripPointerCasts() != Alloca)
     return nullptr;
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
