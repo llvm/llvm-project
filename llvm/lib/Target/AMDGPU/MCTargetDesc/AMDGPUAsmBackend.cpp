@@ -18,6 +18,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -51,6 +52,8 @@ public:
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+  bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
+                             const MCValue &, const MCSubtargetInfo *) override;
 };
 
 } //End anonymous namespace
@@ -187,6 +190,13 @@ MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   assert(unsigned(Kind - FirstTargetFixupKind) < AMDGPU::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
+}
+
+bool AMDGPUAsmBackend::shouldForceRelocation(const MCAssembler &,
+                                             const MCFixup &,
+                                             const MCValue &Target,
+                                             const MCSubtargetInfo *) {
+  return Target.getSpecifier();
 }
 
 unsigned AMDGPUAsmBackend::getMinimumNopSize() const {
