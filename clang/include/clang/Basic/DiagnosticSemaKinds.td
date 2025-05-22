@@ -1749,6 +1749,7 @@ def err_static_assert_requirement_failed : Error<
 def note_expr_evaluates_to : Note<
   "expression evaluates to '%0 %1 %2'">;
 
+
 def subst_user_defined_msg : TextSubstitution<
   "%select{the message|the expression}0 in "
   "%select{a static assertion|this asm operand}0">;
