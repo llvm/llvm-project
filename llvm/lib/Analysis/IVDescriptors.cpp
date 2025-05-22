@@ -630,14 +630,12 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
                                      Instruction *I, InstDesc &Prev) {
   // We must handle the select(cmp(),x,y) as a single instruction. Advance to
   // the select.
-  CmpPredicate Pred;
-  if (match(I, m_OneUse(m_Cmp(Pred, m_Value(), m_Value())))) {
+  if (match(I, m_OneUse(m_Cmp()))) {
     if (auto *Select = dyn_cast<SelectInst>(*I->user_begin()))
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  if (!match(I,
-             m_Select(m_Cmp(Pred, m_Value(), m_Value()), m_Value(), m_Value())))
+  if (!match(I, m_Select(m_Cmp(), m_Value(), m_Value())))
     return InstDesc(false, I);
 
   SelectInst *SI = cast<SelectInst>(I);
@@ -759,16 +757,14 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
 
   // We must handle the select(cmp()) as a single instruction. Advance to the
   // select.
-  CmpPredicate Pred;
-  if (match(I, m_OneUse(m_Cmp(Pred, m_Value(), m_Value())))) {
+  if (match(I, m_OneUse(m_Cmp()))) {
     if (auto *Select = dyn_cast<SelectInst>(*I->user_begin()))
       return InstDesc(Select, Prev.getRecKind());
   }
 
   // Only match select with single use cmp condition, or a min/max intrinsic.
   if (!isa<IntrinsicInst>(I) &&
-      !match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), m_Value(),
-                         m_Value())))
+      !match(I, m_Select(m_OneUse(m_Cmp()), m_Value(), m_Value())))
     return InstDesc(false, I);
 
   // Look for a min/max pattern.
