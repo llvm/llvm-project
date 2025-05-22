@@ -1572,7 +1572,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   // zve32x is broken for partial_reduce_umla, but let's not make it worse.
-  if (Subtarget.hasStdExtZvqdotq() && Subtarget.getRealMinVLen() >= 64) {
+  if (Subtarget.hasStdExtZvqdotq() && Subtarget.getELen() >= 64) {
     setPartialReduceMLAAction(MVT::nxv1i32, MVT::nxv4i8, Custom);
     setPartialReduceMLAAction(MVT::nxv2i32, MVT::nxv8i8, Custom);
     setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Custom);
