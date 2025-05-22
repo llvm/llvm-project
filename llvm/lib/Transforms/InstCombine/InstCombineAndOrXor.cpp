@@ -3593,10 +3593,16 @@ static Value *foldOrOfInversions(BinaryOperator &I,
   return nullptr;
 }
 
+// A decomposition of ((A & N) ? 0 : N * C) . Where X = A, Factor = C, Mask = N.
+// The NUW / NSW bools
+// Note that we can decompose equivalent forms of this expression (e.g. ((A & N)
+// * C))
 struct DecomposedBitMaskMul {
   Value *X;
   APInt Factor;
   APInt Mask;
+  bool NUW;
+  bool NSW;
 };
 
 static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
@@ -3606,20 +3612,21 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
 
   Value *MulOp = nullptr;
   const APInt *MulConst = nullptr;
+
+  // Decompose (A & N) * C) into BitMaskMul
   if (match(Op, m_Mul(m_Value(MulOp), m_APInt(MulConst)))) {
     Value *Original = nullptr;
     const APInt *Mask = nullptr;
-    if (!MulConst->isStrictlyPositive())
+    if (MulConst->isZero())
       return std::nullopt;
 
     if (match(MulOp, m_And(m_Value(Original), m_APInt(Mask)))) {
-      if (!Mask->isStrictlyPositive())
+      if (Mask->isZero())
         return std::nullopt;
-      DecomposedBitMaskMul Ret;
-      Ret.X = Original;
-      Ret.Mask = *Mask;
-      Ret.Factor = *MulConst;
-      return Ret;
+      return std::optional<DecomposedBitMaskMul>(
+          {Original, *MulConst, *Mask,
+           cast<BinaryOperator>(Op)->hasNoUnsignedWrap(),
+           cast<BinaryOperator>(Op)->hasNoSignedWrap()});
     }
     return std::nullopt;
   }
@@ -3627,7 +3634,7 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
   Value *Cond = nullptr;
   const APInt *EqZero = nullptr, *NeZero = nullptr;
 
-  //  (!(A & N) ? 0 : N * C) + (!(A & M) ? 0 : M * C) -> A & (N + M) * C
+  // Decompose ((A & N) ? 0 : N * C) into BitMaskMul
   if (match(Op, m_Select(m_Value(Cond), m_APInt(EqZero), m_APInt(NeZero)))) {
     auto ICmpDecompose =
         decomposeBitTest(Cond, /*LookThruTrunc=*/true,
@@ -3638,22 +3645,20 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
     if (ICmpDecompose->Pred == ICmpInst::ICMP_NE)
       std::swap(EqZero, NeZero);
 
-    if (!EqZero->isZero() || !NeZero->isStrictlyPositive())
+    if (!EqZero->isZero() || NeZero->isZero())
       return std::nullopt;
 
     if (!ICmpInst::isEquality(ICmpDecompose->Pred) ||
         !ICmpDecompose->C.isZero() || !ICmpDecompose->Mask.isPowerOf2() ||
-        ICmpDecompose->Mask.isNegative())
+        ICmpDecompose->Mask.isZero())
       return std::nullopt;
 
     if (!NeZero->urem(ICmpDecompose->Mask).isZero())
       return std::nullopt;
 
-    DecomposedBitMaskMul Ret;
-    Ret.X = ICmpDecompose->X;
-    Ret.Mask = ICmpDecompose->Mask;
-    Ret.Factor = NeZero->udiv(ICmpDecompose->Mask);
-    return Ret;
+    return std::optional<DecomposedBitMaskMul>(
+        {ICmpDecompose->X, NeZero->udiv(ICmpDecompose->Mask),
+         ICmpDecompose->Mask, /*NUW=*/false, /*NSW=*/false});
   }
 
   return std::nullopt;
@@ -3741,19 +3746,26 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
 
-    auto Decomp0 = matchBitmaskMul(I.getOperand(0));
+    // (!(A & N) ? 0 : N * C) + (!(A & M) ? 0 : M * C) -> A & (N + M) * C
+    // This also accepts the equivalent mul form of (A & N) ? 0 : N * C)
+    // expressions i.e. (A & N) * C
     auto Decomp1 = matchBitmaskMul(I.getOperand(1));
-
-    if (Decomp0 && Decomp1) {
-      if (Decomp0->X == Decomp1->X &&
+    if (Decomp1) {
+      auto Decomp0 = matchBitmaskMul(I.getOperand(0));
+      if (Decomp0 && Decomp0->X == Decomp1->X &&
           (Decomp0->Mask & Decomp1->Mask).isZero() &&
           Decomp0->Factor == Decomp1->Factor) {
+
         auto NewAnd = Builder.CreateAnd(
             Decomp0->X, ConstantInt::get(Decomp0->X->getType(),
                                          (Decomp0->Mask + Decomp1->Mask)));
 
-        return BinaryOperator::CreateMul(
+        auto Combined = BinaryOperator::CreateMul(
             NewAnd, ConstantInt::get(NewAnd->getType(), Decomp1->Factor));
+
+        Combined->setHasNoUnsignedWrap(Decomp0->NUW && Decomp1->NUW);
+        Combined->setHasNoSignedWrap(Decomp0->NSW && Decomp1->NSW);
+        return Combined;
       }
     }
   }
