@@ -615,7 +615,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       });
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
-      CompilerInstance::createDiagnostics(*VFS, CI.getDiagnosticOpts(),
+      CompilerInstance::createDiagnostics(*VFS, &CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics,
                                           /*ShouldOwnClient=*/false);
   const Config &Cfg = Config::current();

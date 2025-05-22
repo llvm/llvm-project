@@ -58,9 +58,9 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   std::vector<const char *> Args = {Standard.data(), File.data()};
-  DiagnosticOptions InvocationDiagOpts;
+  auto InvocationDiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
   auto InvocationDiags =
-      CompilerInstance::createDiagnostics(*FS, InvocationDiagOpts);
+      CompilerInstance::createDiagnostics(*FS, InvocationDiagOpts.get());
   CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
 
   CompilerInstance Compiler(std::move(Invocation));

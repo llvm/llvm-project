@@ -22,9 +22,11 @@
 using namespace clang;
 
 TextDiagnosticPrinter::TextDiagnosticPrinter(raw_ostream &os,
-                                             DiagnosticOptions &DiagOpts,
+                                             DiagnosticOptions *diags,
                                              bool _OwnsOutputStream)
-    : OS(os), DiagOpts(DiagOpts), OwnsOutputStream(_OwnsOutputStream) {}
+  : OS(os), DiagOpts(diags),
+    OwnsOutputStream(_OwnsOutputStream) {
+}
 
 TextDiagnosticPrinter::~TextDiagnosticPrinter() {
   if (OwnsOutputStream)
@@ -34,7 +36,7 @@ TextDiagnosticPrinter::~TextDiagnosticPrinter() {
 void TextDiagnosticPrinter::BeginSourceFile(const LangOptions &LO,
                                             const Preprocessor *PP) {
   // Build the TextDiagnostic utility.
-  TextDiag.reset(new TextDiagnostic(OS, LO, DiagOpts, PP));
+  TextDiag.reset(new TextDiagnostic(OS, LO, &*DiagOpts, PP));
 }
 
 void TextDiagnosticPrinter::EndSourceFile() {
@@ -119,7 +121,7 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   Info.FormatDiagnostic(OutStr);
 
   llvm::raw_svector_ostream DiagMessageStream(OutStr);
-  printDiagnosticOptions(DiagMessageStream, Level, Info, DiagOpts);
+  printDiagnosticOptions(DiagMessageStream, Level, Info, *DiagOpts);
 
   // Keeps track of the starting position of the location
   // information (e.g., "foo.c:10:4:") that precedes the error
@@ -135,16 +137,17 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   // diagnostics in a context that lacks language options, a source manager, or
   // other infrastructure necessary when emitting more rich diagnostics.
   if (!Info.getLocation().isValid()) {
-    TextDiagnostic::printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
+    TextDiagnostic::printDiagnosticLevel(OS, Level, DiagOpts->ShowColors);
     TextDiagnostic::printDiagnosticMessage(
         OS, /*IsSupplemental=*/Level == DiagnosticsEngine::Note,
         DiagMessageStream.str(), OS.tell() - StartOfLocationInfo,
-        DiagOpts.MessageLength, DiagOpts.ShowColors);
+        DiagOpts->MessageLength, DiagOpts->ShowColors);
     OS.flush();
     return;
   }
 
   // Assert that the rest of our infrastructure is setup properly.
+  assert(DiagOpts && "Unexpected diagnostic without options set");
   assert(Info.hasSourceManager() &&
          "Unexpected diagnostic with no source manager");
   assert(TextDiag && "Unexpected diagnostic outside source file processing");

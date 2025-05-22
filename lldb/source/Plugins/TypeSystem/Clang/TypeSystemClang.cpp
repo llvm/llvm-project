@@ -680,9 +680,8 @@ void TypeSystemClang::CreateASTContext() {
       file_system_options, FileSystem::Instance().GetVirtualFileSystem());
 
   llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_id_sp(new DiagnosticIDs());
-  m_diagnostic_options_up = std::make_unique<DiagnosticOptions>();
   m_diagnostics_engine_up =
-      std::make_unique<DiagnosticsEngine>(diag_id_sp, *m_diagnostic_options_up);
+      std::make_unique<DiagnosticsEngine>(diag_id_sp, new DiagnosticOptions());
 
   m_source_manager_up = std::make_unique<clang::SourceManager>(
       *m_diagnostics_engine_up, *m_file_manager_up);

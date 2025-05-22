@@ -1204,7 +1204,6 @@ private:
   std::unique_ptr<clang::LangOptions> m_language_options_up;
   std::unique_ptr<clang::FileManager> m_file_manager_up;
   std::unique_ptr<clang::SourceManager> m_source_manager_up;
-  std::unique_ptr<clang::DiagnosticOptions> m_diagnostic_options_up;
   std::unique_ptr<clang::DiagnosticsEngine> m_diagnostics_engine_up;
   std::unique_ptr<clang::DiagnosticConsumer> m_diagnostic_consumer_up;
   std::shared_ptr<clang::TargetOptions> m_target_options_rp;

@@ -47,8 +47,9 @@ inline clang::driver::Driver diagnostic_test_driver() {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
-  clang::DiagnosticOptions DiagOpts;
-  clang::DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer);
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts =
+      new clang::DiagnosticOptions();
+  clang::DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
   return clang::driver::Driver("/bin/clang", "", Diags, "", InMemoryFileSystem);
 }
 

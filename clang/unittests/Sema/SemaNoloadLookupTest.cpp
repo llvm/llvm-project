@@ -59,9 +59,9 @@ public:
 
     CreateInvocationOptions CIOpts;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
-    DiagnosticOptions DiagOpts;
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
+        CompilerInstance::createDiagnostics(*CIOpts.VFS,
+                                            new DiagnosticOptions());
     CIOpts.Diags = Diags;
 
     std::string CacheBMIPath =
