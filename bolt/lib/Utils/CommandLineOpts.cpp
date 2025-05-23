@@ -107,8 +107,7 @@ bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
                                    StringRef Arg, HeatmapBlockSpec &Val) {
   auto [InitialPart, ScalesPart] = Arg.split(':');
   if (InitialPart.getAsInteger(10, Val.Initial)) {
-    O.error("'" + Arg +
-            "' value invalid for block-size initial_size argument");
+    O.error("'" + Arg + "' value invalid for block-size initial_size argument");
     return true;
   }
   // Scales part is optional.

@@ -24,7 +24,7 @@ enum HeatmapModeKind {
 };
 
 struct HeatmapBlockSpec {
-  unsigned Initial{0}; // Initial block size in bytes.
+  unsigned Initial{0};                // Initial block size in bytes.
   llvm::SmallVector<unsigned> Scales; // Pow2 zoom factors applied cumulatively.
 };
 
