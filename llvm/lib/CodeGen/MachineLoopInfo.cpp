@@ -192,8 +192,8 @@ MDNode *MachineLoop::getLoopID() const {
     const auto *TI = BB->getTerminator();
     if (!TI)
       return nullptr;
-    MDNode *MD = TI->getMetadata(LLVMContext::MD_loop);
 
+    MDNode *MD = TI->getMetadata(LLVMContext::MD_loop);
     if (!MD)
       return nullptr;
 
