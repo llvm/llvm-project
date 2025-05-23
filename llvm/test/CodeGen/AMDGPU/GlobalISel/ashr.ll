@@ -1881,6 +1881,141 @@ define amdgpu_ps i65 @s_ashr_i65_33(i65 inreg %value) {
   ret i65 %result
 }
 
+define <4 x i2> @v_ashr_v4i2(<4 x i2> %value, <4 x i2> %amount) {
+; GFX6-LABEL: v_ashr_v4i2:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_and_b32_e32 v4, 3, v4
+; GFX6-NEXT:    v_bfe_i32 v0, v0, 0, 2
+; GFX6-NEXT:    v_ashrrev_i32_e32 v0, v4, v0
+; GFX6-NEXT:    v_and_b32_e32 v4, 3, v5
+; GFX6-NEXT:    v_bfe_i32 v1, v1, 0, 2
+; GFX6-NEXT:    v_ashrrev_i32_e32 v1, v4, v1
+; GFX6-NEXT:    v_and_b32_e32 v4, 3, v6
+; GFX6-NEXT:    v_bfe_i32 v2, v2, 0, 2
+; GFX6-NEXT:    v_ashrrev_i32_e32 v2, v4, v2
+; GFX6-NEXT:    v_and_b32_e32 v4, 3, v7
+; GFX6-NEXT:    v_bfe_i32 v3, v3, 0, 2
+; GFX6-NEXT:    v_ashrrev_i32_e32 v3, v4, v3
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_ashr_v4i2:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_and_b32_e32 v4, 3, v4
+; GFX8-NEXT:    v_bfe_i32 v0, v0, 0, 2
+; GFX8-NEXT:    v_ashrrev_i16_e32 v0, v4, v0
+; GFX8-NEXT:    v_and_b32_e32 v4, 3, v5
+; GFX8-NEXT:    v_bfe_i32 v1, v1, 0, 2
+; GFX8-NEXT:    v_ashrrev_i16_e32 v1, v4, v1
+; GFX8-NEXT:    v_and_b32_e32 v4, 3, v6
+; GFX8-NEXT:    v_bfe_i32 v2, v2, 0, 2
+; GFX8-NEXT:    v_ashrrev_i16_e32 v2, v4, v2
+; GFX8-NEXT:    v_and_b32_e32 v4, 3, v7
+; GFX8-NEXT:    v_bfe_i32 v3, v3, 0, 2
+; GFX8-NEXT:    v_ashrrev_i16_e32 v3, v4, v3
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_ashr_v4i2:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v4, 3, v4
+; GFX9-NEXT:    v_bfe_i32 v0, v0, 0, 2
+; GFX9-NEXT:    v_ashrrev_i16_e32 v0, v4, v0
+; GFX9-NEXT:    v_and_b32_e32 v4, 3, v5
+; GFX9-NEXT:    v_bfe_i32 v1, v1, 0, 2
+; GFX9-NEXT:    v_ashrrev_i16_e32 v1, v4, v1
+; GFX9-NEXT:    v_and_b32_e32 v4, 3, v6
+; GFX9-NEXT:    v_bfe_i32 v2, v2, 0, 2
+; GFX9-NEXT:    v_ashrrev_i16_e32 v2, v4, v2
+; GFX9-NEXT:    v_and_b32_e32 v4, 3, v7
+; GFX9-NEXT:    v_bfe_i32 v3, v3, 0, 2
+; GFX9-NEXT:    v_ashrrev_i16_e32 v3, v4, v3
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10PLUS-LABEL: v_ashr_v4i2:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_and_b32_e32 v4, 3, v4
+; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 2
+; GFX10PLUS-NEXT:    v_and_b32_e32 v5, 3, v5
+; GFX10PLUS-NEXT:    v_bfe_i32 v1, v1, 0, 2
+; GFX10PLUS-NEXT:    v_and_b32_e32 v6, 3, v6
+; GFX10PLUS-NEXT:    v_bfe_i32 v2, v2, 0, 2
+; GFX10PLUS-NEXT:    v_and_b32_e32 v7, 3, v7
+; GFX10PLUS-NEXT:    v_bfe_i32 v3, v3, 0, 2
+; GFX10PLUS-NEXT:    v_ashrrev_i16 v0, v4, v0
+; GFX10PLUS-NEXT:    v_ashrrev_i16 v1, v5, v1
+; GFX10PLUS-NEXT:    v_ashrrev_i16 v2, v6, v2
+; GFX10PLUS-NEXT:    v_ashrrev_i16 v3, v7, v3
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+  %result = ashr <4 x i2> %value, %amount
+  ret <4 x i2> %result
+}
+
+; arithmetic shifts of an i1 are identity operations
+define amdgpu_ps <4 x i1> @s_ashr_v4i1(<4 x i1> inreg %value, <4 x i1> inreg %amount) {
+; GCN-LABEL: s_ashr_v4i1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: s_ashr_v4i1:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  %result = ashr <4 x i1> %value, %amount
+  ret <4 x i1> %result
+}
+
+define <4 x i1> @v_ashr_v4i1(<4 x i1> %value, <4 x i1> %amount) {
+; GCN-LABEL: v_ashr_v4i1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10PLUS-LABEL: v_ashr_v4i1:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+  %result = ashr <4 x i1> %value, %amount
+  ret <4 x i1> %result
+}
+
+define amdgpu_ps <4 x i2> @s_ashr_v4i2(<4 x i2> inreg %value, <4 x i2> inreg %amount) {
+; GCN-LABEL: s_ashr_v4i2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_and_b32 s4, s4, 3
+; GCN-NEXT:    s_bfe_i32 s0, s0, 0x20000
+; GCN-NEXT:    s_ashr_i32 s0, s0, s4
+; GCN-NEXT:    s_and_b32 s4, s5, 3
+; GCN-NEXT:    s_bfe_i32 s1, s1, 0x20000
+; GCN-NEXT:    s_ashr_i32 s1, s1, s4
+; GCN-NEXT:    s_and_b32 s4, s6, 3
+; GCN-NEXT:    s_bfe_i32 s2, s2, 0x20000
+; GCN-NEXT:    s_ashr_i32 s2, s2, s4
+; GCN-NEXT:    s_and_b32 s4, s7, 3
+; GCN-NEXT:    s_bfe_i32 s3, s3, 0x20000
+; GCN-NEXT:    s_ashr_i32 s3, s3, s4
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: s_ashr_v4i2:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_and_b32 s4, s4, 3
+; GFX10PLUS-NEXT:    s_bfe_i32 s0, s0, 0x20000
+; GFX10PLUS-NEXT:    s_and_b32 s5, s5, 3
+; GFX10PLUS-NEXT:    s_bfe_i32 s1, s1, 0x20000
+; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, s4
+; GFX10PLUS-NEXT:    s_ashr_i32 s1, s1, s5
+; GFX10PLUS-NEXT:    s_and_b32 s4, s6, 3
+; GFX10PLUS-NEXT:    s_bfe_i32 s2, s2, 0x20000
+; GFX10PLUS-NEXT:    s_and_b32 s5, s7, 3
+; GFX10PLUS-NEXT:    s_bfe_i32 s3, s3, 0x20000
+; GFX10PLUS-NEXT:    s_ashr_i32 s2, s2, s4
+; GFX10PLUS-NEXT:    s_ashr_i32 s3, s3, s5
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  %result = ashr <4 x i2> %value, %amount
+  ret <4 x i2> %result
+}
+
 ; FIXME: Argument lowering asserts
 ; define <2 x i65> @v_ashr_v2i65(<2 x i65> %value, <2 x i65> %amount) {
 ;   %result = ashr <2 x i65> %value, %amount
