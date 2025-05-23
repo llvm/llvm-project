@@ -9673,8 +9673,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       SextVal = SignExtend32(SplatBits, SplatBitSize);
     } else if (SplatBitSize == 64) {
       int64_t Splat64Val = APSplatBits.getSExtValue();
-      SplatBits = (uint64_t) Splat64Val;
-      SextVal = (int32_t) SplatBits;
+      SplatBits = (uint64_t)Splat64Val;
+      SextVal = (int32_t)SplatBits;
       bool P9Vector = Subtarget.hasP9Vector();
       int32_t Hi = P9Vector ? 127 : 15;
       int32_t Lo = P9Vector ? -128 : -16;
@@ -9814,7 +9814,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // Two instruction sequences.
 
   if (Subtarget.hasP9Vector() && SextVal >= -128 && SextVal <= 127) {
-    SDValue C = DAG.getConstant((unsigned char) SextVal, dl, MVT::i32);
+    SDValue C = DAG.getConstant((unsigned char)SextVal, dl, MVT::i32);
     SmallVector<SDValue, 16> Ops(16, C);
     SDValue BV = DAG.getBuildVector(MVT::v16i8, dl, Ops);
     assert((SplatSize == 2 || SplatSize == 4 || SplatSize == 8) &&
