@@ -452,13 +452,21 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
             .addReg(RegImm.Reg);
       } else if (RISCV::GPRPairRegClass.contains(RegImm.Reg)) {
         assert(RegImm.Imm == 0);
+        MCRegister EvenReg = TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_even);
+        MCRegister OddReg;
+        // We need to special case odd reg for X0_PAIR.
+        if (RegImm.Reg == RISCV::X0_Pair)
+          OddReg = RISCV::X0;
+        else
+          OddReg = TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_odd);
+        assert(NewReg != RISCV::X0_Pair && "Cannot write to X0_Pair");
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI),
                 TRI.getSubReg(NewReg, RISCV::sub_gpr_even))
-            .addReg(TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_even))
+            .addReg(EvenReg)
             .addImm(0);
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI),
                 TRI.getSubReg(NewReg, RISCV::sub_gpr_odd))
-            .addReg(TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_odd))
+            .addReg(OddReg)
             .addImm(0);
       } else {
         assert((RISCV::FPR32RegClass.contains(RegImm.Reg) ||
