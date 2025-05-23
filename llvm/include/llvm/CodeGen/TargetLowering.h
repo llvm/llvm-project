@@ -51,6 +51,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -4232,6 +4233,13 @@ public:
                                               const APInt &DemandedElts,
                                               const MachineRegisterInfo &MRI,
                                               unsigned Depth = 0) const;
+
+  virtual void computeKnownFPClassForTargetInstr(GISelValueTracking &Analysis,
+                                                 Register R,
+                                                 KnownFPClass &Known,
+                                                 const APInt &DemandedElts,
+                                                 const MachineRegisterInfo &MRI,
+                                                 unsigned Depth = 0) const;
 
   /// Determine the known alignment for the pointer value \p R. This is can
   /// typically be inferred from the number of low known 0 bits. However, for a
