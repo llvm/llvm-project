@@ -93,7 +93,7 @@ struct RootConstants {
   ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
-using DescriptorType = llvm::dxil::ResourceClass;
+enum class DescriptorType : uint8_t { SRV = 0, UAV, CBuffer };
 // Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
 struct RootDescriptor {
   DescriptorType Type;
@@ -103,17 +103,13 @@ struct RootDescriptor {
   RootDescriptorFlags Flags;
 
   void setDefaultFlags() {
-    assert(Type != ParamType::Sampler &&
-           "Sampler is not a valid type of ParamType");
     switch (Type) {
-    case ParamType::CBuffer:
-    case ParamType::SRV:
+    case DescriptorType::CBuffer:
+    case DescriptorType::SRV:
       Flags = RootDescriptorFlags::DataStaticWhileSetAtExecute;
       break;
-    case ParamType::UAV:
+    case DescriptorType::UAV:
       Flags = RootDescriptorFlags::DataVolatile;
-      break;
-    case ParamType::Sampler:
       break;
     }
   }
