@@ -59,12 +59,12 @@ __attribute__((target("arch=la664, no-div32")))
 void la664Nodiv32() {}
 
 __attribute__((target("tune=la464")))
-// CHECK-LABEL: define dso_local void @tuneLa664(
+// CHECK-LABEL: define dso_local void @tuneLa464(
 // CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
-void tuneLa664() {}
+void tuneLa464() {}
 
 __attribute__((target("arch=la464, tune=la664")))
 // CHECK-LABEL: define dso_local void @archLa464tuneLa664(

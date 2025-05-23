@@ -388,6 +388,21 @@ bool LoongArchTargetInfo::handleTargetFeatures(
   return true;
 }
 
+enum class AttrFeatureKind { Arch, Tune, NoFeature, Feature };
+
+static std::pair<AttrFeatureKind, llvm::StringRef>
+getAttrFeatureTypeAndValue(llvm::StringRef AttrFeature) {
+  if (auto Split = AttrFeature.split("="); !Split.second.empty()) {
+    if (Split.first.trim() == "arch")
+      return {AttrFeatureKind::Arch, Split.second.trim()};
+    if (Split.first.trim() == "tune")
+      return {AttrFeatureKind::Tune, Split.second.trim()};
+  }
+  if (AttrFeature.starts_with("no-"))
+    return {AttrFeatureKind::NoFeature, AttrFeature.drop_front(3)};
+  return {AttrFeatureKind::Feature, AttrFeature};
+}
+
 ParsedTargetAttr
 LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
   ParsedTargetAttr Ret;
@@ -397,37 +412,44 @@ LoongArchTargetInfo::parseTargetAttr(StringRef Features) const {
   Features.split(AttrFeatures, ",");
 
   for (auto &Feature : AttrFeatures) {
-    Feature = Feature.trim();
+    auto [Kind, Value] = getAttrFeatureTypeAndValue(Feature.trim());
 
-    if (Feature.starts_with("arch=")) {
-      StringRef ArchValue = Feature.split("=").second.trim();
-
-      if (llvm::LoongArch::isValidArchName(ArchValue) ||
-          ArchValue == "la64v1.0" || ArchValue == "la64v1.1") {
+    switch (Kind) {
+    case AttrFeatureKind::Arch: {
+      if (llvm::LoongArch::isValidArchName(Value) || Value == "la64v1.0" ||
+          Value == "la64v1.1") {
         std::vector<llvm::StringRef> ArchFeatures;
-        if (llvm::LoongArch::getArchFeatures(ArchValue, ArchFeatures)) {
+        if (llvm::LoongArch::getArchFeatures(Value, ArchFeatures)) {
           Ret.Features.insert(Ret.Features.end(), ArchFeatures.begin(),
                               ArchFeatures.end());
         }
 
         if (!Ret.CPU.empty())
           Ret.Duplicate = "arch=";
-        else if (ArchValue == "la64v1.0" || ArchValue == "la64v1.1")
+        else if (Value == "la64v1.0" || Value == "la64v1.1")
           Ret.CPU = "loongarch64";
         else
-          Ret.CPU = ArchValue;
+          Ret.CPU = Value;
       } else {
-        Ret.Features.push_back("!arch=" + ArchValue.str());
+        Ret.Features.push_back("!arch=" + Value.str());
       }
-    } else if (Feature.starts_with("tune=")) {
+      break;
+    }
+
+    case AttrFeatureKind::Tune:
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
       else
-        Ret.Tune = Feature.split("=").second.trim();
-    } else if (Feature.starts_with("no-")) {
-      Ret.Features.push_back("-" + Feature.split("-").second.str());
-    } else {
-      Ret.Features.push_back("+" + Feature.str());
+        Ret.Tune = Value;
+      break;
+
+    case AttrFeatureKind::NoFeature:
+      Ret.Features.push_back("-" + Value.str());
+      break;
+
+    case AttrFeatureKind::Feature:
+      Ret.Features.push_back("+" + Value.str());
+      break;
     }
   }
   return Ret;
