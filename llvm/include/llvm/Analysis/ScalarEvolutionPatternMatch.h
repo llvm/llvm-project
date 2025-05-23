@@ -14,7 +14,6 @@
 #define LLVM_ANALYSIS_SCALAREVOLUTIONPATTERNMATCH_H
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include <type_traits>
 
 namespace llvm {
 namespace SCEVPatternMatch {
