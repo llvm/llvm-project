@@ -79,15 +79,13 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
       "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
       llvm::cl::init("-"));
 
-  bool verifyDiagnosticsFlag{};
-  std::string splitInputFileFlag;
-  static llvm::cl::opt<bool, true> verifyDiagnostics(
+  static llvm::cl::opt<bool> verifyDiagnostics(
       "verify-diagnostics",
       llvm::cl::desc("Check that emitted diagnostics match "
                      "expected-* lines on the corresponding line"),
-      llvm::cl::location(verifyDiagnosticsFlag), llvm::cl::init(false));
+      llvm::cl::init(false));
 
-  static llvm::cl::opt<std::string, true> splitInputFile(
+  static llvm::cl::opt<std::string> splitInputFile(
       "split-input-file", llvm::cl::ValueOptional,
       llvm::cl::callback([&](const std::string &str) {
         // Implicit value: use default marker if flag was used without
@@ -97,7 +95,7 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
       }),
       llvm::cl::desc("Split the input file into chunks using the given or "
                      "default marker and process each chunk independently"),
-      llvm::cl::location(splitInputFileFlag), llvm::cl::init(""));
+      llvm::cl::init(""));
 
   llvm::InitLLVM y(argc, argv);
 
@@ -125,14 +123,16 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
                          verifyDiagnostics, nullptr);
   };
 
-  if (splitInputFileFlag.size())
+  auto &splitInputFileDelimiter = splitInputFile.getValue();
+  if (splitInputFileDelimiter.size())
     return splitAndProcessBuffer(std::move(input), chunkFn, output->os(),
-                                 splitInputFileFlag, splitInputFileFlag);
+                                 splitInputFileDelimiter,
+                                 splitInputFileDelimiter);
 
   if (failed(chunkFn(std::move(input), output->os())))
     return failure();
 
-  if (!verifyDiagnosticsFlag)
+  if (!verifyDiagnostics)
     output->keep();
 
   return success();
