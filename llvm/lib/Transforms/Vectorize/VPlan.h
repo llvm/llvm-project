@@ -775,29 +775,37 @@ public:
   void applyFlags(Instruction &I) const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
-      I.setHasNoUnsignedWrap(WrapFlags.HasNUW);
-      I.setHasNoSignedWrap(WrapFlags.HasNSW);
+      if (isa<OverflowingBinaryOperator>(I) || isa<TruncInst>(I)) {
+        I.setHasNoUnsignedWrap(WrapFlags.HasNUW);
+        I.setHasNoSignedWrap(WrapFlags.HasNSW);
+      }
       break;
     case OperationType::DisjointOp:
-      cast<PossiblyDisjointInst>(&I)->setIsDisjoint(DisjointFlags.IsDisjoint);
+      if (auto *Disjoint = dyn_cast<PossiblyDisjointInst>(&I))
+        Disjoint->setIsDisjoint(DisjointFlags.IsDisjoint);
       break;
     case OperationType::PossiblyExactOp:
-      I.setIsExact(ExactFlags.IsExact);
+      if (isa<PossiblyExactOperator>(I))
+        I.setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      cast<GetElementPtrInst>(&I)->setNoWrapFlags(GEPFlags);
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
+        GEP->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
-      I.setHasAllowReassoc(FMFs.AllowReassoc);
-      I.setHasNoNaNs(FMFs.NoNaNs);
-      I.setHasNoInfs(FMFs.NoInfs);
-      I.setHasNoSignedZeros(FMFs.NoSignedZeros);
-      I.setHasAllowReciprocal(FMFs.AllowReciprocal);
-      I.setHasAllowContract(FMFs.AllowContract);
-      I.setHasApproxFunc(FMFs.ApproxFunc);
+      if (isa<FPMathOperator>(I)) {
+        I.setHasAllowReassoc(FMFs.AllowReassoc);
+        I.setHasNoNaNs(FMFs.NoNaNs);
+        I.setHasNoInfs(FMFs.NoInfs);
+        I.setHasNoSignedZeros(FMFs.NoSignedZeros);
+        I.setHasAllowReciprocal(FMFs.AllowReciprocal);
+        I.setHasAllowContract(FMFs.AllowContract);
+        I.setHasApproxFunc(FMFs.ApproxFunc);
+      }
       break;
     case OperationType::NonNegOp:
-      I.setNonNeg(NonNegFlags.NonNeg);
+      if (isa<PossiblyNonNegInst>(I))
+        I.setNonNeg(NonNegFlags.NonNeg);
       break;
     case OperationType::Cmp:
     case OperationType::Other:

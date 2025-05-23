@@ -488,8 +488,9 @@ public:
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
         AC(AC), ORE(ORE), VF(VecWidth),
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
-        Builder(PSE.getSE()->getContext()), Cost(CM), BFI(BFI), PSI(PSI),
-        RTChecks(RTChecks), Plan(Plan),
+        Folder(PSE.getSE()->getDataLayout()),
+        Builder(PSE.getSE()->getContext(), Folder), Cost(CM), BFI(BFI),
+        PSI(PSI), RTChecks(RTChecks), Plan(Plan),
         VectorPHVPB(Plan.getEntry()->getSingleSuccessor()) {}
 
   virtual ~InnerLoopVectorizer() = default;
@@ -597,8 +598,11 @@ protected:
   /// many different vector instructions.
   unsigned UF;
 
-  /// The builder that we use
-  IRBuilder<> Builder;
+  /// The folder that we use for the builder.
+  InstSimplifyFolder Folder;
+
+  /// The builder that we use.
+  IRBuilder<InstSimplifyFolder> Builder;
 
   // --- Vectorization state ---
 
