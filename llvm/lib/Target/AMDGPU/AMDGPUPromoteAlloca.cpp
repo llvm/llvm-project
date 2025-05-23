@@ -469,19 +469,26 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     // If VarOffsets already holds a different pointer, abort.
     //
     // Example:
-    //   Suppose LocalVarsOffsets = { (%ptr → 4) } from this GEP, and
-    //   VarOffsets already has { (%ptr → 8) } from an inner GEP.
-    //   After this loop, VarOffsets should become { (%ptr → 12) }.
+    //   1) First GEP picks the idx’th element (each element is 8 bytes):
+    //        addr0 = base + idx * 8
+    //
+    //   2) Second GEP adds a fixed 4‐byte shift:
+    //        addr1 = addr0 + 4
+    //
+    // To turn that into a 4‐byte “lane” index we divide by 4:
+    //        lane = (idx * 8 + 4) / 4
+    //             = idx * (8 / 4) + (4 / 4)
+    //             = idx * 2 + 1
     for (auto &VarEntry : LocalVarsOffsets) {
       // If VarOffsets already records a different pointer, abort.
       if (!VarOffsets.empty() && !VarOffsets.count(VarEntry.first))
         return nullptr;
 
-      // Look up whether we’ve seen this pointer before.
-      auto *Existing = VarOffsets.find(VarEntry.first);
-      if (Existing == VarOffsets.end())
-        VarOffsets.insert({VarEntry.first, VarEntry.second});
-      else
+      // Try to insert VarEntry.first with its offset; if that pointer is
+      // already in VarOffsets, add the new offset to the existing one.
+      auto [Existing, Inserted] =
+          VarOffsets.try_emplace(VarEntry.first, VarEntry.second);
+      if (!Inserted)
         Existing->second += VarEntry.second;
     }
 
