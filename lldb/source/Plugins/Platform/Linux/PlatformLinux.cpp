@@ -490,10 +490,6 @@ static std::string GetDescriptionFromSiginfo(lldb::ValueObjectSP siginfo_sp) {
   int code = siginfo_sp->GetChildMemberWithName("si_code")->GetValueAsSigned(0);
   int signo =
       siginfo_sp->GetChildMemberWithName("si_signo")->GetValueAsSigned(-1);
-  // si_code = 0 is SI_NOINFO, we just want the description with nothing
-  // important
-  if (code == 0)
-    return linux_signals.GetSignalDescription(signo, code);
 
   auto sifields = siginfo_sp->GetChildMemberWithName("_sifields");
   if (!sifields)
@@ -584,8 +580,8 @@ lldb::StopInfoSP PlatformLinux::GetStopInfoFromSiginfo(Thread &thread) {
   if (siginfo_description.empty())
     return StopInfo::CreateStopReasonWithSignal(
         thread, signo_sp->GetValueAsUnsigned(-1));
-  else
-    return StopInfo::CreateStopReasonWithSignal(
-        thread, signo_sp->GetValueAsUnsigned(-1), siginfo_description.c_str(),
-        sicode_sp->GetValueAsUnsigned(0));
+
+  return StopInfo::CreateStopReasonWithSignal(
+      thread, signo_sp->GetValueAsUnsigned(-1), siginfo_description.c_str(),
+      sicode_sp->GetValueAsUnsigned(0));
 }
