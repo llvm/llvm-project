@@ -690,6 +690,8 @@ static unsigned getFixupKindSize(unsigned Kind) {
   }
 }
 
+// Force relocation when there is a specifier. This might be too conservative -
+// GAS doesn't emit a relocation for call local@plt; local:.
 bool X86AsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
                                           const MCValue &Target,
                                           const MCSubtargetInfo *) {
