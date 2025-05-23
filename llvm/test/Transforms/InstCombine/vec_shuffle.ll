@@ -732,8 +732,11 @@ define <4 x i16> @widening_shuffle_shl_constant_op1_non0(<2 x i16> %v) {
   ret <4 x i16> %bo
 }
 
-; A binop that does not produce undef in the high lanes can not be moved before the shuffle.
-; This is not ok because 'or -1, undef --> -1' but moving the shuffle results in undef instead.
+; Previously, a shufflevector would produce an undef element from an undef mask
+; index, which meant that pulling the shuffle out wasn't correct if the original
+; binary op produced a non-undef result, e.g. or -1, undef --> -1.
+;
+; However nowadays shufflevector produces poison, which is safe to propagate.
 
 define <4 x i16> @widening_shuffle_or(<2 x i16> %v) {
 ; CHECK-LABEL: @widening_shuffle_or(

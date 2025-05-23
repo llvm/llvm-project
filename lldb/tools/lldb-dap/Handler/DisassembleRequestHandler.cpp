@@ -87,6 +87,13 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   auto addr = inst.GetAddress();
   const auto inst_addr = addr.GetLoadAddress(target);
+
+  // FIXME: This is a workaround - this address might come from
+  // disassembly that started in a different section, and thus
+  // comparisons between this object and other address objects with the
+  // same load address will return false.
+  addr = lldb::SBAddress(inst_addr, target);
+
   const char *m = inst.GetMnemonic(target);
   const char *o = inst.GetOperands(target);
   const char *c = inst.GetComment(target);
