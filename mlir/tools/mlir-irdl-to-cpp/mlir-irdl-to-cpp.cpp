@@ -123,7 +123,7 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
                          verifyDiagnostics, nullptr);
   };
 
-  auto &splitInputFileDelimiter = splitInputFile.getValue();
+  StringRef splitInputFileDelimiter{splitInputFile.getValue()};
   if (splitInputFileDelimiter.size())
     return splitAndProcessBuffer(std::move(input), chunkFn, output->os(),
                                  splitInputFileDelimiter,
