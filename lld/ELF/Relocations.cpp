@@ -1671,9 +1671,10 @@ void RelocationScanner::scan(Relocs<RelTy> rels) {
   }
 
   // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
+  // R_RISCV_PCREL_HI20, R_PPC64_ADDR64 and the branch-to-branch optimization.
   if (ctx.arg.emachine == EM_RISCV ||
-      (ctx.arg.emachine == EM_PPC64 && sec->name == ".toc"))
+      (ctx.arg.emachine == EM_PPC64 && sec->name == ".toc") ||
+      ctx.arg.branchToBranch)
     llvm::stable_sort(sec->relocs(),
                       [](const Relocation &lhs, const Relocation &rhs) {
                         return lhs.offset < rhs.offset;
@@ -1964,6 +1965,9 @@ void elf::postScanRelocations(Ctx &ctx) {
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
+
+  if (ctx.arg.branchToBranch)
+    ctx.target->applyBranchToBranchOpt();
 }
 
 static bool mergeCmp(const InputSection *a, const InputSection *b) {
