@@ -4,8 +4,8 @@
 define <4 x float> @fneg_fixed(float %x) {
 ; CHECK-LABEL: define <4 x float> @fneg_fixed(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <4 x float> poison, float [[X]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = fneg <4 x float> [[X_INSERT]]
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x float> poison, float [[V_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[V]]
 ;
   %x.insert = insertelement <4 x float> poison, float %x, i32 0
@@ -16,8 +16,8 @@ define <4 x float> @fneg_fixed(float %x) {
 define <vscale x 4 x float> @fneg_scalable(float %x) {
 ; CHECK-LABEL: define <vscale x 4 x float> @fneg_scalable(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[X]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = fneg <vscale x 4 x float> [[X_INSERT]]
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[V:%.*]] = insertelement <vscale x 4 x float> poison, float [[V_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[V]]
 ;
   %x.insert = insertelement <vscale x 4 x float> poison, float %x, i32 0
