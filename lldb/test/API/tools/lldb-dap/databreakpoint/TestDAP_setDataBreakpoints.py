@@ -77,16 +77,16 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         bp_resp = self.dap_server.request_dataBreakpointInfo(
             var_address, asAddress=True, bytes_=var_byte_watch_size
         )
-        resp_data_id = bp_resp["body"]["dataId"]
         self.assertTrue(
             bp_resp["success"], f"dataBreakpointInfo request failed: {bp_resp}"
         )
+        resp_data_id = bp_resp["body"]["dataId"]
         self.assertEqual(resp_data_id.split("/")[1], str(var_byte_watch_size))
 
         data_breakpoints = [{"dataId": resp_data_id, "accessType": "write"}]
         self.dap_server.request_setDataBreakpoint(data_breakpoints)
 
-        self.continue_to_breakpoint(breakpoint_id=1, is_watchpoint=True)
+        self.continue_to_breakpoint(breakpoint_id=1, reason="data breakpoint")
         eval_response = self.dap_server.request_evaluate("var", context="watch")
         self.assertTrue(eval_response["success"])
         var_value = eval_response["body"]["result"]

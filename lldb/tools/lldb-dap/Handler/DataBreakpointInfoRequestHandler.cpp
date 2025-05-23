@@ -18,16 +18,15 @@ namespace lldb_dap {
 static llvm::Expected<protocol::DataBreakpointInfoResponseBody>
 HandleDataBreakpointBytes(DAP &dap,
                           const protocol::DataBreakpointInfoArguments &args) {
-  llvm::StringRef address = args.name;
+  llvm::StringRef raw_address = args.name;
 
-  unsigned long long load_addr = LLDB_INVALID_ADDRESS;
-  if (llvm::getAsUnsignedInteger(address, 0, load_addr)) {
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+  if (raw_address.getAsInteger<lldb::addr_t>(0, load_addr)) {
     return llvm::make_error<DAPError>(llvm::formatv("invalid address"),
                                       llvm::inconvertibleErrorCode(), false);
   }
 
-  lldb::SBAddress sb_addr(load_addr, dap.target);
-  if (!sb_addr.IsValid()) {
+  if (lldb::SBAddress address(load_addr, dap.target); !address.IsValid()) {
     return llvm::make_error<DAPError>(
         llvm::formatv("address {:x} does not exist in the debuggee", load_addr),
         llvm::inconvertibleErrorCode(), false);
