@@ -5292,7 +5292,6 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   return From;
 }
 
-
 QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
                                             ExprValueKind &VK,
                                             SourceLocation Loc,

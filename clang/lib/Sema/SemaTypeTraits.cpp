@@ -358,7 +358,6 @@ bool Sema::IsCXXReplaceableType(QualType Type) {
   return false;
 }
 
-
 /// Checks that type T is not a VLA.
 ///
 /// @returns @c true if @p T is VLA and a diagnostic was emitted,
@@ -406,15 +405,16 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   // these class templates. We also try to follow any GCC documented behavior
   // in these expressions to ensure portability of standard libraries.
   switch (UTT) {
-  default: llvm_unreachable("not a UTT");
+  default:
+    llvm_unreachable("not a UTT");
     // is_complete_type somewhat obviously cannot require a complete type.
   case UTT_IsCompleteType:
-                           // Fall-through
+    // Fall-through
 
-           // These traits are modeled on the type predicates in C++0x
-           // [meta.unary.cat] and [meta.unary.comp]. They are not specified as
-           // requiring a complete type, as whether or not they return true cannot be
-           // impacted by the completeness of the type.
+    // These traits are modeled on the type predicates in C++0x
+    // [meta.unary.cat] and [meta.unary.comp]. They are not specified as
+    // requiring a complete type, as whether or not they return true cannot be
+    // impacted by the completeness of the type.
   case UTT_IsVoid:
   case UTT_IsIntegral:
   case UTT_IsFloatingPoint:
@@ -438,29 +438,29 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsCompound:
   case UTT_IsMemberPointer:
   case UTT_IsTypedResourceElementCompatible:
-                                             // Fall-through
+    // Fall-through
 
-           // These traits are modeled on type predicates in C++0x [meta.unary.prop]
-           // which requires some of its traits to have the complete type. However,
-           // the completeness of the type cannot impact these traits' semantics, and
-           // so they don't require it. This matches the comments on these traits in
-           // Table 49.
+    // These traits are modeled on type predicates in C++0x [meta.unary.prop]
+    // which requires some of its traits to have the complete type. However,
+    // the completeness of the type cannot impact these traits' semantics, and
+    // so they don't require it. This matches the comments on these traits in
+    // Table 49.
   case UTT_IsConst:
   case UTT_IsVolatile:
   case UTT_IsSigned:
   case UTT_IsUnboundedArray:
   case UTT_IsUnsigned:
 
-           // This type trait always returns false, checking the type is moot.
+    // This type trait always returns false, checking the type is moot.
   case UTT_IsInterfaceClass:
     return true;
 
-           // We diagnose incomplete class types later.
+    // We diagnose incomplete class types later.
   case UTT_StructuredBindingSize:
     return true;
 
-           // C++14 [meta.unary.prop]:
-           //   If T is a non-union class type, T shall be a complete type.
+    // C++14 [meta.unary.prop]:
+    //   If T is a non-union class type, T shall be a complete type.
   case UTT_IsEmpty:
   case UTT_IsPolymorphic:
   case UTT_IsAbstract:
@@ -470,8 +470,8 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
             Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
     return true;
 
-           // C++14 [meta.unary.prop]:
-           //   If T is a class type, T shall be a complete type.
+    // C++14 [meta.unary.prop]:
+    //   If T is a class type, T shall be a complete type.
   case UTT_IsFinal:
   case UTT_IsSealed:
     if (ArgTy->getAsCXXRecordDecl())
@@ -479,7 +479,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
           Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
     return true;
 
-           // LWG3823: T shall be an array type, a complete type, or cv void.
+    // LWG3823: T shall be an array type, a complete type, or cv void.
   case UTT_IsAggregate:
   case UTT_IsImplicitLifetime:
     if (ArgTy->isArrayType() || ArgTy->isVoidType())
@@ -488,8 +488,8 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
     return !S.RequireCompleteType(
         Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
 
-           // has_unique_object_representations<T>
-           // remove_all_extents_t<T> shall be a complete type or cv void (LWG4113).
+    // has_unique_object_representations<T>
+    // remove_all_extents_t<T> shall be a complete type or cv void (LWG4113).
   case UTT_HasUniqueObjectRepresentations:
     ArgTy = QualType(ArgTy->getBaseElementTypeUnsafe(), 0);
     if (ArgTy->isVoidType())
@@ -497,8 +497,8 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
     return !S.RequireCompleteType(
         Loc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr);
 
-           // C++1z [meta.unary.prop]:
-           //   remove_all_extents_t<T> shall be a complete type or cv void.
+    // C++1z [meta.unary.prop]:
+    //   remove_all_extents_t<T> shall be a complete type or cv void.
   case UTT_IsTrivial:
   case UTT_IsTriviallyCopyable:
   case UTT_IsStandardLayout:
@@ -546,8 +546,7 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
                                Sema &Self, SourceLocation KeyLoc, ASTContext &C,
                                bool (CXXRecordDecl::*HasTrivial)() const,
                                bool (CXXRecordDecl::*HasNonTrivial)() const,
-                               bool (CXXMethodDecl::*IsDesiredOp)() const)
-{
+                               bool (CXXMethodDecl::*IsDesiredOp)() const) {
   CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
   if ((RD->*HasTrivial)() && !(RD->*HasNonTrivial)())
     return true;
@@ -564,7 +563,7 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
         continue;
 
       CXXMethodDecl *Operator = cast<CXXMethodDecl>(*Op);
-      if((Operator->*IsDesiredOp)()) {
+      if ((Operator->*IsDesiredOp)()) {
         FoundOperator = true;
         auto *CPT = Operator->getType()->castAs<FunctionProtoType>();
         CPT = Self.ResolveExceptionSpec(KeyLoc, CPT);
@@ -591,7 +590,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
     Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
-           // const ClassT& obj;
+    // const ClassT& obj;
     OpaqueValueExpr Operand(
         KeyLoc,
         Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
@@ -640,7 +639,8 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
          });
 }
 
-static bool isTriviallyEqualityComparableType(Sema &S, QualType Type, SourceLocation KeyLoc) {
+static bool isTriviallyEqualityComparableType(Sema &S, QualType Type,
+                                              SourceLocation KeyLoc) {
   QualType CanonicalType = Type.getCanonicalType();
   if (CanonicalType->isIncompleteType() || CanonicalType->isDependentType() ||
       CanonicalType->isEnumeralType() || CanonicalType->isArrayType())
@@ -693,8 +693,9 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   assert(!T->isDependentType() && "Cannot evaluate traits of dependent type");
 
   ASTContext &C = Self.Context;
-  switch(UTT) {
-  default: llvm_unreachable("not a UTT");
+  switch (UTT) {
+  default:
+    llvm_unreachable("not a UTT");
     // Type trait expressions corresponding to the primary type category
     // predicates in C++0x [meta.unary.cat].
   case UTT_IsVoid:
@@ -742,8 +743,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsFunction:
     return T->isFunctionType();
 
-           // Type trait expressions which correspond to the convenient composition
-           // predicates in C++0x [meta.unary.comp].
+    // Type trait expressions which correspond to the convenient composition
+    // predicates in C++0x [meta.unary.comp].
   case UTT_IsReference:
     return T->isReferenceType();
   case UTT_IsArithmetic:
@@ -776,8 +777,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsMemberPointer:
     return T->isMemberPointerType();
 
-           // Type trait expressions which correspond to the type property predicates
-           // in C++0x [meta.unary.prop].
+    // Type trait expressions which correspond to the type property predicates
+    // in C++0x [meta.unary.prop].
   case UTT_IsConst:
     return T.isConstQualified();
   case UTT_IsVolatile:
@@ -829,21 +830,22 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     // Enum types should always return false.
     return T->isUnsignedIntegerType() && !T->isEnumeralType();
 
-           // Type trait expressions which query classes regarding their construction,
-           // destruction, and copying. Rather than being based directly on the
-           // related type predicates in the standard, they are specified by both
-           // GCC[1] and the Embarcadero C++ compiler[2], and Clang implements those
-           // specifications.
-           //
-           //   1: http://gcc.gnu/.org/onlinedocs/gcc/Type-Traits.html
-           //   2: http://docwiki.embarcadero.com/RADStudio/XE/en/Type_Trait_Functions_(C%2B%2B0x)_Index
-           //
-           // Note that these builtins do not behave as documented in g++: if a class
-           // has both a trivial and a non-trivial special member of a particular kind,
-           // they return false! For now, we emulate this behavior.
-           // FIXME: This appears to be a g++ bug: more complex cases reveal that it
-           // does not correctly compute triviality in the presence of multiple special
-           // members of the same kind. Revisit this once the g++ bug is fixed.
+    // Type trait expressions which query classes regarding their construction,
+    // destruction, and copying. Rather than being based directly on the
+    // related type predicates in the standard, they are specified by both
+    // GCC[1] and the Embarcadero C++ compiler[2], and Clang implements those
+    // specifications.
+    //
+    //   1: http://gcc.gnu/.org/onlinedocs/gcc/Type-Traits.html
+    //   2:
+    //   http://docwiki.embarcadero.com/RADStudio/XE/en/Type_Trait_Functions_(C%2B%2B0x)_Index
+    //
+    // Note that these builtins do not behave as documented in g++: if a class
+    // has both a trivial and a non-trivial special member of a particular kind,
+    // they return false! For now, we emulate this behavior.
+    // FIXME: This appears to be a g++ bug: more complex cases reveal that it
+    // does not correctly compute triviality in the presence of multiple special
+    // members of the same kind. Revisit this once the g++ bug is fixed.
   case UTT_HasTrivialDefaultConstructor:
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html:
     //   If __is_pod (type) is true then the trait is true, else if type is
@@ -862,7 +864,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C))
       return true;
     if (CXXRecordDecl *RD = C.getBaseElementType(T)->getAsCXXRecordDecl())
-      return RD->hasTrivialMoveConstructor() && !RD->hasNonTrivialMoveConstructor();
+      return RD->hasTrivialMoveConstructor() &&
+             !RD->hasNonTrivialMoveConstructor();
     return false;
   case UTT_HasTrivialCopy:
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html:
@@ -883,7 +886,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C))
       return true;
     if (CXXRecordDecl *RD = C.getBaseElementType(T)->getAsCXXRecordDecl())
-      return RD->hasTrivialMoveAssignment() && !RD->hasNonTrivialMoveAssignment();
+      return RD->hasTrivialMoveAssignment() &&
+             !RD->hasNonTrivialMoveAssignment();
     return false;
   case UTT_HasTrivialAssign:
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html:
@@ -914,26 +918,26 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T->isReferenceType())
       return true;
 
-           // Objective-C++ ARC: autorelease types don't require destruction.
+    // Objective-C++ ARC: autorelease types don't require destruction.
     if (T->isObjCLifetimeType() &&
         T.getObjCLifetime() == Qualifiers::OCL_Autoreleasing)
       return true;
 
-           // C++14 [meta.unary.prop]:
-           //   For incomplete types and function types, is_destructible<T>::value is
-           //   false.
+    // C++14 [meta.unary.prop]:
+    //   For incomplete types and function types, is_destructible<T>::value is
+    //   false.
     if (T->isIncompleteType() || T->isFunctionType())
       return false;
 
-           // A type that requires destruction (via a non-trivial destructor or ARC
-           // lifetime semantics) is not trivially-destructible.
+    // A type that requires destruction (via a non-trivial destructor or ARC
+    // lifetime semantics) is not trivially-destructible.
     if (UTT == UTT_IsTriviallyDestructible && T.isDestructedType())
       return false;
 
-           // C++14 [meta.unary.prop]:
-           //   For object types and given U equal to remove_all_extents_t<T>, if the
-           //   expression std::declval<U&>().~U() is well-formed when treated as an
-           //   unevaluated operand (Clause 5), then is_destructible<T>::value is true
+    // C++14 [meta.unary.prop]:
+    //   For object types and given U equal to remove_all_extents_t<T>, if the
+    //   expression std::declval<U&>().~U() is well-formed when treated as an
+    //   unevaluated operand (Clause 5), then is_destructible<T>::value is true
     if (auto *RD = C.getBaseElementType(T)->getAsCXXRecordDecl()) {
       CXXDestructorDecl *Destructor = Self.LookupDestructor(RD);
       if (!Destructor)
@@ -964,7 +968,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C) || T->isReferenceType())
       return true;
 
-           // Objective-C++ ARC: autorelease types don't require destruction.
+    // Objective-C++ ARC: autorelease types don't require destruction.
     if (T->isObjCLifetimeType() &&
         T.getObjCLifetime() == Qualifiers::OCL_Autoreleasing)
       return true;
@@ -1094,9 +1098,9 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
         return Destructor->isVirtual();
     return false;
 
-           // These type trait expressions are modeled on the specifications for the
-           // Embarcadero C++0x type trait functions:
-           //   http://docwiki.embarcadero.com/RADStudio/XE/en/Type_Trait_Functions_(C%2B%2B0x)_Index
+    // These type trait expressions are modeled on the specifications for the
+    // Embarcadero C++0x type trait functions:
+    //   http://docwiki.embarcadero.com/RADStudio/XE/en/Type_Trait_Functions_(C%2B%2B0x)_Index
   case UTT_IsCompleteType:
     // http://docwiki.embarcadero.com/RADStudio/XE/en/Is_complete_type_(typename_T_):
     //   Returns True if and only if T is a complete type at the point of the
@@ -1125,10 +1129,10 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     DiagnoseAtomicInCXXTypeTrait(Self, TInfo,
                                  tok::kw___builtin_is_implicit_lifetime);
 
-           // [basic.types.general] p9
-           // Scalar types, implicit-lifetime class types ([class.prop]),
-           // array types, and cv-qualified versions of these types
-           // are collectively called implicit-lifetime types.
+    // [basic.types.general] p9
+    // Scalar types, implicit-lifetime class types ([class.prop]),
+    // array types, and cv-qualified versions of these types
+    // are collectively called implicit-lifetime types.
     QualType UnqualT = T->getCanonicalTypeUnqualified();
     if (UnqualT->isScalarType())
       return true;
@@ -1138,11 +1142,11 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (!RD)
       return false;
 
-           // [class.prop] p9
-           // A class S is an implicit-lifetime class if
-           //   - it is an aggregate whose destructor is not user-provided or
-           //   - it has at least one trivial eligible constructor and a trivial,
-           //     non-deleted destructor.
+    // [class.prop] p9
+    // A class S is an implicit-lifetime class if
+    //   - it is an aggregate whose destructor is not user-provided or
+    //   - it has at least one trivial eligible constructor and a trivial,
+    //     non-deleted destructor.
     const CXXDestructorDecl *Dtor = RD->getDestructor();
     if (UnqualT->isAggregateType())
       if (Dtor && !Dtor->isUserProvided())
@@ -1174,10 +1178,10 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   }
 }
 
-
-
-static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceInfo *Lhs,
-                                    const TypeSourceInfo *Rhs, SourceLocation KeyLoc);
+static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
+                                    const TypeSourceInfo *Lhs,
+                                    const TypeSourceInfo *Rhs,
+                                    SourceLocation KeyLoc);
 
 static ExprResult CheckConvertibilityForTypeTraits(
     Sema &Self, const TypeSourceInfo *Lhs, const TypeSourceInfo *Rhs,
@@ -1186,45 +1190,45 @@ static ExprResult CheckConvertibilityForTypeTraits(
   QualType LhsT = Lhs->getType();
   QualType RhsT = Rhs->getType();
 
-         // C++0x [meta.rel]p4:
-         //   Given the following function prototype:
-         //
-         //     template <class T>
-         //       typename add_rvalue_reference<T>::type create();
-         //
-         //   the predicate condition for a template specialization
-         //   is_convertible<From, To> shall be satisfied if and only if
-         //   the return expression in the following code would be
-         //   well-formed, including any implicit conversions to the return
-         //   type of the function:
-         //
-         //     To test() {
-         //       return create<From>();
-         //     }
-         //
-         //   Access checking is performed as if in a context unrelated to To and
-         //   From. Only the validity of the immediate context of the expression
-         //   of the return-statement (including conversions to the return type)
-         //   is considered.
-         //
-         // We model the initialization as a copy-initialization of a temporary
-         // of the appropriate type, which for this expression is identical to the
-         // return statement (since NRVO doesn't apply).
+  // C++0x [meta.rel]p4:
+  //   Given the following function prototype:
+  //
+  //     template <class T>
+  //       typename add_rvalue_reference<T>::type create();
+  //
+  //   the predicate condition for a template specialization
+  //   is_convertible<From, To> shall be satisfied if and only if
+  //   the return expression in the following code would be
+  //   well-formed, including any implicit conversions to the return
+  //   type of the function:
+  //
+  //     To test() {
+  //       return create<From>();
+  //     }
+  //
+  //   Access checking is performed as if in a context unrelated to To and
+  //   From. Only the validity of the immediate context of the expression
+  //   of the return-statement (including conversions to the return type)
+  //   is considered.
+  //
+  // We model the initialization as a copy-initialization of a temporary
+  // of the appropriate type, which for this expression is identical to the
+  // return statement (since NRVO doesn't apply).
 
-         // Functions aren't allowed to return function or array types.
+  // Functions aren't allowed to return function or array types.
   if (RhsT->isFunctionType() || RhsT->isArrayType())
     return ExprError();
 
-         // A function definition requires a complete, non-abstract return type.
+  // A function definition requires a complete, non-abstract return type.
   if (!Self.isCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT) ||
       Self.isAbstractType(Rhs->getTypeLoc().getBeginLoc(), RhsT))
     return ExprError();
 
-         // Compute the result of add_rvalue_reference.
+  // Compute the result of add_rvalue_reference.
   if (LhsT->isObjectType() || LhsT->isFunctionType())
     LhsT = Self.Context.getRValueReferenceType(LhsT);
 
-         // Build a fake source and destination for initialization.
+  // Build a fake source and destination for initialization.
   InitializedEntity To(InitializedEntity::InitializeTemporary(RhsT));
   Expr *From = new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
       OpaqueValueExpr(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
@@ -1232,8 +1236,8 @@ static ExprResult CheckConvertibilityForTypeTraits(
   InitializationKind Kind =
       InitializationKind::CreateCopy(KeyLoc, SourceLocation());
 
-         // Perform the initialization in an unevaluated context within a SFINAE
-         // trap at translation unit scope.
+  // Perform the initialization in an unevaluated context within a SFINAE
+  // trap at translation unit scope.
   EnterExpressionEvaluationContext Unevaluated(
       Self, Sema::ExpressionEvaluationContext::Unevaluated);
   Sema::SFINAETrap SFINAE(Self, /*ForValidityCheck=*/true);
@@ -1287,13 +1291,12 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
   if (Kind <= UTT_Last)
     return EvaluateUnaryTypeTrait(S, Kind, KWLoc, Args[0]);
 
-         // Evaluate ReferenceBindsToTemporary and ReferenceConstructsFromTemporary
-         // alongside the IsConstructible traits to avoid duplication.
+  // Evaluate ReferenceBindsToTemporary and ReferenceConstructsFromTemporary
+  // alongside the IsConstructible traits to avoid duplication.
   if (Kind <= BTT_Last && Kind != BTT_ReferenceBindsToTemporary &&
       Kind != BTT_ReferenceConstructsFromTemporary &&
       Kind != BTT_ReferenceConvertsFromTemporary)
-    return EvaluateBinaryTypeTrait(S, Kind, Args[0],
-                                   Args[1], RParenLoc);
+    return EvaluateBinaryTypeTrait(S, Kind, Args[0], Args[1], RParenLoc);
 
   switch (Kind) {
   case clang::BTT_ReferenceBindsToTemporary:
@@ -1317,25 +1320,25 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     //     T t(create<Args>()...);
     assert(!Args.empty());
 
-           // Precondition: T and all types in the parameter pack Args shall be
-           // complete types, (possibly cv-qualified) void, or arrays of
-           // unknown bound.
+    // Precondition: T and all types in the parameter pack Args shall be
+    // complete types, (possibly cv-qualified) void, or arrays of
+    // unknown bound.
     for (const auto *TSI : Args) {
       QualType ArgTy = TSI->getType();
       if (ArgTy->isVoidType() || ArgTy->isIncompleteArrayType())
         continue;
 
-      if (S.RequireCompleteType(KWLoc, ArgTy,
-                                diag::err_incomplete_type_used_in_type_trait_expr))
+      if (S.RequireCompleteType(
+              KWLoc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr))
         return false;
     }
 
-           // Make sure the first argument is not incomplete nor a function type.
+    // Make sure the first argument is not incomplete nor a function type.
     QualType T = Args[0]->getType();
     if (T->isIncompleteType() || T->isFunctionType())
       return false;
 
-           // Make sure the first argument is not an abstract type.
+    // Make sure the first argument is not an abstract type.
     CXXRecordDecl *RD = T->getAsCXXRecordDecl();
     if (RD && RD->isAbstract())
       return false;
@@ -1349,13 +1352,13 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
         ArgTy = S.Context.getRValueReferenceType(ArgTy);
       ArgExprs.push_back(
           new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
-          OpaqueValueExpr(Args[I]->getTypeLoc().getBeginLoc(),
-                          ArgTy.getNonLValueExprType(S.Context),
-                          Expr::getValueKindForType(ArgTy)));
+              OpaqueValueExpr(Args[I]->getTypeLoc().getBeginLoc(),
+                              ArgTy.getNonLValueExprType(S.Context),
+                              Expr::getValueKindForType(ArgTy)));
     }
 
-           // Perform the initialization in an unevaluated context within a SFINAE
-           // trap at translation unit scope.
+    // Perform the initialization in an unevaluated context within a SFINAE
+    // trap at translation unit scope.
     EnterExpressionEvaluationContext Unevaluated(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
     Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
@@ -1411,23 +1414,23 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
       if (T.getNonReferenceType().hasNonTrivialObjCLifetime())
         return false;
 
-             // The initialization succeeded; now make sure there are no non-trivial
-             // calls.
+      // The initialization succeeded; now make sure there are no non-trivial
+      // calls.
       return !Result.get()->hasNonTrivialCall(S.Context);
     }
 
     llvm_unreachable("unhandled type trait");
     return false;
   }
-  default: llvm_unreachable("not a TT");
+  default:
+    llvm_unreachable("not a TT");
   }
 
   return false;
 }
 
 namespace {
-void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
-                                SourceLocation KWLoc) {
+void DiagnoseBuiltinDeprecation(Sema &S, TypeTrait Kind, SourceLocation KWLoc) {
   TypeTrait Replacement;
   switch (Kind) {
   case UTT_HasNothrowAssign:
@@ -1466,13 +1469,13 @@ void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
 bool Sema::CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N) {
   if (Arity && N != Arity) {
     Diag(Loc, diag::err_type_trait_arity)
-    << Arity << 0 << (Arity > 1) << (int)N << SourceRange(Loc);
+        << Arity << 0 << (Arity > 1) << (int)N << SourceRange(Loc);
     return false;
   }
 
   if (!Arity && N == 0) {
     Diag(Loc, diag::err_type_trait_arity)
-    << 1 << 1 << 1 << (int)N << SourceRange(Loc);
+        << 1 << 1 << 1 << (int)N << SourceRange(Loc);
     return false;
   }
   return true;
@@ -1544,15 +1547,17 @@ ExprResult Sema::ActOnTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
   return BuildTypeTrait(Kind, KWLoc, ConvertedArgs, RParenLoc);
 }
 
-static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceInfo *Lhs,
-                                    const TypeSourceInfo *Rhs, SourceLocation KeyLoc) {
+static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
+                                    const TypeSourceInfo *Lhs,
+                                    const TypeSourceInfo *Rhs,
+                                    SourceLocation KeyLoc) {
   QualType LhsT = Lhs->getType();
   QualType RhsT = Rhs->getType();
 
   assert(!LhsT->isDependentType() && !RhsT->isDependentType() &&
          "Cannot evaluate traits of dependent types");
 
-  switch(BTT) {
+  switch (BTT) {
   case BTT_IsBaseOf: {
     // C++0x [meta.rel]p2
     // Base is a base class of Derived without regard to cv-qualifiers or
@@ -1580,11 +1585,11 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
       return BaseInterface->isSuperClassOf(DerivedInterface);
     }
 
-    assert(Self.Context.hasSameUnqualifiedType(LhsT, RhsT)
-           == (lhsRecord == rhsRecord));
+    assert(Self.Context.hasSameUnqualifiedType(LhsT, RhsT) ==
+           (lhsRecord == rhsRecord));
 
-           // Unions are never base classes, and never have base classes.
-           // It doesn't matter if they are complete or not. See PR#41843
+    // Unions are never base classes, and never have base classes.
+    // It doesn't matter if they are complete or not. See PR#41843
     if (lhsRecord && lhsRecord->getDecl()->isUnion())
       return false;
     if (rhsRecord && rhsRecord->getDecl()->isUnion())
@@ -1593,10 +1598,10 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     if (lhsRecord == rhsRecord)
       return true;
 
-           // C++0x [meta.rel]p2:
-           //   If Base and Derived are class types and are different types
-           //   (ignoring possible cv-qualifiers) then Derived shall be a
-           //   complete type.
+    // C++0x [meta.rel]p2:
+    //   If Base and Derived are class types and are different types
+    //   (ignoring possible cv-qualifiers) then Derived shall be a
+    //   complete type.
     if (Self.RequireCompleteType(
             Rhs->getTypeLoc().getBeginLoc(), RhsT,
             diag::err_incomplete_type_used_in_type_trait_expr))
@@ -1682,12 +1687,12 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
             diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
 
-           // cv void is never assignable.
+    // cv void is never assignable.
     if (LhsT->isVoidType() || RhsT->isVoidType())
       return false;
 
-           // Build expressions that emulate the effect of declval<T>() and
-           // declval<U>().
+    // Build expressions that emulate the effect of declval<T>() and
+    // declval<U>().
     if (LhsT->isObjectType() || LhsT->isFunctionType())
       LhsT = Self.Context.getRValueReferenceType(LhsT);
     if (RhsT->isObjectType() || RhsT->isFunctionType())
@@ -1697,18 +1702,18 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     OpaqueValueExpr Rhs(KeyLoc, RhsT.getNonLValueExprType(Self.Context),
                         Expr::getValueKindForType(RhsT));
 
-           // Attempt the assignment in an unevaluated context within a SFINAE
-           // trap at translation unit scope.
+    // Attempt the assignment in an unevaluated context within a SFINAE
+    // trap at translation unit scope.
     EnterExpressionEvaluationContext Unevaluated(
         Self, Sema::ExpressionEvaluationContext::Unevaluated);
     Sema::SFINAETrap SFINAE(Self, /*ForValidityCheck=*/true);
     Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
-    ExprResult Result = Self.BuildBinOp(/*S=*/nullptr, KeyLoc, BO_Assign, &Lhs,
-                                        &Rhs);
+    ExprResult Result =
+        Self.BuildBinOp(/*S=*/nullptr, KeyLoc, BO_Assign, &Lhs, &Rhs);
     if (Result.isInvalid())
       return false;
 
-           // Treat the assignment as unused for the purpose of -Wdeprecated-volatile.
+    // Treat the assignment as unused for the purpose of -Wdeprecated-volatile.
     Self.CheckUnusedVolatileAssignment(Result.get());
 
     if (SFINAE.hasErrorOccurred())
@@ -1789,10 +1794,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
   llvm_unreachable("Unknown type trait or not implemented");
 }
 
-ExprResult Sema::ActOnArrayTypeTrait(ArrayTypeTrait ATT,
-                                     SourceLocation KWLoc,
-                                     ParsedType Ty,
-                                     Expr* DimExpr,
+ExprResult Sema::ActOnArrayTypeTrait(ArrayTypeTrait ATT, SourceLocation KWLoc,
+                                     ParsedType Ty, Expr *DimExpr,
                                      SourceLocation RParen) {
   TypeSourceInfo *TSInfo;
   QualType T = GetTypeFromParser(Ty, &TSInfo);
@@ -1807,7 +1810,7 @@ static uint64_t EvaluateArrayTypeTrait(Sema &Self, ArrayTypeTrait ATT,
                                        SourceLocation KeyLoc) {
   assert(!T->isDependentType() && "Cannot evaluate traits of dependent type");
 
-  switch(ATT) {
+  switch (ATT) {
   case ATT_ArrayRank:
     if (T->isArrayType()) {
       unsigned Dim = 0;
@@ -1828,7 +1831,7 @@ static uint64_t EvaluateArrayTypeTrait(Sema &Self, ArrayTypeTrait ATT,
       return 0;
     if (Value.isSigned() && Value.isNegative()) {
       Self.Diag(KeyLoc, diag::err_dimension_expr_not_constant_integer)
-      << DimExpr->getSourceRange();
+          << DimExpr->getSourceRange();
       return 0;
     }
     Dim = Value.getLimitedValue();
@@ -1846,7 +1849,8 @@ static uint64_t EvaluateArrayTypeTrait(Sema &Self, ArrayTypeTrait ATT,
       }
 
       if (Matched && T->isArrayType()) {
-        if (const ConstantArrayType *CAT = Self.Context.getAsConstantArrayType(T))
+        if (const ConstantArrayType *CAT =
+                Self.Context.getAsConstantArrayType(T))
           return CAT->getLimitedSize();
       }
     }
@@ -1856,32 +1860,28 @@ static uint64_t EvaluateArrayTypeTrait(Sema &Self, ArrayTypeTrait ATT,
   llvm_unreachable("Unknown type trait or not implemented");
 }
 
-ExprResult Sema::BuildArrayTypeTrait(ArrayTypeTrait ATT,
-                                     SourceLocation KWLoc,
-                                     TypeSourceInfo *TSInfo,
-                                     Expr* DimExpr,
+ExprResult Sema::BuildArrayTypeTrait(ArrayTypeTrait ATT, SourceLocation KWLoc,
+                                     TypeSourceInfo *TSInfo, Expr *DimExpr,
                                      SourceLocation RParen) {
   QualType T = TSInfo->getType();
 
-         // FIXME: This should likely be tracked as an APInt to remove any host
-         // assumptions about the width of size_t on the target.
+  // FIXME: This should likely be tracked as an APInt to remove any host
+  // assumptions about the width of size_t on the target.
   uint64_t Value = 0;
   if (!T->isDependentType())
     Value = EvaluateArrayTypeTrait(*this, ATT, T, DimExpr, KWLoc);
 
-         // While the specification for these traits from the Embarcadero C++
-         // compiler's documentation says the return type is 'unsigned int', Clang
-         // returns 'size_t'. On Windows, the primary platform for the Embarcadero
-         // compiler, there is no difference. On several other platforms this is an
-         // important distinction.
+  // While the specification for these traits from the Embarcadero C++
+  // compiler's documentation says the return type is 'unsigned int', Clang
+  // returns 'size_t'. On Windows, the primary platform for the Embarcadero
+  // compiler, there is no difference. On several other platforms this is an
+  // important distinction.
   return new (Context) ArrayTypeTraitExpr(KWLoc, ATT, TSInfo, Value, DimExpr,
                                           RParen, Context.getSizeType());
 }
 
-ExprResult Sema::ActOnExpressionTrait(ExpressionTrait ET,
-                                      SourceLocation KWLoc,
-                                      Expr *Queried,
-                                      SourceLocation RParen) {
+ExprResult Sema::ActOnExpressionTrait(ExpressionTrait ET, SourceLocation KWLoc,
+                                      Expr *Queried, SourceLocation RParen) {
   // If error parsing the expression, ignore.
   if (!Queried)
     return ExprError();
@@ -1893,22 +1893,22 @@ ExprResult Sema::ActOnExpressionTrait(ExpressionTrait ET,
 
 static bool EvaluateExpressionTrait(ExpressionTrait ET, Expr *E) {
   switch (ET) {
-  case ET_IsLValueExpr: return E->isLValue();
+  case ET_IsLValueExpr:
+    return E->isLValue();
   case ET_IsRValueExpr:
     return E->isPRValue();
   }
   llvm_unreachable("Expression trait not covered by switch");
 }
 
-ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET,
-                                      SourceLocation KWLoc,
-                                      Expr *Queried,
-                                      SourceLocation RParen) {
+ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET, SourceLocation KWLoc,
+                                      Expr *Queried, SourceLocation RParen) {
   if (Queried->isTypeDependent()) {
     // Delay type-checking for type-dependent expressions.
   } else if (Queried->hasPlaceholderType()) {
     ExprResult PE = CheckPlaceholderExpr(Queried);
-    if (PE.isInvalid()) return ExprError();
+    if (PE.isInvalid())
+      return ExprError();
     return BuildExpressionTrait(ET, KWLoc, PE.get(), RParen);
   }
 
