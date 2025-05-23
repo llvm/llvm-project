@@ -87,13 +87,15 @@ static cl::opt<unsigned> FMAContractLevelOpt(
 
 static cl::opt<NVPTX::DivPrecisionLevel> UsePrecDivF32(
     "nvptx-prec-divf32", cl::Hidden,
-    cl::desc("NVPTX Specifies: 0 use div.approx, 1 use div.full, 2 use"
-             " IEEE Compliant F32 div.rnd if available."),
-    cl::values(clEnumValN(NVPTX::DivPrecisionLevel::Approx, "0",
-                          "Use div.approx"),
-               clEnumValN(NVPTX::DivPrecisionLevel::Full, "1", "Use div.full"),
-               clEnumValN(NVPTX::DivPrecisionLevel::IEEE754, "2",
-                          "Use IEEE Compliant F32 div.rnd if available")),
+    cl::desc(
+        "NVPTX Specific: Override the precision of the lowering for f32 fdiv"),
+    cl::values(
+        clEnumValN(NVPTX::DivPrecisionLevel::Approx, "0", "Use div.approx"),
+        clEnumValN(NVPTX::DivPrecisionLevel::Full, "1", "Use div.full"),
+        clEnumValN(NVPTX::DivPrecisionLevel::IEEE754, "2",
+                   "Use IEEE Compliant F32 div.rnd if available (default)"),
+        clEnumValN(NVPTX::DivPrecisionLevel::IEEE754_NoFTZ, "3",
+                   "Use IEEE Compliant F32 div.rnd if available, no FTZ")),
     cl::init(NVPTX::DivPrecisionLevel::IEEE754));
 
 static cl::opt<bool> UsePrecSqrtF32(
