@@ -23,13 +23,17 @@ struct builder;
 struct win_impl {
   builder& builder_;
   std::lock_guard<std::mutex> guard_;
-  win_impl(builder& trace);
-  ~win_impl();
+  static std::mutex mutex_;
 
+  explicit win_impl(builder& builder) : builder_(builder), guard_(mutex_) { global_init(); }
+
+  void global_init();
   void collect(size_t skip, size_t max_depth);
   void ident_modules();
   void symbolize();
   void resolve_lines();
+
+  ~win_impl();
 };
 
 } // namespace __stacktrace
