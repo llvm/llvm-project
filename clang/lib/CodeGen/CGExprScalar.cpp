@@ -940,6 +940,7 @@ public:
     return result;                                                             \
   }                                                                            \
   Value *VisitBin##OP##Assign(const CompoundAssignOperator *E) {               \
+    ApplyAtomGroup Grp(CGF.getDebugInfo());                                    \
     return EmitCompoundAssign(E, &ScalarExprEmitter::Emit##OP);                \
   }
   HANDLEBINOP(Mul)
@@ -3166,6 +3167,7 @@ public:
 llvm::Value *
 ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                            bool isInc, bool isPre) {
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   OMPLastprivateConditionalUpdateRAII OMPRegion(CGF, E);
   QualType type = E->getSubExpr()->getType();
   llvm::PHINode *atomicPHI = nullptr;
@@ -5246,6 +5248,7 @@ llvm::Value *CodeGenFunction::EmitWithOriginalRHSBitfieldAssignment(
 }
 
 Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   bool Ignore = TestAndClearIgnoreResultAssign();
 
   Value *RHS;
@@ -6039,6 +6042,7 @@ LValue CodeGenFunction::EmitObjCIsaExpr(const ObjCIsaExpr *E) {
 
 LValue CodeGenFunction::EmitCompoundAssignmentLValue(
                                             const CompoundAssignOperator *E) {
+  ApplyAtomGroup Grp(getDebugInfo());
   ScalarExprEmitter Scalar(*this);
   Value *Result = nullptr;
   switch (E->getOpcode()) {
