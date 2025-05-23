@@ -3947,7 +3947,7 @@ static void emitScanBasedDirective(
       CGF.CGM.getOpenMPRuntime().emitReduction(
           CGF, S.getEndLoc(), Privates, LHSs, RHSs, ReductionOps,
           {/*WithNowait=*/true, /*SimpleReduction=*/true,
-           /*IsPrivateVarReduction*/{}, OMPD_unknown});
+           /*IsPrivateVarReduction*/ {}, OMPD_unknown});
     }
     llvm::Value *NextIVal =
         CGF.Builder.CreateNUWSub(IVal, llvm::ConstantInt::get(CGF.SizeTy, 1));
@@ -5753,7 +5753,7 @@ void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
       CGM.getOpenMPRuntime().emitReduction(
           *this, ParentDir.getEndLoc(), Privates, LHSs, RHSs, ReductionOps,
           {/*WithNowait=*/true, /*SimpleReduction=*/true,
-           /*IsPrivateVarReduction*/{}, OMPD_simd});
+           /*IsPrivateVarReduction*/ {}, OMPD_simd});
       for (unsigned I = 0, E = CopyArrayElems.size(); I < E; ++I) {
         const Expr *PrivateExpr = Privates[I];
         LValue DestLVal;
