@@ -71,6 +71,10 @@ public:
 
   bool UseSynthetic() { return m_use_synthetic; }
 
+  bool UseFragileIvar() { return m_fragile_ivar; }
+
+  bool CheckPtrVsMember() { return m_check_ptr_vs_member; }
+
   lldb::DynamicValueType UseDynamic() { return m_use_dynamic; }
 
 private:
