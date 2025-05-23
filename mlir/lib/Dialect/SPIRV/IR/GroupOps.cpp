@@ -328,6 +328,39 @@ LogicalResult GroupNonUniformRotateKHROp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformAllOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupNonUniformAllOp::verify() {
+  if (getExecutionScope() != spirv::Scope::Subgroup)
+    return emitOpError("execution scope must be 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformAllOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupNonUniformAnyOp::verify() {
+  if (getExecutionScope() != spirv::Scope::Subgroup)
+    return emitOpError("execution scope must be 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformAllEqualOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupNonUniformAllEqualOp::verify() {
+  if (getExecutionScope() != spirv::Scope::Subgroup)
+    return emitOpError("execution scope must be 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Group op verification
 //===----------------------------------------------------------------------===//
 
