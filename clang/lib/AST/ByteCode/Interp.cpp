@@ -1703,6 +1703,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
                           std::optional<uint64_t> ArraySize) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
+  if (!CheckTemporary(S, OpPC, Ptr, AK_Construct))
+    return false;
   if (!CheckStore(S, OpPC, Ptr))
     return false;
 
