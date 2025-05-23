@@ -3456,7 +3456,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
     K->setMetadata(LLVMContext::MD_prof,
                    MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
-
 }
 
 void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
