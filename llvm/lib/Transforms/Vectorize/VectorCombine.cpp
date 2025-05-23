@@ -2809,7 +2809,7 @@ bool VectorCombine::foldShuffleExtExtracts(Instruction &I) {
       !isa<LoadInst>(L))
     return false;
   auto *InnerExt = cast<Instruction>(I.getOperand(0));
-  auto *OuterExt = dyn_cast<Instruction>(*I.user_begin());
+  auto *OuterExt = cast<Instruction>(*I.user_begin());
   if (!isa<SExtInst, ZExtInst>(OuterExt))
     return false;
 
@@ -2833,8 +2833,8 @@ bool VectorCombine::foldShuffleExtExtracts(Instruction &I) {
   Builder.SetInsertPoint(*L->getInsertionPointAfterDef());
   auto *NewLoad = cast<LoadInst>(
       Builder.CreateLoad(SrcTy, L->getOperand(0), L->getName() + ".vec"));
-  auto *NewExt = isa<ZExtInst>(InnerExt) ? Builder.CreateZExt(NewLoad, DstTy)
-                                         : Builder.CreateSExt(NewLoad, DstTy);
+  auto *NewExt = isa<ZExtInst>(InnerExt) ? Builder.CreateZExt(NewLoad, DstTy, "vec.ext", InnerExt->hasNonNeg())
+                                         : Builder.CreateSExt(NewLoad, DstTy, "vec.ext");
   OuterExt->replaceAllUsesWith(NewExt);
   replaceValue(*OuterExt, *NewExt);
   Worklist.pushValue(NewLoad);
