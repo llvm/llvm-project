@@ -53,24 +53,27 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
     return Error::success();
   }
 
-  auto [It, DidEmplace] = Globs.try_emplace(Pattern);
-  if (DidEmplace) {
-    // We must be sure to use the string in the map rather than the provided
-    // reference which could be destroyed before match() is called
-    Pattern = It->getKey();
-    auto &Pair = It->getValue();
-    if (auto Err = GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024)
-                       .moveInto(Pair.first))
-      return Err;
-    Pair.second = LineNumber;
-  }
+  Globs.emplace_back();
+  auto &Glob = Globs.back();
+  Glob.first = Pattern.str();
+  auto &Pair = Glob.second;
+  // We must be sure to use the string in the map rather than the provided
+  // reference which could be destroyed before match() is called
+  llvm::errs() << __func__ << " GlobPattern::create: " << Glob.first << "\n";
+  if (auto Err = GlobPattern::create(Glob.first, /*MaxSubPatterns=*/1024)
+                     .moveInto(Pair.first))
+    return Err;
+  Pair.second = LineNumber;
   return Error::success();
 }
 
 unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
-  for (const auto &[Pattern, Pair] : Globs)
+  for (const auto &[Pattern, Pair] : Globs) {
+    llvm::outs() << "Inside match: " << Pattern
+                 << " Line number: " << Pair.second << "\n";
     if (Pair.first.match(Query))
       return Pair.second;
+  }
   for (const auto &[Regex, LineNumber] : RegExes)
     if (Regex->match(Query))
       return LineNumber;
@@ -228,6 +231,8 @@ unsigned SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
 unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
                                          StringRef Prefix, StringRef Query,
                                          StringRef Category) const {
+  llvm::outs() << "Input Arguments. Prefix:  " << Prefix << " Query: " << Query
+               << " Category: " << Category << " \n";
   SectionEntries::const_iterator I = Entries.find(Prefix);
   if (I == Entries.end())
     return 0;
