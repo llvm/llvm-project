@@ -83,12 +83,12 @@ inline bool isSingleScalar(const VPValue *VPV) {
                (PreservesUniformity(VPI->getOpcode()) &&
                 all_of(VPI->operands(), isSingleScalar));
       })
-      .Case<VPExpandSCEVRecipe>([](const VPValue *) {
+      .Case<VPExpandSCEVRecipe>([](const auto *) {
         // VPExpandSCEVRecipes must be placed in the entry and are always
         // uniform.
         return true;
       })
-      .Default([](const VPValue *) { return false; });
+      .Default([](const auto *) { return false; });
 }
 
 /// Return true if \p V is a header mask in \p Plan.
