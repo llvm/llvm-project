@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "stacktrace/macos.h"
 #include "stacktrace/config.h"
 
 #if defined(_LIBCPP_STACKTRACE_MACOS)
@@ -18,44 +19,34 @@
 
 #  include <__stacktrace/base.h>
 
-#  include "stacktrace/macos.h"
+#  include "stacktrace/utils/image.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-constexpr unsigned kMaxImages = 256;
-
-struct Image {
-  uintptr_t loadedAt{};
-  intptr_t slide{};
-  std::string_view name{};
-  bool operator<(Image const& rhs) const { return loadedAt < rhs.loadedAt; }
-  operator bool() const { return !name.empty(); }
-};
-
-void ident_module(alloc& alloc, entry_base& entry, unsigned& index, Image* images) {
+void ident_module(alloc& alloc, entry_base& entry, unsigned& index, image* images) {
   if (entry.__addr_actual_) {
-    while (images[index].loadedAt > entry.__addr_actual_) {
+    while (images[index].loaded_at_ > entry.__addr_actual_) {
       --index;
     }
-    while (images[index + 1].loadedAt <= entry.__addr_actual_) {
+    while (images[index + 1].loaded_at_ <= entry.__addr_actual_) {
       ++index;
     }
     auto& image = images[index];
     if (image) {
-      entry.__addr_unslid_ = entry.__addr_actual_ - images[index].slide;
-      entry.__file_        = alloc.make_str(images[index].name);
+      entry.__addr_unslid_ = entry.__addr_actual_ - images[index].slide_;
+      entry.__file_        = alloc.make_str(images[index].name_);
     }
   }
 }
 
 bool enum_modules(unsigned& count, auto& images) {
-  count = std::min(kMaxImages, _dyld_image_count());
+  count = std::min(image::kMaxImages, size_t(_dyld_image_count()));
   for (size_t i = 0; i < count; i++) {
-    auto& image    = images[i];
-    image.slide    = _dyld_get_image_vmaddr_slide(i);
-    image.loadedAt = uintptr_t(_dyld_get_image_header(i));
-    image.name     = _dyld_get_image_name(i);
+    auto& image      = images[i];
+    image.slide_     = _dyld_get_image_vmaddr_slide(i);
+    image.loaded_at_ = uintptr_t(_dyld_get_image_header(i));
+    image.name_      = _dyld_get_image_name(i);
   }
   images[count++] = {0uz, 0};  // sentinel at low end
   images[count++] = {~0uz, 0}; // sentinel at high end
@@ -65,7 +56,7 @@ bool enum_modules(unsigned& count, auto& images) {
 
 void macos::ident_modules() {
   static unsigned imageCount;
-  static std::array<Image, kMaxImages + 2> images;
+  static std::array<image, image::kMaxImages + 2> images;
   static bool atomicInitialized = enum_modules(imageCount, images);
   (void)atomicInitialized;
 
@@ -76,7 +67,7 @@ void macos::ident_modules() {
   }
 
   // First image (the main program) is at index 1
-  builder_.__main_prog_path_ = builder_.__alloc_.make_str(images.at(1).name);
+  builder_.__main_prog_path_ = builder_.__alloc_.make_str(images.at(1).name_);
 
   unsigned index = 1; // Starts at one, and is moved by 'ident_module'
   for (auto& entry : builder_.__entries_) {
@@ -103,6 +94,17 @@ void macos::symbolize() {
     symbolize_entry(builder_.__alloc_, (entry_base&)entry);
   }
 }
+
+} // namespace __stacktrace
+_LIBCPP_END_NAMESPACE_STD
+
+#else
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace __stacktrace {
+
+void macos::ident_modules() {}
+void macos::symbolize() {}
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD

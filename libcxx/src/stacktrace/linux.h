@@ -9,6 +9,23 @@
 #ifndef _LIBCPP_STACKTRACE_LINUX_H
 #define _LIBCPP_STACKTRACE_LINUX_H
 
+#include <__stacktrace/base.h>
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace __stacktrace {
+
+struct linux {
+  builder& builder_;
+  void ident_modules();
+  void symbolize();
+
+private:
+  void resolve_main_elf_syms(std::string_view elf_name);
+};
+
+} // namespace __stacktrace
+_LIBCPP_END_NAMESPACE_STD
+
 #include "stacktrace/config.h"
 
 #if defined(_LIBCPP_STACKTRACE_LINUX)
@@ -23,30 +40,18 @@
 #  include <string_view>
 #  include <unistd.h>
 
-#  include <__stacktrace/base.h>
-
-#  include "stacktrace/config.h"
-#  include "stacktrace/utils.h"
+#  include "stacktrace/utils/image.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct linux {
-  builder& builder_;
-  void ident_modules();
-  void symbolize();
-
-private:
-  void resolve_main_elf_syms(std::string_view elf_name);
-};
-
 struct images {
   // How many images this contains, including the left/right sentinels.
   unsigned count_{0};
-  std::array<image, k_max_images + 2> images_{};
+  std::array<image, image::kMaxImages + 2> images_{};
 
   int add(dl_phdr_info& info) {
-    assert(count_ < k_max_images);
+    assert(count_ < image::kMaxImages);
     auto isFirst        = (count_ == 0);
     auto& image         = images_.at(count_++);
     image.loaded_at_    = info.dlpi_addr;
@@ -60,7 +65,7 @@ struct images {
         image.name_ = buffer;
       }
     }
-    return count_ == k_max_images; // return nonzero if we're at the limit
+    return count_ == image::kMaxImages; // return nonzero if we're at the limit
   }
 
   static int callback(dl_phdr_info* info, size_t, void* self) { return (*(images*)(self)).add(*info); }
