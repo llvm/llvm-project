@@ -16,13 +16,23 @@ cc_library(
     srcs = glob(["support/*.cpp"]),
     hdrs = glob(["support/*.h"]),
     deps = [
+        ":lib",
         "//llvm:Support",
     ],
 )
 
 cc_library(
     name = "lib",
-    srcs = glob(["*.cpp"]),
+    srcs = glob(
+        ["*.cpp"],
+        exclude = [
+            "Generators.cpp",
+            "HTMLGenerator.cpp",
+            "HTMLMustacheGenerator.cpp",
+            "MDGenerator.cpp",
+            "YAMLGenerator.cpp",
+        ],
+    ),
     hdrs = glob(["*.h"]),
     includes = ["."],
     deps = [
@@ -39,11 +49,36 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "generators",
+    srcs = [
+        "Generators.cpp",
+        "HTMLGenerator.cpp",
+        "HTMLMustacheGenerator.cpp",
+        "MDGenerator.cpp",
+        "YAMLGenerator.cpp",
+    ],
+    hdrs = ["Generators.h"],
+    includes = ["."],
+    deps = [
+        ":clang-doc-support",
+        ":lib",
+        "//clang:basic",
+        "//llvm:Support",
+    ],
+)
+
+filegroup(
+    name = "assets",
+    srcs = glob(["assets/**"]),
+)
+
 cc_binary(
     name = "clang-doc",
     srcs = ["tool/ClangDocMain.cpp"],
     stamp = 0,
     deps = [
+        ":generators",
         ":lib",
         "//clang:ast",
         "//clang:ast_matchers",
