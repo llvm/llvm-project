@@ -248,7 +248,7 @@ template <> struct MappingTraits<memprof::DataAccessProfRecord> {
         Rec.SymHandle = Hash;
       }
     }
-
+    Io.mapRequired("AccessCount", Rec.AccessCount);
     Io.mapOptional("Locations", Rec.Locations);
   }
 };

@@ -51,12 +51,14 @@ HeapProfileRecords:
 DataAccessProfiles:
   SampledRecords:
     - Symbol:          abcde
+      AccessCount:     100
       Locations:
       - FileName:      file2.h
         Line:          123
       - FileName:      file3.cpp
         Line:          456
     - Hash:            101010
+      AccessCount:     200
       Locations:
         - FileName:        file.cpp
           Line:            233
