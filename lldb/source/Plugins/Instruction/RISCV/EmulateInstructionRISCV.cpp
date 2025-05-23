@@ -650,9 +650,10 @@ std::optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   for (const InstrPattern &pat : PATTERNS) {
     if ((inst & pat.type_mask) == pat.eigen &&
         (inst_type & pat.inst_type) != 0) {
-      LLDB_LOGF(
-          log, "EmulateInstructionRISCV::%s: inst(%x at %" PRIx64 ") was decoded to %s",
-          __FUNCTION__, inst, m_addr, pat.name);
+      LLDB_LOGF(log,
+                "EmulateInstructionRISCV::%s: inst(%x at %" PRIx64
+                ") was decoded to %s",
+                __FUNCTION__, inst, m_addr, pat.name);
       auto decoded = is_16b ? pat.decode(try_rvc) : pat.decode(inst);
       return DecodeResult{decoded, inst, is_16b, pat};
     }
@@ -1649,21 +1650,6 @@ bool EmulateInstructionRISCV::ReadInstruction() {
   return true;
 }
 
-std::optional<addr_t> EmulateInstructionRISCV::ReadPC() {
-  bool success = false;
-  auto addr = ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
-                                   LLDB_INVALID_ADDRESS, &success);
-  return success ? std::optional<addr_t>(addr) : std::nullopt;
-}
-
-bool EmulateInstructionRISCV::WritePC(addr_t pc) {
-  EmulateInstruction::Context ctx;
-  ctx.type = eContextAdvancePC;
-  ctx.SetNoArgs();
-  return WriteRegisterUnsigned(ctx, eRegisterKindGeneric,
-                               LLDB_REGNUM_GENERIC_PC, pc);
-}
-
 RoundingMode EmulateInstructionRISCV::GetRoundingMode() {
   bool success = false;
   auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, fpr_fcsr_riscv,
@@ -1790,6 +1776,101 @@ EmulateInstructionRISCV::CreateInstance(const ArchSpec &arch,
 
 bool EmulateInstructionRISCV::SupportsThisArch(const ArchSpec &arch) {
   return arch.GetTriple().isRISCV();
+}
+
+BreakpointLocations
+RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
+    Status &status) {
+  EmulateInstructionRISCV *riscv_emulator =
+      static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
+
+  auto pc = riscv_emulator->ReadPC();
+  if (!pc) {
+    status = Status("Can't read PC");
+    return {};
+  }
+
+  auto inst = riscv_emulator->ReadInstructionAt(*pc);
+  if (!inst) {
+    // Can't read instruction. Try default handler.
+    return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
+        status);
+  }
+
+  if (FoundLoadReserve(inst->decoded))
+    return HandleAtomicSequence(*pc, status);
+
+  if (FoundStoreConditional(inst->decoded)) {
+    // Ill-formed program, just set a breakpoint to the current position
+    return {*pc};
+  }
+
+  return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(status);
+}
+
+unsigned RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointSize(
+    lldb::addr_t bp_addr, Status &error) {
+  EmulateInstructionRISCV *riscv_emulator =
+      static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
+
+  if (auto inst = riscv_emulator->ReadInstructionAt(bp_addr); inst)
+    return inst->is_rvc ? 2 : 4;
+
+  // Try last instruction size.
+  if (auto last_instr_size = riscv_emulator->GetLastInstrSize();
+      last_instr_size)
+    return *last_instr_size;
+
+  // Just place non-compressed software trap (EBREAK).
+  return 4;
+}
+
+BreakpointLocations
+RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
+    lldb::addr_t pc, Status &error) {
+  EmulateInstructionRISCV *riscv_emulator =
+      static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
+  // Handle instuctions between LR and SC. According to unprivilleged
+  // RISC-V ISA there can be at most 16 instructions in the sequence
+
+  lldb::addr_t entry_pc = pc;
+  pc += 4; // add LR_W, LR_D instruction size
+
+  size_t atomic_length = 0;
+  std::optional<DecodeResult> inst;
+  std::vector<lldb::addr_t> bp_addrs;
+  do {
+    inst = riscv_emulator->ReadInstructionAt(pc);
+    if (!inst) {
+      error = Status("Can't read instruction");
+      return {};
+    }
+
+    if (B *branch = std::get_if<B>(&inst->decoded))
+      bp_addrs.push_back(pc + SignExt(branch->imm));
+
+    unsigned addent = inst->is_rvc ? 2 : 4;
+    pc += addent;
+    atomic_length += addent;
+  } while ((atomic_length < s_max_atomic_sequence_length) &&
+           !FoundStoreConditional(inst->decoded));
+
+  if (atomic_length >= s_max_atomic_sequence_length) {
+    // Ill-formed program, just set a breakpoint to the current position
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log,
+              "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
+              "corresponding store conditional insturuction",
+              __FUNCTION__);
+    return {entry_pc};
+  }
+
+  bp_addrs.erase(
+      llvm::remove_if(bp_addrs,
+                      [pc](lldb::addr_t bp_addr) { return pc >= bp_addr; }),
+      bp_addrs.end());
+  bp_addrs.push_back(pc);
+  return bp_addrs;
 }
 
 } // namespace lldb_private
