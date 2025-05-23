@@ -38,7 +38,8 @@ public:
   RawPtrRefMemberChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
 
-  virtual std::optional<bool> isUnsafePtr(QualType) const = 0;
+  virtual std::optional<bool> isUnsafePtr(QualType,
+                                          bool ignoreARC = false) const = 0;
   virtual const char *typeName() const = 0;
   virtual const char *invariant() const = 0;
 
@@ -174,7 +175,15 @@ public:
     if (!PropType)
       return;
 
-    auto IsUnsafePtr = isUnsafePtr(QT);
+    if (const ObjCInterfaceDecl *ID = dyn_cast<ObjCInterfaceDecl>(CD)) {
+      if (!RTC || !RTC->defaultSynthProperties() ||
+          ID->isObjCRequiresPropertyDefs())
+        return;
+    }
+
+    bool ignoreARC =
+        !PD->isReadOnly() && PD->getSetterKind() == ObjCPropertyDecl::Assign;
+    auto IsUnsafePtr = isUnsafePtr(QT, ignoreARC);
     if (!IsUnsafePtr || !*IsUnsafePtr)
       return;
 
@@ -274,7 +283,7 @@ public:
       : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
                                "reference-countable type") {}
 
-  std::optional<bool> isUnsafePtr(QualType QT) const final {
+  std::optional<bool> isUnsafePtr(QualType QT, bool) const final {
     return isUncountedPtr(QT.getCanonicalType());
   }
 
@@ -291,7 +300,7 @@ public:
       : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
                                "checked-pointer capable type") {}
 
-  std::optional<bool> isUnsafePtr(QualType QT) const final {
+  std::optional<bool> isUnsafePtr(QualType QT, bool) const final {
     return isUncheckedPtr(QT.getCanonicalType());
   }
 
@@ -311,8 +320,8 @@ public:
     RTC = RetainTypeChecker();
   }
 
-  std::optional<bool> isUnsafePtr(QualType QT) const final {
-    return RTC->isUnretained(QT);
+  std::optional<bool> isUnsafePtr(QualType QT, bool ignoreARC) const final {
+    return RTC->isUnretained(QT, ignoreARC);
   }
 
   const char *typeName() const final { return "retainable type"; }
