@@ -209,10 +209,10 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       // Read/modify/write the vector, inserting the new element
       const mlir::Location loc = dst.getVectorPointer().getLoc();
       const mlir::Value vector =
-          builder.createLoad(loc, dst.getVectorAddress().getPointer());
+          builder.createLoad(loc, dst.getVectorAddress());
       const mlir::Value newVector = builder.create<cir::VecInsertOp>(
           loc, vector, src.getScalarVal(), dst.getVectorIdx());
-      builder.createStore(loc, newVector, dst.getVectorAddress().getPointer());
+      builder.createStore(loc, newVector, dst.getVectorAddress());
       return;
     }
 
@@ -301,7 +301,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr.getPointer() /*, isVolatile*/);
+  builder.createStore(*currSrcLoc, value, addr /*, isVolatile*/);
 
   if (isNontemporal) {
     cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar nontemporal");
@@ -409,12 +409,10 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
   Address addr = lvalue.getAddress();
   mlir::Type eltTy = addr.getElementType();
 
-  mlir::Value ptr = addr.getPointer();
   if (mlir::isa<cir::VoidType>(eltTy))
     cgm.errorNYI(loc, "emitLoadOfScalar: void type");
 
-  mlir::Value loadOp = builder.CIRBaseBuilderTy::createLoad(
-      getLoc(loc), ptr, false /*isVolatile*/);
+  mlir::Value loadOp = builder.createLoad(getLoc(loc), addr);
 
   return loadOp;
 }
@@ -431,7 +429,7 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
 
   if (lv.isVectorElt()) {
     const mlir::Value load =
-        builder.createLoad(getLoc(loc), lv.getVectorAddress().getPointer());
+        builder.createLoad(getLoc(loc), lv.getVectorAddress());
     return RValue::get(builder.create<cir::VecExtractOp>(getLoc(loc), load,
                                                          lv.getVectorIdx()));
   }
@@ -745,11 +743,12 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
 
 LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e) {
   cir::GlobalOp globalOp = cgm.getGlobalForStringLiteral(e);
-  assert(!cir::MissingFeatures::opGlobalAlignment());
+  assert(globalOp.getAlignment() && "expected alignment for string literal");
+  unsigned align = *(globalOp.getAlignment());
   mlir::Value addr =
       builder.createGetGlobal(getLoc(e->getSourceRange()), globalOp);
   return makeAddrLValue(
-      Address(addr, globalOp.getSymType(), CharUnits::fromQuantity(1)),
+      Address(addr, globalOp.getSymType(), CharUnits::fromQuantity(align)),
       e->getType(), AlignmentSource::Decl);
 }
 
