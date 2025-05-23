@@ -177,6 +177,11 @@ static cl::opt<bool>
                         cl::desc("Salvage stale MemProf profile"),
                         cl::init(false), cl::Hidden);
 
+static cl::opt<bool> ClMemProfAttachCalleeGuids(
+    "memprof-attach-calleeguids",
+    cl::desc("Attach CalleeGuids value profile metadata to IR"),
+    cl::Hidden, cl::init(true));
+
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
 extern cl::opt<unsigned> MinCallsiteColdBytePercent;
@@ -1212,7 +1217,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
 
           // Check if this is an indirect call and we have GUID information
           // from CallSiteInfo to attach value profile metadata
-          if (!CalledFunction) {
+          if (!CalledFunction && ClMemProfAttachCalleeGuids) {
             // This is an indirect call, look for CallSites with matching stacks
             // that have CalleeGuids information
             for (auto &CS : MemProfRec->CallSites) {
