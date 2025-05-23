@@ -2846,10 +2846,10 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     //       of NAN, but IEEE-754 specifies the signbit of NAN values with
     //       fneg/fabs operations.
     if (!SI.hasNoSignedZeros() &&
-        !(SI.hasOneUse() && ignoreSignBitOfZero(*SI.use_begin())))
+        (!SI.hasOneUse() || !ignoreSignBitOfZero(*SI.use_begin())))
       return nullptr;
     if (!SI.hasNoNaNs() &&
-        !(SI.hasOneUse() && ignoreSignBitOfNaN(*SI.use_begin())))
+        (!SI.hasOneUse() || !ignoreSignBitOfNaN(*SI.use_begin())))
       return nullptr;
 
     if (Swap)
