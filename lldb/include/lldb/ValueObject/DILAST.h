@@ -20,6 +20,7 @@ namespace lldb_private::dil {
 enum class NodeKind {
   eErrorNode,
   eIdentifierNode,
+  eMemberOfNode,
   eUnaryOpNode,
 };
 
@@ -88,6 +89,29 @@ private:
   std::string m_name;
 };
 
+class MemberOfNode : public ASTNode {
+public:
+  MemberOfNode(uint32_t location, ASTNodeUP base, bool is_arrow,
+               std::string name)
+      : ASTNode(location, NodeKind::eMemberOfNode), m_base(std::move(base)),
+        m_is_arrow(is_arrow), m_field_name(std::move(name)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode *GetBase() const { return m_base.get(); }
+  bool GetIsArrow() const { return m_is_arrow; }
+  llvm::StringRef GetFieldName() const { return llvm::StringRef(m_field_name); }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eMemberOfNode;
+  }
+
+private:
+  ASTNodeUP m_base;
+  bool m_is_arrow;
+  std::string m_field_name;
+};
+
 class UnaryOpNode : public ASTNode {
 public:
   UnaryOpNode(uint32_t location, UnaryOpKind kind, ASTNodeUP operand)
@@ -117,6 +141,8 @@ public:
   virtual ~Visitor() = default;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const MemberOfNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const UnaryOpNode *node) = 0;
 };
