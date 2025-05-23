@@ -794,6 +794,7 @@ Bug Fixes to C++ Support
 - Clang could incorrectly instantiate functions in discarded contexts (#GH140449)
 - Fix instantiation of default-initialized variable template specialization. (#GH140632) (#GH140622)
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
+- Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

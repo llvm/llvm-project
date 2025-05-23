@@ -3340,13 +3340,13 @@ bool Sema::SubstDefaultArgument(
   }
 
   ExprResult Result;
+  // C++ [dcl.fct.default]p5:
+  //   The names in the [default argument] expression are bound, and
+  //   the semantic constraints are checked, at the point where the
+  //   default argument expression appears.
+  ContextRAII SavedContext(*this, FD);
   {
-    // C++ [dcl.fct.default]p5:
-    //   The names in the [default argument] expression are bound, and
-    //   the semantic constraints are checked, at the point where the
-    //   default argument expression appears.
-    ContextRAII SavedContext(*this, FD);
-    std::unique_ptr<LocalInstantiationScope> LIS;
+    std::optional<LocalInstantiationScope> LIS;
 
     if (ForCallExpr) {
       // When instantiating a default argument due to use in a call expression,
@@ -3354,7 +3354,7 @@ bool Sema::SubstDefaultArgument(
       // required to satisfy references from the default argument. For example:
       //   template<typename T> void f(T a, int = decltype(a)());
       //   void g() { f(0); }
-      LIS = std::make_unique<LocalInstantiationScope>(*this);
+      LIS.emplace(*this);
       FunctionDecl *PatternFD = FD->getTemplateInstantiationPattern(
           /*ForDefinition*/ false);
       if (addInstantiatedParametersToScope(FD, PatternFD, *LIS, TemplateArgs))
