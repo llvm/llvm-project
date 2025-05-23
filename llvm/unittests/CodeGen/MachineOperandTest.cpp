@@ -424,4 +424,13 @@ TEST(MachineOperandTest, HashValue) {
   ASSERT_TRUE(MO1.isIdenticalTo(MO2));
 }
 
+TEST(MachineOperandTest, RegisterLiveOutHashValue) {
+  uint32_t Mask1 = 0;
+  uint32_t Mask2 = 0;
+  MachineOperand MO1 = MachineOperand::CreateRegLiveOut(&Mask1);
+  MachineOperand MO2 = MachineOperand::CreateRegLiveOut(&Mask2);
+  ASSERT_EQ(hash_value(MO1), hash_value(MO2));
+  ASSERT_TRUE(MO1.isIdenticalTo(MO2));
+}
+
 } // end namespace
