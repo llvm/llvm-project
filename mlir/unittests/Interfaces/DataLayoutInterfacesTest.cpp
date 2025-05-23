@@ -577,6 +577,7 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
   EXPECT_EQ(layout.getManglingMode(), Attribute());
+  EXPECT_EQ(layout.getFunctionPointerAlignment(), Attribute());
 
   EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
