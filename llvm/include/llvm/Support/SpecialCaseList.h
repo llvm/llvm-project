@@ -129,7 +129,6 @@ protected:
       std::string Name;
       unsigned LineNo;
       GlobPattern Pattern;
-      Glob(Glob &&) = delete;
     };
 
     std::vector<std::unique_ptr<Matcher::Glob>> Globs;

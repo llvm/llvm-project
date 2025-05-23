@@ -53,7 +53,7 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
     return Error::success();
   }
 
-  std::unique_ptr<Matcher::Glob> Glob = std::make_unique<Matcher::Glob>();
+  auto Glob = std::make_unique<Matcher::Glob>();
   Glob->Name = Pattern.str();
   Glob->LineNo = LineNumber;
   // We must be sure to use the string in the map rather than the provided
