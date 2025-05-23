@@ -1174,7 +1174,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
         EmitScalarExpr(E->getArg(0)));
   case NVPTX::BI__nvvm_barrier_sync_cnt:
     return Builder.CreateCall(
-        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync),
+        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count),
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
   default:
     return nullptr;

@@ -273,6 +273,8 @@ C23 Feature Support
   be completed).
 - Fixed a failed assertion with an invalid parameter to the ``#embed``
   directive. Fixes #GH126940.
+- Fixed a crash when a declaration of a ``constexpr`` variable with an invalid
+  type. Fixes #GH140887
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -561,6 +563,8 @@ Improvements to Clang's diagnostics
 - Fixed a crash when checking a ``__thread``-specified variable declaration
   with a dependent type in C++. (#GH140509)
 
+- Clang now suggests corrections for unknown attribute names.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -743,6 +747,7 @@ Bug Fixes to C++ Support
   in a ``constexpr`` function. (#GH131432)
 - Fixed an incorrect TreeTransform for calls to ``consteval`` functions if a conversion template is present. (#GH137885)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
+- Fixed a missed initializer instantiation bug for variable templates. (#GH134526), (#GH138122)
 - Fix a crash when checking the template template parameters of a dependent lambda appearing in an alias declaration.
   (#GH136432), (#GH137014), (#GH138018)
 - Fixed an assertion when trying to constant-fold various builtins when the argument
