@@ -2254,25 +2254,6 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
         }
         NewVecC[ShMask[I]] = CElt;
       }
-      // If this is a widening shuffle, we must be able to extend with poison
-      // elements. If the original binop does not produce a poison in the high
-      // lanes, then this transform is not safe.
-      // Similarly for poison lanes due to the shuffle mask, we can only
-      // transform binops that preserve poison.
-      // TODO: We could shuffle those non-poison constant values into the
-      //       result by using a constant vector (rather than an poison vector)
-      //       as operand 1 of the new binop, but that might be too aggressive
-      //       for target-independent shuffle creation.
-      if (I >= SrcVecNumElts || ShMask[I] < 0) {
-        Constant *MaybePoison =
-            ConstOp1
-                ? ConstantFoldBinaryOpOperands(Opcode, PoisonScalar, CElt, DL)
-                : ConstantFoldBinaryOpOperands(Opcode, CElt, PoisonScalar, DL);
-        if (!MaybePoison || !isa<PoisonValue>(MaybePoison)) {
-          MayChange = false;
-          break;
-        }
-      }
     }
     if (MayChange) {
       Constant *NewC = ConstantVector::get(NewVecC);
