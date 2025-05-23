@@ -527,6 +527,8 @@ public:
     return AdditionalBypassBlock;
   }
 
+  IRBuilderBase &getIRBuilder() { return Builder; }
+
 protected:
   friend class LoopVectorizationPlanner;
 
@@ -2321,7 +2323,8 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
     return VectorTripCount;
 
   Value *TC = getTripCount();
-  IRBuilder<> Builder(InsertBlock->getTerminator());
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(InsertBlock->getTerminator());
 
   Type *Ty = TC->getType();
   // This is where we can make the step a runtime constant.
@@ -2395,7 +2398,8 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   // Reuse existing vector loop preheader for TC checks.
   // Note that new preheader block is generated for vector loop.
   BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
-  IRBuilder<> Builder(TCCheckBlock->getTerminator());
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(TCCheckBlock->getTerminator());
 
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
@@ -7840,7 +7844,8 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
   // Reuse existing vector loop preheader for TC checks.
   // Note that new preheader block is generated for vector loop.
   BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
-  IRBuilder<> Builder(TCCheckBlock->getTerminator());
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(TCCheckBlock->getTerminator());
 
   // Generate code to check if the loop's trip count is less than VF * UF of the
   // main vector loop.
@@ -7965,7 +7970,8 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   assert(EPI.TripCount &&
          "Expected trip count to have been saved in the first pass.");
   Value *TC = EPI.TripCount;
-  IRBuilder<> Builder(Insert->getTerminator());
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(Insert->getTerminator());
   Value *Count = Builder.CreateSub(TC, EPI.VectorTripCount, "n.vec.remaining");
 
   // Generate code to check if the loop's trip count is less than VF * UF of the
@@ -9608,7 +9614,7 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
 
   // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
+  IRBuilderBase::FastMathFlagGuard FMFG(State.Builder);
   if (FPBinOp)
     State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
 
@@ -10011,10 +10017,9 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
 /// SCEVs from \p ExpandedSCEVs and set resume values for header recipes.
-static void
-preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
-                                 const SCEV2ValueTy &ExpandedSCEVs,
-                                 const EpilogueLoopVectorizationInfo &EPI) {
+static void preparePlanForEpilogueVectorLoop(
+    VPlan &Plan, Loop *L, const SCEV2ValueTy &ExpandedSCEVs,
+    const EpilogueLoopVectorizationInfo &EPI, IRBuilderBase &Builder) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
@@ -10081,7 +10086,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         // start value; compare the final value from the main vector loop
         // to the start value.
         BasicBlock *PBB = cast<Instruction>(ResumeV)->getParent();
-        IRBuilder<> Builder(PBB, PBB->getFirstNonPHIIt());
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(PBB, PBB->getFirstNonPHIIt());
         ResumeV =
             Builder.CreateICmpNE(ResumeV, RdxDesc.getRecurrenceStartValue());
       } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
@@ -10096,7 +10102,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         // less than the minimum value of a monotonically increasing induction
         // variable.
         BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
-        IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(ResumeBB, ResumeBB->getFirstNonPHIIt());
         Value *Cmp = Builder.CreateICmpEQ(
             ResumeV, ToFrozen[RdxDesc.getRecurrenceStartValue()]);
         ResumeV =
@@ -10150,9 +10157,9 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
 // resume value for the induction variable comes from the trip count of the
 // main vector loop, passed as the second argument.
 static Value *createInductionAdditionalBypassValues(
-    PHINode *OrigPhi, const InductionDescriptor &II, IRBuilder<> &BypassBuilder,
-    const SCEV2ValueTy &ExpandedSCEVs, Value *MainVectorTripCount,
-    Instruction *OldInduction) {
+    PHINode *OrigPhi, const InductionDescriptor &II,
+    IRBuilderBase &BypassBuilder, const SCEV2ValueTy &ExpandedSCEVs,
+    Value *MainVectorTripCount, Instruction *OldInduction) {
   Value *Step = getExpandedStep(II, ExpandedSCEVs);
   // For the primary induction the additional bypass end value is known.
   // Otherwise it is computed.
@@ -10541,15 +10548,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                                  ORE, EPI, &CM, BFI, PSI,
                                                  Checks, BestEpiPlan);
         EpilogILV.setTripCount(MainILV.getTripCount());
-        preparePlanForEpilogueVectorLoop(BestEpiPlan, L, ExpandedSCEVs, EPI);
+        preparePlanForEpilogueVectorLoop(BestEpiPlan, L, ExpandedSCEVs, EPI,
+                                         EpilogILV.getIRBuilder());
 
         LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV,
                         DT, true);
 
         // Fix induction resume values from the additional bypass block.
         BasicBlock *BypassBlock = EpilogILV.getAdditionalBypassBlock();
-        IRBuilder<> BypassBuilder(BypassBlock,
-                                  BypassBlock->getFirstInsertionPt());
+        IRBuilderBase &BypassBuilder = EpilogILV.getIRBuilder();
+        IRBuilderBase::InsertPointGuard Guard(BypassBuilder);
+        BypassBuilder.SetInsertPoint(BypassBlock,
+                                     BypassBlock->getFirstInsertionPt());
         BasicBlock *PH = L->getLoopPreheader();
         for (const auto &[IVPhi, II] : LVL.getInductionVars()) {
           auto *Inc = cast<PHINode>(IVPhi->getIncomingValueForBlock(PH));

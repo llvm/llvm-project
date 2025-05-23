@@ -272,7 +272,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     if (VF.isScalar())
       return V;
     // Place the code for broadcasting invariant variables in the new preheader.
-    IRBuilder<>::InsertPointGuard Guard(Builder);
+    IRBuilderBase::InsertPointGuard Guard(Builder);
     if (SafeToHoist) {
       BasicBlock *LoopVectorPreHeader =
           CFG.VPBB2IRBB[Plan->getVectorPreheader()];
@@ -887,9 +887,11 @@ VPlan::~VPlan() {
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              VPTransformState &State) {
   Type *TCTy = TripCountV->getType();
+  IRBuilderBase &Builder = State.Builder;
   // Check if the backedge taken count is needed, and if so build it.
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(State.CFG.PrevBB->getTerminator());
     auto *TCMO = Builder.CreateSub(TripCountV, ConstantInt::get(TCTy, 1),
                                    "trip.count.minus.1");
     BackedgeTakenCount->setUnderlyingValue(TCMO);
@@ -897,7 +899,8 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   VectorTripCount.setUnderlyingValue(VectorTripCountV);
 
-  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
   if (VF.getNumUsers()) {

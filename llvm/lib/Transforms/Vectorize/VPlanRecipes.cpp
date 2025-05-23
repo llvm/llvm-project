@@ -1986,7 +1986,7 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : getPHINode();
 
   // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+  IRBuilderBase::FastMathFlagGuard FMFG(Builder);
   if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
     Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
 
@@ -2110,7 +2110,7 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
+  IRBuilderBase::FastMathFlagGuard FMFG(State.Builder);
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
 
@@ -3629,7 +3629,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
       State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
-    IRBuilder<>::InsertPointGuard Guard(State.Builder);
+    IRBuilderBase::InsertPointGuard Guard(State.Builder);
     if (State.Builder.GetInsertPoint() !=
         State.Builder.GetInsertBlock()->getFirstNonPHIIt())
       State.Builder.SetInsertPoint(
@@ -3733,7 +3733,9 @@ void VPExpandSCEVRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   Value *CanonicalIV = State.get(getOperand(0), /*IsScalar*/ true);
   Type *STy = CanonicalIV->getType();
-  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  IRBuilderBase &Builder = State.Builder;
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
   Value *VStart = VF.isScalar()
                       ? CanonicalIV
@@ -3772,7 +3774,7 @@ void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
   if (State.VF.isVector()) {
     auto *IdxTy = Builder.getInt32Ty();
     auto *One = ConstantInt::get(IdxTy, 1);
-    IRBuilder<>::InsertPointGuard Guard(Builder);
+    IRBuilderBase::InsertPointGuard Guard(Builder);
     Builder.SetInsertPoint(VectorPH->getTerminator());
     auto *RuntimeVF = getRuntimeVF(Builder, IdxTy, State.VF);
     auto *LastIdx = Builder.CreateSub(RuntimeVF, One);
