@@ -851,9 +851,6 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   return Stride;
 }
 
-static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
-                        const Loop *L);
-
 /// Check whether \p AR is a non-wrapping AddRec. If \p Ptr is not nullptr, use
 /// informating from the IR pointer value to determine no-wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
@@ -864,11 +861,6 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
     return true;
 
   if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
-    return true;
-
-  // The address calculation must not wrap. Otherwise, a dependence could be
-  // inverted.
-  if (Ptr && isNoWrapGEP(Ptr, PSE, L))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -1466,49 +1458,6 @@ void AccessAnalysis::processMemAccesses() {
       }
     }
   }
-}
-
-/// Check whether \p Ptr is non-wrapping GEP.
-static bool isNoWrapGEP(Value *Ptr, PredicatedScalarEvolution &PSE,
-                        const Loop *L) {
-  // Scalar evolution does not propagate the non-wrapping flags to values that
-  // are derived from a non-wrapping induction variable because non-wrapping
-  // could be flow-sensitive.
-  //
-  // Look through the potentially overflowing instruction to try to prove
-  // non-wrapping for the *specific* value of Ptr.
-
-  // The arithmetic implied by an nusw GEP can't overflow.
-  const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
-    return false;
-
-  // Make sure there is only one non-const index and analyze that.
-  Value *NonConstIndex = nullptr;
-  for (Value *Index : GEP->indices())
-    if (!isa<ConstantInt>(Index)) {
-      if (NonConstIndex)
-        return false;
-      NonConstIndex = Index;
-    }
-  if (!NonConstIndex)
-    // The recurrence is on the pointer, ignore for now.
-    return false;
-
-  // The index in GEP is signed.  It is non-wrapping if it's derived from a NSW
-  // AddRec using a NSW operation.
-  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(NonConstIndex))
-    if (OBO->hasNoSignedWrap() &&
-        // Assume constant for other the operand so that the AddRec can be
-        // easily found.
-        isa<ConstantInt>(OBO->getOperand(1))) {
-      const SCEV *OpScev = PSE.getSCEV(OBO->getOperand(0));
-
-      if (auto *OpAR = dyn_cast<SCEVAddRecExpr>(OpScev))
-        return OpAR->getLoop() == L && OpAR->getNoWrapFlags(SCEV::FlagNSW);
-    }
-
-  return false;
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
