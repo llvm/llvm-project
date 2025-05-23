@@ -29,10 +29,7 @@ public:
     eof,
     identifier,
     l_paren,
-    l_square,
-    numeric_constant,
     r_paren,
-    r_square,
     star,
   };
 
