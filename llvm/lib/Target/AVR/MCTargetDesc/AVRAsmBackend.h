@@ -52,9 +52,8 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
+  bool forceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                       const MCValue &Target, const MCSubtargetInfo *);
 
 private:
   Triple::OSType OSType;
