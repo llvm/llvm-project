@@ -118,7 +118,7 @@ struct RootParameterYamlDesc {
   uint32_t Offset;
   ParameterData Data;
 
-  RootParameterYamlDesc(){};
+  RootParameterYamlDesc() {};
   RootParameterYamlDesc(uint32_t T) : Type(T) {}
 };
 
