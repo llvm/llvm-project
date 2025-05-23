@@ -196,12 +196,7 @@ class OpenACCClauseCIREmitter final
                           mlir::Value upperBound, mlir::Value extent) {
     // Arrays always have a start-idx of 0.
     mlir::Value startIdx = createConstantInt(boundLoc, 64, 0);
-    // TODO: OpenACC: It isn't clear that stride would ever be anything other
-    // than '1'?  We emit the type of the reference 'correctly' as far as I
-    // know, so it should just be 1 element each time. We could perhaps use
-    // the 'inBytes' variant here, but it isn't clear what value that gets us.
-    // We might need to revisit this once we try to opt this and see what is
-    // going to happen.
+    // Stride is always 1 in C/C++.
     mlir::Value stride = createConstantInt(boundLoc, 64, 1);
 
     auto bound = builder.create<mlir::acc::DataBoundsOp>(boundLoc, lowerBound,
@@ -261,7 +256,7 @@ class OpenACCClauseCIREmitter final
 
         curVarExpr = section->getBase()->IgnoreParenImpCasts();
       } else {
-        const auto *subscript = dyn_cast<ArraySubscriptExpr>(curVarExpr);
+        const auto *subscript = cast<ArraySubscriptExpr>(curVarExpr);
 
         lowerBound = emitIntExpr(subscript->getIdx());
         // Length of an array index is always 1.
