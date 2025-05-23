@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -gkey-instructions -x c %s -debug-info-kind=line-tables-only -emit-llvm -o -  \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// Perennial quesiton: should the `dec` be in its own source atom or not
+// Perennial question: should the `dec` be in its own source atom or not
 // (currently it is).
 
 // We've made the cmp and br separate source atoms for now, to match existing
