@@ -2266,9 +2266,9 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     bool ConstOp1 = isa<Constant>(RHS);
     if (Constant *NewC =
             unshuffleConstant(Mask, C, cast<VectorType>(V1->getType()))) {
-      // Lanes of NewC not used by the shuffle will be poison which will cause
-      // UB for div/rem. Mask them with a safe constant.
-      if (Inst.isIntDivRem())
+      // For fixed vectors, lanes of NewC not used by the shuffle will be poison
+      // which will cause UB for div/rem. Mask them with a safe constant.
+      if (isa<FixedVectorType>(V1->getType()) && Inst.isIntDivRem())
         NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
