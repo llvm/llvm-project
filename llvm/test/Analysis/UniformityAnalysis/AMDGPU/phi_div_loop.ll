@@ -1,4 +1,3 @@
-;
 ; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 ;
 ; This is to test a divergent phi involving loops
@@ -77,6 +76,4 @@ B8:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #0
-
-attributes #0 = {nounwind readnone }
+declare i32 @llvm.amdgcn.workitem.id.x()

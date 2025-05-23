@@ -630,6 +630,9 @@ public:
     auto IsInIrreducibleCycle = [this](const BlockT *B) {
       for (const auto *Cycle = CI.getCycle(B); Cycle;
            Cycle = Cycle->getParentCycle()) {
+        // If everything is inside a reducible cycle, then look no further
+        if (Cycle->isReducible() && Cycle->contains(&DivTermBlock))
+          return false;
         if (!Cycle->isReducible())
           return true;
       }
@@ -638,12 +641,9 @@ public:
 
     // Technically propagation can continue until it reaches the last node.
     //
-    // For efficiency, propagation can just stop at the IPD (immediate
-    // post-dominator) of successors(DivTemBlock) for any reducible graph.
-    // If FreshLabels.count()=1, the block in FreshLabels should be the IPD.
-    //
-    // For irreducible cycle, propagation continues until it reaches out of
-    // any irreducible cycles first, then stop when FreshLabels.count()=1.
+    // For efficiency, propagation can stop if FreshLabels.count()==1. But
+    // For irreducible cycles, let propagation continue until it reaches
+    // out of irreducible cycles (see code for details.)
     while (true) {
       auto BlockIdx = FreshLabels.find_last();
       if (BlockIdx == -1)
