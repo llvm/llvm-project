@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/BuildID.h"
-#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Error.h"
@@ -82,8 +81,6 @@ private:
   // Whether to generated random memprof hotness for testing.
   bool MemprofGenerateRandomHotness;
 
-  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
-
 public:
   // For memprof testing, random hotness can be assigned to the contexts if
   // MemprofGenerateRandomHotness is enabled. The random seed can be either
@@ -124,9 +121,6 @@ public:
 
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
-
-  void addDataAccessProfData(
-      std::unique_ptr<memprof::DataAccessProfData> DataAccessProfile);
 
   /// Merge existing function counts from the given writer.
   void mergeRecordsFromWriter(InstrProfWriter &&IPW,
