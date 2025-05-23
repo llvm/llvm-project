@@ -2939,6 +2939,8 @@ CodeGenFunction::EmitLoadOfReference(LValue RefLVal,
       Builder.CreateLoad(RefLVal.getAddress(), RefLVal.isVolatile());
   CGM.DecorateInstructionWithTBAA(Load, RefLVal.getTBAAInfo());
   QualType PTy = RefLVal.getType()->getPointeeType();
+  CharUnits Align = CGM.getNaturalTypeAlignment(
+      PTy, PointeeBaseInfo, PointeeTBAAInfo, /*ForPointeeType=*/true);
   if (!PTy->isIncompleteType()) {
     llvm::LLVMContext &Ctx = getLLVMContext();
     llvm::MDBuilder MDB(Ctx);
@@ -2949,17 +2951,16 @@ CodeGenFunction::EmitLoadOfReference(LValue RefLVal,
                         llvm::MDNode::get(Ctx, {}));
     // Emit !align metadata
     if (PTy->isObjectType()) {
-      auto Align =
-          CGM.getNaturalPointeeTypeAlignment(RefLVal.getType()).getQuantity();
-      if (Align > 1) {
+      auto AlignVal = Align.getQuantity();
+      if (AlignVal > 1) {
         Load->setMetadata(
             llvm::LLVMContext::MD_align,
             llvm::MDNode::get(Ctx, MDB.createConstant(llvm::ConstantInt::get(
-                                       Builder.getInt64Ty(), Align))));
+                                       Builder.getInt64Ty(), AlignVal))));
       }
     }
   }
-  return makeNaturalAddressForPointer(Load, PTy, CharUnits(),
+  return makeNaturalAddressForPointer(Load, PTy, Align,
                                       /*ForPointeeType=*/true, PointeeBaseInfo,
                                       PointeeTBAAInfo);
 }
