@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 template<typename T, int N = 2> struct X; // expected-note{{template is declared here}}
 
 X<int, 1> *x1;
@@ -281,5 +282,26 @@ static_assert(S<short *>().SizeOfU<char>() == sizeof(char), "");
 static_assert(S<short *>().SizeOfT<char>() == sizeof(short *), "");
 
 } // namespace GH68490
+
+namespace GH83608 {
+
+class single;
+
+class check_constructible {
+  // This makes it a non-aggregate in C++20+.
+  check_constructible() = default;
+
+  friend class single;
+};
+
+struct single {
+  template <class T> single(T u, check_constructible = {}) {}
+};
+
+// We perform access checking when substituting into the default argument.
+// Make sure it runs within class single.
+single x(0);
+
+}
 
 #endif
