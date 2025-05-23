@@ -179,8 +179,8 @@ static cl::opt<bool>
 
 static cl::opt<bool> ClMemProfAttachCalleeGuids(
     "memprof-attach-calleeguids",
-    cl::desc("Attach CalleeGuids value profile metadata to IR"),
-    cl::Hidden, cl::init(true));
+    cl::desc("Attach CalleeGuids value profile metadata to IR"), cl::Hidden,
+    cl::init(true));
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
