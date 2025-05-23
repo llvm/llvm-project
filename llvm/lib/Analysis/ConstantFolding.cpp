@@ -1635,6 +1635,10 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_umin:
   case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_extract:
+  case Intrinsic::vector_insert:
+  case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_deinterleave2:
   // Target intrinsics
   case Intrinsic::amdgcn_perm:
   case Intrinsic::amdgcn_wave_reduce_umin:
@@ -3750,6 +3754,65 @@ static Constant *ConstantFoldFixedVectorCall(
     }
     return nullptr;
   }
+  case Intrinsic::vector_extract: {
+    auto *Vec = dyn_cast<Constant>(Operands[0]);
+    auto *Idx = dyn_cast<ConstantInt>(Operands[1]);
+    if (!Vec || !Idx)
+      return nullptr;
+
+    unsigned NumElements = FVTy->getNumElements();
+    unsigned VecNumElements =
+        cast<FixedVectorType>(Vec->getType())->getNumElements();
+    // Extracting entire vector is nop
+    if (NumElements == VecNumElements)
+      return Vec;
+
+    unsigned StartingIndex = Idx->getZExtValue();
+    assert(StartingIndex + NumElements <= VecNumElements &&
+           "Cannot extract more elements than exist in the vector");
+    for (unsigned I = 0; I != NumElements; ++I)
+      Result[I] = Vec->getAggregateElement(StartingIndex + I);
+    return ConstantVector::get(Result);
+  }
+  case Intrinsic::vector_insert: {
+    auto *Vec = dyn_cast<Constant>(Operands[0]);
+    auto *SubVec = dyn_cast<Constant>(Operands[1]);
+    auto *Idx = dyn_cast<ConstantInt>(Operands[2]);
+    if (!Vec || !SubVec || !Idx)
+      return nullptr;
+
+    unsigned SubVecNumElements =
+        cast<FixedVectorType>(SubVec->getType())->getNumElements();
+    unsigned VecNumElements =
+        cast<FixedVectorType>(Vec->getType())->getNumElements();
+    unsigned IdxN = Idx->getZExtValue();
+    // Replacing entire vector with a subvec is nop
+    if (SubVecNumElements == VecNumElements)
+      return SubVec;
+
+    unsigned I = 0;
+    for (; I < IdxN; ++I)
+      Result[I] = Vec->getAggregateElement(I);
+    for (; I < IdxN + SubVecNumElements; ++I)
+      Result[I] = SubVec->getAggregateElement(I - IdxN);
+    for (; I < VecNumElements; ++I)
+      Result[I] = Vec->getAggregateElement(I);
+    return ConstantVector::get(Result);
+  }
+  case Intrinsic::vector_interleave2: {
+    auto *Vec0 = dyn_cast<Constant>(Operands[0]);
+    auto *Vec1 = dyn_cast<Constant>(Operands[1]);
+    if (!Vec0 || !Vec1)
+      return nullptr;
+
+    unsigned NumElements =
+        cast<FixedVectorType>(Vec0->getType())->getNumElements();
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Result[2 * I] = Vec0->getAggregateElement(I);
+      Result[2 * I + 1] = Vec1->getAggregateElement(I);
+    }
+    return ConstantVector::get(Result);
+  }
   default:
     break;
   }
@@ -3910,6 +3973,21 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
     if (!SinResult || !CosResult)
       return nullptr;
     return ConstantStruct::get(StTy, SinResult, CosResult);
+  }
+  case Intrinsic::vector_deinterleave2: {
+    auto *Vec = dyn_cast<Constant>(Operands[0]);
+    if (!Vec)
+      return nullptr;
+
+    unsigned NumElements =
+        cast<FixedVectorType>(Vec->getType())->getNumElements() / 2;
+    SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Res0[I] = Vec->getAggregateElement(2 * I);
+      Res1[I] = Vec->getAggregateElement(2 * I + 1);
+    }
+    return ConstantStruct::get(StTy, ConstantVector::get(Res0),
+                               ConstantVector::get(Res1));
   }
   default:
     // TODO: Constant folding of vector intrinsics that fall through here does
