@@ -552,7 +552,7 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     llvm::Value *id = $barrierId ? $barrierId : builder.getInt32(0);
     if ($numberOfThreads)
       createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned,
+          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count,
           {id, $numberOfThreads});
     else
       createIntrinsicCall(
