@@ -565,6 +565,65 @@ entry:
   ret <1 x i32> %res
 }
 
+define <1 x i32> @vqdotu_vv_partial_reduce_v1i32_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; NODOT-LABEL: vqdotu_vv_partial_reduce_v1i32_v4i8:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; NODOT-NEXT:    vwmulu.vv v10, v8, v9
+; NODOT-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; NODOT-NEXT:    vzext.vf2 v8, v10
+; NODOT-NEXT:    vslidedown.vi v9, v8, 3
+; NODOT-NEXT:    vslidedown.vi v10, v8, 2
+; NODOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; NODOT-NEXT:    vadd.vv v9, v9, v8
+; NODOT-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; NODOT-NEXT:    vslidedown.vi v8, v8, 1
+; NODOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v8, v10
+; NODOT-NEXT:    vadd.vv v8, v8, v9
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: vqdotu_vv_partial_reduce_v1i32_v4i8:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; DOT-NEXT:    vmv.s.x v10, zero
+; DOT-NEXT:    vqdotu.vv v10, v8, v9
+; DOT-NEXT:    vmv1r.v v8, v10
+; DOT-NEXT:    ret
+entry:
+  %a.sext = zext <4 x i8> %a to <4 x i32>
+  %b.sext = zext <4 x i8> %b to <4 x i32>
+  %mul = mul <4 x i32> %a.sext, %b.sext
+  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  ret <1 x i32> %res
+}
+
+define <1 x i32> @vqdotsu_vv_partial_reduce_v1i32_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: vqdotsu_vv_partial_reduce_v1i32_v4i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vwmulsu.vv v9, v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v9, 3
+; CHECK-NEXT:    vslidedown.vi v10, v9, 2
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v9, 1
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vadd.vv v8, v9, v8
+; CHECK-NEXT:    ret
+entry:
+  %a.sext = sext <4 x i8> %a to <4 x i32>
+  %b.sext = zext <4 x i8> %b to <4 x i32>
+  %mul = mul <4 x i32> %a.sext, %b.sext
+  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  ret <1 x i32> %res
+}
+
 define <2 x i32> @vqdot_vv_partial_reduce_v2i32_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; NODOT-LABEL: vqdot_vv_partial_reduce_v2i32_v8i8:
 ; NODOT:       # %bb.0: # %entry
