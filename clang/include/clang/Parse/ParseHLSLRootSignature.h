@@ -93,6 +93,7 @@ private:
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Space;
     std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::hlsl::rootsig::RootDescriptorFlags> Flags;
   };
   std::optional<ParsedRootDescriptorParams>
   parseRootDescriptorParams(RootSignatureToken::Kind RegType);
@@ -113,6 +114,8 @@ private:
 
   /// Parsing methods of various enums
   std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
+  std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
+  parseRootDescriptorFlags();
   std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
   parseDescriptorRangeFlags();
 
