@@ -2786,7 +2786,7 @@ bool DagInit::isConcrete() const {
 std::string DagInit::getAsString() const {
   std::string Result = "(" + Val->getAsString();
   if (ValName)
-    Result += ":" + ValName->getAsUnquotedString();
+    Result += ":$" + ValName->getAsUnquotedString();
   if (!arg_empty()) {
     Result += " ";
     ListSeparator LS;

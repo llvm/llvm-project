@@ -9987,19 +9987,29 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
         MaskSize == (int)ExpectedOp.getNumOperands())
       return Op.getOperand(Idx) == ExpectedOp.getOperand(ExpectedIdx);
     break;
-  case ISD::BITCAST:
-    if (Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize) {
-      SDValue Src = peekThroughBitcasts(Op);
-      EVT SrcVT = Src.getValueType();
-      if (SrcVT.isVector() &&
-          (SrcVT.getScalarSizeInBits() % VT.getScalarSizeInBits()) == 0) {
+  case ISD::BITCAST: {
+    SDValue Src = peekThroughBitcasts(Op);
+    EVT SrcVT = Src.getValueType();
+    if (Op == ExpectedOp && SrcVT.isVector() &&
+        (int)VT.getVectorNumElements() == MaskSize) {
+      if ((SrcVT.getScalarSizeInBits() % VT.getScalarSizeInBits()) == 0) {
         unsigned Scale = SrcVT.getScalarSizeInBits() / VT.getScalarSizeInBits();
         return (Idx % Scale) == (ExpectedIdx % Scale) &&
                IsElementEquivalent(SrcVT.getVectorNumElements(), Src, Src,
                                    Idx / Scale, ExpectedIdx / Scale);
       }
+      if ((VT.getScalarSizeInBits() % SrcVT.getScalarSizeInBits()) == 0) {
+        unsigned Scale = VT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits();
+        for (unsigned I = 0; I != Scale; ++I)
+          if (!IsElementEquivalent(SrcVT.getVectorNumElements(), Src, Src,
+                                   (Idx * Scale) + I,
+                                   (ExpectedIdx * Scale) + I))
+            return false;
+        return true;
+      }
     }
     break;
+  }
   case ISD::VECTOR_SHUFFLE: {
     auto *SVN = cast<ShuffleVectorSDNode>(Op);
     return Op == ExpectedOp && (int)VT.getVectorNumElements() == MaskSize &&
@@ -15252,6 +15262,20 @@ static SDValue lowerShuffleAsSplitOrBlend(const SDLoc &DL, MVT VT, SDValue V1,
     return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG,
                                 /*SimpleOnly*/ false);
 
+  // Without AVX2, if we can freely split the subvectors then we're better off
+  // performing half width shuffles.
+  if (!Subtarget.hasAVX2()) {
+    SDValue BC1 = peekThroughBitcasts(V1);
+    SDValue BC2 = peekThroughBitcasts(V2);
+    bool SplatOrSplitV1 = isFreeToSplitVector(BC1, DAG) ||
+                          DAG.isSplatValue(BC1, /*AllowUndefs=*/true);
+    bool SplatOrSplitV2 = isFreeToSplitVector(BC2, DAG) ||
+                          DAG.isSplatValue(BC2, /*AllowUndefs=*/true);
+    if (SplatOrSplitV1 && SplatOrSplitV2)
+      return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG,
+                                  /*SimpleOnly*/ false);
+  }
+
   // Otherwise, just fall back to decomposed shuffles and a blend/unpack. This
   // requires that the decomposed single-input shuffles don't end up here.
   return lowerShuffleAsDecomposedShuffleMerge(DL, VT, V1, V2, Mask, Zeroable,
@@ -16430,15 +16454,14 @@ static SDValue lowerV4F64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                DAG, Subtarget);
   }
 
-  // Use dedicated unpack instructions for masks that match their pattern.
-  if (SDValue V = lowerShuffleWithUNPCK(DL, MVT::v4f64, V1, V2, Mask, DAG))
-    return V;
-
   if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v4f64, V1, V2, Mask,
                                           Zeroable, Subtarget, DAG))
     return Blend;
 
-  // Check if the blend happens to exactly fit that of SHUFPD.
+  // Use dedicated unpack instructions for masks that match their pattern.
+  if (SDValue V = lowerShuffleWithUNPCK(DL, MVT::v4f64, V1, V2, Mask, DAG))
+    return V;
+
   if (SDValue Op = lowerShuffleWithSHUFPD(DL, MVT::v4f64, V1, V2, Mask,
                                           Zeroable, Subtarget, DAG))
     return Op;
@@ -18298,6 +18321,25 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   assert(NumElements == (int)Mask.size() &&
          "canonicalizeShuffleMaskWithHorizOp "
          "shouldn't alter the shuffle mask size");
+
+  // Canonicalize zeros/ones/fp splat constants to ensure no undefs.
+  // These will be materialized uniformly anyway, so make splat matching easier.
+  // TODO: Allow all int constants?
+  auto CanonicalizeConstant = [VT, &DL, &DAG](SDValue V) {
+    if (auto *BV = dyn_cast<BuildVectorSDNode>(V)) {
+      BitVector Undefs;
+      if (SDValue Splat = BV->getSplatValue(&Undefs)) {
+        if (Undefs.any() &&
+            (isNullConstant(Splat) || isAllOnesConstant(Splat) ||
+             isa<ConstantFPSDNode>(Splat))) {
+          V = DAG.getBitcast(VT, DAG.getSplat(BV->getValueType(0), DL, Splat));
+        }
+      }
+    }
+    return V;
+  };
+  V1 = CanonicalizeConstant(V1);
+  V2 = CanonicalizeConstant(V2);
 
   // Commute the shuffle if it will improve canonicalization.
   if (canonicalizeShuffleMaskWithCommute(Mask)) {

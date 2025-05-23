@@ -1,8 +1,18 @@
 import("//third-party/unittest/unittest.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
+
+write_cmake_config("config") {
+  input = "config.h.cmake"
+  output = "$target_gen_dir/config.h"
+  values = [
+    "CLANG_DOC_TEST_ASSET_DIR=",
+  ]
+}
 
 unittest("ClangDocTests") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":config",
     "//clang-tools-extra/clang-doc",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
@@ -18,7 +28,14 @@ unittest("ClangDocTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]
-  include_dirs = [ "//clang-tools-extra/clang-doc" ]
+
+  include_dirs = [
+    "//clang-tools-extra/clang-doc",
+
+    # To pick up generated config.h.
+    target_gen_dir,
+  ]
+
   sources = [
     "BitcodeTest.cpp",
     "ClangDocTest.cpp",
