@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stacktrace/linux.h"
+#include "stacktrace/linux/impl.h"
 #include "stacktrace/config.h"
 
-#if defined(_LIBCPP_STACKTRACE_LINUX)
+#if defined(__linux__)
 
 #  include <cassert>
 #  include <dlfcn.h>
@@ -111,16 +111,4 @@ void linux::symbolize() {
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#else
-
-_LIBCPP_BEGIN_NAMESPACE_STD
-namespace __stacktrace {
-
-void linux::ident_modules() {}
-void linux::symbolize() {}
-void linux::resolve_main_elf_syms(std::string_view main_elf_name) {}
-
-} // namespace __stacktrace
-_LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_STACKTRACE_LINUX
+#endif // __linux__

@@ -15,8 +15,8 @@
 #  include "stacktrace/alloc.h"
 #  include "stacktrace/config.h"
 #  include "stacktrace/utils.h"
-#  include "stacktrace/win/dll.h"
-#  include "stacktrace/win/impl.h"
+#  include "stacktrace/windows/dll.h"
+#  include "stacktrace/windows/impl.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {

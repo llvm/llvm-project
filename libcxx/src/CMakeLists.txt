@@ -41,13 +41,13 @@ set(LIBCXX_SOURCES
   ryu/d2s.cpp
   ryu/f2s.cpp
   stacktrace/builder.cpp
-  stacktrace/linux.cpp
-  stacktrace/macos.cpp
+  stacktrace/linux/impl.cpp
+  stacktrace/macos/impl.cpp
   stacktrace/to_string.cpp
-  stacktrace/tools.cpp
-  stacktrace/unwind.cpp
-  stacktrace/win/dll.cpp
-  stacktrace/win/impl.cpp
+  stacktrace/tools/tools.cpp
+  stacktrace/unwind/impl.cpp
+  stacktrace/windows/dll.cpp
+  stacktrace/windows/impl.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp
