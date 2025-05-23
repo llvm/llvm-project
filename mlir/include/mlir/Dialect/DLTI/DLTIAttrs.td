@@ -92,7 +92,7 @@ def DLTI_DataLayoutSpecAttr :
     /// Returns the stack alignment identifier.
     StringAttr getStackAlignmentIdentifier(MLIRContext *context) const;
 
-    /// Returns the function poinrter alignment identifier.
+    /// Returns the function pointer alignment identifier.
     StringAttr getFunctionPointerAlignmentIdentifier(MLIRContext *context) const;
 
     /// Returns the attribute associated with the key.

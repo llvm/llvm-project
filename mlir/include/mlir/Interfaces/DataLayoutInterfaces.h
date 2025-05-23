@@ -263,10 +263,7 @@ public:
   /// unspecified.
   uint64_t getStackAlignment() const;
 
-  /// Returns the natural alignment of the stack in bits. Alignment promotion of
-  /// stack variables should be limited to the natural stack alignment to
-  /// prevent dynamic stack alignment. Returns zero if the stack alignment is
-  /// unspecified.
+  /// Returns function pointer alignment.
   Attribute getFunctionPointerAlignment() const;
 
   /// Returns the value of the specified property if the property is defined for

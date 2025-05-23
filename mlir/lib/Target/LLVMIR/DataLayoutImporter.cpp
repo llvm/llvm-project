@@ -228,10 +228,12 @@ LogicalResult DataLayoutImporter::tryToEmplaceFunctionPointerAlignmentEntry(
   if (keyEntries.count(key))
     return success();
 
-  // i: The alignment of function pointers is independent of the alignment of
-  // functions, and is a multiple of <abi>.
-  // n: The alignment of function pointers is a multiple of the explicit
-  // alignment specified on the function, and is a multiple of <abi>.
+  // The data layout entry for "F<type><abi>". <abi> is the aligment value,
+  // preceded by one of the two possible <types>:
+  // "i": The alignment of function pointers is independent of the alignment of
+  //      functions, and is a multiple of <abi>.
+  // "n": The alignment of function pointers is a multiple of the explicit
+  //      alignment specified on the function, and is a multiple of <abi>.
   bool functionDependent = false;
   if (fnPtrString == "n")
     functionDependent = true;
