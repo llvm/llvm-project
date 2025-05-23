@@ -11,11 +11,11 @@
 
 #include <__stacktrace/base.h>
 
-#include "stacktrace/linux.h"
-#include "stacktrace/macos.h"
-#include "stacktrace/tools.h"
-#include "stacktrace/unwind.h"
-#include "stacktrace/win/impl.h"
+#include "stacktrace/linux/impl.h"
+#include "stacktrace/macos/impl.h"
+#include "stacktrace/tools/tools.h"
+#include "stacktrace/unwind/impl.h"
+#include "stacktrace/windows/impl.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

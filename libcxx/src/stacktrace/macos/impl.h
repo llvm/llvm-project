@@ -6,37 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_WIN_IMPL_H
-#define _LIBCPP_STACKTRACE_WIN_IMPL_H
+#ifndef _LIBCPP_STACKTRACE_MACOS_IMPL
+#define _LIBCPP_STACKTRACE_MACOS_IMPL
 
 #include <__config>
 #include <__config_site>
 #include <cstddef>
 #include <cstdlib>
-#include <mutex>
+
+#include "stacktrace/config.h"
+#include <__stacktrace/base.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct builder;
-
-struct win_impl {
+struct macos {
   builder& builder_;
-  std::lock_guard<std::mutex> guard_;
-  static std::mutex mutex_;
 
-  explicit win_impl(builder& builder) : builder_(builder), guard_(mutex_) { global_init(); }
-
-  void global_init();
-  void collect(size_t skip, size_t max_depth);
+#if defined(__APPLE__)
+  // defined in macos.cpp
   void ident_modules();
   void symbolize();
-  void resolve_lines();
-
-  ~win_impl();
+#else
+  // inline-able dummy definitions
+  void ident_modules() {}
+  void symbolize() {}
+#endif // __APPLE__
 };
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STACKTRACE_WIN_IMPL_H
+#endif // _LIBCPP_STACKTRACE_MACOS_IMPL

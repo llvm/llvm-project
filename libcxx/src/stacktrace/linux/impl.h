@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_LINUX_H
-#define _LIBCPP_STACKTRACE_LINUX_H
+#ifndef _LIBCPP_STACKTRACE_LINUX_IMPL
+#define _LIBCPP_STACKTRACE_LINUX_IMPL
 
 #include <__stacktrace/base.h>
 
@@ -16,11 +16,19 @@ namespace __stacktrace {
 
 struct linux {
   builder& builder_;
+
+#if defined(__linux__)
+  // defined in linux.cpp
   void ident_modules();
   void symbolize();
 
 private:
   void resolve_main_elf_syms(std::string_view elf_name);
+#else
+  // inline-able dummy definitions
+  void ident_modules() {}
+  void symbolize() {}
+#endif
 };
 
 } // namespace __stacktrace
@@ -28,7 +36,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #include "stacktrace/config.h"
 
-#if defined(_LIBCPP_STACKTRACE_LINUX)
+#if defined(__linux__)
 
 #  include <algorithm>
 #  include <array>
@@ -388,6 +396,6 @@ inline std::string_view Symbol::name() const { return elf_->strtab_.at(nameIndex
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STACKTRACE_LINUX
+#endif // __linux__
 
-#endif // _LIBCPP_STACKTRACE_LINUX_H
+#endif // _LIBCPP_STACKTRACE_LINUX_IMPL

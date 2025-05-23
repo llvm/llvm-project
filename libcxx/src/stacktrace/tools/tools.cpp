@@ -27,7 +27,7 @@
 #  include <__stacktrace/basic.h>
 #  include <__stacktrace/entry.h>
 
-#  include "stacktrace/tools.h"
+#  include "stacktrace/tools/tools.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {

@@ -8,11 +8,11 @@
 
 #include "stacktrace/config.h"
 
-#if defined(_LIBCPP_STACKTRACE_COLLECT_UNWIND)
+#if defined(_LIBCPP_STACKTRACE_UNWIND_IMPL)
 
 #  include <unwind.h>
 
-#  include "stacktrace/unwind.h"
+#  include "stacktrace/unwind/impl.h"
 #  include <__stacktrace/basic.h>
 #  include <__stacktrace/entry.h>
 
