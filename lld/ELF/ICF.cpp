@@ -245,10 +245,13 @@ void ICF<ELFT>::segregate(size_t begin, size_t end, uint32_t eqClassBase,
 template <class ELFT>
 template <class RelTy>
 bool ICF<ELFT>::isTrivialRelocation(InputSection *a, Symbol &s, RelTy reloc) {
-  OffsetGetter getter(*a);
-  uint64_t offset = getter.get(ctx, reloc.r_offset);
+  // For our use cases, we can get by without calculating exact location within
+  // the section, and just use fake location array. We need to ensure validity
+  // for loc[-1] to loc[3] as various targets' getRelExpr() reference them.
+  std::array<uint8_t, 5> fakeLocArray;
+  uint8_t *fakeLoc = fakeLocArray.data() + 1;
   RelExpr expr = ctx.target->getRelExpr(reloc.getType(ctx.arg.isMips64EL), s,
-                                        a->content().data() + offset);
+                                        fakeLoc);
 
   if (needsGot(expr) || needsTls(s, expr))
     return false;
@@ -412,7 +415,7 @@ bool ICF<ELFT>::variableEq(InputSection *secA, Relocs<RelTy> ra,
     // getting merged into each other (done later in ICF). We do this as
     // post-ICF passes cannot handle duplicates when iterating over local
     // symbols. There are also assertions that prevent this.
-    if ((!da->isGlobal() || !db->isGlobal()) &&
+    if ((da->isLocal() || db->isLocal()) &&
         !isTrivialRelocation(secA, sa, *rai))
       return false;
 

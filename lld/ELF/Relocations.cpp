@@ -371,6 +371,49 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
 //
 // For sections other than .eh_frame, this class doesn't do anything.
 namespace {
+class OffsetGetter {
+public:
+  OffsetGetter() = default;
+  explicit OffsetGetter(InputSectionBase &sec) {
+    if (auto *eh = dyn_cast<EhInputSection>(&sec)) {
+      cies = eh->cies;
+      fdes = eh->fdes;
+      i = cies.begin();
+      j = fdes.begin();
+    }
+  }
+
+  // Translates offsets in input sections to offsets in output sections.
+  // Given offset must increase monotonically. We assume that Piece is
+  // sorted by inputOff.
+  uint64_t get(Ctx &ctx, uint64_t off) {
+    if (cies.empty())
+      return off;
+
+    while (j != fdes.end() && j->inputOff <= off)
+      ++j;
+    auto it = j;
+    if (j == fdes.begin() || j[-1].inputOff + j[-1].size <= off) {
+      while (i != cies.end() && i->inputOff <= off)
+        ++i;
+      if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off) {
+        Err(ctx) << ".eh_frame: relocation is not in any piece";
+        return 0;
+      }
+      it = i;
+    }
+
+    // Offset -1 means that the piece is dead (i.e. garbage collected).
+    if (it[-1].outputOff == -1)
+      return -1;
+    return it[-1].outputOff + (off - it[-1].inputOff);
+  }
+
+private:
+  ArrayRef<EhSectionPiece> cies, fdes;
+  ArrayRef<EhSectionPiece>::iterator i, j;
+};
+
 // This class encapsulates states needed to scan relocations for one
 // InputSectionBase.
 class RelocationScanner {
