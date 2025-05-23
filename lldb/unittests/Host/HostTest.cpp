@@ -13,12 +13,14 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ProcessInfo.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <future>
+#include <thread>
 
 using namespace lldb_private;
 using namespace llvm;
@@ -94,9 +96,14 @@ TEST(Host, LaunchProcessSetsArgv0) {
 TEST(Host, FindProcesses) {
   SubsystemRAII<FileSystem, HostInfo> subsystems;
 
-  if (test_arg != 0)
+  if (test_arg != 0) {
+    // Give the parent time to retrieve information about self.
+    // It will kill self when it is done.
+    std::this_thread::sleep_for(std::chrono::seconds(10));
     exit(0);
+  }
 
+  bool foundPID = false;
   ProcessLaunchInfo info;
   ProcessInstanceInfoList processes;
   ProcessInstanceInfoMatch match(TestMainArgv0, NameMatch::Equals);
@@ -110,8 +117,18 @@ TEST(Host, FindProcesses) {
   });
   ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), Succeeded());
   ASSERT_TRUE(Host::FindProcesses(match, processes));
-  ASSERT_EQ(processes[0].GetArg0(), TestMainArgv0);
-  ASSERT_THAT(exit_status.get_future().get(), 0);
+  for (const auto &process : processes) {
+    if (process.GetProcessID() == info.GetProcessID()) {
+      ASSERT_EQ(process.GetExecutableFile().GetFilename(),
+                info.GetExecutableFile().GetFilename());
+      foundPID = true;
+    }
+  }
+  ASSERT_TRUE(foundPID);
+  auto clean_up = llvm::make_scope_exit([&] {
+    Host::Kill(info.GetProcessID(), SIGKILL);
+    exit_status.get_future().get();
+  });
 }
 
 TEST(Host, LaunchProcessDuplicatesHandle) {
