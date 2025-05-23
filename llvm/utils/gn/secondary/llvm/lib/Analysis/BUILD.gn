@@ -57,6 +57,7 @@ static_library("Analysis") {
     "GlobalsModRef.cpp",
     "GuardUtils.cpp",
     "HeatUtils.cpp",
+    "IR2Vec.cpp",
     "IRSimilarityIdentifier.cpp",
     "IVDescriptors.cpp",
     "IVUsers.cpp",
