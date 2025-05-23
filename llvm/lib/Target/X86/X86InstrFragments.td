@@ -842,21 +842,21 @@ def X86fldf80 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
 def X86fild16 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
 }]> {
-  let IsStore = true;
+  let IsLoad = true;
   let MemoryVT = i16;
 }
 
 def X86fild32 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
 }]> {
-  let IsStore = true;
+  let IsLoad = true;
   let MemoryVT = i32;
 }
 
 def X86fild64 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
 }]> {
-  let IsStore = true;
+  let IsLoad = true;
   let MemoryVT = i64;
 }
 
