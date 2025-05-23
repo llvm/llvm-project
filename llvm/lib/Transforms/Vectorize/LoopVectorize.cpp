@@ -490,7 +490,7 @@ public:
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Cost(CM), BFI(BFI), PSI(PSI),
         RTChecks(RTChecks), Plan(Plan),
-        VectorPHVPB(Plan.getEntry()->getSuccessors()[1]) {}
+        VectorPHVPB(Plan.getVectorLoopRegion()->getSinglePredecessor()) {}
 
   virtual ~InnerLoopVectorizer() = default;
 
@@ -7870,6 +7870,8 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
 
+  // Only generate add a new block for the trip-count check for the main loop.
+  // The epilogue will use the already existing VPlan entry block.
   if (!ForEpilogue)
     introduceCheckBlockInVPlan(TCCheckBlock);
   return TCCheckBlock;
