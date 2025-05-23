@@ -2880,6 +2880,8 @@ LogicalResult TypeConverter::convertType(Type t,
       if (t.getContext()->isMultithreadingEnabled())
         cacheWriteLock.lock();
       if (!succeeded(*result)) {
+        assert(results.size() == currentCount &&
+               "failed type conversion should not change results");
         cachedDirectConversions.try_emplace(t, nullptr);
         return failure();
       }
@@ -2889,6 +2891,9 @@ LogicalResult TypeConverter::convertType(Type t,
       else
         cachedMultiConversions.try_emplace(t, llvm::to_vector<2>(newTypes));
       return success();
+    } else {
+      assert(results.size() == currentCount &&
+             "failed type conversion should not change results");
     }
   }
   return failure();
@@ -2959,7 +2964,7 @@ TypeConverter::convertSignatureArgs(TypeRange types,
 Value TypeConverter::materializeSourceConversion(OpBuilder &builder,
                                                  Location loc, Type resultType,
                                                  ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn :
+  for (const SourceMaterializationCallbackFn &fn :
        llvm::reverse(sourceMaterializations))
     if (Value result = fn(builder, resultType, inputs, loc))
       return result;

@@ -142,6 +142,7 @@
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
+#include "llvm/Transforms/Vectorize/EVLIndVarSimplify.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
@@ -2319,6 +2320,10 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
 
   // The order in which these are registered determines their priority when
   // being queried.
+
+  // Add any target-specific alias analyses that should be run early.
+  if (TM)
+    TM->registerEarlyDefaultAliasAnalyses(AA);
 
   // First we register the basic alias analysis that provides the majority of
   // per-function local AA logic. This is a stateless, on-demand local set of

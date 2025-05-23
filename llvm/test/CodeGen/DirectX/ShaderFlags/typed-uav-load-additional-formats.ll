@@ -44,7 +44,9 @@ define void @noload(<4 x float> %val) #0 {
 }
 
 !llvm.module.flags = !{!0}
+!dx.valver = !{!1}
 !0 = !{i32 1, !"dx.resmayalias", i32 1}
+!1 = !{i32 1, i32 8}
 
 attributes #0 = { convergent norecurse nounwind "hlsl.export"}
 

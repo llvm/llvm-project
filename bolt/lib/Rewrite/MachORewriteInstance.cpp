@@ -108,21 +108,21 @@ Error MachORewriteInstance::setProfile(StringRef Filename) {
 void MachORewriteInstance::preprocessProfileData() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->preprocessProfile(*BC.get()))
+  if (Error E = ProfileReader->preprocessProfile(*BC))
     report_error("cannot pre-process profile", std::move(E));
 }
 
 void MachORewriteInstance::processProfileDataPreCFG() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->readProfilePreCFG(*BC.get()))
+  if (Error E = ProfileReader->readProfilePreCFG(*BC))
     report_error("cannot read profile pre-CFG", std::move(E));
 }
 
 void MachORewriteInstance::processProfileData() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->readProfile(*BC.get()))
+  if (Error E = ProfileReader->readProfile(*BC))
     report_error("cannot read profile", std::move(E));
 }
 

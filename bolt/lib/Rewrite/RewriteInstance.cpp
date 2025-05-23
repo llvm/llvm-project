@@ -968,8 +968,9 @@ void RewriteInstance::discoverFileObjects() {
       continue;
     }
 
-    // Ignore input hot markers
-    if (SymName == "__hot_start" || SymName == "__hot_end")
+    // Ignore input hot markers unless in heatmap mode
+    if ((SymName == "__hot_start" || SymName == "__hot_end") &&
+        !opts::HeatmapMode)
       continue;
 
     FileSymRefs.emplace(SymbolAddress, Symbol);
@@ -1453,7 +1454,8 @@ void RewriteInstance::updateRtFiniReloc() {
 }
 
 void RewriteInstance::registerFragments() {
-  if (!BC->HasSplitFunctions)
+  if (!BC->HasSplitFunctions ||
+      opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
     return;
 
   // Process fragments with ambiguous parents separately as they are typically a
@@ -1998,7 +2000,7 @@ Error RewriteInstance::readSpecialSections() {
           BC->getUniqueSectionByName(BoltAddressTranslation::SECTION_NAME)) {
     BC->HasBATSection = true;
     // Do not read BAT when plotting a heatmap
-    if (!opts::HeatmapMode) {
+    if (opts::HeatmapMode != opts::HeatmapModeKind::HM_Exclusive) {
       if (std::error_code EC = BAT->parse(BC->outs(), BATSec->getContents())) {
         BC->errs() << "BOLT-ERROR: failed to parse BOLT address translation "
                       "table.\n";
@@ -2037,7 +2039,7 @@ Error RewriteInstance::readSpecialSections() {
   }
 
   // Force non-relocation mode for heatmap generation
-  if (opts::HeatmapMode)
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
     BC->HasRelocations = false;
 
   if (BC->HasRelocations)
@@ -2697,20 +2699,19 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                BD->nameStartsWith("_ZTCN"))) { // construction vtable
       BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
           SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
-      if (!BF || BF->getAddress() != SymbolAddress) {
-        BC->errs()
-            << "BOLT-ERROR: the virtual function table entry at offset 0x"
-            << Twine::utohexstr(Rel.getOffset());
-        if (BF)
-          BC->errs() << " points to the middle of a function @ 0x"
-                     << Twine::utohexstr(BF->getAddress()) << "\n";
-        else
-          BC->errs() << " does not point to any function\n";
-        exit(1);
+      if (BF) {
+        if (BF->getAddress() != SymbolAddress) {
+          BC->errs()
+              << "BOLT-ERROR: the virtual function table entry at offset 0x"
+              << Twine::utohexstr(Rel.getOffset())
+              << " points to the middle of a function @ 0x"
+              << Twine::utohexstr(BF->getAddress()) << "\n";
+          exit(1);
+        }
+        BC->addRelocation(Rel.getOffset(), BF->getSymbol(), RType, Addend,
+                          ExtractedValue);
+        return;
       }
-      BC->addRelocation(Rel.getOffset(), BF->getSymbol(), RType, Addend,
-                        ExtractedValue);
-      return;
     }
   }
 
@@ -3281,7 +3282,7 @@ void RewriteInstance::preprocessProfileData() {
     ProfileReader->setBAT(&*BAT);
   }
 
-  if (Error E = ProfileReader->preprocessProfile(*BC.get()))
+  if (Error E = ProfileReader->preprocessProfile(*BC))
     report_error("cannot pre-process profile", std::move(E));
 
   if (!BC->hasSymbolsWithFileName() && ProfileReader->hasLocalsWithFileName() &&
@@ -3336,7 +3337,7 @@ void RewriteInstance::processProfileDataPreCFG() {
   NamedRegionTimer T("processprofile-precfg", "process profile data pre-CFG",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
 
-  if (Error E = ProfileReader->readProfilePreCFG(*BC.get()))
+  if (Error E = ProfileReader->readProfilePreCFG(*BC))
     report_error("cannot read profile pre-CFG", std::move(E));
 }
 
@@ -3347,7 +3348,7 @@ void RewriteInstance::processProfileData() {
   NamedRegionTimer T("processprofile", "process profile data", TimerGroupName,
                      TimerGroupDesc, opts::TimeRewrite);
 
-  if (Error E = ProfileReader->readProfile(*BC.get()))
+  if (Error E = ProfileReader->readProfile(*BC))
     report_error("cannot read profile", std::move(E));
 
   if (opts::PrintProfile || opts::PrintAll) {
@@ -4702,7 +4703,6 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   }
 
   // Assign indices to sections.
-  std::unordered_map<std::string, uint64_t> NameToIndex;
   for (uint32_t Index = 1; Index < OutputSections.size(); ++Index)
     OutputSections[Index].first->setIndex(Index);
 

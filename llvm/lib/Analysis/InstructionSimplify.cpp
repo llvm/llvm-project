@@ -26,6 +26,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -5042,14 +5043,6 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
   if (Q.isUndefValue(Ptr))
     return UndefValue::get(GEPTy);
 
-  // getelementptr inbounds null, idx -> null
-  if (NW.isInBounds() && Q.IIQ.UseInstrInfo && Q.CxtI) {
-    if (auto *BaseC = dyn_cast<Constant>(Ptr))
-      if (BaseC->isNullValue() &&
-          !NullPointerIsDefined(Q.CxtI->getFunction(), AS))
-        return Constant::getNullValue(GEPTy);
-  }
-
   bool IsScalableVec =
       SrcTy->isScalableTy() || any_of(Indices, [](const Value *V) {
         return isa<ScalableVectorType>(V->getType());
@@ -6385,15 +6378,6 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     if (isSplatValue(Op0))
       return Op0;
     break;
-  case Intrinsic::frexp: {
-    // Frexp is idempotent with the added complication of the struct return.
-    if (match(Op0, m_ExtractValue<0>(m_Value(X)))) {
-      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value())))
-        return X;
-    }
-
-    break;
-  }
   default:
     break;
   }
@@ -6548,6 +6532,10 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // Canonicalize immediate constant operand as Op1.
     if (match(Op0, m_ImmConstant()))
       std::swap(Op0, Op1);
+
+    // Propagate poison.
+    if (isa<PoisonValue>(Op1))
+      return Op1;
 
     // Assume undef is the limit value.
     if (Q.isUndefValue(Op1))

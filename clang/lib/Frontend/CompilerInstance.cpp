@@ -67,20 +67,18 @@
 using namespace clang;
 
 CompilerInstance::CompilerInstance(
+    std::shared_ptr<CompilerInvocation> Invocation,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ModuleCache *ModCache)
     : ModuleLoader(/*BuildingModule=*/ModCache),
-      Invocation(new CompilerInvocation()),
+      Invocation(std::move(Invocation)),
       ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
-      ThePCHContainerOperations(std::move(PCHContainerOps)) {}
+      ThePCHContainerOperations(std::move(PCHContainerOps)) {
+  assert(this->Invocation && "Invocation must not be null");
+}
 
 CompilerInstance::~CompilerInstance() {
   assert(OutputFiles.empty() && "Still output files in flight?");
-}
-
-void CompilerInstance::setInvocation(
-    std::shared_ptr<CompilerInvocation> Value) {
-  Invocation = std::move(Value);
 }
 
 bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
@@ -282,20 +280,20 @@ static void collectVFSEntries(CompilerInstance &CI,
 }
 
 // Diagnostics
-static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
+static void SetUpDiagnosticLog(DiagnosticOptions &DiagOpts,
                                const CodeGenOptions *CodeGenOpts,
                                DiagnosticsEngine &Diags) {
   std::error_code EC;
   std::unique_ptr<raw_ostream> StreamOwner;
   raw_ostream *OS = &llvm::errs();
-  if (DiagOpts->DiagnosticLogFile != "-") {
+  if (DiagOpts.DiagnosticLogFile != "-") {
     // Create the output stream.
     auto FileOS = std::make_unique<llvm::raw_fd_ostream>(
-        DiagOpts->DiagnosticLogFile, EC,
+        DiagOpts.DiagnosticLogFile, EC,
         llvm::sys::fs::OF_Append | llvm::sys::fs::OF_TextWithCRLF);
     if (EC) {
       Diags.Report(diag::warn_fe_cc_log_diagnostics_failure)
-          << DiagOpts->DiagnosticLogFile << EC.message();
+          << DiagOpts.DiagnosticLogFile << EC.message();
     } else {
       FileOS->SetUnbuffered();
       OS = FileOS.get();
@@ -317,7 +315,7 @@ static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
   }
 }
 
-static void SetupSerializedDiagnostics(DiagnosticOptions *DiagOpts,
+static void SetupSerializedDiagnostics(DiagnosticOptions &DiagOpts,
                                        DiagnosticsEngine &Diags,
                                        StringRef OutputFile) {
   auto SerializedConsumer =
@@ -335,12 +333,12 @@ static void SetupSerializedDiagnostics(DiagnosticOptions *DiagOpts,
 void CompilerInstance::createDiagnostics(llvm::vfs::FileSystem &VFS,
                                          DiagnosticConsumer *Client,
                                          bool ShouldOwnClient) {
-  Diagnostics = createDiagnostics(VFS, &getDiagnosticOpts(), Client,
+  Diagnostics = createDiagnostics(VFS, getDiagnosticOpts(), Client,
                                   ShouldOwnClient, &getCodeGenOpts());
 }
 
 IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
-    llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
+    llvm::vfs::FileSystem &VFS, DiagnosticOptions &Opts,
     DiagnosticConsumer *Client, bool ShouldOwnClient,
     const CodeGenOptions *CodeGenOpts) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
@@ -351,25 +349,24 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
   // implementing -verify.
   if (Client) {
     Diags->setClient(Client, ShouldOwnClient);
-  } else if (Opts->getFormat() == DiagnosticOptions::SARIF) {
+  } else if (Opts.getFormat() == DiagnosticOptions::SARIF) {
     Diags->setClient(new SARIFDiagnosticPrinter(llvm::errs(), Opts));
   } else
     Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
 
   // Chain in -verify checker, if requested.
-  if (Opts->VerifyDiagnostics)
+  if (Opts.VerifyDiagnostics)
     Diags->setClient(new VerifyDiagnosticConsumer(*Diags));
 
   // Chain in -diagnostic-log-file dumper, if requested.
-  if (!Opts->DiagnosticLogFile.empty())
+  if (!Opts.DiagnosticLogFile.empty())
     SetUpDiagnosticLog(Opts, CodeGenOpts, *Diags);
 
-  if (!Opts->DiagnosticSerializationFile.empty())
-    SetupSerializedDiagnostics(Opts, *Diags,
-                               Opts->DiagnosticSerializationFile);
+  if (!Opts.DiagnosticSerializationFile.empty())
+    SetupSerializedDiagnostics(Opts, *Diags, Opts.DiagnosticSerializationFile);
 
   // Configure our handling of diagnostics.
-  ProcessWarningOptions(*Diags, *Opts, VFS);
+  ProcessWarningOptions(*Diags, Opts, VFS);
 
   return Diags;
 }
@@ -582,13 +579,13 @@ struct ReadModuleNames : ASTReaderListener {
     ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
     for (const std::string &LoadedModule : LoadedModules)
       MM.cacheModuleLoad(*PP.getIdentifierInfo(LoadedModule),
-                         MM.findModule(LoadedModule));
+                         MM.findOrLoadModule(LoadedModule));
     LoadedModules.clear();
   }
 
   void markAllUnavailable() {
     for (const std::string &LoadedModule : LoadedModules) {
-      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(
+      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findOrLoadModule(
               LoadedModule)) {
         M->HasIncompatibleModuleFile = true;
 
@@ -640,8 +637,9 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
       PP, ModCache, &Context, PCHContainerRdr, Extensions,
       Sysroot.empty() ? "" : Sysroot.data(), DisableValidation,
       AllowPCHWithCompilerErrors, /*AllowConfigurationMismatch*/ false,
-      HSOpts.ModulesValidateSystemHeaders, HSOpts.ValidateASTInputFilesContent,
-      UseGlobalModuleIndex));
+      HSOpts.ModulesValidateSystemHeaders,
+      HSOpts.ModulesForceValidateUserHeaders,
+      HSOpts.ValidateASTInputFilesContent, UseGlobalModuleIndex));
 
   // We need the external source to be set up before we read the AST, because
   // eagerly-deserialized declarations may use it.
@@ -1210,11 +1208,10 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      getPCHContainerOperations(), &getModuleCache());
+      std::move(Invocation), getPCHContainerOperations(), &getModuleCache());
   auto &Instance = *InstancePtr;
 
-  auto &Inv = *Invocation;
-  Instance.setInvocation(std::move(Invocation));
+  auto &Inv = Instance.getInvocation();
 
   if (ThreadSafeConfig) {
     Instance.createFileManager(ThreadSafeConfig->getVFS());
@@ -1257,10 +1254,14 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     Instance.GetDependencyDirectives =
         GetDependencyDirectives->cloneFor(Instance.getFileManager());
 
-  // If we're collecting module dependencies, we need to share a collector
-  // between all of the module CompilerInstances. Other than that, we don't
-  // want to produce any dependency output from the module build.
-  Instance.setModuleDepCollector(getModuleDepCollector());
+  if (ThreadSafeConfig) {
+    Instance.setModuleDepCollector(ThreadSafeConfig->getModuleDepCollector());
+  } else {
+    // If we're collecting module dependencies, we need to share a collector
+    // between all of the module CompilerInstances. Other than that, we don't
+    // want to produce any dependency output from the module build.
+    Instance.setModuleDepCollector(getModuleDepCollector());
+  }
   Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
   return InstancePtr;
@@ -1285,7 +1286,7 @@ bool CompilerInstance::compileModule(SourceLocation ImportLoc,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
-  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnThread(
+  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
         GenerateModuleFromModuleMapAction Action;
         Instance.ExecuteAction(Action);
@@ -1751,6 +1752,7 @@ void CompilerInstance::createASTReader() {
       PPOpts.DisablePCHOrModuleValidation,
       /*AllowASTWithCompilerErrors=*/FEOpts.AllowPCMWithCompilerErrors,
       /*AllowConfigurationMismatch=*/false, HSOpts.ModulesValidateSystemHeaders,
+      HSOpts.ModulesForceValidateUserHeaders,
       HSOpts.ValidateASTInputFilesContent,
       getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
   if (hasASTConsumer()) {

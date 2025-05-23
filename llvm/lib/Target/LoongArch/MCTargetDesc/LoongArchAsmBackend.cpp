@@ -12,6 +12,7 @@
 
 #include "LoongArchAsmBackend.h"
 #include "LoongArchFixupKinds.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -26,6 +27,12 @@
 #define DEBUG_TYPE "loongarch-asmbackend"
 
 using namespace llvm;
+
+LoongArchAsmBackend::LoongArchAsmBackend(const MCSubtargetInfo &STI,
+                                         uint8_t OSABI, bool Is64Bit,
+                                         const MCTargetOptions &Options)
+    : MCAsmBackend(llvm::endianness::little, /*LinkerRelaxation=*/true),
+      STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {}
 
 std::optional<MCFixupKind>
 LoongArchAsmBackend::getFixupKind(StringRef Name) const {
@@ -429,64 +436,80 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
-                                                  const MCFragment &F,
-                                                  const MCFixup &Fixup,
-                                                  const MCValue &Target,
-                                                  uint64_t &FixedValue) const {
-  assert(Target.getSpecifier() == 0 &&
-         "relocatable SymA-SymB cannot have relocation specifier");
-  std::pair<MCFixupKind, MCFixupKind> FK;
+bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
+                                   const MCFixup &Fixup, const MCValue &Target,
+                                   uint64_t &FixedValue, bool IsResolved,
+                                   const MCSubtargetInfo *CurSTI) {
+  auto Fallback = [&]() {
+    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved,
+                                  CurSTI);
+  };
   uint64_t FixedValueA, FixedValueB;
-  const MCSymbol &SA = *Target.getAddSym();
-  const MCSymbol &SB = *Target.getSubSym();
+  if (Target.getSubSym()) {
+    assert(Target.getSpecifier() == 0 &&
+           "relocatable SymA-SymB cannot have relocation specifier");
+    std::pair<MCFixupKind, MCFixupKind> FK;
+    const MCSymbol &SA = *Target.getAddSym();
+    const MCSymbol &SB = *Target.getSubSym();
 
-  bool force = !SA.isInSection() || !SB.isInSection();
-  if (!force) {
-    const MCSection &SecA = SA.getSection();
-    const MCSection &SecB = SB.getSection();
+    bool force = !SA.isInSection() || !SB.isInSection();
+    if (!force) {
+      const MCSection &SecA = SA.getSection();
+      const MCSection &SecB = SB.getSection();
 
-    // We need record relocation if SecA != SecB. Usually SecB is same as the
-    // section of Fixup, which will be record the relocation as PCRel. If SecB
-    // is not same as the section of Fixup, it will report error. Just return
-    // false and then this work can be finished by handleFixup.
-    if (&SecA != &SecB)
-      return false;
+      // We need record relocation if SecA != SecB. Usually SecB is same as the
+      // section of Fixup, which will be record the relocation as PCRel. If SecB
+      // is not same as the section of Fixup, it will report error. Just return
+      // false and then this work can be finished by handleFixup.
+      if (&SecA != &SecB)
+        return Fallback();
 
-    // In SecA == SecB case. If the linker relaxation is enabled, we need record
-    // the ADD, SUB relocations. Otherwise the FixedValue has already been calc-
-    // ulated out in evaluateFixup, return true and avoid record relocations.
-    if (!STI.hasFeature(LoongArch::FeatureRelax))
-      return true;
+      // In SecA == SecB case. If the linker relaxation is enabled, we need
+      // record the ADD, SUB relocations. Otherwise the FixedValue has already
+      // been calc- ulated out in evaluateFixup, return true and avoid record
+      // relocations.
+      if (!STI.hasFeature(LoongArch::FeatureRelax))
+        return true;
+    }
+
+    switch (Fixup.getKind()) {
+    case llvm::FK_Data_1:
+      FK = getRelocPairForSize(8);
+      break;
+    case llvm::FK_Data_2:
+      FK = getRelocPairForSize(16);
+      break;
+    case llvm::FK_Data_4:
+      FK = getRelocPairForSize(32);
+      break;
+    case llvm::FK_Data_8:
+      FK = getRelocPairForSize(64);
+      break;
+    case llvm::FK_Data_leb128:
+      FK = getRelocPairForSize(128);
+      break;
+    default:
+      llvm_unreachable("unsupported fixup size");
+    }
+    MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
+    MCValue B = MCValue::get(Target.getSubSym());
+    auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
+    auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
+    Asm.getWriter().recordRelocation(Asm, &F, FA, A, FixedValueA);
+    Asm.getWriter().recordRelocation(Asm, &F, FB, B, FixedValueB);
+    FixedValue = FixedValueA - FixedValueB;
+    return false;
   }
 
-  switch (Fixup.getKind()) {
-  case llvm::FK_Data_1:
-    FK = getRelocPairForSize(8);
-    break;
-  case llvm::FK_Data_2:
-    FK = getRelocPairForSize(16);
-    break;
-  case llvm::FK_Data_4:
-    FK = getRelocPairForSize(32);
-    break;
-  case llvm::FK_Data_8:
-    FK = getRelocPairForSize(64);
-    break;
-  case llvm::FK_Data_leb128:
-    FK = getRelocPairForSize(128);
-    break;
-  default:
-    llvm_unreachable("unsupported fixup size");
+  IsResolved = Fallback();
+  // If linker relaxation is enabled and supported by the current relocation,
+  // append a RELAX relocation.
+  if (Fixup.needsRelax()) {
+    auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_LARCH_RELAX);
+    Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
+                                     FixedValueA);
   }
-  MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSubSym());
-  auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
-  auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
-  auto &Assembler = const_cast<MCAssembler &>(Asm);
-  Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
-  FixedValue = FixedValueA - FixedValueB;
+
   return true;
 }
 

@@ -242,8 +242,7 @@ Status ProcessWindows::DoResume(RunDirection direction) {
 
   if (direction == RunDirection::eRunReverse) {
     return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
+        "{0} does not support reverse execution of processes", GetPluginName());
   }
 
   Status error;

@@ -20,6 +20,7 @@ class MachineFunctionPass;
 class VirtRegMap;
 class VirtRegAuxInfo;
 class LiveIntervals;
+class LiveRegMatrix;
 class LiveStacks;
 class MachineDominatorTree;
 class MachineBlockFrequencyInfo;

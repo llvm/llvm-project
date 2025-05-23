@@ -16,17 +16,15 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr_ref {
+struct auto_ptr_ref {
   _Tp* __ptr_;
 };
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr {
+class _LIBCPP_TEMPLATE_VIS auto_ptr {
 private:
   _Tp* __ptr_;
 
@@ -80,13 +78,11 @@ public:
 };
 
 template <>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr<void> {
+class _LIBCPP_TEMPLATE_VIS auto_ptr<void> {
 public:
   typedef void element_type;
 };
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 
 #endif // _LIBCPP___CXX03___MEMORY_AUTO_PTR_H

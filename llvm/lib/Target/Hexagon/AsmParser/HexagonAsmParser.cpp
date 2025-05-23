@@ -110,6 +110,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
   bool equalIsAsmAssignment() override { return false; }
   bool isLabel(AsmToken &Token) override;
+  bool tokenIsStartOfStatement(AsmToken::TokenKind Token) override;
 
   void Warning(SMLoc L, const Twine &Msg) { Parser.Warning(L, Msg); }
   bool Error(SMLoc L, const Twine &Msg) { return Parser.Error(L, Msg); }
@@ -1007,6 +1008,10 @@ bool HexagonAsmParser::isLabel(AsmToken &Token) {
   return false;
 }
 
+bool HexagonAsmParser::tokenIsStartOfStatement(AsmToken::TokenKind Token) {
+  return Token == AsmToken::LCurly || Token == AsmToken::RCurly;
+}
+
 bool HexagonAsmParser::handleNoncontigiousRegister(bool Contigious,
                                                    SMLoc &Loc) {
   if (!Contigious && ErrorNoncontigiousRegister) {
@@ -1348,7 +1353,6 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   MCContext &Context = getParser().getContext();
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   const std::string r = "r";
-  const std::string v = "v";
   const std::string Colon = ":";
   using RegPairVals = std::pair<unsigned, unsigned>;
   auto GetRegPair = [this, r](RegPairVals RegPair) {

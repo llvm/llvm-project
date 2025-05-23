@@ -860,7 +860,8 @@ static unsigned isM1OrSmaller(MVT VT) {
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
 
@@ -2188,8 +2189,9 @@ InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
 
 InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                  TTI::TargetCostKind CostKind,
-                                                 unsigned Index, Value *Op0,
-                                                 Value *Op1) const {
+                                                 unsigned Index,
+                                                 const Value *Op0,
+                                                 const Value *Op1) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   if (Opcode != Instruction::ExtractElement &&

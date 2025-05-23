@@ -246,6 +246,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #    if defined(__APPLE__) || defined(__FreeBSD__)
 #      define _LIBCPP_GET_C_LOCALE 0
@@ -1277,7 +1278,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   }
 
   auto __res = std::__to_chars_integral(__buffer_ptr, __char_buffer + __buffer_size, __uval, __base);
-  _LIBCPP_ASSERT_INTERNAL(__res.__ec == std::errc(), "to_chars: invalid maximum buffer size computed?");
+  _LIBCPP_ASSERT_INTERNAL(__res.__ec == std::errc(0), "to_chars: invalid maximum buffer size computed?");
 
   // Make letters uppercase
   if (__flags & ios_base::hex && __flags & ios_base::uppercase) {
@@ -3678,6 +3679,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 #    endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT)
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
