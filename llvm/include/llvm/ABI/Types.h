@@ -1,9 +1,9 @@
 #ifndef LLVM_ABI_TYPES_H
 #define LLVM_ABI_TYPES_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Allocator.h"
 #include <cstdint>
-#include <memory>
-#include <string>
 
 namespace llvm {
 namespace abi {
@@ -19,6 +19,7 @@ enum class TypeKind {
   Union,
   Function
 };
+
 class Type {
 protected:
   TypeKind Kind;
@@ -31,8 +32,6 @@ protected:
         IsExplicitlyAligned(ExplicitAlign) {}
 
 public:
-  virtual ~Type() = default;
-
   TypeKind getKind() const { return Kind; }
   uint64_t getSizeInBits() const { return SizeInBits; }
   uint64_t getAlignInBits() const { return AlignInBits; }
@@ -52,9 +51,8 @@ public:
   bool isStruct() const { return Kind == TypeKind::Struct; }
   bool isUnion() const { return Kind == TypeKind::Union; }
   bool isFunction() const { return Kind == TypeKind::Function; }
-
-  static bool classof(const Type *) { return true; }
 };
+
 class VoidType : public Type {
 public:
   VoidType() : Type(TypeKind::Void, 0, 0) {}
@@ -65,53 +63,237 @@ public:
 class IntegerType : public Type {
 private:
   bool IsSigned;
-  bool IsAltRepresentation;
-  std::string TypeName;
 
 public:
-  IntegerType(uint64_t BitWidth, uint64_t Align, bool Signed,
-              bool AltRep = false, const std::string &Name = "")
-      : Type(TypeKind::Integer, BitWidth, Align), IsSigned(Signed),
-        IsAltRepresentation(AltRep), TypeName(Name) {}
+  IntegerType(uint64_t BitWidth, uint64_t Align, bool Signed)
+      : Type(TypeKind::Integer, BitWidth, Align), IsSigned(Signed) {}
 
   bool isSigned() const { return IsSigned; }
-  bool isAltRepresentation() const { return IsAltRepresentation; }
-  const std::string &getTypeName() const { return TypeName; }
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Integer;
   }
 };
+
 class FloatType : public Type {
-private:
-  std::string TypeName;
-
 public:
-  FloatType(uint64_t BitWidth, uint64_t Align, const std::string &Name)
-      : Type(TypeKind::Float, BitWidth, Align), TypeName(Name) {}
-
-  const std::string &getTypeName() const { return TypeName; }
+  FloatType(uint64_t BitWidth, uint64_t Align)
+      : Type(TypeKind::Float, BitWidth, Align) {}
 
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Float; }
 };
+
 class PointerType : public Type {
-private:
-  std::unique_ptr<Type> PointeeType;
-  bool IsConst;
-  bool IsVolatile;
-
 public:
-  PointerType(std::unique_ptr<Type> Pointee, uint64_t Size, uint64_t Align,
-              bool Const = false, bool Volatile = false)
-      : Type(TypeKind::Pointer, Size, Align), PointeeType(std::move(Pointee)),
-        IsConst(Const), IsVolatile(Volatile) {}
-
-  const Type *getPointeeType() const { return PointeeType.get(); }
-  bool isConst() const { return IsConst; }
-  bool isVolatile() const { return IsVolatile; }
+  PointerType(uint64_t Size, uint64_t Align)
+      : Type(TypeKind::Pointer, Size, Align) {}
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Pointer;
+  }
+};
+
+class ArrayType : public Type {
+private:
+  const Type *ElementType;
+  uint64_t NumElements;
+
+public:
+  ArrayType(const Type *ElemType, uint64_t NumElems)
+      : Type(TypeKind::Array, ElemType->getSizeInBits() * NumElems,
+             ElemType->getAlignInBits()),
+        ElementType(ElemType), NumElements(NumElems) {}
+
+  const Type *getElementType() const { return ElementType; }
+  uint64_t getNumElements() const { return NumElements; }
+
+  static bool classof(const Type *T) { return T->getKind() == TypeKind::Array; }
+};
+
+class VectorType : public Type {
+private:
+  const Type *ElementType;
+  uint64_t NumElements;
+
+public:
+  VectorType(const Type *ElemType, uint64_t NumElems, uint64_t Align)
+      : Type(TypeKind::Vector, ElemType->getSizeInBits() * NumElems, Align),
+        ElementType(ElemType), NumElements(NumElems) {}
+
+  const Type *getElementType() const { return ElementType; }
+  uint64_t getNumElements() const { return NumElements; }
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::Vector;
+  }
+};
+
+struct FieldInfo {
+  const Type *FieldType;
+  uint64_t OffsetInBits;
+  bool IsBitField;
+  uint64_t BitFieldWidth;
+
+  FieldInfo(const Type *Type, uint64_t Offset = 0, bool BitField = false,
+            uint64_t BFWidth = 0)
+      : FieldType(Type), OffsetInBits(Offset), IsBitField(BitField),
+        BitFieldWidth(BFWidth) {}
+};
+
+enum class StructPacking { Default, Packed, ExplicitPacking };
+
+class StructType : public Type {
+private:
+  const FieldInfo *Fields;
+  uint32_t NumFields;
+  StructPacking Packing;
+
+public:
+  StructType(const FieldInfo *StructFields, uint32_t FieldCount, uint64_t Size,
+             uint64_t Align, StructPacking Pack = StructPacking::Default)
+      : Type(TypeKind::Struct, Size, Align), Fields(StructFields),
+        NumFields(FieldCount), Packing(Pack) {}
+
+  const FieldInfo *getFields() const { return Fields; }
+  uint32_t getNumFields() const { return NumFields; }
+  StructPacking getPacking() const { return Packing; }
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::Struct;
+  }
+};
+
+class UnionType : public Type {
+private:
+  const FieldInfo *Fields;
+  uint32_t NumFields;
+  StructPacking Packing;
+
+public:
+  UnionType(const FieldInfo *UnionFields, uint32_t FieldCount, uint64_t Size,
+            uint64_t Align, StructPacking Pack = StructPacking::Default)
+      : Type(TypeKind::Union, Size, Align), Fields(UnionFields),
+        NumFields(FieldCount), Packing(Pack) {}
+
+  const FieldInfo *getFields() const { return Fields; }
+  uint32_t getNumFields() const { return NumFields; }
+  StructPacking getPacking() const { return Packing; }
+
+  static bool classof(const Type *T) { return T->getKind() == TypeKind::Union; }
+};
+
+enum class CallConv {
+  C,
+  // TODO: extend for more CallConvs
+};
+
+class FunctionType : public Type {
+private:
+  const Type *ReturnType;
+  const Type *const *ParameterTypes;
+  uint32_t NumParams;
+  bool IsVarArg;
+  CallConv CC;
+
+public:
+  FunctionType(const Type *RetType, const Type *const *ParamTypes,
+               uint32_t ParamCount, bool VarArgs, CallConv CallConv)
+      : Type(TypeKind::Function, 0, 0), ReturnType(RetType),
+        ParameterTypes(ParamTypes), NumParams(ParamCount), IsVarArg(VarArgs),
+        CC(CallConv) {}
+
+  const Type *getReturnType() const { return ReturnType; }
+  const Type *const *getParameterTypes() const { return ParameterTypes; }
+  uint32_t getNumParameters() const { return NumParams; }
+  const Type *getParameterType(uint32_t Index) const {
+    assert(Index < NumParams && "Parameter index out of bounds");
+    return ParameterTypes[Index];
+  }
+  bool isVarArg() const { return IsVarArg; }
+  CallConv getCallingConv() const { return CC; }
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::Function;
+  }
+};
+
+// API for creating ABI Types
+class TypeBuilder {
+private:
+  BumpPtrAllocator &Allocator;
+
+public:
+  explicit TypeBuilder(BumpPtrAllocator &Alloc) : Allocator(Alloc) {}
+
+  const VoidType *getVoidType() {
+    return new (Allocator.Allocate<VoidType>()) VoidType();
+  }
+
+  const IntegerType *getIntegerType(uint64_t BitWidth, uint64_t Align,
+                                    bool Signed) {
+    return new (Allocator.Allocate<IntegerType>())
+        IntegerType(BitWidth, Align, Signed);
+  }
+
+  const FloatType *getFloatType(uint64_t BitWidth, uint64_t Align) {
+    return new (Allocator.Allocate<FloatType>()) FloatType(BitWidth, Align);
+  }
+
+  const PointerType *getPointerType(uint64_t Size, uint64_t Align) {
+    return new (Allocator.Allocate<PointerType>()) PointerType(Size, Align);
+  }
+
+  const ArrayType *getArrayType(const Type *ElementType, uint64_t NumElements) {
+    return new (Allocator.Allocate<ArrayType>())
+        ArrayType(ElementType, NumElements);
+  }
+
+  const VectorType *getVectorType(const Type *ElementType, uint64_t NumElements,
+                                  uint64_t Align) {
+    return new (Allocator.Allocate<VectorType>())
+        VectorType(ElementType, NumElements, Align);
+  }
+
+  const StructType *getStructType(ArrayRef<FieldInfo> Fields, uint64_t Size,
+                                  uint64_t Align,
+                                  StructPacking Pack = StructPacking::Default) {
+    FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
+
+    for (size_t I = 0; I < Fields.size(); ++I) {
+      new (&FieldArray[I]) FieldInfo(Fields[I]);
+    }
+
+    return new (Allocator.Allocate<StructType>()) StructType(
+        FieldArray, static_cast<uint32_t>(Fields.size()), Size, Align, Pack);
+  }
+
+  const UnionType *getUnionType(ArrayRef<FieldInfo> Fields, uint64_t Size,
+                                uint64_t Align,
+                                StructPacking Pack = StructPacking::Default) {
+    FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
+
+    for (size_t I = 0; I < Fields.size(); ++I) {
+      new (&FieldArray[I]) FieldInfo(Fields[I]);
+    }
+
+    return new (Allocator.Allocate<UnionType>()) UnionType(
+        FieldArray, static_cast<uint32_t>(Fields.size()), Size, Align, Pack);
+  }
+
+  const FunctionType *getFunctionType(const Type *ReturnType,
+                                      ArrayRef<const Type *> ParamTypes,
+                                      bool IsVarArg,
+                                      CallConv CC = CallConv::C) {
+    const Type **ParamArray =
+        Allocator.Allocate<const Type *>(ParamTypes.size());
+
+    for (size_t I = 0; I < ParamTypes.size(); ++I) {
+      ParamArray[I] = ParamTypes[I];
+    }
+
+    return new (Allocator.Allocate<FunctionType>())
+        FunctionType(ReturnType, ParamArray,
+                     static_cast<uint32_t>(ParamTypes.size()), IsVarArg, CC);
   }
 };
 
