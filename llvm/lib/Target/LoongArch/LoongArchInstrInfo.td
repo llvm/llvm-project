@@ -300,17 +300,31 @@ def simm5 : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<5>";
 }
 
-def simm8 : Operand<GRLenVT> {
+def simm8 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isInt<8>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<8>;
   let DecoderMethod = "decodeSImmOperand<8>";
 }
 
-foreach I = [1, 2, 3] in {
-def simm8_lsl # I : Operand<GRLenVT> {
-  let ParserMatchClass = SImmAsmOperand<8, "lsl" # I>;
-  let EncoderMethod = "getImmOpValueAsr<" # I # ">";
-  let DecoderMethod = "decodeSImmOperand<8," # I # ">";
+def simm8_lsl1 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isShiftedInt<8,1>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<8, "lsl1">;
+  let EncoderMethod = "getImmOpValueAsr<1>";
+  let DecoderMethod = "decodeSImmOperand<8, 1>";
 }
+
+def simm8_lsl2 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isShiftedInt<8,2>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<8, "lsl2">;
+  let EncoderMethod = "getImmOpValueAsr<2>";
+  let DecoderMethod = "decodeSImmOperand<8, 2>";
+}
+
+def simm8_lsl3 : Operand<GRLenVT>,
+                 ImmLeaf<GRLenVT, [{return isShiftedInt<8,3>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<8, "lsl3">;
+  let EncoderMethod = "getImmOpValueAsr<3>";
+  let DecoderMethod = "decodeSImmOperand<8, 3>";
 }
 
 def simm9_lsl3 : Operand<GRLenVT>,
@@ -2431,7 +2445,7 @@ let hasSideEffects = 1, Constraints = "$rd = $dst" in {
 def CSRWR : FmtCSR<0x04000020, (outs GPR:$dst),
                    (ins GPR:$rd, uimm14:$csr_num), "$rd, $csr_num">;
 def CSRXCHG : FmtCSRXCHG<0x04000000, (outs GPR:$dst),
-                         (ins GPR:$rd, GPR:$rj, uimm14:$csr_num),
+                         (ins GPR:$rd, GPRNoR0R1:$rj, uimm14:$csr_num),
                          "$rd, $rj, $csr_num">;
 } // hasSideEffects = 1, Constraints = "$rd = $dst"
 
@@ -2478,8 +2492,8 @@ def IDLE : MISC_I15<0x06488000>;
 def : Pat<(loongarch_csrrd uimm14:$imm14), (CSRRD uimm14:$imm14)>;
 def : Pat<(loongarch_csrwr GPR:$rd, uimm14:$imm14),
           (CSRWR GPR:$rd, uimm14:$imm14)>;
-def : Pat<(loongarch_csrxchg GPR:$rd, GPR:$rj, uimm14:$imm14),
-          (CSRXCHG GPR:$rd, GPR:$rj, uimm14:$imm14)>;
+def : Pat<(loongarch_csrxchg GPR:$rd, GPRNoR0R1:$rj, uimm14:$imm14),
+          (CSRXCHG GPR:$rd, GPRNoR0R1:$rj, uimm14:$imm14)>;
 
 def : Pat<(loongarch_iocsrrd_b GPR:$rj), (IOCSRRD_B GPR:$rj)>;
 def : Pat<(loongarch_iocsrrd_h GPR:$rj), (IOCSRRD_H GPR:$rj)>;

@@ -270,6 +270,18 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
       result =
           rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
     }
+  } else if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
+    // TODO(cir): this diverges from traditional lowering. Normally the string
+    // would be a global constant that is memcopied.
+    auto arrayTy = mlir::dyn_cast<cir::ArrayType>(strAttr.getType());
+    assert(arrayTy && "String attribute must have an array type");
+    mlir::Type eltTy = arrayTy.getElementType();
+    for (auto [idx, elt] : llvm::enumerate(strAttr)) {
+      auto init = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, converter->convertType(eltTy), elt);
+      result =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+    }
   } else {
     llvm_unreachable("unexpected ConstArrayAttr elements");
   }
@@ -530,10 +542,18 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
                                                         llvmSrcVal);
     return mlir::success();
   }
-  case cir::CastKind::bitcast:
+  case cir::CastKind::bitcast: {
+    mlir::Type dstTy = castOp.getType();
+    mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
+
     assert(!MissingFeatures::cxxABI());
     assert(!MissingFeatures::dataMemberType());
-    break;
+
+    mlir::Value llvmSrcVal = adaptor.getOperands().front();
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
+                                                       llvmSrcVal);
+    return mlir::success();
+  }
   case cir::CastKind::ptr_to_bool: {
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
     mlir::Value zeroPtr = rewriter.create<mlir::LLVM::ZeroOp>(
@@ -1042,6 +1062,33 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       alignment, addrSpace, isDsoLocal, isThreadLocal,
       /*comdat=*/mlir::SymbolRefAttr(), attributes);
 
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
+    cir::SwitchFlatOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+
+  llvm::SmallVector<mlir::APInt, 8> caseValues;
+  for (mlir::Attribute val : op.getCaseValues()) {
+    auto intAttr = cast<cir::IntAttr>(val);
+    caseValues.push_back(intAttr.getValue());
+  }
+
+  llvm::SmallVector<mlir::Block *, 8> caseDestinations;
+  llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
+
+  for (mlir::Block *x : op.getCaseDestinations())
+    caseDestinations.push_back(x);
+
+  for (mlir::OperandRange x : op.getCaseOperands())
+    caseOperands.push_back(x);
+
+  // Set switch op to branch to the newly created blocks.
+  rewriter.setInsertionPoint(op);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
+      op, adaptor.getCondition(), op.getDefaultDestination(),
+      op.getDefaultOperands(), caseValues, caseDestinations, caseOperands);
   return mlir::success();
 }
 
@@ -1661,6 +1708,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,
                CIRToLLVMSelectOpLowering,
+               CIRToLLVMSwitchFlatOpLowering,
                CIRToLLVMShiftOpLowering,
                CIRToLLVMStackSaveOpLowering,
                CIRToLLVMStackRestoreOpLowering,

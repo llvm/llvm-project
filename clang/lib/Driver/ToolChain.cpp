@@ -389,10 +389,9 @@ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
   return SanArgs;
 }
 
-const XRayArgs& ToolChain::getXRayArgs() const {
-  if (!XRayArguments)
-    XRayArguments.reset(new XRayArgs(*this, Args));
-  return *XRayArguments;
+const XRayArgs ToolChain::getXRayArgs(const llvm::opt::ArgList &JobArgs) const {
+  XRayArgs XRayArguments(*this, JobArgs);
+  return XRayArguments;
 }
 
 namespace {
@@ -502,8 +501,7 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
-  bool IsRegistered =
-      llvm::TargetRegistry::lookupTarget(std::string(Prefix), IgnoredError);
+  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Prefix, IgnoredError);
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }

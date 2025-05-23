@@ -6913,7 +6913,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--offload-new-driver");
   }
 
-  const XRayArgs &XRay = TC.getXRayArgs();
+  const XRayArgs &XRay = TC.getXRayArgs(Args);
   XRay.addArgs(TC, Args, CmdArgs, InputType);
 
   for (const auto &Filename :

@@ -2791,16 +2791,20 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     // initializer list that the child calls see, so that we don't try
     // to re-process the designator.
     unsigned OldIndex = Index;
-    IList->setInit(OldIndex, DIE->getInit());
+    auto *OldDIE =
+        dyn_cast_if_present<DesignatedInitExpr>(IList->getInit(OldIndex));
+    if (!OldDIE)
+      OldDIE = DIE;
+    IList->setInit(OldIndex, OldDIE->getInit());
 
     CheckSubElementType(Entity, IList, CurrentObjectType, Index, StructuredList,
                         StructuredIndex, /*DirectlyDesignated=*/true);
 
     // Restore the designated initializer expression in the syntactic
     // form of the initializer list.
-    if (IList->getInit(OldIndex) != DIE->getInit())
-      DIE->setInit(IList->getInit(OldIndex));
-    IList->setInit(OldIndex, DIE);
+    if (IList->getInit(OldIndex) != OldDIE->getInit())
+      OldDIE->setInit(IList->getInit(OldIndex));
+    IList->setInit(OldIndex, OldDIE);
 
     return hadError && !prevHadError;
   }
@@ -6614,7 +6618,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // initializer present. However, we only do this for structure types, not
       // union types, because an unitialized field in a union is generally
       // reasonable, especially in C where unions can be used for type punning.
-      if (!Initializer && !Rec->isUnion()) {
+      if (!Initializer && !Rec->isUnion() && !Rec->isInvalidDecl()) {
         if (const FieldDecl *FD = getConstField(Rec)) {
           unsigned DiagID = diag::warn_default_init_const_field_unsafe;
           if (Var->getStorageDuration() == SD_Static ||

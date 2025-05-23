@@ -38,6 +38,7 @@ struct MissingFeatures {
   static bool opGlobalWeakRef() { return false; }
   static bool opGlobalLinkage() { return false; }
   static bool opGlobalSetVisitibility() { return false; }
+  static bool opGlobalUnnamedAddr() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
@@ -119,7 +120,6 @@ struct MissingFeatures {
   static bool opUnaryPromotionType() { return false; }
 
   // SwitchOp handling
-  static bool foldCascadingCases() { return false; }
   static bool foldRangeCase() { return false; }
 
   // Clang early optimizations or things defered to LLVM lowering.
@@ -127,7 +127,6 @@ struct MissingFeatures {
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
   // RecordType
-  static bool recursiveRecordLayout() { return false; }
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool cxxSupport() { return false; }
