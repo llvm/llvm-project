@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -806,7 +807,7 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
   return FoldedElements;
 }
 
-bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
+bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI, GISelValueTracking *VT,
                            bool SNaN) {
   const MachineInstr *DefMI = MRI.getVRegDef(Val);
   if (!DefMI)
@@ -815,79 +816,12 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   const TargetMachine& TM = DefMI->getMF()->getTarget();
   if (DefMI->getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath)
     return true;
-
-  // If the value is a constant, we can obviously see if it is a NaN or not.
-  if (const ConstantFP *FPVal = getConstantFPVRegVal(Val, MRI)) {
-    return !FPVal->getValueAPF().isNaN() ||
-           (SNaN && !FPVal->getValueAPF().isSignaling());
-  }
-
-  if (DefMI->getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
-    for (const auto &Op : DefMI->uses())
-      if (!isKnownNeverNaN(Op.getReg(), MRI, SNaN))
-        return false;
-    return true;
-  }
-
-  switch (DefMI->getOpcode()) {
-  default:
-    break;
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FREM:
-  case TargetOpcode::G_FSIN:
-  case TargetOpcode::G_FCOS:
-  case TargetOpcode::G_FTAN:
-  case TargetOpcode::G_FACOS:
-  case TargetOpcode::G_FASIN:
-  case TargetOpcode::G_FATAN:
-  case TargetOpcode::G_FATAN2:
-  case TargetOpcode::G_FCOSH:
-  case TargetOpcode::G_FSINH:
-  case TargetOpcode::G_FTANH:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FMAD:
-    if (SNaN)
-      return true;
-
-    // TODO: Need isKnownNeverInfinity
-    return false;
-  case TargetOpcode::G_FMINNUM_IEEE:
-  case TargetOpcode::G_FMAXNUM_IEEE: {
-    if (SNaN)
-      return true;
-    // This can return a NaN if either operand is an sNaN, or if both operands
-    // are NaN.
-    return (isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI) &&
-            isKnownNeverSNaN(DefMI->getOperand(2).getReg(), MRI)) ||
-           (isKnownNeverSNaN(DefMI->getOperand(1).getReg(), MRI) &&
-            isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI));
-  }
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXNUM: {
-    // Only one needs to be known not-nan, since it will be returned if the
-    // other ends up being one.
-    return isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI, SNaN) ||
-           isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI, SNaN);
-  }
-  }
-
-  if (SNaN) {
-    // FP operations quiet. For now, just handle the ones inserted during
-    // legalization.
-    switch (DefMI->getOpcode()) {
-    case TargetOpcode::G_FPEXT:
-    case TargetOpcode::G_FPTRUNC:
-    case TargetOpcode::G_FCANONICALIZE:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  return false;
+    
+  KnownFPClass FPClass = VT->computeKnownFPClass(Val, fcNan);
+  if (SNaN)
+    return FPClass.isKnownNever(fcSNan);
+  
+  return FPClass.isKnownNeverNaN();
 }
 
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
