@@ -266,6 +266,9 @@ static cl::opt<bool>
                     cl::desc("Split static data sections into hot and cold "
                              "sections using profile information"));
 
+static cl::opt<bool> MergedStackColoring("merged-stack-coloring",
+                                         cl::init(false), cl::Hidden);
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -1305,9 +1308,11 @@ void TargetPassConfig::addMachineSSAOptimization() {
   // instructions dead.
   addPass(&OptimizePHIsLegacyID);
 
-  // This pass merges large allocas. StackSlotColoring is a different pass
-  // which merges spill slots.
-  addPass(&StackColoringLegacyID);
+  if (!MergedStackColoring) {
+    // This pass merges large allocas. StackSlotColoring is a different pass
+    // which merges spill slots.
+    addPass(&StackColoringLegacyID);
+  }
 
   // If the target requests it, assign local variables to stack slots relative
   // to one another and simplify frame index references where possible.
@@ -1495,6 +1500,12 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   if (addRegAssignAndRewriteOptimized()) {
     // Perform stack slot coloring and post-ra machine LICM.
     addPass(&StackSlotColoringID);
+
+    if (MergedStackColoring) {
+      // This pass merges large allocas. StackSlotColoring is a different pass
+      // which merges spill slots.
+      addPass(&StackColoringLegacyID);
+    }
 
     // Allow targets to expand pseudo instructions depending on the choice of
     // registers before MachineCopyPropagation.
