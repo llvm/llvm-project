@@ -368,7 +368,8 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
 
   const SCEV *BTC = SE.getBackedgeTakenCount(&L);
   SCEVExpander Expander(SE, L.getHeader()->getDataLayout(), "loop-peel");
-  if (!SE.isKnownNonZero(BTC) && Expander.isHighCostExpansion(BTC, &L, SCEVCheapExpansionBudget, &TTI,
+  if (!SE.isKnownNonZero(BTC) &&
+      Expander.isHighCostExpansion(BTC, &L, SCEVCheapExpansionBudget, &TTI,
                                    L.getLoopPredecessor()->getTerminator()))
     return false;
 
