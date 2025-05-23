@@ -485,9 +485,52 @@ LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
   CheckCondition condition = CheckCondition::invalid;
   const auto maybeProfDef = getOperatorDefinition<Profile>(op, condition);
   const auto maybeExtDef = getOperatorDefinition<Extension>(op, condition);
+
   if (!failed(maybeProfDef) && !failed(maybeExtDef) &&
-      !maybeProfDef.value().size() && !maybeExtDef.value().size())
+      !maybeProfDef.value().size() && !maybeExtDef.value().size()) {
+    std::string message;
+    llvm::raw_string_ostream os(message);
+    os << "illegal: operation operand/result data types did not align with any "
+          "profile or extension, got (";
+
+    ProfileInfoDepot depot(op);
+    SmallVector<TypeInfo> current = depot.getInfo();
+    for (const auto &typeInfo : llvm::drop_end(current))
+      os << stringifyTypeInfo(typeInfo) << ",";
+    os << stringifyTypeInfo(current.back()) << ")";
+
+    // avoid polluting the error message output by outputting only
+    // the best match
+    const std::string opName = op->getName().getStringRef().str();
+    int maxMatches = -1;
+    SmallVector<TypeInfo> bestTypeInfo;
+    const auto searchBestMatch = [&](auto map) {
+      for (const auto &complianceInfos : map[opName]) {
+        for (const auto &typeInfos : complianceInfos.operandTypeInfoSet) {
+          const int matches = llvm::count_if(
+              llvm::zip_equal(current, typeInfos), [&](const auto zipType) {
+                return isSameTypeInfo(std::get<0>(zipType),
+                                      std::get<1>(zipType));
+              });
+          if (matches > maxMatches) {
+            maxMatches = matches;
+            bestTypeInfo = typeInfos;
+          }
+        }
+      }
+    };
+    searchBestMatch(getProfileComplianceMap<Profile>());
+    searchBestMatch(getProfileComplianceMap<Extension>());
+
+    os << ", did you mean (";
+    for (const auto &typeInfo : llvm::drop_end(bestTypeInfo))
+      os << stringifyTypeInfo(typeInfo) << ",";
+    os << stringifyTypeInfo(bestTypeInfo.back()) << ")? ";
+    os << "Otherwise, please refer to the 'supported data types' for '"
+       << opName << "' in the specification.";
+    op->emitOpError(message);
     return failure();
+  }
 
   return success();
 }
@@ -561,4 +604,22 @@ SmallVector<StringRef> TosaProfileCompliance::stringifyProfile(
   }
 
   return debugStrings;
+}
+
+llvm::SmallString<7>
+TosaProfileCompliance::stringifyTypeInfo(const TypeInfo &typeInfo) {
+  if (typeInfo.typeID == mlir::IntegerType::getTypeID()) {
+    return {"i" + llvm::utostr(typeInfo.bitWidth)};
+  } else if (typeInfo.typeID == mlir::Float16Type::getTypeID()) {
+    return {"f16"};
+  } else if (typeInfo.typeID == mlir::Float32Type::getTypeID()) {
+    return {"f32"};
+  } else if (typeInfo.typeID == mlir::BFloat16Type::getTypeID()) {
+    return {"bf16"};
+  } else if (typeInfo.typeID == mlir::Float8E4M3FNType::getTypeID()) {
+    return {"fp8e4m3"};
+  } else if (typeInfo.typeID == mlir::Float8E5M2Type::getTypeID()) {
+    return {"fp8e5m2"};
+  }
+  llvm_unreachable("unknown type");
 }

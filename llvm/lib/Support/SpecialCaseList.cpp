@@ -229,9 +229,11 @@ unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
                                          StringRef Prefix, StringRef Query,
                                          StringRef Category) const {
   SectionEntries::const_iterator I = Entries.find(Prefix);
-  if (I == Entries.end()) return 0;
+  if (I == Entries.end())
+    return 0;
   StringMap<Matcher>::const_iterator II = I->second.find(Category);
-  if (II == I->second.end()) return 0;
+  if (II == I->second.end())
+    return 0;
 
   return II->getValue().match(Query);
 }

@@ -78,23 +78,23 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
                                        "' instruction!");
 
     const Record *Rec = Arg->getDef();
-    std::string PrintMethod = "printOperand";
-    std::string EncoderMethod;
+    StringRef PrintMethod = "printOperand";
+    StringRef EncoderMethod;
     std::string OperandType = "OPERAND_UNKNOWN";
     std::string OperandNamespace = "MCOI";
     unsigned NumOps = 1;
     const DagInit *MIOpInfo = nullptr;
     if (Rec->isSubClassOf("RegisterOperand")) {
-      PrintMethod = Rec->getValueAsString("PrintMethod").str();
+      PrintMethod = Rec->getValueAsString("PrintMethod");
       OperandType = Rec->getValueAsString("OperandType").str();
       OperandNamespace = Rec->getValueAsString("OperandNamespace").str();
-      EncoderMethod = Rec->getValueAsString("EncoderMethod").str();
+      EncoderMethod = Rec->getValueAsString("EncoderMethod");
     } else if (Rec->isSubClassOf("Operand")) {
-      PrintMethod = Rec->getValueAsString("PrintMethod").str();
+      PrintMethod = Rec->getValueAsString("PrintMethod");
       OperandType = Rec->getValueAsString("OperandType").str();
       OperandNamespace = Rec->getValueAsString("OperandNamespace").str();
       // If there is an explicit encoder method, use it.
-      EncoderMethod = Rec->getValueAsString("EncoderMethod").str();
+      EncoderMethod = Rec->getValueAsString("EncoderMethod");
       MIOpInfo = Rec->getValueAsDag("MIOperandInfo");
 
       // Verify that MIOpInfo has an 'ops' root value.
@@ -139,8 +139,8 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
                           " has the same name as a previous operand!");
 
     OperandInfo &OpInfo = OperandList.emplace_back(
-        Rec, ArgName.str(), std::string(std::move(PrintMethod)),
-        OperandNamespace + "::" + OperandType, MIOperandNo, NumOps, MIOpInfo);
+        Rec, ArgName, PrintMethod, OperandNamespace + "::" + OperandType,
+        MIOperandNo, NumOps, MIOpInfo);
 
     if (SubArgDag) {
       if (SubArgDag->getNumArgs() != NumOps) {
@@ -182,7 +182,7 @@ CGIOperandList::CGIOperandList(const Record *R) : TheDef(R) {
     } else if (!EncoderMethod.empty()) {
       // If we have no explicit sub-op dag, but have an top-level encoder
       // method, the single encoder will multiple sub-ops, itself.
-      OpInfo.EncoderMethodNames[0] = std::move(EncoderMethod);
+      OpInfo.EncoderMethodNames[0] = EncoderMethod;
       for (unsigned j = 1; j < NumOps; ++j)
         OpInfo.DoNotEncode[j] = true;
     }
