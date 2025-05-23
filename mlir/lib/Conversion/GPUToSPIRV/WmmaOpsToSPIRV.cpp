@@ -114,11 +114,11 @@ struct WmmaConstantOpToSPIRVLowering final
 /// Converts GPU MMA ExtractOp to CompositeExtract SPIR-V KHR/NV cooperative
 /// matrix ops.
 struct WmmaExtractOpToSPIRVLowering final
-    : OpConversionPattern<gpu::SubgroupMmaExtractOp> {
+    : OpConversionPattern<gpu::SubgroupMmaExtractThreadLocalOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(gpu::SubgroupMmaExtractOp op, OpAdaptor adaptor,
+  matchAndRewrite(gpu::SubgroupMmaExtractThreadLocalOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Value matrix = adaptor.getMatrix();
     auto coopType =
@@ -146,11 +146,11 @@ struct WmmaExtractOpToSPIRVLowering final
 /// Converts GPU MMA InsertOp to CompositeInsert SPIR-V KHR/NV cooperative
 /// matrix ops.
 struct WmmaInsertOpToSPIRVLowering final
-    : OpConversionPattern<gpu::SubgroupMmaInsertOp> {
+    : OpConversionPattern<gpu::SubgroupMmaInsertThreadLocalOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(gpu::SubgroupMmaInsertOp op, OpAdaptor adaptor,
+  matchAndRewrite(gpu::SubgroupMmaInsertThreadLocalOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Value value = adaptor.getValue();
     Value matrix = adaptor.getMatrix();

@@ -436,11 +436,11 @@ module attributes {gpu.container_module} {
                                 %ptr: memref<16x16xf32>) {
     %zero = arith.constant 0.0 : f32
     %c0 = arith.constant 0 : index
-    // CHECK: gpu.subgroup_mma_extract
-    %val = gpu.subgroup_mma_extract %src[%c0] : !gpu.mma_matrix<16x16xf32, "COp"> -> f32
+    // CHECK: gpu.subgroup_mma_extract_thread_local
+    %val = gpu.subgroup_mma_extract_thread_local %src[%c0] : !gpu.mma_matrix<16x16xf32, "COp"> -> f32
     %m = gpu.subgroup_mma_constant_matrix %zero : !gpu.mma_matrix<16x16xf32, "COp">
-    // CHECK: gpu.subgroup_mma_insert
-    %s0 = gpu.subgroup_mma_insert %val, %m[%c0] : f32, !gpu.mma_matrix<16x16xf32, "COp"> -> !gpu.mma_matrix<16x16xf32, "COp">
+    // CHECK: gpu.subgroup_mma_insert_thread_local
+    %s0 = gpu.subgroup_mma_insert_thread_local %val, %m[%c0] : f32, !gpu.mma_matrix<16x16xf32, "COp"> -> !gpu.mma_matrix<16x16xf32, "COp">
     gpu.subgroup_mma_store_matrix %s0, %ptr[%c0, %c0] {leadDimension = 16 : index} : !gpu.mma_matrix<16x16xf32, "COp">, memref<16x16xf32>
     return
   }
