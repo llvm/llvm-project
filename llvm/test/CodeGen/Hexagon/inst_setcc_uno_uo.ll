@@ -1,4 +1,4 @@
-;; RUN: llc --mtriple=hexagon -mattr=+hvx79,+hvx-length128b %s -o - | FileCheck %s
+;; RUN: llc --mtriple=hexagon -mattr=+hvxv79,+hvx-length128b %s -o - | FileCheck %s
 
 define dso_local void @store_isnan_f32(ptr %a, ptr %isnan_a) local_unnamed_addr {
 entry:
