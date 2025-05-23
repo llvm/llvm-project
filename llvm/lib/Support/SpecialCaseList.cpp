@@ -240,8 +240,7 @@ unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
   if (II == I->second.end())
     return 0;
 
-  const llvm::SpecialCaseList::Matcher &matcher = II->getValue();
-  return matcher.match(Query);
+  return II->getValue().match(Query);
 }
 
 } // namespace llvm
