@@ -137,7 +137,7 @@ body:             |
     ; RV32: liveins: $x10, $x11, $x12
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: $x14 = ADDI $x0, 0
-    ; RV32-NEXT: $x15 = ADDI $dummy_reg_pair_with_x0, 0
+    ; RV32-NEXT: $x15 = ADDI $x0, 0
     ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x10, 0 :: (store (s64) into %ir.a)
     ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x11, 0 :: (store (s64) into %ir.b)
     ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x12, 0 :: (store (s64) into %ir.c)
