@@ -467,17 +467,16 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     // map.
     // Only a single pointer variable is allowed in the entire GEP chain.
     // If VarOffsets already holds a different pointer, abort.
-    for (auto &VarEntry : LocalVarsOffsets) {
+    for (auto &[Var, Offset] : LocalVarsOffsets) {
       // If VarOffsets already records a different pointer, abort.
-      if (!VarOffsets.empty() && !VarOffsets.contains(VarEntry.first))
+      if (!VarOffsets.empty() && !VarOffsets.contains(Var))
         return nullptr;
 
       // Try to insert VarEntry.first with its offset; if that pointer is
       // already in VarOffsets, add the new offset to the existing one.
-      auto [Existing, Inserted] =
-          VarOffsets.try_emplace(VarEntry.first, VarEntry.second);
+      auto [Existing, Inserted] = VarOffsets.try_emplace(Var, Offset);
       if (!Inserted)
-        Existing->second += VarEntry.second;
+        Existing->second += Offset;
     }
 
     ConstOffset += LocalConstOffset;

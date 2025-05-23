@@ -19,32 +19,25 @@ entry:
   ret void
 }
 
-attributes #0 = { "amdgpu-promote-alloca-to-vector-max-regs"="32" }
-
-define amdgpu_cs void @scalar_alloca_ptr_with_vector_gep_of_scratch(i32 inreg %0, i32 inreg %1, i32 inreg %2, <3 x i32> inreg %coord, i32 inreg %4, <3 x i32> %v_in, <2 x i32> %in, i32 %extra, i32 %idx, ptr addrspace(8) %buffer) #0 {
-; CHECK-LABEL: define amdgpu_cs void @scalar_alloca_ptr_with_vector_gep_of_scratch(
-; CHECK-SAME: i32 inreg [[TMP0:%.*]], i32 inreg [[TMP1:%.*]], i32 inreg [[TMP2:%.*]], <3 x i32> inreg [[COORD:%.*]], i32 inreg [[TMP3:%.*]], <3 x i32> [[V_IN:%.*]], <2 x i32> [[IN:%.*]], i32 [[EXTRA:%.*]], i32 [[IDX:%.*]], ptr addrspace(8) [[BUFFER:%.*]]) #[[ATTR0]] {
+define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_of_gep3(i32 %j) #0 {
+; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_of_gep3(
+; CHECK-SAME: i32 [[J:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[V:%.*]] = freeze <3 x i32> poison
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i32> [[V]], i32 [[EXTRA]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[IN]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <3 x i32> [[TMP4]], i32 [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[IN]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <3 x i32> [[TMP6]], i32 [[TMP7]], i32 2
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 1, [[IDX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <3 x i32> [[TMP8]], i32 [[TMP9]]
-; CHECK-NEXT:    [[XF:%.*]] = bitcast i32 [[TMP10]] to float
-; CHECK-NEXT:    store float [[XF]], ptr addrspace(8) [[BUFFER]], align 4
+; CHECK-NEXT:    [[SORTEDFRAGMENTS:%.*]] = freeze <16 x i32> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[J]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 8, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[J]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 9, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i32> [[SORTEDFRAGMENTS]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %v = alloca [3 x i32], addrspace(5)
-  %v1 = getelementptr [3 x i32], ptr addrspace(5) %v, i32 0, i32 1
-  store i32 %extra, ptr addrspace(5) %v
-  store <2 x i32> %in, ptr addrspace(5) %v1
-  %e = getelementptr [2 x i32], ptr addrspace(5) %v1, i32 0, i32 %idx
-  %x = load i32, ptr addrspace(5) %e
-  %xf = bitcast i32 %x to float
-  store float %xf, ptr addrspace(8) %buffer, align 4
+  %SortedFragments = alloca [2 x [4 x <2 x i32>]], align 8, addrspace(5)
+  %lvl1 = getelementptr inbounds [2 x [4 x <2 x i32>]], ptr addrspace(5) %SortedFragments, i32 0, i32 1
+  %lvl2 = getelementptr inbounds [4 x <2 x i32>], ptr addrspace(5) %lvl1, i32 0, i32 %j
+  %byte = getelementptr inbounds i8, ptr addrspace(5) %lvl2, i32 4
+  %val  = load i32, ptr addrspace(5) %byte, align 4
   ret void
 }
+
+attributes #0 = { "amdgpu-promote-alloca-to-vector-max-regs"="32" }
