@@ -2520,19 +2520,19 @@ unsigned OperationLegalizer::applyCostModelToPatterns(
     return minDepth;
 
   // Sort the patterns by those likely to be the most beneficial.
-  std::stable_sort(patternsByDepth.begin(), patternsByDepth.end(),
-                   [](const std::pair<const Pattern *, unsigned> &lhs,
-                      const std::pair<const Pattern *, unsigned> &rhs) {
-                     // First sort by the smaller pattern legalization
-                     // depth.
-                     if (lhs.second != rhs.second)
-                       return lhs.second < rhs.second;
+  llvm::stable_sort(patternsByDepth,
+                    [](const std::pair<const Pattern *, unsigned> &lhs,
+                       const std::pair<const Pattern *, unsigned> &rhs) {
+                      // First sort by the smaller pattern legalization
+                      // depth.
+                      if (lhs.second != rhs.second)
+                        return lhs.second < rhs.second;
 
-                     // Then sort by the larger pattern benefit.
-                     auto lhsBenefit = lhs.first->getBenefit();
-                     auto rhsBenefit = rhs.first->getBenefit();
-                     return lhsBenefit > rhsBenefit;
-                   });
+                      // Then sort by the larger pattern benefit.
+                      auto lhsBenefit = lhs.first->getBenefit();
+                      auto rhsBenefit = rhs.first->getBenefit();
+                      return lhsBenefit > rhsBenefit;
+                    });
 
   // Update the legalization pattern to use the new sorted list.
   patterns.clear();
