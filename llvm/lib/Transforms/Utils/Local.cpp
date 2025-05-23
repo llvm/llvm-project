@@ -3319,7 +3319,7 @@ static void combineMetadata(Instruction *K, const Instruction *J,
     switch (Kind) {
       default:
         if (K->isAtomic() && IsAMDGPUMD(Kind))
-          break; // Preserve AMDGPU atomic metadata.
+          K->setMetadata(Kind, MDNode::intersect(JMD, KMD));
         else
           K->setMetadata(Kind, nullptr); // Remove unknown metadata
         break;
@@ -3457,16 +3457,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                    MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 
-  // Preserve AMDGPU atomic metadata from J, if present. K might already be
-  // carrying this but overwriting should cause no issue.
-  if (K->isAtomic()) {
-    if (auto *JMD = J->getMetadata("amdgpu.no.fine.grained.memory"))
-      K->setMetadata("amdgpu.no.fine.grained.memory", JMD);
-    if (auto *JMD = J->getMetadata("amdgpu.no.remote.memory"))
-      K->setMetadata("amdgpu.no.remote.memory", JMD);
-    if (auto *JMD = J->getMetadata("amdgpu.ignore.denormal.mode"))
-      K->setMetadata("amdgpu.ignore.denormal.mode", JMD);
-  }
 }
 
 void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
