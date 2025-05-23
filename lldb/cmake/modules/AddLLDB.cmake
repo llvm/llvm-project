@@ -93,29 +93,25 @@ function(add_lldb_library name)
     set(libkind STATIC)
   endif()
 
-  if (PARAM_OBJECT)
-    add_library(${name} ${libkind} ${srcs})
+  if(PARAM_ENTITLEMENTS)
+    set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
+  endif()
+
+  if(LLDB_NO_INSTALL_DEFAULT_RPATH)
+    set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
+  endif()
+
+  llvm_add_library(${name} ${libkind} ${srcs}
+    LINK_LIBS ${PARAM_LINK_LIBS}
+    DEPENDS ${PARAM_DEPENDS}
+    ${pass_ENTITLEMENTS}
+    ${pass_NO_INSTALL_RPATH}
+  )
+
+  if(CLANG_LINK_CLANG_DYLIB)
+    target_link_libraries(${name} PRIVATE clang-cpp)
   else()
-    if(PARAM_ENTITLEMENTS)
-      set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
-    endif()
-
-    if(LLDB_NO_INSTALL_DEFAULT_RPATH)
-      set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
-    endif()
-
-    llvm_add_library(${name} ${libkind} ${srcs}
-      LINK_LIBS ${PARAM_LINK_LIBS}
-      DEPENDS ${PARAM_DEPENDS}
-      ${pass_ENTITLEMENTS}
-      ${pass_NO_INSTALL_RPATH}
-    )
-
-    if(CLANG_LINK_CLANG_DYLIB)
-      target_link_libraries(${name} PRIVATE clang-cpp)
-    else()
-      target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
-    endif()
+    target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
   endif()
 
   # A target cannot be changed to a FRAMEWORK after calling install() because
