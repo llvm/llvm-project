@@ -86,7 +86,7 @@ inline bool isSingleScalar(const VPValue *VPV) {
                 all_of(VPI->operands(), isSingleScalar));
       })
       .Case<VPExpandSCEVRecipe>([](const VPValue *) {
-        // VPExpandSCEVRecipes must be placed in the entry and are alway
+        // VPExpandSCEVRecipes must be placed in the entry and are always
         // uniform.
         return true;
       })
