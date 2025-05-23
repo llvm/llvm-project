@@ -31,7 +31,7 @@
 namespace clang {
 
 SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
-                                 DiagnosticOptions *DiagOpts,
+                                 DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
     : DiagnosticRenderer(LangOpts, DiagOpts), Writer(Writer) {}
 
@@ -163,7 +163,7 @@ SARIFDiagnostic::addDiagnosticLevelToRule(SarifRule Rule,
 
 llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
                                               const SourceManager &SM) {
-  if (DiagOpts->AbsolutePath) {
+  if (DiagOpts.AbsolutePath) {
     auto File = SM.getFileManager().getOptionalFileRef(Filename);
     if (File) {
       // We want to print a simplified absolute path, i. e. without "dots".
