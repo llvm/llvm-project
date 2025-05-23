@@ -15,6 +15,7 @@
 
 #if LLDB_ENABLE_PYTHON
 
+#include "JITLoaderPythonInterface.h"
 #include "OperatingSystemPythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
