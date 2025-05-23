@@ -1,5 +1,5 @@
 // RUN: mlir-opt -split-input-file \
-// RUN: -transform-preload-library='transform-library-paths=%p/td/vectorize-with-patterns.mlir' \
+// RUN: -transform-preload-library='transform-library-paths=%p/../td/vectorize-with-patterns.mlir' \
 // RUN: -transform-interpreter=entry-point=vectorize_with_patterns %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
