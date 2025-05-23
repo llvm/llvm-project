@@ -329,6 +329,8 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
   Register Val = Src0->getOperand(0).getReg();
 
   auto isOp3Zero = [&]() {
+    if (MI.getNumOperands() < 5)
+      return false;
     MachineInstr *Op3 = getDefIgnoringCopies(MI.getOperand(4).getReg(), MRI);
     if (Op3->getOpcode() == TargetOpcode::G_FCONSTANT)
       return Op3->getOperand(1).getFPImm()->isExactlyValue(0.0);
