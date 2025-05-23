@@ -11887,13 +11887,23 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
   EVT ExtMulOpVT =
       EVT::getVectorVT(*DAG.getContext(), AccVT.getVectorElementType(),
                        MulOpVT.getVectorElementCount());
-  unsigned ExtOpc = N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA
-                        ? ISD::SIGN_EXTEND
-                        : ISD::ZERO_EXTEND;
-
   if (ExtMulOpVT != MulOpVT) {
-    MulLHS = DAG.getNode(ExtOpc, DL, ExtMulOpVT, MulLHS);
-    MulRHS = DAG.getNode(ExtOpc, DL, ExtMulOpVT, MulRHS);
+    switch (N->getOpcode()) {
+    case ISD::PARTIAL_REDUCE_SMLA:
+      MulLHS = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtMulOpVT, MulLHS);
+      MulRHS = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtMulOpVT, MulRHS);
+      break;
+    case ISD::PARTIAL_REDUCE_UMLA:
+      MulLHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtMulOpVT, MulLHS);
+      MulRHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtMulOpVT, MulRHS);
+      break;
+    case ISD::PARTIAL_REDUCE_SUMLA:
+      MulLHS = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtMulOpVT, MulLHS);
+      MulRHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtMulOpVT, MulRHS);
+      break;
+    default:
+      llvm_unreachable("unexpected opcode");
+    }
   }
   SDValue Input = MulLHS;
   APInt ConstantOne;

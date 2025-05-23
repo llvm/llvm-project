@@ -8240,6 +8240,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     return lowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
@@ -8391,8 +8392,20 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDValue B = Op.getOperand(2);
   assert(A.getSimpleValueType() == B.getSimpleValueType() &&
          A.getSimpleValueType().getVectorElementType() == MVT::i8);
-  bool IsSigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
-  unsigned Opc = IsSigned ? RISCVISD::VQDOT_VL : RISCVISD::VQDOTU_VL;
+  unsigned Opc;
+  switch (Op.getOpcode()) {
+  case ISD::PARTIAL_REDUCE_SMLA:
+    Opc = RISCVISD::VQDOT_VL;
+    break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+    Opc = RISCVISD::VQDOTU_VL;
+    break;
+  case ISD::PARTIAL_REDUCE_SUMLA:
+    Opc = RISCVISD::VQDOTSU_VL;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
   auto [Mask, VL] = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
   return DAG.getNode(Opc, DL, VT, {A, B, Accum, Mask, VL});
 }

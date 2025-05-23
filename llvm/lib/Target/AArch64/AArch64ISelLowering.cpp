@@ -1874,8 +1874,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (EnablePartialReduceNodes && Subtarget->isSVEorStreamingSVEAvailable()) {
     // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
     // Other pairs will default to 'Expand'.
-    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
-    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
+    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Custom);
+    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Custom);
 
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv16i8, Custom);
   }
@@ -7745,6 +7745,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_HISTOGRAM(Op, DAG);
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   }
 }
@@ -29532,13 +29533,24 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
+  // No support for sumla forms, let generic legalization handle them
+  if (Op->getOpcode() == ISD::PARTIAL_REDUCE_SUMLA)
+    return SDValue();
+
   SDLoc DL(Op);
 
   SDValue Acc = Op.getOperand(0);
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   EVT ResultVT = Op.getValueType();
-  assert(ResultVT == MVT::nxv2i64 && LHS.getValueType() == MVT::nxv16i8);
+  EVT OpVT = LHS.getValueType();
+
+  // These two are legal...
+  if ((ResultVT == MVT::nxv2i64 && OpVT == MVT::nxv8i16) ||
+      (ResultVT == MVT::nxv4i32 && OpVT == MVT::nxv16i8))
+    return Op;
+
+  assert(ResultVT == MVT::nxv2i64 && OpVT == MVT::nxv16i8);
 
   SDValue DotNode = DAG.getNode(Op.getOpcode(), DL, MVT::nxv4i32,
                                 DAG.getConstant(0, DL, MVT::nxv4i32), LHS, RHS);
