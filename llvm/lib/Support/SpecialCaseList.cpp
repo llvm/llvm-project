@@ -55,10 +55,11 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
 
   Globs.emplace_back();
   auto &Glob = Globs.back();
-  Glob.first = Pattern;
+  Glob.first = Pattern.str();
   auto &Pair = Glob.second;
   // We must be sure to use the string in the map rather than the provided
   // reference which could be destroyed before match() is called
+  llvm::errs() << __func__ << " GlobPattern::create: " << Glob.first << "\n";
   if (auto Err = GlobPattern::create(Glob.first, /*MaxSubPatterns=*/1024)
                      .moveInto(Pair.first))
     return Err;
@@ -67,11 +68,11 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
 }
 
 unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
-  for (const auto &glob : this->Globs) {
-    llvm::outs() << "Inside match: " << glob.first
-                 << " Line number: " << glob.second.second << "\n";
-    if (glob.second.first.match(Query))
-      return glob.second.second;
+  for (const auto &[Pattern, Pair] : Globs) {
+    llvm::outs() << "Inside match: " << Pattern
+                 << " Line number: " << Pair.second << "\n";
+    if (Pair.first.match(Query))
+      return Pair.second;
   }
   for (const auto &[Regex, LineNumber] : RegExes)
     if (Regex->match(Query))
@@ -240,10 +241,6 @@ unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
     return 0;
 
   const llvm::SpecialCaseList::Matcher &matcher = II->getValue();
-  for (const auto &glob : matcher.Globs) {
-    llvm::outs() << "Outside match: " << glob.first
-                 << " line number: " << glob.second.second << "\n";
-  }
   return matcher.match(Query);
 }
 

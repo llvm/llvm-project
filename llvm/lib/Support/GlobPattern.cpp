@@ -191,8 +191,17 @@ GlobPattern::SubGlobPattern::create(StringRef S) {
 }
 
 bool GlobPattern::match(StringRef S) const {
-  if (!S.consume_front(Prefix))
+  int debug = 0;
+  if (S == "hello") {
+    llvm::errs() << "Prefix: " << Prefix << "\n";
+    debug = 1;
+  }
+  if (!S.consume_front(Prefix)) {
+    if (debug == 1) {
+      llvm::errs() << "consume_front: " << Prefix << "\n";
+    }
     return false;
+  }
   if (SubGlobs.empty() && S.empty())
     return true;
   for (auto &Glob : SubGlobs)
