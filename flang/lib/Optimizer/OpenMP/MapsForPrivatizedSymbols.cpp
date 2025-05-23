@@ -22,7 +22,9 @@
 // 2. Generalize this for more than just omp.target ops.
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -188,32 +190,45 @@ class MapsForPrivatizedSymbolsPass
   // in a subsequent PR.
   void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
                     llvm::SmallVector<mlir::Value> &boundsOps) {
-    if (!fir::isBoxAddress(var.getType()))
-      return;
+    if (fir::isBoxAddress(var.getType())) {
+      unsigned int rank = 0;
+      rank = fir::getBoxRank(fir::unwrapRefType(var.getType()));
+      mlir::Location loc = var.getLoc();
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+      mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+      mlir::Type boundTy = builder.getType<omp::MapBoundsType>();
+      mlir::Value box = builder.create<fir::LoadOp>(loc, var);
+      for (unsigned int i = 0; i < rank; ++i) {
+        mlir::Value dimNo = builder.createIntegerConstant(loc, idxTy, i);
+        auto dimInfo = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
+                                                      box, dimNo);
+        mlir::Value lb = dimInfo.getLowerBound();
+        mlir::Value extent = dimInfo.getExtent();
+        mlir::Value byteStride = dimInfo.getByteStride();
+        mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, extent, one);
 
-    unsigned int rank = 0;
-    rank = fir::getBoxRank(fir::unwrapRefType(var.getType()));
-    mlir::Location loc = var.getLoc();
-    mlir::Type idxTy = builder.getIndexType();
-    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-    mlir::Type boundTy = builder.getType<omp::MapBoundsType>();
-    mlir::Value box = builder.create<fir::LoadOp>(loc, var);
-    for (unsigned int i = 0; i < rank; ++i) {
-      mlir::Value dimNo = builder.createIntegerConstant(loc, idxTy, i);
-      auto dimInfo =
-          builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dimNo);
-      mlir::Value lb = dimInfo.getLowerBound();
-      mlir::Value extent = dimInfo.getExtent();
-      mlir::Value byteStride = dimInfo.getByteStride();
-      mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, extent, one);
-
-      mlir::Value boundsOp = builder.create<omp::MapBoundsOp>(
-          loc, boundTy, /*lower_bound=*/zero,
-          /*upper_bound=*/ub, /*extent=*/extent, /*stride=*/byteStride,
-          /*stride_in_bytes = */ true, /*start_idx=*/lb);
-      LLVM_DEBUG(PDBGS() << "Created BoundsOp " << boundsOp << "\n");
-      boundsOps.push_back(boundsOp);
+        mlir::Value boundsOp = builder.create<omp::MapBoundsOp>(
+            loc, boundTy, /*lower_bound=*/zero,
+            /*upper_bound=*/ub, /*extent=*/extent, /*stride=*/byteStride,
+            /*stride_in_bytes = */ true, /*start_idx=*/lb);
+        LLVM_DEBUG(PDBGS() << "Created BoundsOp " << boundsOp << "\n");
+        boundsOps.push_back(boundsOp);
+      }
+    } else {
+      mlir::Location loc = var.getLoc();
+      fir::factory::AddrAndBoundsInfo info = fir::factory::getDataOperandBaseAddr(builder, var, /*isOptional=*/false, loc);
+      fir::ExtendedValue extendedValue =
+          hlfir::translateToExtendedValue(loc, builder,
+                                          hlfir::Entity{info.addr},
+                                          /*continguousHint=*/true).first;
+      llvm::SmallVector<mlir::Value> boundsOpsVec =
+          fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                             mlir::omp::MapBoundsType>(
+                builder, info, extendedValue,
+                /*dataExvIsAssumedSize=*/false, loc);
+      for (auto bounds : boundsOpsVec)
+        boundsOps.push_back(bounds);
     }
   }
 };
