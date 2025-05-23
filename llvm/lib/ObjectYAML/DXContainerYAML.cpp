@@ -48,7 +48,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   RootSigDesc.RootParametersOffset = Data.getRootParametersOffset();
 
   uint32_t Flags = Data.getFlags();
-  for (const dxbc::RootParameterHeader &PH : Data.param_headers()) {
+  for (const dxbc::RTS0::v1::RootParameterHeader &PH : Data.param_headers()) {
 
     if (!dxbc::isValidParameterType(PH.ParameterType))
       return createStringError(std::errc::invalid_argument,
@@ -71,7 +71,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     object::DirectX::RootParameterView ParamView = ParamViewOrErr.get();
 
     if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
-      llvm::Expected<dxbc::RootConstants> ConstantsOrErr =
+      llvm::Expected<dxbc::RTS0::v1::RootConstants> ConstantsOrErr =
           RCV->read();
       if (Error E = ConstantsOrErr.takeError())
         return std::move(E);
@@ -395,7 +395,8 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
     if (IO.outputting())
       Constants = std::get<DXContainerYAML::RootConstantsYaml>(P.Data);
     IO.mapRequired("Constants", Constants);
-    P.Data = Constants;
+    if (!IO.outputting())
+      P.Data = Constants;
   } break;
   case llvm::to_underlying(dxbc::RootParameterType::CBV):
   case llvm::to_underlying(dxbc::RootParameterType::SRV):
@@ -404,7 +405,8 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
     if (IO.outputting())
       Descriptor = std::get<DXContainerYAML::RootDescriptorYaml>(P.Data);
     IO.mapRequired("Descriptor", Descriptor);
-    P.Data = Descriptor;
+    if (!IO.outputting())
+      P.Data = Descriptor;
   } break;
   case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
     DXContainerYAML::DescriptorTableYaml Table;

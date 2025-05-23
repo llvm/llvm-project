@@ -275,12 +275,12 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
       for (const auto &Param : P.RootSignature->Parameters) {
-        dxbc::RootParameterHeader Header{Param.Type, Param.Visibility,
-                                         Param.Offset};
+        auto Header = dxbc::RTS0::v1::RootParameterHeader{
+            Param.Type, Param.Visibility, Param.Offset};
 
         if (auto *ConstantYaml =
                 std::get_if<DXContainerYAML::RootConstantsYaml>(&Param.Data)) {
-          dxbc::RootConstants Constants;
+          dxbc::RTS0::v1::RootConstants Constants;
           Constants.Num32BitValues = ConstantYaml->Num32BitValues;
           Constants.RegisterSpace = ConstantYaml->RegisterSpace;
           Constants.ShaderRegister = ConstantYaml->ShaderRegister;

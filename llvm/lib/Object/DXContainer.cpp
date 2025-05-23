@@ -274,7 +274,7 @@ Error DirectX::RootSignature::parse() {
 
   ParametersHeaders.Data = PartData.substr(
       RootParametersOffset,
-      NumParameters * sizeof(dxbc::RootParameterHeader));
+      NumParameters * sizeof(dxbc::RTS0::v1::RootParameterHeader));
 
   return Error::success();
 }

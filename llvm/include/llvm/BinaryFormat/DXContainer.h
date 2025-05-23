@@ -597,6 +597,7 @@ struct ProgramSignatureElement {
 
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
+
 namespace RTS0 {
 namespace v1 {
 struct RootDescriptor {
@@ -605,6 +606,48 @@ struct RootDescriptor {
   void swapBytes() {
     sys::swapByteOrder(ShaderRegister);
     sys::swapByteOrder(RegisterSpace);
+  }
+};
+
+struct RootConstants {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
+
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Num32BitValues);
+  }
+};
+
+struct RootParameterHeader {
+  uint32_t ParameterType;
+  uint32_t ShaderVisibility;
+  uint32_t ParameterOffset;
+
+  void swapBytes() {
+    sys::swapByteOrder(ParameterType);
+    sys::swapByteOrder(ShaderVisibility);
+    sys::swapByteOrder(ParameterOffset);
+  }
+};
+
+struct RootSignatureHeader {
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t ParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplerOffset;
+  uint32_t Flags;
+
+  void swapBytes() {
+    sys::swapByteOrder(Version);
+    sys::swapByteOrder(NumParameters);
+    sys::swapByteOrder(ParametersOffset);
+    sys::swapByteOrder(NumStaticSamplers);
+    sys::swapByteOrder(StaticSamplerOffset);
+    sys::swapByteOrder(Flags);
   }
 };
 
@@ -647,49 +690,6 @@ struct DescriptorRange : public v1::DescriptorRange {
 };
 } // namespace v2
 } // namespace RTS0
-// following dx12 naming
-// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_constants
-struct RootConstants {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t Num32BitValues;
-
-  void swapBytes() {
-    sys::swapByteOrder(ShaderRegister);
-    sys::swapByteOrder(RegisterSpace);
-    sys::swapByteOrder(Num32BitValues);
-  }
-};
-
-struct RootParameterHeader {
-  uint32_t ParameterType;
-  uint32_t ShaderVisibility;
-  uint32_t ParameterOffset;
-
-  void swapBytes() {
-    sys::swapByteOrder(ParameterType);
-    sys::swapByteOrder(ShaderVisibility);
-    sys::swapByteOrder(ParameterOffset);
-  }
-};
-
-struct RootSignatureHeader {
-  uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t ParametersOffset;
-  uint32_t NumStaticSamplers;
-  uint32_t StaticSamplerOffset;
-  uint32_t Flags;
-
-  void swapBytes() {
-    sys::swapByteOrder(Version);
-    sys::swapByteOrder(NumParameters);
-    sys::swapByteOrder(ParametersOffset);
-    sys::swapByteOrder(NumStaticSamplers);
-    sys::swapByteOrder(StaticSamplerOffset);
-    sys::swapByteOrder(Flags);
-  }
-};
 } // namespace dxbc
 } // namespace llvm
 
