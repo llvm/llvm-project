@@ -3240,11 +3240,17 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
     descriptor implementation must have, only the base_addr and derived_type
     descriptor fields can be addressed.
 
+    It also accepts the address of a fir.boxchar and returns
+    address of the data pointer encapsulated by the fir.boxchar.
+
     ```
         %addr = fir.box_offset %box base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
         %tdesc = fir.box_offset %box derived_type : (!fir.ref<!fir.box<!fir.type<t>>>) -> !fir.llvm_ptr<!fir.tdesc<!fir.type<t>>>
 
+        %addr1 = fir.box_offset %boxchar base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<fir.char<1,?>>>
     ```
+
+    The derived_type field cannot be used when the input to this op is a reference to a fir.boxchar.
   }];
 
   let arguments = (ins
