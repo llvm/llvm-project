@@ -85,8 +85,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenSelectSC: {
-    const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    const Instruction *I = dyn_cast_if_present<Instruction>(
+        getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayWriteToMemory()) &&
            "underlying instruction may write to memory");
@@ -132,8 +132,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenSelectSC: {
-    const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    const Instruction *I = dyn_cast_if_present<Instruction>(
+        getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayReadFromMemory()) &&
            "underlying instruction may read from memory");
@@ -173,8 +173,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPWidenPointerInductionSC:
   case VPWidenSC:
   case VPWidenSelectSC: {
-    const Instruction *I =
-        dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
+    const Instruction *I = dyn_cast_if_present<Instruction>(
+        getVPSingleValue()->getUnderlyingValue());
     (void)I;
     assert((!I || !I->mayHaveSideEffects()) &&
            "underlying instruction has side-effects");
@@ -251,7 +251,7 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
   //   * apply forced target instruction cost.
   Instruction *UI = nullptr;
   if (auto *S = dyn_cast<VPSingleDefRecipe>(this))
-    UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+    UI = dyn_cast_if_present<Instruction>(S->getUnderlyingValue());
   else if (auto *IG = dyn_cast<VPInterleaveRecipe>(this))
     UI = IG->getInsertPos();
   else if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(this))
@@ -1387,7 +1387,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   for (const auto &[Idx, Op] : enumerate(operands())) {
     auto *V = Op->getUnderlyingValue();
     if (!V) {
-      if (auto *UI = dyn_cast_or_null<CallBase>(getUnderlyingValue())) {
+      if (auto *UI = dyn_cast_if_present<CallBase>(getUnderlyingValue())) {
         Arguments.push_back(UI->getArgOperand(Idx));
         continue;
       }
@@ -1407,7 +1407,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
   IntrinsicCostAttributes CostAttrs(
       VectorIntrinsicID, RetTy, Arguments, ParamTys, FMF,
-      dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()),
+      dyn_cast_if_present<IntrinsicInst>(getUnderlyingValue()),
       InstructionCost::getInvalid(), &Ctx.TLI);
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);
 }
@@ -1729,7 +1729,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
       // Propagate fast math flags.
       C = Builder.CreateFCmpFMF(
           getPredicate(), A, B,
-          dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+          dyn_cast_if_present<Instruction>(getUnderlyingValue()));
     } else {
       C = Builder.CreateICmp(getPredicate(), A, B);
     }
@@ -1794,7 +1794,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
         getOperand(1)->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
-    Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
+    Instruction *CtxI = dyn_cast_if_present<Instruction>(getUnderlyingValue());
 
     SmallVector<const Value *, 4> Operands;
     if (CtxI)
@@ -1816,7 +1816,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   }
   case Instruction::ICmp:
   case Instruction::FCmp: {
-    Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
+    Instruction *CtxI = dyn_cast_if_present<Instruction>(getUnderlyingValue());
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
     return Ctx.TTI.getCmpSelInstrCost(
         Opcode, VectorTy, CmpInst::makeCmpResultType(VectorTy), getPredicate(),
@@ -1987,13 +1987,13 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
+  if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
     Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
 
   // Now do the actual transformations, and start with fetching the step value.
   Value *Step = State.get(getStepValue(), VPLane(0));
 
-  assert((isa<PHINode>(EntryVal) || isa<TruncInst>(EntryVal)) &&
+  assert((isa<PHINode, TruncInst>(EntryVal)) &&
          "Expected either an induction phi-node or a truncate of it!");
 
   // Construct the initial value of the vector IV in the vector loop preheader
