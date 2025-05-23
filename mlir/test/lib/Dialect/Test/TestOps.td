@@ -1873,6 +1873,11 @@ def TestEitherOpB : TEST_Op<"either_op_b"> {
   let results = (outs I32:$output);
 }
 
+def TestEitherOpC : TEST_Op<"either_op_c"> {
+  let arguments = (ins AnyI32Attr:$attr, AnyInteger:$arg0, AnyInteger:$arg1);
+  let results = (outs I32:$output);
+}
+
 def : Pat<(TestEitherOpA (either I32:$arg1, I16:$arg2), $x),
           (TestEitherOpB $arg2, $x)>;
 
@@ -1883,6 +1888,9 @@ def : Pat<(TestEitherOpA (either (TestEitherOpB I32:$arg1, $_),
                                  (TestEitherOpB I16:$arg2, $_)),
                           $x),
           (TestEitherOpB $arg2, $x)>;
+
+def : Pat<(TestEitherOpC ConstantAttr<I32Attr, "0">, (either $arg1, I32:$arg2)),
+          (TestEitherOpB $arg1, $arg2)>;
 
 def TestEitherHelperOpA : TEST_Op<"either_helper_op_a"> {
   let arguments = (ins I32:$arg0);
