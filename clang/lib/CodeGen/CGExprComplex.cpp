@@ -1550,7 +1550,8 @@ EmitComplexCompoundAssignmentLValue(const CompoundAssignOperator *E) {
 LValue CodeGenFunction::
 EmitScalarCompoundAssignWithComplex(const CompoundAssignOperator *E,
                                     llvm::Value *&Result) {
-  ApplyAtomGroup Grp(getDebugInfo());
+  // Key Instructions: Don't need to create an atom group here; one will already
+  // be active through scalar handling code.
   CompoundFunc Op = getComplexOp(E->getOpcode());
   RValue Val;
   LValue Ret = ComplexExprEmitter(*this).EmitCompoundAssignLValue(E, Op, Val);

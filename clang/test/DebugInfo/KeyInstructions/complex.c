@@ -54,21 +54,21 @@ void test() {
 
 #ifndef __cplusplus
 // CHECK-C: %2 = load float, ptr @f, align 4
-// CHECK-C: %add.r24 = fadd float %2, %ci.real22, !dbg [[G9R2:!.*]]
-// CHECK-C: store float %add.r24, ptr @f, align 4, !dbg [[G9R1:!.*]]
+// CHECK-C: %add.r24 = fadd float %2, %ci.real22, !dbg [[G8R2:!.*]]
+// CHECK-C: store float %add.r24, ptr @f, align 4, !dbg [[G8R1:!.*]]
   f += ci;
 
 // CHECK-C: %3 = load float, ptr @f, align 4
-// CHECK-C: %sub.r27 = fsub float %3, %ci.real25, !dbg [[G11R2:!.*]]
-// CHECK-C: store float %sub.r27, ptr @f, align 4, !dbg [[G11R1:!.*]]
+// CHECK-C: %sub.r27 = fsub float %3, %ci.real25, !dbg [[G9R2:!.*]]
+// CHECK-C: store float %sub.r27, ptr @f, align 4, !dbg [[G9R1:!.*]]
   f -= ci;
 
-// CHECK-C: %coerce32.real = load float, ptr %coerce32.realp, align 4, !dbg [[G13R2:!.*]]
-// CHECK-C: store float %coerce32.real, ptr @f, align 4, !dbg [[G13R1:!.*]]
+// CHECK-C: %coerce32.real = load float, ptr %coerce32.realp, align 4, !dbg [[G10R2:!.*]]
+// CHECK-C: store float %coerce32.real, ptr @f, align 4, !dbg [[G10R1:!.*]]
   f /= ci;
 
-// CHECK-C: %mul.rl = fmul float %5, %ci.real33, !dbg [[G15R2:!.*]]
-// CHECK-C: store float %mul.rl, ptr @f, align 4, !dbg [[G15R1:!.*]]
+// CHECK-C: %mul.rl = fmul float %5, %ci.real33, !dbg [[G11R2:!.*]]
+// CHECK-C: store float %mul.rl, ptr @f, align 4, !dbg [[G11R1:!.*]]
   f *= ci;
 #endif
 }
@@ -88,11 +88,11 @@ void test() {
 // CHECK: [[G7R2]] = !DILocation({{.*}}, atomGroup: 7, atomRank: 2)
 // CHECK: [[G7R1]] = !DILocation({{.*}}, atomGroup: 7, atomRank: 1)
 // FIXME: These inc by 2 atom groups each time?
+// CHECK-C: [[G8R2]] = !DILocation({{.*}}, atomGroup: 8, atomRank: 2)
+// CHECK-C: [[G8R1]] = !DILocation({{.*}}, atomGroup: 8, atomRank: 1)
 // CHECK-C: [[G9R2]] = !DILocation({{.*}}, atomGroup: 9, atomRank: 2)
 // CHECK-C: [[G9R1]] = !DILocation({{.*}}, atomGroup: 9, atomRank: 1)
+// CHECK-C: [[G10R2]] = !DILocation({{.*}}, atomGroup: 10, atomRank: 2)
+// CHECK-C: [[G10R1]] = !DILocation({{.*}}, atomGroup: 10, atomRank: 1)
 // CHECK-C: [[G11R2]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 2)
 // CHECK-C: [[G11R1]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 1)
-// CHECK-C: [[G13R2]] = !DILocation({{.*}}, atomGroup: 13, atomRank: 2)
-// CHECK-C: [[G13R1]] = !DILocation({{.*}}, atomGroup: 13, atomRank: 1)
-// CHECK-C: [[G15R2]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 2)
-// CHECK-C: [[G15R1]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 1)
