@@ -176,19 +176,43 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
     return std::nullopt;
 
   RootDescriptor Descriptor;
+  TokenKind ExpectedReg;
   switch (DescriptorKind) {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
     Descriptor.Type = DescriptorType::CBuffer;
+    ExpectedReg = TokenKind::bReg;
     break;
   case TokenKind::kw_SRV:
     Descriptor.Type = DescriptorType::SRV;
+    ExpectedReg = TokenKind::tReg;
     break;
   case TokenKind::kw_UAV:
     Descriptor.Type = DescriptorType::UAV;
+    ExpectedReg = TokenKind::uReg;
     break;
   }
+
+  auto Params = parseRootDescriptorParams(ExpectedReg);
+  if (!Params.has_value())
+    return std::nullopt;
+
+  // Check mandatory parameters were provided
+  if (!Params->Reg.has_value()) {
+    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+        << ExpectedReg;
+    return std::nullopt;
+  }
+
+  Descriptor.Reg = Params->Reg.value();
+
+  // Fill in optional values
+  if (Params->Space.has_value())
+    Descriptor.Space = Params->Space.value();
+
+  if (Params->Visibility.has_value())
+    Descriptor.Visibility = Params->Visibility.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -349,6 +373,64 @@ RootSignatureParser::parseRootConstantParams() {
 
     // `b` POS_INT
     if (tryConsumeExpectedToken(TokenKind::bReg)) {
+      if (Params.Reg.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+      auto Reg = parseRegister();
+      if (!Reg.has_value())
+        return std::nullopt;
+      Params.Reg = Reg;
+    }
+
+    // `space` `=` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+      if (Params.Space.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Space = parseUIntParam();
+      if (!Space.has_value())
+        return std::nullopt;
+      Params.Space = Space;
+    }
+
+    // `visibility` `=` SHADER_VISIBILITY
+    if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+      if (Params.Visibility.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Visibility = parseShaderVisibility();
+      if (!Visibility.has_value())
+        return std::nullopt;
+      Params.Visibility = Visibility;
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+  return Params;
+}
+
+std::optional<RootSignatureParser::ParsedRootDescriptorParams>
+RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
+  assert(CurToken.TokKind == TokenKind::pu_l_paren &&
+         "Expects to only be invoked starting at given token");
+
+  ParsedRootDescriptorParams Params;
+  do {
+    // ( `b` | `t` | `u`) POS_INT
+    if (tryConsumeExpectedToken(RegType)) {
       if (Params.Reg.has_value()) {
         getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
