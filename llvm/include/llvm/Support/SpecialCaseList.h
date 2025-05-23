@@ -129,6 +129,9 @@ protected:
       std::string Name;
       unsigned LineNo;
       GlobPattern Pattern;
+      // neither copyable nor movable because GlobPattern contains StringRef.
+      Glob(Glob &&) = delete;
+      Glob() = default;
     };
 
     std::vector<std::unique_ptr<Matcher::Glob>> Globs;

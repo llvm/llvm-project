@@ -56,7 +56,7 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
   auto Glob = std::make_unique<Matcher::Glob>();
   Glob->Name = Pattern.str();
   Glob->LineNo = LineNumber;
-  // We must be sure to use the string in the map rather than the provided
+  // We must be sure to use the string in `Glob` rather than the provided
   // reference which could be destroyed before match() is called
   if (auto Err = GlobPattern::create(Glob->Name, /*MaxSubPatterns=*/1024)
                      .moveInto(Glob->Pattern))
