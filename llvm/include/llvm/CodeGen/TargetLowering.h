@@ -1228,6 +1228,9 @@ public:
     MaybeAlign align = Align(1);   // alignment
 
     MachineMemOperand::Flags flags = MachineMemOperand::MONone;
+    SyncScope::ID ssid = SyncScope::System;
+    AtomicOrdering order = AtomicOrdering::NotAtomic;
+    AtomicOrdering failureOrder = AtomicOrdering::NotAtomic;
     IntrinsicInfo() = default;
   };
 
