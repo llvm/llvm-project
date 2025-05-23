@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s | \
-# RUN:     llvm-objdump -d -M no-aliases --no-show-raw-insn - | \
+# RUN:     llvm-objdump -dr -M no-aliases --no-show-raw-insn - | \
 # RUN:     FileCheck %s
 
 # CHECK-LABEL: <foo>:
@@ -82,5 +82,7 @@ nop
 # CHECK-LABEL: 00011000 <far>:
 .org 0x11000
 far:
-# CHECK: jalr ra, 0x0(ra) <foo>
+# CHECK-NEXT: auipc ra, 0x0
+# CHECK-NEXT: R_RISCV_CALL_PLT foo
+# CHECK-NEXT: jalr ra, 0x0(ra) <far>
 call foo
