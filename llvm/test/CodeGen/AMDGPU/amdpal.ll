@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tahiti | FileCheck --check-prefixes=PAL --enable-var-scope %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefixes=PAL --enable-var-scope %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tahiti | FileCheck --check-prefixes=PAL,CI --enable-var-scope %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefixes=PAL,VI --enable-var-scope %s
 
 ; PAL-NOT: .AMDGPU.config
 ; PAL-LABEL: {{^}}simple:
@@ -56,13 +56,13 @@ entry:
 ; disappear.
 
 ; PAL-LABEL: {{^}}scratch2_cs:
-; PAL-NEXT: ; %bb.0:
-; PAL-NEXT: v_add_i32_e32 v0, vcc, 1, v6
-; PAL-NEXT: v_cmp_eq_u32_e32 vcc, 1, v0
-; PAL-NEXT: v_cndmask_b32_e32 v1, v5, v3, vcc
-; PAL-NEXT: v_cmp_eq_u32_e32 vcc, 2, v0
-; PAL-NEXT: v_cndmask_b32_e32 v0, v1, v4, vcc
-; PAL-NEXT: buffer_store{{.*}}, s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}
+; CI: v_add_i32_e32 v0, vcc, 1, v6
+; VI: v_add_u32_e32 v0, vcc, 1, v6
+; PAL: v_cmp_eq_u32_e32 vcc, 1, v0
+; PAL: v_cndmask_b32_e32 v1, v5, v3, vcc
+; PAL: v_cmp_eq_u32_e32 vcc, 2, v0
+; PAL: v_cndmask_b32_e32 v0, v1, v4, vcc
+; PAL: buffer_store{{.*}}, s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}
 
 define amdgpu_cs void @scratch2_cs(i32 inreg, i32 inreg, i32 inreg, <3 x i32> inreg, i32 inreg, <3 x i32> %coord, <2 x i32> %in, i32 %extra, i32 %idx) #0 {
 entry:
