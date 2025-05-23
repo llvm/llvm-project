@@ -394,31 +394,17 @@ define amdgpu_kernel void @fadd_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX900-NEXT:    s_endpgm
 ;
-; PACKED-SDAG-LABEL: fadd_v2_v_lit_splat:
-; PACKED-SDAG:       ; %bb.0:
-; PACKED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; PACKED-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; PACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; PACKED-SDAG-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
-; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 1.0 op_sel_hi:[1,0]
-; PACKED-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
-; PACKED-SDAG-NEXT:    s_endpgm
-;
-; PACKED-GISEL-LABEL: fadd_v2_v_lit_splat:
-; PACKED-GISEL:       ; %bb.0:
-; PACKED-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; PACKED-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; PACKED-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; PACKED-GISEL-NEXT:    s_mov_b32 s2, 1.0
-; PACKED-GISEL-NEXT:    s_mov_b32 s3, s2
-; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; PACKED-GISEL-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
-; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], s[2:3]
-; PACKED-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
-; PACKED-GISEL-NEXT:    s_endpgm
+; PACKED-LABEL: fadd_v2_v_lit_splat:
+; PACKED:       ; %bb.0:
+; PACKED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; PACKED-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; PACKED-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
+; PACKED-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; PACKED-NEXT:    s_waitcnt vmcnt(0)
+; PACKED-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 1.0 op_sel_hi:[1,0]
+; PACKED-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; PACKED-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
@@ -1171,31 +1157,17 @@ define amdgpu_kernel void @fmul_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX900-NEXT:    s_endpgm
 ;
-; PACKED-SDAG-LABEL: fmul_v2_v_lit_splat:
-; PACKED-SDAG:       ; %bb.0:
-; PACKED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; PACKED-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; PACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; PACKED-SDAG-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
-; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], 4.0 op_sel_hi:[1,0]
-; PACKED-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
-; PACKED-SDAG-NEXT:    s_endpgm
-;
-; PACKED-GISEL-LABEL: fmul_v2_v_lit_splat:
-; PACKED-GISEL:       ; %bb.0:
-; PACKED-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; PACKED-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; PACKED-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; PACKED-GISEL-NEXT:    s_mov_b32 s2, 4.0
-; PACKED-GISEL-NEXT:    s_mov_b32 s3, s2
-; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; PACKED-GISEL-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
-; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], s[2:3]
-; PACKED-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
-; PACKED-GISEL-NEXT:    s_endpgm
+; PACKED-LABEL: fmul_v2_v_lit_splat:
+; PACKED:       ; %bb.0:
+; PACKED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; PACKED-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; PACKED-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
+; PACKED-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; PACKED-NEXT:    s_waitcnt vmcnt(0)
+; PACKED-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], 4.0 op_sel_hi:[1,0]
+; PACKED-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; PACKED-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
@@ -1701,51 +1673,17 @@ define amdgpu_kernel void @fma_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX900-NEXT:    s_endpgm
 ;
-; PACKED-SDAG-LABEL: fma_v2_v_lit_splat:
-; PACKED-SDAG:       ; %bb.0:
-; PACKED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; PACKED-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; PACKED-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; PACKED-SDAG-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
-; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-SDAG-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], 4.0, 1.0 op_sel_hi:[1,0,0]
-; PACKED-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
-; PACKED-SDAG-NEXT:    s_endpgm
-;
-; GFX90A-GISEL-LABEL: fma_v2_v_lit_splat:
-; GFX90A-GISEL:       ; %bb.0:
-; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX90A-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
-; GFX90A-GISEL-NEXT:    s_mov_b32 s4, 1.0
-; GFX90A-GISEL-NEXT:    s_mov_b32 s2, 4.0
-; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
-; GFX90A-GISEL-NEXT:    s_mov_b32 s5, s4
-; GFX90A-GISEL-NEXT:    s_mov_b32 s3, s2
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[0,1]
-; GFX90A-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], s[2:3], v[2:3]
-; GFX90A-GISEL-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
-; GFX90A-GISEL-NEXT:    s_endpgm
-;
-; GFX942-GISEL-LABEL: fma_v2_v_lit_splat:
-; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
-; GFX942-GISEL-NEXT:    s_mov_b32 s4, 1.0
-; GFX942-GISEL-NEXT:    s_mov_b32 s2, 4.0
-; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
-; GFX942-GISEL-NEXT:    s_mov_b32 s5, s4
-; GFX942-GISEL-NEXT:    s_mov_b32 s3, s2
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[4:5]
-; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], s[2:3], v[2:3]
-; GFX942-GISEL-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
-; GFX942-GISEL-NEXT:    s_endpgm
+; PACKED-LABEL: fma_v2_v_lit_splat:
+; PACKED:       ; %bb.0:
+; PACKED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; PACKED-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; PACKED-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
+; PACKED-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; PACKED-NEXT:    s_waitcnt vmcnt(0)
+; PACKED-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], 4.0, 1.0 op_sel_hi:[1,0,0]
+; PACKED-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; PACKED-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
