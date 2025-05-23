@@ -276,4 +276,47 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// VisibilityAttr
+//===----------------------------------------------------------------------===//
+
+def VK_Default : I32EnumAttrCase<"Default", 1, "default">;
+def VK_Hidden : I32EnumAttrCase<"Hidden", 2, "hidden">;
+def VK_Protected : I32EnumAttrCase<"Protected", 3, "protected">;
+
+def VisibilityKind : I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
+  VK_Default, VK_Hidden, VK_Protected
+]> {
+  let cppNamespace = "::cir";
+}
+
+def VisibilityAttr : CIR_Attr<"Visibility", "visibility"> {
+  let summary = "Visibility attribute";
+  let description = [{
+    Visibility attributes.
+  }];
+  let parameters = (ins "VisibilityKind":$value);
+
+  let assemblyFormat = [{
+    $value
+  }];
+
+  let builders = [
+    AttrBuilder<(ins CArg<"VisibilityKind", "cir::VisibilityKind::Default">:$value), [{
+      return $_get($_ctxt, value);
+    }]>
+  ];
+
+  let skipDefaultBuilders = 1;
+
+  // Make DefaultValuedAttr accept VisibilityKind as default value ($0).
+  let constBuilderCall = "cir::VisibilityAttr::get($_builder.getContext(), $0)";
+
+  let extraClassDeclaration = [{
+    bool isDefault() const { return getValue() == VisibilityKind::Default; };
+    bool isHidden() const { return getValue() == VisibilityKind::Hidden; };
+    bool isProtected() const { return getValue() == VisibilityKind::Protected; };
+  }];
+}
+
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD
