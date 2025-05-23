@@ -14,7 +14,7 @@
 #include "gtest/gtest.h"
 
 namespace llvm {
-namespace memprof {
+namespace data_access_prof {
 namespace {
 
 using ::llvm::StringRef;
@@ -177,5 +177,5 @@ TEST(MemProf, DataAccessProfile) {
   }
 }
 } // namespace
-} // namespace memprof
+} // namespace data_access_prof
 } // namespace llvm
