@@ -357,6 +357,12 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
     return Store;
   }
+  // Zihintpause
+  case RISCV::BI__builtin_riscv_pause: {
+    llvm::Function *Fn = CGM.getIntrinsic(llvm::Intrinsic::riscv_pause);
+    return Builder.CreateCall(Fn, {});
+  }
+
   // XCValu
   case RISCV::BI__builtin_riscv_cv_alu_addN:
     ID = Intrinsic::riscv_cv_alu_addN;

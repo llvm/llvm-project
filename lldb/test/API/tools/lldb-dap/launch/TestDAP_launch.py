@@ -75,9 +75,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_disconnect()
 
         # Wait until the underlying lldb-dap process dies.
-        self.dap_server.process.wait(
-            timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval
-        )
+        self.dap_server.process.wait(timeout=self.DEFAULT_TIMEOUT)
 
         # Check the return code
         self.assertEqual(self.dap_server.process.poll(), 0)
@@ -90,15 +88,16 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
 
-        stopped_events = self.dap_server.wait_for_stopped()
-        for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" in body:
-                    reason = body["reason"]
-                    self.assertNotEqual(
-                        reason, "breakpoint", 'verify stop isn\'t "main" breakpoint'
-                    )
+        self.assertTrue(
+            len(self.dap_server.thread_stop_reasons) > 0,
+            "expected stopped event during launch",
+        )
+        for _, body in self.dap_server.thread_stop_reasons.items():
+            if "reason" in body:
+                reason = body["reason"]
+                self.assertNotEqual(
+                    reason, "breakpoint", 'verify stop isn\'t "main" breakpoint'
+                )
 
     @skipIfWindows
     def test_cwd(self):
@@ -393,14 +392,14 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue again and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the second breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
@@ -462,21 +461,21 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("launchCommands", output, launchCommands)
         # Verify the "stopCommands" here
         self.continue_to_next_stop()
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_next_stop()
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
         self.continue_to_exit()
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
-        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        output = self.get_console(timeout=self.DEFAULT_TIMEOUT)
         self.verify_commands("exitCommands", output, exitCommands)
 
     def test_failing_launch_commands(self):
@@ -531,7 +530,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
         terminateCommands = ["expr 4+2"]
         self.launch(
-            program=program,
+            program,
             stopOnEntry=True,
             terminateCommands=terminateCommands,
             disconnectAutomatically=False,

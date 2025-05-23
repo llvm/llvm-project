@@ -230,7 +230,7 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (hasScalarValue(Def, Lane))
     return Data.VPV2Scalars[Def][Lane.mapToCacheIndex(VF)];
 
-  if (!Lane.isFirstLane() && vputils::isUniformAfterVectorization(Def) &&
+  if (!Lane.isFirstLane() && vputils::isSingleScalar(Def) &&
       hasScalarValue(Def, VPLane::getFirstLane())) {
     return Data.VPV2Scalars[Def][0];
   }
@@ -303,17 +303,17 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     return ScalarValue;
   }
 
-  bool IsUniform = vputils::isUniformAfterVectorization(Def);
+  bool IsSingleScalar = vputils::isSingleScalar(Def);
 
-  VPLane LastLane(IsUniform ? 0 : VF.getKnownMinValue() - 1);
+  VPLane LastLane(IsSingleScalar ? 0 : VF.getKnownMinValue() - 1);
   // Check if there is a scalar value for the selected lane.
   if (!hasScalarValue(Def, LastLane)) {
     // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
-    // VPExpandSCEVRecipes can also be uniform.
+    // VPExpandSCEVRecipes can also be a single scalar.
     assert((isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe,
                 VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
            "unexpected recipe found to be invariant");
-    IsUniform = true;
+    IsSingleScalar = true;
     LastLane = 0;
   }
 
@@ -334,7 +334,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   // resulting vectors are stored in State, we will only generate the
   // insertelements once.
   Value *VectorValue = nullptr;
-  if (IsUniform) {
+  if (IsSingleScalar) {
     VectorValue = GetBroadcastInstrs(ScalarValue);
     set(Def, VectorValue);
   } else {

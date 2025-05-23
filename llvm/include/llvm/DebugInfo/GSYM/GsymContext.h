@@ -1,4 +1,4 @@
-//===-- GsymDIContext.h --------------------------------------------------===//
+//===-- GsymContext.h --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===/
 
-#ifndef LLVM_DEBUGINFO_GSYM_GSYMDICONTEXT_H
-#define LLVM_DEBUGINFO_GSYM_GSYMDICONTEXT_H
+#ifndef LLVM_DEBUGINFO_GSYM_GSYMCONTEXT_H
+#define LLVM_DEBUGINFO_GSYM_GSYMCONTEXT_H
 
 #include "llvm/DebugInfo/DIContext.h"
 #include <cstdint>
@@ -27,12 +27,12 @@ class GsymReader;
 /// interface to different symbolication formats (e.g. GSYM, PDB and DWARF).
 /// More control and power over the debug information access can be had by using
 /// the GSYM interfaces directly.
-class GsymDIContext : public DIContext {
+class GsymContext : public DIContext {
 public:
-  GsymDIContext(std::unique_ptr<GsymReader> Reader);
+  GsymContext(std::unique_ptr<GsymReader> Reader);
 
-  GsymDIContext(GsymDIContext &) = delete;
-  GsymDIContext &operator=(GsymDIContext &) = delete;
+  GsymContext(GsymContext &) = delete;
+  GsymContext &operator=(GsymContext &) = delete;
 
   static bool classof(const DIContext *DICtx) {
     return DICtx->getKind() == CK_GSYM;
@@ -63,4 +63,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_PDBCONTEXT_H
+#endif // LLVM_DEBUGINFO_GSYM_GSYMCONTEXT_H

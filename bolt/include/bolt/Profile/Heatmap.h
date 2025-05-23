@@ -86,8 +86,9 @@ public:
 
   size_t size() const { return Map.size(); }
 
-  /// Increase bucket size to \p TargetSize, recomputing the heatmap.
-  bool resizeBucket(uint64_t TargetSize);
+  /// Increase bucket size by 2^\p Scale, recomputing the heatmap.
+  /// Returns new bucket size.
+  uint64_t resizeBucket(uint64_t Pow2Scale);
 };
 
 } // namespace bolt
