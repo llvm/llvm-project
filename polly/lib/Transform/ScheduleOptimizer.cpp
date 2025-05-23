@@ -387,6 +387,8 @@ ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
   isl::union_set ScheduleRangeUSet = SchedRelUMap.range();
   isl::set ScheduleRange{ScheduleRangeUSet};
   isl::set IsolateDomain = getPartialTilePrefixes(ScheduleRange, VectorWidth);
+  if (IsolateDomain.is_null())
+    return isl::schedule_node();
   auto AtomicOption = getDimOptions(IsolateDomain.ctx(), "atomic");
   isl::union_set IsolateOption = getIsolateOptions(IsolateDomain, 1);
   Node = Node.parent().parent();
@@ -430,6 +432,8 @@ isl::schedule_node ScheduleTreeOptimizer::prevectSchedBand(
   Node =
       isl::manage(isl_schedule_node_band_tile(Node.release(), Sizes.release()));
   Node = isolateFullPartialTiles(Node, VectorWidth);
+  if (Node.is_null())
+    return isl::schedule_node();
   Node = Node.child(0);
   // Make sure the "trivially vectorizable loop" is not unrolled. Otherwise,
   // we will have troubles to match it in the backend.
@@ -543,6 +547,8 @@ ScheduleTreeOptimizer::applyPrevectBandOpt(isl::schedule_node Node) {
       break;
     }
 
+  if (Node.is_null())
+    return isl::schedule_node();
   return Node;
 }
 
@@ -574,7 +580,12 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
   if (OAI->Prevect) {
     // FIXME: Prevectorization requirements are different from those checked by
     // isTileableBandNode.
-    Node = applyPrevectBandOpt(Node);
+    {
+      IslMaxOperationsGuard MaxOpGuard(Node.ctx().get(), ScheduleComputeOut);
+      Node = applyPrevectBandOpt(Node);
+      if (MaxOpGuard.hasQuotaExceeded() || Node.is_null())
+        return (isl::schedule_node()).release();
+    }
   }
 
   return Node.release();
@@ -585,6 +596,8 @@ ScheduleTreeOptimizer::optimizeSchedule(isl::schedule Schedule,
                                         const OptimizerAdditionalInfoTy *OAI) {
   auto Root = Schedule.get_root();
   Root = optimizeScheduleNode(Root, OAI);
+  if (Root.is_null())
+    return isl::schedule();
   return Root.get_schedule();
 }
 
@@ -593,6 +606,8 @@ isl::schedule_node ScheduleTreeOptimizer::optimizeScheduleNode(
   Node = isl::manage(isl_schedule_node_map_descendant_bottom_up(
       Node.release(), optimizeBand,
       const_cast<void *>(static_cast<const void *>(OAI))));
+  if (Node.is_null())
+    return isl::schedule_node();
   return Node;
 }
 
@@ -908,6 +923,12 @@ static void runIslScheduleOptimizer(
       DepsChanged};
   if (OAI.PatternOpts || OAI.Postopts || OAI.Prevect) {
     Schedule = ScheduleTreeOptimizer::optimizeSchedule(Schedule, &OAI);
+    if (Schedule.is_null()) {
+      POLLY_DEBUG(dbgs() << "Invalidating scop from further optimization as "
+                            "max operations exceeded\n");
+      S.invalidate(COMPLEXITY, DebugLoc());
+      return;
+    }
     Schedule = hoistExtensionNodes(Schedule);
     POLLY_DEBUG(printSchedule(dbgs(), Schedule, "After post-optimizations"));
     walkScheduleTreeForStatistics(Schedule, 2);
