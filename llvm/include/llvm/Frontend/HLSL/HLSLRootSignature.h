@@ -90,6 +90,8 @@ using DescriptorType = llvm::dxil::ResourceClass;
 struct RootDescriptor {
   DescriptorType Type;
   Register Reg;
+  uint32_t Space = 0;
+  ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
 // Models the end of a descriptor table and stores its visibility
