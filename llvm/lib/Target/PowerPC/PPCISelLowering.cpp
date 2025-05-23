@@ -11946,8 +11946,7 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
       SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops), 0);
 
   if (IsV1024i1) {
-    SDValue RetOps[] = {Value, TF};
-    return DAG.getMergeValues(RetOps, dl);
+    return DAG.getMergeValues({Value, TF}, dl);
   }
 
   // Handle Loads for V2048i1 which represents a dmr pair.
@@ -11971,8 +11970,7 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   DmrPValue = SDValue(
       DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1, DmrPOps), 0);
 
-  SDValue RetOps[] = {DmrPValue, TF};
-  return DAG.getMergeValues(RetOps, dl);
+  return DAG.getMergeValues({DmrPValue, TF}, dl);
 }
 
 SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
