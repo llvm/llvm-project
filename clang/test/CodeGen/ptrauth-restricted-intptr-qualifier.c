@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -mllvm -ptrauth-emit-wrapper-globals=0 -fptrauth-calls -fptrauth-intrinsics -emit-llvm %s -O0 -o - | FileCheck %s
 
 #define __ptrauth(...) __ptrauth(__VA_ARGS__)
 
