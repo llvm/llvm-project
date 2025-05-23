@@ -1599,41 +1599,41 @@ define <2 x float> @v_mad_mix_v2f32_f32imminv2pi(<2 x half> %src0, <2 x half> %s
 }
 
 define float @v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
-; GFX1100-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
-; GFX1100:       ; %bb.0:
-; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX1100-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; SDAG-GFX1100:       ; %bb.0:
+; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX900-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
-; GFX900:       ; %bb.0:
-; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX900-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX900-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; SDAG-GFX900:       ; %bb.0:
+; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX906-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
-; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX906-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX906-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; SDAG-GFX906:       ; %bb.0:
+; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9GEN-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
-; GFX9GEN:       ; %bb.0:
-; GFX9GEN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9GEN-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
-; GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX9GEN-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; SDAG-GFX9GEN:       ; %bb.0:
+; SDAG-GFX9GEN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-GFX9GEN-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
+; SDAG-GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-NEXT:    v_cvt_f32_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-NEXT:    v_cvt_f32_f16_sdwa v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; VI-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-VI-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; SDAG-VI:       ; %bb.0:
+; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-VI-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
+; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-CI-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
 ; SDAG-CI:       ; %bb.0:
@@ -1641,13 +1641,56 @@ define float @v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x h
 ; SDAG-CI-NEXT:    v_mad_f32 v0, v1, v3, v5 clamp
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GISEL-GFX1100-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; GISEL-GFX1100:       ; %bb.0:
+; GISEL-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-GFX1100-NEXT:    v_med3_f32 v0, v0, 0, 1.0
+; GISEL-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX900-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; GISEL-GFX900:       ; %bb.0:
+; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX900-NEXT:    v_med3_f32 v0, v0, 0, 1.0
+; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX906-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; GISEL-GFX906:       ; %bb.0:
+; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX906-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GISEL-GFX906-NEXT:    v_med3_f32 v0, v0, 0, 1.0
+; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX9GEN-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; GISEL-GFX9GEN:       ; %bb.0:
+; GISEL-GFX9GEN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GISEL-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GISEL-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GISEL-GFX9GEN-NEXT:    v_mac_f32_e32 v2, v0, v1
+; GISEL-GFX9GEN-NEXT:    v_med3_f32 v0, v2, 0, 1.0
+; GISEL-GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-VI-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
+; GISEL-VI:       ; %bb.0:
+; GISEL-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-VI-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GISEL-VI-NEXT:    v_cvt_f32_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GISEL-VI-NEXT:    v_cvt_f32_f16_sdwa v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GISEL-VI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; GISEL-VI-NEXT:    v_med3_f32 v0, v2, 0, 1.0
+; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GISEL-CI-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
 ; GISEL-CI:       ; %bb.0:
 ; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v0, v1
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v3
 ; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v2, v5
-; GISEL-CI-NEXT:    v_mad_f32 v0, v0, v1, v2 clamp
+; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; GISEL-CI-NEXT:    v_med3_f32 v0, v2, 0, 1.0
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.hi = extractelement <2 x half> %src0, i32 1
   %src1.hi = extractelement <2 x half> %src1, i32 1

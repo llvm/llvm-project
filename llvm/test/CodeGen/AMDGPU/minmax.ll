@@ -445,23 +445,47 @@ define amdgpu_ps float @test_maxmin_commuted_f32_ieee_false(float %a, float %b, 
 }
 
 define void @test_med3_f32(ptr addrspace(1) %arg, float %x, float %y, float %z) #0 {
-; GFX11-LABEL: test_med3_f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_med3_f32 v2, v2, v3, v4
-; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX11-LABEL: test_med3_f32:
+; SDAG-GFX11:       ; %bb.0:
+; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX11-NEXT:    v_med3_f32 v2, v2, v3, v4
+; SDAG-GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; SDAG-GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: test_med3_f32:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_med3_num_f32 v2, v2, v3, v4
-; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-GFX11-LABEL: test_med3_f32:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX11-NEXT:    v_dual_max_f32 v2, v2, v2 :: v_dual_max_f32 v3, v3, v3
+; GISEL-GFX11-NEXT:    v_min_f32_e32 v5, v2, v3
+; GISEL-GFX11-NEXT:    v_dual_max_f32 v2, v2, v3 :: v_dual_max_f32 v3, v4, v4
+; GISEL-GFX11-NEXT:    v_minmax_f32 v2, v2, v3, v5
+; GISEL-GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-GFX12-LABEL: test_med3_f32:
+; SDAG-GFX12:       ; %bb.0:
+; SDAG-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-GFX12-NEXT:    s_wait_expcnt 0x0
+; SDAG-GFX12-NEXT:    s_wait_samplecnt 0x0
+; SDAG-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; SDAG-GFX12-NEXT:    s_wait_kmcnt 0x0
+; SDAG-GFX12-NEXT:    v_med3_num_f32 v2, v2, v3, v4
+; SDAG-GFX12-NEXT:    global_store_b32 v[0:1], v2, off
+; SDAG-GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX12-LABEL: test_med3_f32:
+; GISEL-GFX12:       ; %bb.0:
+; GISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; GISEL-GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
+; GISEL-GFX12-NEXT:    v_min_num_f32_e32 v5, v2, v3
+; GISEL-GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v3 :: v_dual_max_num_f32 v3, v4, v4
+; GISEL-GFX12-NEXT:    v_minmax_num_f32 v2, v2, v3, v5
+; GISEL-GFX12-NEXT:    global_store_b32 v[0:1], v2, off
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = call float @llvm.minnum.f32(float %x, float %y)
   %tmp1 = call float @llvm.maxnum.f32(float %x, float %y)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %z)
@@ -471,23 +495,47 @@ define void @test_med3_f32(ptr addrspace(1) %arg, float %x, float %y, float %z) 
 }
 
 define void @test_med3_minimumnum_maximumnum_f32(ptr addrspace(1) %arg, float %x, float %y, float %z) #0 {
-; GFX11-LABEL: test_med3_minimumnum_maximumnum_f32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_med3_f32 v2, v2, v3, v4
-; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX11-LABEL: test_med3_minimumnum_maximumnum_f32:
+; SDAG-GFX11:       ; %bb.0:
+; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX11-NEXT:    v_med3_f32 v2, v2, v3, v4
+; SDAG-GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; SDAG-GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: test_med3_minimumnum_maximumnum_f32:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_med3_num_f32 v2, v2, v3, v4
-; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-GFX11-LABEL: test_med3_minimumnum_maximumnum_f32:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX11-NEXT:    v_dual_max_f32 v2, v2, v2 :: v_dual_max_f32 v3, v3, v3
+; GISEL-GFX11-NEXT:    v_min_f32_e32 v5, v2, v3
+; GISEL-GFX11-NEXT:    v_dual_max_f32 v2, v2, v3 :: v_dual_max_f32 v3, v4, v4
+; GISEL-GFX11-NEXT:    v_minmax_f32 v2, v2, v3, v5
+; GISEL-GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; SDAG-GFX12-LABEL: test_med3_minimumnum_maximumnum_f32:
+; SDAG-GFX12:       ; %bb.0:
+; SDAG-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-GFX12-NEXT:    s_wait_expcnt 0x0
+; SDAG-GFX12-NEXT:    s_wait_samplecnt 0x0
+; SDAG-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; SDAG-GFX12-NEXT:    s_wait_kmcnt 0x0
+; SDAG-GFX12-NEXT:    v_med3_num_f32 v2, v2, v3, v4
+; SDAG-GFX12-NEXT:    global_store_b32 v[0:1], v2, off
+; SDAG-GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX12-LABEL: test_med3_minimumnum_maximumnum_f32:
+; GISEL-GFX12:       ; %bb.0:
+; GISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; GISEL-GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
+; GISEL-GFX12-NEXT:    v_min_num_f32_e32 v5, v2, v3
+; GISEL-GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v3 :: v_dual_max_num_f32 v3, v4, v4
+; GISEL-GFX12-NEXT:    v_minmax_num_f32 v2, v2, v3, v5
+; GISEL-GFX12-NEXT:    global_store_b32 v[0:1], v2, off
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = call float @llvm.minimumnum.f32(float %x, float %y)
   %tmp1 = call float @llvm.maximumnum.f32(float %x, float %y)
   %tmp2 = call float @llvm.minimumnum.f32(float %tmp1, float %z)
@@ -875,14 +923,24 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
 ; GISEL-GFX11-TRUE16-LABEL: test_med3_f16:
 ; GISEL-GFX11-TRUE16:       ; %bb.0:
 ; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-TRUE16-NEXT:    v_med3_f16 v2.l, v2.l, v3.l, v4.l
+; GISEL-GFX11-TRUE16-NEXT:    v_max_f16_e32 v2.l, v2.l, v2.l
+; GISEL-GFX11-TRUE16-NEXT:    v_max_f16_e32 v2.h, v3.l, v3.l
+; GISEL-GFX11-TRUE16-NEXT:    v_min_f16_e32 v3.l, v2.l, v2.h
+; GISEL-GFX11-TRUE16-NEXT:    v_max_f16_e32 v2.l, v2.l, v2.h
+; GISEL-GFX11-TRUE16-NEXT:    v_max_f16_e32 v2.h, v4.l, v4.l
+; GISEL-GFX11-TRUE16-NEXT:    v_minmax_f16 v2.l, v2.l, v2.h, v3.l
 ; GISEL-GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GISEL-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX11-FAKE16-LABEL: test_med3_f16:
 ; GISEL-GFX11-FAKE16:       ; %bb.0:
 ; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-FAKE16-NEXT:    v_med3_f16 v2, v2, v3, v4
+; GISEL-GFX11-FAKE16-NEXT:    v_max_f16_e32 v2, v2, v2
+; GISEL-GFX11-FAKE16-NEXT:    v_max_f16_e32 v3, v3, v3
+; GISEL-GFX11-FAKE16-NEXT:    v_min_f16_e32 v5, v2, v3
+; GISEL-GFX11-FAKE16-NEXT:    v_max_f16_e32 v2, v2, v3
+; GISEL-GFX11-FAKE16-NEXT:    v_max_f16_e32 v3, v4, v4
+; GISEL-GFX11-FAKE16-NEXT:    v_minmax_f16 v2, v2, v3, v5
 ; GISEL-GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GISEL-GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -915,7 +973,12 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
 ; GISEL-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-TRUE16-NEXT:    v_med3_num_f16 v2.l, v2.l, v3.l, v4.l
+; GISEL-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v2.l, v2.l, v2.l
+; GISEL-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v2.h, v3.l, v3.l
+; GISEL-GFX12-TRUE16-NEXT:    v_min_num_f16_e32 v3.l, v2.l, v2.h
+; GISEL-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v2.l, v2.l, v2.h
+; GISEL-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v2.h, v4.l, v4.l
+; GISEL-GFX12-TRUE16-NEXT:    v_minmax_num_f16 v2.l, v2.l, v2.h, v3.l
 ; GISEL-GFX12-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GISEL-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -926,7 +989,12 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
 ; GISEL-GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-FAKE16-NEXT:    v_med3_num_f16 v2, v2, v3, v4
+; GISEL-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v2, v2, v2
+; GISEL-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v3, v3, v3
+; GISEL-GFX12-FAKE16-NEXT:    v_min_num_f16_e32 v5, v2, v3
+; GISEL-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v2, v2, v3
+; GISEL-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v3, v4, v4
+; GISEL-GFX12-FAKE16-NEXT:    v_minmax_num_f16 v2, v2, v3, v5
 ; GISEL-GFX12-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; GISEL-GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %tmp0 = call half @llvm.minnum.f16(half %x, half %y)
