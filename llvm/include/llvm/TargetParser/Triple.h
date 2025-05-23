@@ -237,7 +237,6 @@ public:
     WASI,       // Experimental WebAssembly OS
     Emscripten,
     ShaderModel, // DirectX ShaderModel
-    LiteOS,
     Serenity,
     Vulkan, // Vulkan SPIR-V
     LastOSType = Vulkan
@@ -299,7 +298,6 @@ public:
     Mesh,
     Amplification,
     OpenCL,
-    OpenHOS,
     Mlibc,
 
     PAuthTest,
@@ -825,17 +823,8 @@ public:
            getEnvironment() == Triple::MuslEABIHF ||
            getEnvironment() == Triple::MuslF32 ||
            getEnvironment() == Triple::MuslSF ||
-           getEnvironment() == Triple::MuslX32 ||
-           getEnvironment() == Triple::OpenHOS || isOSLiteOS();
+           getEnvironment() == Triple::MuslX32;
   }
-
-  /// Tests whether the target is OHOS
-  /// LiteOS default enviroment is also OHOS, but omited on triple.
-  bool isOHOSFamily() const { return isOpenHOS() || isOSLiteOS(); }
-
-  bool isOpenHOS() const { return getEnvironment() == Triple::OpenHOS; }
-
-  bool isOSLiteOS() const { return getOS() == Triple::LiteOS; }
 
   /// Tests whether the target is DXIL.
   bool isDXIL() const {
@@ -912,7 +901,6 @@ public:
             getEnvironment() == Triple::EABIHF ||
             getEnvironment() == Triple::GNUEABIHF ||
             getEnvironment() == Triple::GNUEABIHFT64 ||
-            getEnvironment() == Triple::OpenHOS ||
             getEnvironment() == Triple::MuslEABIHF || isAndroid()) &&
            isOSBinFormatELF();
   }
@@ -1122,7 +1110,7 @@ public:
   /// Note: Android API level 29 (10) introduced ELF TLS.
   bool hasDefaultEmulatedTLS() const {
     return (isAndroid() && isAndroidVersionLT(29)) || isOSOpenBSD() ||
-           isWindowsCygwinEnvironment() || isOHOSFamily();
+           isWindowsCygwinEnvironment();
   }
 
   /// True if the target uses TLSDESC by default.

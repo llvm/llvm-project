@@ -245,8 +245,7 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
          TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
          TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
          TargetTriple.getEnvironment() == Triple::MuslEABI ||
-         TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-         TargetTriple.getEnvironment() == Triple::OpenHOS) &&
+         TargetTriple.getEnvironment() == Triple::MuslEABIHF) &&
         !(TargetTriple.isOSWindows() || TargetTriple.isOSDarwin()))
       this->Options.EABIVersion = EABI::GNU;
     else

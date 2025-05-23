@@ -318,7 +318,6 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case Win32: return "windows";
   case ZOS: return "zos";
   case ShaderModel: return "shadermodel";
-  case LiteOS: return "liteos";
   case XROS: return "xros";
   case Vulkan: return "vulkan";
   }
@@ -381,7 +380,6 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case Amplification: return "amplification";
   case OpenCL:
     return "opencl";
-  case OpenHOS: return "ohos";
   case PAuthTest:
     return "pauthtest";
   case LLVM:
@@ -713,7 +711,6 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("wasi", Triple::WASI)
     .StartsWith("emscripten", Triple::Emscripten)
     .StartsWith("shadermodel", Triple::ShaderModel)
-    .StartsWith("liteos", Triple::LiteOS)
     .StartsWith("serenity", Triple::Serenity)
     .StartsWith("vulkan", Triple::Vulkan)
     .Default(Triple::UnknownOS);
@@ -768,7 +765,6 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("mesh", Triple::Mesh)
       .StartsWith("amplification", Triple::Amplification)
       .StartsWith("opencl", Triple::OpenCL)
-      .StartsWith("ohos", Triple::OpenHOS)
       .StartsWith("pauthtest", Triple::PAuthTest)
       .StartsWith("llvm", Triple::LLVM)
       .StartsWith("mlibc", Triple::Mlibc)
