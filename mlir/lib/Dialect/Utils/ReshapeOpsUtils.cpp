@@ -59,12 +59,9 @@ struct ReassociationIndexRange {
   }
   bool containsSingleIndex() const { return size() == 1; }
 
-  void expandRight() { ++rightIdx; }
-  void shrinkLeft() { ++leftIdx; }
-
-  /// Implements arithmetic XOR semantics to get non-overlapping indices between
-  /// ranges.
-  ReassociationIndices operator^(ReassociationIndexRange &rhs) const {
+  /// Collects indices that do not overlap between this and another range.
+  ReassociationIndices
+  getNonOverlappingIndicesWith(ReassociationIndexRange &rhs) const {
     ReassociationIndices result;
     result.reserve(size() + rhs.size() / 2); // Attempt to amortize
     for (int64_t idx = this->leftIdx; idx <= this->rightIdx; ++idx) {
@@ -87,6 +84,7 @@ struct ReassociationIndexRange {
     return result;
   }
 };
+} // namespace
 
 /// Starting from `sourceStartIdx`, searches `sourceShape` for the first
 /// sequence that can be collapsed into a dynamic dimension (at least one must
@@ -94,20 +92,18 @@ struct ReassociationIndexRange {
 /// By default, lazily returns once the first dynamic dimension has been found.
 /// Setting `matchGreedily` as `true` will also mark all subsequent
 /// source dimensions for collapsing into the target.
-FailureOr<ReassociationIndexRange>
+static FailureOr<ReassociationIndexRange>
 findReassociationRangeForDynamicDim(ArrayRef<int64_t> sourceShape,
                                     int64_t sourceStartIdx,
                                     bool matchGreedily = false) {
   ReassociationIndexRange iterationRange{sourceStartIdx, sourceStartIdx};
   const unsigned numSourceDims = sourceShape.size();
   ReassociationIndexRange sourceShapeAsRange{0, numSourceDims - 1};
-  if (!iterationRange.isInRange(sourceShapeAsRange))
-    return failure();
   auto resultRange = iterationRange;
 
   bool foundDynamic = false;
   for (; iterationRange.isInRange(sourceShapeAsRange);
-       iterationRange.expandRight()) {
+       iterationRange.rightIdx++) {
     int64_t sourceSize = sourceShape[iterationRange.rightIdx];
     if (foundDynamic && !matchGreedily)
       break;
@@ -125,15 +121,13 @@ findReassociationRangeForDynamicDim(ArrayRef<int64_t> sourceShape,
 /// By default, lazily returns once the product matches the target size. Setting
 /// `matchGreedily` as `true` will append all neighboring unit dimensions
 /// (dimensions of 1) to the match.
-FailureOr<ReassociationIndexRange>
+static FailureOr<ReassociationIndexRange>
 findReassociationRangeForSize(ArrayRef<int64_t> sourceShape,
                               int64_t sourceStartIdx, int64_t targetSize,
                               bool matchGreedily = false) {
   ReassociationIndexRange iterationRange{sourceStartIdx, sourceStartIdx};
   const unsigned numSourceDims = sourceShape.size();
   ReassociationIndexRange sourceShapeAsRange{0, numSourceDims - 1};
-  if (!iterationRange.isInRange(sourceShapeAsRange))
-    return failure();
   auto resultRange = iterationRange;
 
   int64_t prodOfCollapsedDims = 1;
@@ -163,7 +157,8 @@ findReassociationRangeForSize(ArrayRef<int64_t> sourceShape,
            !iterationRange.containsSingleIndex()) {
       int64_t frontSourceSize = sourceShape[iterationRange.leftIdx];
       prodOfCollapsedDims /= frontSourceSize;
-      iterationRange.shrinkLeft();
+      // Shrink the range rightwards
+      iterationRange.leftIdx++;
     }
     resultRange = iterationRange;
     // We could've reached the target size with the current dimension,
@@ -171,7 +166,7 @@ findReassociationRangeForSize(ArrayRef<int64_t> sourceShape,
     if (prodOfCollapsedDims == targetSize)
       reachedTargetDimSize = true;
     // Increment the iteration range
-    iterationRange.expandRight();
+    iterationRange.rightIdx++;
   }
   if (!reachedTargetDimSize)
     return failure();
@@ -191,7 +186,7 @@ findReassociationRangeForSize(ArrayRef<int64_t> sourceShape,
 /// linear complexity). As feasible, consider adding further backtracking
 /// routines to enable more reassociations, e.g.:
 /// - ?x2x?x2 into ?x2
-FailureOr<SmallVector<ReassociationIndexRange>>
+static FailureOr<SmallVector<ReassociationIndexRange>>
 findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
                                    ArrayRef<int64_t> targetShape) {
   unsigned numSourceDims = sourceShape.size(),
@@ -236,7 +231,7 @@ findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
     // Store the gathered information as required for the next iteration.
     prevTargetSize = targetSize;
     sourceDimIdx = sourceRange->rightIdx + 1;
-    reassocRanges.emplace_back(std::move(*sourceRange));
+    reassocRanges.push_back(*sourceRange);
   }
   // Fail if the source shape wasn't a full match for the target shape. We only
   // need to check the last recorded index - any other gaps should have been
@@ -248,7 +243,7 @@ findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
 
 /// A variant of `findReassociationRangesForCollapse(...)` that can also scan
 /// the shapes right-to-left.
-FailureOr<SmallVector<ReassociationIndexRange>>
+static FailureOr<SmallVector<ReassociationIndexRange>>
 findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
                                    ArrayRef<int64_t> targetShape,
                                    bool iterateRightToLeft) {
@@ -268,8 +263,6 @@ findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
   // We have received the ranges for inverted shapes. Now we have to invert
   // the ranges back to correspond with the original source shape.
   for (auto &range : rangesToInvert) {
-    if (failed(range.verify()))
-      return failure();
     int64_t invLeftIdx = range.leftIdx, invRightIdx = range.rightIdx;
     range.leftIdx = numSourceDims - 1 - invRightIdx;
     range.rightIdx = numSourceDims - 1 - invLeftIdx;
@@ -279,7 +272,6 @@ findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
   std::reverse(rangesToInvert.begin(), rangesToInvert.end());
   return rangesToInvert;
 }
-} // namespace
 
 std::optional<SmallVector<ReassociationIndices>>
 mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
@@ -298,7 +290,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       // All source dimensions must be unit or dynamic.
       if (sourceSize != 1 && sourceSize != ShapedType::kDynamic)
         return std::nullopt;
-      allSourceIndices.emplace_back(sourceDimIdx);
+      allSourceIndices.push_back(sourceDimIdx);
     }
     return SmallVector<ReassociationIndices>{allSourceIndices};
   }
@@ -337,7 +329,8 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
     auto &range = ranges[targetDimIdx];
     auto &reverseRange = reverseRanges[targetDimIdx];
     // Get non-overlapping indices between the ranges
-    ReassociationIndices nonMatchingIndices = range ^ reverseRange;
+    ReassociationIndices nonMatchingIndices =
+        range.getNonOverlappingIndicesWith(reverseRange);
     // Unit dimensions can be collapsed wherever - this is the only ambiguity
     // that we allow.
     for (int64_t sourceDimIdx : nonMatchingIndices) {
