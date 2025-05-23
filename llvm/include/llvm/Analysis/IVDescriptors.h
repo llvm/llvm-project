@@ -51,9 +51,7 @@ enum class RecurKind {
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
   FMaximumNum, ///< FP max with llvm.maximumnum semantics
   FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
-  IAnyOf,   ///< Any_of reduction with select(icmp(),x,y) where one of (x,y) is
-            ///< loop invariant, and both x and y are integer type.
-  FAnyOf,   ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
+  AnyOf,    ///< AnyOf reduction with select(cmp(),x,y) where one of (x,y) is
             ///< loop invariant, and both x and y are integer type.
   FindLastIV, ///< FindLast reduction with select(cmp(),x,y) where one of
               ///< (x,y) is increasing loop induction, and both x and y are
@@ -252,7 +250,7 @@ public:
   /// Returns true if the recurrence kind is of the form
   ///   select(cmp(),x,y) where one of (x,y) is loop invariant.
   static bool isAnyOfRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::IAnyOf || Kind == RecurKind::FAnyOf;
+    return Kind == RecurKind::AnyOf;
   }
 
   /// Returns true if the recurrence kind is of the form
