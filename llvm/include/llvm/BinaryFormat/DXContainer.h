@@ -585,8 +585,18 @@ struct ProgramSignatureElement {
 
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
+
 namespace RTS0 {
 namespace v1 {
+struct RootDescriptor {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+  }
+};
+
 // following dx12 naming
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_constants
 struct RootConstants {
@@ -628,15 +638,6 @@ struct RootSignatureHeader {
     sys::swapByteOrder(NumStaticSamplers);
     sys::swapByteOrder(StaticSamplerOffset);
     sys::swapByteOrder(Flags);
-  }
-};
-
-struct RootDescriptor {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  void swapBytes() {
-    sys::swapByteOrder(ShaderRegister);
-    sys::swapByteOrder(RegisterSpace);
   }
 };
 } // namespace v1
