@@ -8246,21 +8246,6 @@ cc_library(
 )
 
 cc_library(
-    name = "AMXToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/AMX/*.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/AMX/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":AMXConversionIncGen",
-        ":AMXDialect",
-        ":IR",
-        ":ToLLVMIRTranslation",
-        "//llvm:Core",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
     name = "ArmNeonToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/ArmNeon/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/ArmNeon/*.h"]),
@@ -8491,7 +8476,6 @@ cc_library(
     hdrs = ["include/mlir/Target/LLVMIR/Dialect/All.h"],
     includes = ["include"],
     deps = [
-        ":AMXToLLVMIRTranslation",
         ":ArmNeonToLLVMIRTranslation",
         ":ArmSMEToLLVMIRTranslation",
         ":ArmSVEToLLVMIRTranslation",
