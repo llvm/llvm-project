@@ -305,6 +305,9 @@ if swift_stdlibs_dir and not os.path.isdir(
 ):
     dotest_cmd += ["--skip-category=swiftmaccatalyst"]
 
+if is_configured("cmake_build_type"):
+    dotest_cmd += ["--cmake-build-type", config.cmake_build_type]
+
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]
 elif "lldb-simulator-watchos" in config.available_features:
