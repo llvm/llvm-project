@@ -73,8 +73,8 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-namespace std // purposefully not using versioning namespace
-{
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI logic_error : public exception {
 #  ifndef _LIBCPP_ABI_VCRUNTIME
@@ -207,7 +207,8 @@ public:
 #  endif
 };
 
-} // namespace std
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

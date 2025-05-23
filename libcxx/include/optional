@@ -244,8 +244,8 @@ namespace std {
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-namespace std // purposefully not using versioning namespace
-{
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS bad_optional_access : public exception {
 public:
@@ -257,7 +257,8 @@ public:
   const char* what() const _NOEXCEPT override;
 };
 
-} // namespace std
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #  if _LIBCPP_STD_VER >= 17
 
