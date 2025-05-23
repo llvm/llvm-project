@@ -481,7 +481,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     //             = idx * 2 + 1
     for (auto &VarEntry : LocalVarsOffsets) {
       // If VarOffsets already records a different pointer, abort.
-      if (!VarOffsets.empty() && !VarOffsets.count(VarEntry.first))
+      if (!VarOffsets.empty() && !VarOffsets.contains(VarEntry.first))
         return nullptr;
 
       // Try to insert VarEntry.first with its offset; if that pointer is
