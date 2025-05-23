@@ -1122,10 +1122,11 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   else if (isa<BinaryOperator>(I))
     NewVecC = ConstantFoldBinaryOpOperands((Instruction::BinaryOps)Opcode,
                                            VecCs[0], VecCs[1], *DL);
-  else if (isa<IntrinsicInst>(I) && cast<IntrinsicInst>(I).arg_size() == 2)
-    NewVecC =
-        ConstantFoldBinaryIntrinsic(cast<IntrinsicInst>(I).getIntrinsicID(),
-                                    VecCs[0], VecCs[1], I.getType(), &I);
+  else if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    if (II->arg_size() == 2)
+      NewVecC = ConstantFoldBinaryIntrinsic(II->getIntrinsicID(), VecCs[0],
+                                            VecCs[1], II->getType(), II);
+  }
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
