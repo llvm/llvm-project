@@ -553,7 +553,10 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
     // Each section has a matcher with that section's name, attached to that
     // line.
     const auto &DiagSectionMatcher = Entry.SectionMatcher;
-    unsigned DiagLine = DiagSectionMatcher->Globs.at(DiagName).second;
+    unsigned DiagLine = 0;
+    for (const auto &[Pattern, Pair] : DiagSectionMatcher->Globs)
+      if (Pattern == DiagName)
+        DiagLine = Pair.second;
     LineAndSectionEntry.emplace_back(DiagLine, &Entry);
   }
   llvm::sort(LineAndSectionEntry);
