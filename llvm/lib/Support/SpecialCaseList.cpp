@@ -66,10 +66,9 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
 }
 
 unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
-  for (const auto &Glob : Globs) {
+  for (const auto &Glob : Globs)
     if (Glob->Pattern.match(Query))
       return Glob->LineNo;
-  }
   for (const auto &[Regex, LineNumber] : RegExes)
     if (Regex->match(Query))
       return LineNumber;
