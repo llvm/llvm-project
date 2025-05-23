@@ -44,16 +44,16 @@ define void @e(<4 x i16> %0) {
 ; THRESH-NEXT:    [[TMP13:%.*]] = icmp sgt <16 x i16> [[TMP12]], [[TMP7]]
 ; THRESH-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i1> [[TMP13]], <16 x i1> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; THRESH-NEXT:    [[TMP15:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
+; THRESH-NEXT:    [[TMP23:%.*]] = insertelement <4 x i1> poison, i1 [[TMP15]], i64 0
 ; THRESH-NEXT:    [[TMP16:%.*]] = shufflevector <16 x i1> [[TMP13]], <16 x i1> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; THRESH-NEXT:    [[TMP17:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP16]])
+; THRESH-NEXT:    [[TMP24:%.*]] = insertelement <4 x i1> [[TMP23]], i1 [[TMP17]], i64 1
 ; THRESH-NEXT:    [[TMP18:%.*]] = shufflevector <16 x i1> [[TMP13]], <16 x i1> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
 ; THRESH-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP18]])
+; THRESH-NEXT:    [[TMP22:%.*]] = insertelement <4 x i1> [[TMP24]], i1 [[TMP19]], i64 2
 ; THRESH-NEXT:    [[TMP20:%.*]] = shufflevector <16 x i1> [[TMP13]], <16 x i1> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
 ; THRESH-NEXT:    [[TMP21:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP20]])
-; THRESH-NEXT:    [[TMP22:%.*]] = insertelement <4 x i1> poison, i1 [[TMP15]], i32 0
-; THRESH-NEXT:    [[TMP23:%.*]] = insertelement <4 x i1> [[TMP22]], i1 [[TMP17]], i32 1
-; THRESH-NEXT:    [[TMP24:%.*]] = insertelement <4 x i1> [[TMP23]], i1 [[TMP19]], i32 2
-; THRESH-NEXT:    [[TMP25:%.*]] = insertelement <4 x i1> [[TMP24]], i1 [[TMP21]], i32 3
+; THRESH-NEXT:    [[TMP25:%.*]] = insertelement <4 x i1> [[TMP22]], i1 [[TMP21]], i64 3
 ; THRESH-NEXT:    [[TMP26]] = zext <4 x i1> [[TMP25]] to <4 x i32>
 ; THRESH-NEXT:    br label [[VECTOR_BODY]]
 ;

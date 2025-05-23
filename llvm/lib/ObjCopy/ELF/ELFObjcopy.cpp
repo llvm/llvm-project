@@ -352,8 +352,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
       Sym.Name = std::string(I->getValue());
 
     if (!Config.SymbolsPrefixRemove.empty() && Sym.Type != STT_SECTION)
-      if (Sym.Name.compare(0, Config.SymbolsPrefixRemove.size(),
-                           Config.SymbolsPrefixRemove) == 0)
+      if (StringRef(Sym.Name).starts_with(Config.SymbolsPrefixRemove))
         Sym.Name = Sym.Name.substr(Config.SymbolsPrefixRemove.size());
 
     if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
@@ -662,13 +661,13 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
   for (const DeletedRange &RemRange : ToRemove) {
     if (CurPos < RemRange.OldFrom) {
       auto Slice = OldData.slice(CurPos, RemRange.OldFrom - CurPos);
-      NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+      llvm::append_range(NewData, Slice);
     }
     CurPos = RemRange.OldTo;
   }
   if (CurPos < OldData.size()) {
     auto Slice = OldData.slice(CurPos);
-    NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+    llvm::append_range(NewData, Slice);
   }
   return NewData;
 }

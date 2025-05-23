@@ -10,7 +10,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 ; -force-vector-interleave, but is a multiple of the internally computed MaxVF;
 ; e.g., when all types are i32 lead to MaxVF=1.
 
-define void @pr45679(ptr %A) optsize {
+define void @pr45679(ptr %A) {
 ; CHECK-LABEL: @pr45679(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]

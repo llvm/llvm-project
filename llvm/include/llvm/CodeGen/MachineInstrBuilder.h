@@ -229,9 +229,8 @@ public:
   }
 
   const MachineInstrBuilder &add(ArrayRef<MachineOperand> MOs) const {
-    for (const MachineOperand &MO : MOs) {
+    for (const MachineOperand &MO : MOs)
       MI->addOperand(*MF, MO);
-    }
     return *this;
   }
 

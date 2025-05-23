@@ -214,6 +214,25 @@ public:
     return *this;
   }
 
+  // Per property has/set/reset accessors.
+#define PPACCESSORS(X)                                                         \
+  bool has##X() const { return hasProperty(Property::X); }                     \
+  MachineFunctionProperties &set##X(void) { return set(Property::X); }         \
+  MachineFunctionProperties &reset##X(void) { return reset(Property::X); }
+
+  PPACCESSORS(IsSSA)
+  PPACCESSORS(NoPHIs)
+  PPACCESSORS(TracksLiveness)
+  PPACCESSORS(NoVRegs)
+  PPACCESSORS(FailedISel)
+  PPACCESSORS(Legalized)
+  PPACCESSORS(RegBankSelected)
+  PPACCESSORS(Selected)
+  PPACCESSORS(TiedOpsRewritten)
+  PPACCESSORS(FailsVerification)
+  PPACCESSORS(FailedRegAlloc)
+  PPACCESSORS(TracksDebugUserValues)
+
   /// Reset all the properties.
   MachineFunctionProperties &reset() {
     Properties.reset();
@@ -1073,6 +1092,16 @@ public:
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
+      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
+    return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
+                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                FailureOrdering);
+  }
+  MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
       Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
       const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
@@ -1099,6 +1128,10 @@ public:
             : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
   }
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          int64_t Offset, uint64_t Size) {
+    return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
+  }
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           int64_t Offset, TypeSize Size) {
     return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
   }
@@ -1113,6 +1146,11 @@ public:
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
                                           LLT Ty);
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          const MachinePointerInfo &PtrInfo,
+                                          uint64_t Size) {
+    return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
+  }
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
                                           TypeSize Size) {

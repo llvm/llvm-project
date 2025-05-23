@@ -1,17 +1,5 @@
 ; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 -o /dev/null | FileCheck %s
 
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled instruction: indirectbr ptr %dst, [label %bb1, label %bb2]
-define i32 @unhandled_instruction(ptr %dst) {
-  indirectbr ptr %dst, [label %bb1, label %bb2]
-bb1:
-  ret i32 0
-bb2:
-  ret i32 1
-}
-
-; // -----
-
 ; Check that debug intrinsics with an unsupported argument are dropped.
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -325,7 +313,7 @@ target datalayout = "e-m-i64:64"
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: incompatible call and callee types: '!llvm.func<void (i64)>' and '!llvm.func<void (ptr)>'
+; CHECK-SAME: warning: incompatible call and callee types: '!llvm.func<void (i64)>' and '!llvm.func<void (ptr)>'
 define void @incompatible_call_and_callee_types() {
   call void @callee(i64 0)
   ret void
@@ -336,7 +324,7 @@ declare void @callee(ptr)
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: incompatible call and callee types: '!llvm.func<void ()>' and '!llvm.func<i32 ()>'
+; CHECK-SAME: warning: incompatible call and callee types: '!llvm.func<void ()>' and '!llvm.func<i32 ()>'
 define void @f() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @g() to label %bb1 unwind label %bb2
@@ -360,3 +348,127 @@ define void @fn() {
 bb1:
   ret void
 }
+
+; // -----
+
+!10 = !{ i32 1, !"foo", i32 1 }
+!11 = !{ i32 4, !"bar", i32 37 }
+!12 = !{ i32 2, !"qux", i32 42 }
+; CHECK: unsupported module flag value for key 'qux' : !4 = !{!"foo", i32 1}
+!13 = !{ i32 3, !"qux", !{ !"foo", i32 1 }}
+!llvm.module.flags = !{ !10, !11, !12, !13 }
+
+; // -----
+
+!llvm.module.flags = !{!41873}
+
+!41873 = !{i32 1, !"ProfileSummary", !41874}
+!41874 = !{!41875, !41876, !41877, !41878, !41880, !41881, !41882, !41883, !41884}
+!41875 = !{!"ProfileFormat", !"InstrProf"}
+!41876 = !{!"TotalCount", i64 263646}
+!41877 = !{!"MaxCount", i64 86427}
+!41878 = !{!"MaxInternalCount", i64 86427}
+; CHECK: expected 'MaxFunctionCount' key, but found: !"NumCounts"
+!41880 = !{!"NumCounts", i64 3712}
+!41881 = !{!"NumFunctions", i64 796}
+!41882 = !{!"IsPartialProfile", i64 0}
+!41883 = !{!"PartialProfileRatio", double 0.000000e+00}
+!41884 = !{!"DetailedSummary", !41885}
+!41885 = !{!41886, !41887}
+!41886 = !{i32 10000, i64 86427, i32 1}
+!41887 = !{i32 100000, i64 86427, i32 1}
+
+; // -----
+
+!llvm.module.flags = !{!51873}
+
+!51873 = !{i32 1, !"ProfileSummary", !51874}
+!51874 = !{!51875, !51876, !51877, !51878, !51879, !51880, !51881, !51882, !51883, !51884}
+!51875 = !{!"ProfileFormat", !"InstrProf"}
+!51876 = !{!"TotalCount", i64 263646}
+!51877 = !{!"MaxCount", i64 86427}
+!51878 = !{!"MaxInternalCount", i64 86427}
+!51879 = !{!"MaxFunctionCount", i64 4691}
+!51880 = !{!"NumCounts", i64 3712}
+; CHECK: expected integer metadata value for key 'NumFunctions'
+!51881 = !{!"NumFunctions", double 0.000000e+00}
+!51882 = !{!"IsPartialProfile", i64 0}
+!51883 = !{!"PartialProfileRatio", double 0.000000e+00}
+!51884 = !{!"DetailedSummary", !51885}
+!51885 = !{!51886, !51887}
+!51886 = !{i32 10000, i64 86427, i32 1}
+!51887 = !{i32 100000, i64 86427, i32 1}
+
+; // -----
+
+!llvm.module.flags = !{!61873}
+
+!61873 = !{i32 1, !"ProfileSummary", !61874}
+!61874 = !{!61875, !61876, !61877, !61878, !61879, !61880, !61881, !61882, !61883, !61884}
+; CHECK: expected 'SampleProfile', 'InstrProf' or 'CSInstrProf' values, but found: !"MyThingyFmt"
+!61875 = !{!"ProfileFormat", !"MyThingyFmt"}
+!61876 = !{!"TotalCount", i64 263646}
+!61877 = !{!"MaxCount", i64 86427}
+!61878 = !{!"MaxInternalCount", i64 86427}
+!61879 = !{!"MaxFunctionCount", i64 4691}
+!61880 = !{!"NumCounts", i64 3712}
+!61881 = !{!"NumFunctions", i64 796}
+!61882 = !{!"IsPartialProfile", i64 0}
+!61883 = !{!"PartialProfileRatio", double 0.000000e+00}
+!61884 = !{!"DetailedSummary", !61885}
+!61885 = !{!61886, !61887}
+!61886 = !{i32 10000, i64 86427, i32 1}
+!61887 = !{i32 100000, i64 86427, i32 1}
+
+; // -----
+
+!llvm.module.flags = !{!71873}
+
+!71873 = !{i32 1, !"ProfileSummary", !71874}
+!71874 = !{!71875, !71876, !71877, !71878, !71879, !71880, !71881, !71882, !71883}
+!71875 = !{!"ProfileFormat", !"InstrProf"}
+!71876 = !{!"TotalCount", i64 263646}
+!71877 = !{!"MaxCount", i64 86427}
+!71878 = !{!"MaxInternalCount", i64 86427}
+!71879 = !{!"MaxFunctionCount", i64 4691}
+!71880 = !{!"NumCounts", i64 3712}
+!71881 = !{!"NumFunctions", i64 796}
+!71882 = !{!"IsPartialProfile", i64 0}
+; CHECK: the last summary entry is 'PartialProfileRatio', expected 'DetailedSummary'
+!71883 = !{!"PartialProfileRatio", double 0.000000e+00}
+
+; // -----
+
+!llvm.module.flags = !{!81873}
+
+!81873 = !{i32 1, !"ProfileSummary", !81874}
+; CHECK: expected at 8 entries in 'ProfileSummary'
+!81874 = !{!81875, !81876, !81877, !81878, !81879, !81880, !81881}
+!81875 = !{!"ProfileFormat", !"InstrProf"}
+!81876 = !{!"TotalCount", i64 263646}
+!81877 = !{!"MaxCount", i64 86427}
+!81878 = !{!"MaxInternalCount", i64 86427}
+!81879 = !{!"MaxFunctionCount", i64 4691}
+!81880 = !{!"NumCounts", i64 3812}
+!81881 = !{!"NumFunctions", i64 796}
+
+; // -----
+
+!llvm.module.flags = !{!91873}
+
+!91873 = !{i32 1, !"ProfileSummary", !91874}
+!91874 = !{!91875, !91876, !91877, !91878, !91879, !91880, !91881, !91882, !91883, !91884}
+!91875 = !{!"ProfileFormat", !"InstrProf"}
+; CHECK: expected 2-element tuple metadata
+!91876 = !{!"TotalCount", i64 263646, i64 263646}
+!91877 = !{!"MaxCount", i64 86427}
+!91878 = !{!"MaxInternalCount", i64 86427}
+!91879 = !{!"MaxFunctionCount", i64 4691}
+!91880 = !{!"NumCounts", i64 3712}
+!91881 = !{!"NumFunctions", i64 796}
+!91882 = !{!"IsPartialProfile", i64 0}
+!91883 = !{!"PartialProfileRatio", double 0.000000e+00}
+!91884 = !{!"DetailedSummary", !91885}
+!91885 = !{!91886, !91887}
+!91886 = !{i32 10000, i64 86427, i32 1}
+!91887 = !{i32 100000, i64 86427, i32 1}

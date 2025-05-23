@@ -63,7 +63,6 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     SUITE
       libc-support-tests
     SRCS
-      fake_heap.s
       freelist_heap_test.cpp
     DEPENDS
       libc.src.__support.CPP.span

@@ -21,42 +21,6 @@ using namespace mlir::smt;
 // BitVectorAttr
 //===----------------------------------------------------------------------===//
 
-namespace mlir {
-namespace smt {
-namespace detail {
-struct BitVectorAttrStorage : public mlir::AttributeStorage {
-  using KeyTy = APInt;
-  BitVectorAttrStorage(APInt value) : value(std::move(value)) {}
-
-  KeyTy getAsKey() const { return value; }
-
-  // NOTE: the implementation of this operator is the reason we need to define
-  // the storage manually. The auto-generated version would just do the direct
-  // equality check of the APInt, but that asserts the bitwidth of both to be
-  // the same, leading to a crash. This implementation, therefore, checks for
-  // matching bit-width beforehand.
-  bool operator==(const KeyTy &key) const {
-    return (value.getBitWidth() == key.getBitWidth() && value == key);
-  }
-
-  static llvm::hash_code hashKey(const KeyTy &key) {
-    return llvm::hash_value(key);
-  }
-
-  static BitVectorAttrStorage *
-  construct(mlir::AttributeStorageAllocator &allocator, KeyTy &&key) {
-    return new (allocator.allocate<BitVectorAttrStorage>())
-        BitVectorAttrStorage(std::move(key));
-  }
-
-  APInt value;
-};
-} // namespace detail
-} // namespace smt
-} // namespace mlir
-
-APInt BitVectorAttr::getValue() const { return getImpl()->value; }
-
 LogicalResult BitVectorAttr::verify(
     function_ref<InFlightDiagnostic()> emitError,
     APInt value) { // NOLINT(performance-unnecessary-value-param)

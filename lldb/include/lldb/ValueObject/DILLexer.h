@@ -24,11 +24,15 @@ namespace lldb_private::dil {
 class Token {
 public:
   enum Kind {
+    amp,
+    arrow,
     coloncolon,
     eof,
     identifier,
     l_paren,
+    period,
     r_paren,
+    star,
   };
 
   Token(Kind kind, std::string spelling, uint32_t start)

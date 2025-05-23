@@ -20,6 +20,7 @@
 #include "flang/Common/optional.h"
 #include "flang/Common/reference-wrapper.h"
 #include "flang/Common/visit.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include "flang/Runtime/io-api.h"
 #include <flang/Common/variant.h>
 #include <functional>
@@ -180,8 +181,8 @@ public:
 
   private:
     RT_API_ATTRS void CheckForAsterisk() {
-      hasAsterisk_ =
-          at_ && at_ < limit_ && std::memchr(at_, '*', limit_ - at_) != nullptr;
+      hasAsterisk_ = at_ && at_ < limit_ &&
+          runtime::memchr(at_, '*', limit_ - at_) != nullptr;
     }
 
     ConnectionState &connection_;

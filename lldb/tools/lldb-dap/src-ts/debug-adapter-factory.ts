@@ -184,6 +184,7 @@ export async function createDebugAdapterExecutable(
       ...configEnvironment,
       ...env,
     },
+    cwd: workspaceFolder!!.uri.fsPath,
   };
   const dbgArgs = await getDAPArguments(workspaceFolder, configuration);
 
@@ -211,7 +212,7 @@ export class LLDBDapDescriptorFactory
     if (session.configuration.debugAdapterPort) {
       return new vscode.DebugAdapterServer(
         session.configuration.debugAdapterPort,
-        session.configuration.debugAdapterHost,
+        session.configuration.debugAdapterHostname,
       );
     }
 

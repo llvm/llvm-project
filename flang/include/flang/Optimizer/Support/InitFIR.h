@@ -40,7 +40,7 @@ namespace fir::support {
       mlir::cf::ControlFlowDialect, mlir::func::FuncDialect,                   \
       mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
       mlir::complex::ComplexDialect, mlir::DLTIDialect, cuf::CUFDialect,       \
-      mlir::NVVM::NVVMDialect
+      mlir::NVVM::NVVMDialect, mlir::gpu::GPUDialect
 
 #define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, mlir::LLVM::LLVMDialect
 
