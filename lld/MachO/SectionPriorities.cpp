@@ -246,15 +246,15 @@ DenseMap<const InputSection *, int> CallGraphSort::run() {
 }
 
 std::optional<int>
-macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
-  if (sym->isAbsolute())
-    return std::nullopt;
+macho::PriorityBuilder::getSymbolOrCStringPriority(const StringRef key,
+                                                   InputFile *f) {
 
-  auto it = priorities.find(sym->getName());
+  for (auto &[name, entry] : priorities)
+    llvm::errs() << name << ", " << entry.anyObjectFile << "\n";
+  auto it = priorities.find(key);
   if (it == priorities.end())
     return std::nullopt;
   const SymbolPriorityEntry &entry = it->second;
-  const InputFile *f = sym->isec()->getFile();
   if (!f)
     return entry.anyObjectFile;
   // We don't use toString(InputFile *) here because it returns the full path
@@ -266,6 +266,13 @@ macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
     filename = saver().save(path::filename(f->archiveName) + "(" +
                             path::filename(f->getName()) + ")");
   return std::min(entry.objectFiles.lookup(filename), entry.anyObjectFile);
+}
+
+std::optional<int>
+macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
+  if (sym->isAbsolute())
+    return std::nullopt;
+  return getSymbolOrCStringPriority(sym->getName(), sym->isec()->getFile());
 }
 
 void macho::PriorityBuilder::extractCallGraphProfile() {
@@ -300,7 +307,7 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
   int prio = std::numeric_limits<int>::min();
   MemoryBufferRef mbref = *buffer;
   for (StringRef line : args::getLines(mbref)) {
-    StringRef objectFile, symbol;
+    StringRef objectFile, symbolOrCStrHash;
     line = line.take_until([](char c) { return c == '#'; }); // ignore comments
     line = line.ltrim();
 
@@ -315,7 +322,6 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
 
     if (cpuType != CPU_TYPE_ANY && cpuType != target->cpuType)
       continue;
-
     // Drop the CPU type as well as the colon
     if (cpuType != CPU_TYPE_ANY)
       line = line.drop_until([](char c) { return c == ':'; }).drop_front();
@@ -330,10 +336,20 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
         break;
       }
     }
-    symbol = line.trim();
 
-    if (!symbol.empty()) {
-      SymbolPriorityEntry &entry = priorities[symbol];
+    // The rest of the line is either <symbol name> or
+    // CStringEntryPrefix<cstring hash>
+    if (line.starts_with(CStringEntryPrefix)) {
+      StringRef possibleHash = line.drop_front(CStringEntryPrefix.size());
+      uint32_t hash = 0;
+      if (to_integer(possibleHash, hash))
+        line = possibleHash;
+    }
+    symbolOrCStrHash = line.trim();
+    llvm::errs() << symbolOrCStrHash << "\n";
+
+    if (!symbolOrCStrHash.empty()) {
+      SymbolPriorityEntry &entry = priorities[symbolOrCStrHash];
       if (!objectFile.empty())
         entry.objectFiles.insert(std::make_pair(objectFile, prio));
       else
@@ -389,26 +405,6 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
   return sectionPriorities;
 }
 
-void macho::PriorityBuilder::parseOrderFileCString(StringRef path) {
-  std::optional<MemoryBufferRef> buffer = readFile(path);
-  if (!buffer) {
-    error("Could not read cstring order file at " + path);
-    return;
-  }
-  MemoryBufferRef mbref = *buffer;
-  int priority = std::numeric_limits<int>::min();
-  for (StringRef line : args::getLines(mbref)) {
-    if (line.empty())
-      continue;
-    uint32_t hash = 0;
-    if (!to_integer(line, hash))
-      continue;
-    auto [it, wasInserted] = cStringPriorities.try_emplace(hash, priority);
-    if (wasInserted)
-      ++priority;
-  }
-}
-
 std::vector<StringPiecePair> macho::PriorityBuilder::buildCStringPriorities(
     ArrayRef<CStringInputSection *> inputs) {
   // Split the input strings into hold and cold sets.
@@ -424,12 +420,14 @@ std::vector<StringPiecePair> macho::PriorityBuilder::buildCStringPriorities(
       if (!piece.live)
         continue;
 
-      auto it = cStringPriorities.find(piece.hash);
-      if (it != cStringPriorities.end())
-        hotStringPrioritiesAndStringPieces.emplace_back(
-            it->second, std::make_pair(isec, stringPieceIdx));
-      else
+      llvm::errs() << "buildCStringPriorities:" << piece.hash << "\n";
+      std::optional<int> priority = getSymbolOrCStringPriority(
+          std::to_string(piece.hash), isec->getFile());
+      if (!priority)
         coldStringPieces.emplace_back(isec, stringPieceIdx);
+      else
+        hotStringPrioritiesAndStringPieces.emplace_back(
+            *priority, std::make_pair(isec, stringPieceIdx));
     }
   }
 

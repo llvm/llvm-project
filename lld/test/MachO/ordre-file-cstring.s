@@ -6,20 +6,20 @@
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-0 | FileCheck %s --check-prefix=ORIGIN_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-0 | FileCheck %s --check-prefix=ORIGIN_SEC
 
-# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-1 %t/test.o %t/more-cstrings.o -order_file_cstring %t/ord-1
+# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-1 %t/test.o %t/more-cstrings.o -order_file %t/ord-1
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-1 | FileCheck %s --check-prefix=ONE_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-1 | FileCheck %s --check-prefix=ONE_SEC
 
 
-# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-2 %t/test.o %t/more-cstrings.o -order_file_cstring %t/ord-2
+# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-2 %t/test.o %t/more-cstrings.o -order_file %t/ord-2
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-2 | FileCheck %s --check-prefix=TWO_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-2 | FileCheck %s --check-prefix=TWO_SEC
 
-# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-3 %t/test.o %t/more-cstrings.o -order_file_cstring %t/ord-3
+# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-3 %t/test.o %t/more-cstrings.o -order_file %t/ord-3
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-3 | FileCheck %s --check-prefix=THREE_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-3 | FileCheck %s --check-prefix=THREE_SEC
 
-# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-4 %t/test.o %t/more-cstrings.o -order_file_cstring %t/ord-4
+# RUN: %lld --deduplicate-strings -arch arm64 -lSystem -e _main -o %t/test-4 %t/test.o %t/more-cstrings.o -order_file %t/ord-4
 # RUN: llvm-nm --numeric-sort --format=just-symbols %t/test-4 | FileCheck %s --check-prefix=FOUR_SYM
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" %t/test-4 | FileCheck %s --check-prefix=FOUR_SEC
 # RUN: llvm-readobj --string-dump=__cstring %t/test-4 | FileCheck %s --check-prefix=FOUR_SEC_ESCAPE
@@ -45,6 +45,16 @@
 # ORIGIN_SEC: bar2
 # ORIGIN_SEC: foo3
 
+# original order, but only parital covered
+#--- ord-1
+#foo2
+CSTR:1433942677
+#bar
+CSTR:540201826
+#bar2
+CSTR:1496286555
+#foo3
+CSTR:1343999025
 
 # ONE_SYM: _globl_foo2
 # ONE_SYM: _local_foo2
@@ -126,57 +136,51 @@
 # FOUR_SEC_ESCAPE: baz
 # FOUR_SEC_ESCAPE: bar2
 
-# original order, but only parital covered
-#--- ord-1
-#foo2
-0x55783A95
-#bar
-0x2032D362
-#bar2
-0x592F855B
-#foo3
-0x501BCC31
 
 # change order, parital covered
 #--- ord-2
 #foo2
-0x55783A95
+CSTR:1433942677
 #foo1
-0x6326A039
+CSTR:1663475769
 #baz
-0x336F8925
+CSTR:862947621
 #bar
-0x2032D362
+CSTR:540201826
 #bar2
-0x592F855B
+CSTR:1496286555
 
 # change order, parital covered, with mismatches, duplicates
 #--- ord-3
 foo2222
-0x11111111
+CSTR:0x11111111
+#bar (mismatched cpu and file name)
+fakeCPU:fake-file-name.o:CSTR:540201826
+#not a hash
+CSTR:xxx
 #foo1
-0x6326A039
+CSTR:1663475769
 #baz
-0x336F8925
+CSTR:862947621
 #bar
-0x2032D362
+CSTR:540201826
 #bar2
-0x592F855B
+CSTR:1496286555
 #baz
-0x336F8925
+CSTR:862947621
 
 # test escape strings
 #--- ord-4
 #\t\n
-0x3DBEA0C9
+CSTR:1035903177
 #foo2
-0x55783A95
+CSTR:1433942677
 #@\"NSDictionary\"
-0x47AF4776
+CSTR:1202669430
 #foo3
-0x501BCC31
+CSTR:1343999025
 #bar
-0x2032D362
+CSTR:540201826
 
 
 #--- test.s

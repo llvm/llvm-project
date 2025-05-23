@@ -225,7 +225,6 @@ struct Configuration {
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;
 
-  llvm::StringRef cStringOrderFilePath;
   llvm::StringRef irpgoProfilePath;
   bool bpStartupFunctionSort = false;
   bool bpCompressionSortStartupFunctions = false;
