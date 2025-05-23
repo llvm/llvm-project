@@ -364,15 +364,19 @@ public:
 
   // Compound assignments.
   ComplexPairTy VisitBinAddAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinAdd);
   }
   ComplexPairTy VisitBinSubAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinSub);
   }
   ComplexPairTy VisitBinMulAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinMul);
   }
   ComplexPairTy VisitBinDivAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinDiv);
   }
 
@@ -1213,7 +1217,6 @@ LValue ComplexExprEmitter::
 EmitCompoundAssignLValue(const CompoundAssignOperator *E,
           ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo&),
                          RValue &Val) {
-  ApplyAtomGroup Grp(CGF.getDebugInfo());
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
   QualType LHSTy = E->getLHS()->getType();
@@ -1361,8 +1364,8 @@ LValue ComplexExprEmitter::EmitBinAssignLValue(const BinaryOperator *E,
 }
 
 ComplexPairTy ComplexExprEmitter::VisitBinAssign(const BinaryOperator *E) {
-  ApplyAtomGroup Grp(CGF.getDebugInfo());
   ComplexPairTy Val;
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   LValue LV = EmitBinAssignLValue(E, Val);
 
   // The result of an assignment in C is the assigned r-value.
@@ -1538,6 +1541,7 @@ static CompoundFunc getComplexOp(BinaryOperatorKind Op) {
 
 LValue CodeGenFunction::
 EmitComplexCompoundAssignmentLValue(const CompoundAssignOperator *E) {
+  ApplyAtomGroup Grp(getDebugInfo());
   CompoundFunc Op = getComplexOp(E->getOpcode());
   RValue Val;
   return ComplexExprEmitter(*this).EmitCompoundAssignLValue(E, Op, Val);
