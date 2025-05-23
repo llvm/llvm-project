@@ -12781,7 +12781,7 @@ struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
 } // namespace
 
 /// ------------------------ No Alias Address Space  ---------------------------
-// This attrubte assumes flat address space can alias all other address space
+// This attribute assumes flat address space can alias all other address space
 namespace {
 struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
   AANoAliasAddrSpaceImpl(const IRPosition &IRP, Attributor &A)
@@ -12848,6 +12848,8 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     MDNode *NoAliasASNode = nullptr;
     MDBuilder MDB(Ctx);
     for (RangeMap::const_iterator I = Map.begin(); I != Map.end(); I++) {
+      if (I.value() != true)
+        continue;
       unsigned Upper = I.stop();
       unsigned Lower = I.start();
       if (NoAliasASNode == nullptr) {
@@ -12861,7 +12863,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     Value *AssociatedValue = &getAssociatedValue();
     bool Changed = false;
 
-    auto Pred = [&](const Use &U, bool &) {
+    auto AddNoAliasAttr = [&](const Use &U, bool &) {
       if (U.get() != AssociatedValue)
         return true;
       auto *Inst = dyn_cast<Instruction>(U.getUser());
@@ -12876,8 +12878,8 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
       Changed = true;
       return true;
     };
-    (void)A.checkForAllUses(Pred, *this, getAssociatedValue(),
-                            /* CheckBBLivenessOnly=*/true);
+    (void)A.checkForAllUses(AddNoAliasAttr, *this, getAssociatedValue(),
+                            /*CheckBBLivenessOnly=*/true);
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
