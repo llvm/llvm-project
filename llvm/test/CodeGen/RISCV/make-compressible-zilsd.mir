@@ -10,6 +10,14 @@
     ret void
   }
 
+  define void @store_common_value_double_zero(ptr %a, ptr %b, ptr %c) #0 {
+  entry:
+    store double 0.0, ptr %a, align 8
+    store double 0.0, ptr %b, align 8
+    store double 0.0, ptr %c, align 8
+    ret void
+  }
+
   define void @store_common_ptr_double(double %a, double %b, double %d, ptr %p) #0 {
   entry:
     store volatile double %a, ptr %p, align 8
@@ -115,6 +123,28 @@ body:             |
     SD_RV32 renamable $x16_x17, killed renamable $x10, 0 :: (store (s64) into %ir.a)
     SD_RV32 renamable $x16_x17, killed renamable $x11, 0 :: (store (s64) into %ir.b)
     SD_RV32 killed renamable $x16_x17, killed renamable $x12, 0 :: (store (s64) into %ir.c)
+    PseudoRET
+
+...
+---
+name:            store_common_value_double_zero
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11, $x12
+
+    ; RV32-LABEL: name: store_common_value_double_zero
+    ; RV32: liveins: $x10, $x11, $x12
+    ; RV32-NEXT: {{  $}}
+    ; RV32-NEXT: $x14 = ADDI $x0, 0
+    ; RV32-NEXT: $x15 = ADDI $x0, 0
+    ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x10, 0 :: (store (s64) into %ir.a)
+    ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x11, 0 :: (store (s64) into %ir.b)
+    ; RV32-NEXT: SD_RV32 $x14_x15, killed renamable $x12, 0 :: (store (s64) into %ir.c)
+    ; RV32-NEXT: PseudoRET
+    SD_RV32 $x0_pair, killed renamable $x10, 0 :: (store (s64) into %ir.a)
+    SD_RV32 $x0_pair, killed renamable $x11, 0 :: (store (s64) into %ir.b)
+    SD_RV32 $x0_pair, killed renamable $x12, 0 :: (store (s64) into %ir.c)
     PseudoRET
 
 ...
