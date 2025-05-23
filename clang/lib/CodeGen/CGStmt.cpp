@@ -1130,7 +1130,15 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
     if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
       BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
           BoolCondVal, Stmt::getLikelihood(S.getBody()));
-    Builder.CreateCondBr(BoolCondVal, LoopBody, ExitBlock, Weights);
+    auto *I = Builder.CreateCondBr(BoolCondVal, LoopBody, ExitBlock, Weights);
+    // Key Instructions: Emit the condition and branch as separate source
+    // location atoms otherwise we may omit a step onto the loop condition in
+    // favour of the `while` keyword.
+    // FIXME: We could have the branch as the backup location for the condition,
+    // which would probably be a better experience. Explore this later.
+    if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(CondI, nullptr);
+    addInstToNewSourceAtom(I, nullptr);
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
