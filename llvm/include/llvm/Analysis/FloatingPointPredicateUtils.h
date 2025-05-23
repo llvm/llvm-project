@@ -9,7 +9,7 @@
 #ifndef LLVM_ANALYSIS_FLOATINGPOINTPREDICATEUTILS_H
 #define LLVM_ANALYSIS_FLOATINGPOINTPREDICATEUTILS_H
 
-#include "llvm/ADT/GenericFloatingPointPredicateUtils.h"
+#include "llvm/IR/GenericFloatingPointPredicateUtils.h"
 #include "llvm/IR/SSAContext.h"
 
 namespace llvm {

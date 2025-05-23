@@ -9,8 +9,8 @@
 #ifndef LLVM_CODEGEN_MACHINEFLOATINGPOINTPREDICATEUTILS_H
 #define LLVM_CODEGEN_MACHINEFLOATINGPOINTPREDICATEUTILS_H
 
-#include "llvm/ADT/GenericFloatingPointPredicateUtils.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
+#include "llvm/IR/GenericFloatingPointPredicateUtils.h"
 
 namespace llvm {
 
