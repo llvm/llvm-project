@@ -227,8 +227,6 @@ unsigned SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
 unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
                                          StringRef Prefix, StringRef Query,
                                          StringRef Category) const {
-  llvm::outs() << "Input Arguments. Prefix:  " << Prefix << " Query: " << Query
-               << " Category: " << Category << " \n";
   SectionEntries::const_iterator I = Entries.find(Prefix);
   if (I == Entries.end())
     return 0;
