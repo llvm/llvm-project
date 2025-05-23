@@ -261,7 +261,8 @@ TokenVerifier::TokenVerifier(std::string body) {
   // Let's build the actual source code Clang needs and setup some utility
   // objects.
   llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_ids(new DiagnosticIDs());
-  DiagnosticOptions diags_opts;
+  llvm::IntrusiveRefCntPtr<DiagnosticOptions> diags_opts(
+      new DiagnosticOptions());
   DiagnosticsEngine diags(diag_ids, diags_opts);
   clang::SourceManager SM(diags, file_mgr);
   auto buf = llvm::MemoryBuffer::getMemBuffer(body);

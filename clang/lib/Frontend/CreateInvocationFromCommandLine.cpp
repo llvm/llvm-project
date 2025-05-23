@@ -31,15 +31,11 @@ std::unique_ptr<CompilerInvocation>
 clang::createInvocation(ArrayRef<const char *> ArgList,
                         CreateInvocationOptions Opts) {
   assert(!ArgList.empty());
-  std::optional<DiagnosticOptions> LocalDiagOpts;
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
-  if (Opts.Diags) {
-    Diags = std::move(Opts.Diags);
-  } else {
-    LocalDiagOpts.emplace();
-    Diags = CompilerInstance::createDiagnostics(
-        Opts.VFS ? *Opts.VFS : *llvm::vfs::getRealFileSystem(), *LocalDiagOpts);
-  }
+  auto Diags = Opts.Diags
+                   ? std::move(Opts.Diags)
+                   : CompilerInstance::createDiagnostics(
+                         Opts.VFS ? *Opts.VFS : *llvm::vfs::getRealFileSystem(),
+                         new DiagnosticOptions);
 
   SmallVector<const char *, 16> Args(ArgList);
 
