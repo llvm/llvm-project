@@ -1209,6 +1209,41 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
                                                InlinedCallStack)) {
           NumOfMemProfMatchedCallSites++;
           addCallsiteMetadata(I, InlinedCallStack, Ctx);
+
+          // Check if this is an indirect call and we have GUID information
+          // from CallSiteInfo to attach value profile metadata
+          if (!CalledFunction) {
+            // This is an indirect call, look for CallSites with matching stacks
+            // that have CalleeGuids information
+            for (auto &CS : MemProfRec->CallSites) {
+              if (!CS.CalleeGuids.empty() && stackFrameIncludesInlinedCallStack(
+                                                 CS.Frames, InlinedCallStack)) {
+                // Create value profile data from the CalleeGuids
+                SmallVector<InstrProfValueData, 4> VDs;
+                uint64_t TotalCount = 0;
+
+                for (GlobalValue::GUID CalleeGUID : CS.CalleeGuids) {
+                  // For MemProf, we don't have actual call counts, so we assign
+                  // a weight of 1 to each potential target. This provides the
+                  // information needed for indirect call promotion without
+                  // specific count data.
+                  InstrProfValueData VD;
+                  VD.Value = CalleeGUID;
+                  VD.Count = 1; // Weight for ICP decision making
+                  VDs.push_back(VD);
+                  TotalCount += VD.Count;
+                }
+
+                if (!VDs.empty()) {
+                  // Attach value profile metadata for indirect call targets
+                  annotateValueSite(M, I, VDs, TotalCount,
+                                    IPVK_IndirectCallTarget, VDs.size());
+                }
+                break;
+              }
+            }
+          }
+
           // Only need to find one with a matching call stack and add a single
           // callsite metadata.
 
