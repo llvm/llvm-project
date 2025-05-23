@@ -3,7 +3,6 @@
 
 #include "CFIState.h"
 #include "ExtendedMCInstrAnalysis.h"
-#include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -21,7 +20,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cstdint>
 #include <memory>
 #include <optional>
 #include <set>
