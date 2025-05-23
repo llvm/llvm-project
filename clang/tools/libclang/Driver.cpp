@@ -49,7 +49,7 @@ clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
   std::unique_ptr<llvm::vfs::FileSystem> VFS =
       llvm::vfs::createPhysicalFileSystem();
 
-  auto Diags = CompilerInstance::createDiagnostics(*VFS, DiagOpts.release(),
+  auto Diags = CompilerInstance::createDiagnostics(*VFS, *DiagOpts,
                                                    &DiagConsumer, false);
   if (WorkingDirectory)
     if (std::error_code EC =

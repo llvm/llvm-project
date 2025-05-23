@@ -344,11 +344,11 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
 
   // We capture diagnostics as a serialized diagnostics buffer, so that we don't
   // need to keep a valid SourceManager in order to access diagnostic locations.
-  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  DiagnosticOptions DiagOpts;
   auto DiagOS =
       std::make_unique<llvm::raw_svector_ostream>(DepGraph->SerialDiagBuf);
   std::unique_ptr<DiagnosticConsumer> SerialDiagConsumer =
-      serialized_diags::create("<diagnostics>", DiagOpts.get(),
+      serialized_diags::create("<diagnostics>", DiagOpts,
                                /*MergeChildRecords=*/false, std::move(DiagOS));
 
   if (!W || argc < 2 || !argv)

@@ -615,7 +615,7 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
   llvm::raw_svector_ostream DiagOS(DiagText);
   Clang.createDiagnostics(
       *llvm::vfs::getRealFileSystem(),
-      new TextDiagnosticPrinter(DiagOS, &Clang.getDiagnosticOpts()));
+      new TextDiagnosticPrinter(DiagOS, Clang.getDiagnosticOpts()));
   Clang.setVerboseOutputStream(DiagOS);
 
   // FIXME: we should create an include-tree filesystem based on the cache key
