@@ -67,7 +67,6 @@ public:
 private:
   GlobalVariable *lookupReplacementGlobal(Value *CurrOperand);
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
-  static bool isArrayOfVectors(Type *T);
 };
 
 bool DataScalarizerVisitor::visit(Function &F) {
@@ -91,7 +90,7 @@ DataScalarizerVisitor::lookupReplacementGlobal(Value *CurrOperand) {
   return nullptr; // Not found
 }
 
-// Recursively Creates and Array like version of the given vector like type.
+// Recursively creates an array version of the given vector type.
 static Type *replaceVectorWithArray(Type *T, LLVMContext &Ctx) {
   if (auto *VecTy = dyn_cast<VectorType>(T))
     return ArrayType::get(VecTy->getElementType(),
@@ -105,7 +104,7 @@ static Type *replaceVectorWithArray(Type *T, LLVMContext &Ctx) {
   return T;
 }
 
-bool DataScalarizerVisitor::isArrayOfVectors(Type *T) {
+static bool isArrayOfVectors(Type *T) {
   if (ArrayType *ArrType = dyn_cast<ArrayType>(T))
     return isa<VectorType>(ArrType->getElementType());
   return false;
