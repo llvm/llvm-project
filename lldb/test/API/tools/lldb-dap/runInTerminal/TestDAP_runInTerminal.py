@@ -130,8 +130,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertFalse(response["success"])
         self.assertIn(
-            "Could not create a target for a program 'INVALIDPROGRAM': 'INVALIDPROGRAM' does not exist",
-            response["message"],
+            "'INVALIDPROGRAM' does not exist",
+            response["body"]["error"]["format"],
         )
 
     @skipIfLinux # FIXME: doesn't seem to work on Ubuntu 16.04.
