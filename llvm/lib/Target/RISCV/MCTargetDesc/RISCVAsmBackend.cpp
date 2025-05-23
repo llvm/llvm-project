@@ -14,6 +14,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
@@ -547,12 +548,18 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-// Check if the offset between the symbol and fragment is fully resolved,
-// unaffected by linker-relaxable instructions. Complements the generic
-// isSymbolRefDifferenceFullyResolvedImpl.
 bool RISCVAsmBackend::isPCRelFixupResolved(const MCAssembler &Asm,
                                            const MCSymbol *SymA,
                                            const MCFragment &F) {
+  // If the section does not contain linker-relaxable instructions, PC-relative
+  // fixups can be resolved.
+  if (!F.getParent()->isLinkerRelaxable())
+    return true;
+
+  // Otherwise, check if the offset between the symbol and fragment is fully
+  // resolved, unaffected by linker-relaxable fragments (e.g. instructions or
+  // offset-affected MCAlignFragment). Complements the generic
+  // isSymbolRefDifferenceFullyResolvedImpl.
   if (!PCRelTemp)
     PCRelTemp = Asm.getContext().createTempSymbol();
   PCRelTemp->setFragment(const_cast<MCFragment *>(&F));
@@ -654,7 +661,7 @@ bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
 
   // If linker relaxation is enabled and supported by the current relocation,
   // generate a relocation and then append a RELAX.
-  if (Fixup.needsRelax())
+  if (Fixup.isLinkerRelaxable())
     IsResolved = false;
   if (IsResolved &&
       (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
@@ -662,7 +669,7 @@ bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
   IsResolved = MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
                                       IsResolved, STI);
 
-  if (Fixup.needsRelax()) {
+  if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
     Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
                                      FixedValueA);

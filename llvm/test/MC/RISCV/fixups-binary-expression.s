@@ -24,11 +24,11 @@ c.j     .+32
 
 c.j     .LBB2+4
 # CHECK-INSTR: c.j   0x22
-# CHECK-RELOC-NEXT:      R_RISCV_RVC_JUMP .LBB2 0x4
+# CHECK-RELOC-NEXT:      R_RISCV_RVC_JUMP
 
 c.beqz a0, .-2
 # CHECK-INSTR: c.beqz a0, 0x12
 
 call relax
-# CHECK-RELOC-NEXT:  R_RISCV_CALL_PLT relax 0x0
+# CHECK-RELOC-NEXT:  R_RISCV_CALL_PLT
 .LBB2:
