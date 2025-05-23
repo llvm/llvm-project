@@ -132,12 +132,12 @@ multiclass BARRIER2<string asmstr, Intrinsic intrinsic, list<Predicate> requires
 // "barrier.*.aligned" variants. We use the older syntax for compatibility with
 // older versions of the PTX ISA.
 defm BARRIER_CTA_SYNC_ALIGNED_ALL : BARRIER1<"bar.sync", int_nvvm_barrier_cta_sync_aligned_all>;
-defm BARRIER_CTA_SYNC_ALIGNED : BARRIER2<"bar.sync", int_nvvm_barrier_cta_sync_aligned>;
-defm BARRIER_CTA_ARRIVE_ALIGNED : BARRIER2<"bar.arrive", int_nvvm_barrier_cta_arrive_aligned>;
+defm BARRIER_CTA_SYNC_ALIGNED : BARRIER2<"bar.sync", int_nvvm_barrier_cta_sync_aligned_count>;
+defm BARRIER_CTA_ARRIVE_ALIGNED : BARRIER2<"bar.arrive", int_nvvm_barrier_cta_arrive_aligned_count>;
 
 defm BARRIER_CTA_SYNC_ALL : BARRIER1<"barrier.sync", int_nvvm_barrier_cta_sync_all, [hasPTX<60>]>;
-defm BARRIER_CTA_SYNC : BARRIER2<"barrier.sync", int_nvvm_barrier_cta_sync, [hasPTX<60>]>;
-defm BARRIER_CTA_ARRIVE : BARRIER2<"barrier.arrive", int_nvvm_barrier_cta_arrive, [hasPTX<60>]>;
+defm BARRIER_CTA_SYNC : BARRIER2<"barrier.sync", int_nvvm_barrier_cta_sync_count, [hasPTX<60>]>;
+defm BARRIER_CTA_ARRIVE : BARRIER2<"barrier.arrive", int_nvvm_barrier_cta_arrive_count, [hasPTX<60>]>;
 
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
@@ -1028,8 +1028,23 @@ class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
 // MISC
 //
 
-def INT_NVVM_PRMT : F_MATH_3<"prmt.b32 \t$dst, $src0, $src1, $src2;", Int32Regs,
-  Int32Regs, Int32Regs, Int32Regs, int_nvvm_prmt>;
+class PRMT3Pat<Intrinsic prmt_intrinsic, PatLeaf prmt_mode>
+    : Pat<(prmt_intrinsic i32:$a, i32:$b, i32:$c),
+          (PRMT_B32rrr $a, $b, $c, prmt_mode)>;
+
+class PRMT2Pat<Intrinsic prmt_intrinsic, PatLeaf prmt_mode>
+    : Pat<(prmt_intrinsic i32:$a, i32:$c),
+          (PRMT_B32rir $a, (i32 0), $c, prmt_mode)>;
+
+def : PRMT3Pat<int_nvvm_prmt,      PrmtNONE>;
+def : PRMT3Pat<int_nvvm_prmt_f4e,  PrmtF4E>;
+def : PRMT3Pat<int_nvvm_prmt_b4e,  PrmtB4E>;
+
+def : PRMT2Pat<int_nvvm_prmt_rc8,  PrmtRC8>;
+def : PRMT2Pat<int_nvvm_prmt_ecl,  PrmtECL>;
+def : PRMT2Pat<int_nvvm_prmt_ecr,  PrmtECR>;
+def : PRMT2Pat<int_nvvm_prmt_rc16, PrmtRC16>;
+
 
 def INT_NVVM_NANOSLEEP_I : NVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u32 \t$i;",
                              [(int_nvvm_nanosleep imm:$i)]>,

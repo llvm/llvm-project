@@ -23089,10 +23089,8 @@ private:
         case RecurKind::Mul:
         case RecurKind::FMul:
         case RecurKind::FMulAdd:
-        case RecurKind::IAnyOf:
-        case RecurKind::FAnyOf:
-        case RecurKind::IFindLastIV:
-        case RecurKind::FFindLastIV:
+        case RecurKind::AnyOf:
+        case RecurKind::FindLastIV:
         case RecurKind::FMaximumNum:
         case RecurKind::FMinimumNum:
         case RecurKind::None:
@@ -23225,10 +23223,8 @@ private:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
-    case RecurKind::IAnyOf:
-    case RecurKind::FAnyOf:
-    case RecurKind::IFindLastIV:
-    case RecurKind::FFindLastIV:
+    case RecurKind::AnyOf:
+    case RecurKind::FindLastIV:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
@@ -23326,10 +23322,8 @@ private:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
-    case RecurKind::IAnyOf:
-    case RecurKind::FAnyOf:
-    case RecurKind::IFindLastIV:
-    case RecurKind::FFindLastIV:
+    case RecurKind::AnyOf:
+    case RecurKind::FindLastIV:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
