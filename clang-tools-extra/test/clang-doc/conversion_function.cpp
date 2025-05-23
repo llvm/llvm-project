@@ -11,9 +11,8 @@ struct MyStruct {
   operator T();
 };
 
-// Output incorrect conversion names.
-// CHECK-YAML:         Name:            'operator type-parameter-0-0'
-// CHECK-YAML-NOT:     Name:            'operator T'
+// Output correct conversion names.
+// CHECK-YAML:         Name:            'operator T'
 
-// CHECK-HTML-NOT: <h3 id='{{[0-9A-F]*}}'>operator T</h3>
-// CHECK-HTML-NOT: <p>public T operator T()</p>
+// CHECK-HTML: <h3 id='{{[0-9A-F]*}}'>operator T</h3>
+// CHECK-HTML: <p>public T operator T()</p>
