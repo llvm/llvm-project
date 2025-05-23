@@ -58,8 +58,7 @@ public:
   // If there were no phis and we do waterfall expansion machine verifier would
   // fail.
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 
@@ -250,8 +249,7 @@ public:
 }
 
 bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   // Setup the instruction builder with CSE.

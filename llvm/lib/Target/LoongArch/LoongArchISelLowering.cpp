@@ -5729,7 +5729,7 @@ emitSelectPseudo(MachineInstr &MI, MachineBasicBlock *BB,
     SelectMBBI = Next;
   }
 
-  F->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+  F->getProperties().resetNoPHIs();
   return TailMBB;
 }
 
