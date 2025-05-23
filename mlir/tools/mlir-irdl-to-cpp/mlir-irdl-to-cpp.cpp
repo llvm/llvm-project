@@ -79,7 +79,7 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
       "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
       llvm::cl::init("-"));
 
-  bool verifyDiagnosticsFlag;
+  bool verifyDiagnosticsFlag{};
   std::string splitInputFileFlag;
   static llvm::cl::opt<bool, true> verifyDiagnostics(
       "verify-diagnostics",
