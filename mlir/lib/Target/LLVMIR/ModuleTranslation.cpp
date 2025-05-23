@@ -240,6 +240,16 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       layoutStream << "-S" << alignment;
       continue;
     }
+    if (key.getValue() == DLTIDialect::kDataLayoutFunctionPointerAlignmentKey) {
+      auto value = cast<FunctionPointerAlignmentAttr>(entry.getValue());
+      uint64_t alignment = value.getAlignment();
+      // Skip the default function pointer alignment.
+      if (alignment == 0)
+        continue;
+      layoutStream << "-F" << (value.getFunctionDependent() ? "n" : "i")
+                   << alignment;
+      continue;
+    }
     emitError(*loc) << "unsupported data layout key " << key;
     return failure();
   }
