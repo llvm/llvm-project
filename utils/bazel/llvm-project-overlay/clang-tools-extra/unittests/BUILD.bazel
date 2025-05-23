@@ -70,6 +70,7 @@ cc_test(
         "//clang:ast",
         "//clang:basic",
         "//clang-tools-extra/clang-doc:generators",
+        "//clang-tools-extra/clang-doc:lib",
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:Support",
