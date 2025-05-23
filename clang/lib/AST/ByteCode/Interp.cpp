@@ -1703,9 +1703,25 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
                           std::optional<uint64_t> ArraySize) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
+  // Similar to CheckStore(), but with the additional CheckTemporary() call and
+  // the AccessKinds are different.
   if (!CheckTemporary(S, OpPC, Ptr, AK_Construct))
     return false;
-  if (!CheckStore(S, OpPC, Ptr))
+  if (!CheckLive(S, OpPC, Ptr, AK_Construct))
+    return false;
+  if (!CheckDummy(S, OpPC, Ptr, AK_Construct))
+    return false;
+  if (!CheckLifetime(S, OpPC, Ptr, AK_Construct))
+    return false;
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, AK_Construct))
+    return false;
+  if (!CheckGlobal(S, OpPC, Ptr))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
+  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
     return false;
 
   if (!InvalidNewDeleteExpr(S, OpPC, E))
