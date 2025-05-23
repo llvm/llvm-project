@@ -258,7 +258,7 @@ public:
   bool ContainsFileAddress(lldb::addr_t file_addr) const;
 
   static llvm::StringRef GetSyntheticSymbolPrefix() {
-    return "___lldb_unnamed_symbol";
+    return "___lldb_unnamed_symbol_";
   }
 
   /// Decode a serialized version of this object from data.
