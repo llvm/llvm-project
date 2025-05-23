@@ -88,7 +88,7 @@ static cl::opt<bool> EnableNonTrivialUnswitch(
              "following the configuration passed into the pass."));
 
 static cl::opt<int>
-    UnswitchThreshold("unswitch-threshold", cl::init(50), cl::Hidden,
+    UnswitchThreshold("unswitch-threshold", cl::init(120), cl::Hidden,
                       cl::desc("The cost threshold for unswitching a loop."));
 
 static cl::opt<bool> EnableUnswitchCostMultiplier(
@@ -98,6 +98,9 @@ static cl::opt<bool> EnableUnswitchCostMultiplier(
 static cl::opt<int> UnswitchSiblingsToplevelDiv(
     "unswitch-siblings-toplevel-div", cl::init(2), cl::Hidden,
     cl::desc("Toplevel siblings divisor for cost multiplier."));
+static cl::opt<int> UnswitchParentBlocksDiv(
+    "unswitch-parent-blocks-div", cl::init(16), cl::Hidden,
+    cl::desc("Outer loop size divisor for cost multiplier."));
 static cl::opt<int> UnswitchNumInitialUnscaledCandidates(
     "unswitch-num-initial-unscaled-candidates", cl::init(8), cl::Hidden,
     cl::desc("Number of unswitch candidates that are ignored when calculating "
@@ -2142,10 +2145,10 @@ void visitDomSubTree(DominatorTree &DT, BasicBlock *BB, CallableT Callable) {
 void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
                   bool CurrentLoopValid, bool PartiallyInvariant,
                   bool InjectedCondition, ArrayRef<Loop *> NewLoops) {
-  auto RecordLoopAsUnswitched = [&](Loop *TargetLoop, StringRef Tag) {
+  auto RecordLoopAsUnswitched = [&](Loop *TargetLoop, StringRef Tag,
+                                    StringRef DisableTag) {
     auto &Ctx = TargetLoop->getHeader()->getContext();
-    const auto &DisableMDName = (Twine(Tag) + ".disable").str();
-    MDNode *DisableMD = MDNode::get(Ctx, MDString::get(Ctx, DisableMDName));
+    MDNode *DisableMD = MDNode::get(Ctx, MDString::get(Ctx, DisableTag));
     MDNode *NewLoopID = makePostTransformationMetadata(
         Ctx, TargetLoop->getLoopID(), {Tag}, {DisableMD});
     TargetLoop->setLoopID(NewLoopID);
@@ -2155,7 +2158,8 @@ void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
   // Mark such newly-created loops as visited.
   if (!NewLoops.empty()) {
     for (Loop *NL : NewLoops)
-      RecordLoopAsUnswitched(NL, "llvm.loop.unswitch.nontrivial");
+      RecordLoopAsUnswitched(NL, "llvm.loop.unswitch.nontrivial",
+                             "llvm.loop.unswitch.nontrivial.disable");
     U.addSiblingLoops(NewLoops);
   }
 
@@ -2165,10 +2169,12 @@ void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
     if (PartiallyInvariant) {
       // Mark the new loop as partially unswitched, to avoid unswitching on
       // the same condition again.
-      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.partial");
+      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.partial",
+                             "llvm.loop.unswitch.partial.disable");
     } else if (InjectedCondition) {
       // Do the same for injection of invariant conditions.
-      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.injection");
+      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.injection",
+                             "llvm.loop.unswitch.injection.disable");
     } else
       U.revisitCurrentLoop();
   } else
@@ -2844,7 +2850,8 @@ static int CalculateUnswitchCostMultiplier(
   auto *ParentL = L.getParentLoop();
   int ParentSizeMultiplier = 1;
   if (ParentL)
-    ParentSizeMultiplier = std::max((int)ParentL->getNumBlocks(), 1);
+    ParentSizeMultiplier = std::max(
+        (int)ParentL->getNumBlocks() / (int)UnswitchParentBlocksDiv, 1);
 
   int SiblingsCount = (ParentL ? ParentL->getSubLoopsVector().size()
                                : std::distance(LI.begin(), LI.end()));
