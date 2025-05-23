@@ -16,6 +16,7 @@ from __future__ import unicode_literals
 
 import argparse
 import glob
+import hashlib
 import html
 import json
 import mmap
@@ -312,9 +313,24 @@ class Symbolizer:
           except Exception as e:
             print("Failed to parse {}: {}".format(filename, e), file=sys.stderr)
             continue
-          if bid is not None:
-            if bid in self.__index:
-              print("Duplicate build ID {} for {} and {}".format(bid, self.__index[bid], filename), file=sys.stderr)
+          if bid is None:
+            continue
+
+          if bid in self.__index:
+            index_filename = self.__index[bid]
+
+            if os.path.samefile(index_filename, filename):
+              continue
+
+            with open(filename, "rb") as f:
+              file_hash = hashlib.file_digest(f, "sha256")
+
+            with open(index_filename, "rb") as f:
+              index_file_hash = hashlib.file_digest(f, "sha256")
+
+            if index_file_hash.digest() != file_hash.digest():
+              print("Build ID collision! Files share the same BuildId ({}) but their contents differ. Files {} and {} ".format(bid, filename, index_filename), file=sys.stderr)
+          else:
             self.__index[bid] = filename
 
   def symbolize_line(self, line):
