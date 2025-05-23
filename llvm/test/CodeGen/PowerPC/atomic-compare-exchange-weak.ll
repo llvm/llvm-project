@@ -6,7 +6,6 @@
 ; RUN: llc < %s -ppc-asm-full-reg-names  -mtriple=powerpc-ibm-aix7.2.0.0 -mcpu=pwr8  -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
 ; RUN: llc < %s -ppc-asm-full-reg-names  -mtriple=powerpc64-ibm-aix7.2.0.0 -mcpu=pwr8  -verify-machineinstrs | FileCheck %s --check-prefix=CHECK64
 
-
 define i32 @foo(ptr noundef %cp, ptr noundef %old, i32 noundef %c)  {
 entry:
   %cp.addr = alloca ptr, align 4
@@ -68,6 +67,7 @@ cmpxchg.continue:                                 ; preds = %cmpxchg.store_expec
 ; CHECK-NEXT: 	isel r3, r4, r3, 4*cr1+eq
 ; CHECK-NEXT: 	stb r3, -17(r1)
 ; CHECK-NEXT: 	blr
+
 ; CHECK64:       .foo:
 ; CHECK64-NEXT:  # %bb.0:                                # %entry
 ; CHECK64-NEXT:  	lwz r7, 0(r4)
