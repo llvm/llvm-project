@@ -15,6 +15,7 @@
 #include "llvm-objdump.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
+#include "llvm/Object/OffloadBundle.h"
 #include "llvm/Support/Alignment.h"
 
 using namespace llvm;
@@ -51,7 +52,7 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index) {
 }
 
 /// Print the embedded offloading contents of an ObjectFile \p O.
-void llvm::dumpOffloadBinary(const ObjectFile &O, std::string ArchName) {
+void llvm::dumpOffloadBinary(const ObjectFile &O, StringRef ArchName) {
   if (!O.isELF() && !O.isCOFF()) {
     reportWarning(
         "--offloading is currently only supported for COFF and ELF targets",
@@ -75,9 +76,14 @@ void llvm::dumpOffloadBinary(const ObjectFile &O, std::string ArchName) {
 // and dump them into Code Object files
 // if -d is specified, disassemble the Code Object Files
 // if -arch=-name is specified, only dump the Entries that match the target arch
-void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, std::string ArchName) {
-  assert((O.isELF() || O.isCOFF()) && "Invalid file type");
-  // Collect all Bundles and their Entries ....
+void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, StringRef ArchName) {
+  if (!O.isELF() && !O.isCOFF()) {
+    reportWarning(
+        "--offloading is currently only supported for COFF and ELF targets",
+        O.getFileName());
+    return;
+  }
+
   SmallVector<llvm::object::OffloadBundleFatBin> FoundBundles;
   SmallVector<OffloadBundleEntry> FoundEntries;
 
@@ -85,38 +91,23 @@ void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, std::string ArchName)
     reportError(O.getFileName(), "while extracting offload FatBin bundles: " +
                                      toString(std::move(Err)));
 
-  // Now filter based on if arch-name is specified
-  SmallVectorImpl<llvm::object::OffloadBundleFatBin>::iterator BundleIter =
-      FoundBundles.begin();
-  for (uint64_t bundle_num = 0; bundle_num < FoundBundles.size();
-       bundle_num++) {
-    if (!ArchName.empty())
-      FoundEntries = BundleIter->EntryIDContains(StringRef(ArchName));
-    else
-      FoundEntries = BundleIter->getEntries();
+  for (const auto &[BundleNum, Bundle] : llvm::enumerate(FoundBundles)) {
+    for (OffloadBundleEntry &Entry : Bundle.getEntries()) {
+      if (!ArchName.empty() && !Entry.ID.contains(ArchName))
+        continue;
 
-    // now we have a list of Found Entries .... dump them
-    SmallVectorImpl<OffloadBundleEntry>::iterator FoundIter =
-        FoundEntries.begin();
-    for (uint64_t entry_num = 0; entry_num < FoundEntries.size(); entry_num++) {
-      // create file name for this object file:  <source-filename>:<Bundle
+      // create file name for this object file:  <source-filename>.<Bundle
       // Number>.<EntryID>
-      std::string str = BundleIter->getFileName().str() + ":" +
-                        itostr(bundle_num) + "." + FoundIter->ID.str();
-      StringRef OutputFilename = StringRef(str);
-      if (Error Err = object::extractCodeObject(
-              O, FoundIter->Offset, FoundIter->Size, OutputFilename))
+      std::string str = Bundle.getFileName().str() + "." + itostr(BundleNum) +
+                        "." + Entry.ID.str();
+      if (Error Err = object::extractCodeObject(O, Entry.Offset, Entry.Size,
+                                                StringRef(str)))
         reportError(O.getFileName(),
                     "while extracting offload Bundle Entries: " +
                         toString(std::move(Err)));
-
-      // TODO: If -d was specified, disasseble the Code Object too
-
-      ++FoundIter;
-    } // end of for found_entries loop
-
-    ++BundleIter;
-  } // end of for Bundles loop
+      outs() << "Extracting offload bundle: " << str << "\n";
+    }
+  }
 }
 
 /// Print the contents of an offload binary file \p OB. This may contain
