@@ -656,7 +656,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
       if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
           MI.getOpcode() == TargetOpcode::LIFETIME_END) {
         int Slot = getStartOrEndSlot(MI);
-        if (Slot < 0) {
+        if (Slot < 0 || MFI->isObjectPreAllocated(Slot)) {
           Markers.push_back(&MI);
           continue;
         }
