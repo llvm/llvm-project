@@ -192,7 +192,7 @@ exit:                               ; preds = %bb2, %bb3, %bb4
 ; CHECK-LABEL: test5:
 ; ALIGN: .p2align 6
 ; ALIGN-NEXT: .LBB4_1: # %while.cond
-define dso_local i32 @test5(i32 %n) #0 {
+define i32 @test5(i32 %n) #0 {
 entry:
   %retval = alloca i32, align 4
   %n.addr = alloca i32, align 4
@@ -202,20 +202,20 @@ entry:
   br label %while.cond
 
 while.cond:                                       ; preds = %while.body, %entry
-  %0 = load i32, ptr %i, align 4
-  %1 = load i32, ptr %n.addr, align 4
-  %cmp = icmp slt i32 %0, %1
+  %i.val = load i32, ptr %i, align 4
+  %n.val = load i32, ptr %n.addr, align 4
+  %cmp = icmp slt i32 %i.val, %n.val
   br i1 %cmp, label %while.body, label %while.end
 
 while.body:                                       ; preds = %while.cond
-  %2 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %2, 1
+  %tmp = load i32, ptr %i, align 4
+  %inc = add nsw i32 %tmp, 1
   store i32 %inc, ptr %i, align 4
   br label %while.cond, !llvm.loop !0
 
 while.end:                                        ; preds = %while.cond
-  %3 = load i32, ptr %retval, align 4
-  ret i32 %3
+  %val = load i32, ptr %retval, align 4
+  ret i32 %val
 }
 
 
