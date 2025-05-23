@@ -1958,6 +1958,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
         } else {
           Value *OpTyVal = Op;
           if (OpTy->isTargetExtTy()) {
+            // We need to do this in order to be consistent with how target ext types are handled in `processInstrAfterVisit`
             OpTyVal = getNormalizedPoisonValue(OpTy);
           }
           CallInst *AssignCI =
@@ -2077,6 +2078,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
     Type *OpElemTy = GR->findDeducedElementType(Op);
     Value *NewOp = Op;
     if (OpTy->isTargetExtTy()) {
+      // Since this value is replaced by poison, we need to do the same in `insertAssignTypeIntrs`.
       Value *OpTyVal = getNormalizedPoisonValue(OpTy);
       NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
                               {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
