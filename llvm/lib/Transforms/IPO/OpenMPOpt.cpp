@@ -1535,7 +1535,7 @@ private:
     // safely remove it.
     // TODO: This should be somewhere more common in the future.
     if (GlobalVariable *GV = M.getNamedGlobal("__llvm_rpc_client")) {
-      if (GV->getNumUses() >= 1)
+      if (GV->hasNUsesOrMore(1))
         return false;
 
       GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
@@ -5734,10 +5734,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto IsCalled = [&](Function &F) {
     if (Kernels.contains(&F))
       return true;
-    for (const User *U : F.users())
-      if (!isa<BlockAddress>(U))
-        return true;
-    return false;
+    return !F.use_empty();
   };
 
   auto EmitRemark = [&](Function &F) {
@@ -5855,8 +5852,6 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
 
   if (PrintModuleBeforeOptimizations)
     LLVM_DEBUG(dbgs() << TAG << "Module before OpenMPOpt CGSCC Pass:\n" << M);
-
-  KernelSet Kernels = getDeviceKernels(M);
 
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();

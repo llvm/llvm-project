@@ -16,7 +16,7 @@ namespace std {
 void operator delete(void*, std::destroying_delete_t); // ok, just a placement delete
 
 struct A;
-void operator delete(A*, std::destroying_delete_t); // expected-error {{first parameter of 'operator delete' must have type 'void *'}}
+void operator delete(A*, std::destroying_delete_t); // expected-error {{1st parameter of 'operator delete' must have type 'void *'}}
 
 struct A {
   void operator delete(A*, std::destroying_delete_t);
@@ -27,7 +27,7 @@ struct A {
   // FIXME: It's probably a language defect that we permit usual operator delete to be variadic.
   void operator delete(A*, std::destroying_delete_t, std::size_t, ...);
 
-  void operator delete(struct X*, std::destroying_delete_t, std::size_t, ...); // expected-error {{first parameter of 'operator delete' must have type 'A *'}}
+  void operator delete(struct X*, std::destroying_delete_t, std::size_t, ...); // expected-error {{1st parameter of destroying 'operator delete' must have type 'A *'}}
 
   void operator delete(void*, std::size_t);
 };
@@ -191,7 +191,7 @@ namespace delete_from_new {
 namespace GH96191 {
   struct S {};
   struct T {
-    void operator delete(S) { } // expected-error {{first parameter of 'operator delete' must have type 'void *'}}
+    void operator delete(S) { } // expected-error {{1st parameter of 'operator delete' must have type 'void *'}}
   };
 
   void foo(T *t) { delete t; }

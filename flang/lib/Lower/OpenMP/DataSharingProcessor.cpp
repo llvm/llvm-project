@@ -67,6 +67,8 @@ void DataSharingProcessor::processStep1(
 
 void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
   // 'sections' lastprivate is handled by genOMP()
+  if (mlir::isa<mlir::omp::SectionOp>(op))
+    return;
   if (!mlir::isa<mlir::omp::SectionsOp>(op)) {
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     copyLastPrivatize(op);
@@ -211,14 +213,15 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   // so, we won't need to explicitely handle block objects (or forget to do
   // so).
   for (auto *sym : explicitlyPrivatizedSymbols)
-    allPrivatizedSymbols.insert(sym);
+    if (!sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
+      allPrivatizedSymbols.insert(sym);
 }
 
 bool DataSharingProcessor::needBarrier() {
   // Emit implicit barrier to synchronize threads and avoid data races on
   // initialization of firstprivate variables and post-update of lastprivate
   // variables.
-  // Emit implicit barrier for linear clause. Maybe on somewhere else.
+  // Emit implicit barrier for linear clause in the OpenMPIRBuilder.
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
         (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||

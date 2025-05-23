@@ -734,10 +734,9 @@ void llvm::format_provider<ObjectFile::Strata>::format(
   }
 }
 
-
-Symtab *ObjectFile::GetSymtab() {
+Symtab *ObjectFile::GetSymtab(bool can_create) {
   ModuleSP module_sp(GetModule());
-  if (module_sp) {
+  if (module_sp && can_create) {
     // We can't take the module lock in ObjectFile::GetSymtab() or we can
     // deadlock in DWARF indexing when any file asks for the symbol table from
     // an object file. This currently happens in the preloading of symbols in

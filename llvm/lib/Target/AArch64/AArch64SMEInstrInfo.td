@@ -10,12 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 2,
-                             [SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 1,
+                             [SDTCisInt<0>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 2,
-                             [SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 1,
+                             [SDTCisInt<0>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_cond_smstart : SDNode<"AArch64ISD::COND_SMSTART", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_cond_smstop  : SDNode<"AArch64ISD::COND_SMSTOP", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
 def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
@@ -175,12 +183,31 @@ let Predicates = [HasSME_MOP4, HasSMEI16I64] in {
 }
 
 let Predicates = [HasSME_TMOP] in {
-def STMOPA_M2ZZZI_BtoS  : sme_int_sparse_outer_product_i32<0b00100, ZZ_b_mul_r, ZPR8,  "stmopa">;
-def STMOPA_M2ZZZI_HtoS  : sme_int_sparse_outer_product_i32<0b00101, ZZ_h_mul_r, ZPR16, "stmopa">;
-def UTMOPA_M2ZZZI_BtoS  : sme_int_sparse_outer_product_i32<0b11100, ZZ_b_mul_r, ZPR8,  "utmopa">;
-def UTMOPA_M2ZZZI_HtoS  : sme_int_sparse_outer_product_i32<0b10101, ZZ_h_mul_r, ZPR16, "utmopa">;
-def SUTMOPA_M2ZZZI_BtoS : sme_int_sparse_outer_product_i32<0b01100, ZZ_b_mul_r, ZPR8, "sutmopa">;
-def USTMOPA_M2ZZZI_BtoS : sme_int_sparse_outer_product_i32<0b10100, ZZ_b_mul_r, ZPR8, "ustmopa">;
+  defm STMOPA_M2ZZZI_BtoS  : sme_tmopa_32b<0b00100, ZZ_b_mul_r, ZPR8,  nxv16i8, "stmopa", int_aarch64_sme_stmopa_za32>;
+  defm STMOPA_M2ZZZI_HtoS  : sme_tmopa_32b<0b00101, ZZ_h_mul_r, ZPR16, nxv8i16, "stmopa", int_aarch64_sme_stmopa_za32>;
+  defm UTMOPA_M2ZZZI_BtoS  : sme_tmopa_32b<0b11100, ZZ_b_mul_r, ZPR8,  nxv16i8, "utmopa", int_aarch64_sme_utmopa_za32>;
+  defm UTMOPA_M2ZZZI_HtoS  : sme_tmopa_32b<0b10101, ZZ_h_mul_r, ZPR16, nxv8i16, "utmopa", int_aarch64_sme_utmopa_za32>;
+  defm SUTMOPA_M2ZZZI_BtoS : sme_tmopa_32b<0b01100, ZZ_b_mul_r, ZPR8,  nxv16i8, "sutmopa", int_aarch64_sme_sutmopa_za32>;
+  defm USTMOPA_M2ZZZI_BtoS : sme_tmopa_32b<0b10100, ZZ_b_mul_r, ZPR8,  nxv16i8, "ustmopa", int_aarch64_sme_ustmopa_za32>;
+  defm FTMOPA_M2ZZZI_HtoS  : sme_tmopa_32b<0b11000, ZZ_h_mul_r, ZPR16, nxv8f16,  "ftmopa", int_aarch64_sme_ftmopa_za32, [FPCR]>;
+  defm FTMOPA_M2ZZZI_StoS  : sme_tmopa_32b<0b00000, ZZ_s_mul_r, ZPR32, nxv4f32,  "ftmopa", int_aarch64_sme_ftmopa_za32, [FPCR]>;
+  defm BFTMOPA_M2ZZZI_HtoS : sme_tmopa_32b<0b10000, ZZ_h_mul_r, ZPR16, nxv8bf16, "bftmopa", int_aarch64_sme_ftmopa_za32, [FPCR]>;
+}
+
+let Predicates = [HasSME_TMOP, HasSMEF16F16] in {
+  defm FTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b10001, ZZ_h_mul_r, ZPR16, nxv8f16, "ftmopa", int_aarch64_sme_ftmopa_za16, [FPCR]>;
+}
+
+let Predicates = [HasSME_TMOP, HasSMEB16B16] in {
+  defm BFTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b11001, ZZ_h_mul_r, ZPR16, nxv8bf16, "bftmopa", int_aarch64_sme_ftmopa_za16, [FPCR]>;
+}
+
+let Predicates = [HasSME_TMOP, HasSMEF8F16] in {
+  defm FTMOPA_M2ZZZI_BtoH : sme_tmopa_16b<0b01001, ZZ_b_mul_r, ZPR8, nxv16i8, "ftmopa", int_aarch64_sme_ftmopa_za16, [FPMR, FPCR]>;
+}
+
+let Predicates = [HasSME_TMOP, HasSMEF8F32] in {
+  defm FTMOPA_M2ZZZI_BtoS : sme_tmopa_32b<0b01000, ZZ_b_mul_r, ZPR8, nxv16i8, "ftmopa", int_aarch64_sme_ftmopa_za32, [FPMR, FPCR]>;
 }
 
 let Predicates = [HasSME] in {
@@ -286,15 +313,15 @@ def MSRpstatePseudo :
   let Defs = [VG];
 }
 
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b1, timm0_31:$condition)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b0, timm0_31:$condition)>;
+def : Pat<(AArch64_cond_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b1, timm0_31:$condition, GPR64:$pstatesm)>;
+def : Pat<(AArch64_cond_smstop (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b0, timm0_31:$condition, GPR64:$pstatesm)>;
 
 // Unconditional start/stop
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
 
 
@@ -1064,12 +1091,6 @@ let Predicates = [HasSME_MOP4] in {
   defm FMOP4S : sme2_fmop4as_fp32_non_widening<1, "fmop4s", "int_aarch64_sme_mop4s">;
 }
 
-let Predicates = [HasSME_TMOP] in {
-  def FTMOPA_M2ZZZI_HtoS  : sme_tmopa_32b<0b11000, ZZ_h_mul_r, ZPR16, "ftmopa">;
-  def FTMOPA_M2ZZZI_StoS  : sme_tmopa_32b<0b00000, ZZ_s_mul_r, ZPR32, "ftmopa">;
-  def BFTMOPA_M2ZZZI_HtoS : sme_tmopa_32b<0b10000, ZZ_h_mul_r, ZPR16, "bftmopa">;
-}
-
 let Predicates = [HasSME2p2] in {
   defm FMUL_2ZZ  : sme2_multi2_fmul_sm<"fmul">;
   defm FMUL_2Z2Z : sme2_multi2_fmul_mm< "fmul">;
@@ -1078,24 +1099,8 @@ let Predicates = [HasSME2p2] in {
 
 } // [HasSME2p2]
 
-let Predicates = [HasSME_TMOP, HasSMEB16B16] in {
-  def BFTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b11001, ZZ_h_mul_r, ZPR16, "bftmopa">;
-}
-
-let Predicates = [HasSME_TMOP, HasSMEF8F32], Uses = [FPMR, FPCR] in {
-  def FTMOPA_M2ZZZI_BtoS : sme_tmopa_32b<0b01000, ZZ_b_mul_r, ZPR8, "ftmopa">;
-}
-
-let Predicates = [HasSME_TMOP, HasSMEF8F16], Uses = [FPMR, FPCR] in {
-  def FTMOPA_M2ZZZI_BtoH : sme_tmopa_16b<0b01001, ZZ_b_mul_r, ZPR8, "ftmopa">;
-}
-
-let Predicates = [HasSME_MOP4, HasSMEF8F16], Uses = [FPMR, FPCR] in {
-  defm FMOP4A : sme2_fmop4a_fp8_fp16_2way<"fmop4a">;
-}
-
-let Predicates = [HasSME_TMOP, HasSMEF16F16] in {
-  def FTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b10001, ZZ_h_mul_r, ZPR16, "ftmopa">;
+let Predicates = [HasSME_MOP4, HasSMEF8F16] in {
+  defm FMOP4A : sme2_fmop4a_fp8_fp16_2way<"fmop4a", "int_aarch64_sme_fp8_fmop4a_za16">;
 }
 
 let Predicates = [HasSME_MOP4, HasSMEF16F16] in {
@@ -1108,10 +1113,8 @@ let Predicates = [HasSME2, HasSVEBFSCALE] in {
   defm BFMUL : sme2_bfmul_multi<"bfmul">;
 }
 
-let Uses = [FPMR, FPCR] in {
 let Predicates = [HasSME_MOP4, HasSMEF8F32] in {
-  defm FMOP4A : sme2_fmop4a_fp8_fp32_4way<"fmop4a">;
-}
+  defm FMOP4A : sme2_fmop4a_fp8_fp32_4way<"fmop4a", "int_aarch64_sme_fp8_fmop4a_za32">;
 }
 
 let Predicates = [HasSME_MOP4, HasSMEB16B16] in {

@@ -232,7 +232,10 @@ LLVMFunctionType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 
 LLVMFunctionType LLVMFunctionType::clone(TypeRange inputs,
                                          TypeRange results) const {
-  assert(results.size() == 1 && "expected a single result type");
+  if (results.size() != 1 || !isValidResultType(results[0]))
+    return {};
+  if (!llvm::all_of(inputs, isValidArgumentType))
+    return {};
   return get(results[0], llvm::to_vector(inputs), isVarArg());
 }
 
@@ -849,18 +852,6 @@ Type mlir::LLVM::getVectorType(Type elementType,
                          /*isScalable=*/true);
   return getVectorType(elementType, numElements.getFixedValue(),
                        /*isScalable=*/false);
-}
-
-Type mlir::LLVM::getFixedVectorType(Type elementType, unsigned numElements) {
-  assert(VectorType::isValidElementType(elementType) &&
-         "incompatible element type");
-  return VectorType::get(numElements, elementType);
-}
-
-Type mlir::LLVM::getScalableVectorType(Type elementType, unsigned numElements) {
-  // LLVM vectors are always 1-D, hence only 1 bool is required to mark it as
-  // scalable/non-scalable.
-  return VectorType::get(numElements, elementType, /*scalableDims=*/true);
 }
 
 llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {

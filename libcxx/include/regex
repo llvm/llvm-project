@@ -840,6 +840,7 @@ _LIBCPP_PUSH_MACROS
 #    define _LIBCPP_REGEX_COMPLEXITY_FACTOR 4096
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace regex_constants {
 
@@ -3929,7 +3930,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_character_escape(
       if (__hd == -1)
         std::__throw_regex_error<regex_constants::error_escape>();
       __sum = 16 * __sum + static_cast<unsigned>(__hd);
-      _LIBCPP_FALLTHROUGH();
+      [[__fallthrough__]];
     case 'x':
       ++__first;
       if (__first == __last)
@@ -5805,6 +5806,7 @@ regex_replace(const _CharT* __s,
   return __r;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #    if _LIBCPP_STD_VER >= 17

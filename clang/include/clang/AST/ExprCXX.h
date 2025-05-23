@@ -41,6 +41,7 @@
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
@@ -2235,6 +2236,98 @@ enum class CXXNewInitializationStyle {
   Braces
 };
 
+enum class TypeAwareAllocationMode : unsigned { No, Yes };
+
+inline bool isTypeAwareAllocation(TypeAwareAllocationMode Mode) {
+  return Mode == TypeAwareAllocationMode::Yes;
+}
+
+inline TypeAwareAllocationMode
+typeAwareAllocationModeFromBool(bool IsTypeAwareAllocation) {
+  return IsTypeAwareAllocation ? TypeAwareAllocationMode::Yes
+                               : TypeAwareAllocationMode::No;
+}
+
+enum class AlignedAllocationMode : unsigned { No, Yes };
+
+inline bool isAlignedAllocation(AlignedAllocationMode Mode) {
+  return Mode == AlignedAllocationMode::Yes;
+}
+
+inline AlignedAllocationMode alignedAllocationModeFromBool(bool IsAligned) {
+  return IsAligned ? AlignedAllocationMode::Yes : AlignedAllocationMode::No;
+}
+
+enum class SizedDeallocationMode : unsigned { No, Yes };
+
+inline bool isSizedDeallocation(SizedDeallocationMode Mode) {
+  return Mode == SizedDeallocationMode::Yes;
+}
+
+inline SizedDeallocationMode sizedDeallocationModeFromBool(bool IsSized) {
+  return IsSized ? SizedDeallocationMode::Yes : SizedDeallocationMode::No;
+}
+
+struct ImplicitAllocationParameters {
+  ImplicitAllocationParameters(QualType AllocType,
+                               TypeAwareAllocationMode PassTypeIdentity,
+                               AlignedAllocationMode PassAlignment)
+      : Type(AllocType), PassTypeIdentity(PassTypeIdentity),
+        PassAlignment(PassAlignment) {
+    if (!Type.isNull())
+      Type = Type.getUnqualifiedType();
+  }
+  explicit ImplicitAllocationParameters(AlignedAllocationMode PassAlignment)
+      : PassTypeIdentity(TypeAwareAllocationMode::No),
+        PassAlignment(PassAlignment) {}
+
+  unsigned getNumImplicitArgs() const {
+    unsigned Count = 1; // Size
+    if (isTypeAwareAllocation(PassTypeIdentity))
+      ++Count;
+    if (isAlignedAllocation(PassAlignment))
+      ++Count;
+    return Count;
+  }
+
+  QualType Type;
+  TypeAwareAllocationMode PassTypeIdentity;
+  AlignedAllocationMode PassAlignment;
+};
+
+struct ImplicitDeallocationParameters {
+  ImplicitDeallocationParameters(QualType DeallocType,
+                                 TypeAwareAllocationMode PassTypeIdentity,
+                                 AlignedAllocationMode PassAlignment,
+                                 SizedDeallocationMode PassSize)
+      : Type(DeallocType), PassTypeIdentity(PassTypeIdentity),
+        PassAlignment(PassAlignment), PassSize(PassSize) {
+    if (!Type.isNull())
+      Type = Type.getUnqualifiedType();
+  }
+
+  ImplicitDeallocationParameters(AlignedAllocationMode PassAlignment,
+                                 SizedDeallocationMode PassSize)
+      : PassTypeIdentity(TypeAwareAllocationMode::No),
+        PassAlignment(PassAlignment), PassSize(PassSize) {}
+
+  unsigned getNumImplicitArgs() const {
+    unsigned Count = 1; // Size
+    if (isTypeAwareAllocation(PassTypeIdentity))
+      ++Count;
+    if (isAlignedAllocation(PassAlignment))
+      ++Count;
+    if (isSizedDeallocation(PassSize))
+      ++Count;
+    return Count;
+  }
+
+  QualType Type;
+  TypeAwareAllocationMode PassTypeIdentity;
+  AlignedAllocationMode PassAlignment;
+  SizedDeallocationMode PassSize;
+};
+
 /// Represents a new-expression for memory allocation and constructor
 /// calls, e.g: "new CXXNewExpr(foo)".
 class CXXNewExpr final
@@ -2290,7 +2383,8 @@ class CXXNewExpr final
 
   /// Build a c++ new expression.
   CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
-             FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
+             FunctionDecl *OperatorDelete,
+             const ImplicitAllocationParameters &IAP,
              bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
              SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
              CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
@@ -2305,7 +2399,7 @@ public:
   /// Create a c++ new expression.
   static CXXNewExpr *
   Create(const ASTContext &Ctx, bool IsGlobalNew, FunctionDecl *OperatorNew,
-         FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
+         FunctionDecl *OperatorDelete, const ImplicitAllocationParameters &IAP,
          bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
          SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
          CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
@@ -2394,6 +2488,10 @@ public:
     return const_cast<CXXNewExpr *>(this)->getPlacementArg(I);
   }
 
+  unsigned getNumImplicitArgs() const {
+    return implicitAllocationParameters().getNumImplicitArgs();
+  }
+
   bool isParenTypeId() const { return CXXNewExprBits.IsParenTypeId; }
   SourceRange getTypeIdParens() const {
     return isParenTypeId() ? getTrailingObjects<SourceRange>()[0]
@@ -2437,6 +2535,15 @@ public:
   /// parameter.
   bool doesUsualArrayDeleteWantSize() const {
     return CXXNewExprBits.UsualArrayDeleteWantsSize;
+  }
+
+  /// Provides the full set of information about expected implicit
+  /// parameters in this call
+  ImplicitAllocationParameters implicitAllocationParameters() const {
+    return ImplicitAllocationParameters{
+        getAllocatedType(),
+        typeAwareAllocationModeFromBool(CXXNewExprBits.ShouldPassTypeIdentity),
+        alignedAllocationModeFromBool(CXXNewExprBits.ShouldPassAlignment)};
   }
 
   using arg_iterator = ExprIterator;
@@ -2838,7 +2945,7 @@ public:
 
   /// Retrieve the argument types.
   ArrayRef<TypeSourceInfo *> getArgs() const {
-    return llvm::ArrayRef(getTrailingObjects<TypeSourceInfo *>(), getNumArgs());
+    return getTrailingObjects<TypeSourceInfo *>(getNumArgs());
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
@@ -3512,7 +3619,7 @@ public:
                                   ArrayRef<CleanupObject> objects);
 
   ArrayRef<CleanupObject> getObjects() const {
-    return llvm::ArrayRef(getTrailingObjects<CleanupObject>(), getNumObjects());
+    return getTrailingObjects<CleanupObject>(getNumObjects());
   }
 
   unsigned getNumObjects() const { return ExprWithCleanupsBits.NumObjects; }
@@ -4311,7 +4418,7 @@ class SizeOfPackExpr final
     assert((!Length || PartialArgs.empty()) &&
            "have partial args for non-dependent sizeof... expression");
     auto *Args = getTrailingObjects<TemplateArgument>();
-    std::uninitialized_copy(PartialArgs.begin(), PartialArgs.end(), Args);
+    llvm::uninitialized_copy(PartialArgs, Args);
     setDependence(Length ? ExprDependence::None
                          : ExprDependence::ValueInstantiation);
   }
@@ -4416,8 +4523,7 @@ class PackIndexingExpr final
         FullySubstituted(FullySubstituted) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
-    std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
-                            Exprs);
+    llvm::uninitialized_copy(SubstitutedExprs, Exprs);
 
     setDependence(computeDependence(this));
     if (!isInstantiationDependent())
@@ -4441,6 +4547,7 @@ public:
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
 
+  // The index expression and all elements of the pack have been substituted.
   bool isFullySubstituted() const { return FullySubstituted; }
 
   /// Determine if the expression was expanded to empty.
@@ -5018,20 +5125,20 @@ public:
 
   void updateDependence() { setDependence(computeDependence(this)); }
 
-  ArrayRef<Expr *> getInitExprs() {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  MutableArrayRef<Expr *> getInitExprs() {
+    return getTrailingObjects<Expr *>(NumExprs);
   }
 
-  const ArrayRef<Expr *> getInitExprs() const {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  ArrayRef<Expr *> getInitExprs() const {
+    return getTrailingObjects<Expr *>(NumExprs);
   }
 
   ArrayRef<Expr *> getUserSpecifiedInitExprs() {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumUserSpecifiedExprs);
+    return getTrailingObjects<Expr *>(NumUserSpecifiedExprs);
   }
 
-  const ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
-    return ArrayRef(getTrailingObjects<Expr *>(), NumUserSpecifiedExprs);
+  ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
+    return getTrailingObjects<Expr *>(NumUserSpecifiedExprs);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return LParenLoc; }

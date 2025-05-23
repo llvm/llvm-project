@@ -995,6 +995,10 @@ public:
   // overflow sub
   bool matchSuboCarryOut(const MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
+  // (sext_inreg (sext_inreg x, K0), K1)
+  bool matchRedundantSextInReg(MachineInstr &Root, MachineInstr &Other,
+                               BuildFnTy &MatchInfo) const;
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;

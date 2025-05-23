@@ -414,7 +414,8 @@ let Class = PropertyTypeCase<APValue, "Union"> in {
     let Read = [{ node.getUnionValue() }];
   }
   def : Creator<[{
-    return APValue(cast<clang::FieldDecl>(fieldDecl), std::move(value));
+    // node.getUnionField() / fieldDecl can be null, thus, using `cast_if_present`
+    return APValue(cast_if_present<clang::FieldDecl>(fieldDecl), std::move(value));
   }]>;
 }
 let Class = PropertyTypeCase<APValue, "AddrLabelDiff"> in {
@@ -877,11 +878,14 @@ let Class = PropertyTypeCase<TemplateArgument, "Expression"> in {
   def : Property<"expression", ExprRef> {
     let Read = [{ node.getAsExpr() }];
   }
+  def : Property<"IsCanonical", Bool> {
+    let Read = [{ node.isCanonicalExpr() }];
+  }
   def : Property<"isDefaulted", Bool> {
     let Read = [{ node.getIsDefaulted() }];
   }
   def : Creator<[{
-    return TemplateArgument(expression, isDefaulted);
+    return TemplateArgument(expression, IsCanonical, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {

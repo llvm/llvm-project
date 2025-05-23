@@ -474,6 +474,15 @@ bool OptionValue::SetArchSpecValue(ArchSpec arch_spec) {
   return false;
 }
 
+bool OptionValue::SetFormatEntityValue(const FormatEntity::Entry &entry) {
+  std::lock_guard<std::mutex> lock(m_mutex);
+  if (OptionValueFormatEntity *option_value = GetAsFormatEntity()) {
+    option_value->SetCurrentValue(entry);
+    return true;
+  }
+  return false;
+}
+
 const char *OptionValue::GetBuiltinTypeAsCString(Type t) {
   switch (t) {
   case eTypeInvalid:

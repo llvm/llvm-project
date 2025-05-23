@@ -127,7 +127,7 @@ static llvm::cl::opt<OutputFormatTy>
                llvm::cl::init(OutputFormatTy::yaml),
                llvm::cl::cat(ClangDocCategory));
 
-std::string getFormatString() {
+static std::string getFormatString() {
   switch (FormatEnum) {
   case OutputFormatTy::yaml:
     return "yaml";
@@ -144,11 +144,11 @@ std::string getFormatString() {
 // GetMainExecutable (since some platforms don't support taking the
 // address of main, and some platforms can't implement GetMainExecutable
 // without being given the address of a function in the main executable).
-std::string getExecutablePath(const char *Argv0, void *MainAddr) {
+static std::string getExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
-llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
+static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code FileErr;
   llvm::SmallString<128> FilePath(UserAssetPath);
@@ -168,8 +168,8 @@ llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   return llvm::Error::success();
 }
 
-llvm::Error getDefaultAssetFiles(const char *Argv0,
-                                 clang::doc::ClangDocContext &CDCtx) {
+static llvm::Error getDefaultAssetFiles(const char *Argv0,
+                                        clang::doc::ClangDocContext &CDCtx) {
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
   llvm::SmallString<128> NativeClangDocPath;
@@ -204,8 +204,8 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   return llvm::Error::success();
 }
 
-llvm::Error getHtmlAssetFiles(const char *Argv0,
-                              clang::doc::ClangDocContext &CDCtx) {
+static llvm::Error getHtmlAssetFiles(const char *Argv0,
+                                     clang::doc::ClangDocContext &CDCtx) {
   if (!UserAssetPath.empty() &&
       !llvm::sys::fs::is_directory(std::string(UserAssetPath)))
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
@@ -217,7 +217,8 @@ llvm::Error getHtmlAssetFiles(const char *Argv0,
 
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
-void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
+static void
+sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
     if (Info->IT == doc::InfoType::IT_namespace) {

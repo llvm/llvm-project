@@ -483,8 +483,36 @@ def : SysReg<"vsctrctl", 0x24e>;
 def : SysReg<"mctrctl", 0x34e>;
 
 //===-----------------------------------------------
+// Cycle and Instret Privilege Mode Filtering (Smcntrpmf)
+//===-----------------------------------------------
+def : SysReg<"mcyclecfg", 0x321>;
+def : SysReg<"minstretcfg", 0x322>;
+let isRV32Only = 1 in {
+def : SysReg<"mcyclecfgh", 0x721>;
+def : SysReg<"minstretcfgh", 0x722>;
+} // isRV32Only
+
+//===-----------------------------------------------
 // Vendor CSRs
 //===-----------------------------------------------
+
+// XSfmclic
+let FeaturesRequired = [{ {RISCV::FeatureVendorXSfmclic} }] in {
+def : SysReg<"sf.mtvt", 0x307>;
+def : SysReg<"sf.mnxti", 0x345>;
+def : SysReg<"sf.mintstatus", 0x346>;
+def : SysReg<"sf.mscratchcsw", 0x348>;
+def : SysReg<"sf.mscratchcswl", 0x349>;
+}
+
+// XSfsclic
+let FeaturesRequired = [{ {RISCV::FeatureVendorXSfsclic} }] in {
+def : SysReg<"sf.stvt", 0x107>;
+def : SysReg<"sf.snxti", 0x145>;
+def : SysReg<"sf.sintstatus", 0x146>;
+def : SysReg<"sf.sscratchcsw", 0x148>;
+def : SysReg<"sf.sscratchcswl", 0x149>;
+}
 
 // Xqciint
 let FeaturesRequired = [{ {RISCV::FeatureVendorXqciint} }], isRV32Only = 1 in {

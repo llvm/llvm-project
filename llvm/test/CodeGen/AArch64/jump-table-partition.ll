@@ -17,47 +17,28 @@
 ; DEFAULT: .section .rodata.func_without_profile,"a",@progbits
 ; DEFAULT:   .LJTI1_0:
 ; DEFAULT: .section .rodata.bar_prefix.bar,"a",@progbits
-; DEFAULT: .LJTI2_0
+; DEFAULT:   .LJTI2_0
 
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
+; Test that section names are uniqufied by numbers but not function names with
+; {-function-sections, -unique-section-names=false}. Specifically, @foo jump
+; tables are emitted in two sections, one with unique ID 2 and the other with
+; unique ID 3.
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
-; RUN:     -unique-section-names=false %s -o - 2>&1 | FileCheck %s --check-prefixes=NUM,JT
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NUM,JT
 
-; Section names will optionally have `.<func>` if -function-sections is enabled.
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
+; Section names will optionally have `.<func>` with {-function-sections, -unique-section-names}.
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names \
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2  \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT
 
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=false \
+; Test that section names won't have `.<func>` with -function-sections=false.
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections=false \
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
-
-; A function's section prefix is used for all jump tables of this function.
-; @foo is hot so its jump table data section has a hot prefix.
-; NUM:    .section .rodata.hot.,"a",@progbits,unique,2
-; FUNC:     .section .rodata.hot.foo,"a",@progbits
-; FUNCLESS: .section .rodata.hot.,"a",@progbits
-; JT: .LJTI0_0:
-; JT: .LJTI0_1:
-; JT: .LJTI0_2:
-; JT: .LJTI0_3:
-
-; func_without_profile doesn't have profiles, so its jumptable doesn't have
-; hotness-based prefix.
-; NUM: .section .rodata,"a",@progbits,unique,4
-; FUNC: .section .rodata.func_without_profile,"a",@progbits
-; FUNCLESS: .section .rodata,"a",@progbits
-; JT: .LJTI1_0:
-
-; @bar doesn't have profile information and it has a section prefix.
-; Tests that its jump tables are placed in sections with function prefixes.
-; NUM: .section .rodata.bar_prefix.,"a",@progbits,unique,
-; FUNC: .section .rodata.bar_prefix.bar
-; FUNCLESS: .section .rodata.bar_prefix.,"a"
-; JT: .LJTI2_0
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
@@ -70,6 +51,20 @@ target triple = "aarch64-unknown-linux-gnu"
 @case1 = private constant [7 x i8] c"case 1\00"
 @default = private constant [8 x i8] c"default\00"
 @jt3 = private constant [4 x i8] c"jt3\00"
+
+; In function @foo, the 2 switch instructions to jt0.* and jt1.* are placed in
+; hot-prefixed sections, and the 2 switch instructions to jt2.* and jt3.* are
+; placed in cold-prefixed sections.
+; NUM:          .section .rodata.hot.,"a",@progbits,unique,2
+; FUNC:         .section .rodata.hot.foo,"a",@progbits
+; FUNCLESS:     .section .rodata.hot.,"a",@progbits
+; JT:           .LJTI0_0:
+; JT:           .LJTI0_2:
+; NUM:          .section .rodata.unlikely.,"a",@progbits,unique,3
+; FUNC:         .section .rodata.unlikely.foo
+; FUNCLESS:     .section .rodata.unlikely.,"a",@progbits
+; JT:           .LJTI0_1:
+; JT:           .LJTI0_3:
 
 ; jt0 and jt2 are hot. jt1 and jt3 are cold.
 define i32 @foo(i32 %num) !prof !13 {
@@ -168,6 +163,12 @@ return:
   ret i32 %mod3
 }
 
+; @func_without_profile doesn't have profiles, so its jumptable doesn't have
+; hotness-based prefix.
+; NUM:        .section .rodata,"a",@progbits,unique,5
+; FUNC:       .section .rodata.func_without_profile,"a",@progbits
+; FUNCLESS:   .section .rodata,"a",@progbits
+; JT:         .LJTI1_0:
 define void @func_without_profile(i32 %num) {
 entry:
   switch i32 %num, label %sw.default [
@@ -191,6 +192,12 @@ sw.epilog:
   ret void
 }
 
+; @bar doesn't have profile information and it has a section prefix.
+; Tests that its jump tables are placed in sections with function prefixes.
+; NUM:        .section .rodata.bar_prefix.,"a",@progbits,unique,7
+; FUNC:       .section .rodata.bar_prefix.bar
+; FUNCLESS:   .section .rodata.bar_prefix.,"a"
+; JT:         .LJTI2_0
 define void @bar(i32 %num) !section_prefix !20  {
 entry:
   switch i32 %num, label %sw.default [

@@ -124,6 +124,146 @@ public:
 
 char PreviouslyReportedError::ID = 0;
 
+/*
+ * Custom class for processing linear clause for omp.wsloop
+ * and omp.simd. Linear clause translation requires setup,
+ * initialization, update, and finalization at varying
+ * basic blocks in the IR. This class helps maintain
+ * internal state to allow consistent translation in
+ * each of these stages.
+ */
+
+class LinearClauseProcessor {
+
+private:
+  SmallVector<llvm::Value *> linearPreconditionVars;
+  SmallVector<llvm::Value *> linearLoopBodyTemps;
+  SmallVector<llvm::AllocaInst *> linearOrigVars;
+  SmallVector<llvm::Value *> linearOrigVal;
+  SmallVector<llvm::Value *> linearSteps;
+  llvm::BasicBlock *linearFinalizationBB;
+  llvm::BasicBlock *linearExitBB;
+  llvm::BasicBlock *linearLastIterExitBB;
+
+public:
+  // Allocate space for linear variabes
+  void createLinearVar(llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation,
+                       mlir::Value &linearVar) {
+    if (llvm::AllocaInst *linearVarAlloca = dyn_cast<llvm::AllocaInst>(
+            moduleTranslation.lookupValue(linearVar))) {
+      linearPreconditionVars.push_back(builder.CreateAlloca(
+          linearVarAlloca->getAllocatedType(), nullptr, ".linear_var"));
+      llvm::Value *linearLoopBodyTemp = builder.CreateAlloca(
+          linearVarAlloca->getAllocatedType(), nullptr, ".linear_result");
+      linearOrigVal.push_back(moduleTranslation.lookupValue(linearVar));
+      linearLoopBodyTemps.push_back(linearLoopBodyTemp);
+      linearOrigVars.push_back(linearVarAlloca);
+    }
+  }
+
+  // Initialize linear step
+  inline void initLinearStep(LLVM::ModuleTranslation &moduleTranslation,
+                             mlir::Value &linearStep) {
+    linearSteps.push_back(moduleTranslation.lookupValue(linearStep));
+  }
+
+  // Emit IR for initialization of linear variables
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy
+  initLinearVar(llvm::IRBuilderBase &builder,
+                LLVM::ModuleTranslation &moduleTranslation,
+                llvm::BasicBlock *loopPreHeader) {
+    builder.SetInsertPoint(loopPreHeader->getTerminator());
+    for (size_t index = 0; index < linearOrigVars.size(); index++) {
+      llvm::LoadInst *linearVarLoad = builder.CreateLoad(
+          linearOrigVars[index]->getAllocatedType(), linearOrigVars[index]);
+      builder.CreateStore(linearVarLoad, linearPreconditionVars[index]);
+    }
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
+        moduleTranslation.getOpenMPBuilder()->createBarrier(
+            builder.saveIP(), llvm::omp::OMPD_barrier);
+    return afterBarrierIP;
+  }
+
+  // Emit IR for updating Linear variables
+  void updateLinearVar(llvm::IRBuilderBase &builder, llvm::BasicBlock *loopBody,
+                       llvm::Value *loopInductionVar) {
+    builder.SetInsertPoint(loopBody->getTerminator());
+    for (size_t index = 0; index < linearPreconditionVars.size(); index++) {
+      // Emit increments for linear vars
+      llvm::LoadInst *linearVarStart =
+          builder.CreateLoad(linearOrigVars[index]->getAllocatedType(),
+
+                             linearPreconditionVars[index]);
+      auto mulInst = builder.CreateMul(loopInductionVar, linearSteps[index]);
+      auto addInst = builder.CreateAdd(linearVarStart, mulInst);
+      builder.CreateStore(addInst, linearLoopBodyTemps[index]);
+    }
+  }
+
+  // Linear variable finalization is conditional on the last logical iteration.
+  // Create BB splits to manage the same.
+  void outlineLinearFinalizationBB(llvm::IRBuilderBase &builder,
+                                   llvm::BasicBlock *loopExit) {
+    linearFinalizationBB = loopExit->splitBasicBlock(
+        loopExit->getTerminator(), "omp_loop.linear_finalization");
+    linearExitBB = linearFinalizationBB->splitBasicBlock(
+        linearFinalizationBB->getTerminator(), "omp_loop.linear_exit");
+    linearLastIterExitBB = linearFinalizationBB->splitBasicBlock(
+        linearFinalizationBB->getTerminator(), "omp_loop.linear_lastiter_exit");
+  }
+
+  // Finalize the linear vars
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy
+  finalizeLinearVar(llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    llvm::Value *lastIter) {
+    // Emit condition to check whether last logical iteration is being executed
+    builder.SetInsertPoint(linearFinalizationBB->getTerminator());
+    llvm::Value *loopLastIterLoad = builder.CreateLoad(
+        llvm::Type::getInt32Ty(builder.getContext()), lastIter);
+    llvm::Value *isLast =
+        builder.CreateCmp(llvm::CmpInst::ICMP_NE, loopLastIterLoad,
+                          llvm::ConstantInt::get(
+                              llvm::Type::getInt32Ty(builder.getContext()), 0));
+    // Store the linear variable values to original variables.
+    builder.SetInsertPoint(linearLastIterExitBB->getTerminator());
+    for (size_t index = 0; index < linearOrigVars.size(); index++) {
+      llvm::LoadInst *linearVarTemp =
+          builder.CreateLoad(linearOrigVars[index]->getAllocatedType(),
+                             linearLoopBodyTemps[index]);
+      builder.CreateStore(linearVarTemp, linearOrigVars[index]);
+    }
+
+    // Create conditional branch such that the linear variable
+    // values are stored to original variables only at the
+    // last logical iteration
+    builder.SetInsertPoint(linearFinalizationBB->getTerminator());
+    builder.CreateCondBr(isLast, linearLastIterExitBB, linearExitBB);
+    linearFinalizationBB->getTerminator()->eraseFromParent();
+    // Emit barrier
+    builder.SetInsertPoint(linearExitBB->getTerminator());
+    return moduleTranslation.getOpenMPBuilder()->createBarrier(
+        builder.saveIP(), llvm::omp::OMPD_barrier);
+  }
+
+  // Rewrite all uses of the original variable in `BBName`
+  //  with the linear variable in-place
+  void rewriteInPlace(llvm::IRBuilderBase &builder, std::string BBName,
+                      size_t varIndex) {
+    llvm::SmallVector<llvm::User *> users;
+    for (llvm::User *user : linearOrigVal[varIndex]->users())
+      users.push_back(user);
+    for (auto *user : users) {
+      if (auto *userInst = dyn_cast<llvm::Instruction>(user)) {
+        if (userInst->getParent()->getName().str() == BBName)
+          user->replaceUsesOfWith(linearOrigVal[varIndex],
+                                  linearLoopBodyTemps[varIndex]);
+      }
+    }
+  }
+};
+
 } // namespace
 
 /// Looks up from the operation from and returns the PrivateClauseOp with
@@ -158,6 +298,22 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getBare())
       result = todo("ompx_bare");
   };
+  auto checkCancelDirective = [&todo](auto op, LogicalResult &result) {
+    omp::ClauseCancellationConstructType cancelledDirective =
+        op.getCancelDirective();
+    // Cancelling a taskloop is not yet supported because we don't yet have LLVM
+    // IR conversion for taskloop
+    if (cancelledDirective == omp::ClauseCancellationConstructType::Taskgroup) {
+      Operation *parent = op->getParentOp();
+      while (parent) {
+        if (parent->getDialect() == op->getDialect())
+          break;
+        parent = parent->getParentOp();
+      }
+      if (isa_and_nonnull<omp::TaskloopOp>(parent))
+        result = todo("cancel directive inside of taskloop");
+    }
+  };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
       result = todo("depend");
@@ -187,10 +343,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (!op.getLinearVars().empty() || !op.getLinearStepVars().empty())
       result = todo("linear");
   };
-  auto checkNontemporal = [&todo](auto op, LogicalResult &result) {
-    if (!op.getNontemporalVars().empty())
-      result = todo("nontemporal");
-  };
   auto checkNowait = [&todo](auto op, LogicalResult &result) {
     if (op.getNowait())
       result = todo("nowait");
@@ -209,19 +361,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
     if constexpr (std::is_same_v<std::decay_t<decltype(op)>, omp::TargetOp>) {
-      // Privatization clauses are supported, except on some situations, so we
-      // need to check here whether any of these unsupported cases are being
-      // translated.
-      if (std::optional<ArrayAttr> privateSyms = op.getPrivateSyms()) {
-        for (Attribute privatizerNameAttr : *privateSyms) {
-          omp::PrivateClauseOp privatizer = findPrivatizer(
-              op.getOperation(), cast<SymbolRefAttr>(privatizerNameAttr));
-
-          if (privatizer.getDataSharingType() ==
-              omp::DataSharingClauseType::FirstPrivate)
-            result = todo("firstprivate");
-        }
-      }
+      // Privatization is supported only for included target tasks.
+      if (!op.getPrivateVars().empty() && op.getNowait())
+        result = todo("privatization for deferred target tasks");
     } else {
       if (!op.getPrivateVars().empty() || op.getPrivateSyms())
         result = todo("privatization");
@@ -248,6 +390,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
 
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
+      .Case([&](omp::CancelOp op) { checkCancelDirective(op, result); })
+      .Case([&](omp::CancellationPointOp op) {
+        checkCancelDirective(op, result);
+      })
       .Case([&](omp::DistributeOp op) {
         checkAllocate(op, result);
         checkDistSchedule(op, result);
@@ -286,7 +432,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
-        checkLinear(op, result);
         checkOrder(op, result);
         checkReduction(op, result);
       })
@@ -296,7 +441,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::SimdOp op) {
         checkLinear(op, result);
-        checkNontemporal(op, result);
         checkReduction(op, result);
       })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
@@ -1479,6 +1623,7 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   assert(allocaTerminator->getNumSuccessors() == 1 &&
          "This is an unconditional branch created by splitBB");
 
+  llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
   unsigned int allocaAS =
@@ -1505,12 +1650,12 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   return afterAllocas;
 }
 
-static LogicalResult
-copyFirstPrivateVars(llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation,
-                     SmallVectorImpl<mlir::Value> &mlirPrivateVars,
-                     ArrayRef<llvm::Value *> llvmPrivateVars,
-                     SmallVectorImpl<omp::PrivateClauseOp> &privateDecls) {
+static LogicalResult copyFirstPrivateVars(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    SmallVectorImpl<mlir::Value> &mlirPrivateVars,
+    ArrayRef<llvm::Value *> llvmPrivateVars,
+    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Apply copy region for firstprivate.
   bool needsFirstprivate =
       llvm::any_of(privateDecls, [](omp::PrivateClauseOp &privOp) {
@@ -1534,7 +1679,8 @@ copyFirstPrivateVars(llvm::IRBuilderBase &builder,
     Region &copyRegion = decl.getCopyRegion();
 
     // map copyRegion rhs arg
-    llvm::Value *nonPrivateVar = moduleTranslation.lookupValue(mlirVar);
+    llvm::Value *nonPrivateVar = findAssociatedValue(
+        mlirVar, builder, moduleTranslation, mappedPrivateVars);
     assert(nonPrivateVar);
     moduleTranslation.mapValue(decl.getCopyMoldArg(), nonPrivateVar);
 
@@ -1578,6 +1724,20 @@ cleanupPrivateVars(llvm::IRBuilderBase &builder,
                                 "`omp.private` op in");
 
   return success();
+}
+
+/// Returns true if the construct contains omp.cancel or omp.cancellation_point
+static bool constructIsCancellable(Operation *op) {
+  // omp.cancel and omp.cancellation_point must be "closely nested" so they will
+  // be visible and not inside of function calls. This is enforced by the
+  // verifier.
+  return op
+      ->walk([](Operation *child) {
+        if (mlir::isa<omp::CancelOp, omp::CancellationPointOp>(child))
+          return WalkResult::interrupt();
+        return WalkResult::advance();
+      })
+      .wasInterrupted();
 }
 
 static LogicalResult
@@ -1668,10 +1828,11 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   auto finiCB = [&](InsertPointTy codeGenIP) { return llvm::Error::success(); };
 
   allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
+  bool isCancellable = constructIsCancellable(sectionsOp);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createSections(
-          ompLoc, allocaIP, sectionCBs, privCB, finiCB, false,
+          ompLoc, allocaIP, sectionCBs, privCB, finiCB, isCancellable,
           sectionsOp.getNowait());
 
   if (failed(handleError(afterIP, opInst)))
@@ -1874,6 +2035,55 @@ buildDependData(std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
     llvm::Value *depVal = moduleTranslation.lookupValue(std::get<0>(dep));
     llvm::OpenMPIRBuilder::DependData dd(type, depVal->getType(), depVal);
     dds.emplace_back(dd);
+  }
+}
+
+/// Shared implementation of a callback which adds a termiator for the new block
+/// created for the branch taken when an openmp construct is cancelled. The
+/// terminator is saved in \p cancelTerminators. This callback is invoked only
+/// if there is cancellation inside of the taskgroup body.
+/// The terminator will need to be fixed to branch to the correct block to
+/// cleanup the construct.
+static void
+pushCancelFinalizationCB(SmallVectorImpl<llvm::BranchInst *> &cancelTerminators,
+                         llvm::IRBuilderBase &llvmBuilder,
+                         llvm::OpenMPIRBuilder &ompBuilder, mlir::Operation *op,
+                         llvm::omp::Directive cancelDirective) {
+  auto finiCB = [&](llvm::OpenMPIRBuilder::InsertPointTy ip) -> llvm::Error {
+    llvm::IRBuilderBase::InsertPointGuard guard(llvmBuilder);
+
+    // ip is currently in the block branched to if cancellation occured.
+    // We need to create a branch to terminate that block.
+    llvmBuilder.restoreIP(ip);
+
+    // We must still clean up the construct after cancelling it, so we need to
+    // branch to the block that finalizes the taskgroup.
+    // That block has not been created yet so use this block as a dummy for now
+    // and fix this after creating the operation.
+    cancelTerminators.push_back(llvmBuilder.CreateBr(ip.getBlock()));
+    return llvm::Error::success();
+  };
+  // We have to add the cleanup to the OpenMPIRBuilder before the body gets
+  // created in case the body contains omp.cancel (which will then expect to be
+  // able to find this cleanup callback).
+  ompBuilder.pushFinalizationCB(
+      {finiCB, cancelDirective, constructIsCancellable(op)});
+}
+
+/// If we cancelled the construct, we should branch to the finalization block of
+/// that construct. OMPIRBuilder structures the CFG such that the cleanup block
+/// is immediately before the continuation block. Now this finalization has
+/// been created we can fix the branch.
+static void
+popCancelFinalizationCB(const ArrayRef<llvm::BranchInst *> cancelTerminators,
+                        llvm::OpenMPIRBuilder &ompBuilder,
+                        const llvm::OpenMPIRBuilder::InsertPointTy &afterIP) {
+  ompBuilder.popFinalizationCB();
+  llvm::BasicBlock *constructFini = afterIP.getBlock()->getSinglePredecessor();
+  for (llvm::BranchInst *cancelBranch : cancelTerminators) {
+    assert(cancelBranch->getNumSuccessors() == 1 &&
+           "cancel branch should have one target");
+    cancelBranch->setSuccessor(0, constructFini);
   }
 }
 
@@ -2190,6 +2400,14 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     return llvm::Error::success();
   };
 
+  llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
+  SmallVector<llvm::BranchInst *> cancelTerminators;
+  // The directive to match here is OMPD_taskgroup because it is the taskgroup
+  // which is canceled. This is handled here because it is the task's cleanup
+  // block which should be branched to.
+  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, taskOp,
+                           llvm::omp::Directive::OMPD_taskgroup);
+
   SmallVector<llvm::OpenMPIRBuilder::DependData> dds;
   buildDependData(taskOp.getDependKinds(), taskOp.getDependVars(),
                   moduleTranslation, dds);
@@ -2206,6 +2424,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
+
+  // Set the correct branch target for task cancellation
+  popCancelFinalizationCB(cancelTerminators, ompBuilder, afterIP.get());
 
   builder.restoreIP(*afterIP);
   return success();
@@ -2336,16 +2557,45 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           ? llvm::omp::WorksharingLoopType::DistributeForStaticLoop
           : llvm::omp::WorksharingLoopType::ForStaticLoop;
 
+  SmallVector<llvm::BranchInst *> cancelTerminators;
+  pushCancelFinalizationCB(cancelTerminators, builder, *ompBuilder, wsloopOp,
+                           llvm::omp::Directive::OMPD_for);
+
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+
+  // Initialize linear variables and linear step
+  LinearClauseProcessor linearClauseProcessor;
+  if (wsloopOp.getLinearVars().size()) {
+    for (mlir::Value linearVar : wsloopOp.getLinearVars())
+      linearClauseProcessor.createLinearVar(builder, moduleTranslation,
+                                            linearVar);
+    for (mlir::Value linearStep : wsloopOp.getLinearStepVars())
+      linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
+  }
+
   llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
       wsloopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
 
   if (failed(handleError(regionBlock, opInst)))
     return failure();
 
-  builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
   llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
 
+  // Emit Initialization and Update IR for linear variables
+  if (wsloopOp.getLinearVars().size()) {
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
+        linearClauseProcessor.initLinearVar(builder, moduleTranslation,
+                                            loopInfo->getPreheader());
+    if (failed(handleError(afterBarrierIP, *loopOp)))
+      return failure();
+    builder.restoreIP(*afterBarrierIP);
+    linearClauseProcessor.updateLinearVar(builder, loopInfo->getBody(),
+                                          loopInfo->getIndVar());
+    linearClauseProcessor.outlineLinearFinalizationBB(builder,
+                                                      loopInfo->getExit());
+  }
+
+  builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
       ompBuilder->applyWorkshareLoop(
           ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
@@ -2356,6 +2606,25 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (failed(handleError(wsloopIP, opInst)))
     return failure();
+
+  // Emit finalization and in-place rewrites for linear vars.
+  if (wsloopOp.getLinearVars().size()) {
+    llvm::OpenMPIRBuilder::InsertPointTy oldIP = builder.saveIP();
+    assert(loopInfo->getLastIter() &&
+           "`lastiter` in CanonicalLoopInfo is nullptr");
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
+        linearClauseProcessor.finalizeLinearVar(builder, moduleTranslation,
+                                                loopInfo->getLastIter());
+    if (failed(handleError(afterBarrierIP, *loopOp)))
+      return failure();
+    for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
+      linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
+                                           index);
+    builder.restoreIP(oldIP);
+  }
+
+  // Set the correct branch target for task cancellation
+  popCancelFinalizationCB(cancelTerminators, *ompBuilder, wsloopIP.get());
 
   // Process the reductions if required.
   if (failed(createReductionsAndCleanup(
@@ -2524,8 +2793,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   auto pbKind = llvm::omp::OMP_PROC_BIND_default;
   if (auto bind = opInst.getProcBindKind())
     pbKind = getProcBindKind(*bind);
-  // TODO: Is the Parallel construct cancellable?
-  bool isCancellable = false;
+  bool isCancellable = constructIsCancellable(opInst);
 
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
@@ -2601,6 +2869,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
   llvm::omp::OrderKind order = convertOrderKind(simdOp.getOrder());
+
   llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   std::optional<ArrayAttr> alignmentValues = simdOp.getAlignments();
   mlir::OperandRange operands = simdOp.getAlignedVars();
@@ -2789,6 +3058,8 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::AtomicOrdering ao = convertAtomicOrdering(writeOp.getMemoryOrder());
@@ -2797,7 +3068,8 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::Type *ty = moduleTranslation.convertType(writeOp.getExpr().getType());
   llvm::OpenMPIRBuilder::AtomicOpValue x = {dest, ty, /*isSigned=*/false,
                                             /*isVolatile=*/false};
-  builder.restoreIP(ompBuilder->createAtomicWrite(ompLoc, x, expr, ao));
+  builder.restoreIP(
+      ompBuilder->createAtomicWrite(ompLoc, x, expr, ao, allocaIP));
   return success();
 }
 
@@ -2988,6 +3260,71 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     return failure();
 
   builder.restoreIP(*afterIP);
+  return success();
+}
+
+static llvm::omp::Directive convertCancellationConstructType(
+    omp::ClauseCancellationConstructType directive) {
+  switch (directive) {
+  case omp::ClauseCancellationConstructType::Loop:
+    return llvm::omp::Directive::OMPD_for;
+  case omp::ClauseCancellationConstructType::Parallel:
+    return llvm::omp::Directive::OMPD_parallel;
+  case omp::ClauseCancellationConstructType::Sections:
+    return llvm::omp::Directive::OMPD_sections;
+  case omp::ClauseCancellationConstructType::Taskgroup:
+    return llvm::omp::Directive::OMPD_taskgroup;
+  }
+}
+
+static LogicalResult
+convertOmpCancel(omp::CancelOp op, llvm::IRBuilderBase &builder,
+                 LLVM::ModuleTranslation &moduleTranslation) {
+  if (failed(checkImplementationStatus(*op.getOperation())))
+    return failure();
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  llvm::Value *ifCond = nullptr;
+  if (Value ifVar = op.getIfExpr())
+    ifCond = moduleTranslation.lookupValue(ifVar);
+
+  llvm::omp::Directive cancelledDirective =
+      convertCancellationConstructType(op.getCancelDirective());
+
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+      ompBuilder->createCancel(ompLoc, ifCond, cancelledDirective);
+
+  if (failed(handleError(afterIP, *op.getOperation())))
+    return failure();
+
+  builder.restoreIP(afterIP.get());
+
+  return success();
+}
+
+static LogicalResult
+convertOmpCancellationPoint(omp::CancellationPointOp op,
+                            llvm::IRBuilderBase &builder,
+                            LLVM::ModuleTranslation &moduleTranslation) {
+  if (failed(checkImplementationStatus(*op.getOperation())))
+    return failure();
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  llvm::omp::Directive cancelledDirective =
+      convertCancellationConstructType(op.getCancelDirective());
+
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+      ompBuilder->createCancellationPoint(ompLoc, cancelledDirective);
+
+  if (failed(handleError(afterIP, *op.getOperation())))
+    return failure();
+
+  builder.restoreIP(afterIP.get());
+
   return success();
 }
 
@@ -3563,6 +3900,9 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
     LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder,
     llvm::OpenMPIRBuilder &ompBuilder, DataLayout &dl, MapInfosTy &combinedInfo,
     MapInfoData &mapData, uint64_t mapDataIndex, bool isTargetParams) {
+  assert(!ompBuilder.Config.isTargetDevice() &&
+         "function only supported for host device codegen");
+
   // Map the first segment of our structure
   combinedInfo.Types.emplace_back(
       isTargetParams
@@ -3671,6 +4011,8 @@ static void processMapMembersWithParent(
     llvm::OpenMPIRBuilder &ompBuilder, DataLayout &dl, MapInfosTy &combinedInfo,
     MapInfoData &mapData, uint64_t mapDataIndex,
     llvm::omp::OpenMPOffloadMappingFlags memberOfFlag) {
+  assert(!ompBuilder.Config.isTargetDevice() &&
+         "function only supported for host device codegen");
 
   auto parentClause =
       llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
@@ -3784,6 +4126,9 @@ static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
                                     DataLayout &dl, MapInfosTy &combinedInfo,
                                     MapInfoData &mapData, uint64_t mapDataIndex,
                                     bool isTargetParams) {
+  assert(!ompBuilder.Config.isTargetDevice() &&
+         "function only supported for host device codegen");
+
   auto parentClause =
       llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
 
@@ -3825,6 +4170,8 @@ static void
 createAlteredByCaptureMap(MapInfoData &mapData,
                           LLVM::ModuleTranslation &moduleTranslation,
                           llvm::IRBuilderBase &builder) {
+  assert(!moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice() &&
+         "function only supported for host device codegen");
   for (size_t i = 0; i < mapData.MapClause.size(); ++i) {
     // if it's declare target, skip it, it's handled separately.
     if (!mapData.IsDeclareTarget[i]) {
@@ -3889,6 +4236,9 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
                         LLVM::ModuleTranslation &moduleTranslation,
                         DataLayout &dl, MapInfosTy &combinedInfo,
                         MapInfoData &mapData, bool isTargetParams = false) {
+  assert(!moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice() &&
+         "function only supported for host device codegen");
+
   // We wish to modify some of the methods in which arguments are
   // passed based on their capture type by the target region, this can
   // involve generating new loads and stores, which changes the
@@ -3900,8 +4250,7 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
   // kernel arg structure. It primarily becomes relevant in cases like
   // bycopy, or byref range'd arrays. In the default case, we simply
   // pass thee pointer byref as both basePointer and pointer.
-  if (!moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice())
-    createAlteredByCaptureMap(mapData, moduleTranslation, builder);
+  createAlteredByCaptureMap(mapData, moduleTranslation, builder);
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
@@ -3935,6 +4284,8 @@ emitUserDefinedMapper(Operation *declMapperOp, llvm::IRBuilderBase &builder,
 static llvm::Expected<llvm::Function *>
 getOrCreateUserDefinedMapperFunc(Operation *op, llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
+  assert(!moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice() &&
+         "function only supported for host device codegen");
   auto declMapperOp = cast<omp::DeclareMapperOp>(op);
   std::string mapperFuncName =
       moduleTranslation.getOpenMPBuilder()->createPlatformSpecificName(
@@ -3951,6 +4302,8 @@ static llvm::Expected<llvm::Function *>
 emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
                       LLVM::ModuleTranslation &moduleTranslation,
                       llvm::StringRef mapperFuncName) {
+  assert(!moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice() &&
+         "function only supported for host device codegen");
   auto declMapperOp = cast<omp::DeclareMapperOp>(op);
   auto declMapperInfoOp = declMapperOp.getDeclareMapperInfo();
   DataLayout dl = DataLayout(declMapperOp->getParentOfType<ModuleOp>());
@@ -4440,6 +4793,8 @@ static void
 handleDeclareTargetMapVar(MapInfoData &mapData,
                           LLVM::ModuleTranslation &moduleTranslation,
                           llvm::IRBuilderBase &builder, llvm::Function *func) {
+  assert(moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice() &&
+         "function only supported for target device codegen");
   for (size_t i = 0; i < mapData.MapClause.size(); ++i) {
     // In the case of declare target mapped variables, the basePointer is
     // the reference pointer generated by the convertDeclareTargetAttr
@@ -4532,6 +4887,8 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
                              LLVM::ModuleTranslation &moduleTranslation,
                              llvm::IRBuilderBase::InsertPoint allocaIP,
                              llvm::IRBuilderBase::InsertPoint codeGenIP) {
+  assert(ompBuilder.Config.isTargetDevice() &&
+         "function only supported for target device codegen");
   builder.restoreIP(allocaIP);
 
   omp::VariableCaptureKind capture = omp::VariableCaptureKind::ByRef;
@@ -5064,6 +5421,12 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
+    if (failed(copyFirstPrivateVars(
+            builder, moduleTranslation, privateVarsInfo.mlirVars,
+            privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
+            &mappedPrivateVars)))
+      return llvm::make_error<PreviouslyReportedError>();
+
     SmallVector<Region *> privateCleanupRegions;
     llvm::transform(privateVarsInfo.privatizers,
                     std::back_inserter(privateCleanupRegions),
@@ -5420,6 +5783,12 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::AtomicCaptureOp op) {
             return convertOmpAtomicCapture(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::CancelOp op) {
+            return convertOmpCancel(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::CancellationPointOp op) {
+            return convertOmpCancellationPoint(op, builder, moduleTranslation);
           })
           .Case([&](omp::SectionsOp) {
             return convertOmpSections(*op, builder, moduleTranslation);

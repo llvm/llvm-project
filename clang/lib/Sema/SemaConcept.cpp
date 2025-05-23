@@ -639,8 +639,7 @@ bool Sema::CheckConstraintSatisfaction(
   // here.
   llvm::SmallVector<TemplateArgument, 4> FlattenedArgs;
   for (auto List : TemplateArgsLists)
-    FlattenedArgs.insert(FlattenedArgs.end(), List.Args.begin(),
-                         List.Args.end());
+    llvm::append_range(FlattenedArgs, List.Args);
 
   llvm::FoldingSetNodeID ID;
   ConstraintSatisfaction::Profile(ID, Context, Template, FlattenedArgs);
@@ -908,7 +907,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   if (MLTAL.getNumSubstitutedLevels() == 0)
     return ConstrExpr;
 
-  Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/false);
+  Sema::SFINAETrap SFINAE(S);
 
   Sema::InstantiatingTemplate Inst(
       S, DeclInfo.getLocation(),
@@ -1929,11 +1928,11 @@ auto SubsumptionChecker::find(AtomicConstraint *Ori) -> Literal {
   }
   auto It = Elems.find(ID);
   if (It == Elems.end()) {
-    It =
-        Elems
-            .insert({ID, MappedAtomicConstraint{Ori, Literal{getNewLiteralId(),
-                                                             Literal::Atomic}}})
-            .first;
+    It = Elems
+             .insert({ID,
+                      MappedAtomicConstraint{
+                          Ori, {getNewLiteralId(), Literal::Atomic}}})
+             .first;
     ReverseMap[It->second.ID.Value] = Ori;
   }
   return It->getSecond().ID;
@@ -2000,8 +1999,9 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
   });
 
   if (NC.getCompoundKind() == FormulaType::Kind) {
+    auto SizeLeft = Left.size();
     Res = std::move(Left);
-    Res.reserve(Left.size() + Right.size());
+    Res.reserve(SizeLeft + Right.size());
     std::for_each(std::make_move_iterator(Right.begin()),
                   std::make_move_iterator(Right.end()), Add);
     return Res;
@@ -2012,8 +2012,8 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
     for (const auto &RTransform : Right) {
       Clause Combined;
       Combined.reserve(LTransform.size() + RTransform.size());
-      llvm::copy(LTransform, std::back_inserter(Combined));
-      llvm::copy(RTransform, std::back_inserter(Combined));
+      llvm::append_range(Combined, LTransform);
+      llvm::append_range(Combined, RTransform);
       Add(std::move(Combined));
     }
   }

@@ -94,8 +94,12 @@ void MCObjectStreamer::resolvePendingFixups() {
 static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
                                                   const MCSymbol *Lo) {
   assert(Hi && Lo);
-  if (!Hi->getFragment() || Hi->getFragment() != Lo->getFragment() ||
-      Hi->isVariable() || Lo->isVariable())
+  if (Lo == Hi)
+    return 0;
+  if (Hi->isVariable() || Lo->isVariable())
+    return std::nullopt;
+  auto *LoF = dyn_cast_or_null<MCDataFragment>(Lo->getFragment());
+  if (!LoF || Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
     return std::nullopt;
 
   return Hi->getOffset() - Lo->getOffset();
@@ -104,20 +108,18 @@ static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
 void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
                                               const MCSymbol *Lo,
                                               unsigned Size) {
-  if (!getAssembler().getContext().getTargetTriple().isRISCV())
-    if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
-      return emitIntValue(*Diff, Size);
-  MCStreamer::emitAbsoluteSymbolDiff(Hi, Lo, Size);
+  if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
+    emitIntValue(*Diff, Size);
+  else
+    MCStreamer::emitAbsoluteSymbolDiff(Hi, Lo, Size);
 }
 
 void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
                                                        const MCSymbol *Lo) {
-  if (!getAssembler().getContext().getTargetTriple().isRISCV())
-    if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo)) {
-      emitULEB128IntValue(*Diff);
-      return;
-    }
-  MCStreamer::emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
+  if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
+    emitULEB128IntValue(*Diff);
+  else
+    MCStreamer::emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
 
 void MCObjectStreamer::reset() {
@@ -462,6 +464,18 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
                          Label, PointerSize);
     return;
   }
+
+  // If the two labels are within the same fragment, then the address-offset is
+  // already a fixed constant and is not relaxable. Emit the advance-line-addr
+  // data immediately to save time and memory.
+  if (auto OptAddrDelta = absoluteSymbolDiff(Label, LastLabel)) {
+    SmallString<16> Tmp;
+    MCDwarfLineAddr::encode(getContext(), Assembler->getDWARFLinetableParams(),
+                            LineDelta, *OptAddrDelta, Tmp);
+    emitBytes(Tmp);
+    return;
+  }
+
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, SMLoc());
   insert(getContext().allocFragment<MCDwarfLineAddrFragment>(LineDelta,
                                                              *AddrDelta));

@@ -2398,8 +2398,9 @@ bool IntegerRelation::removeDuplicateConstraints() {
       addEquality(getInequality(k));
       removeInequality(k);
       removeInequality(l);
-    } else
+    } else {
       *this = getEmpty(getSpace());
+    }
     break;
   }
 

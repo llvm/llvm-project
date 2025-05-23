@@ -227,9 +227,7 @@ INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",
                 "Profile summary info", false, true)
 
 ProfileSummaryInfoWrapperPass::ProfileSummaryInfoWrapperPass()
-    : ImmutablePass(ID) {
-  initializeProfileSummaryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID) {}
 
 bool ProfileSummaryInfoWrapperPass::doInitialization(Module &M) {
   PSI.reset(new ProfileSummaryInfo(M));

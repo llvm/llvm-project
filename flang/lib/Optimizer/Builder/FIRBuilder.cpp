@@ -280,6 +280,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
     return &cufKernelOp.getRegion().front();
 
+  if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
+    return doConcurentOp.getBody();
+
   return getEntryBlock();
 }
 
@@ -577,14 +580,20 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
+mlir::Value fir::FirOpBuilder::createVolatileCast(mlir::Location loc,
+                                                  bool isVolatile,
+                                                  mlir::Value val) {
+  mlir::Type volatileAdjustedType =
+      fir::updateTypeWithVolatility(val.getType(), isVolatile);
+  if (volatileAdjustedType == val.getType())
+    return val;
+  return create<fir::VolatileCastOp>(loc, volatileAdjustedType, val);
+}
+
 mlir::Value fir::FirOpBuilder::createConvertWithVolatileCast(mlir::Location loc,
                                                              mlir::Type toTy,
                                                              mlir::Value val) {
-  if (fir::isa_volatile_type(val.getType()) != fir::isa_volatile_type(toTy)) {
-    mlir::Type volatileAdjustedType = fir::updateTypeWithVolatility(
-        val.getType(), fir::isa_volatile_type(toTy));
-    val = create<fir::VolatileCastOp>(loc, volatileAdjustedType, val);
-  }
+  val = createVolatileCast(loc, fir::isa_volatile_type(toTy), val);
   return createConvert(loc, toTy, val);
 }
 
@@ -609,8 +618,9 @@ mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
                                                mlir::Value val,
                                                mlir::Value addr) {
-  mlir::Value cast =
-      createConvert(loc, fir::unwrapRefType(addr.getType()), val);
+  mlir::Type unwrapedRefType = fir::unwrapRefType(addr.getType());
+  val = createVolatileCast(loc, fir::isa_volatile_type(unwrapedRefType), val);
+  mlir::Value cast = createConvert(loc, unwrapedRefType, val);
   create<fir::StoreOp>(loc, cast, addr);
 }
 
@@ -1858,7 +1868,8 @@ void fir::factory::setInternalLinkage(mlir::func::FuncOp func) {
   func->setAttr("llvm.linkage", linkage);
 }
 
-uint64_t fir::factory::getAllocaAddressSpace(mlir::DataLayout *dataLayout) {
+uint64_t
+fir::factory::getAllocaAddressSpace(const mlir::DataLayout *dataLayout) {
   if (dataLayout)
     if (mlir::Attribute addrSpace = dataLayout->getAllocaMemorySpace())
       return mlir::cast<mlir::IntegerAttr>(addrSpace).getUInt();
@@ -1929,4 +1940,21 @@ void fir::factory::genDimInfoFromBox(
     if (strides)
       strides->push_back(dimInfo.getByteStride());
   }
+}
+
+mlir::Value fir::factory::genLifetimeStart(mlir::OpBuilder &builder,
+                                           mlir::Location loc,
+                                           fir::AllocaOp alloc, int64_t size,
+                                           const mlir::DataLayout *dl) {
+  mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(
+      alloc.getContext(), getAllocaAddressSpace(dl));
+  mlir::Value cast =
+      builder.create<fir::ConvertOp>(loc, ptrTy, alloc.getResult());
+  builder.create<mlir::LLVM::LifetimeStartOp>(loc, size, cast);
+  return cast;
+}
+
+void fir::factory::genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
+                                  mlir::Value cast, int64_t size) {
+  builder.create<mlir::LLVM::LifetimeEndOp>(loc, size, cast);
 }

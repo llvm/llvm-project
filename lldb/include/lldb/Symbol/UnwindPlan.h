@@ -356,11 +356,11 @@ public:
 
     void RemoveRegisterInfo(uint32_t reg_num);
 
-    lldb::addr_t GetOffset() const { return m_offset; }
+    int64_t GetOffset() const { return m_offset; }
 
-    void SetOffset(lldb::addr_t offset) { m_offset = offset; }
+    void SetOffset(int64_t offset) { m_offset = offset; }
 
-    void SlideOffset(lldb::addr_t offset) { m_offset += offset; }
+    void SlideOffset(int64_t offset) { m_offset += offset; }
 
     const FAValue &GetCFAValue() const { return m_cfa_value; }
     FAValue &GetCFAValue() { return m_cfa_value; }
@@ -420,7 +420,7 @@ public:
 
   protected:
     typedef std::map<uint32_t, AbstractRegisterLocation> collection;
-    lldb::addr_t m_offset = 0; // Offset into the function for this row
+    int64_t m_offset = 0; // Offset into the function for this row
 
     FAValue m_cfa_value;
     FAValue m_afa_value;
@@ -455,7 +455,7 @@ public:
   // practice, the UnwindPlan for a function with no known start address will be
   // the architectural default UnwindPlan which will only have one row.
   const UnwindPlan::Row *
-  GetRowForFunctionOffset(std::optional<int> offset) const;
+  GetRowForFunctionOffset(std::optional<int64_t> offset) const;
 
   lldb::RegisterKind GetRegisterKind() const { return m_register_kind; }
 

@@ -1776,10 +1776,50 @@ llvm.mlir.alias external @y5 : i32 {
 // -----
 
 module {
-  // expected-error@+2 {{expected integer value}}
-  // expected-error@+1 {{failed to parse ModuleFlagAttr parameter 'value' which is to be a `uint32_t`}}
-  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", "yolo">]
+  llvm.func @foo()
+
+  // expected-error@below {{only integer and string values are currently supported}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
 }
+
+// -----
+
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
+    "yo"
+  ]>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", 3 : i64>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'ProfileSummary' key expects a '#llvm.profile_summary' attribute}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "ProfileSummary", 3 : i64>]
+}
+
+// -----
+
+llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+     // expected-error@below {{expected one of [SampleProfile, InstrProf, CSInstrProf] for LLVM ProfileSummary format kinds, got: YoloFmt}}
+     #llvm.profile_summary<format = "YoloFmt", total_count = 263646, max_count = 86427,
+     // expected-error@above {{failed to parse ModuleFlagProfileSummaryAttr parameter 'format' which is to be a `ProfileSummaryFormatKind`}}
+       max_internal_count = 86427, max_function_count = 4691,
+       num_counts = 3712, num_functions = 796,
+       is_partial_profile = 0,
+       partial_profile_ratio = 0.000000e+00 : f64,
+       detailed_summary =
+         <cut_off = 10000, min_count = 86427, num_counts = 1>,
+         <cut_off = 100000, min_count = 86427, num_counts = 1>
+      // expected-error@below {{failed to parse ModuleFlagAttr parameter}}
+>>]
 
 // -----
 
@@ -1801,4 +1841,44 @@ llvm.func @t1() -> !llvm.ptr {
   llvm.br ^bb1
 ^bb1:
   llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
+  // expected-error@+1 {{'inbounds_flag' cannot be used directly}}
+  llvm.getelementptr inbounds_flag %ptr[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_size() : !llvm.array<2x!llvm.struct<(i32, f32)>> {
+  // expected-error@below {{'llvm.mlir.constant' op array attribute size does not match array type size in dimension 0: 1 vs. 2}}
+  %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2x!llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<2x!llvm.struct<(i32, f32)>>
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_nesting() : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>> {
+  // expected-error@below {{'llvm.mlir.constant' op nested attribute for sub-array in dimension 1 at index 0 must be a zero, or undef, or array attribute}}
+  %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
+  llvm.return %0 : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_elements() : !llvm.array<1x!llvm.struct<(i32, f32)>> {
+  // expected-error@below {{'llvm.mlir.constant' op nested array attribute size for struct element at index 0 must match struct size: 1 vs. 2}}
+  %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<1x!llvm.struct<(i32, f32)>>
+}
+
+// ----
+
+llvm.mlir.global internal constant @bad_array_attr_simple_type() : !llvm.array<2 x f64> {
+  // expected-error@below {{'llvm.mlir.constant' op for array with an array attribute must have a struct element type}}
+  %0 = llvm.mlir.constant([2.5, 7.4]) : !llvm.array<2 x f64>
+  llvm.return %0 : !llvm.array<2 x f64>
 }

@@ -1198,8 +1198,7 @@ private:
   /// Pops a code iterator from the stack, returning true on success.
   void popCodeIt() {
     assert(!resumeCodeIt.empty() && "attempt to pop code off empty stack");
-    curCodeIt = resumeCodeIt.back();
-    resumeCodeIt.pop_back();
+    curCodeIt = resumeCodeIt.pop_back_val();
   }
 
   /// Return the bytecode iterator at the start of the current op code.
@@ -1497,22 +1496,25 @@ LogicalResult ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
 void ByteCodeExecutor::processNativeFunResults(
     ByteCodeRewriteResultList &results, unsigned numResults,
     LogicalResult &rewriteResult) {
-  // Store the results in the bytecode memory or handle missing results on
-  // failure.
-  for (unsigned resultIdx = 0; resultIdx < numResults; resultIdx++) {
-    PDLValue::Kind resultKind = read<PDLValue::Kind>();
-
+  if (failed(rewriteResult)) {
     // Skip the according number of values on the buffer on failure and exit
     // early as there are no results to process.
-    if (failed(rewriteResult)) {
+    for (unsigned resultIdx = 0; resultIdx < numResults; resultIdx++) {
+      const PDLValue::Kind resultKind = read<PDLValue::Kind>();
       if (resultKind == PDLValue::Kind::TypeRange ||
           resultKind == PDLValue::Kind::ValueRange) {
         skip(2);
       } else {
         skip(1);
       }
-      return;
     }
+    return;
+  }
+
+  // Store the results in the bytecode memory
+  for (unsigned resultIdx = 0; resultIdx < numResults; resultIdx++) {
+    PDLValue::Kind resultKind = read<PDLValue::Kind>();
+    (void)resultKind;
     PDLValue result = results.getResults()[resultIdx];
     LLVM_DEBUG(llvm::dbgs() << "  * Result: " << result << "\n");
     assert(result.getKind() == resultKind &&

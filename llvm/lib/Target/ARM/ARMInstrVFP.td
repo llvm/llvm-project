@@ -2513,6 +2513,9 @@ class MovFromVFP<bits<4> opc19_16, dag oops, dag iops, string opc, string asm,
   let Inst{3-0}   = 0b0000;
   let Unpredictable{7-5} = 0b111;
   let Unpredictable{3-0} = 0b1111;
+
+  // Needed to avoid errors when a MachineInstrt::FrameSetup flag is set.
+  let mayStore = 0;
 }
 
 let DecoderMethod = "DecodeForVMRSandVMSR" in {

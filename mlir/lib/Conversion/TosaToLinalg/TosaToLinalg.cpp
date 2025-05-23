@@ -82,15 +82,6 @@ materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
                                           rhsOrResult);
 }
 
-template <typename T>
-static arith::ConstantOp
-createConstOpFromZpVal(Operation *op, const int64_t &zp, Type requiredAttrType,
-                       OpBuilder &rewriter) {
-  auto castedN = static_cast<T>(zp);
-  return rewriter.create<arith::ConstantOp>(
-      op->getLoc(), IntegerAttr::get(requiredAttrType, castedN));
-}
-
 static Value createLinalgBodyCalculationForElementwiseOp(
     Operation *op, ValueRange args, ArrayRef<Type> resultTypes,
     ConversionPatternRewriter &rewriter) {
@@ -1467,11 +1458,6 @@ public:
           Value value = blockArgs[0];
           Type valueTy = value.getType();
 
-          // For now we do all of our math in 64-bit. This is not optimal but
-          // should be correct for now, consider computing correct bit depth
-          // later.
-          int32_t inBitwidth = valueTy.getIntOrFloatBitWidth() > 32 ? 48 : 32;
-
           FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
           if (failed(maybeIZp)) {
             (void)rewriter.notifyMatchFailure(
@@ -1479,9 +1465,12 @@ public:
             return;
           }
 
-          auto inputZp = createConstOpFromZpVal<int32_t>(
-              op, *maybeIZp, nestedBuilder.getIntegerType(inBitwidth),
-              nestedBuilder);
+          const int32_t inBitwidth = valueTy.getIntOrFloatBitWidth();
+          // Extend zeropoint for sub-32bits widths.
+          const int32_t inAttrBitwidth = inBitwidth > 32 ? inBitwidth : 32;
+          auto inputZp = nestedBuilder.create<arith::ConstantOp>(
+              loc, IntegerAttr::get(rewriter.getIntegerType(inAttrBitwidth),
+                                    *maybeIZp));
 
           FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
           if (failed(maybeOZp)) {
@@ -1490,8 +1479,14 @@ public:
             return;
           };
 
-          auto outputZp = createConstOpFromZpVal<int32_t>(
-              op, *maybeOZp, nestedBuilder.getI32Type(), nestedBuilder);
+          IntegerType outIntType =
+              cast<IntegerType>(blockArgs.back().getType());
+          unsigned outBitWidth = outIntType.getWidth();
+          const int32_t outAttrBitwidth = 32;
+          assert(outBitWidth <= 32 && "Unexpected output zeropoint bitwidth");
+          auto outputZp = nestedBuilder.create<arith::ConstantOp>(
+              loc, IntegerAttr::get(rewriter.getIntegerType(outAttrBitwidth),
+                                    *maybeOZp));
 
           Value multiplier = multiplierConstant ? multiplierConstant
                                                 : blockArgs[multiplierArg];
@@ -1519,10 +1514,6 @@ public:
               nestedBuilder.create<arith::AddIOp>(nestedLoc, value, outputZp);
 
           // Saturate to the output size.
-          IntegerType outIntType =
-              cast<IntegerType>(blockArgs.back().getType());
-          unsigned outBitWidth = outIntType.getWidth();
-
           int32_t intMin = APInt::getSignedMinValue(outBitWidth).getSExtValue();
           int32_t intMax = APInt::getSignedMaxValue(outBitWidth).getSExtValue();
 
@@ -2285,8 +2276,22 @@ public:
 
           Value predicate;
           if (isa<FloatType>(inElementTy)) {
-            predicate = rewriter.create<arith::CmpFOp>(
-                nestedLoc, arith::CmpFPredicate::OGT, newValue, oldValue);
+            if (argmaxOp.getNanMode() == "IGNORE") {
+              // Only update index & max value for non NaN values. If all
+              // values are NaNs, the initial index will be return which is 0.
+              predicate = rewriter.create<arith::CmpFOp>(
+                  nestedLoc, arith::CmpFPredicate::OGT, newValue, oldValue);
+            } else {
+              // Update max value if either of the following is true:
+              // - new value is bigger
+              // - cur max is not NaN and new value is NaN
+              Value gt = rewriter.create<arith::CmpFOp>(
+                  nestedLoc, arith::CmpFPredicate::UGT, newValue, oldValue);
+              Value oldNonNaN = rewriter.create<arith::CmpFOp>(
+                  nestedLoc, arith::CmpFPredicate::ORD, oldValue, oldValue);
+              predicate = rewriter.create<arith::AndIOp>(
+                  nestedLoc, rewriter.getI1Type(), gt, oldNonNaN);
+            }
           } else if (isa<IntegerType>(inElementTy)) {
             predicate = rewriter.create<arith::CmpIOp>(
                 nestedLoc, arith::CmpIPredicate::sgt, newValue, oldValue);
@@ -2299,28 +2304,6 @@ public:
               nestedLoc, predicate, newValue, oldValue);
           auto resultIndex = rewriter.create<arith::SelectOp>(
               nestedLoc, predicate, newIndex, oldIndex);
-
-          // Check if we need to materialize compare and select for the given
-          // NaN propagation mode.
-
-          // "PROPAGATE" matches the default NaN propagation mode of the arith
-          // dialect so no compare and select is required.
-          //
-          // In the case "IGNORE" we check if the current argument is NaN and
-          // select the old index and value otherwise take the updated index and
-          // value.
-          if (const auto nanMode = argmaxOp.getNanMode();
-              isa<FloatType>(inElementTy) && nanMode == "IGNORE") {
-            // Unordered comparison of NaN against itself will always return
-            // true.
-            Value isNaN = rewriter.create<arith::CmpFOp>(
-                argmaxOp.getLoc(), arith::CmpFPredicate::UNO, newValue,
-                newValue);
-            resultMax = rewriter.create<arith::SelectOp>(nestedLoc, isNaN,
-                                                         oldValue, resultMax);
-            resultIndex = rewriter.create<arith::SelectOp>(
-                nestedLoc, isNaN, oldIndex, resultIndex);
-          }
           nestedBuilder.create<linalg::YieldOp>(
               nestedLoc, ValueRange({resultIndex, resultMax}));
         });

@@ -847,9 +847,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   Partition &part = isec.getPartition(ctx);
 
   if (sym.isTagged()) {
-    std::lock_guard<std::mutex> lock(ctx.relocMutex);
-    part.relaDyn->addRelativeReloc(ctx.target->relativeRel, isec, offsetInSec,
-                                   sym, addend, type, expr);
+    part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
+                                          offsetInSec, sym, addend, type, expr);
     // With MTE globals, we always want to derive the address tag by `ldg`-ing
     // the symbol. When we have a RELATIVE relocation though, we no longer have
     // a reference to the symbol. Because of this, when we have an addend that

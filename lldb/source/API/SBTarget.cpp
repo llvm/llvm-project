@@ -1668,6 +1668,26 @@ SBError SBTarget::SetLabel(const char *label) {
   return Status::FromError(target_sp->SetLabel(label));
 }
 
+uint32_t SBTarget::GetMinimumOpcodeByteSize() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  TargetSP target_sp(GetSP());
+  if (target_sp)
+    return target_sp->GetArchitecture().GetMinimumOpcodeByteSize();
+
+  return 0;
+}
+
+uint32_t SBTarget::GetMaximumOpcodeByteSize() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  TargetSP target_sp(GetSP());
+  if (target_sp)
+    return target_sp->GetArchitecture().GetMaximumOpcodeByteSize();
+
+  return 0;
+}
+
 uint32_t SBTarget::GetDataByteSize() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -2021,9 +2041,9 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
                                 error, force_live_memory, &load_addr);
       const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
       sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
-          target_sp->GetArchitecture(), nullptr, target_sp->GetDisassemblyCPU(),
-          target_sp->GetDisassemblyFeatures(), flavor_string, *addr_ptr,
-          data.GetBytes(), bytes_read, count, data_from_file));
+          target_sp->GetArchitecture(), nullptr, flavor_string,
+          target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+          *addr_ptr, data.GetBytes(), bytes_read, count, data_from_file));
     }
   }
 

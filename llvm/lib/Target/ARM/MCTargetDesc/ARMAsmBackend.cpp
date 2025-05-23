@@ -65,7 +65,7 @@ ARMAsmBackendELF::getFixupKind(StringRef Name) const {
   return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
 }
 
-const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo InfosLE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // ARMFixupKinds.h.
@@ -193,7 +193,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   // Fixup kinds from .reloc directive are like R_ARM_NONE. They do not require
   // any extra processing.
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
@@ -204,19 +204,6 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return (Endian == llvm::endianness::little
               ? InfosLE
               : InfosBE)[Kind - FirstTargetFixupKind];
-}
-
-void ARMAsmBackend::handleAssemblerFlag(MCAssemblerFlag Flag) {
-  switch (Flag) {
-  default:
-    break;
-  case MCAF_Code16:
-    setIsThumb(true);
-    break;
-  case MCAF_Code32:
-    setIsThumb(false);
-    break;
-  }
 }
 
 unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op,
@@ -335,8 +322,36 @@ const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
   return nullptr;
 }
 
-bool ARMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                         uint64_t Value) const {
+static bool needsInterworking(const MCAssembler &Asm, const MCSymbol *Sym,
+                              unsigned FixupKind) {
+  // Create relocations for unconditional branches to function symbols with
+  // different execution mode in ELF binaries.
+  if (!Sym || !Sym->isELF())
+    return false;
+  unsigned Type = cast<MCSymbolELF>(Sym)->getType();
+  if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)) {
+    if (Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_uncondbranch))
+      return true;
+    if (!Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_thumb_br ||
+                                  FixupKind == ARM::fixup_arm_thumb_bl ||
+                                  FixupKind == ARM::fixup_t2_condbranch ||
+                                  FixupKind == ARM::fixup_t2_uncondbranch))
+      return true;
+  }
+  return false;
+}
+
+bool ARMAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                                 const MCFixup &Fixup,
+                                                 const MCValue &Target,
+                                                 uint64_t Value,
+                                                 bool Resolved) const {
+  const MCSymbol *Sym = Target.getAddSym();
+  if (needsInterworking(Asm, Sym, Fixup.getTargetKind()))
+    return true;
+
+  if (!Resolved)
+    return true;
   return reasonForFixupRelaxation(Fixup, Value);
 }
 
@@ -377,7 +392,7 @@ bool ARMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   const uint16_t Thumb2_16bitNopEncoding = 0xbf00; // NOP
   const uint32_t ARMv4_NopEncoding = 0xe1a00000;   // using MOV r0,r0
   const uint32_t ARMv6T2_NopEncoding = 0xe320f000; // NOP
-  if (isThumb()) {
+  if (STI->hasFeature(ARM::ModeThumb)) {
     const uint16_t nopEncoding =
         hasNOP(STI) ? Thumb2_16bitNopEncoding : Thumb1_16bitNopEncoding;
     uint64_t NumNops = Count / 2;
@@ -973,18 +988,8 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   }
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
-  if (Sym && Sym->isELF()) {
-    unsigned Type = cast<MCSymbolELF>(Sym)->getType();
-    if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)) {
-      if (Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_uncondbranch))
-        return true;
-      if (!Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_thumb_br ||
-                                    FixupKind == ARM::fixup_arm_thumb_bl ||
-                                    FixupKind == ARM::fixup_t2_condbranch ||
-                                    FixupKind == ARM::fixup_t2_uncondbranch))
-        return true;
-    }
-  }
+  if (needsInterworking(Asm, Sym, Fixup.getTargetKind()))
+    return true;
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination
   // symbol's thumb-ness to get interworking right.
@@ -1128,8 +1133,8 @@ void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved,
                                const MCSubtargetInfo* STI) const {
-  unsigned Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
+  auto Kind = Fixup.getKind();
+  if (mc::isRelocation(Kind))
     return;
   MCContext &Ctx = Asm.getContext();
   Value = adjustFixupValue(Asm, Fixup, Target, Value, IsResolved, Ctx, STI);
@@ -1389,14 +1394,13 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
     return new ARMAsmBackendDarwin(T, STI, MRI);
   case Triple::COFF:
     assert(TheTriple.isOSWindows() && "non-Windows ARM COFF is not supported");
-    return new ARMAsmBackendWinCOFF(T, STI.getTargetTriple().isThumb());
+    return new ARMAsmBackendWinCOFF(T);
   case Triple::ELF:
     assert(TheTriple.isOSBinFormatELF() && "using ELF for non-ELF target");
     uint8_t OSABI = Options.FDPIC
                         ? static_cast<uint8_t>(ELF::ELFOSABI_ARM_FDPIC)
                         : MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
-    return new ARMAsmBackendELF(T, STI.getTargetTriple().isThumb(), OSABI,
-                                Endian);
+    return new ARMAsmBackendELF(T, OSABI, Endian);
   }
 }
 

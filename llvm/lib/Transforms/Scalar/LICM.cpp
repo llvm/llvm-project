@@ -296,8 +296,7 @@ private:
 PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR, LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -330,8 +329,7 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &) {
   if (!AR.MSSA)
-    report_fatal_error("LNICM requires MemorySSA (loop-mssa)",
-                       /*GenCrashDiag*/false);
+    reportFatalUsageError("LNICM requires MemorySSA (loop-mssa)");
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
@@ -2294,10 +2292,14 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   AliasSetTracker AST(BatchAA);
 
   auto IsPotentiallyPromotable = [L](const Instruction *I) {
-    if (const auto *SI = dyn_cast<StoreInst>(I))
-      return L->isLoopInvariant(SI->getPointerOperand());
-    if (const auto *LI = dyn_cast<LoadInst>(I))
-      return L->isLoopInvariant(LI->getPointerOperand());
+    if (const auto *SI = dyn_cast<StoreInst>(I)) {
+      const Value *PtrOp = SI->getPointerOperand();
+      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+    }
+    if (const auto *LI = dyn_cast<LoadInst>(I)) {
+      const Value *PtrOp = LI->getPointerOperand();
+      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+    }
     return false;
   };
 
@@ -2536,6 +2538,7 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                                     IsInBounds);
   GEP->replaceAllUsesWith(NewGEP);
   eraseInstruction(*GEP, SafetyInfo, MSSAU);
+  salvageDebugInfo(*Src);
   eraseInstruction(*Src, SafetyInfo, MSSAU);
   return true;
 }
@@ -2590,7 +2593,10 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
-  eraseInstruction(cast<Instruction>(*VariantLHS), SafetyInfo, MSSAU);
+
+  Instruction &DeadI = cast<Instruction>(*VariantLHS);
+  salvageDebugInfo(DeadI);
+  eraseInstruction(DeadI, SafetyInfo, MSSAU);
   return true;
 }
 
@@ -2668,7 +2674,10 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
-  eraseInstruction(cast<Instruction>(*VariantLHS), SafetyInfo, MSSAU);
+
+  Instruction &DeadI = cast<Instruction>(*VariantLHS);
+  salvageDebugInfo(DeadI);
+  eraseInstruction(DeadI, SafetyInfo, MSSAU);
   return true;
 }
 
@@ -2855,19 +2864,29 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   auto *NewBO = BinaryOperator::Create(
       Opcode, LV, Inv, BO->getName() + ".reass", BO->getIterator());
 
-  // Copy NUW for ADDs if both instructions have it.
-  if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
-      BO0->hasNoUnsignedWrap()) {
-    // If `Inv` was not constant-folded, a new Instruction has been created.
-    if (auto *I = dyn_cast<Instruction>(Inv))
-      I->setHasNoUnsignedWrap(true);
-    NewBO->setHasNoUnsignedWrap(true);
-  } else if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
+  if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
     // Intersect FMF flags for FADD and FMUL.
     FastMathFlags Intersect = BO->getFastMathFlags() & BO0->getFastMathFlags();
     if (auto *I = dyn_cast<Instruction>(Inv))
       I->setFastMathFlags(Intersect);
     NewBO->setFastMathFlags(Intersect);
+  } else if (Opcode == Instruction::Or) {
+    bool Disjoint = cast<PossiblyDisjointInst>(BO)->isDisjoint() &&
+                    cast<PossiblyDisjointInst>(BO0)->isDisjoint();
+    // If `Inv` was not constant-folded, a new Instruction has been created.
+    if (auto *I = dyn_cast<PossiblyDisjointInst>(Inv))
+      I->setIsDisjoint(Disjoint);
+    cast<PossiblyDisjointInst>(NewBO)->setIsDisjoint(Disjoint);
+  } else {
+    OverflowTracking Flags;
+    Flags.AllKnownNonNegative = false;
+    Flags.AllKnownNonZero = false;
+    Flags.mergeFlags(*BO);
+    Flags.mergeFlags(*BO0);
+    // If `Inv` was not constant-folded, a new Instruction has been created.
+    if (auto *I = dyn_cast<Instruction>(Inv))
+      Flags.applyFlags(*I);
+    Flags.applyFlags(*NewBO);
   }
 
   BO->replaceAllUsesWith(NewBO);
@@ -2875,8 +2894,10 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
 
   // (LV op C1) might not be erased if it has more uses than the one we just
   // replaced.
-  if (BO0->use_empty())
+  if (BO0->use_empty()) {
+    salvageDebugInfo(*BO0);
     eraseInstruction(*BO0, SafetyInfo, MSSAU);
+  }
 
   return true;
 }

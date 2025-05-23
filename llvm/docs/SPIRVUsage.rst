@@ -153,6 +153,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_INTEL_2d_block_io``
+     - Adds additional subgroup block prefetch, load, load transposed, load transformed and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
@@ -211,6 +213,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds the ability to specify the maximum error for floating-point operations.
    * - ``SPV_INTEL_ternary_bitwise_function``
      - Adds a bitwise instruction on three operands and a look-up table index for specifying the bitwise operation to perform. 
+   * - ``SPV_INTEL_subgroup_matrix_multiply_accumulate``
+     - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 

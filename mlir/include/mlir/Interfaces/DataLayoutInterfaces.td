@@ -232,9 +232,9 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
     /// identifier they are associated with. Users are not expected to call this
     /// method directly.
     void bucketEntriesByType(
-        ::llvm::DenseMap<::mlir::TypeID, ::mlir::DataLayoutEntryList> &types,
-        ::llvm::DenseMap<::mlir::StringAttr,
-                         ::mlir::DataLayoutEntryInterface> &ids);
+        ::llvm::MapVector<::mlir::TypeID, ::mlir::DataLayoutEntryList> &types,
+        ::llvm::MapVector<::mlir::StringAttr,
+                          ::mlir::DataLayoutEntryInterface> &ids);
   }];
 }
 

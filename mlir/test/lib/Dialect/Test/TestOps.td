@@ -13,6 +13,7 @@ include "TestDialect.td"
 include "TestInterfaces.td"
 include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
+include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -243,16 +244,6 @@ def FloatElementsAttrOp : TEST_Op<"float_elements_attr"> {
   );
 }
 
-def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
-  let arguments = (ins NestedPolynomialAttr:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
-def ContainingIntPolynomialAttr2Op : TEST_Op<"containing_int_polynomial_attr2"> {
-  let arguments = (ins NestedPolynomialAttr2:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -332,6 +323,10 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
    `i32attr` `=` $i32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
    `f64attr` `=` $f64attr `emptyattr` `=` $emptyattr attr-dict
   }];
+}
+
+def SlashAttrOp : TEST_Op<"slash_attr"> {
+  let arguments = (ins SlashAttr:$attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -422,6 +417,52 @@ def : Pat<(OpWithEnum ConstantEnumCase<TestEnumAttr, "first">:$value,
                       ConstantAttr<I32Attr, "0">:$tag),
           (OpWithEnum ConstantEnumCase<TestEnumAttr, "second">,
                       ConstantAttr<I32Attr, "1">)>;
+
+//===----------------------------------------------------------------------===//
+// Test Enum Properties
+//===----------------------------------------------------------------------===//
+
+// Define the enum property.
+def TestEnumProp : EnumProp<TestEnum>;
+// Define an op that contains the enum property.
+def OpWithEnumProp : TEST_Op<"op_with_enum_prop"> {
+  let arguments = (ins TestEnumProp:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
+def TestEnumPropAttrForm : EnumPropWithAttrForm<TestEnum, TestEnumAttr>;
+def OpWithEnumPropAttrForm : TEST_Op<"op_with_enum_prop_attr_form"> {
+  let arguments = (ins TestEnumPropAttrForm:$value);
+  let assemblyFormat = "prop-dict attr-dict";
+}
+
+def TestEnumPropAttrFormAlways : EnumPropWithAttrForm<TestEnum, TestEnumAttr> {
+  let storeInCustomAttribute = 1;
+}
+def OpWithEnumPropAttrFormAlways : TEST_Op<"op_with_enum_prop_attr_form_always"> {
+  let arguments = (ins TestEnumPropAttrFormAlways:$value);
+  let assemblyFormat = "prop-dict attr-dict";
+}
+
+def TestBitEnumProp : EnumProp<TestBitEnum> {
+  let defaultValue = TestBitEnum.cppType # "::Read";
+}
+def OpWithTestBitEnum : TEST_Op<"op_with_bit_enum_prop"> {
+  let arguments = (ins
+    TestBitEnumProp:$value1,
+    TestBitEnumProp:$value2);
+  let assemblyFormat = "$value1 ($value2^)? attr-dict `:` `(``)`";
+}
+
+def TestBitEnumPropNamed : NamedEnumProp<TestBitEnum, "bit_enum"> {
+  let defaultValue = TestBitEnum.cppType # "::Read";
+}
+def OpWithBitEnumPropNamed : TEST_Op<"op_with_bit_enum_prop_named"> {
+  let arguments = (ins
+    TestBitEnumPropNamed:$value1,
+    TestBitEnumPropNamed:$value2);
+  let assemblyFormat = "$value1 ($value2^)? attr-dict";
+}
 
 //===----------------------------------------------------------------------===//
 // Test Bit Enum Attributes
@@ -1804,6 +1845,20 @@ def : Pat<
   (MixedVOperandOp5 $input2a, $input2b, $input1b, $attr1,
                     ConstantStrAttr<StrAttr, "MatchMultiVariadicSubSymbol">)>;
 
+def MixedVOperandOp7 : TEST_Op<"mixed_variadic_optional_in7",
+                               [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<I32>:$input1,
+    Optional<I32>:$input2,
+    I32Attr:$attr1
+  );
+}
+
+def : Pat<
+  (MixedVOperandOp7 $input1, $input2, ConstantAttr<I32Attr, "2">:$attr1),
+  (MixedVOperandOp6 $input1, (variadic $input2), $attr1),
+  [(Constraint<CPred<"$0 != Value()">> $input2)]>;
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (either)
 //===----------------------------------------------------------------------===//
@@ -2744,6 +2799,28 @@ def TestLinalgFillOp :
       return getOutputsMutable();
     }
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test NVVM RequiresSM trait.
+//===----------------------------------------------------------------------===//
+
+def TestNVVMRequiresSMOp :
+    TEST_Op<"nvvm_requires_sm_80", [NVVMRequiresSM<80>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMArchCondOp :
+    TEST_Op<"nvvm_requires_sm_90a", [NVVMRequiresSMa<[90]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequirestSMArchCondMultiOp : 
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

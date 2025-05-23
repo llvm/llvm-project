@@ -133,7 +133,7 @@ getUserTileSizesAndNumThreads(RewriterBase &rewriter, TilingInterface op,
     tileSizes.resize(numLoops, zero);
     for (auto [index, range, nt] :
          llvm::enumerate(iterationDomain, numThreads)) {
-      if (isConstantIntValue(nt, 0))
+      if (isZeroInteger(nt))
         continue;
 
       tileSizes[index] = affine::makeComposedFoldedAffineApply(
@@ -265,7 +265,7 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
 
       // Non-tiled cases, set the offset and size to the
       // `loopRange.offset/size`.
-      if (isConstantIntValue(nt, 0)) {
+      if (isZeroInteger(nt)) {
         offsets.push_back(loopRange.offset);
         sizes.push_back(loopRange.size);
         continue;
@@ -280,7 +280,7 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
           {loopRange.offset, nt, tileSize, loopRange.size});
 
       OpFoldResult size = tileSize;
-      if (!isConstantIntValue(residualTileSize, 0)) {
+      if (!isZeroInteger(residualTileSize)) {
         OpFoldResult sizeMinusOffsetPerThread =
             affine::makeComposedFoldedAffineApply(rewriter, loc, s0 - d0,
                                                   {offset, loopRange.size});
@@ -316,7 +316,7 @@ getTileOffsetAndSizes(RewriterBase &rewriter, Location loc, ValueRange ivs,
 
       // Non-tiled cases, set the offset and size to the
       // `loopRange.offset/size`.
-      if (isConstantIntValue(tileSize, 0)) {
+      if (isZeroInteger(tileSize)) {
         offsets.push_back(loopRange.offset);
         sizes.push_back(loopRange.size);
         continue;
@@ -341,7 +341,7 @@ getLoopBounds(RewriterBase &rewriter, Location loc, ArrayRef<Range> loopRanges,
   SmallVector<OpFoldResult> lbs, ubs, steps;
   for (auto [loopRange, tileSize] : llvm::zip_equal(loopRanges, tileSizes)) {
     // No loop if the tile size is 0.
-    if (isConstantIntValue(tileSize, 0))
+    if (isZeroInteger(tileSize))
       continue;
     lbs.push_back(loopRange.offset);
     ubs.push_back(loopRange.size);
@@ -483,8 +483,6 @@ static LogicalResult generateLoopNestUsingForallOp(
   assert(loopRanges.size() == tileSizes.size() &&
          "expected as many tile sizes as loop ranges");
   OpBuilder::InsertionGuard guard(rewriter);
-  SmallVector<OpFoldResult> offsets(loopRanges.size()),
-      sizes(loopRanges.size());
 
   std::optional<ArrayAttr> mappingAttr;
   if (!mappingVector.empty())
@@ -497,7 +495,7 @@ static LogicalResult generateLoopNestUsingForallOp(
     // Prune the zero numthreads.
     SmallVector<OpFoldResult> nonZeroNumThreads;
     for (auto nt : numThreads) {
-      if (isConstantIntValue(nt, 0))
+      if (isZeroInteger(nt))
         continue;
       nonZeroNumThreads.push_back(nt);
     }
@@ -553,7 +551,7 @@ static LogicalResult generateLoopNest(
     YieldTiledValuesFn tiledBodyFn, SmallVector<LoopLikeOpInterface> &loops) {
   // If the tile sizes are all zero, no loops are generated. Just call the
   // callback function to handle untiled case.
-  if (llvm::all_of(tileSizes, isZeroIndex)) {
+  if (llvm::all_of(tileSizes, isZeroInteger)) {
     SmallVector<Value> tiledResults;
     SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
     return tiledBodyFn(rewriter, loc, ValueRange{}, destinationTensors,
@@ -865,7 +863,6 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop(
 static LogicalResult addInitOperandsToLoopNest(
     RewriterBase &rewriter, MutableArrayRef<LoopLikeOpInterface> loops,
     ValueRange newInitValues, YieldTiledValuesFn getNewTiledYieldsFn) {
-  SmallVector<scf::ForOp> newLoops;
   if (loops.empty())
     return success();
   OpBuilder::InsertionGuard g(rewriter);
@@ -1002,7 +999,7 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
     // 5b. Early return cloned op if tiling is not happening. We can not
     // return the original op because it could lead to `rewriter.replaceOp(op,
     // op->getResults())` and users would get crash.
-    if (llvm::all_of(tileSizes, isZeroIndex)) {
+    if (llvm::all_of(tileSizes, isZeroInteger)) {
       tiledResults.append(clonedOp->result_begin(), clonedOp->result_end());
       tilingResult =
           TilingResult{/*tiledOps=*/{clonedOp}, clonedOp->getResults(),
@@ -1293,9 +1290,7 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
                               sliceSizes = sliceOp.getMixedSizes();
 
     // expect all strides of sliceOp being 1
-    if (llvm::any_of(sliceOp.getMixedStrides(), [](OpFoldResult ofr) {
-          return !isConstantIntValue(ofr, 1);
-        }))
+    if (!llvm::all_of(sliceOp.getMixedStrides(), isOneInteger))
       return failure();
 
     unsigned sliceResultNumber =
@@ -1438,10 +1433,10 @@ SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
   if (!patterns)
     return success();
 
-  GreedyRewriteConfig config;
-  config.listener = this;
-  config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
-  return applyOpPatternsGreedily(ops, patterns.value(), config);
+  return applyOpPatternsGreedily(
+      ops, patterns.value(),
+      GreedyRewriteConfig().setListener(this).setStrictness(
+          GreedyRewriteStrictness::ExistingAndNewOps));
 }
 
 void SliceTrackingListener::notifyOperationInserted(
@@ -1535,7 +1530,6 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
 
   // 1. First tile the consumer.
   SetVector<Operation *> fusedProducers, tiledAndFusedOps;
-  llvm::SmallDenseMap<Value, size_t> origProducerToLoopResultNum;
 
   FailureOr<scf::SCFTilingResult> tilingResult =
       tileUsingSCF(rewriter, consumer, options.tilingOptions);
@@ -2118,9 +2112,7 @@ mlir::scf::tileAndFuseConsumerOfSlice(
     SmallVector<OpFoldResult> strides = ossSliceOp.getMixedStrides();
 
     // 9. Check all insert stride is 1.
-    if (llvm::any_of(strides, [](OpFoldResult stride) {
-          return !isConstantIntValue(stride, 1);
-        })) {
+    if (!llvm::all_of(strides, isOneInteger)) {
       return rewriter.notifyMatchFailure(
           candidateSliceOp, "containingOp's result yield with stride");
     }

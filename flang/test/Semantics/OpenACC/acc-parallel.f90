@@ -34,6 +34,17 @@ program openacc_parallel_validity
   !$acc parallel async(1)
   !$acc end parallel
 
+  !ERROR: At most one ASYNC clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel async(1) async(2)
+  !$acc end parallel
+
+  !$acc parallel async(1) device_type(nvidia) async(3)
+  !$acc end parallel
+
+  !ERROR: At most one ASYNC clause can appear on the PARALLEL directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel async(1) device_type(nvidia) async(2) async(3)
+  !$acc end parallel
+
   !$acc parallel async(async1)
   !$acc end parallel
 

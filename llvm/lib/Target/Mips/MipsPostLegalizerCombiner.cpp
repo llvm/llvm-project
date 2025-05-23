@@ -106,8 +106,8 @@ void MipsPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysis>();
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -117,8 +117,6 @@ void MipsPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 MipsPostLegalizerCombiner::MipsPostLegalizerCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  initializeMipsPostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
@@ -136,7 +134,8 @@ bool MipsPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const MipsLegalizerInfo *LI =
       static_cast<const MipsLegalizerInfo *>(ST.getLegalizerInfo());
 
-  GISelValueTracking *VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr
                 : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
@@ -152,13 +151,11 @@ INITIALIZE_PASS_BEGIN(MipsPostLegalizerCombiner, DEBUG_TYPE,
                       "Combine Mips machine instrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(MipsPostLegalizerCombiner, DEBUG_TYPE,
                     "Combine Mips machine instrs after legalization", false,
                     false)
 
-namespace llvm {
-FunctionPass *createMipsPostLegalizeCombiner(bool IsOptNone) {
+FunctionPass *llvm::createMipsPostLegalizeCombiner(bool IsOptNone) {
   return new MipsPostLegalizerCombiner(IsOptNone);
 }
-} // end namespace llvm
