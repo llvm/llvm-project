@@ -143,8 +143,8 @@ void f(void) {
 // NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
 // NON-APX-NOT:  error: {{.*}} -mapx-features=
 
-// RUN: %clang_cl --target=x86_64-pc-windows -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
-// RUN: %clang_cl --target=x86_64-pc-windows -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
-// RUN: %clang_cl --target=x86_64-pc-windows -mapx-features=egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
+// RUN: %clang_cl --target=x86_64-pc-windows -mapxf %s -### 2>&1 | FileCheck -check-prefix=APXF %s
+// RUN: %clang_cl --target=x86_64-pc-windows -mapxf -mno-apxf %s -### 2>&1 | FileCheck -check-prefix=NO-APXF %s
+// RUN: %clang_cl --target=x86_64-pc-windows -mapx-features=egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu %s -### 2>&1 | FileCheck -check-prefix=APXF %s
 // APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu"
 // NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu"
