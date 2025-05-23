@@ -324,7 +324,8 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
     if (IO.outputting())
       Constants = std::get<DXContainerYAML::RootConstantsYaml>(P.Data);
     IO.mapRequired("Constants", Constants);
-    P.Data = Constants;
+    if (!IO.outputting())
+      P.Data = Constants;
   } break;
   case llvm::to_underlying(dxbc::RootParameterType::CBV):
   case llvm::to_underlying(dxbc::RootParameterType::SRV):
@@ -333,7 +334,8 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
     if (IO.outputting())
       Descriptor = std::get<DXContainerYAML::RootDescriptorYaml>(P.Data);
     IO.mapRequired("Descriptor", Descriptor);
-    P.Data = Descriptor;
+    if (!IO.outputting())
+      P.Data = Descriptor;
   } break;
   }
 }
