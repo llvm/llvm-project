@@ -83,7 +83,7 @@ setupTemplate(std::unique_ptr<MustacheTemplateFile> &Template,
   if (Error Err = T.takeError())
     return Err;
   Template = std::move(T.get());
-  for (const auto [Name, FileName] : Partials)
+  for (const auto &[Name, FileName] : Partials)
     if (auto Err = Template->registerPartialFile(Name, FileName))
       return Err;
   return Error::success();
