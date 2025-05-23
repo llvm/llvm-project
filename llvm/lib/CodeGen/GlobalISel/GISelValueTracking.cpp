@@ -693,6 +693,9 @@ static bool outputDenormalIsIEEEOrPosZero(const MachineFunction &MF, LLT Ty) {
 void GISelValueTracking::computeKnownFPClass(Register R, KnownFPClass &Known,
                                              FPClassTest InterestedClasses,
                                              unsigned Depth) {
+  if (!R.isVirtual())
+    return;
+  
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
@@ -735,6 +738,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
 
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
+
+  if (!R.isVirtual())
+    return;
 
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
