@@ -327,7 +327,8 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
-static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB, bool HasCall=false);
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                                 bool HasCall = false);
 static bool requiresSaveVG(const MachineFunction &MF);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
@@ -1034,7 +1035,8 @@ static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
 // but we would then have to make sure that we were in fact saving at least one
 // callee-save register in the prologue, which is additional complexity that
 // doesn't seem worth the benefit.
-static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB, bool HasCall) {
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                                 bool HasCall) {
   MachineFunction *MF = MBB->getParent();
 
   // If MBB is an entry block, use X9 as the scratch register
@@ -1097,8 +1099,10 @@ bool AArch64FrameLowering::canUseAsPrologue(
     if (findScratchNonCalleeSaveRegister(TmpMBB) == AArch64::NoRegister)
       return false;
 
-  // May need a scratch register (for return value) if require making a special call
-  if (requiresSaveVG(*MF) || windowsRequiresStackProbe(*MF, std::numeric_limits<uint64_t>::max()))
+  // May need a scratch register (for return value) if require making a special
+  // call
+  if (requiresSaveVG(*MF) ||
+      windowsRequiresStackProbe(*MF, std::numeric_limits<uint64_t>::max()))
     if (findScratchNonCalleeSaveRegister(TmpMBB, true) == AArch64::NoRegister)
       return false;
 
@@ -2001,7 +2005,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                            AArch64::X15, LiveIn.PhysReg);
                      })) {
       X15Scratch = findScratchNonCalleeSaveRegister(&MBB, true);
-      assert(X15Scratch != AArch64::NoRegister && (X15Scratch < AArch64::X15 || X15Scratch > AArch64::X17));
+      assert(X15Scratch != AArch64::NoRegister &&
+             (X15Scratch < AArch64::X15 || X15Scratch > AArch64::X17));
 #ifndef NDEBUG
       LiveRegs.removeReg(AArch64::X15); // ignore X15 since we restore it
 #endif
