@@ -283,13 +283,11 @@ struct InheritedPrivateMovable : PrivateMovable {
 
 struct X1 {
   X1(const ProtectedMovable &M) : M(M) {}
-  // CHECK-FIXES: X1(const ProtectedMovable &M) : M(M) {}
   ProtectedMovable M;
 };
 
 struct X2 {
   X2(const PrivateMovable &M) : M(M) {}
-  // CHECK-FIXES: X2(const PrivateMovable &M) : M(M) {}
   PrivateMovable M;
 };
 
