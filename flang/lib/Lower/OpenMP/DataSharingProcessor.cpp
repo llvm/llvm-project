@@ -58,6 +58,7 @@ void DataSharingProcessor::processStep1() {
   collectDefaultSymbols();
   collectImplicitSymbols();
   collectPreDeterminedSymbols();
+
 }
 
 void DataSharingProcessor::processStep2(
@@ -66,7 +67,7 @@ void DataSharingProcessor::processStep2(
     return;
 
   privatize(clauseOps);
-  insertBarrier();
+  insertBarrier(clauseOps);
   privatizationDone = true;
 }
 
@@ -235,9 +236,18 @@ bool DataSharingProcessor::needBarrier() {
   return false;
 }
 
-void DataSharingProcessor::insertBarrier() {
-  if (needBarrier())
+void DataSharingProcessor::insertBarrier(
+    mlir::omp::PrivateClauseOps *clauseOps) {
+  if (!needBarrier())
+    return;
+
+  if (useDelayedPrivatization) {
+    if (clauseOps)
+      clauseOps->privateNeedsBarrier =
+          mlir::UnitAttr::get(&converter.getMLIRContext());
+  } else {
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
+  }
 }
 
 void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
