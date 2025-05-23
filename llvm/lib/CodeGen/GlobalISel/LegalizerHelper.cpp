@@ -8179,10 +8179,10 @@ LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
     // Note this must be done here, and not as an optimization combine in the
     // absence of a dedicate quiet-snan instruction as we're using an
     // omni-purpose G_FCANONICALIZE.
-    if (!isKnownNeverSNaN(Src0, MRI))
+    if (!isKnownNeverSNaN(Src0, MRI, VT))
       Src0 = MIRBuilder.buildFCanonicalize(Ty, Src0, MI.getFlags()).getReg(0);
 
-    if (!isKnownNeverSNaN(Src1, MRI))
+    if (!isKnownNeverSNaN(Src1, MRI, VT))
       Src1 = MIRBuilder.buildFCanonicalize(Ty, Src1, MI.getFlags()).getReg(0);
   }
 
