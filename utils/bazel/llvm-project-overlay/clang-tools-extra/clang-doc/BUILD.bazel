@@ -36,7 +36,6 @@ cc_library(
     hdrs = glob(["*.h"]),
     includes = ["."],
     deps = [
-        ":clang-doc-support",
         "//clang:ast",
         "//clang:basic",
         "//clang:frontend",
