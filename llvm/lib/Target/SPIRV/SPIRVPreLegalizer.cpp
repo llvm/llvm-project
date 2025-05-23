@@ -380,16 +380,32 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
 // To support current approach and limitations wrt. bit width here we widen a
 // scalar register with a bit width greater than 1 to valid sizes and cap it to
 // 64 width.
-static void widenScalarLLTNextPow2(Register Reg, MachineRegisterInfo &MRI) {
+static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
+  if (BitWidth == 1)
+    return 1; // No need to widen 1-bit values
+  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 64u);
+}
+
+static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
   LLT RegType = MRI.getType(Reg);
   if (!RegType.isScalar())
     return;
-  unsigned Sz = RegType.getScalarSizeInBits();
-  if (Sz == 1)
-    return;
-  unsigned NewSz = std::min(std::max(1u << Log2_32_Ceil(Sz), 8u), 64u);
-  if (NewSz != Sz)
-    MRI.setType(Reg, LLT::scalar(NewSz));
+  unsigned CurrentWidth = RegType.getScalarSizeInBits();
+  unsigned NewWidth = widenBitWidthToNextPow2(CurrentWidth);
+  if (NewWidth != CurrentWidth)
+    MRI.setType(Reg, LLT::scalar(NewWidth));
+}
+
+static void widenCImmType(MachineOperand &MOP) {
+  const ConstantInt *CImmVal = MOP.getCImm();
+  unsigned CurrentWidth = CImmVal->getBitWidth();
+  unsigned NewWidth = widenBitWidthToNextPow2(CurrentWidth);
+  if (NewWidth != CurrentWidth) {
+    // Replace the immediate value with the widened version
+    MOP.setCImm(ConstantInt::get(
+        CImmVal->getType()->getContext(),
+        CImmVal->getValue().zextOrTrunc(NewWidth)));
+  }
 }
 
 static void setInsertPtAfterDef(MachineIRBuilder &MIB, MachineInstr *Def) {
@@ -506,10 +522,13 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       unsigned MIOp = MI.getOpcode();
 
       if (!IsExtendedInts) {
-        // validate bit width of scalar registers
-        for (const auto &MOP : MI.operands())
+        // validate bit width of scalar registers and immediates
+        for (auto &MOP : MI.operands()) {
           if (MOP.isReg())
-            widenScalarLLTNextPow2(MOP.getReg(), MRI);
+            widenScalarType(MOP.getReg(), MRI);
+          else if (MOP.isCImm())
+            widenCImmType(MOP);
+        }
       }
 
       if (isSpvIntrinsic(MI, Intrinsic::spv_assign_ptr_type)) {
