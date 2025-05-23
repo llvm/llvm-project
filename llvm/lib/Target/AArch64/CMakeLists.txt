@@ -98,20 +98,9 @@ add_llvm_target(AArch64CodeGen
   AArch64Desc
   AArch64Info
   AArch64Utils
-  Analysis
-  AsmPrinter
+  ${TARGET_LIBRARIES}
   CFGuard
-  CodeGen
-  CodeGenTypes
-  Core
   GlobalISel
-  MC
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
   Vectorize
 
   ADD_TO_COMPONENT

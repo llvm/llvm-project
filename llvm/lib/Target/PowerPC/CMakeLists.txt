@@ -62,22 +62,11 @@ add_llvm_target(PowerPCCodeGen
   GISel/PPCLegalizerInfo.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  BinaryFormat
-  CodeGen
-  CodeGenTypes
-  Core
-  GlobalISel
-  MC
   PowerPCDesc
   PowerPCInfo
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
+  BinaryFormat
+  GlobalISel
 
   ADD_TO_COMPONENT
   PowerPC
