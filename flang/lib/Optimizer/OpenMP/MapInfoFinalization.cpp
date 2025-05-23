@@ -48,7 +48,7 @@
 #include <numeric>
 
 #define DEBUG_TYPE "omp-map-info-finalization"
-#define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")
+
 namespace flangomp {
 #define GEN_PASS_DEF_MAPINFOFINALIZATIONPASS
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
@@ -283,6 +283,60 @@ class MapInfoFinalizationPass
       }
     }
     return false;
+  }
+
+  mlir::omp::MapInfoOp genBoxcharMemberMap(mlir::omp::MapInfoOp op,
+                                           fir::FirOpBuilder &builder) {
+    if (!op.getMembers().empty())
+      return op;
+    mlir::Location loc = op.getVarPtr().getLoc();
+    mlir::Value boxChar = op.getVarPtr();
+
+    if (mlir::isa<fir::ReferenceType>(op.getVarPtr().getType()))
+      boxChar = builder.create<fir::LoadOp>(loc, op.getVarPtr());
+
+    fir::BoxCharType boxCharType = mlir::dyn_cast<fir::BoxCharType>(boxChar.getType());
+    mlir::Value boxAddr = builder.create<fir::BoxOffsetOp>(loc, op.getVarPtr(), fir::BoxFieldAttr::base_addr);
+
+    uint64_t mapTypeToImplicit = static_cast<
+        std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+
+    mlir::ArrayAttr  newMembersAttr;
+    llvm::SmallVector<llvm::SmallVector<int64_t>> memberIdx = {{0}};
+    newMembersAttr = builder.create2DI64ArrayAttr(memberIdx);
+
+    mlir::Value varPtr = op.getVarPtr();
+    mlir::omp::MapInfoOp memberMapInfoOp = builder.create<mlir::omp::MapInfoOp>(
+        op.getLoc(), varPtr.getType(), varPtr,
+        mlir::TypeAttr::get(boxCharType.getEleTy()),
+        builder.getIntegerAttr(builder.getIntegerType(64, /*isSigned=*/false),
+                               mapTypeToImplicit),
+        builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
+            mlir::omp::VariableCaptureKind::ByRef),
+        /*varPtrPtr=*/boxAddr,
+        /*members=*/llvm::SmallVector<mlir::Value>{},
+        /*member_index=*/mlir::ArrayAttr{},
+        /*bounds=*/op.getBounds(),
+        /*mapperId=*/mlir::FlatSymbolRefAttr(), /*name=*/op.getNameAttr(),
+        builder.getBoolAttr(false));
+
+    mlir::omp::MapInfoOp newMapInfoOp = builder.create<mlir::omp::MapInfoOp>(
+        op.getLoc(), op.getResult().getType(), varPtr,
+        mlir::TypeAttr::get(llvm::cast<mlir::omp::PointerLikeType>(varPtr.getType())
+                            .getElementType()),
+        op.getMapTypeAttr(),
+        op.getMapCaptureTypeAttr(),
+        /*varPtrPtr=*/mlir::Value{},
+        /*members=*/llvm::SmallVector<mlir::Value>{memberMapInfoOp},
+        /*member_index=*/newMembersAttr,
+        /*bounds=*/llvm::SmallVector<mlir::Value>{},
+        /*mapperId=*/mlir::FlatSymbolRefAttr(), op.getNameAttr(),
+        /*partial_map=*/builder.getBoolAttr(false));
+    op.replaceAllUsesWith(newMapInfoOp.getResult());
+    op->erase();
+    return newMapInfoOp;
   }
 
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
@@ -575,6 +629,7 @@ class MapInfoFinalizationPass
         fir::factory::AddrAndBoundsInfo info =
             fir::factory::getDataOperandBaseAddr(
                 builder, varPtr, /*isOptional=*/false, varPtr.getLoc());
+
         fir::ExtendedValue extendedValue =
             hlfir::translateToExtendedValue(varPtr.getLoc(), builder,
                                             hlfir::Entity{info.addr},
@@ -741,6 +796,37 @@ class MapInfoFinalizationPass
         op.setPartialMap(true);
 
         return mlir::WalkResult::advance();
+      });
+
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        if (!op.getMembers().empty())
+          return;
+
+        if (!mlir::isa<fir::BoxCharType>(fir::unwrapRefType(op.getVarType())))
+          return;
+
+        // POSSIBLE_HACK_ALERT: If the boxchar has been implicitly mapped then
+        // it is likely that the underlying pointer to the data
+        // (!fir.ref<fir.char<k,?>>) has already been mapped. So, skip such
+        // boxchars. We are primarily interested in boxchars that were mapped
+        // by passes such as MapsForPrivatizedSymbols that map boxchars that
+        // are privatized. At present, such boxchar maps are not marked
+        // implicit. Should they be? I don't know. If they should be then
+        // we need to change this check for early return OR live with
+        // over-mapping.
+        bool hasImplicitMap =
+            (llvm::omp::OpenMPOffloadMappingFlags(op.getMapType()) &
+             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT) ==
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+        if (hasImplicitMap)
+          return;
+
+        assert(llvm::hasSingleElement(op->getUsers()) &&
+               "OMPMapInfoFinalization currently only supports single users "
+               "of a MapInfoOp");
+
+        builder.setInsertionPoint(op);
+        genBoxcharMemberMap(op, builder);
       });
 
       func->walk([&](mlir::omp::MapInfoOp op) {

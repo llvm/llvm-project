@@ -91,6 +91,16 @@ inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
 
     return AddrAndBoundsInfo(symAddr, rawInput, isPresent, boxTy);
   }
+  // For boxchar references, do the same as what is done above for box
+  // references - Load the boxchar so that it is easier to retrieve the length
+  // of the underlying character and the data pointer.
+  if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(
+          fir::unwrapRefType((symAddr.getType())))) {
+    if (!isOptional && mlir::isa<fir::ReferenceType>(symAddr.getType())) {
+      mlir::Value boxChar = builder.create<fir::LoadOp>(loc, symAddr);
+      return AddrAndBoundsInfo(boxChar, rawInput, isPresent);
+    }
+  }
   return AddrAndBoundsInfo(symAddr, rawInput, isPresent);
 }
 
@@ -137,26 +147,61 @@ template <typename BoundsOp, typename BoundsType>
 mlir::Value
 genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
                        fir::ExtendedValue dataExv, AddrAndBoundsInfo &info) {
-  // TODO: Handle info.isPresent.
-  if (auto boxCharType =
-          mlir::dyn_cast<fir::BoxCharType>(info.addr.getType())) {
-    mlir::Type idxTy = builder.getIndexType();
-    mlir::Type lenType = builder.getCharacterLengthType();
+
+  if (!mlir::isa<fir::BoxCharType>(fir::unwrapRefType(info.addr.getType())))
+    return mlir::Value{};
+
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type lenType = builder.getCharacterLengthType();
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  using ExtentAndStride = std::tuple<mlir::Value, mlir::Value>;
+  auto [extent, stride] = [&]() -> ExtentAndStride {
+    if (info.isPresent) {
+      llvm::SmallVector<mlir::Type> resTypes = {idxTy, idxTy};
+      mlir::Operation::result_range ifRes =
+          builder.genIfOp(loc, resTypes, info.isPresent, /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value boxChar =
+                    fir::isa_ref_type(info.addr.getType())
+                        ? builder.create<fir::LoadOp>(loc, info.addr)
+                        : info.addr;
+                fir::BoxCharType boxCharType =
+                    mlir::cast<fir::BoxCharType>(boxChar.getType());
+                mlir::Type refType = builder.getRefType(boxCharType.getEleTy());
+                auto unboxed = builder.create<fir::UnboxCharOp>(
+                    loc, refType, lenType, boxChar);
+                mlir::SmallVector<mlir::Value> results = {unboxed.getResult(1), one };
+                builder.create<fir::ResultOp>(loc, results);
+              })
+          .genElse([&]() {
+            mlir::SmallVector<mlir::Value> results = {zero, zero };
+            builder.create<fir::ResultOp>(loc, results); })
+          .getResults();
+      return {ifRes[0], ifRes[1]};
+    }
+    // We have already established that info.addr.getType() is a boxchar
+    // or a boxchar address. If an address, load the boxchar.
+    mlir::Value boxChar = fir::isa_ref_type(info.addr.getType())
+                              ? builder.create<fir::LoadOp>(loc, info.addr)
+                              : info.addr;
+    fir::BoxCharType boxCharType =
+        mlir::cast<fir::BoxCharType>(boxChar.getType());
     mlir::Type refType = builder.getRefType(boxCharType.getEleTy());
     auto unboxed =
-        builder.create<fir::UnboxCharOp>(loc, refType, lenType, info.addr);
-    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-    mlir::Value extent = unboxed.getResult(1);
-    mlir::Value stride = one;
-    mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, extent, one);
-    mlir::Type boundTy = builder.getType<mlir::omp::MapBoundsType>();
-    return builder.create<mlir::omp::MapBoundsOp>(
-        loc, boundTy, /*lower_bound=*/zero,
-        /*upper_bound=*/ub, /*extent=*/extent, /*stride=*/stride,
-        /*stride_in_bytes=*/true, /*start_idx=*/zero);
-  }
-  return mlir::Value{};
+        builder.create<fir::UnboxCharOp>(loc, refType, lenType, boxChar);
+    return {unboxed.getResult(1), one};
+  }();
+
+  mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, extent, one);
+  mlir::Type boundTy = builder.getType<BoundsType>();
+  return builder.create<BoundsOp>(loc, boundTy,
+                                  /*lower_bound=*/zero,
+                                  /*upper_bound=*/ub,
+                                  /*extent=*/extent,
+                                  /*stride=*/stride,
+                                  /*stride_in_bytes=*/true,
+                                  /*start_idx=*/zero);
 }
 
 /// Generate the bounds operation from the descriptor information.
@@ -296,11 +341,11 @@ genImplicitBoundsOps(fir::FirOpBuilder &builder, AddrAndBoundsInfo &info,
     bounds = genBaseBoundsOps<BoundsOp, BoundsType>(builder, loc, dataExv,
                                                     dataExvIsAssumedSize);
   }
-  if (characterWithDynamicLen(fir::unwrapRefType(baseOp.getType()))) {
+  if (characterWithDynamicLen(fir::unwrapRefType(baseOp.getType())) ||
+      mlir::isa<fir::BoxCharType>(fir::unwrapRefType(info.addr.getType()))) {
     bounds = {genBoundsOpFromBoxChar<BoundsOp, BoundsType>(builder, loc,
                                                            dataExv, info)};
   }
-
   return bounds;
 }
 
