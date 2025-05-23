@@ -161,15 +161,271 @@ Error MustacheHTMLGenerator::generateDocs(
   return Error::success();
 }
 
+static json::Value
+extractValue(const Location &L,
+             std::optional<StringRef> RepositoryUrl = std::nullopt) {
+  Object Obj = Object();
+  // TODO: Consider using both Start/End line numbers to improve location report
+  Obj.insert({"LineNumber", L.StartLineNumber});
+  Obj.insert({"Filename", L.Filename});
+
+  if (!L.IsFileInRootDir || !RepositoryUrl)
+    return Obj;
+  SmallString<128> FileURL(*RepositoryUrl);
+  sys::path::append(FileURL, sys::path::Style::posix, L.Filename);
+  FileURL += "#" + std::to_string(L.StartLineNumber);
+  Obj.insert({"FileURL", FileURL});
+
+  return Obj;
+}
+
+static json::Value extractValue(const Reference &I,
+                                StringRef CurrentDirectory) {
+  SmallString<64> Path = I.getRelativeFilePath(CurrentDirectory);
+  sys::path::append(Path, I.getFileBaseName() + ".html");
+  sys::path::native(Path, sys::path::Style::posix);
+  Object Obj = Object();
+  Obj.insert({"Link", Path});
+  Obj.insert({"Name", I.Name});
+  Obj.insert({"QualName", I.QualName});
+  Obj.insert({"ID", toHex(toStringRef(I.USR))});
+  return Obj;
+}
+
+static json::Value extractValue(const TypedefInfo &I) {
+  // Not Supported
+  return nullptr;
+}
+
+static json::Value extractValue(const CommentInfo &I) {
+  assert((I.Kind == "BlockCommandComment" || I.Kind == "FullComment" ||
+          I.Kind == "ParagraphComment" || I.Kind == "TextComment") &&
+         "Unknown Comment type in CommentInfo.");
+
+  Object Obj = Object();
+  json::Value Child = Object();
+
+  // TextComment has no children, so return it.
+  if (I.Kind == "TextComment") {
+    Obj.insert({"TextComment", I.Text});
+    return Obj;
+  }
+
+  // BlockCommandComment needs to generate a Command key.
+  if (I.Kind == "BlockCommandComment")
+    Child.getAsObject()->insert({"Command", I.Name});
+
+  // Use the same handling for everything else.
+  // Only valid for:
+  //  - BlockCommandComment
+  //  - FullComment
+  //  - ParagraphComment
+  json::Value ChildArr = Array();
+  auto &CARef = *ChildArr.getAsArray();
+  CARef.reserve(I.Children.size());
+  for (const auto &C : I.Children)
+    CARef.emplace_back(extractValue(*C));
+  Child.getAsObject()->insert({"Children", ChildArr});
+  Obj.insert({I.Kind, Child});
+
+  return Obj;
+}
+
+static void maybeInsertLocation(std::optional<Location> Loc,
+                                const ClangDocContext &CDCtx, Object &Obj) {
+  if (!Loc)
+    return;
+  Location L = *Loc;
+  Obj.insert({"Location", extractValue(L, CDCtx.RepositoryUrl)});
+}
+
+static void extractDescriptionFromInfo(ArrayRef<CommentInfo> Descriptions,
+                                       json::Object &EnumValObj) {
+  if (Descriptions.empty())
+    return;
+  json::Value DescArr = Array();
+  json::Array &DescARef = *DescArr.getAsArray();
+  for (const CommentInfo &Child : Descriptions)
+    DescARef.emplace_back(extractValue(Child));
+  EnumValObj.insert({"EnumValueComments", DescArr});
+}
+
+static json::Value extractValue(const FunctionInfo &I, StringRef ParentInfoDir,
+                                const ClangDocContext &CDCtx) {
+  Object Obj = Object();
+  Obj.insert({"Name", I.Name});
+  Obj.insert({"ID", toHex(toStringRef(I.USR))});
+  Obj.insert({"Access", getAccessSpelling(I.Access).str()});
+  Obj.insert({"ReturnType", extractValue(I.ReturnType.Type, ParentInfoDir)});
+
+  json::Value ParamArr = Array();
+  json::Array &ParamARef = *ParamArr.getAsArray();
+  for (const auto Val : enumerate(I.Params)) {
+    json::Value V = Object();
+    auto &VRef = *V.getAsObject();
+    VRef.insert({"Name", Val.value().Name});
+    VRef.insert({"Type", Val.value().Type.Name});
+    VRef.insert({"End", Val.index() + 1 == I.Params.size()});
+    ParamARef.emplace_back(V);
+  }
+  Obj.insert({"Params", ParamArr});
+
+  maybeInsertLocation(I.DefLoc, CDCtx, Obj);
+  return Obj;
+}
+
+static json::Value extractValue(const EnumInfo &I,
+                                const ClangDocContext &CDCtx) {
+  Object Obj = Object();
+  std::string EnumType = I.Scoped ? "enum class " : "enum ";
+  EnumType += I.Name;
+  bool HasComment = std::any_of(
+      I.Members.begin(), I.Members.end(),
+      [](const EnumValueInfo &M) { return !M.Description.empty(); });
+  Obj.insert({"EnumName", EnumType});
+  Obj.insert({"HasComment", HasComment});
+  Obj.insert({"ID", toHex(toStringRef(I.USR))});
+  json::Value EnumArr = Array();
+  json::Array &EnumARef = *EnumArr.getAsArray();
+  for (const EnumValueInfo &M : I.Members) {
+    json::Value EnumValue = Object();
+    auto &EnumValObj = *EnumValue.getAsObject();
+    EnumValObj.insert({"Name", M.Name});
+    if (!M.ValueExpr.empty())
+      EnumValObj.insert({"ValueExpr", M.ValueExpr});
+    else
+      EnumValObj.insert({"Value", M.Value});
+
+    extractDescriptionFromInfo(M.Description, EnumValObj);
+    EnumARef.emplace_back(EnumValue);
+  }
+  Obj.insert({"EnumValues", EnumArr});
+
+  extractDescriptionFromInfo(I.Description, Obj);
+  maybeInsertLocation(I.DefLoc, CDCtx, Obj);
+
+  return Obj;
+}
+
+static void extractScopeChildren(const ScopeChildren &S, Object &Obj,
+                                 StringRef ParentInfoDir,
+                                 const ClangDocContext &CDCtx) {
+  json::Value NamespaceArr = Array();
+  json::Array &NamespaceARef = *NamespaceArr.getAsArray();
+  for (const Reference &Child : S.Namespaces)
+    NamespaceARef.emplace_back(extractValue(Child, ParentInfoDir));
+
+  if (!NamespaceARef.empty())
+    Obj.insert({"Namespace", Object{{"Links", NamespaceArr}}});
+
+  json::Value RecordArr = Array();
+  json::Array &RecordARef = *RecordArr.getAsArray();
+  for (const Reference &Child : S.Records)
+    RecordARef.emplace_back(extractValue(Child, ParentInfoDir));
+
+  if (!RecordARef.empty())
+    Obj.insert({"Record", Object{{"Links", RecordArr}}});
+
+  json::Value FunctionArr = Array();
+  json::Array &FunctionARef = *FunctionArr.getAsArray();
+
+  json::Value PublicFunctionArr = Array();
+  json::Array &PublicFunctionARef = *PublicFunctionArr.getAsArray();
+
+  json::Value ProtectedFunctionArr = Array();
+  json::Array &ProtectedFunctionARef = *ProtectedFunctionArr.getAsArray();
+
+  for (const FunctionInfo &Child : S.Functions) {
+    json::Value F = extractValue(Child, ParentInfoDir, CDCtx);
+    AccessSpecifier Access = Child.Access;
+    if (Access == AccessSpecifier::AS_public)
+      PublicFunctionARef.emplace_back(F);
+    else if (Access == AccessSpecifier::AS_protected)
+      ProtectedFunctionARef.emplace_back(F);
+    else
+      FunctionARef.emplace_back(F);
+  }
+
+  if (!FunctionARef.empty())
+    Obj.insert({"Function", Object{{"Obj", FunctionArr}}});
+
+  if (!PublicFunctionARef.empty())
+    Obj.insert({"PublicFunction", Object{{"Obj", PublicFunctionArr}}});
+
+  if (!ProtectedFunctionARef.empty())
+    Obj.insert({"ProtectedFunction", Object{{"Obj", ProtectedFunctionArr}}});
+
+  json::Value EnumArr = Array();
+  auto &EnumARef = *EnumArr.getAsArray();
+  for (const EnumInfo &Child : S.Enums)
+    EnumARef.emplace_back(extractValue(Child, CDCtx));
+
+  if (!EnumARef.empty())
+    Obj.insert({"Enums", Object{{"Obj", EnumArr}}});
+
+  json::Value TypedefArr = Array();
+  auto &TypedefARef = *TypedefArr.getAsArray();
+  for (const TypedefInfo &Child : S.Typedefs)
+    TypedefARef.emplace_back(extractValue(Child));
+
+  if (!TypedefARef.empty())
+    Obj.insert({"Typedefs", Object{{"Obj", TypedefArr}}});
+}
+
 static json::Value extractValue(const NamespaceInfo &I,
                                 const ClangDocContext &CDCtx) {
   Object NamespaceValue = Object();
+  std::string InfoTitle = I.Name.empty() ? "Global Namespace"
+                                         : (Twine("namespace ") + I.Name).str();
+
+  SmallString<64> BasePath = I.getRelativeFilePath("");
+  NamespaceValue.insert({"NamespaceTitle", InfoTitle});
+  NamespaceValue.insert({"NamespacePath", BasePath});
+
+  extractDescriptionFromInfo(I.Description, NamespaceValue);
+  extractScopeChildren(I.Children, NamespaceValue, BasePath, CDCtx);
   return NamespaceValue;
 }
 
 static json::Value extractValue(const RecordInfo &I,
                                 const ClangDocContext &CDCtx) {
   Object RecordValue = Object();
+  extractDescriptionFromInfo(I.Description, RecordValue);
+  RecordValue.insert({"Name", I.Name});
+  RecordValue.insert({"FullName", I.FullName});
+  RecordValue.insert({"RecordType", getTagType(I.TagType)});
+
+  maybeInsertLocation(I.DefLoc, CDCtx, RecordValue);
+
+  StringRef BasePath = I.getRelativeFilePath("");
+  extractScopeChildren(I.Children, RecordValue, BasePath, CDCtx);
+  json::Value PublicMembers = Array();
+  json::Array &PubMemberRef = *PublicMembers.getAsArray();
+  json::Value ProtectedMembers = Array();
+  json::Array &ProtMemberRef = *ProtectedMembers.getAsArray();
+  json::Value PrivateMembers = Array();
+  json::Array &PrivMemberRef = *PrivateMembers.getAsArray();
+  for (const MemberTypeInfo &Member : I.Members) {
+    json::Value MemberValue = Object();
+    auto &MVRef = *MemberValue.getAsObject();
+    MVRef.insert({"Name", Member.Name});
+    MVRef.insert({"Type", Member.Type.Name});
+    extractDescriptionFromInfo(Member.Description, MVRef);
+
+    if (Member.Access == AccessSpecifier::AS_public)
+      PubMemberRef.emplace_back(MemberValue);
+    else if (Member.Access == AccessSpecifier::AS_protected)
+      ProtMemberRef.emplace_back(MemberValue);
+    else if (Member.Access == AccessSpecifier::AS_private)
+      ProtMemberRef.emplace_back(MemberValue);
+  }
+  if (!PubMemberRef.empty())
+    RecordValue.insert({"PublicMembers", Object{{"Obj", PublicMembers}}});
+  if (!ProtMemberRef.empty())
+    RecordValue.insert({"ProtectedMembers", Object{{"Obj", ProtectedMembers}}});
+  if (!PrivMemberRef.empty())
+    RecordValue.insert({"PrivateMembers", Object{{"Obj", PrivateMembers}}});
+
   return RecordValue;
 }
 
