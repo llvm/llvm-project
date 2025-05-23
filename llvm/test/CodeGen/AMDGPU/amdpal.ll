@@ -62,7 +62,7 @@ entry:
 ; PAL-NEXT: v_cndmask_b32_e32 v1, v5, v3, vcc
 ; PAL-NEXT: v_cmp_eq_u32_e32 vcc, 2, v0
 ; PAL-NEXT: v_cndmask_b32_e32 v0, v1, v4, vcc
-; PAL-NEXT: buffer_store{{.*}}, s[[[SCRATCHDESC]]:
+; PAL-NEXT: buffer_store{{.*}}, s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}
 
 define amdgpu_cs void @scratch2_cs(i32 inreg, i32 inreg, i32 inreg, <3 x i32> inreg, i32 inreg, <3 x i32> %coord, <2 x i32> %in, i32 %extra, i32 %idx) #0 {
 entry:
