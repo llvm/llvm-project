@@ -1801,8 +1801,15 @@ RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
     return HandleAtomicSequence(*pc, status);
 
   if (FoundStoreConditional(inst->decoded)) {
-    // Ill-formed program, just set a breakpoint to the current position
-    return {*pc};
+    // Ill-formed atomic sequence (SC doesn't have corresponding LR
+    // instruction). Consider SC instruction like a non-atomic store and set a
+    // breakpoint at the next instruction.
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log,
+              "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
+              "corresponding load reserve insturuction",
+              __FUNCTION__);
+    return {*pc + 4};
   }
 
   return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(status);
@@ -1821,7 +1828,7 @@ unsigned RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointSize(
       last_instr_size)
     return *last_instr_size;
 
-  // Just place non-compressed software trap (EBREAK).
+  // Just place non-compressed software trap.
   return 4;
 }
 
@@ -1830,11 +1837,12 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
     lldb::addr_t pc, Status &error) {
   EmulateInstructionRISCV *riscv_emulator =
       static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
-  // Handle instuctions between LR and SC. According to unprivilleged
-  // RISC-V ISA there can be at most 16 instructions in the sequence
 
-  lldb::addr_t entry_pc = pc;
-  pc += 4; // add LR_W, LR_D instruction size
+  // Handle instructions between LR and SC. According to unprivilleged
+  // RISC-V ISA there can be at most 16 instructions in the sequence.
+
+  lldb::addr_t entry_pc = pc; // LR instruction address
+  pc += 4;                    // add LR_W, LR_D instruction size
 
   size_t atomic_length = 0;
   std::optional<DecodeResult> inst;
@@ -1856,20 +1864,39 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
            !FoundStoreConditional(inst->decoded));
 
   if (atomic_length >= s_max_atomic_sequence_length) {
-    // Ill-formed program, just set a breakpoint to the current position
+    // Ill-formed atomic sequence (LR doesn't have corresponding SC
+    // instruction). In this case consider LR like a non-atomic load instruction
+    // and set a breakpoint at the next after LR instruction.
     Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOGF(log,
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
               "corresponding store conditional insturuction",
               __FUNCTION__);
-    return {entry_pc};
+    return {entry_pc + 4};
   }
 
-  bp_addrs.erase(
-      llvm::remove_if(bp_addrs,
-                      [pc](lldb::addr_t bp_addr) { return pc >= bp_addr; }),
-      bp_addrs.end());
-  bp_addrs.push_back(pc);
+  lldb::addr_t exit_pc = pc;
+
+  // Check if we have a branch to the start of the atomic sequence after SC
+  // instruction. If we have such branch, consider it as a part of the atomic
+  // sequence.
+  inst = riscv_emulator->ReadInstructionAt(exit_pc);
+  if (inst) {
+    B *branch = std::get_if<B>(&inst->decoded);
+    if (branch && (exit_pc + SignExt(branch->imm)) == entry_pc)
+      exit_pc += inst->is_rvc ? 2 : 4;
+  }
+
+  // Set breakpoints at the jump addresses of the forward branches that points
+  // after the end of the atomic sequence.
+  bp_addrs.erase(llvm::remove_if(bp_addrs,
+                                 [exit_pc](lldb::addr_t bp_addr) {
+                                   return exit_pc >= bp_addr;
+                                 }),
+                 bp_addrs.end());
+
+  // Set breakpoint at the end of atomic sequence.
+  bp_addrs.push_back(exit_pc);
   return bp_addrs;
 }
 
