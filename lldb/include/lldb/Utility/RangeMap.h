@@ -380,6 +380,25 @@ public:
     return nullptr;
   }
 
+  const Entry *FindEntryThatIntersects(const Entry &range) const {
+#ifdef ASSERT_RANGEMAP_ARE_SORTED
+    assert(IsSorted());
+#endif
+    if (!m_entries.empty()) {
+      typename Collection::const_iterator begin = m_entries.begin();
+      typename Collection::const_iterator end = m_entries.end();
+      typename Collection::const_iterator pos =
+          std::lower_bound(begin, end, range, BaseLessThan);
+
+      while (pos != begin && pos[-1].DoesIntersect(range))
+        --pos;
+
+      if (pos != end && pos->DoesIntersect(range))
+        return &(*pos);
+    }
+    return nullptr;
+  }
+
   using const_iterator = typename Collection::const_iterator;
   const_iterator begin() const { return m_entries.begin(); }
   const_iterator end() const { return m_entries.end(); }

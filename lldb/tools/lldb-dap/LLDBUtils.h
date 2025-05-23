@@ -13,6 +13,7 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -161,6 +162,15 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 
+/// Gets an SBFileSpec and returns its path as a string.
+///
+/// \param[in] file_spec
+///     The file spec.
+///
+/// \return
+///     The file path as a string.
+std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec);
+
 /// Helper for sending telemetry to lldb server, if client-telemetry is enabled.
 class TelemetryDispatcher {
 public:
@@ -198,6 +208,17 @@ private:
   lldb::SBDebugger *debugger;
 };
 
+/// RAII utility to put the debugger temporarily  into synchronous mode.
+class ScopeSyncMode {
+public:
+  ScopeSyncMode(lldb::SBDebugger &debugger);
+  ~ScopeSyncMode();
+
+private:
+  lldb::SBDebugger &m_debugger;
+  bool m_async;
+};
+
 /// Get the stop-disassembly-display settings
 ///
 /// \param[in] debugger
@@ -206,7 +227,6 @@ private:
 /// \return
 ///     The value of the stop-disassembly-display setting
 lldb::StopDisassemblyType GetStopDisassemblyDisplay(lldb::SBDebugger &debugger);
-
 
 /// Take ownership of the stored error.
 llvm::Error ToError(const lldb::SBError &error);

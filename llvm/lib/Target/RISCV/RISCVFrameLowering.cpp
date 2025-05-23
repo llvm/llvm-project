@@ -293,7 +293,7 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
 
   // Enable interrupts.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRSI))
-      .addReg(RISCV::X0)
+      .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mstatus)
       .addImm(8)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -315,7 +315,7 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
 
   // Disable interrupts.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRCI))
-      .addReg(RISCV::X0)
+      .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mstatus)
       .addImm(8)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -324,12 +324,12 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
   // in the function, they have already been restored once, so now have the
   // value stored in `emitSiFiveCLICPreemptibleSaves`.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
-      .addReg(RISCV::X0)
+      .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mepc)
       .addReg(RISCV::X9, RegState::Kill)
       .setMIFlag(MachineInstr::FrameSetup);
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
-      .addReg(RISCV::X0)
+      .addReg(RISCV::X0, RegState::Define)
       .addImm(RISCVSysReg::mcause)
       .addReg(RISCV::X8, RegState::Kill)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -633,7 +633,6 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
 
   // It will be expanded to a probe loop in `inlineStackProbe`.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::PROBED_STACKALLOC_RVV))
-      .addReg(SPReg)
       .addReg(TargetReg);
 
   if (EmitCFI) {
@@ -828,9 +827,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   }
 
   // It will be expanded to a probe loop in `inlineStackProbe`.
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PROBED_STACKALLOC))
-      .addReg(SPReg)
-      .addReg(TargetReg);
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PROBED_STACKALLOC)).addReg(TargetReg);
 
   if (EmitCFI) {
     // Set the CFA register back to SP.
@@ -1813,9 +1810,22 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
       if (MI->getOpcode() == RISCV::ADJCALLSTACKDOWN)
         Amount = -Amount;
 
-      const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
-      RI.adjustReg(MBB, MI, DL, SPReg, SPReg, StackOffset::getFixed(Amount),
-                   MachineInstr::NoFlags, getStackAlign());
+      const RISCVTargetLowering *TLI =
+          MF.getSubtarget<RISCVSubtarget>().getTargetLowering();
+      int64_t ProbeSize = TLI->getStackProbeSize(MF, getStackAlign());
+      if (TLI->hasInlineStackProbe(MF) && -Amount >= ProbeSize) {
+        // When stack probing is enabled, the decrement of SP may need to be
+        // probed. We can handle both the decrement and the probing in
+        // allocateStack.
+        bool DynAllocation =
+            MF.getInfo<RISCVMachineFunctionInfo>()->hasDynamicAllocation();
+        allocateStack(MBB, MI, MF, -Amount, -Amount, !hasFP(MF),
+                      /*NeedProbe=*/true, ProbeSize, DynAllocation);
+      } else {
+        const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
+        RI.adjustReg(MBB, MI, DL, SPReg, SPReg, StackOffset::getFixed(Amount),
+                     MachineInstr::NoFlags, getStackAlign());
+      }
     }
   }
 
@@ -2420,7 +2430,7 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
         MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV) {
       MachineBasicBlock::iterator MBBI = MI->getIterator();
       DebugLoc DL = MBB.findDebugLoc(MBBI);
-      Register TargetReg = MI->getOperand(1).getReg();
+      Register TargetReg = MI->getOperand(0).getReg();
       emitStackProbeInline(MBBI, DL, TargetReg,
                            (MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV));
       MBBI->eraseFromParent();

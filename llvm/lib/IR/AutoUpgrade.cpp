@@ -646,8 +646,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
 
   if (Name == "thread.pointer") {
     // '(arm|aarch64).thread.pointer'.
-    NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                              Intrinsic::thread_pointer);
+    NewFn = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), Intrinsic::thread_pointer, F->getReturnType());
     return true;
   }
 
@@ -1353,12 +1353,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.{min,max}.{i,ii,ui,ull}
         Expand = Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
                  Name == "ui" || Name == "ull";
-      else if (Name.consume_front("atomic.load.add."))
-        // nvvm.atomic.load.add.{f32.p,f64.p}
-        Expand = Name.starts_with("f32.p") || Name.starts_with("f64.p");
-      else if (Name.consume_front("atomic.load.") && Name.consume_back(".32"))
-        // nvvm.atomic.load.{inc,dec}.32
-        Expand = Name == "inc" || Name == "dec";
+      else if (Name.consume_front("atomic.load."))
+        // nvvm.atomic.load.add.{f32,f64}.p
+        // nvvm.atomic.load.{inc,dec}.32.p
+        Expand = StringSwitch<bool>(Name)
+                     .StartsWith("add.f32.p", true)
+                     .StartsWith("add.f64.p", true)
+                     .StartsWith("inc.32.p", true)
+                     .StartsWith("dec.32.p", true)
+                     .Default(false);
       else if (Name.consume_front("bitcast."))
         // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
         Expand =
@@ -1468,6 +1471,14 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   case 's':
     if (Name == "stackprotectorcheck") {
       NewFn = nullptr;
+      return true;
+    }
+    break;
+
+  case 't':
+    if (Name == "thread.pointer") {
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), Intrinsic::thread_pointer, F->getReturnType());
       return true;
     }
     break;
@@ -1602,7 +1613,7 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
     auto Ctor = cast<Constant>(Init->getOperand(i));
     NewCtors[i] = ConstantStruct::get(EltTy, Ctor->getAggregateElement(0u),
                                       Ctor->getAggregateElement(1),
-                                      Constant::getNullValue(IRB.getPtrTy()));
+                                      ConstantPointerNull::get(IRB.getPtrTy()));
   }
   Constant *NewInit = ConstantArray::get(ArrayType::get(EltTy, N), NewCtors);
 
@@ -2383,10 +2394,12 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Val = CI->getArgOperand(1);
     Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
                                   AtomicOrdering::SequentiallyConsistent);
-  } else if (Name.consume_front("atomic.load.") && Name.consume_back(".32")) {
+  } else if (Name.starts_with("atomic.load.inc.32.p") ||
+             Name.starts_with("atomic.load.dec.32.p")) {
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
-    auto Op = Name == "inc" ? AtomicRMWInst::UIncWrap : AtomicRMWInst::UDecWrap;
+    auto Op = Name.starts_with("atomic.load.inc") ? AtomicRMWInst::UIncWrap
+                                                  : AtomicRMWInst::UDecWrap;
     Rep = Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
                                   AtomicOrdering::SequentiallyConsistent);
   } else if (Name.consume_front("max.") &&
@@ -4554,9 +4567,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Value *NewLdCall = Builder.CreateCall(NewFn, Args);
     Value *Ret = llvm::PoisonValue::get(RetTy);
     for (unsigned I = 0; I < N; I++) {
-      Value *Idx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
       Value *SRet = Builder.CreateExtractValue(NewLdCall, I);
-      Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, Idx);
+      Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, I * MinElts);
     }
     NewCall = dyn_cast<CallInst>(Ret);
     break;
@@ -4611,9 +4623,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *Ret = llvm::PoisonValue::get(RetTy);
       unsigned MinElts = RetTy->getMinNumElements() / N;
       for (unsigned I = 0; I < N; I++) {
-        Value *Idx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
         Value *V = CI->getArgOperand(I);
-        Ret = Builder.CreateInsertVector(RetTy, Ret, V, Idx);
+        Ret = Builder.CreateInsertVector(RetTy, Ret, V, I * MinElts);
       }
       NewCall = dyn_cast<CallInst>(Ret);
     }
@@ -4710,10 +4721,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     }
 
     // Create a new call with an added null annotation attribute argument.
-    NewCall =
-        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
-                                   CI->getArgOperand(2), CI->getArgOperand(3),
-                                   Constant::getNullValue(Builder.getPtrTy())});
+    NewCall = Builder.CreateCall(
+        NewFn,
+        {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2),
+         CI->getArgOperand(3), ConstantPointerNull::get(Builder.getPtrTy())});
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
@@ -4726,10 +4737,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
     // Create a new call with an added null annotation attribute argument.
-    NewCall =
-        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
-                                   CI->getArgOperand(2), CI->getArgOperand(3),
-                                   Constant::getNullValue(Builder.getPtrTy())});
+    NewCall = Builder.CreateCall(
+        NewFn,
+        {CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2),
+         CI->getArgOperand(3), ConstantPointerNull::get(Builder.getPtrTy())});
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
@@ -5770,7 +5781,10 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (!DL.contains("-p7") && !DL.starts_with("p7"))
       Res.append("-p7:160:256:256:32");
     if (!DL.contains("-p8") && !DL.starts_with("p8"))
-      Res.append("-p8:128:128");
+      Res.append("-p8:128:128:128:48");
+    constexpr StringRef OldP8("-p8:128:128-");
+    if (DL.contains(OldP8))
+      Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
       Res.append("-p9:192:256:256:32");
 

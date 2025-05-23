@@ -65,8 +65,9 @@ static sycl::device getDefaultDevice() {
       return syclDevice;
     }
     throw std::runtime_error("getDefaultDevice failed");
-  } else
+  } else {
     return syclDevice;
+  }
 }
 
 static sycl::context getDefaultContext() {
