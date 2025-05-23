@@ -286,7 +286,8 @@ public:
     uint64_t alignment = addr.getAlignment().getQuantity();
     if (alignment)
       align = getI64IntegerAttr(alignment);
-    return create<cir::LoadOp>(loc, addr.getPointer(), /*isDeref=*/false, align);
+    return create<cir::LoadOp>(loc, addr.getPointer(), /*isDeref=*/false,
+                               align);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
