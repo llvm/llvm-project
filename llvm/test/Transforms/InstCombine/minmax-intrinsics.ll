@@ -2418,9 +2418,9 @@ define <3 x i8> @umin_unary_shuffle_ops_narrowing(<4 x i8> %x, <4 x i8> %y) {
 
 define <3 x i8> @smax_unary_shuffle_ops_lhs_const(<3 x i8> %x) {
 ; CHECK-LABEL: @smax_unary_shuffle_ops_lhs_const(
-; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SX]], <3 x i8> <i8 0, i8 1, i8 2>)
-; CHECK-NEXT:    ret <3 x i8> [[R]]
+; CHECK-NEXT:    [[X:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[X1:%.*]], <3 x i8> <i8 1, i8 0, i8 2>)
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X]], <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    ret <3 x i8> [[SX]]
 ;
   %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
   %r = call <3 x i8> @llvm.smax(<3 x i8> <i8 0, i8 1, i8 2>, <3 x i8> %sx)
@@ -2429,9 +2429,9 @@ define <3 x i8> @smax_unary_shuffle_ops_lhs_const(<3 x i8> %x) {
 
 define <vscale x 3 x i8> @smax_unary_shuffle_ops_lhs_const_scalable(<vscale x 3 x i8> %x) {
 ; CHECK-LABEL: @smax_unary_shuffle_ops_lhs_const_scalable(
-; CHECK-NEXT:    [[SX:%.*]] = shufflevector <vscale x 3 x i8> [[X:%.*]], <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 3 x i8> @llvm.smax.nxv3i8(<vscale x 3 x i8> [[SX]], <vscale x 3 x i8> splat (i8 42))
-; CHECK-NEXT:    ret <vscale x 3 x i8> [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 3 x i8> @llvm.smax.nxv3i8(<vscale x 3 x i8> [[SX:%.*]], <vscale x 3 x i8> splat (i8 42))
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <vscale x 3 x i8> [[R]], <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 3 x i8> [[R1]]
 ;
   %sx = shufflevector <vscale x 3 x i8> %x, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
   %r = call <vscale x 3 x i8> @llvm.smax(<vscale x 3 x i8> splat (i8 42), <vscale x 3 x i8> %sx)
@@ -2440,9 +2440,9 @@ define <vscale x 3 x i8> @smax_unary_shuffle_ops_lhs_const_scalable(<vscale x 3 
 
 define <3 x i8> @smax_unary_shuffle_ops_lhs_const_widening(<2 x i8> %x) {
 ; CHECK-LABEL: @smax_unary_shuffle_ops_lhs_const_widening(
-; CHECK-NEXT:    [[SX:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 poison>
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[SX]], <3 x i8> <i8 0, i8 1, i8 2>)
-; CHECK-NEXT:    ret <3 x i8> [[R]]
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X1:%.*]], <2 x i8> <i8 1, i8 0>)
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <2 x i8> [[X]], <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+; CHECK-NEXT:    ret <3 x i8> [[SX]]
 ;
   %sx = shufflevector <2 x i8> %x, <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 poison>
   %r = call <3 x i8> @llvm.smax(<3 x i8> <i8 0, i8 1, i8 2>, <3 x i8> %sx)
