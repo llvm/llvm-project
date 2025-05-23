@@ -6519,8 +6519,8 @@ unsigned CombinerHelper::getFPMinMaxOpcForSelect(
 CombinerHelper::SelectPatternNaNBehaviour
 CombinerHelper::computeRetValAgainstNaN(Register LHS, Register RHS,
                                         bool IsOrderedComparison) const {
-  bool LHSSafe = isKnownNeverNaN(LHS, MRI);
-  bool RHSSafe = isKnownNeverNaN(RHS, MRI);
+  bool LHSSafe = isKnownNeverNaN(LHS, MRI, VT);
+  bool RHSSafe = isKnownNeverNaN(RHS, MRI, VT);
   // Completely unsafe.
   if (!LHSSafe && !RHSSafe)
     return SelectPatternNaNBehaviour::NOT_APPLICABLE;
