@@ -139,7 +139,6 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   // Store the prefix that does not contain any metacharacter.
   size_t PrefixSize = S.find_first_of("?*[{\\");
   Pat.Prefix = S.substr(0, PrefixSize);
-  llvm::errs() << "GlobPattern::create:  Prefix: " << Pat.Prefix << "\n";
   if (PrefixSize == std::string::npos)
     return Pat;
   S = S.substr(PrefixSize);
@@ -192,17 +191,8 @@ GlobPattern::SubGlobPattern::create(StringRef S) {
 }
 
 bool GlobPattern::match(StringRef S) const {
-  int debug = 0;
-  if (S == "hello") {
-    llvm::errs() << "Prefix: " << Prefix << "\n";
-    debug = 1;
-  }
-  if (!S.consume_front(Prefix)) {
-    if (debug == 1) {
-      llvm::errs() << "consume_front: " << Prefix << "\n";
-    }
+  if (!S.consume_front(Prefix))
     return false;
-  }
   if (SubGlobs.empty() && S.empty())
     return true;
   for (auto &Glob : SubGlobs)

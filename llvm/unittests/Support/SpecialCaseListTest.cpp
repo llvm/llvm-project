@@ -63,20 +63,20 @@ TEST_F(SpecialCaseListTest, Basic) {
                           "src:hi=category\n"
                           "src:z*=category\n");
   EXPECT_TRUE(SCL->inSection("", "src", "hello"));
-  // EXPECT_TRUE(SCL->inSection("", "src", "bye"));
-  // EXPECT_TRUE(SCL->inSection("", "src", "hi", "category"));
-  // EXPECT_TRUE(SCL->inSection("", "src", "zzzz", "category"));
-  // EXPECT_FALSE(SCL->inSection("", "src", "hi"));
-  // EXPECT_FALSE(SCL->inSection("", "fun", "hello"));
-  // EXPECT_FALSE(SCL->inSection("", "src", "hello", "category"));
+  EXPECT_TRUE(SCL->inSection("", "src", "bye"));
+  EXPECT_TRUE(SCL->inSection("", "src", "hi", "category"));
+  EXPECT_TRUE(SCL->inSection("", "src", "zzzz", "category"));
+  EXPECT_FALSE(SCL->inSection("", "src", "hi"));
+  EXPECT_FALSE(SCL->inSection("", "fun", "hello"));
+  EXPECT_FALSE(SCL->inSection("", "src", "hello", "category"));
 
-  // EXPECT_EQ(3u, SCL->inSectionBlame("", "src", "hello"));
-  // EXPECT_EQ(4u, SCL->inSectionBlame("", "src", "bye"));
-  // EXPECT_EQ(5u, SCL->inSectionBlame("", "src", "hi", "category"));
-  // EXPECT_EQ(6u, SCL->inSectionBlame("", "src", "zzzz", "category"));
-  // EXPECT_EQ(0u, SCL->inSectionBlame("", "src", "hi"));
-  // EXPECT_EQ(0u, SCL->inSectionBlame("", "fun", "hello"));
-  // EXPECT_EQ(0u, SCL->inSectionBlame("", "src", "hello", "category"));
+  EXPECT_EQ(3u, SCL->inSectionBlame("", "src", "hello"));
+  EXPECT_EQ(4u, SCL->inSectionBlame("", "src", "bye"));
+  EXPECT_EQ(5u, SCL->inSectionBlame("", "src", "hi", "category"));
+  EXPECT_EQ(6u, SCL->inSectionBlame("", "src", "zzzz", "category"));
+  EXPECT_EQ(0u, SCL->inSectionBlame("", "src", "hi"));
+  EXPECT_EQ(0u, SCL->inSectionBlame("", "fun", "hello"));
+  EXPECT_EQ(0u, SCL->inSectionBlame("", "src", "hello", "category"));
 }
 
 TEST_F(SpecialCaseListTest, CorrectErrorLineNumberWithBlankLine) {
