@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "ParasolISelLowering.h"
+#include "ParasolMachineFunction.h"
 #include "ParasolSubtarget.h"
 #include "ParasolTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -48,8 +49,6 @@ ParasolTargetLowering::ParasolTargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i16, &Parasol::IRRegClass);
   addRegisterClass(MVT::i32, &Parasol::IRRegClass);
 
-  addRegisterClass(MVT::i32, &Parasol::PRRegClass);
-
   // Must, computeRegisterProperties - Once all of the register classes are
   // added, this allows us to compute derived properties we expose.
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -85,18 +84,25 @@ ParasolTargetLowering::ParasolTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::i32, MVT::i8, Expand);
   setTruncStoreAction(MVT::i32, MVT::i16, Expand);
 
+  // Branches
+  // setOperationAction(ISD::BRCOND, MVT::i1, Custom);
+  setOperationAction(ISD::BR_CC, {MVT::i1, MVT::i8, MVT::i16, MVT::i32},
+                     Expand);
+
   // Set minimum and preferred function alignment (log2)
-  setMinFunctionAlignment(Align(1));
-  setPrefFunctionAlignment(Align(1));
+  setMinFunctionAlignment(Align(8));
+  setPrefFunctionAlignment(Align(8));
 
   // Set preferred loop alignment (log2)
-  setPrefLoopAlignment(Align(1));
+  setPrefLoopAlignment(Align(8));
 }
 
 const char *ParasolTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
   case ParasolISD::Ret:
     return "ParasolISD::Ret";
+  case ParasolISD::BR_CC:
+    return "ParasolISD::BR_CC";
   default:
     return NULL;
   }
@@ -115,14 +121,217 @@ void ParasolTargetLowering::ReplaceNodeResults(
 //===----------------------------------------------------------------------===//
 
 // The BeyondRISC calling convention parameter registers.
-static const MCPhysReg GPRArgRegs[] = {Parasol::P0, Parasol::P1, Parasol::P2,
-                                       Parasol::P3};
+static const MCPhysReg GPRArgRegs[] = {Parasol::X10, Parasol::X11, Parasol::X12,
+                                       Parasol::X13, Parasol::X14, Parasol::X15,
+                                       Parasol::X16, Parasol::X17};
+
+bool assignArg(const DataLayout &DL, unsigned ValNo, MVT ValVT, MVT LocVT,
+               CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+               CCState &State, bool IsRet, Type *OrigTy,
+               const ParasolTargetLowering &TLI) {
+  // We use RISCV's RV32 calling convention.
+  unsigned XLen = 4;
+  unsigned TwoXLen = 8;
+
+  SmallVectorImpl<CCValAssign> &PendingLocs = State.getPendingLocs();
+  SmallVectorImpl<ISD::ArgFlagsTy> &PendingArgFlags =
+      State.getPendingArgFlags();
+
+  unsigned ValSize = ValVT.getStoreSize();
+  Align ValAlign = Align(ValSize);
+
+  // Handle 8-byte values split over 2 registers.
+  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
+    // If this isn't the last value, store it for later and move to the next
+    // one.
+    if (!ArgFlags.isSplitEnd()) {
+      LocVT = MVT::i32;
+      LocInfo = CCValAssign::Indirect;
+      PendingLocs.push_back(
+          CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+      PendingArgFlags.push_back(ArgFlags);
+
+      return false;
+    } else {
+      assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
+      CCValAssign VALLo = PendingLocs[0];
+      ISD::ArgFlagsTy AFLo = PendingArgFlags[0];
+      PendingLocs.clear();
+      PendingArgFlags.clear();
+
+      // Try placing the lo word in a register. Failing that, it goes on the
+      // stack.
+      if (Register Reg = State.AllocateReg(GPRArgRegs)) {
+        State.addLoc(CCValAssign::getReg(VALLo.getValNo(), VALLo.getValVT(),
+                                         Reg, VALLo.getLocVT(),
+                                         CCValAssign::Full));
+      } else {
+        State.addLoc(CCValAssign::getMem(
+            VALLo.getValNo(), VALLo.getValVT(),
+            State.AllocateStack(XLen, Align(AFLo.getNonZeroOrigAlign())),
+            VALLo.getLocVT(), CCValAssign::Full));
+      }
+
+      // Now try placing the hi word. Again, it goes on the stack if no
+      // registers are available.
+      if (Register Reg = State.AllocateReg(GPRArgRegs)) {
+        State.addLoc(
+            CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, CCValAssign::Full));
+      } else {
+        State.addLoc(CCValAssign::getMem(ValNo, ValVT,
+                                         State.AllocateStack(XLen, Align(XLen)),
+                                         LocVT, CCValAssign::Full));
+      }
+    }
+  } else if (ValSize <= 4) { // <= 4-byte values go in a register/stack
+    if (Register Reg = State.AllocateReg(GPRArgRegs)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+    } else {
+      State.addLoc(CCValAssign::getMem(ValNo, ValVT,
+                                       State.AllocateStack(ValSize, ValAlign),
+                                       LocVT, LocInfo));
+    }
+  } else { // Larger values are passed by reference.
+    assert("Unimplemented");
+  }
+
+  return false;
+}
+
+void ParasolTargetLowering::analyzeInputArgs(
+    MachineFunction &MF, CCState &CCInfo,
+    const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet) const {
+  unsigned NumArgs = Ins.size();
+  FunctionType *FType = MF.getFunction().getFunctionType();
+
+  for (unsigned i = 0; i != NumArgs; ++i) {
+    MVT ArgVT = Ins[i].VT;
+    ISD::ArgFlagsTy ArgFlags = Ins[i].Flags;
+
+    Type *ArgTy = nullptr;
+    if (IsRet)
+      ArgTy = FType->getReturnType();
+    else if (Ins[i].isOrigArg())
+      ArgTy = FType->getParamType(Ins[i].getOrigArgIndex());
+
+    if (assignArg(MF.getDataLayout(), i, ArgVT, ArgVT, CCValAssign::Full,
+                  ArgFlags, CCInfo, IsRet, ArgTy, *this)) {
+      LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type " << ArgVT
+                        << '\n');
+      llvm_unreachable(nullptr);
+    }
+  }
+}
+
+void ParasolTargetLowering::analyzeOutputArgs(
+    MachineFunction &MF, CCState &CCInfo,
+    const SmallVectorImpl<ISD::OutputArg> &Outs) const {
+
+  for (unsigned i = 0; i < Outs.size(); i++) {
+    MVT ArgVT = Outs[i].VT;
+
+    Register Reg = CCInfo.AllocateReg(GPRArgRegs);
+    CCInfo.addLoc(CCValAssign::getReg(i, ArgVT, Reg, ArgVT, CCValAssign::Full));
+  }
+}
+
+// Convert Val to a ValVT. Should not be called for CCValAssign::Indirect
+// values.
+static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
+                                   const CCValAssign &VA, const SDLoc &DL) {
+  switch (VA.getLocInfo()) {
+  default:
+    llvm_unreachable("Unexpected CCValAssign::LocInfo");
+  case CCValAssign::Full:
+    break;
+  case CCValAssign::BCvt:
+    Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
+    break;
+  }
+  return Val;
+}
+
+// The caller is responsible for loading the full value if the argument is
+// passed with CCValAssign::Indirect.
+static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
+                                const CCValAssign &VA, const SDLoc &DL,
+                                const ISD::InputArg &In,
+                                const ParasolTargetLowering &TLI) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineRegisterInfo &RegInfo = MF.getRegInfo();
+  EVT LocVT = VA.getLocVT();
+  SDValue Val;
+  const TargetRegisterClass *RC = TLI.getRegClassFor(LocVT.getSimpleVT());
+  Register VReg = RegInfo.createVirtualRegister(RC);
+  RegInfo.addLiveIn(VA.getLocReg(), VReg);
+
+  // Our arguments are packed as 32-bit values, so we need to start there and
+  // truncate to the actual size below.
+  Val = DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32);
+
+  // If input is sign extended from 32 bits, note it for the SExtWRemoval pass.
+  if (In.isOrigArg()) {
+    Argument *OrigArg = MF.getFunction().getArg(In.getOrigArgIndex());
+    if (OrigArg->getType()->isIntegerTy()) {
+      unsigned BitWidth = OrigArg->getType()->getIntegerBitWidth();
+      // An input zero extended from i31 can also be considered sign extended.
+      if ((BitWidth <= 32 && In.Flags.isSExt()) ||
+          (BitWidth < 32 && In.Flags.isZExt())) {
+        ParasolFunctionInfo *PFI = MF.getInfo<ParasolFunctionInfo>();
+        Val = DAG.getZExtOrTrunc(Val, DL, VA.getValVT());
+        // PFI->addSExt32Register(VReg);
+      }
+    }
+  }
+
+  if (VA.getLocInfo() == CCValAssign::Indirect) {
+    return Val;
+  }
+
+  return convertLocVTToValVT(DAG, Val, VA, DL);
+}
+
+// The caller is responsible for loading the full value if the argument is
+// passed with CCValAssign::Indirect.
+static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
+                                const CCValAssign &VA, const SDLoc &DL) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  EVT LocVT = VA.getLocVT();
+  EVT ValVT = VA.getValVT();
+  EVT PtrVT = MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0));
+  if (ValVT.isScalableVector()) {
+    // When the value is a scalable vector, we save the pointer which points to
+    // the scalable vector value in the stack. The ValVT will be the pointer
+    // type, instead of the scalable vector type.
+    ValVT = LocVT;
+  }
+  int FI = MFI.CreateFixedObject(ValVT.getStoreSize(), VA.getLocMemOffset(),
+                                 /*IsImmutable=*/true);
+  SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
+  SDValue Val;
+
+  ISD::LoadExtType ExtType;
+  switch (VA.getLocInfo()) {
+  default:
+    llvm_unreachable("Unexpected CCValAssign::LocInfo");
+  case CCValAssign::Full:
+  case CCValAssign::Indirect:
+  case CCValAssign::BCvt:
+    ExtType = ISD::NON_EXTLOAD;
+    break;
+  }
+  Val = DAG.getExtLoad(
+      ExtType, DL, LocVT, Chain, FIN,
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), ValVT);
+  return Val;
+}
 
 /// LowerFormalArguments - transform physical registers into virtual registers
 /// and generate load operations for arguments places on the stack.
 SDValue ParasolTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   assert((CallingConv::C == CallConv || CallingConv::Fast == CallConv) &&
          "Unsupported CallingConv to FORMAL_ARGS");
@@ -137,139 +346,25 @@ SDValue ParasolTargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
-                 *DAG.getContext());
-  CCInfo.AnalyzeFormalArguments(Ins, CC_Parasol);
+  CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
 
   SmallVector<SDValue, 16> ArgValues;
   SDValue ArgValue;
   Function::const_arg_iterator CurOrigArg = MF.getFunction().arg_begin();
-  unsigned CurArgIdx = 0;
 
-  // SUNSCREEN TODO: Commented out this code since we are not handling cases of
-  // variadic arguments or pointer arguments.
-  //
-  // Calculate the amount of stack space that we need to allocate to store
-  // byval and variadic arguments that are passed in registers.
-  // We need to know this before we allocate the first byval or variadic
-  // argument, as they will be allocated a stack slot below the CFA (Canonical
-  // Frame Address, the stack pointer at entry to the function).
-  unsigned ArgRegBegin = Parasol::P32;
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    if (CCInfo.getInRegsParamsProcessed() >= CCInfo.getInRegsParamsCount())
-      break;
+  analyzeInputArgs(MF, CCInfo, Ins, false);
 
+  for (unsigned i = 0, e = ArgLocs.size(), InsIdx = 0; i != e; ++i, ++InsIdx) {
     CCValAssign &VA = ArgLocs[i];
-    unsigned Index = VA.getValNo();
-    ISD::ArgFlagsTy Flags = Ins[Index].Flags;
-    if (!Flags.isByVal())
-      continue;
+    SDValue ArgValue;
 
-    assert(VA.isMemLoc() && "unexpected byval pointer in reg");
-    unsigned RBegin, REnd;
-    CCInfo.getInRegsParamInfo(CCInfo.getInRegsParamsProcessed(), RBegin, REnd);
-    ArgRegBegin = std::min(ArgRegBegin, RBegin);
-
-    CCInfo.nextInRegsParam();
-  }
-  CCInfo.rewindByValRegsInfo();
-
-  int lastInsIndex = -1;
-
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
-
-    if (Ins[VA.getValNo()].isOrigArg()) {
-      std::advance(CurOrigArg,
-                   Ins[VA.getValNo()].getOrigArgIndex() - CurArgIdx);
-      CurArgIdx = Ins[VA.getValNo()].getOrigArgIndex();
-    }
-
-    unsigned Index = VA.getValNo();
-    Argument *Arg = F.getArg(i);
-    ISD::ArgFlagsTy Flags = Ins[Index].Flags;
-
-    // Arguments stored in registers.
     if (VA.isRegLoc()) {
-      EVT RegVT = VA.getLocVT();
-
-      if (VA.needsCustom()) {
-        llvm_unreachable("Custom val assignment not supported by "
-                         "FORMAL_ARGUMENTS Lowering");
-      } else {
-        const TargetRegisterClass *RC;
-
-        // SUNSCREEN TODO: This gets triggered but the resulting registers are
-        // still of type r instead of e.  This also seems to double allocate the
-        // registers, as now the ParasolInstrInfo::copyPhysReg reports the
-        // register list as X, X, E, E, R instead of X, X, R when using
-        // non-encrypted arguments.
-        if (Flags.isEncrypted()) {
-          RC = &Parasol::PRRegClass;
-          RegVT.setIsEncrypted(true);
-        }
-        if (RegVT == MVT::i32) {
-          RC = &Parasol::PRRegClass;
-        } else {
-          llvm_unreachable("RegVT not supported by FORMAL_ARGUMENTS Lowering");
-        }
-
-        // Transform the arguments in physical registers into virtual ones.
-        unsigned Reg = MF.addLiveIn(VA.getLocReg(), RC);
-        ArgValue = DAG.getCopyFromReg(Chain, dl, Reg, RegVT);
-
-        unsigned bind_op;
-
-        if (Arg->onlyReadsMemory() == 1) {
-          bind_op =
-              Flags.isEncrypted() ? ISD::BINDREADENCRYPTED : ISD::BINDREADPLAIN;
-        } else {
-          bind_op = Flags.isEncrypted() ? ISD::BINDREADWRITEENCRYPTED
-                                        : ISD::BINDREADWRITEPLAIN;
-        }
-
-        SDValue BindId = DAG.getConstant(i, dl, EVT(MVT::SimpleValueType::i32));
-
-        ArgValue = DAG.getNode(bind_op, dl, VA.getValVT(), ArgValue, BindId);
-        ArgValue.getNode()->setHasEncryptedValue(Flags.isEncrypted());
-      }
-
-      // If this is an 8 or 16-bit value, it is really passed promoted
-      // to 32 bits.  Insert an assert[sz]ext to capture this, then
-      // truncate to the right size.
-      switch (VA.getLocInfo()) {
-      default:
-        llvm_unreachable("Unknown loc info!");
-      case CCValAssign::Full:
-        break;
-      case CCValAssign::BCvt:
-        ArgValue = DAG.getNode(ISD::BITCAST, dl, VA.getValVT(), ArgValue);
-        break;
-      case CCValAssign::SExt:
-        ArgValue = DAG.getNode(ISD::AssertSext, dl, RegVT, ArgValue,
-                               DAG.getValueType(VA.getValVT()));
-        ArgValue = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), ArgValue);
-        break;
-      case CCValAssign::ZExt:
-        ArgValue = DAG.getNode(ISD::AssertZext, dl, RegVT, ArgValue,
-                               DAG.getValueType(VA.getValVT()));
-        ArgValue = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), ArgValue);
-        break;
-      }
-      InVals.push_back(ArgValue);
-    } else { // VA.isRegLoc()
-      // sanity check
-      assert(VA.isMemLoc());
-      assert(VA.getValVT() != MVT::i64 && "i64 should already be lowered");
-
-      int index = VA.getValNo();
-
-      // Some Ins[] entries become multiple ArgLoc[] entries.
-      // Process them only once.
-      if (index != lastInsIndex) {
-        llvm_unreachable("Cannot retrieve arguments from the stack");
-      }
+      ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, Ins[InsIdx], *this);
+    } else {
+      ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL);
     }
+
+    InVals.push_back(ArgValue);
   }
 
   return Chain;
@@ -283,8 +378,17 @@ bool ParasolTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
   SmallVector<CCValAssign, 16> RVLocs;
-  CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(Outs, Parasol_CRetConv);
+  switch (Outs.size()) {
+  case 0:
+    return true;
+  case 1:
+    return Outs[0].VT.getStoreSize() <= 8;
+  case 2:
+    return Outs[0].VT.getStoreSize() + Outs[1].VT.getStoreSize() <= 8;
+  default:
+  }
+
+  return false;
 }
 
 /// LowerMemOpCallTo - Store the argument to the stack.
@@ -419,61 +523,41 @@ ParasolTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                    bool isVarArg,
                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
                                    const SmallVectorImpl<SDValue> &OutVals,
-                                   const SDLoc &dl, SelectionDAG &DAG) const {
-  // CCValAssign - represent the assignment of the return value to a location.
+                                   const SDLoc &DL, SelectionDAG &DAG) const {
   SmallVector<CCValAssign, 16> RVLocs;
+  SmallVector<SDValue, 4> RetOps(1, Chain);
+  MachineFunction &MF = DAG.getMachineFunction();
+  CCState CCInfo(CallConv, isVarArg, MF, RVLocs, *DAG.getContext());
+  SDValue Glue;
 
-  // CCState - Info about the registers and stack slots.
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
-                 *DAG.getContext());
-
-  // Analyze outgoing return values.
-  CCInfo.AnalyzeReturn(Outs, Parasol_CRetConv);
-
-  SDValue Flag;
-  SmallVector<SDValue, 4> RetOps;
-  RetOps.push_back(Chain); // Operand #0 = Chain (updated below)
-
-  // Copy the result values into the output registers.
-  for (unsigned i = 0, realRVLocIdx = 0; i != RVLocs.size();
-       ++i, ++realRVLocIdx) {
-    CCValAssign &VA = RVLocs[i];
-    assert(VA.isRegLoc() && "Can only return in registers!");
-
-    SDValue Arg = OutVals[realRVLocIdx];
-    bool ReturnF16 = false;
-
-    switch (VA.getLocInfo()) {
-    default:
-      llvm_unreachable("Unknown loc info!");
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      if (!ReturnF16)
-        Arg = DAG.getNode(ISD::BITCAST, dl, VA.getLocVT(), Arg);
-      break;
-    }
-
-    if (VA.needsCustom()) {
-      llvm_unreachable("Custom val assignment not supported by "
-                       "RETURN Lowering");
-    } else {
-      Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), Arg, Flag);
-    }
-
-    // Guarantee that all emitted copies are stuck together, avoiding something
-    // bad.
-    Flag = Chain.getValue(1);
-    RetOps.push_back(
-        DAG.getRegister(VA.getLocReg(), ReturnF16 ? MVT::f16 : VA.getLocVT()));
+  // The caller has split up > 4-byte values on our behalf.
+  if (OutVals.size() > 2) {
+    assert("Cannot return more than 2 values in registers.");
   }
 
-  // Update chain and glue.
-  RetOps[0] = Chain;
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  analyzeOutputArgs(MF, CCInfo, Outs);
 
-  return DAG.getNode(ParasolISD::Ret, dl, MVT::Other, RetOps);
+  for (size_t i = 0; i < RVLocs.size(); i++) {
+    SDValue Val = OutVals[i];
+    CCValAssign &VA = RVLocs[i];
+
+    // Explicitly zero-extend values too small for 4-bytes.
+    if (VA.getValVT().getStoreSize() < 4) {
+      Val = DAG.getZeroExtendInReg(Val, DL, MVT::i32);
+    }
+
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Val, Glue);
+    Glue = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
+  }
+
+  RetOps[0] = Chain;
+
+  if (Glue.getNode()) {
+    RetOps.push_back(Glue);
+  }
+
+  return DAG.getNode(ParasolISD::RetGlue, DL, MVT::Other, RetOps);
 }
 
 //===----------------------------------------------------------------------===//

@@ -109,9 +109,9 @@ def ElementType : TypeAttr<"elementtype", [ParamAttr]>;
 
 /// The given function is the entry point for a fully homomorphic encryption
 // program.
-def FheCircuit: EnumAttr<"fhe_circuit", [FnAttr]>;
+def FheCircuit: EnumAttr<"fhe_program", [FnAttr]>;
 
-/// Indicates an input parameter on an `fhe_circuit` is encrypted.
+/// Indicates an input parameter on an `fhe_program` is encrypted.
 def Encrypted: EnumAttr<"encrypted", [ParamAttr]>;
 
 /// Whether to keep return instructions, or replace with a jump to an external

@@ -37,6 +37,9 @@ ParasolMCAsmInfo::ParasolMCAsmInfo(const Triple &TheTriple) {
 
   UseAssignmentForEHBegin = true;
 
+  MaxInstLength = 8;
+  MinInstAlignment = 8;
+
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
   DwarfRegNumForCFI = true;

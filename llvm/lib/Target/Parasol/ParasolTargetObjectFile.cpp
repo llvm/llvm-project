@@ -11,6 +11,8 @@
 
 using namespace llvm;
 
+unsigned ParasolTargetObjectFile::getTextSectionAlignment() const { return 8; }
+
 void ParasolTargetObjectFile::Initialize(MCContext &Ctx,
                                          const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);

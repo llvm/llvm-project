@@ -5,4 +5,4 @@
 
 GIT_ROOT=$(git rev-parse --show-toplevel)
 
-find ./llvm/lib/Target/Parasol -name '*.cpp' -o -name '*.h' -o -name "*.def" | xargs "$GIT_ROOT/build/bin/clang-format" -i
+find "$GIT_ROOT/llvm/lib/Target/Parasol" -name '*.cpp' -o -name '*.h' -o -name "*.def" | xargs "$GIT_ROOT/build/bin/clang-format" -i

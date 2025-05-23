@@ -14,6 +14,10 @@ Files changed
 .github/PULL_REQUEST_TEMPLATE.md
 .gitignore
 README.md
+compile.sh
+run-all.sh
+run.sh
+shell.nix
 clang/include/clang/AST/Type.h
 clang/include/clang/Basic/Attr.td
 clang/include/clang/Basic/AttrDocs.td

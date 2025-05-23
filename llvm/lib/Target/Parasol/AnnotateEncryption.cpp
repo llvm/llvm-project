@@ -78,7 +78,7 @@ PreservedAnalyses AnnotateEncryptionPass::run(Function &F,
   // First, capture the color for the function arguments.
   for (const auto &A : F.args()) {
     if (!A.getType()->isPointerTy()) {
-      report_fatal_error("An fhe_circuit function had a non-pointer argument");
+      report_fatal_error("An fhe_program function had a non-pointer argument");
     }
 
     if (A.hasEncryptedAttr()) {

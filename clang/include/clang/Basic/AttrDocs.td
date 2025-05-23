@@ -7891,7 +7891,7 @@ Specifies a function as an TFHE circuit
 
 .. code-block:: c
 
-  [[clang::fhe_circuit]] int test([[clang::encrypted]] int a, [[clang::encrypted]] int b)
+  [[clang::fhe_program]] int test([[clang::encrypted]] int a, [[clang::encrypted]] int b)
   {
       return a + b;
   }
@@ -7905,9 +7905,10 @@ Specifies a variable as an encrypted variable
 
 .. code-block:: c
 
-  [[clang::fhe_circuit]] int test([[clang::encrypted]] int a, [[clang::encrypted]] int b)
+  [[clang::fhe_program]] int test([[clang::encrypted]] int a, [[clang::encrypted]] int b)
   {
       return a + b;
   }
   }];
 }
+

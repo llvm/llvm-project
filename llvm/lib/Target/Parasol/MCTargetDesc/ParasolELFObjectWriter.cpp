@@ -18,7 +18,7 @@
 using namespace llvm;
 
 // Update this number whenever the instruction format changes
-#define ABI_VERSION 1
+#define ABI_VERSION 2
 
 namespace {
 class ParasolELFObjectWriter : public MCELFObjectTargetWriter {

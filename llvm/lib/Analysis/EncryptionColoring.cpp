@@ -33,10 +33,6 @@ EncryptionColoring EncryptionColoringAnalysis::run(Function &F,
 
     // First, capture the color for the function arguments.
     for (const auto &A : F.args()) {
-        if (!A.getType()->isPointerTy()) {
-            report_fatal_error("An fhe_circuit function had a non-pointer argument");
-        }
-
         if (A.hasEncryptedAttr()) {
             Coloring.Colors.insert(std::pair(&A, EncryptedPtrEncryptedPlainIndex));
         } else {
@@ -112,3 +108,4 @@ void EncryptionColoringAnalysis::colorInstruction(const Instruction &Inst, Encry
 
 EncryptionColoring::EncryptionColoring(Function& F): Parent(&F), IsApplicable(false), Colors() {
 }
+

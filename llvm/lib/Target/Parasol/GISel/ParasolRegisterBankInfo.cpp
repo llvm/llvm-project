@@ -73,8 +73,6 @@ ParasolRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   switch (RC.getID()) {
   case Parasol::IRRegClassID:
     return getRegBank(Parasol::IRRegBankID);
-  case Parasol::PRRegClassID:
-    return getRegBank(Parasol::PRRegBankID);
   default:
     llvm_unreachable("Register class not supported");
   }
@@ -146,10 +144,9 @@ ParasolRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
     unsigned Size = DstTy.getSizeInBits();
     bool isPointer = DstTy.isPointer();
-    const RegisterBank &DstRB =
-        isPointer ? Parasol::PRRegBank : Parasol::IRRegBank;
-    const RegisterBank &SrcRB =
-        isPointer ? Parasol::PRRegBank : Parasol::IRRegBank;
+    const RegisterBank &DstRB = Parasol::IRRegBank;
+    const RegisterBank &SrcRB = Parasol::IRRegBank;
+
     return getInstructionMapping(
         DefaultMappingID, copyCost(DstRB, SrcRB, TypeSize::getFixed(Size)),
         Parasol::getValueMapping(DstRB.getID(), Size),
@@ -176,8 +173,7 @@ ParasolRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       continue;
     OpSize[Idx] = Ty.getSizeInBits();
 
-    OpRegBankIdx[Idx] =
-        Ty.isPointer() ? Parasol::PRRegBankID : Parasol::IRRegBankID;
+    OpRegBankIdx[Idx] = Parasol::IRRegBankID;
   }
 
   unsigned Cost = 1;

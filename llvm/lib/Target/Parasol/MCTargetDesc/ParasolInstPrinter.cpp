@@ -55,6 +55,28 @@ void ParasolInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 
   if (Op.isImm()) {
     O << Op.getImm();
+
+    // If the immediate is 32 bit (I think we only have this at least for now)
+    // and could be negative in 2's complement, also print that out
+    uint32_t trunc_imm = (uint32_t)Op.getImm();
+    if (trunc_imm == Op.getImm() && (trunc_imm & 0x80000000)) {
+      O << " (" << (int32_t)trunc_imm << ")";
+    }
+
+    // If it's branching, also display the number of instructions involved
+    switch (MI->getOpcode()) {
+    case Parasol::BR:
+    case Parasol::BRZ:
+    case Parasol::BRNZ:
+      int32_t inst_count = ((int32_t)trunc_imm) / 8;
+      if (inst_count > 0) {
+        O << " [Down " << inst_count << "]";
+      } else {
+        O << " [Up " << -inst_count << "]";
+      }
+      break;
+    }
+
     return;
   }
 

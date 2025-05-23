@@ -28,6 +28,7 @@ function check_requirements() {
 
 # Define paths
 GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || dirname "$0")
+# If we move this script file to other repos, we will need to adjust this
 LLVM_PROJECT_ROOT="$GIT_ROOT"
 
 # Function to get the last build type

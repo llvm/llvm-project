@@ -4467,7 +4467,7 @@ def CountedBy : InheritableAttr {
 }
 
 def FheCircuit : InheritableAttr {
-  let Spellings = [Clang<"fhe_circuit">, Declspec<"fhe_circuit">];
+  let Spellings = [Clang<"fhe_program">, Declspec<"fhe_program">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [FheCircuitDocs];
   let SimpleHandler = 1;
@@ -4478,3 +4478,4 @@ def Encrypted : InheritableAttr {
   let Subjects = SubjectList<[ParmVar], ErrorDiag>;
   let Documentation = [EncryptedDocs];
 }
+

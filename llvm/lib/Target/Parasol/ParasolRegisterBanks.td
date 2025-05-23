@@ -12,5 +12,3 @@
 
 /// General Purpose Registers
 def IRRegBank : RegisterBank<"IRRB", [IR]>;
-def PRRegBank : RegisterBank<"PRRB", [PR]>;
-def GPRRegBank : RegisterBank<"GPRB", [GPR]>;

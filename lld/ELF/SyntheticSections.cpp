@@ -3737,6 +3737,14 @@ static uint8_t getAbiVersion() {
     return ver;
   }
 
+  // Parasol executable gets ABI version from input object file
+  if (config->emachine == EM_Parasol) {
+    if (ctx.objectFiles.empty()) {
+      error("linker has no input file and this is not possible");
+    }
+    return ctx.objectFiles[0]->abiVersion;
+  }
+
   return 0;
 }
 

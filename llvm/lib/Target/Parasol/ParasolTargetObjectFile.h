@@ -14,6 +14,7 @@ namespace llvm {
 class ParasolTargetObjectFile : public TargetLoweringObjectFileELF {
 public:
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  unsigned getTextSectionAlignment() const override;
 };
 } // end namespace llvm
 

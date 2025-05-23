@@ -33,6 +33,10 @@ enum NodeType {
   MUL,
   SELECT,
 
+  RetGlue,
+
+  BR_CC,
+
   // Return
   Ret,
 };
@@ -97,6 +101,13 @@ private:
   SDValue LowerMemOpCallTo(SDValue Chain, SDValue Arg, const SDLoc &dl,
                            SelectionDAG &DAG, const CCValAssign &VA,
                            ISD::ArgFlagsTy Flags) const;
+
+  void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
+                        const SmallVectorImpl<ISD::InputArg> &Ins,
+                        bool IsRet) const;
+
+  void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
+                         const SmallVectorImpl<ISD::OutputArg> &Outs) const;
 };
 } // namespace llvm
 

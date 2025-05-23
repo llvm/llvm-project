@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/ParasolMCTargetDesc.h"
+#include "ParasolFixupKinds.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -18,22 +19,6 @@
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
-
-static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {}
-
-/// getFixupKindNumBytes - The number of bytes the fixup may change.
-static unsigned getFixupKindNumBytes(unsigned Kind) {
-  switch (Kind) {
-  default:
-    return 8;
-  case FK_Data_1:
-    return 1;
-  case FK_Data_2:
-    return 2;
-  case FK_Data_8:
-    return 8;
-  }
-}
 
 namespace {
 class ParasolAsmBackend : public MCAsmBackend {
@@ -48,7 +33,9 @@ public:
                          : llvm::endianness::big),
         TheTarget(T) {}
 
-  unsigned getNumFixupKinds() const override { return 0; }
+  unsigned getNumFixupKinds() const override {
+    return Parasol::NumTargetFixupKinds;
+  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
     unsigned Type;
@@ -63,33 +50,17 @@ public:
   }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
-    static const MCFixupKindInfo Builtins[] = {
-        {"FK_NONE", 0, 0, 0},
-        {"FK_Data_1", 0, 8, 0},
-        {"FK_Data_2", 0, 16, 0},
-        {"FK_Data_4", 0, 32, 0},
-        {"FK_Data_8", 0, 64, 0},
-        {"FK_Data_leb128", 0, 0, 0},
-        {"FK_PCRel_1", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
-        {"FK_PCRel_2", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-        {"FK_PCRel_4", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"FK_PCRel_8", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
-        {"FK_GPRel_1", 0, 8, 0},
-        {"FK_GPRel_2", 0, 16, 0},
-        {"FK_GPRel_4", 0, 32, 0},
-        {"FK_GPRel_8", 0, 64, 0},
-        {"FK_DTPRel_4", 0, 32, 0},
-        {"FK_DTPRel_8", 0, 64, 0},
-        {"FK_TPRel_4", 0, 32, 0},
-        {"FK_TPRel_8", 0, 64, 0},
-        {"FK_SecRel_1", 0, 8, 0},
-        {"FK_SecRel_2", 0, 16, 0},
-        {"FK_SecRel_4", 0, 32, 0},
-        {"FK_SecRel_8", 0, 64, 0},
+    static const MCFixupKindInfo Infos[Parasol::NumTargetFixupKinds] = {
+        {"fixup_br_one_reg_imm", 14, 32, MCFixupKindInfo::FKF_IsPCRel},
+        {"fixup_br_imm", 8, 32, MCFixupKindInfo::FKF_IsPCRel},
     };
 
-    assert((size_t)Kind <= std::size(Builtins) && "Unknown fixup kind");
-    return Builtins[Kind];
+    if (Kind < FirstTargetFixupKind)
+      return MCAsmBackend::getFixupKindInfo(Kind);
+
+    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+           "Invalid kind!");
+    return Infos[Kind - FirstTargetFixupKind];
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
@@ -141,11 +112,14 @@ public:
 
     if (Fixup.getKind() >= FirstLiteralRelocationKind)
       return;
-    Value = adjustFixupValue(Fixup.getKind(), Value);
+
+    auto fixup_info = getFixupKindInfo(Fixup.getKind());
+    Value = (Value & 0xFFFFFFFF) << fixup_info.TargetOffset;
     if (!Value)
       return; // Doesn't change encoding.
 
-    unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
+    unsigned NumBytes =
+        (fixup_info.TargetOffset + fixup_info.TargetSize + 7) / 8;
     unsigned Offset = Fixup.getOffset();
     // For each byte of the fragment that the fixup touches, mask in the bits
     // from the fixup value. The Value has been "split up" into the

@@ -387,10 +387,6 @@ def blockaddress : SDNode<"ISD::BlockAddress",        SDTPtrLeaf, [],
 def tblockaddress: SDNode<"ISD::TargetBlockAddress",  SDTPtrLeaf, [],
                          "BlockAddressSDNode">;
 
-def bindreadplain        : SDNode<"ISD::BINDREADPLAIN"       , SDTIntBinOp, []>;
-def bindreadwriteplain   : SDNode<"ISD::BINDREADWRITEPLAIN"  , SDTIntBinOp, []>;
-def bindreadencrypted    : SDNode<"ISD::BINDREADENCRYPTED"       , SDTIntBinOp, []>;
-def bindreadwriteencrypted : SDNode<"ISD::BINDREADWRITEENCRYPTED"  , SDTIntBinOp, []>;
 def add        : SDNode<"ISD::ADD"       , SDTIntBinOp   ,
                         [SDNPCommutative, SDNPAssociative]>;
 def ptradd     : SDNode<"ISD::ADD"       , SDTPtrAddOp, []>;

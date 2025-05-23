@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "mccodeemitter"
+#include "MCTargetDesc/ParasolFixupKinds.h"
 #include "MCTargetDesc/ParasolMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -24,12 +25,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/SubtargetFeature.h"
 
 using namespace llvm;
 
@@ -96,19 +92,29 @@ ParasolMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
     return MO.getImm();
 
   assert(MO.isExpr());
-  const MCExpr *Expr = MO.getExpr();
   // SUNSCREEN TODO: Reenable?
-  //   if (const ParasolMCExpr *SExpr = dyn_cast<ParasolMCExpr>(Expr)) {
-  //     MCFixupKind Kind = (MCFixupKind)SExpr->getFixupKind();
-  //     Fixups.push_back(MCFixup::create(0, Expr, Kind));
-  //     return 0;
-  //   }
+  // if (const ParasolMCExpr *SExpr = dyn_cast<ParasolMCExpr>(Expr)) {
+  //   MCFixupKind Kind = (MCFixupKind)SExpr->getFixupKind();
+  //   Fixups.push_back(MCFixup::create(0, Expr, Kind));
+  //   return 0;
+  // }
 
-  int64_t Res;
-  if (Expr->evaluateAsAbsolute(Res))
-    return Res;
+  auto Expr = MO.getExpr();
 
-  llvm_unreachable("Unhandled expression!");
+  switch (MI.getOpcode()) {
+  case Parasol::BRZ:
+  case Parasol::BRNZ:
+    Fixups.push_back(
+        MCFixup::create(0, Expr, MCFixupKind(Parasol::fixup_br_one_reg_imm)));
+    break;
+  case Parasol::BR:
+    Fixups.push_back(
+        MCFixup::create(0, Expr, MCFixupKind(Parasol::fixup_br_imm)));
+    break;
+  default:
+    llvm_unreachable("Opcode should not need fixups");
+  }
+
   return 0;
 }
 
@@ -128,7 +134,7 @@ ParasolMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
                                              const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
   if (MO.isReg() || MO.isImm())
-    return getMachineOpValue(MI, MO, Fixups, STI);
+    getMachineOpValue(MI, MO, Fixups, STI);
 
   return 0;
 }

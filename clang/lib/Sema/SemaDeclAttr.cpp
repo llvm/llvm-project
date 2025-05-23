@@ -1688,14 +1688,6 @@ static void handleEncryptedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (D->isInvalidDecl())
     return;
 
-  // encrypted only applies to pointer types.
-  QualType T = cast<ParmVarDecl>(D)->getType();
-  if (!S.isValidPointerAttrType(T, /* RefOkay */ true)) {
-    S.Diag(AL.getLoc(), diag::warn_attribute_pointers_only)
-        << AL << AL.getRange() << 0;
-    return;
-  }
-
   D->addAttr(::new (S.Context) EncryptedAttr(S.Context, AL));
 }
 

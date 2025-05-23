@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 // Procedure return
-def parasol_ret : SDNode<"ParasolISD::Ret", SDTNone,
+def parasol_ret_glue : SDNode<"ParasolISD::RetGlue", SDTNone,
                        [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 // Procedure calling
@@ -38,23 +38,6 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                               [(callseq_end timm:$amt1, timm:$amt2)]>;
 } // end Defs = [X2], Uses = [X2]
 
-//===----------------------------------------------------------------------===//
-// Move Instructions
-//===----------------------------------------------------------------------===//
-
-def MOVrr : ParasolInst<(outs IR:$dst), (ins IR:$src), "mov", "$dst, $src", []> {
-    let hasSideEffects = 0;
-    let mayLoad = 0;
-    let mayStore = 0;
-    let Opcode = OPC_MOV.Value;
-
-    bits<6> dst;
-    bits<6> src;
-
-    let Inst{19-14} = src;
-    let Inst{13-8} = dst;
-}
-
 
 //===----------------------------------------------------------------------===//
 // Load Immediate Instructions
@@ -70,8 +53,8 @@ def LoadImmediate32 : ParasolLoadImm<Parasolimm32, i32>;
 // Load/Store Instructions
 //===----------------------------------------------------------------------===//
 
-def LOAD : ParasolInst<(outs IR:$val), (ins PR:$addr, Parasolimm32:$size), "ldr", "$val, $addr, $size", []> {
-    bits<3> size;
+def LOAD : ParasolInst<(outs IR:$val), (ins IR:$addr, Parasolimm32:$size), "ldr", "$val, $addr, $size", []> {
+    bits<7> size;
     bits<6> val;
     bits<6> addr;
 
@@ -79,19 +62,19 @@ def LOAD : ParasolInst<(outs IR:$val), (ins PR:$addr, Parasolimm32:$size), "ldr"
     let mayLoad = 1;
     let mayStore = 0;
 
-    // 2 ^ size bits
-    let Inst{22-20} = size;
+    let Inst{26-20} = size;
     let Inst{19-14} = addr;
     let Inst{13-8} = val;
     let Opcode = OPC_LOAD.Value;
 }
 
-def : Pat<(i8 (load PR:$addr)), (LOAD $addr, 3)>;
-def : Pat<(i16 (load PR:$addr)), (LOAD $addr, 4)>;
-def : Pat<(i32 (load PR:$addr)), (LOAD $addr, 5)>;
+def : Pat<(i1 (load IR:$addr)), (LOAD $addr, 1)>;
+def : Pat<(i8 (load IR:$addr)), (LOAD $addr, 8)>;
+def : Pat<(i16 (load IR:$addr)), (LOAD $addr, 16)>;
+def : Pat<(i32 (load IR:$addr)), (LOAD $addr, 32)>;
 
-def STORE : ParasolInst<(outs), (ins IR:$val, PR:$addr, Parasolimm32:$size), "str", "$addr, $val, $size", []> {
-    bits<3> size;
+def STORE : ParasolInst<(outs), (ins IR:$val, IR:$addr, Parasolimm32:$size), "str", "$addr, $val, $size", []> {
+    bits<7> size;
     bits<6> val;
     bits<6> addr;
 
@@ -99,24 +82,32 @@ def STORE : ParasolInst<(outs), (ins IR:$val, PR:$addr, Parasolimm32:$size), "st
     let mayLoad = 0;
     let mayStore = 1;
 
-    // 2 ^ size bits
-    let Inst{22-20} = size;
+    let Inst{26-20} = size;
     let Inst{19-14} = val;
     let Inst{13-8} = addr;
     let Opcode = OPC_STORE.Value;
 }
 
-def : Pat<(store i8:$val , PR:$addr), (STORE $val, $addr, 3)>;
-def : Pat<(store i16:$val, PR:$addr), (STORE $val, $addr, 4)>;
-def : Pat<(store i32:$val, PR:$addr), (STORE $val, $addr, 5)>;
+def : Pat<(store i1:$val , IR:$addr), (STORE $val, $addr, 1)>;
+def : Pat<(store i8:$val , IR:$addr), (STORE $val, $addr, 8)>;
+def : Pat<(store i16:$val, IR:$addr), (STORE $val, $addr, 16)>;
+def : Pat<(store i32:$val, IR:$addr), (STORE $val, $addr, 32)>;
 
+def MOV : ParasolInst<(outs IR:$dst), (ins IR:$src), "mv", "$dst, $src", []> {
+    bits<6> dst;
+    bits<6> src;
+
+    let Inst{19-14} = src;
+    let Inst{13-8} = dst;
+    let Opcode = OPC_MOV.Value;
+}
 
 //===----------------------------------------------------------------------===//
 // Truncation and zero extension
 //===----------------------------------------------------------------------===//
 
 class ParasolTruncInst<ValueType to, ValueType from>
-    : ParasolInst<(outs IR:$output), (ins IR:$input), "trunc", "$output, $input, " # log2ValueType<to>.value # ", " # log2ValueType<from>.value,
+    : ParasolInst<(outs IR:$output), (ins IR:$input), "trunc", "$output, $input, " # to.Size # ", " # from.Size,
                    [(set to:$output, (trunc from:$input))]> {
     bits<6> output;
     bits<6> input;
@@ -125,8 +116,8 @@ class ParasolTruncInst<ValueType to, ValueType from>
     let mayLoad = 0;
     let mayStore = 0;
 
-    let Inst{25-23} = log2ValueType<from>.value;
-    let Inst{22-20} = log2ValueType<to>.value;
+    let Inst{33-27} = from.Size;
+    let Inst{26-20} = to.Size;
     let Inst{19-14} = input;
     let Inst{13-8} = output;
     let Opcode = OPC_TRUNC.Value;
@@ -140,7 +131,7 @@ def TRUNC_8_32 : ParasolTruncInst<i8, i32>;
 def TRUNC_16_32 : ParasolTruncInst<i16, i32>;
 
 class ParasolZExtInst<ValueType to, ValueType from>
-    : ParasolInst<(outs IR:$output), (ins IR:$input), "zext", "$output, $input, " # log2ValueType<to>.value # ", " # log2ValueType<from>.value,
+    : ParasolInst<(outs IR:$output), (ins IR:$input), "zext", "$output, $input, " # to.Size # ", " # from.Size,
                    [(set to:$output, (zext from:$input))]> {
     bits<6> output;
     bits<6> input;
@@ -149,8 +140,8 @@ class ParasolZExtInst<ValueType to, ValueType from>
     let mayLoad = 0;
     let mayStore = 0;
 
-    let Inst{25-23} = log2ValueType<from>.value;
-    let Inst{22-20} = log2ValueType<to>.value;
+    let Inst{33-27} = from.Size;
+    let Inst{26-20} = to.Size;
     let Inst{19-14} = input;
     let Inst{13-8} = output;
     let Opcode = OPC_ZEXT.Value;
@@ -163,22 +154,9 @@ def ZEXT_16_8 : ParasolZExtInst<i16, i8>;
 def ZEXT_32_8 : ParasolZExtInst<i32, i8>;
 def ZEXT_32_16 : ParasolZExtInst<i32, i16>;
 
-// We don't have signed types at the moment so we replace them all with zero
-// extends.
-def : Pat<(i8 (sext_inreg IR:$input, i1)), (ZEXT_8_1 $input)>;
-def : Pat<(i16 (sext_inreg IR:$input, i1)), (ZEXT_16_1 $input)>;
-def : Pat<(i16 (sext_inreg IR:$input, i8)), (ZEXT_16_8 $input)>;
-def : Pat<(i32 (sext_inreg IR:$input, i1)), (ZEXT_32_1 $input)>;
-def : Pat<(i32 (sext_inreg IR:$input, i8)), (ZEXT_32_8 $input)>;
-def : Pat<(i32 (sext_inreg IR:$input, i16)), (ZEXT_32_16 $input)>;
-
-def : Pat<(i8 (sext i1:$input)), (ZEXT_8_1 $input)>;
-def : Pat<(i16 (sext i1:$input)), (ZEXT_16_1 $input)>;
-def : Pat<(i16 (sext i8:$input)), (ZEXT_16_8 $input)>;
-def : Pat<(i32 (sext i1:$input)), (ZEXT_32_1 $input)>;
-def : Pat<(i32 (sext i8:$input)), (ZEXT_32_8 $input)>;
-def : Pat<(i32 (sext i16:$input)), (ZEXT_32_16 $input)>;
-
+// Judging from https://github.com/llvm/llvm-project/blob/7470131b43405a07ccafd83aea286d0f35aefb34/llvm/lib/CodeGen/GlobalISel/Utils.cpp#L969-L978
+// anyext is an extension where the higher bits do not matter and the compiler should choose the most efficient instruction from zext and sext
+// here we chose zext
 def : Pat<(i8 (anyext i1:$input)), (ZEXT_8_1 $input)>;
 def : Pat<(i16 (anyext i1:$input)), (ZEXT_16_1 $input)>;
 def : Pat<(i16 (anyext i8:$input)), (ZEXT_16_8 $input)>;
@@ -186,6 +164,45 @@ def : Pat<(i32 (anyext i1:$input)), (ZEXT_32_1 $input)>;
 def : Pat<(i32 (anyext i8:$input)), (ZEXT_32_8 $input)>;
 def : Pat<(i32 (anyext i16:$input)), (ZEXT_32_16 $input)>;
 
+class ParasolSExtInst<ValueType to, ValueType from>
+    : ParasolInst<(outs IR:$output), (ins IR:$input), "sext", "$output, $input, " # to.Size # ", " # from.Size,
+                   [(set to:$output, (sext from:$input))]> {
+    bits<6> output;
+    bits<6> input;
+
+    let hasSideEffects = 0;
+    let mayLoad = 0;
+    let mayStore = 0;
+
+    let Inst{33-27} = from.Size;
+    let Inst{26-20} = to.Size;
+    let Inst{19-14} = input;
+    let Inst{13-8} = output;
+    let Opcode = OPC_SEXT.Value;
+}
+
+def SEXT_8_1 : ParasolSExtInst<i8, i1>;
+def SEXT_16_1 : ParasolSExtInst<i16, i1>;
+def SEXT_32_1 : ParasolSExtInst<i32, i1>;
+def SEXT_16_8 : ParasolSExtInst<i16, i8>;
+def SEXT_32_8 : ParasolSExtInst<i32, i8>;
+def SEXT_32_16 : ParasolSExtInst<i32, i16>;
+
+// In register sext should also just call our sext operation
+
+def : Pat<(i8 (sext_inreg IR:$input, i1)), (SEXT_8_1 $input)>;
+def : Pat<(i16 (sext_inreg IR:$input, i1)), (SEXT_16_1 $input)>;
+def : Pat<(i16 (sext_inreg IR:$input, i8)), (SEXT_16_8 $input)>;
+def : Pat<(i32 (sext_inreg IR:$input, i1)), (SEXT_32_1 $input)>;
+def : Pat<(i32 (sext_inreg IR:$input, i8)), (SEXT_32_8 $input)>;
+def : Pat<(i32 (sext_inreg IR:$input, i16)), (SEXT_32_16 $input)>;
+
+//===----------------------------------------------------------------------===//
+// Branch instructions
+//===----------------------------------------------------------------------===//
+def BRZ : ParasolCondBranchInstruction<OPC_BRZ, "brz">;
+def BRNZ : ParasolCondBranchInstruction<OPC_BRNZ, "brnz">;
+def BR : ParasolBranchInstruction;
 
 //===----------------------------------------------------------------------===//
 // Arithmetic and logic instructions
@@ -193,16 +210,6 @@ def : Pat<(i32 (anyext i16:$input)), (ZEXT_32_16 $input)>;
 
 // Could add isAsCheapAsAMove = 1 to these instructions.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-
-    def BindReadPlain
-        : ParasolBindInst<OPC_BINDREADONLY, "bpr", 0, bindreadplain>;
-    def BindReadWritePlain
-        : ParasolBindInst<OPC_BINDREADWRITE, "bprw", 0, bindreadwriteplain>;
-    def BindReadEncrypted
-        : ParasolBindInst<OPC_BINDREADONLY, "ber", 1, bindreadencrypted>;
-    def BindReadWriteEncrypted
-        : ParasolBindInst<OPC_BINDREADWRITE, "berw", 1, bindreadwriteencrypted>;
-
     def ADDrr   : ParasolBinaryALUInst<OPC_ADD, "add">,
                   Sched<[WriteIALU, ReadIALU]>;
 
@@ -231,6 +238,9 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
                    Sched<[WriteIALU, ReadIALU]>;
 
     def SHRrr   : ParasolBinaryALUInst<OPC_SHR, "shr">,
+                  Sched<[WriteIALU, ReadIALU]>;
+
+    def SHRArr  : ParasolBinaryALUInst<OPC_SHRA, "shra">,
                   Sched<[WriteIALU, ReadIALU]>;
 
     def ROTRrr  : ParasolBinaryALUInst<OPC_ROTR, "rotr">,
@@ -269,6 +279,18 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
         def LErr    : ParasolBinaryALUInst<OPC_LE, "le">,
                     Sched<[WriteIALU, ReadIALU]>;
 
+        def GTSrr    : ParasolBinaryALUInst<OPC_GTS, "gts">,
+                    Sched<[WriteIALU, ReadIALU]>;
+
+        def GESrr    : ParasolBinaryALUInst<OPC_GES, "ges">,
+                    Sched<[WriteIALU, ReadIALU]>;
+
+        def LTSrr    : ParasolBinaryALUInst<OPC_LTS, "lts">,
+                    Sched<[WriteIALU, ReadIALU]>;
+
+        def LESrr    : ParasolBinaryALUInst<OPC_LES, "les">,
+                    Sched<[WriteIALU, ReadIALU]>;
+
         def EQrr    : ParasolBinaryALUInst<OPC_EQ, "eq">,
                     Sched<[WriteIALU, ReadIALU]>;
 
@@ -280,12 +302,6 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     }
 
 }
-
-// Tell globalisel the equivalent instruction is for these sd nodes
-def : GINodeEquiv<BindReadPlain, bindreadplain>;
-def : GINodeEquiv<BindReadWritePlain, bindreadwriteplain>;
-def : GINodeEquiv<BindReadEncrypted, bindreadencrypted>;
-def : GINodeEquiv<BindReadWriteEncrypted, bindreadwriteencrypted>;
 
 // Patterns for binary operations
 class Pat2Ir<SDPatternOperator OpNode, ParasolInst Inst>
@@ -336,11 +352,13 @@ defm : Pat2IrMultiValueType<xor, XORrr>;
 defm : Pat2IrMultiValueType<shl, SHLrr>;
 defm : Pat2IrMultiValueType<rotl, ROTLrr>;
 defm : Pat2IrMultiValueType<srl, SHRrr>;
+defm : Pat2IrMultiValueType<sra, SHRArr>;
 defm : Pat2IrMultiValueType<rotr, ROTRrr>;
 
 defm : PatIrI32MultiValueType<shl, SHLrr>;
 defm : PatIrI32MultiValueType<rotl, ROTLrr>;
 defm : PatIrI32MultiValueType<srl, SHRrr>;
+defm : PatIrI32MultiValueType<sra, SHRArr>;
 defm : PatIrI32MultiValueType<rotr, ROTRrr>;
 
 // Patterns for comparison operations
@@ -358,24 +376,24 @@ defm : PatComparisonMultiValueType<SETULE, (LErr $rs1, $rs2)>;
 defm : PatComparisonMultiValueType<SETUEQ, (EQrr $rs1, $rs2)>;
 defm : PatComparisonMultiValueType<SETUNE, (NOTr (EQrr $rs1, $rs2))>;
 
-defm : PatComparisonMultiValueType<SETGT, (GTrr $rs1, $rs2)>;
-defm : PatComparisonMultiValueType<SETGE, (GErr $rs1, $rs2)>;
-defm : PatComparisonMultiValueType<SETLT, (LTrr $rs1, $rs2)>;
-defm : PatComparisonMultiValueType<SETLE, (LErr $rs1, $rs2)>;
+defm : PatComparisonMultiValueType<SETGT, (GTSrr $rs1, $rs2)>;
+defm : PatComparisonMultiValueType<SETGE, (GESrr $rs1, $rs2)>;
+defm : PatComparisonMultiValueType<SETLT, (LTSrr $rs1, $rs2)>;
+defm : PatComparisonMultiValueType<SETLE, (LESrr $rs1, $rs2)>;
 defm : PatComparisonMultiValueType<SETEQ, (EQrr $rs1, $rs2)>;
 defm : PatComparisonMultiValueType<SETNE, (NOTr (EQrr $rs1, $rs2))>;
 
 /* Procedure calling instructions */
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let isCall = 1 in
-def JALR : ParasolInstI<OPC_JALR, (outs GPR:$rd),
-                   (ins GPR:$rs1, i32imm:$imm32),
+def JALR : ParasolInstI<OPC_JALR, (outs IR:$rd),
+                   (ins IR:$rs1, i32imm:$imm32),
                    "jalr", "$rd, ${imm32}(${rs1})">,
            Sched<[WriteJalr, ReadJalr]>;
 }
 
 let isReturn = 1, isBarrier = 1, isTerminator = 1 in
-def PseudoRET : Pseudo<(outs), (ins), [(parasol_ret)]>,
+def PseudoRET : Pseudo<(outs), (ins), [(parasol_ret_glue)]>,
                 PseudoInstExpansion<(JALR X0, X1, 0)>;
 
 def : InstAlias<"ret",                   (JALR      X0,      X1, 0), 8>;
@@ -510,6 +528,77 @@ defm : PatSetCCShiftAnd1Eq<SETEQ>;
 defm : PatSetCCShiftAnd1Eq<SETUEQ>;
 defm : PatSetCCShiftAnd1Eq<SETOEQ>;
 
+//===----------------------------------------------------------------------===//
+// Conditional branch patterns
+//===----------------------------------------------------------------------===//
+multiclass BrNePats<ValueType T> {
+    def : Pat<(brcond (i1 (setne T:$lhs, T:$rhs)), bb:$loc),
+        (BRZ (EQrr $lhs, $rhs), $loc)>;
+}
+
+defm : BrNePats<i1>;
+defm : BrNePats<i8>;
+defm : BrNePats<i16>;
+defm : BrNePats<i32>;
+
+multiclass BrCondPats<PatFrag Op, Instruction MachOp,  ValueType T> {
+    def : Pat<(brcond (i1 (Op T:$lhs, T:$rhs)), bb:$loc),
+        (BRNZ (MachOp $lhs, $rhs), $loc)>;
+}
+
+// breq
+defm : BrCondPats<seteq, EQrr, i1>;
+defm : BrCondPats<seteq, EQrr, i8>;
+defm : BrCondPats<seteq, EQrr, i16>;
+defm : BrCondPats<seteq, EQrr, i32>;
+
+// brgt (signed)
+defm : BrCondPats<setgt, GTSrr, i1>;
+defm : BrCondPats<setgt, GTSrr, i8>;
+defm : BrCondPats<setgt, GTSrr, i16>;
+defm : BrCondPats<setgt, GTSrr, i32>;
+
+// brge (signed)
+defm : BrCondPats<setge, GESrr, i1>;
+defm : BrCondPats<setge, GESrr, i8>;
+defm : BrCondPats<setge, GESrr, i16>;
+defm : BrCondPats<setge, GESrr, i32>;
+
+// brlt (signed)
+defm : BrCondPats<setlt, LTSrr, i1>;
+defm : BrCondPats<setlt, LTSrr, i8>;
+defm : BrCondPats<setlt, LTSrr, i16>;
+defm : BrCondPats<setlt, LTSrr, i32>;
+
+// brle (signed)
+defm : BrCondPats<setle, LESrr, i1>;
+defm : BrCondPats<setle, LESrr, i8>;
+defm : BrCondPats<setle, LESrr, i16>;
+defm : BrCondPats<setle, LESrr, i32>;
+
+// brugt (unsigned)
+defm : BrCondPats<setugt, GTrr, i1>;
+defm : BrCondPats<setugt, GTrr, i8>;
+defm : BrCondPats<setugt, GTrr, i16>;
+defm : BrCondPats<setugt, GTrr, i32>;
+
+// bruge (unsigned)
+defm : BrCondPats<setuge, GErr, i1>;
+defm : BrCondPats<setuge, GErr, i8>;
+defm : BrCondPats<setuge, GErr, i16>;
+defm : BrCondPats<setuge, GErr, i32>;
+
+// brult (unsigned)
+defm : BrCondPats<setult, LTrr, i1>;
+defm : BrCondPats<setult, LTrr, i8>;
+defm : BrCondPats<setult, LTrr, i16>;
+defm : BrCondPats<setult, LTrr, i32>;
+
+// brule (unsigned)
+defm : BrCondPats<setule, LErr, i1>;
+defm : BrCondPats<setule, LErr, i8>;
+defm : BrCondPats<setule, LErr, i16>;
+defm : BrCondPats<setule, LErr, i32>;
 
 //===----------------------------------------------------------------------===//
 // Select patterns
@@ -520,8 +609,8 @@ multiclass PatSelect<ValueType comparisonvt> {
               (CMUXrrr $bool, $trueval, $falseval)>;
 
     // Convert when you have PR input to load the value first
-    def : Pat<(comparisonvt (load (select i1:$bool, PR:$trueval, PR:$falseval))),
-              (CMUXrrr $bool, (LOAD $trueval, log2ValueType<comparisonvt>.value), (LOAD $falseval, log2ValueType<comparisonvt>.value))>;
+    def : Pat<(comparisonvt (load (select i1:$bool, IR:$trueval, IR:$falseval))),
+              (CMUXrrr $bool, (LOAD $trueval, comparisonvt.Size), (LOAD $falseval, comparisonvt.Size))>;
 }
 
 defm : PatSelect<i1>;

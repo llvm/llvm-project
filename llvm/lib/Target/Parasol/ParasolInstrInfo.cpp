@@ -34,12 +34,6 @@ void ParasolInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, MCRegister DestReg,
                                    MCRegister SrcReg, bool KillSrc) const {
-
-  if (Parasol::IRRegClass.contains(DestReg, SrcReg)) {
-    BuildMI(MBB, I, DL, get(Parasol::MOVrr), DestReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
-  }
-
   // Leaving this here because it might be a way for us to get the number of
   // bits of a register.
   // const TargetRegisterInfo *TRI =
@@ -47,6 +41,9 @@ void ParasolInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // TargetRegisterClass *DestRegClass = TRI->getRegClass(DestReg);
   // TRI->getRegSizeInBits(*DestRegClass);
 
-  // If we get here we have an unhandled case.
-  // llvm_unreachable("Impossible reg-to-reg copy");
+  MachineInstr *NewMI =
+      BuildMI(MBB, I, MBB.findDebugLoc(I), get(Parasol::MOV), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+
+  return;
 }
