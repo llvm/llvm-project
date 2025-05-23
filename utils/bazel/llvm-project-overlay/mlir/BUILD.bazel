@@ -2189,7 +2189,10 @@ gentbl_cc_library(
 
 td_library(
     name = "AMXTdFiles",
-    srcs = ["include/mlir/Dialect/AMX/AMX.td"],
+    srcs = [
+        "include/mlir/Dialect/AMX/AMX.td",
+        "include/mlir/Dialect/AMX/AMXInterfaces.td",
+    ],
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
@@ -2226,6 +2229,19 @@ gentbl_cc_library(
     deps = [":AMXTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "AMXInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/AMX/AMXInterfaces.h.inc": ["-gen-type-interface-decls"],
+        "include/mlir/Dialect/AMX/AMXInterfaces.cpp.inc": ["-gen-type-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/AMX/AMXInterfaces.td",
+    deps = [
+        ":AMXTdFiles", 
+    ],
+)
+
 cc_library(
     name = "AMXDialect",
     srcs = ["lib/Dialect/AMX/IR/AMXDialect.cpp"],
@@ -2233,8 +2249,10 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMXIncGen",
+        ":AMXInterfaceIncGen",
         ":BytecodeOpInterface",
         ":IR",
+        ":LLVMCommonConversion",
         ":LLVMDialect",
         ":SideEffectInterfaces",
         "//llvm:Support",
