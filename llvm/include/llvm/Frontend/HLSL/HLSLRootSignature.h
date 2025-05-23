@@ -46,6 +46,14 @@ enum class RootFlags : uint32_t {
   ValidFlags = 0x00000fff
 };
 
+enum class RootDescriptorFlags : unsigned {
+  None = 0,
+  DataVolatile = 0x2,
+  DataStaticWhileSetAtExecute = 0x4,
+  DataStatic = 0x8,
+  ValidFlags = 0xe,
+};
+
 enum class DescriptorRangeFlags : unsigned {
   None = 0,
   DescriptorsVolatile = 0x1,
@@ -85,13 +93,26 @@ struct RootConstants {
   ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
-using DescriptorType = llvm::dxil::ResourceClass;
+enum class DescriptorType : uint8_t { SRV = 0, UAV, CBuffer };
 // Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
 struct RootDescriptor {
   DescriptorType Type;
   Register Reg;
   uint32_t Space = 0;
   ShaderVisibility Visibility = ShaderVisibility::All;
+  RootDescriptorFlags Flags;
+
+  void setDefaultFlags() {
+    switch (Type) {
+    case DescriptorType::CBuffer:
+    case DescriptorType::SRV:
+      Flags = RootDescriptorFlags::DataStaticWhileSetAtExecute;
+      break;
+    case DescriptorType::UAV:
+      Flags = RootDescriptorFlags::DataVolatile;
+      break;
+    }
+  }
 };
 
 // Models the end of a descriptor table and stores its visibility
