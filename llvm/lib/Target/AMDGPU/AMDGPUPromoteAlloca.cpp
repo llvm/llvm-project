@@ -482,11 +482,11 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     ConstOffset += LocalConstOffset;
 
     // Move to the next outer pointer
-    CurPtr = CurGEP->getPointerOperand()->stripPointerCasts();
+    CurPtr = CurGEP->getPointerOperand();
   }
 
   // Only proceed if this GEP stems from the same alloca.
-  if (CurPtr->stripPointerCasts() != Alloca)
+  if (CurPtr != Alloca)
     return nullptr;
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
