@@ -96,24 +96,24 @@ static FailureOr<ReassociationIndexRange>
 findReassociationRangeForDynamicDim(ArrayRef<int64_t> sourceShape,
                                     int64_t sourceStartIdx,
                                     bool matchGreedily = false) {
-  ReassociationIndexRange iterationRange{sourceStartIdx, sourceStartIdx};
   const unsigned numSourceDims = sourceShape.size();
   ReassociationIndexRange sourceShapeAsRange{0, numSourceDims - 1};
-  auto resultRange = iterationRange;
+  std::optional<ReassociationIndexRange> resultRange = std::nullopt;
 
-  bool foundDynamic = false;
+  ReassociationIndexRange iterationRange{sourceStartIdx, sourceStartIdx};
   for (; iterationRange.isInRange(sourceShapeAsRange);
        iterationRange.rightIdx++) {
     int64_t sourceSize = sourceShape[iterationRange.rightIdx];
-    if (foundDynamic && !matchGreedily)
+    if (sourceSize == ShapedType::kDynamic) {
+      resultRange = iterationRange;
       break;
-    if (sourceSize == ShapedType::kDynamic)
-      foundDynamic = true;
-    resultRange = iterationRange;
+    }
   }
-  if (!foundDynamic)
+  if (!resultRange)
     return failure();
-  return resultRange;
+  if (matchGreedily)
+    resultRange->rightIdx = sourceShapeAsRange.rightIdx;
+  return *resultRange;
 }
 
 /// Starting from `sourceStartIdx`, searches `sourceShape` for the first
@@ -125,31 +125,24 @@ static FailureOr<ReassociationIndexRange>
 findReassociationRangeForSize(ArrayRef<int64_t> sourceShape,
                               int64_t sourceStartIdx, int64_t targetSize,
                               bool matchGreedily = false) {
-  ReassociationIndexRange iterationRange{sourceStartIdx, sourceStartIdx};
   const unsigned numSourceDims = sourceShape.size();
   ReassociationIndexRange sourceShapeAsRange{0, numSourceDims - 1};
-  auto resultRange = iterationRange;
+  std::optional<ReassociationIndexRange> resultRange = std::nullopt;
 
+  ReassociationIndexRange iterationRange{sourceStartIdx, sourceStartIdx};
   int64_t prodOfCollapsedDims = 1;
-  bool reachedTargetDimSize = false;
   while (iterationRange.isInRange(sourceShapeAsRange)) {
     int64_t sourceSize = sourceShape[iterationRange.rightIdx];
-    if (reachedTargetDimSize && !matchGreedily)
-      break;
     if (sourceSize == ShapedType::kDynamic) {
-      if (reachedTargetDimSize)
-        break;
       // Reassociation for a static dim cannot include a dynamic dim. Reset
       // induction variables to essentially restart the loop from the next
       // source dimension.
       prodOfCollapsedDims = 1;
-      resultRange = {iterationRange.rightIdx + 1, iterationRange.rightIdx + 1};
-      iterationRange = resultRange;
+      iterationRange = {iterationRange.rightIdx + 1,
+                        iterationRange.rightIdx + 1};
       continue;
     }
     prodOfCollapsedDims *= sourceSize;
-    if (prodOfCollapsedDims > targetSize && reachedTargetDimSize)
-      break;
     // If the target size has been exceeded without matching, we need to shift
     // the range start right. From the start of the range, roll back the
     // multiplication until the target size exceeds the product again.
@@ -160,17 +153,29 @@ findReassociationRangeForSize(ArrayRef<int64_t> sourceShape,
       // Shrink the range rightwards
       iterationRange.leftIdx++;
     }
-    resultRange = iterationRange;
     // We could've reached the target size with the current dimension,
     // also as a result of the above shift to right.
-    if (prodOfCollapsedDims == targetSize)
-      reachedTargetDimSize = true;
+    if (prodOfCollapsedDims == targetSize) {
+      resultRange = iterationRange;
+      break;
+    }
     // Increment the iteration range
     iterationRange.rightIdx++;
   }
-  if (!reachedTargetDimSize)
+  if (!resultRange)
     return failure();
-  return resultRange;
+  if (matchGreedily) {
+    // We now want to collect all unit dimensions directly after the target
+    // product match. Advance the iterator to avoid OOB when the product match
+    // happens at the last element.
+    iterationRange.rightIdx++;
+    while (iterationRange.isInRange(sourceShapeAsRange) &&
+           sourceShape[iterationRange.rightIdx] == 1) {
+      resultRange = iterationRange;
+      iterationRange.rightIdx++;
+    }
+  }
+  return *resultRange;
 }
 
 /// Attempts to find a valid collapsing reassociation of `sourceShape` into
