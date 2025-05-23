@@ -80,15 +80,14 @@ public:
   void runOnOperation() override;
 
 private:
-  // Get the tile shape for a given value. If the value has a layout
-  // attribute and it is an SG layout, return the inst_data as the tile shape
-  // if inst_data is available; otherwise, return the original shape of the
-  // value. If the value does not have an SG layout, return std::nullopt.
-  std::optional<SmallVector<int64_t>>
-  getTileShape(TypedValue<ShapedType> value) const;
-
+  // Get the tile shape for a given operand by examining the layout attribute.
+  // If layout is not present or is not a subgroup level layout, it returns
+  // std::nullopt.
   std::optional<SmallVector<int64_t>> getTileShape(OpOperand &operand) const;
 
+  // Get the tile shape for a given result by examining the layout attribute.
+  // If layout is not present or is not a subgroup level layout, it returns
+  // std::nullopt.
   std::optional<SmallVector<int64_t>> getTileShape(OpResult result) const;
 
   // Get the tile shape for a given operation.
@@ -100,18 +99,6 @@ private:
   bool needsUnroll(Operation *op) const;
 };
 } // namespace
-
-std::optional<SmallVector<int64_t>>
-XeGPUBlockingPass::getTileShape(TypedValue<ShapedType> value) const {
-  assert(value && "value must be non-null");
-  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(value);
-  if (layout && layout.isSgLayout()) {
-    if (auto inst_data = layout.getInstData())
-      return llvm::to_vector_of<int64_t>(inst_data.asArrayRef());
-    return llvm::to_vector(value.getType().getShape());
-  }
-  return std::nullopt;
-}
 
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(OpOperand &operand) const {
