@@ -99,8 +99,7 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_ternary_bitwise_function",
          SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function},
         {"SPV_INTEL_2d_block_io",
-         SPIRV::Extension::Extension::SPV_INTEL_2d_block_io},
-        {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4}};
+         SPIRV::Extension::Extension::SPV_INTEL_2d_block_io}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,

@@ -128,8 +128,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   bool IsExtendedInts =
       ST.canUseExtension(
           SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
-      ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
-      ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions);
   auto extendedScalarsAndVectors =
       [IsExtendedInts](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[0];
