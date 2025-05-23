@@ -492,8 +492,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   bool IsExtendedInts =
       ST->canUseExtension(
           SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers) ||
-      ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
-      ST->canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
+      ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions);
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     if (MBB->empty())
