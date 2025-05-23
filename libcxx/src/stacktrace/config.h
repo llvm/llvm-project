@@ -15,17 +15,7 @@
 // Check for unwind.h -- could exist on any OS (in theory), but it (or `libunwind`) is likely on Linux systems, and also
 // comes with XCode tools on MacOS.
 #if __has_include(<unwind.h>)
-#  define _LIBCPP_STACKTRACE_COLLECT_UNWIND
-#endif
-
-// For OSX specific stuff (generally controls whether we use `dyld`)
-#if defined(__APPLE__)
-#  define _LIBCPP_STACKTRACE_MACOS
-#endif
-
-// For Linux specific stuff (`link.h`, expanded functions in `dlfcn.h`, and ELF symtab parsing)
-#if defined(__linux__)
-#  define _LIBCPP_STACKTRACE_LINUX
+#  define _LIBCPP_STACKTRACE_UNWIND_IMPL
 #endif
 
 // Whether we can invoke external processes via `posix_spawn`

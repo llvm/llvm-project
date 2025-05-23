@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stacktrace/macos.h"
-#include "stacktrace/config.h"
+#include "stacktrace/macos/impl.h"
 
-#if defined(_LIBCPP_STACKTRACE_MACOS)
+#if defined(__APPLE__)
 
 #  include <algorithm>
 #  include <array>
@@ -98,15 +97,4 @@ void macos::symbolize() {
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#else
-
-_LIBCPP_BEGIN_NAMESPACE_STD
-namespace __stacktrace {
-
-void macos::ident_modules() {}
-void macos::symbolize() {}
-
-} // namespace __stacktrace
-_LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_STACKTRACE_MACOS
+#endif // __APPLE__
