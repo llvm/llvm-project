@@ -463,7 +463,6 @@ private:
 
     depth++;
     getMaxNestedDepth(op, depth);
-    return;
   }
 
   bool levelCheckMaxNesting(Operation *op) {
