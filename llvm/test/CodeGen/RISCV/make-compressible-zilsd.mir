@@ -234,10 +234,8 @@ body:             |
     ; RV32-LABEL: name: store_common_value_double_no_opt2
     ; RV32: liveins: $x10, $x16, $x17
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: $x12 = ADDI $x16, 0
-    ; RV32-NEXT: $x13 = ADDI $x17, 0
-    ; RV32-NEXT: SD_RV32 $x12_x13, renamable $x10, 0 :: (volatile store (s64) into %ir.a)
-    ; RV32-NEXT: SD_RV32 killed $x12_x13, killed renamable $x10, 0 :: (volatile store (s64) into %ir.a)
+    ; RV32-NEXT: SD_RV32 renamable $x16_x17, renamable $x10, 0 :: (volatile store (s64) into %ir.a)
+    ; RV32-NEXT: SD_RV32 killed renamable $x16_x17, killed renamable $x10, 0 :: (volatile store (s64) into %ir.a)
     ; RV32-NEXT: PseudoRET
     SD_RV32 renamable $x16_x17, renamable $x10, 0 :: (volatile store (s64) into %ir.a)
     SD_RV32 killed renamable $x16_x17, killed renamable $x10, 0 :: (volatile store (s64) into %ir.a)
