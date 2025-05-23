@@ -94,6 +94,9 @@ class LVScope : public LVElement {
   LVProperties<Property> Properties;
   static LVScopeDispatch Dispatch;
 
+  // Size in bits if this scope represents also a compound type.
+  uint32_t BitSize = 0;
+
   // Coverage factor in units (bytes).
   unsigned CoverageFactor = 0;
 
@@ -270,6 +273,9 @@ public:
 
   bool removeElement(LVElement *Element) override;
   void updateLevel(LVScope *Parent, bool Moved) override;
+
+  uint32_t getBitSize() const override { return BitSize; }
+  void setBitSize(uint32_t Size) override { BitSize = Size; }
 
   void resolve() override;
   void resolveName() override;
