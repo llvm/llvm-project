@@ -18322,6 +18322,25 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
          "canonicalizeShuffleMaskWithHorizOp "
          "shouldn't alter the shuffle mask size");
 
+  // Canonicalize zeros/ones/fp splat constants to ensure no undefs.
+  // These will be materialized uniformly anyway, so make splat matching easier.
+  // TODO: Allow all int constants?
+  auto CanonicalizeConstant = [VT, &DL, &DAG](SDValue V) {
+    if (auto *BV = dyn_cast<BuildVectorSDNode>(V)) {
+      BitVector Undefs;
+      if (SDValue Splat = BV->getSplatValue(&Undefs)) {
+        if (Undefs.any() &&
+            (isNullConstant(Splat) || isAllOnesConstant(Splat) ||
+             isa<ConstantFPSDNode>(Splat))) {
+          V = DAG.getBitcast(VT, DAG.getSplat(BV->getValueType(0), DL, Splat));
+        }
+      }
+    }
+    return V;
+  };
+  V1 = CanonicalizeConstant(V1);
+  V2 = CanonicalizeConstant(V2);
+
   // Commute the shuffle if it will improve canonicalization.
   if (canonicalizeShuffleMaskWithCommute(Mask)) {
     ShuffleVectorSDNode::commuteMask(Mask);
