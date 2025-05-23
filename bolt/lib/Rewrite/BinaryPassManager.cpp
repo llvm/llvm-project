@@ -352,7 +352,7 @@ Error BinaryFunctionPassManager::runPasses() {
 Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
-  if (BC.isAArch64())
+  if (BC.isAArch64() && AllowPacret)
     Manager.registerPass(std::make_unique<MarkRAStates>());
 
   Manager.registerPass(
@@ -515,7 +515,8 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     // relocations out of range and crash during linking.
     Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
 
-    Manager.registerPass(std::make_unique<InsertNegateRAState>());
+    if (AllowPacret)
+      Manager.registerPass(std::make_unique<InsertNegateRAState>());
   }
 
   // This pass should always run last.*

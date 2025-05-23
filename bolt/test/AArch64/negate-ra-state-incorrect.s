@@ -1,6 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags  %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.exe.bolt | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.exe.bolt --allow-experimental-pacret \
+# RUN: | FileCheck %s
 
 # check that the output is listing foo as incorrect
 # CHECK: BOLT-INFO: inconsistent RAStates in function foo
