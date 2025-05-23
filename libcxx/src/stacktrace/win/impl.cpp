@@ -6,7 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "stacktrace/win/impl.h"
 #include <__config>
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace __stacktrace {
+std::mutex win_impl::mutex_;
+} // namespace __stacktrace
+_LIBCPP_END_NAMESPACE_STD
 
 #if defined(_LIBCPP_WIN32API)
 // windows.h must be first
@@ -34,7 +41,6 @@ so we claim a lock in the `WinDebugAPIs` constructor.
 */
 
 // Statically-initialized
-std::mutex gWindowsAPILock;
 DbgHelpDLL dbg;
 PSAPIDLL ps;
 
@@ -53,7 +59,7 @@ size_t moduleCount; // 0 IFF module enumeration failed
 
 } // namespace
 
-win_impl::WinDebugAPIs(builder& trace) : builder_(trace), guard_(gWindowsAPILock) {
+win_impl::global_init() {
   if (!globalInitialized) {
     // Cannot proceed without these DLLs:
     if (!dbg) {
@@ -84,7 +90,7 @@ win_impl::WinDebugAPIs(builder& trace) : builder_(trace), guard_(gWindowsAPILock
   (*dbg.SymSetOptions)(symOptions);
 }
 
-win_impl::~WinDebugAPIs() {
+win_impl::~win_impl() {
   if (symsInitialized) {
     (*dbg.SymCleanup)(proc);
     symsInitialized = false;
@@ -204,15 +210,15 @@ _LIBCPP_END_NAMESPACE_STD
 
 // Not_LIBCPP_WIN32API
 
-#  include "stacktrace/win/impl.h"
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
+void win_impl::global_init() {}
 void win_impl::collect(size_t skip, size_t max_depth) {}
 void win_impl::ident_modules() {}
 void win_impl::symbolize() {}
 void win_impl::resolve_lines() {}
+win_impl::~win_impl() {}
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
