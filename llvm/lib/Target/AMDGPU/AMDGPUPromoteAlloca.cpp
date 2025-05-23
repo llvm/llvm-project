@@ -467,18 +467,6 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     // map.
     // Only a single pointer variable is allowed in the entire GEP chain.
     // If VarOffsets already holds a different pointer, abort.
-    //
-    // Example:
-    //   1) First GEP picks the idx’th element (each element is 8 bytes):
-    //        addr0 = base + idx * 8
-    //
-    //   2) Second GEP adds a fixed 4‐byte shift:
-    //        addr1 = addr0 + 4
-    //
-    // To turn that into a 4‐byte “lane” index we divide by 4:
-    //        lane = (idx * 8 + 4) / 4
-    //             = idx * (8 / 4) + (4 / 4)
-    //             = idx * 2 + 1
     for (auto &VarEntry : LocalVarsOffsets) {
       // If VarOffsets already records a different pointer, abort.
       if (!VarOffsets.empty() && !VarOffsets.contains(VarEntry.first))
