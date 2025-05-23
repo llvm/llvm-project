@@ -34,7 +34,7 @@ static bool isFirstFriendOfSecond(const CXXRecordDecl *Friend,
 
 namespace {
 /// Matches move-constructible classes whose constructor can be called inside
-/// a CXXRecordDecl with a bound ID. 
+/// a CXXRecordDecl with a bound ID.
 ///
 /// Given
 /// \code
@@ -49,7 +49,7 @@ namespace {
 ///   class Buz {
 ///     Buz(Buz &&);
 ///     int a;
-///     friend class Outer; 
+///     friend class Outer;
 ///   };
 ///
 ///   class Outer {
