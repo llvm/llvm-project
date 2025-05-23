@@ -937,8 +937,9 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
 
   if (T.isOSAIX() && T.getEnvironment() == Triple::UnknownEnvironment) {
     // Strip unknown environment from the triple.
-    const llvm::Triple AIXTriple(llvm::Triple(T.getArchName(), T.getVendorName(),
-                                 llvm::Triple::getOSTypeName(T.getOS())));
+    const llvm::Triple AIXTriple(
+        llvm::Triple(T.getArchName(), T.getVendorName(),
+                     llvm::Triple::getOSTypeName(T.getOS())));
     if (auto Path = getPathForTriple(AIXTriple))
       return *Path;
   }
