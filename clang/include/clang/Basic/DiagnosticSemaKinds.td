@@ -12747,9 +12747,8 @@ def err_sycl_special_type_num_init_method : Error<
   "method defined">;
 
 //SYCL external attribute diagnostics
-def err_sycl_attribute_internal_decl
-    : Error<"%0 attribute cannot be applied to a %select{function|variable}1"
-            " without external linkage">;
+def err_sycl_attribute_invalid_linkage : Error<
+  "'sycl_external' can only be applied to functions with external linkage">;
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<

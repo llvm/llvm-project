@@ -12909,7 +12909,8 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   if (D->hasAttr<WeakRefAttr>())
     return false;
 
-  if (LangOpts.SYCLIsDevice && !D->hasAttr<SYCLKernelEntryPointAttr>())
+  if (LangOpts.SYCLIsDevice &&
+       (!D->hasAttr<SYCLKernelEntryPointAttr>() || !D->hasAttr<SYCLExternalAttr>()))
     return false;
 
   // Aliases and used decls are required.
@@ -12927,10 +12928,9 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
       return true;
 
-    // FIXME: Functions declared with SYCL_EXTERNAL are required during
-    // device compilation.
-    // Functions definitions with sycl_external attribute are required during
-    // device compilation.
+    // Functions definitions with the sycl_external attribute are required
+    // during device compilation regardless of whether they are reachable from
+    // a SYCL kernel.
     if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLExternalAttr>())
       return true;
 

@@ -412,10 +412,6 @@ class LangOpt<string name, code customCode = [{}], bit silentlyIgnore = 0> {
   // The language option to test; ignored when custom code is supplied.
   string Name = name;
 
-  // If set to 1, the attribute is accepted but is silently ignored. This is
-  // useful in multi-compilation situations like SYCL.
-  bit SilentlyIgnore = silentlyIgnore;
-
   // A custom predicate, written as an expression evaluated in a context with
   // "LangOpts" bound.
   code CustomCode = customCode;
@@ -426,7 +422,6 @@ def CUDA : LangOpt<"CUDA">;
 def HIP : LangOpt<"HIP">;
 def SYCLHost : LangOpt<"SYCLIsHost">;
 def SYCLDevice : LangOpt<"SYCLIsDevice">;
-def SilentlyIgnoreSYCLHost : LangOpt<"SYCLIsHost", "", 1>;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
@@ -1556,9 +1551,9 @@ def GlobalStorageNonLocalVar : SubsetSubject<Var,
                                              "global variables">;
 
 def SYCLExternal : InheritableAttr {
-  let Spellings = [GNU<"sycl_external">];
+  let Spellings = [Clang<"sycl_external">];
   let Subjects = SubjectList<[Function, GlobalStorageNonLocalVar]>;
-  let LangOpts = [SYCLDevice, SilentlyIgnoreSYCLHost];
+  let LangOpts = [SYCLDevice];
   let Documentation = [SYCLExternalDocs];
 }
 
