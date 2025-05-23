@@ -8,7 +8,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
+# --keep-symbol causes error on Windows: llvm-strip.exe: error: option is not supported for COFF
+@skipIfWindows
 class TestUnnamedSymbolLookup(TestBase):
     def test_unnamed_symbol_lookup(self):
         """Test looking up unnamed symbol synthetic name"""
