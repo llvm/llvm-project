@@ -26,15 +26,15 @@
 namespace clang {
 
 SARIFDiagnosticPrinter::SARIFDiagnosticPrinter(raw_ostream &OS,
-                                               DiagnosticOptions &DiagOpts)
-    : OS(OS), DiagOpts(DiagOpts) {}
+                                               DiagnosticOptions *Diags)
+    : OS(OS), DiagOpts(Diags) {}
 
 void SARIFDiagnosticPrinter::BeginSourceFile(const LangOptions &LO,
                                              const Preprocessor *PP) {
   // Build the SARIFDiagnostic utility.
   assert(hasSarifWriter() && "Writer not set!");
   assert(!SARIFDiag && "SARIFDiagnostic already set.");
-  SARIFDiag = std::make_unique<SARIFDiagnostic>(OS, LO, DiagOpts, &*Writer);
+  SARIFDiag = std::make_unique<SARIFDiagnostic>(OS, LO, &*DiagOpts, &*Writer);
   // Initialize the SARIF object.
   Writer->createRun("clang", Prefix);
 }
@@ -72,6 +72,7 @@ void SARIFDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   }
 
   // Assert that the rest of our infrastructure is setup properly.
+  assert(DiagOpts && "Unexpected diagnostic without options set");
   assert(Info.hasSourceManager() &&
          "Unexpected diagnostic with no source manager");
 

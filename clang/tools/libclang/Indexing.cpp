@@ -480,10 +480,9 @@ static CXErrorCode clang_indexSourceFile_Impl(
     CaptureDiag = new CaptureDiagnosticConsumer();
 
   // Configure the diagnostics.
-  auto DiagOpts = std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          *DiagOpts, CaptureDiag,
+                                          new DiagnosticOptions, CaptureDiag,
                                           /*ShouldOwnClient=*/true));
 
   // Recover resources if we crash before exiting this function.
@@ -555,7 +554,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
   CInvok->getHeaderSearchOpts().ModuleFormat = std::string(
       CXXIdx->getPCHContainerOperations()->getRawReader().getFormats().front());
 
-  auto Unit = ASTUnit::create(CInvok, DiagOpts, Diags, CaptureDiagnostics,
+  auto Unit = ASTUnit::create(CInvok, Diags, CaptureDiagnostics,
                               /*UserFilesAreVolatile=*/true);
   if (!Unit)
     return CXError_InvalidArguments;
@@ -618,7 +617,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
       !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
   DiagnosticErrorTrap DiagTrap(*Diags);
   bool Success = ASTUnit::LoadFromCompilerInvocationAction(
-      std::move(CInvok), CXXIdx->getPCHContainerOperations(), DiagOpts, Diags,
+      std::move(CInvok), CXXIdx->getPCHContainerOperations(), Diags,
       IndexAction.get(), UPtr, Persistent, CXXIdx->getClangResourcesPath(),
       OnlyLocalDecls, CaptureDiagnostics, PrecompilePreambleAfterNParses,
       CacheCodeCompletionResults, /*UserFilesAreVolatile=*/true);

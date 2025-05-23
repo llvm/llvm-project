@@ -32,9 +32,9 @@ makeTUDiagnostics(const std::string &MainSourceFile, StringRef DiagnosticName,
 // Test to ensure diagnostics with no fixes, will be merged correctly
 // before applying.
 TEST(ApplyReplacementsTest, mergeDiagnosticsWithNoFixes) {
-  DiagnosticOptions DiagOpts;
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts.get());
   FileManager Files((FileSystemOptions()));
   SourceManager SM(Diagnostics, Files);
   TUReplacements TURs;

@@ -248,9 +248,8 @@ public:
   }
 
   // Data fields.
-  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      new DiagnosticsEngine(new DiagnosticIDs, DiagOpts);
+      new DiagnosticsEngine(new DiagnosticIDs, new DiagnosticOptions);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       new llvm::vfs::InMemoryFileSystem;
   llvm::IntrusiveRefCntPtr<FileManager> FileMgr =

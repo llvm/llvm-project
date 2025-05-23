@@ -86,7 +86,7 @@ protected:
   std::shared_ptr<TargetOptions> TargetOpts;
 
   /// Options controlling the diagnostic engine.
-  std::shared_ptr<DiagnosticOptions> DiagnosticOpts;
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagnosticOpts;
 
   /// Options controlling the \#include directive.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
