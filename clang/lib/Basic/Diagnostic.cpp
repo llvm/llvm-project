@@ -77,11 +77,11 @@ DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
   Output.append(Str.begin(), Str.end());
 }
 
-DiagnosticsEngine::DiagnosticsEngine(
-    IntrusiveRefCntPtr<DiagnosticIDs> diags,
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts, DiagnosticConsumer *client,
-    bool ShouldOwnClient)
-    : Diags(std::move(diags)), DiagOpts(std::move(DiagOpts)) {
+DiagnosticsEngine::DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> diags,
+                                     DiagnosticOptions &DiagOpts,
+                                     DiagnosticConsumer *client,
+                                     bool ShouldOwnClient)
+    : Diags(std::move(diags)), DiagOpts(DiagOpts) {
   setClient(client, ShouldOwnClient);
   ArgToStringFn = DummyArgToStringFn;
 
@@ -150,8 +150,7 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
 
 DiagnosticMapping &
 DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
-  std::pair<iterator, bool> Result =
-      DiagMap.insert(std::make_pair(Diag, DiagnosticMapping()));
+  std::pair<iterator, bool> Result = DiagMap.try_emplace(Diag);
 
   // Initialize the entry if we added it.
   if (Result.second) {
