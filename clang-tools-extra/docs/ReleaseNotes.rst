@@ -219,6 +219,10 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to not run on
+  objective-c code.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
