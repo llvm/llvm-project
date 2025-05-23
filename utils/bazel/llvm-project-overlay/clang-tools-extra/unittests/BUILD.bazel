@@ -64,10 +64,12 @@ cc_test(
         ],
         allow_empty = False,
     ),
+    data = ["//clang-tools-extra/clang-doc:assets"],
+    local_defines = ['CLANG_DOC_TEST_ASSET_DIR=\\"clang-tools-extra/clang-doc/assets\\"'],
     deps = [
         "//clang:ast",
         "//clang:basic",
-        "//clang-tools-extra/clang-doc:lib",
+        "//clang-tools-extra/clang-doc:generators",
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:Support",
