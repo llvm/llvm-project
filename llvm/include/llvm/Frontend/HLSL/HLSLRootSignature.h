@@ -100,9 +100,9 @@ struct DescriptorTable {
   // Denotes that the previous NumClauses in the RootElement array
   // are the clauses in the table.
   uint32_t NumClauses = 0;
-
-  void dump(raw_ostream &OS) const;
 };
+
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
 static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
@@ -130,9 +130,9 @@ struct DescriptorTableClause {
       break;
     }
   }
-
-  void dump(raw_ostream &OS) const;
 };
+
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
 
 /// Models RootElement : RootFlags | RootConstants | RootDescriptor
 ///  | DescriptorTable | DescriptorTableClause
