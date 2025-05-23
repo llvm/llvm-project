@@ -547,7 +547,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     MCRegister OddReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_odd);
     // We need to correct the odd register of X0_Pair.
     if (OddReg == RISCV::DUMMY_REG_PAIR_WITH_X0)
-      OddReg == RISCV::X0;
+      OddReg = RISCV::X0;
     assert(DstReg != RISCV::X0_Pair && "Cannot write to X0_Pair");
 
     // Emit an ADDI for both parts of GPRPair.
