@@ -12274,6 +12274,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizationInterfaces",
+        ":BufferizationTransforms",
         ":FuncDialect",
         ":IR",
         ":MLProgramDialect",
