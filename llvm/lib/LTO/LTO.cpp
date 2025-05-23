@@ -41,8 +41,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ThreadPool.h"
@@ -1398,6 +1401,16 @@ SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
 Error ThinBackendProc::emitFiles(
     const FunctionImporter::ImportMapTy &ImportList, llvm::StringRef ModulePath,
     const std::string &NewModulePath) const {
+  return emitFiles(ImportList, ModulePath, NewModulePath,
+                   NewModulePath + ".thinlto.bc",
+                   /*ImportsFiles=*/std::nullopt);
+}
+
+Error ThinBackendProc::emitFiles(
+    const FunctionImporter::ImportMapTy &ImportList, llvm::StringRef ModulePath,
+    const std::string &NewModulePath, StringRef SummaryPath,
+    std::optional<std::reference_wrapper<ImportsFilesContainer>> ImportsFiles)
+    const {
   ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
   GVSummaryPtrSet DeclarationSummaries;
 
@@ -1406,32 +1419,62 @@ Error ThinBackendProc::emitFiles(
                                    ImportList, ModuleToSummariesForIndex,
                                    DeclarationSummaries);
 
-  raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
-                    sys::fs::OpenFlags::OF_None);
+  raw_fd_ostream OS(SummaryPath, EC, sys::fs::OpenFlags::OF_None);
   if (EC)
-    return createFileError("cannot open " + NewModulePath + ".thinlto.bc", EC);
+    return createFileError("cannot open " + Twine(SummaryPath), EC);
 
   writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
                    &DeclarationSummaries);
 
   if (ShouldEmitImportsFiles) {
-    Error ImportFilesError = EmitImportsFiles(
+    Error ImportsFilesError = EmitImportsFiles(
         ModulePath, NewModulePath + ".imports", ModuleToSummariesForIndex);
-    if (ImportFilesError)
-      return ImportFilesError;
+    if (ImportsFilesError)
+      return ImportsFilesError;
   }
+
+  // Optionally, store the imports files.
+  if (ImportsFiles)
+    processImportsFiles(
+        ModulePath, ModuleToSummariesForIndex,
+        [&](StringRef M) { ImportsFiles->get().push_back(M.str()); });
+
   return Error::success();
 }
 
 namespace {
-class InProcessThinBackend : public ThinBackendProc {
+/// Base class for ThinLTO backends that perform code generation and insert the
+/// generated files back into the link.
+class CGThinBackend : public ThinBackendProc {
 protected:
   AddStreamFn AddStream;
-  FileCache Cache;
   DenseSet<GlobalValue::GUID> CfiFunctionDefs;
   DenseSet<GlobalValue::GUID> CfiFunctionDecls;
-
   bool ShouldEmitIndexFiles;
+
+public:
+  CGThinBackend(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      AddStreamFn AddStream, lto::IndexWriteCallback OnWrite,
+      bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
+      ThreadPoolStrategy ThinLTOParallelism)
+      : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
+                        OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
+        AddStream(std::move(AddStream)),
+        ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
+    auto &Defs = CombinedIndex.cfiFunctionDefs();
+    CfiFunctionDefs.insert_range(Defs.guids());
+    auto &Decls = CombinedIndex.cfiFunctionDecls();
+    CfiFunctionDecls.insert_range(Decls.guids());
+  }
+};
+
+/// This backend performs code generation by scheduling a job to run on
+/// an in-process thread when invoked for each task.
+class InProcessThinBackend : public CGThinBackend {
+protected:
+  FileCache Cache;
 
 public:
   InProcessThinBackend(
@@ -1440,15 +1483,10 @@ public:
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles)
-      : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                        OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
-        AddStream(std::move(AddStream)), Cache(std::move(Cache)),
-        ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
-    auto &Defs = CombinedIndex.cfiFunctionDefs();
-    CfiFunctionDefs.insert_range(Defs.guids());
-    auto &Decls = CombinedIndex.cfiFunctionDecls();
-    CfiFunctionDecls.insert_range(Decls.guids());
-  }
+      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
+                      AddStream, OnWrite, ShouldEmitIndexFiles,
+                      ShouldEmitImportsFiles, ThinLTOParallelism),
+        Cache(std::move(Cache)) {}
 
   virtual Error runThinLTOBackendThread(
       AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
@@ -2020,6 +2058,10 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
           ResolvedODR[Mod.first], ThinLTO.ModuleMap);
     };
 
+    BackendProcess->setup(ModuleMap.size(),
+                          RegularLTO.ParallelCodeGenParallelismLevel,
+                          RegularLTO.CombinedModule->getTargetTriple());
+
     if (BackendProcess->getThreadCount() == 1 ||
         BackendProcess->isSensitiveToInputOrder()) {
       // Process the modules in the order they were provided on the
@@ -2145,4 +2187,330 @@ std::vector<int> lto::generateModulesOrdering(ArrayRef<BitcodeModule *> R) {
     return LSize > RSize;
   });
   return ModulesOrdering;
+}
+
+namespace {
+/// This out-of-process backend does not perform code generation when invoked
+/// for each task. Instead, it generates the necessary information (e.g., the
+/// summary index shard, import list, etc.) to enable code generation to be
+/// performed externally, similar to WriteIndexesThinBackend. The backend's
+/// `wait` function then invokes an external distributor process to carry out
+/// the backend compilations.
+class OutOfProcessThinBackend : public CGThinBackend {
+  using SString = SmallString<128>;
+
+  BumpPtrAllocator Alloc;
+  StringSaver Saver{Alloc};
+
+  SString LinkerOutputFile;
+
+  SString DistributorPath;
+  ArrayRef<StringRef> DistributorArgs;
+
+  SString RemoteCompiler;
+  ArrayRef<StringRef> RemoteCompilerArgs;
+
+  bool SaveTemps;
+
+  SmallVector<StringRef, 0> CodegenOptions;
+  DenseSet<StringRef> CommonInputs;
+
+  // Information specific to individual backend compilation job.
+  struct Job {
+    unsigned Task;
+    StringRef ModuleID;
+    StringRef NativeObjectPath;
+    StringRef SummaryIndexPath;
+    ImportsFilesContainer ImportsFiles;
+  };
+  // The set of backend compilations jobs.
+  SmallVector<Job> Jobs;
+
+  // A unique string to identify the current link.
+  SmallString<8> UID;
+
+  // The offset to the first ThinLTO task.
+  unsigned ThinLTOTaskOffset;
+
+  // The target triple to supply for backend compilations.
+  llvm::Triple Triple;
+
+public:
+  OutOfProcessThinBackend(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      ThreadPoolStrategy ThinLTOParallelism,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      AddStreamFn AddStream, lto::IndexWriteCallback OnWrite,
+      bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
+      StringRef LinkerOutputFile, StringRef Distributor,
+      ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+      ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps)
+      : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
+                      AddStream, OnWrite, ShouldEmitIndexFiles,
+                      ShouldEmitImportsFiles, ThinLTOParallelism),
+        LinkerOutputFile(LinkerOutputFile), DistributorPath(Distributor),
+        DistributorArgs(DistributorArgs), RemoteCompiler(RemoteCompiler),
+        RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps) {}
+
+  virtual void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
+                     llvm::Triple Triple) override {
+    UID = itostr(sys::Process::getProcessId());
+    Jobs.resize((size_t)ThinLTONumTasks);
+    this->ThinLTOTaskOffset = ThinLTOTaskOffset;
+    this->Triple = Triple;
+  }
+
+  Error start(
+      unsigned Task, BitcodeModule BM,
+      const FunctionImporter::ImportMapTy &ImportList,
+      const FunctionImporter::ExportSetTy &ExportList,
+      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
+      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+
+    StringRef ModulePath = BM.getModuleIdentifier();
+
+    SString ObjFilePath = sys::path::parent_path(LinkerOutputFile);
+    sys::path::append(ObjFilePath, sys::path::stem(ModulePath) + "." +
+                                       itostr(Task) + "." + UID + ".native.o");
+
+    Job &J = Jobs[Task - ThinLTOTaskOffset];
+    J = {
+        Task,
+        ModulePath,
+        Saver.save(ObjFilePath.str()),
+        Saver.save(ObjFilePath.str() + ".thinlto.bc"),
+        {} // Filled in by emitFiles below.
+    };
+
+    assert(ModuleToDefinedGVSummaries.count(ModulePath));
+
+    // The BackendThreadPool is only used here to write the sharded index files
+    // (similar to WriteIndexesThinBackend).
+    BackendThreadPool.async(
+        [=](Job &J, const FunctionImporter::ImportMapTy &ImportList) {
+          if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
+                                 J.SummaryIndexPath, J.ImportsFiles)) {
+            std::unique_lock<std::mutex> L(ErrMu);
+            if (Err)
+              Err = joinErrors(std::move(*Err), std::move(E));
+            else
+              Err = std::move(E);
+          }
+        },
+        std::ref(J), std::ref(ImportList));
+
+    return Error::success();
+  }
+
+  // Derive a set of Clang options that will be shared/common for all DTLTO
+  // backend compilations. We are intentionally minimal here as these options
+  // must remain synchronized with the behavior of Clang. DTLTO does not support
+  // all the features available with in-process LTO. More features are expected
+  // to be added over time. Users can specify Clang options directly if a
+  // feature is not supported. Note that explicitly specified options that imply
+  // additional input or output file dependencies must be communicated to the
+  // distribution system, potentially by setting extra options on the
+  // distributor program.
+  void buildCommonRemoteCompilerOptions() {
+    const lto::Config &C = Conf;
+    auto &Ops = CodegenOptions;
+
+    Ops.push_back(Saver.save("-O" + Twine(C.OptLevel)));
+
+    if (C.Options.EmitAddrsig)
+      Ops.push_back("-faddrsig");
+    if (C.Options.FunctionSections)
+      Ops.push_back("-ffunction-sections");
+    if (C.Options.DataSections)
+      Ops.push_back("-fdata-sections");
+
+    if (C.RelocModel == Reloc::PIC_)
+      // Clang doesn't have -fpic for all triples.
+      if (!Triple.isOSBinFormatCOFF())
+        Ops.push_back("-fpic");
+
+    // Turn on/off warnings about profile cfg mismatch (default on)
+    // --lto-pgo-warn-mismatch.
+    if (!C.PGOWarnMismatch) {
+      Ops.push_back("-mllvm");
+      Ops.push_back("-no-pgo-warn-mismatch");
+    }
+
+    // Enable sample-based profile guided optimizations.
+    // Sample profile file path --lto-sample-profile=<value>.
+    if (!C.SampleProfile.empty()) {
+      Ops.push_back(
+          Saver.save("-fprofile-sample-use=" + Twine(C.SampleProfile)));
+      CommonInputs.insert(C.SampleProfile);
+    }
+
+    // We don't know which of options will be used by Clang.
+    Ops.push_back("-Wno-unused-command-line-argument");
+
+    // Forward any supplied options.
+    if (!RemoteCompilerArgs.empty())
+      for (auto &a : RemoteCompilerArgs)
+        Ops.push_back(a);
+  }
+
+  // Generates a JSON file describing the backend compilations, for the
+  // distributor.
+  bool emitDistributorJson(StringRef DistributorJson) {
+    using json::Array;
+    std::error_code EC;
+    raw_fd_ostream OS(DistributorJson, EC);
+    if (EC)
+      return false;
+
+    json::OStream JOS(OS);
+    JOS.object([&]() {
+      // Information common to all jobs.
+      JOS.attributeObject("common", [&]() {
+        JOS.attribute("linker_output", LinkerOutputFile);
+
+        JOS.attributeArray("args", [&]() {
+          JOS.value(RemoteCompiler);
+
+          JOS.value("-c");
+
+          JOS.value(Saver.save("--target=" + Triple.str()));
+
+          for (const auto &A : CodegenOptions)
+            JOS.value(A);
+        });
+
+        JOS.attribute("inputs", Array(CommonInputs));
+      });
+
+      // Per-compilation-job information.
+      JOS.attributeArray("jobs", [&]() {
+        for (const auto &J : Jobs) {
+          assert(J.Task != 0);
+
+          SmallVector<StringRef, 2> Inputs;
+          SmallVector<StringRef, 1> Outputs;
+
+          JOS.object([&]() {
+            JOS.attributeArray("args", [&]() {
+              JOS.value(J.ModuleID);
+              Inputs.push_back(J.ModuleID);
+
+              JOS.value(
+                  Saver.save("-fthinlto-index=" + Twine(J.SummaryIndexPath)));
+              Inputs.push_back(J.SummaryIndexPath);
+
+              JOS.value("-o");
+              JOS.value(J.NativeObjectPath);
+              Outputs.push_back(J.NativeObjectPath);
+            });
+
+            // Add the bitcode files from which imports will be made. These do
+            // not explicitly appear on the backend compilation command lines
+            // but are recorded in the summary index shards.
+            llvm::append_range(Inputs, J.ImportsFiles);
+            JOS.attribute("inputs", Array(Inputs));
+
+            JOS.attribute("outputs", Array(Outputs));
+          });
+        }
+      });
+    });
+
+    return true;
+  }
+
+  void removeFile(StringRef FileName) {
+    std::error_code EC = sys::fs::remove(FileName, true);
+    if (EC && EC != std::make_error_code(std::errc::no_such_file_or_directory))
+      errs() << "warning: could not remove the file '" << FileName
+             << "': " << EC.message() << "\n";
+  }
+
+  Error wait() override {
+    // Wait for the information on the required backend compilations to be
+    // gathered.
+    BackendThreadPool.wait();
+    if (Err)
+      return std::move(*Err);
+
+    auto CleanPerJobFiles = llvm::make_scope_exit([&] {
+      if (!SaveTemps)
+        for (auto &Job : Jobs) {
+          removeFile(Job.NativeObjectPath);
+          if (!ShouldEmitIndexFiles)
+            removeFile(Job.SummaryIndexPath);
+        }
+    });
+
+    const StringRef BCError = "DTLTO backend compilation: ";
+
+    buildCommonRemoteCompilerOptions();
+
+    SString JsonFile = sys::path::parent_path(LinkerOutputFile);
+    sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." + UID +
+                                    ".dist-file.json");
+    if (!emitDistributorJson(JsonFile))
+      return make_error<StringError>(
+          BCError + "failed to generate distributor JSON script: " + JsonFile,
+          inconvertibleErrorCode());
+    auto CleanJson = llvm::make_scope_exit([&] {
+      if (!SaveTemps)
+        removeFile(JsonFile);
+    });
+
+    SmallVector<StringRef, 3> Args = {DistributorPath};
+    llvm::append_range(Args, DistributorArgs);
+    Args.push_back(JsonFile);
+    std::string ErrMsg;
+    if (sys::ExecuteAndWait(Args[0], Args,
+                            /*Env=*/std::nullopt, /*Redirects=*/{},
+                            /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg)) {
+      return make_error<StringError>(
+          BCError + "distributor execution failed" +
+              (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
+          inconvertibleErrorCode());
+    }
+
+    for (auto &Job : Jobs) {
+      // Load the native object from a file into a memory buffer
+      // and store its contents in the output buffer.
+      auto ObjFileMbOrErr =
+          MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
+                                /*RequiresNullTerminator=*/false);
+      if (std::error_code EC = ObjFileMbOrErr.getError())
+        return make_error<StringError>(
+            BCError + "cannot open native object file: " +
+                Job.NativeObjectPath + ": " + EC.message(),
+            inconvertibleErrorCode());
+      auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
+      if (Error Err = StreamOrErr.takeError())
+        report_fatal_error(std::move(Err));
+      auto &Stream = *StreamOrErr->get();
+      *Stream.OS << ObjFileMbOrErr->get()->getMemBufferRef().getBuffer();
+      if (Error Err = Stream.commit())
+        report_fatal_error(std::move(Err));
+    }
+
+    return Error::success();
+  }
+};
+} // end anonymous namespace
+
+ThinBackend lto::createOutOfProcessThinBackend(
+    ThreadPoolStrategy Parallelism, lto::IndexWriteCallback OnWrite,
+    bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
+    StringRef LinkerOutputFile, StringRef Distributor,
+    ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps) {
+  auto Func =
+      [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+          const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+          AddStreamFn AddStream, FileCache /*Cache*/) {
+        return std::make_unique<OutOfProcessThinBackend>(
+            Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+            AddStream, OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,
+            LinkerOutputFile, Distributor, DistributorArgs, RemoteCompiler,
+            RemoteCompilerArgs, SaveTemps);
+      };
+  return ThinBackend(Func, Parallelism);
 }

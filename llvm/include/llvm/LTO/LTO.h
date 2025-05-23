@@ -199,6 +199,8 @@ private:
 
 using IndexWriteCallback = std::function<void(const std::string &)>;
 
+using ImportsFilesContainer = llvm::SmallVector<std::string>;
+
 /// This class defines the interface to the ThinLTO backend.
 class ThinBackendProc {
 protected:
@@ -223,13 +225,15 @@ public:
         BackendThreadPool(ThinLTOParallelism) {}
 
   virtual ~ThinBackendProc() = default;
+  virtual void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
+                     Triple Triple) {}
   virtual Error start(
       unsigned Task, BitcodeModule BM,
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       MapVector<StringRef, BitcodeModule> &ModuleMap) = 0;
-  Error wait() {
+  virtual Error wait() {
     BackendThreadPool.wait();
     if (Err)
       return std::move(*Err);
@@ -240,8 +244,15 @@ public:
 
   // Write sharded indices and (optionally) imports to disk
   Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
-                  llvm::StringRef ModulePath,
-                  const std::string &NewModulePath) const;
+                  StringRef ModulePath, const std::string &NewModulePath) const;
+
+  // Write sharded indices to SummaryPath, (optionally) imports to disk, and
+  // (optionally) record imports in ImportsFiles.
+  Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
+                  StringRef ModulePath, const std::string &NewModulePath,
+                  StringRef SummaryPath,
+                  std::optional<std::reference_wrapper<ImportsFilesContainer>>
+                      ImportsFiles) const;
 };
 
 /// This callable defines the behavior of a ThinLTO backend after the thin-link
@@ -293,6 +304,30 @@ ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
                                        IndexWriteCallback OnWrite = nullptr,
                                        bool ShouldEmitIndexFiles = false,
                                        bool ShouldEmitImportsFiles = false);
+
+/// This ThinBackend generates the index shards and then runs the individual
+/// backend jobs via an external process. It takes the same parameters as the
+/// InProcessThinBackend; however, these parameters only control the behavior
+/// when generating the index files for the modules. Additionally:
+/// LinkerOutputFile is a string that should identify this LTO invocation in
+/// the context of a wider build. It's used for naming to aid the user in
+/// identifying activity related to a specific LTO invocation.
+/// Distributor specifies the path to a process to invoke to manage the backend
+/// job execution.
+/// DistributorArgs specifies a list of arguments to be applied to the
+/// distributor.
+/// RemoteCompiler specifies the path to a Clang executable to be invoked for
+/// the backend jobs.
+/// RemoteCompilerArgs specifies a list of arguments to be applied to the
+/// backend compilations.
+/// SaveTemps is a debugging tool that prevents temporary files created by this
+/// backend from being cleaned up.
+ThinBackend createOutOfProcessThinBackend(
+    ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite,
+    bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
+    StringRef LinkerOutputFile, StringRef Distributor,
+    ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds
