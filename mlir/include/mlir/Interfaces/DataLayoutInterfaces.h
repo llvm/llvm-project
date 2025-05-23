@@ -101,8 +101,8 @@ Attribute getDefaultGlobalMemorySpace(DataLayoutEntryInterface entry);
 /// DataLayoutInterface if specified, otherwise returns the default.
 uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
-/// Default handler for the stack alignment request. Dispatches to the
-/// DataLayoutInterface if specified, otherwise returns the default.
+/// Default handler for the function pointer alignment request. Dispatches to
+/// the DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultFunctionPointerAlignment(DataLayoutEntryInterface entry);
 
 /// Returns the value of the property from the specified DataLayoutEntry. If the

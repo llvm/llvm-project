@@ -316,9 +316,8 @@ mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
 // the entry is empty the default alignment zero is returned.
 Attribute mlir::detail::getDefaultFunctionPointerAlignment(
     DataLayoutEntryInterface entry) {
-  if (entry == DataLayoutEntryInterface()) {
+  if (entry == DataLayoutEntryInterface())
     return Attribute();
-  }
   return entry.getValue();
 }
 
