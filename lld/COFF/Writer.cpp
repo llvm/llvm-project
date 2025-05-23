@@ -285,6 +285,7 @@ private:
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
   std::vector<char> strtab;
+  StringMap<size_t> strtabMap;
   std::vector<llvm::object::coff_symbol16> outputSymtab;
   std::vector<ECCodeMapEntry> codeMap;
   IdataContents idata;
@@ -1439,10 +1440,13 @@ void Writer::assignOutputSectionIndices() {
 
 size_t Writer::addEntryToStringTable(StringRef str) {
   assert(str.size() > COFF::NameSize);
-  size_t offsetOfEntry = strtab.size() + 4; // +4 for the size field
-  strtab.insert(strtab.end(), str.begin(), str.end());
-  strtab.push_back('\0');
-  return offsetOfEntry;
+  size_t newOffsetOfEntry = strtab.size() + 4; // +4 for the size field
+  auto res = strtabMap.try_emplace(str, newOffsetOfEntry);
+  if (res.second) {
+    strtab.insert(strtab.end(), str.begin(), str.end());
+    strtab.push_back('\0');
+  }
+  return res.first->getValue();
 }
 
 std::optional<coff_symbol16> Writer::createSymbol(Defined *def) {
