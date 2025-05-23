@@ -1242,9 +1242,18 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
     uint64_t BackedgeCount = getProfileCount(S.getBody()) - ParentCount;
-    Builder.CreateCondBr(
+    auto *I = Builder.CreateCondBr(
         BoolCondVal, LoopBody, LoopExit.getBlock(),
         createProfileWeightsForLoop(S.getCond(), BackedgeCount));
+
+    // Key Instructions: Emit the condition and branch as separate source
+    // location atoms otherwise we may omit a step onto the loop condition in
+    // favour of the closing brace.
+    // FIXME: We could have the branch as the backup location for the condition,
+    // which would probably be a better experience (no jumping to the brace).
+    if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(CondI, nullptr);
+    addInstToNewSourceAtom(I, nullptr);
   }
 
   LoopStack.pop();
