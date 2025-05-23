@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -116,10 +117,6 @@ static cl::opt<bool>
                                 cl::init(true),
 #endif
                                 cl::desc(""));
-
-namespace llvm {
-extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
-}
 
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
