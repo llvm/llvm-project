@@ -129,7 +129,8 @@ protected:
       std::string Name;
       unsigned LineNo;
       GlobPattern Pattern;
-      // neither copyable nor movable because GlobPattern contains StringRef.
+      // neither copyable nor movable because GlobPattern contains
+      // Glob::StringRef that points to Glob::Name.
       Glob(Glob &&) = delete;
       Glob() = default;
     };
