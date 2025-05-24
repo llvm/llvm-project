@@ -248,7 +248,7 @@ void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                 bool IsResolved,
                                 const MCSubtargetInfo *STI) const {
   MCFixupKind Kind = Fixup.getKind();
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   Value = adjustFixupValue(Fixup, Value, Ctx);
 
   if (!Value)

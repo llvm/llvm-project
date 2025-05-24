@@ -109,7 +109,7 @@ void MSP430AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                   MutableArrayRef<char> Data,
                                   uint64_t Value, bool IsResolved,
                                   const MCSubtargetInfo *STI) const {
-  Value = adjustFixupValue(Fixup, Value, Asm.getContext());
+  Value = adjustFixupValue(Fixup, Value, getContext());
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   if (!Value)
     return; // Doesn't change encoding.

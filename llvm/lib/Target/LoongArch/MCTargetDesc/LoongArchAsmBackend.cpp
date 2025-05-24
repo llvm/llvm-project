@@ -153,7 +153,7 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
   if (mc::isRelocation(Kind))
     return;
   MCFixupKindInfo Info = getFixupKindInfo(Kind);
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
 
   // Fixup leb128 separately.
   if (Fixup.getTargetKind() == FK_Data_leb128)
@@ -216,7 +216,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
     return false;
 
   MCSection *Sec = AF.getParent();
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
   MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_LARCH_ALIGN);
   unsigned MaxBytesToEmit = AF.getMaxBytesToEmit();
@@ -299,7 +299,7 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(const MCAssembler &Asm,
 bool LoongArchAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
                                              MCDwarfLineAddrFragment &DF,
                                              bool &WasRelaxed) const {
-  MCContext &C = Asm.getContext();
+  MCContext &C = getContext();
 
   int64_t LineDelta = DF.getLineDelta();
   const MCExpr &AddrDelta = DF.getAddrDelta();
@@ -383,7 +383,7 @@ bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
   Fixups.clear();
   raw_svector_ostream OS(Data);
 
-  assert(Asm.getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+  assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
     WasRelaxed = OldSize != Data.size();
