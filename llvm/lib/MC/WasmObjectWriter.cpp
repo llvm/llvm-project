@@ -1897,7 +1897,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       assert(llvm::all_of(DataFrag.getContents(), [](char C) { return !C; }));
       for (const MCFixup &Fixup : DataFrag.getFixups()) {
         assert(Fixup.getKind() ==
-               MCFixup::getKindForSize(is64Bit() ? 8 : 4, false));
+               MCFixup::getDataKindForSize(is64Bit() ? 8 : 4));
         const MCExpr *Expr = Fixup.getValue();
         auto *SymRef = dyn_cast<MCSymbolRefExpr>(Expr);
         if (!SymRef)
