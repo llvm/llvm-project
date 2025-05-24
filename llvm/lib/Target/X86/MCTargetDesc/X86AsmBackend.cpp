@@ -713,8 +713,8 @@ void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
       getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel) {
     // check that PC relative fixup fits into the fixup size.
     if (Size > 0 && !isIntN(Size * 8, SignedValue))
-      Asm.getContext().reportError(
-                                   Fixup.getLoc(), "value of " + Twine(SignedValue) +
+      getContext().reportError(Fixup.getLoc(),
+                               "value of " + Twine(SignedValue) +
                                    " is too large for field of " + Twine(Size) +
                                    ((Size == 1) ? " byte." : " bytes."));
   } else {

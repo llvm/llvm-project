@@ -391,7 +391,7 @@ void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCSubtargetInfo *STI) const {
   if (mc::isRelocation(Fixup.getKind()))
     return;
-  adjustFixupValue(Fixup, Target, Value, &Asm.getContext());
+  adjustFixupValue(Fixup, Target, Value, &getContext());
   if (Value == 0)
     return; // Doesn't change encoding.
 
@@ -532,7 +532,7 @@ bool AVRAsmBackend::forceRelocation(const MCAssembler &Asm, const MCFragment &F,
     // hopes are that the module we're currently compiling won't be actually
     // linked to the final binary.
     return !adjust::adjustRelativeBranch(Size, Fixup, Offset,
-                                         Asm.getContext().getSubtargetInfo());
+                                         getContext().getSubtargetInfo());
   }
 
   case AVR::fixup_call:

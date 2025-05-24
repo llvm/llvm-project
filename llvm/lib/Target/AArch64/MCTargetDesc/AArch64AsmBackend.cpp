@@ -431,8 +431,8 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
         SymLoc == AArch64AuthMCExpr::VK_AUTHADDR) {
       const auto *Expr = dyn_cast<AArch64AuthMCExpr>(Fixup.getValue());
       if (!Expr) {
-        Asm.getContext().reportError(Fixup.getValue()->getLoc(),
-                                     "expected relocatable expression");
+        getContext().reportError(Fixup.getValue()->getLoc(),
+                                 "expected relocatable expression");
         return;
       }
       assert(Value == 0);
@@ -446,7 +446,7 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     return; // Doesn't change encoding.
   unsigned NumBytes = getFixupKindNumBytes(Kind);
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   int64_t SignedValue = static_cast<int64_t>(Value);
   // Apply any target-specific value adjustments.
   Value = adjustFixupValue(Fixup, Target, Value, Ctx, TheTriple, IsResolved);
