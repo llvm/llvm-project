@@ -391,7 +391,7 @@ protected:
   Function *ParseFunction(CompileUnit &comp_unit, const DWARFDIE &die);
 
   size_t ParseBlocksRecursive(CompileUnit &comp_unit, Block *parent_block,
-                              DWARFDIE die, lldb::addr_t subprogram_low_pc);
+                              DWARFDIE die, lldb::addr_t function_file_addr);
 
   size_t ParseTypes(const SymbolContext &sc, const DWARFDIE &die,
                     bool parse_siblings, bool parse_children);

@@ -340,7 +340,7 @@ def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
 
 def no_warn_mismatch: F<"no-warn-mismatch">,
-  HelpText<"Suppress errors for certain unknown seciton types">;
+  HelpText<"Suppress errors for certain unknown section types">;
 
 def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
   HelpText<"Page align sections (default)">;
@@ -431,6 +431,10 @@ defm reproduce:
 defm rosegment: BB<"rosegment",
   "Put read-only non-executable sections in their own segment (default)",
   "Do not put read-only non-executable sections in their own segment">;
+
+defm xosegment: BB<"xosegment",
+  "Put execute-only sections in their own segment",
+  "Do not put execute-only sections in their own segment (default)">;
 
 defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
 
@@ -567,6 +571,12 @@ defm whole_archive: B<"whole-archive",
     "Do not force load of all members in a static library (default)">;
 
 def why_extract: JJ<"why-extract=">, HelpText<"Print to a file about why archive members are extracted">;
+
+defm why_live
+    : EEq<"why-live",
+          "Report a chain of references preventing garbage collection for "
+          "each symbol matching <glob>">,
+      MetaVarName<"<glob>">;
 
 defm wrap : Eq<"wrap", "Redirect symbol references to __wrap_symbol and "
                        "__real_symbol references to symbol">,

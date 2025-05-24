@@ -596,7 +596,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context) const {
 std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
                                                   QualType Ty) {
   auto MangleCallback = [](ASTContext &Ctx,
-                           const NamedDecl *ND) -> std::optional<unsigned> {
+                           const NamedDecl *ND) -> UnsignedOrNone {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
       return RD->getDeviceLambdaManglingNumber();
     return std::nullopt;
@@ -692,9 +692,9 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
           GD = GlobalDecl(CD, Ctor_Base);
         else if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(ND))
           GD = GlobalDecl(DD, Dtor_Base);
-        else if (ND->hasAttr<CUDAGlobalAttr>())
-          GD = GlobalDecl(cast<FunctionDecl>(ND));
-        else
+        else if (auto FD = dyn_cast<FunctionDecl>(ND)) {
+          GD = FD->isReferenceableKernel() ? GlobalDecl(FD) : GlobalDecl(ND);
+        } else
           GD = GlobalDecl(ND);
         MC->mangleName(GD, Out);
 
@@ -1652,8 +1652,11 @@ SourceLocation CallExpr::getBeginLoc() const {
   if (!isTypeDependent()) {
     if (const auto *Method =
             dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
-        Method && Method->isExplicitObjectMemberFunction())
-      return getArg(0)->getBeginLoc();
+        Method && Method->isExplicitObjectMemberFunction()) {
+      if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
+        return FirstArgLoc;
+      }
+    }
   }
 
   SourceLocation begin = getCallee()->getBeginLoc();
@@ -2108,8 +2111,8 @@ ImplicitCastExpr *ImplicitCastExpr::Create(const ASTContext &C, QualType T,
   ImplicitCastExpr *E =
       new (Buffer) ImplicitCastExpr(T, Kind, Operand, PathSize, FPO, VK);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -2135,8 +2138,8 @@ CStyleCastExpr *CStyleCastExpr::Create(const ASTContext &C, QualType T,
   CStyleCastExpr *E =
       new (Buffer) CStyleCastExpr(T, VK, K, Op, PathSize, FPO, WrittenTy, L, R);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -2242,6 +2245,16 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
     PExp = RHS;
   } else {
     return false;
+  }
+
+  // Workaround for old glibc's __PTR_ALIGN macro
+  if (auto *Select =
+          dyn_cast<ConditionalOperator>(PExp->IgnoreParenNoopCasts(Ctx))) {
+    // If the condition can be constant evaluated, we check the selected arm.
+    bool EvalResult;
+    if (!Select->getCond()->EvaluateAsBooleanCondition(EvalResult, Ctx))
+      return false;
+    PExp = EvalResult ? Select->getTrueExpr() : Select->getFalseExpr();
   }
 
   // Check that the pointer is a nullptr.
@@ -3250,8 +3263,8 @@ bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
   // refer to temporaries of that type:
 
   // - implicit derived-to-base conversions
-  if (isa<ImplicitCastExpr>(E)) {
-    switch (cast<ImplicitCastExpr>(E)->getCastKind()) {
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    switch (ICE->getCastKind()) {
     case CK_DerivedToBase:
     case CK_UncheckedDerivedToBase:
       return false;
@@ -3264,7 +3277,7 @@ bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
   if (isa<MemberExpr>(E))
     return false;
 
-  if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E))
+  if (const auto *BO = dyn_cast<BinaryOperator>(E))
     if (BO->isPtrMemOp())
       return false;
 
@@ -4436,11 +4449,10 @@ GenericSelectionExpr::GenericSelectionExpr(
   GenericSelectionExprBits.GenericLoc = GenericLoc;
   getTrailingObjects<Stmt *>()[getIndexOfControllingExpression()] =
       ControllingExpr;
-  std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
-  std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>() +
-                getIndexOfStartOfAssociatedTypes());
+  llvm::copy(AssocExprs,
+             getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  llvm::copy(AssocTypes, getTrailingObjects<TypeSourceInfo *>() +
+                             getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4464,11 +4476,10 @@ GenericSelectionExpr::GenericSelectionExpr(
   GenericSelectionExprBits.GenericLoc = GenericLoc;
   getTrailingObjects<TypeSourceInfo *>()[getIndexOfControllingType()] =
       ControllingType;
-  std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
-  std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>() +
-                getIndexOfStartOfAssociatedTypes());
+  llvm::copy(AssocExprs,
+             getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  llvm::copy(AssocTypes, getTrailingObjects<TypeSourceInfo *>() +
+                             getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4489,11 +4500,10 @@ GenericSelectionExpr::GenericSelectionExpr(
   GenericSelectionExprBits.GenericLoc = GenericLoc;
   getTrailingObjects<Stmt *>()[getIndexOfControllingExpression()] =
       ControllingExpr;
-  std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
-  std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>() +
-                getIndexOfStartOfAssociatedTypes());
+  llvm::copy(AssocExprs,
+             getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  llvm::copy(AssocTypes, getTrailingObjects<TypeSourceInfo *>() +
+                             getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4514,11 +4524,10 @@ GenericSelectionExpr::GenericSelectionExpr(
   GenericSelectionExprBits.GenericLoc = GenericLoc;
   getTrailingObjects<TypeSourceInfo *>()[getIndexOfControllingType()] =
       ControllingType;
-  std::copy(AssocExprs.begin(), AssocExprs.end(),
-            getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
-  std::copy(AssocTypes.begin(), AssocTypes.end(),
-            getTrailingObjects<TypeSourceInfo *>() +
-                getIndexOfStartOfAssociatedTypes());
+  llvm::copy(AssocExprs,
+             getTrailingObjects<Stmt *>() + getIndexOfStartOfAssociatedExprs());
+  llvm::copy(AssocTypes, getTrailingObjects<TypeSourceInfo *>() +
+                             getIndexOfStartOfAssociatedTypes());
 
   setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
 }
@@ -4767,9 +4776,7 @@ ParenListExpr::ParenListExpr(SourceLocation LParenLoc, ArrayRef<Expr *> Exprs,
     : Expr(ParenListExprClass, QualType(), VK_PRValue, OK_Ordinary),
       LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
   ParenListExprBits.NumExprs = Exprs.size();
-
-  for (unsigned I = 0, N = Exprs.size(); I != N; ++I)
-    getTrailingObjects<Stmt *>()[I] = Exprs[I];
+  llvm::copy(Exprs, getTrailingObjects());
   setDependence(computeDependence(this));
 }
 
@@ -5030,17 +5037,19 @@ PseudoObjectExpr::PseudoObjectExpr(QualType type, ExprValueKind VK,
     : Expr(PseudoObjectExprClass, type, VK, OK_Ordinary) {
   PseudoObjectExprBits.NumSubExprs = semantics.size() + 1;
   PseudoObjectExprBits.ResultIndex = resultIndex + 1;
+  MutableArrayRef<Expr *> Trail = getTrailingObjects(semantics.size() + 1);
+  Trail[0] = syntax;
 
-  for (unsigned i = 0, e = semantics.size() + 1; i != e; ++i) {
-    Expr *E = (i == 0 ? syntax : semantics[i-1]);
-    getSubExprsBuffer()[i] = E;
+  assert(llvm::all_of(semantics,
+                      [](const Expr *E) {
+                        return !isa<OpaqueValueExpr>(E) ||
+                               cast<OpaqueValueExpr>(E)->getSourceExpr() !=
+                                   nullptr;
+                      }) &&
+         "opaque-value semantic expressions for pseudo-object "
+         "operations must have sources");
 
-    if (isa<OpaqueValueExpr>(E))
-      assert(cast<OpaqueValueExpr>(E)->getSourceExpr() != nullptr &&
-             "opaque-value semantic expressions for pseudo-object "
-             "operations must have sources");
-  }
-
+  llvm::copy(semantics, Trail.drop_front().begin());
   setDependence(computeDependence(this));
 }
 
@@ -5227,7 +5236,7 @@ RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,
   assert(!T.isNull());
   assert(!llvm::is_contained(SubExprs, nullptr));
 
-  llvm::copy(SubExprs, getTrailingObjects<Expr *>());
+  llvm::copy(SubExprs, getTrailingObjects());
   setDependence(computeDependence(this));
 }
 
@@ -5294,9 +5303,7 @@ OMPArrayShapingExpr *OMPArrayShapingExpr::CreateEmpty(const ASTContext &Context,
 }
 
 void OMPIteratorExpr::setIteratorDeclaration(unsigned I, Decl *D) {
-  assert(I < NumIterators &&
-         "Idx is greater or equal the number of iterators definitions.");
-  getTrailingObjects<Decl *>()[I] = D;
+  getTrailingObjects<Decl *>(NumIterators)[I] = D;
 }
 
 void OMPIteratorExpr::setAssignmentLoc(unsigned I, SourceLocation Loc) {

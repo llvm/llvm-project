@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/VEMCExpr.h"
 #include "VEFixupKinds.h"
 #include "VEMCExpr.h"
 #include "VEMCTargetDesc.h"
@@ -39,6 +40,17 @@ protected:
 unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                          const MCFixup &Fixup,
                                          bool IsPCRel) const {
+  switch (Target.getSpecifier()) {
+  case VEMCExpr::VK_TLS_GD_HI32:
+  case VEMCExpr::VK_TLS_GD_LO32:
+  case VEMCExpr::VK_TPOFF_HI32:
+  case VEMCExpr::VK_TPOFF_LO32:
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
   if (const VEMCExpr *SExpr = dyn_cast<VEMCExpr>(Fixup.getValue())) {
     if (SExpr->getSpecifier() == VEMCExpr::VK_PC_LO32)
       return ELF::R_VE_PC_LO32;
@@ -55,12 +67,10 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                       "1-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
     case FK_Data_2:
-    case FK_PCRel_2:
       Ctx.reportError(Fixup.getLoc(),
                       "2-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
     case FK_Data_4:
-    case FK_PCRel_4:
       return ELF::R_VE_SREL32;
     case FK_Data_8:
     case FK_PCRel_8:

@@ -11,6 +11,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
 namespace llvm {
 class MCSection;
 }
@@ -18,6 +19,8 @@ class MCSection;
 using namespace llvm;
 
 MCObjectWriter::~MCObjectWriter() = default;
+
+MCContext &MCObjectWriter::getContext() const { return Asm->getContext(); }
 
 void MCObjectWriter::reset() {
   FileNames.clear();
@@ -27,24 +30,20 @@ void MCObjectWriter::reset() {
   CGProfile.clear();
 }
 
-bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(
-    const MCAssembler &Asm, const MCSymbolRefExpr *A, const MCSymbolRefExpr *B,
-    bool InSet) const {
-  // Modified symbol references cannot be resolved.
-  if (A->getKind() != MCSymbolRefExpr::VK_None ||
-      B->getKind() != MCSymbolRefExpr::VK_None)
-    return false;
+void MCObjectWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                                      MCValue Target, uint64_t &FixedValue) {}
 
-  const MCSymbol &SA = A->getSymbol();
-  const MCSymbol &SB = B->getSymbol();
+bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(const MCSymbol &SA,
+                                                        const MCSymbol &SB,
+                                                        bool InSet) const {
   assert(!SA.isUndefined() && !SB.isUndefined());
-  return isSymbolRefDifferenceFullyResolvedImpl(Asm, SA, *SB.getFragment(),
-                                                InSet, /*IsPCRel=*/false);
+  return isSymbolRefDifferenceFullyResolvedImpl(SA, *SB.getFragment(), InSet,
+                                                /*IsPCRel=*/false);
 }
 
 bool MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
-    bool InSet, bool IsPCRel) const {
+    const MCSymbol &SymA, const MCFragment &FB, bool InSet,
+    bool IsPCRel) const {
   const MCSection &SecA = SymA.getSection();
   const MCSection &SecB = *FB.getParent();
   // On ELF and COFF  A - B is absolute if A and B are in the same section.

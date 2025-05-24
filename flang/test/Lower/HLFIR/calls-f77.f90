@@ -9,6 +9,7 @@ subroutine call_no_arg()
   call void()
 end subroutine
 ! CHECK-LABEL: func.func @_QPcall_no_arg() {
+! CHECK-NEXT:  fir.dummy_scope
 ! CHECK-NEXT:  fir.call @_QPvoid() fastmath<contract> : () -> ()
 ! CHECK-NEXT:  return
 

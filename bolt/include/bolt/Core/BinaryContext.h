@@ -544,9 +544,10 @@ public:
   ///
   /// Optional \p Name can be assigned to the patch. The name will be emitted to
   /// the symbol table at \p Address.
-  BinaryFunction *createInstructionPatch(uint64_t Address,
-                                         InstructionListType &Instructions,
-                                         const Twine &Name = "");
+  BinaryFunction *
+  createInstructionPatch(uint64_t Address,
+                         const InstructionListType &Instructions,
+                         const Twine &Name = "");
 
   std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
@@ -1498,7 +1499,7 @@ public:
     MCEInstance.LocalCtx.reset(
         new MCContext(*TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
     MCEInstance.LocalMOFI.reset(
-        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx.get(),
+        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx,
                                           /*PIC=*/!HasFixedLoadAddress));
     MCEInstance.LocalCtx->setObjectFileInfo(MCEInstance.LocalMOFI.get());
     MCEInstance.MCE.reset(

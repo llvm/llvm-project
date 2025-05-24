@@ -73,6 +73,8 @@ enum NodeType : unsigned {
 
   SMSTART,
   SMSTOP,
+  COND_SMSTART,
+  COND_SMSTOP,
   RESTORE_ZA,
   RESTORE_ZT,
   SAVE_ZT,
@@ -241,26 +243,9 @@ enum NodeType : unsigned {
   VSRI,
 
   // Vector comparisons
-  CMEQ,
-  CMGE,
-  CMGT,
-  CMHI,
-  CMHS,
   FCMEQ,
   FCMGE,
   FCMGT,
-
-  // Vector zero comparisons
-  CMEQz,
-  CMGEz,
-  CMGTz,
-  CMLEz,
-  CMLTz,
-  FCMEQz,
-  FCMGEz,
-  FCMGTz,
-  FCMLEz,
-  FCMLTz,
 
   // Round wide FP to narrow FP with inexact results to odd.
   FCVTXN,
@@ -377,7 +362,6 @@ enum NodeType : unsigned {
   CTLZ_MERGE_PASSTHRU,
   CTPOP_MERGE_PASSTHRU,
   DUP_MERGE_PASSTHRU,
-  INDEX_VECTOR,
 
   // Cast between vectors of the same element type but differ in length.
   REINTERPRET_CAST,
@@ -394,11 +378,6 @@ enum NodeType : unsigned {
   LDFF1S_MERGE_ZERO,
   LD1RQ_MERGE_ZERO,
   LD1RO_MERGE_ZERO,
-
-  // Structured loads.
-  SVE_LD2_MERGE_ZERO,
-  SVE_LD3_MERGE_ZERO,
-  SVE_LD4_MERGE_ZERO,
 
   // Unsigned gather loads.
   GLD1_MERGE_ZERO,
@@ -705,8 +684,8 @@ public:
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
-  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                             EVT NewVT) const override;
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   bool shouldRemoveRedundantExtend(SDValue Op) const override;
 
@@ -892,9 +871,10 @@ public:
     if (!VT.isVector())
       return hasAndNotCompare(Y);
 
-    TypeSize TS = VT.getSizeInBits();
-    // TODO: We should be able to use bic/bif too for SVE.
-    return !TS.isScalable() && TS.getFixedValue() >= 64; // vector 'bic'
+    if (VT.isScalableVector())
+      return true;
+
+    return VT.getFixedSizeInBits() >= 64; // vector 'bic'
   }
 
   bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
@@ -1048,10 +1028,6 @@ public:
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
 
-#ifndef NDEBUG
-  void verifyTargetSDNode(const SDNode *N) const override;
-#endif
-
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
@@ -1202,6 +1178,8 @@ private:
   SDValue LowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_HISTOGRAM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerGET_ACTIVE_LANE_MASK(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;

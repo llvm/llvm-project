@@ -315,6 +315,24 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  hypotf16_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    hypotf16_test.cpp
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.hypotf16
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   fmod_generic_impl_test
   NO_RUN_POSTBUILD
   NEED_MPFR

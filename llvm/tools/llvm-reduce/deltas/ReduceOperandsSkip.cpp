@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceOperandsSkip.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -52,7 +51,7 @@ static bool shouldReduceOperand(Use &Op) {
   if (isa<GEPOperator>(Op.getUser()))
     return false;
   if (auto *CB = dyn_cast<CallBase>(Op.getUser())) {
-    if (&CB->getCalledOperandUse() == &Op)
+    if (CB->isCallee(&Op))
       return false;
   }
   return true;
@@ -194,7 +193,7 @@ opportunities(Function &F,
   }
 }
 
-static void extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceOperandsSkipDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   for (Function &F : Program.functions()) {
@@ -228,9 +227,4 @@ static void extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
         P.first->set(P.second);
     }
   }
-}
-
-void llvm::reduceOperandsSkipDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractOperandsFromModule,
-               "Reducing operands by skipping over instructions");
 }

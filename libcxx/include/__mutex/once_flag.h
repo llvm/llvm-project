@@ -31,7 +31,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TEMPLATE_VIS once_flag;
+struct once_flag;
 
 #ifndef _LIBCPP_CXX03_LANG
 
@@ -48,7 +48,7 @@ _LIBCPP_HIDE_FROM_ABI void call_once(once_flag&, const _Callable&);
 
 #endif // _LIBCPP_CXX03_LANG
 
-struct _LIBCPP_TEMPLATE_VIS once_flag {
+struct once_flag {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR once_flag() _NOEXCEPT : __state_(_Unset) {}
   once_flag(const once_flag&)            = delete;
   once_flag& operator=(const once_flag&) = delete;
@@ -119,7 +119,9 @@ void _LIBCPP_HIDE_FROM_ABI __call_once_proxy(void* __vp) {
   (*__p)();
 }
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI void __call_once(volatile once_flag::_State_type&, void*, void (*)(void*));
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #ifndef _LIBCPP_CXX03_LANG
 

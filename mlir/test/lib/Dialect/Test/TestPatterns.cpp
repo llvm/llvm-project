@@ -386,26 +386,26 @@ struct TestGreedyPatternDriver
     patterns.insert<IncrementIntAttribute<3>>(&getContext());
 
     GreedyRewriteConfig config;
-    config.useTopDownTraversal = this->useTopDownTraversal;
-    config.maxIterations = this->maxIterations;
-    config.fold = this->fold;
-    config.cseConstants = this->cseConstants;
+    config.setUseTopDownTraversal(useTopDownTraversal)
+        .setMaxIterations(this->maxIterations)
+        .enableFolding(this->fold)
+        .enableConstantCSE(this->cseConstants);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 
   Option<bool> useTopDownTraversal{
       *this, "top-down",
       llvm::cl::desc("Seed the worklist in general top-down order"),
-      llvm::cl::init(GreedyRewriteConfig().useTopDownTraversal)};
+      llvm::cl::init(GreedyRewriteConfig().getUseTopDownTraversal())};
   Option<int> maxIterations{
       *this, "max-iterations",
       llvm::cl::desc("Max. iterations in the GreedyRewriteConfig"),
-      llvm::cl::init(GreedyRewriteConfig().maxIterations)};
+      llvm::cl::init(GreedyRewriteConfig().getMaxIterations())};
   Option<bool> fold{*this, "fold", llvm::cl::desc("Whether to fold"),
-                    llvm::cl::init(GreedyRewriteConfig().fold)};
-  Option<bool> cseConstants{*this, "cse-constants",
-                            llvm::cl::desc("Whether to CSE constants"),
-                            llvm::cl::init(GreedyRewriteConfig().cseConstants)};
+                    llvm::cl::init(GreedyRewriteConfig().isFoldingEnabled())};
+  Option<bool> cseConstants{
+      *this, "cse-constants", llvm::cl::desc("Whether to CSE constants"),
+      llvm::cl::init(GreedyRewriteConfig().isConstantCSEEnabled())};
 };
 
 struct DumpNotifications : public RewriterBase::Listener {
@@ -501,13 +501,13 @@ public:
 
     DumpNotifications dumpNotifications;
     GreedyRewriteConfig config;
-    config.listener = &dumpNotifications;
+    config.setListener(&dumpNotifications);
     if (strictMode == "AnyOp") {
-      config.strictMode = GreedyRewriteStrictness::AnyOp;
+      config.setStrictness(GreedyRewriteStrictness::AnyOp);
     } else if (strictMode == "ExistingAndNewOps") {
-      config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
+      config.setStrictness(GreedyRewriteStrictness::ExistingAndNewOps);
     } else if (strictMode == "ExistingOps") {
-      config.strictMode = GreedyRewriteStrictness::ExistingOps;
+      config.setStrictness(GreedyRewriteStrictness::ExistingOps);
     } else {
       llvm_unreachable("invalid strictness option");
     }
@@ -772,6 +772,7 @@ void TestDerivedAttributeDriver::runOnOperation() {
 namespace {
 //===----------------------------------------------------------------------===//
 // Region-Block Rewrite Testing
+//===----------------------------------------------------------------------===//
 
 /// This pattern applies a signature conversion to a block inside a detached
 /// region.
@@ -958,6 +959,7 @@ struct TestUndoPropertiesModification : public ConversionPattern {
 
 //===----------------------------------------------------------------------===//
 // Type-Conversion Rewrite Testing
+//===----------------------------------------------------------------------===//
 
 /// This patterns erases a region operation that has had a type conversion.
 struct TestDropOpSignatureConversion : public ConversionPattern {
@@ -1278,6 +1280,29 @@ public:
   }
 };
 
+/// Test unambiguous overload resolution of replaceOpWithMultiple. This
+/// function is just to trigger compiler errors. It is never executed.
+[[maybe_unused]] void testReplaceOpWithMultipleOverloads(
+    ConversionPatternRewriter &rewriter, Operation *op, ArrayRef<ValueRange> r1,
+    SmallVector<ValueRange> r2, ArrayRef<SmallVector<Value>> r3,
+    SmallVector<SmallVector<Value>> r4, ArrayRef<ArrayRef<Value>> r5,
+    SmallVector<ArrayRef<Value>> r6, SmallVector<SmallVector<Value>> &&r7,
+    Value v, ValueRange vr, ArrayRef<Value> ar) {
+  rewriter.replaceOpWithMultiple(op, r1);
+  rewriter.replaceOpWithMultiple(op, r2);
+  rewriter.replaceOpWithMultiple(op, r3);
+  rewriter.replaceOpWithMultiple(op, r4);
+  rewriter.replaceOpWithMultiple(op, r5);
+  rewriter.replaceOpWithMultiple(op, r6);
+  rewriter.replaceOpWithMultiple(op, std::move(r7));
+  rewriter.replaceOpWithMultiple(op, {vr});
+  rewriter.replaceOpWithMultiple(op, {ar});
+  rewriter.replaceOpWithMultiple(op, {{v}});
+  rewriter.replaceOpWithMultiple(op, {{v, v}});
+  rewriter.replaceOpWithMultiple(op, {{v, v}, vr});
+  rewriter.replaceOpWithMultiple(op, {{v, v}, ar});
+  rewriter.replaceOpWithMultiple(op, {ar, {v, v}, vr});
+}
 } // namespace
 
 namespace {

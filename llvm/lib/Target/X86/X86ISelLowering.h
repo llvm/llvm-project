@@ -90,6 +90,10 @@ namespace llvm {
     /// POP_FROM_X87_REG (which may remove a required FPU stack pop).
     POP_FROM_X87_REG,
 
+    // Pseudo for a call to an imported function to ensure the correct machine
+    // instruction is emitted for Import Call Optimization.
+    IMP_CALL,
+
     /// X86 compare and logical compare instructions.
     CMP,
     FCMP,
@@ -724,6 +728,10 @@ namespace llvm {
     MCVTSI2P,
     MCVTUI2P,
 
+    // Custom handling for FP_TO_xINT_SAT
+    FP_TO_SINT_SAT,
+    FP_TO_UINT_SAT,
+
     // Vector float to bfloat16.
     // Convert packed single data to packed BF16 data
     CVTNEPS2BF16,
@@ -916,10 +924,6 @@ namespace llvm {
 
     // Load x87 FPU environment from memory.
     FLDENVm,
-
-    // Custom handling for FP_TO_xINT_SAT
-    FP_TO_SINT_SAT,
-    FP_TO_UINT_SAT,
 
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
@@ -1337,8 +1341,8 @@ namespace llvm {
                                    unsigned Depth) const override;
 
     bool isTargetCanonicalConstantNode(SDValue Op) const override {
-      // Peek through bitcasts/extracts/inserts to see if we have a broadcast
-      // vector from memory.
+      // Peek through bitcasts/extracts/inserts to see if we have a vector
+      // load/broadcast from memory.
       while (Op.getOpcode() == ISD::BITCAST ||
              Op.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
              (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
@@ -1346,6 +1350,9 @@ namespace llvm {
         Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
 
       return Op.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+             Op.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
+             (Op.getOpcode() == ISD::LOAD &&
+              getTargetConstantFromLoad(cast<LoadSDNode>(Op))) ||
              TargetLowering::isTargetCanonicalConstantNode(Op);
     }
 
@@ -1501,8 +1508,9 @@ namespace llvm {
 
     /// Return true if we believe it is correct and profitable to reduce the
     /// load node to a smaller type.
-    bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                               EVT NewVT) const override;
+    bool
+    shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                          std::optional<unsigned> ByteOffset) const override;
 
     /// Return true if the specified scalar FP type is computed in an SSE
     /// register, not on the X87 floating point stack.
@@ -1742,8 +1750,8 @@ namespace llvm {
 
     /// Creates target global address or external symbol nodes for calls or
     /// other uses.
-    SDValue LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
-                                  bool ForCall) const;
+    SDValue LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG, bool ForCall,
+                                  bool *IsImpCall) const;
 
     SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;

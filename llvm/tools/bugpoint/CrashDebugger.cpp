@@ -167,8 +167,8 @@ bool ReduceCrashingGlobalInitializers::TestGlobalVariables(
   // Convert list to set for fast lookup...
   std::set<GlobalVariable *> GVSet;
 
-  for (unsigned i = 0, e = GVs.size(); i != e; ++i) {
-    GlobalVariable *CMGV = cast<GlobalVariable>(VMap[GVs[i]]);
+  for (GlobalVariable *GV : GVs) {
+    GlobalVariable *CMGV = cast<GlobalVariable>(VMap[GV]);
     assert(CMGV && "Global Variable not in module?!");
     GVSet.insert(CMGV);
   }
@@ -260,11 +260,11 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
 
   // Convert list to set for fast lookup...
   std::set<Function *> Functions;
-  for (unsigned i = 0, e = Funcs.size(); i != e; ++i) {
-    Function *CMF = cast<Function>(VMap[Funcs[i]]);
+  for (Function *Func : Funcs) {
+    Function *CMF = cast<Function>(VMap[Func]);
     assert(CMF && "Function not in module?!");
-    assert(CMF->getFunctionType() == Funcs[i]->getFunctionType() && "wrong ty");
-    assert(CMF->getName() == Funcs[i]->getName() && "wrong name");
+    assert(CMF->getFunctionType() == Func->getFunctionType() && "wrong ty");
+    assert(CMF->getName() == Func->getName() && "wrong name");
     Functions.insert(CMF);
   }
 
@@ -390,9 +390,7 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
 
     // Pass along the set of attributes that caused the crash.
     Attrs.clear();
-    for (Attribute A : NewAttrs.getFnAttrs()) {
-      Attrs.push_back(A);
-    }
+    llvm::append_range(Attrs, NewAttrs.getFnAttrs());
     return true;
   }
   return false;
@@ -417,9 +415,8 @@ void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
   // undefined behavior into unreachables, but bugpoint was the thing that
   // generated the undefined behavior, and we don't want it to kill the entire
   // program.
-  SmallPtrSet<BasicBlock *, 16> Visited;
-  for (auto *BB : depth_first(&F.getEntryBlock()))
-    Visited.insert(BB);
+  SmallPtrSet<BasicBlock *, 16> Visited(llvm::from_range,
+                                        depth_first(&F.getEntryBlock()));
 
   SmallVector<BasicBlock *, 16> Unreachable;
   for (auto &BB : F)
@@ -471,8 +468,8 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
 
   // Convert list to set for fast lookup...
   SmallPtrSet<BasicBlock *, 8> Blocks;
-  for (unsigned i = 0, e = BBs.size(); i != e; ++i)
-    Blocks.insert(cast<BasicBlock>(VMap[BBs[i]]));
+  for (const BasicBlock *BB : BBs)
+    Blocks.insert(cast<BasicBlock>(VMap[BB]));
 
   outs() << "Checking for crash with only these blocks:";
   unsigned NumPrint = Blocks.size();
@@ -768,9 +765,9 @@ bool ReduceCrashingInstructions::TestInsts(
 
   // Convert list to set for fast lookup...
   SmallPtrSet<Instruction *, 32> Instructions;
-  for (unsigned i = 0, e = Insts.size(); i != e; ++i) {
-    assert(!Insts[i]->isTerminator());
-    Instructions.insert(cast<Instruction>(VMap[Insts[i]]));
+  for (const Instruction *Inst : Insts) {
+    assert(!Inst->isTerminator());
+    Instructions.insert(cast<Instruction>(VMap[Inst]));
   }
 
   outs() << "Checking for crash with only " << Instructions.size();
@@ -779,9 +776,9 @@ bool ReduceCrashingInstructions::TestInsts(
   else
     outs() << " instructions: ";
 
-  for (Module::iterator MI = M->begin(), ME = M->end(); MI != ME; ++MI)
-    for (Function::iterator FI = MI->begin(), FE = MI->end(); FI != FE; ++FI)
-      for (Instruction &Inst : llvm::make_early_inc_range(*FI)) {
+  for (Function &F : *M)
+    for (BasicBlock &BB : F)
+      for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
         if (!Instructions.count(&Inst) && !Inst.isTerminator() &&
             !Inst.isEHPad() && !Inst.getType()->isTokenTy() &&
             !Inst.isSwiftError()) {
@@ -801,8 +798,7 @@ bool ReduceCrashingInstructions::TestInsts(
     // Make sure to use instruction pointers that point into the now-current
     // module, and that they don't include any deleted blocks.
     Insts.clear();
-    for (Instruction *Inst : Instructions)
-      Insts.push_back(Inst);
+    llvm::append_range(Insts, Instructions);
     return true;
   }
   // It didn't crash, try something else.
@@ -871,8 +867,7 @@ bool ReduceCrashingMetadata::TestInsts(std::vector<Instruction *> &Insts) {
     // Make sure to use instruction pointers that point into the now-current
     // module, and that they don't include any deleted blocks.
     Insts.clear();
-    for (Instruction *I : Instructions)
-      Insts.push_back(I);
+    llvm::append_range(Insts, Instructions);
     return true;
   }
   // It didn't crash, try something else.
@@ -917,9 +912,7 @@ bool ReduceCrashingNamedMD::TestNamedMDs(std::vector<std::string> &NamedMDs) {
   outs() << ": ";
 
   // Make a StringMap for faster lookup
-  StringSet<> Names;
-  for (const std::string &Name : NamedMDs)
-    Names.insert(Name);
+  StringSet<> Names(llvm::from_range, NamedMDs);
 
   // First collect all the metadata to delete in a vector, then
   // delete them all at once to avoid invalidating the iterator
@@ -971,10 +964,7 @@ public:
 bool ReduceCrashingNamedMDOps::TestNamedMDOps(
     std::vector<const MDNode *> &NamedMDOps) {
   // Convert list to set for fast lookup...
-  SmallPtrSet<const MDNode *, 32> OldMDNodeOps;
-  for (unsigned i = 0, e = NamedMDOps.size(); i != e; ++i) {
-    OldMDNodeOps.insert(NamedMDOps[i]);
-  }
+  SmallPtrSet<const MDNode *, 32> OldMDNodeOps(llvm::from_range, NamedMDOps);
 
   outs() << "Checking for crash with only " << OldMDNodeOps.size();
   if (OldMDNodeOps.size() == 1)
@@ -1115,9 +1105,8 @@ static Error ReduceInsts(BugDriver &BD, BugTester TestFn) {
                                 E = BD.getProgram().end();
          FI != E; ++FI)
       if (!FI->isDeclaration())
-        for (Function::const_iterator BI = FI->begin(), E = FI->end(); BI != E;
-             ++BI)
-          for (BasicBlock::const_iterator I = BI->begin(), E = --BI->end();
+        for (const BasicBlock &BI : *FI)
+          for (BasicBlock::const_iterator I = BI.begin(), E = --BI.end();
                I != E; ++I, ++CurInstructionNum) {
             if (InstructionsToSkipBeforeDeleting) {
               --InstructionsToSkipBeforeDeleting;
@@ -1217,8 +1206,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
         assert(Fn && "Could not find function?");
 
         std::vector<Attribute> Attrs;
-        for (Attribute A : Fn->getAttributes().getFnAttrs())
-          Attrs.push_back(A);
+        llvm::append_range(Attrs, Fn->getAttributes().getFnAttrs());
 
         OldSize += Attrs.size();
         Expected<bool> Result =
@@ -1325,8 +1313,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
       // contribute to the crash, bisect the operands of the remaining ones
       std::vector<const MDNode *> NamedMDOps;
       for (auto &NamedMD : BD.getProgram().named_metadata())
-        for (auto *op : NamedMD.operands())
-          NamedMDOps.push_back(op);
+        llvm::append_range(NamedMDOps, NamedMD.operands());
       Expected<bool> Result =
           ReduceCrashingNamedMDOps(BD, TestFn).reduceList(NamedMDOps);
       if (Error E = Result.takeError())

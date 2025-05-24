@@ -137,6 +137,8 @@ template <size_t N> struct hash<std::bitset<N>>;
 #  include <__algorithm/fill_n.h>
 #  include <__algorithm/find.h>
 #  include <__assert>
+#  include <__bit/countr.h>
+#  include <__bit/invert_if.h>
 #  include <__bit_reference>
 #  include <__config>
 #  include <__cstddef/ptrdiff_t.h>
@@ -227,6 +229,21 @@ protected:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool all() const _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool any() const _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI size_t __hash_code() const _NOEXCEPT;
+
+  template <bool _Sparse, class _CharT, class _Traits, class _Allocator>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 basic_string<_CharT, _Traits, _Allocator>
+  __to_string(_CharT __zero, _CharT __one) const {
+    basic_string<_CharT, _Traits, _Allocator> __r(_Size, _Sparse ? __zero : __one);
+    for (size_t __i = 0, __bits = 0; __i < _N_words; ++__i, __bits += __bits_per_word) {
+      __storage_type __word = std::__invert_if<!_Sparse>(__first_[__i]);
+      if (__i == _N_words - 1 && _Size - __bits < __bits_per_word)
+        __word &= (__storage_type(1) << (_Size - __bits)) - 1;
+      for (; __word; __word &= (__word - 1))
+        __r[_Size - 1 - (__bits + std::__countr_zero(__word))] = _Sparse ? __one : __zero;
+    }
+
+    return __r;
+  }
 
 private:
 #  ifdef _LIBCPP_CXX03_LANG
@@ -464,10 +481,14 @@ protected:
     return __const_reference(&__first_, __storage_type(1) << __pos);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __iterator __make_iter(size_t __pos) _NOEXCEPT {
-    return __iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
+    // Allow the == case to accommodate the past-the-end iterator.
+    _LIBCPP_ASSERT_INTERNAL(__pos <= __bits_per_word, "Out of bounds access in the single-word bitset implementation.");
+    return __pos != __bits_per_word ? __iterator(&__first_, __pos) : __iterator(&__first_ + 1, 0);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __const_iterator __make_iter(size_t __pos) const _NOEXCEPT {
-    return __const_iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
+    // Allow the == case to accommodate the past-the-end iterator.
+    _LIBCPP_ASSERT_INTERNAL(__pos <= __bits_per_word, "Out of bounds access in the single-word bitset implementation.");
+    return __pos != __bits_per_word ? __const_iterator(&__first_, __pos) : __const_iterator(&__first_ + 1, 0);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator&=(const __bitset& __v) _NOEXCEPT;
@@ -478,6 +499,20 @@ protected:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const;
+
+  template <bool _Sparse, class _CharT, class _Traits, class _Allocator>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 basic_string<_CharT, _Traits, _Allocator>
+  __to_string(_CharT __zero, _CharT __one) const {
+    basic_string<_CharT, _Traits, _Allocator> __r(_Size, _Sparse ? __zero : __one);
+    __storage_type __word = std::__invert_if<!_Sparse>(__first_);
+    if (_Size < __bits_per_word)
+      __word &= (__storage_type(1) << _Size) - 1;
+    for (; __word; __word &= (__word - 1)) {
+      size_t __pos           = std::__countr_zero(__word);
+      __r[_Size - 1 - __pos] = _Sparse ? __one : __zero;
+    }
+    return __r;
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool all() const _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool any() const _NOEXCEPT;
@@ -590,6 +625,12 @@ protected:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const { return 0; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const { return 0; }
 
+  template <bool _Sparse, class _CharT, class _Traits, class _Allocator>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 basic_string<_CharT, _Traits, _Allocator>
+  __to_string(_CharT, _CharT) const {
+    return basic_string<_CharT, _Traits, _Allocator>();
+  }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool all() const _NOEXCEPT { return true; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool any() const _NOEXCEPT { return false; }
 
@@ -601,13 +642,12 @@ inline _LIBCPP_CONSTEXPR __bitset<0, 0>::__bitset() _NOEXCEPT {}
 inline _LIBCPP_CONSTEXPR __bitset<0, 0>::__bitset(unsigned long long) _NOEXCEPT {}
 
 template <size_t _Size>
-class _LIBCPP_TEMPLATE_VIS bitset;
+class bitset;
 template <size_t _Size>
 struct hash<bitset<_Size> >;
 
 template <size_t _Size>
-class _LIBCPP_TEMPLATE_VIS bitset
-    : private __bitset<_Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1, _Size> {
+class bitset : private __bitset<_Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1, _Size> {
 public:
   static const unsigned __n_words = _Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1;
   typedef __bitset<__n_words, _Size> __base;
@@ -844,12 +884,11 @@ template <size_t _Size>
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 basic_string<_CharT, _Traits, _Allocator>
 bitset<_Size>::to_string(_CharT __zero, _CharT __one) const {
-  basic_string<_CharT, _Traits, _Allocator> __r(_Size, __zero);
-  for (size_t __i = 0; __i != _Size; ++__i) {
-    if ((*this)[__i])
-      __r[_Size - 1 - __i] = __one;
-  }
-  return __r;
+  bool __sparse = size_t(std::count(__base::__make_iter(0), __base::__make_iter(_Size), true)) < _Size / 2;
+  if (__sparse)
+    return __base::template __to_string<true, _CharT, _Traits, _Allocator>(__zero, __one);
+  else
+    return __base::template __to_string<false, _CharT, _Traits, _Allocator>(__zero, __one);
 }
 
 template <size_t _Size>
@@ -951,7 +990,7 @@ operator^(const bitset<_Size>& __x, const bitset<_Size>& __y) _NOEXCEPT {
 }
 
 template <size_t _Size>
-struct _LIBCPP_TEMPLATE_VIS hash<bitset<_Size> > : public __unary_function<bitset<_Size>, size_t> {
+struct hash<bitset<_Size> > : public __unary_function<bitset<_Size>, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const bitset<_Size>& __bs) const _NOEXCEPT { return __bs.__hash_code(); }
 };
 
@@ -970,6 +1009,7 @@ _LIBCPP_POP_MACROS
 #  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #    include <concepts>
 #    include <cstdlib>
+#    include <optional>
 #    include <type_traits>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64InstrInfo.h"
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
@@ -191,6 +192,10 @@ public:
     return false;
   }
 
+  SmallVector<MCPhysReg> getTrustedLiveInRegs() const override {
+    return {AArch64::LR};
+  }
+
   ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::AUTIAZ:
@@ -252,6 +257,36 @@ public:
     return AuthenticatedReg.getError() ? false : *AuthenticatedReg == Reg;
   }
 
+  MCPhysReg getSignedReg(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::PACIA:
+    case AArch64::PACIB:
+    case AArch64::PACDA:
+    case AArch64::PACDB:
+    case AArch64::PACIZA:
+    case AArch64::PACIZB:
+    case AArch64::PACDZA:
+    case AArch64::PACDZB:
+      return Inst.getOperand(0).getReg();
+    case AArch64::PACIAZ:
+    case AArch64::PACIBZ:
+    case AArch64::PACIASP:
+    case AArch64::PACIBSP:
+    case AArch64::PACIASPPC:
+    case AArch64::PACIBSPPC:
+    case AArch64::PACNBIASPPC:
+    case AArch64::PACNBIBSPPC:
+      return AArch64::LR;
+    case AArch64::PACIA1716:
+    case AArch64::PACIB1716:
+    case AArch64::PACIA171615:
+    case AArch64::PACIB171615:
+      return AArch64::X17;
+    default:
+      return getNoRegister();
+    }
+  }
+
   ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const override {
     assert(isReturn(Inst));
     switch (Inst.getOpcode()) {
@@ -271,6 +306,265 @@ public:
     default:
       llvm_unreachable("Unhandled return instruction");
     }
+  }
+
+  MCPhysReg getRegUsedAsIndirectBranchDest(
+      const MCInst &Inst, bool &IsAuthenticatedInternally) const override {
+    assert(isIndirectCall(Inst) || isIndirectBranch(Inst));
+
+    switch (Inst.getOpcode()) {
+    case AArch64::BR:
+    case AArch64::BLR:
+      IsAuthenticatedInternally = false;
+      return Inst.getOperand(0).getReg();
+    case AArch64::BRAA:
+    case AArch64::BRAB:
+    case AArch64::BRAAZ:
+    case AArch64::BRABZ:
+    case AArch64::BLRAA:
+    case AArch64::BLRAB:
+    case AArch64::BLRAAZ:
+    case AArch64::BLRABZ:
+      IsAuthenticatedInternally = true;
+      return Inst.getOperand(0).getReg();
+    default:
+      llvm_unreachable("Unhandled indirect branch or call");
+    }
+  }
+
+  MCPhysReg
+  getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::ADR:
+    case AArch64::ADRP:
+      // These instructions produce an address value based on the information
+      // encoded into the instruction itself (which should reside in a read-only
+      // code memory) and the value of PC register (that is, the location of
+      // this instruction), so the produced value is not attacker-controlled.
+      return Inst.getOperand(0).getReg();
+    default:
+      return getNoRegister();
+    }
+  }
+
+  std::optional<std::pair<MCPhysReg, MCPhysReg>>
+  analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    default:
+      return std::nullopt;
+    case AArch64::ADDXri:
+    case AArch64::SUBXri:
+      // The immediate addend is encoded into the instruction itself, so it is
+      // not attacker-controlled under Pointer Authentication threat model.
+      return std::make_pair(Inst.getOperand(0).getReg(),
+                            Inst.getOperand(1).getReg());
+    case AArch64::ORRXrs:
+      // "mov Xd, Xm" is equivalent to "orr Xd, XZR, Xm, lsl #0"
+      if (Inst.getOperand(1).getReg() != AArch64::XZR ||
+          Inst.getOperand(3).getImm() != 0)
+        return std::nullopt;
+
+      return std::make_pair(Inst.getOperand(0).getReg(),
+                            Inst.getOperand(2).getReg());
+    }
+  }
+
+  std::optional<std::pair<MCPhysReg, MCInst *>>
+  getAuthCheckedReg(BinaryBasicBlock &BB) const override {
+    // Match several possible hard-coded sequences of instructions which can be
+    // emitted by LLVM backend to check that the authenticated pointer is
+    // correct (see AArch64AsmPrinter::emitPtrauthCheckAuthenticatedValue).
+    //
+    // This function only matches sequences involving branch instructions.
+    // All these sequences have the form:
+    //
+    // (0) ... regular code that authenticates a pointer in Xn ...
+    // (1) analyze Xn
+    // (2) branch to .Lon_success if the pointer is correct
+    // (3) BRK #imm (fall-through basic block)
+    //
+    // In the above pseudocode, (1) + (2) is one of the following sequences:
+    //
+    // - eor Xtmp, Xn, Xn, lsl #1
+    //   tbz Xtmp, #62, .Lon_success
+    //
+    // - mov Xtmp, Xn
+    //   xpac(i|d) Xn (or xpaclri if Xn is LR)
+    //   cmp Xtmp, Xn
+    //   b.eq .Lon_success
+    //
+    // Note that any branch destination operand is accepted as .Lon_success -
+    // it is the responsibility of the caller of getAuthCheckedReg to inspect
+    // the list of successors of this basic block as appropriate.
+
+    // Any of the above code sequences assume the fall-through basic block
+    // is a dead-end BRK instruction (any immediate operand is accepted).
+    const BinaryBasicBlock *BreakBB = BB.getFallthrough();
+    if (!BreakBB || BreakBB->empty() ||
+        BreakBB->front().getOpcode() != AArch64::BRK)
+      return std::nullopt;
+
+    // Iterate over the instructions of BB in reverse order, matching opcodes
+    // and operands.
+    MCPhysReg TestedReg = 0;
+    MCPhysReg ScratchReg = 0;
+    auto It = BB.end();
+    auto StepAndGetOpcode = [&It, &BB]() -> int {
+      if (It == BB.begin())
+        return -1;
+      --It;
+      return It->getOpcode();
+    };
+
+    switch (StepAndGetOpcode()) {
+    default:
+      // Not matched the branch instruction.
+      return std::nullopt;
+    case AArch64::Bcc:
+      // Bcc EQ, .Lon_success
+      if (It->getOperand(0).getImm() != AArch64CC::EQ)
+        return std::nullopt;
+      // Not checking .Lon_success (see above).
+
+      // SUBSXrs XZR, TestedReg, ScratchReg, 0 (used by "CMP reg, reg" alias)
+      if (StepAndGetOpcode() != AArch64::SUBSXrs ||
+          It->getOperand(0).getReg() != AArch64::XZR ||
+          It->getOperand(3).getImm() != 0)
+        return std::nullopt;
+      TestedReg = It->getOperand(1).getReg();
+      ScratchReg = It->getOperand(2).getReg();
+
+      // Either XPAC(I|D) ScratchReg, ScratchReg
+      // or     XPACLRI
+      switch (StepAndGetOpcode()) {
+      default:
+        return std::nullopt;
+      case AArch64::XPACLRI:
+        // No operands to check, but using XPACLRI forces TestedReg to be X30.
+        if (TestedReg != AArch64::LR)
+          return std::nullopt;
+        break;
+      case AArch64::XPACI:
+      case AArch64::XPACD:
+        if (It->getOperand(0).getReg() != ScratchReg ||
+            It->getOperand(1).getReg() != ScratchReg)
+          return std::nullopt;
+        break;
+      }
+
+      // ORRXrs ScratchReg, XZR, TestedReg, 0 (used by "MOV reg, reg" alias)
+      if (StepAndGetOpcode() != AArch64::ORRXrs)
+        return std::nullopt;
+      if (It->getOperand(0).getReg() != ScratchReg ||
+          It->getOperand(1).getReg() != AArch64::XZR ||
+          It->getOperand(2).getReg() != TestedReg ||
+          It->getOperand(3).getImm() != 0)
+        return std::nullopt;
+
+      return std::make_pair(TestedReg, &*It);
+
+    case AArch64::TBZX:
+      // TBZX ScratchReg, 62, .Lon_success
+      ScratchReg = It->getOperand(0).getReg();
+      if (It->getOperand(1).getImm() != 62)
+        return std::nullopt;
+      // Not checking .Lon_success (see above).
+
+      // EORXrs ScratchReg, TestedReg, TestedReg, 1
+      if (StepAndGetOpcode() != AArch64::EORXrs)
+        return std::nullopt;
+      TestedReg = It->getOperand(1).getReg();
+      if (It->getOperand(0).getReg() != ScratchReg ||
+          It->getOperand(2).getReg() != TestedReg ||
+          It->getOperand(3).getImm() != 1)
+        return std::nullopt;
+
+      return std::make_pair(TestedReg, &*It);
+    }
+  }
+
+  MCPhysReg getAuthCheckedReg(const MCInst &Inst,
+                              bool MayOverwrite) const override {
+    // Cannot trivially reuse AArch64InstrInfo::getMemOperandWithOffsetWidth()
+    // method as it accepts an instance of MachineInstr, not MCInst.
+    const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
+
+    // If signing oracles are considered, the particular value left in the base
+    // register after this instruction is important. This function checks that
+    // if the base register was overwritten, it is due to address write-back:
+    //
+    //     ; good:
+    //     autdza  x1           ; x1 is authenticated (may fail)
+    //     ldr     x0, [x1, #8] ; x1 is checked and not changed
+    //     pacdzb  x1
+    //
+    //     ; also good:
+    //     autdza  x1
+    //     ldr     x0, [x1, #8]! ; x1 is checked and incremented by 8
+    //     pacdzb  x1
+    //
+    //     ; bad (the value being signed is not the authenticated one):
+    //     autdza  x1
+    //     ldr     x1, [x1, #8]  ; x1 is overwritten with an unrelated value
+    //     pacdzb  x1
+    //
+    //     ; also bad:
+    //     autdza  x1
+    //     pacdzb  x1  ; possibly signing the result of failed authentication
+    //
+    // Note that this function is not needed for authentication oracles, as the
+    // particular value left in the register after a successful memory access
+    // is not important.
+    auto ClobbersBaseRegExceptWriteback = [&](unsigned BaseRegUseIndex) {
+      // FIXME: Compute the indices of address operands (base reg and written-
+      //        back result) in AArch64InstrInfo instead of this ad-hoc code.
+      MCPhysReg BaseReg = Inst.getOperand(BaseRegUseIndex).getReg();
+      unsigned WrittenBackDefIndex = Desc.getOperandConstraint(
+          BaseRegUseIndex, MCOI::OperandConstraint::TIED_TO);
+
+      for (unsigned DefIndex = 0; DefIndex < Desc.getNumDefs(); ++DefIndex) {
+        // Address write-back is permitted:
+        //
+        //    autda x0, x2
+        //    ; x0 is authenticated
+        //    ldr   x1, [x0, #8]!
+        //    ; x0 is trusted (as authenticated and checked)
+        if (DefIndex == WrittenBackDefIndex)
+          continue;
+
+        // Any other overwriting is not permitted:
+        //
+        //    autda x0, x2
+        //    ; x0 is authenticated
+        //    ldr   w0, [x0]
+        //    ; x0 is not authenticated anymore
+        if (RegInfo->regsOverlap(Inst.getOperand(DefIndex).getReg(), BaseReg))
+          return true;
+      }
+
+      return false;
+    };
+
+    if (mayLoad(Inst)) {
+      // The first Use operand is the base address register.
+      unsigned BaseRegIndex = Desc.getNumDefs();
+
+      // Reject non-immediate offsets, as adding a 64-bit register can change
+      // the resulting address arbitrarily.
+      for (unsigned I = BaseRegIndex + 1, E = Desc.getNumOperands(); I < E; ++I)
+        if (Inst.getOperand(I).isReg())
+          return getNoRegister();
+
+      if (!MayOverwrite && ClobbersBaseRegExceptWriteback(BaseRegIndex))
+        return getNoRegister();
+
+      return Inst.getOperand(BaseRegIndex).getReg();
+    }
+
+    // Store instructions are not handled yet, as they are not important for
+    // pauthtest ABI. Though, they could be handled similar to loads, if needed.
+
+    return getNoRegister();
   }
 
   bool isADRP(const MCInst &Inst) const override {
@@ -631,7 +925,7 @@ public:
   }
 
   bool isIndirectCall(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::BLR;
+    return isIndirectCallOpcode(Inst.getOpcode());
   }
 
   MCPhysReg getSpRegister(int Size) const {
@@ -858,20 +1152,12 @@ public:
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetSymbol(AArchExpr->getSubExpr());
 
-    auto *BinExpr = dyn_cast<MCBinaryExpr>(Expr);
-    if (BinExpr)
-      return getTargetSymbol(BinExpr->getLHS());
-
-    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Expr);
-    if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_None)
-      return &SymExpr->getSymbol();
-
-    return nullptr;
+    return MCPlusBuilder::getTargetSymbol(Expr);
   }
 
   const MCSymbol *getTargetSymbol(const MCInst &Inst,
                                   unsigned OpNum = 0) const override {
-    if (!getSymbolRefOperandNum(Inst, OpNum))
+    if (!OpNum && !getSymbolRefOperandNum(Inst, OpNum))
       return nullptr;
 
     const MCOperand &Op = Inst.getOperand(OpNum);
@@ -1338,17 +1624,47 @@ public:
 
   int getUncondBranchEncodingSize() const override { return 28; }
 
+  // This helper function creates the snippet of code that compares a register
+  // RegNo with an immedaite Imm, and jumps to Target if they are equal.
+  // cmp RegNo, #Imm
+  // b.eq Target
+  // where cmp is an alias for subs, which results in the code below:
+  // subs xzr, RegNo, #Imm
+  // b.eq Target.
   InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
                                   const MCSymbol *Target,
                                   MCContext *Ctx) const override {
     InstructionListType Code;
     Code.emplace_back(MCInstBuilder(AArch64::SUBSXri)
-                          .addReg(RegNo)
+                          .addReg(AArch64::XZR)
                           .addReg(RegNo)
                           .addImm(Imm)
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(AArch64CC::EQ)
+                          .addExpr(MCSymbolRefExpr::create(
+                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    return Code;
+  }
+
+  // This helper function creates the snippet of code that compares a register
+  // RegNo with an immedaite Imm, and jumps to Target if they are not equal.
+  // cmp RegNo, #Imm
+  // b.ne Target
+  // where cmp is an alias for subs, which results in the code below:
+  // subs xzr, RegNo, #Imm
+  // b.ne Target.
+  InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+                                   const MCSymbol *Target,
+                                   MCContext *Ctx) const override {
+    InstructionListType Code;
+    Code.emplace_back(MCInstBuilder(AArch64::SUBSXri)
+                          .addReg(AArch64::XZR)
+                          .addReg(RegNo)
                           .addImm(Imm)
+                          .addImm(0));
+    Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(AArch64CC::NE)
                           .addExpr(MCSymbolRefExpr::create(
                               Target, MCSymbolRefExpr::VK_None, *Ctx)));
     return Code;
@@ -2248,7 +2564,7 @@ public:
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
-    const MCFixupKindInfo &FKI = MAB.getFixupKindInfo(Fixup.getKind());
+    MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
 
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();

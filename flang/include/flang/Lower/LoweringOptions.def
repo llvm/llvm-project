@@ -48,13 +48,14 @@ ENUM_LOWERINGOPT(ReallocateLHS, unsigned, 1, 1)
 /// On by default.
 ENUM_LOWERINGOPT(InitGlobalZero, unsigned, 1, 1)
 
-/// If true, the arrays of unknown size and array temporaries
-/// are requested to be allocated in stack memory.
-ENUM_LOWERINGOPT(StackArrays, unsigned, 1, 0)
-
 /// If true, the dummy assumed shape arrays are conditionally
 /// packed into contiguous memory.
 ENUM_LOWERINGOPT(RepackArrays, unsigned, 1, 0)
+
+/// If true, the temporary arrays created under RepackArrays
+/// control will be allocated in stack memory. If false,
+/// they will be allocated in heap memory.
+ENUM_LOWERINGOPT(StackRepackArrays, unsigned, 1, 0)
 
 /// If true, the repacking (RepackArrays option above)
 /// will be done for arrays non-contiguous in any dimension,

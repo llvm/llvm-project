@@ -36,6 +36,9 @@ class MetadataStreamer;
 } // namespace AMDGPU
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
+public:
+  static char ID;
+
 private:
   unsigned CodeObjectVersion;
   void initializeTargetID(const Module &M);
@@ -107,7 +110,8 @@ public:
   /// Lower the specified LLVM Constant to an MCExpr.
   /// The AsmPrinter::lowerConstantof does not know how to lower
   /// addrspacecast, therefore they should be lowered by this function.
-  const MCExpr *lowerConstant(const Constant *CV) override;
+  const MCExpr *lowerConstant(const Constant *CV, const Constant *BaseCV,
+                              uint64_t Offset) override;
 
   /// tblgen'erated driver function for lowering simple MI->MC pseudo
   /// instructions.

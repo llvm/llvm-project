@@ -1041,8 +1041,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
     IndirectTerminatedMBBs.insert(&MBB);
 
     // Add all the successors to our target candidates.
-    for (MachineBasicBlock *Succ : MBB.successors())
-      IndirectTargetMBBs.insert(Succ);
+    IndirectTargetMBBs.insert_range(MBB.successors());
   }
 
   // Keep track of the cmov instructions we insert so we can return them.

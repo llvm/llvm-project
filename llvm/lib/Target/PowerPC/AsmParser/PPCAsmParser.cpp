@@ -1363,107 +1363,79 @@ ParseStatus PPCAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   return ParseStatus::Success;
 }
 
-/// Extract \code @l/@ha \endcode specifier from expression.  Recursively scan
-/// the expression and check for VK_LO/HI/HA
-/// symbol variants.  If all symbols with specifier use the same
-/// specifier, return the corresponding PPCMCExpr::Specifier,
-/// and a modified expression using the default symbol variant.
-/// Otherwise, return NULL.
+// Extract the @l or @ha specifier from the expression, returning a modified
+// expression with the specifier removed. Stores the extracted specifier in
+// `Spec`. Reports an error if multiple specifiers are detected.
 const MCExpr *PPCAsmParser::extractSpecifier(const MCExpr *E,
-                                             PPCMCExpr::Specifier &Variant) {
+                                             PPCMCExpr::Specifier &Spec) {
   MCContext &Context = getParser().getContext();
-  Variant = PPCMCExpr::VK_None;
-
   switch (E->getKind()) {
-  case MCExpr::Target:
   case MCExpr::Constant:
-    return nullptr;
+    break;
+  case MCExpr::Target: {
+    // Detect error but do not return a modified expression.
+    auto *TE = cast<PPCMCExpr>(E);
+    Spec = TE->getSpecifier();
+    (void)extractSpecifier(TE->getSubExpr(), Spec);
+    Spec = PPCMCExpr::VK_None;
+  } break;
 
   case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
-    Variant = (PPCMCExpr::Specifier)SRE->getKind();
-    switch (Variant) {
-    case PPCMCExpr::VK_LO:
-      Variant = PPCMCExpr::VK_LO;
-      break;
-    case PPCMCExpr::VK_HI:
-      Variant = PPCMCExpr::VK_HI;
-      break;
-    case PPCMCExpr::VK_HA:
-      Variant = PPCMCExpr::VK_HA;
-      break;
-    case PPCMCExpr::VK_HIGH:
-      Variant = PPCMCExpr::VK_HIGH;
-      break;
-    case PPCMCExpr::VK_HIGHA:
-      Variant = PPCMCExpr::VK_HIGHA;
-      break;
-    case PPCMCExpr::VK_HIGHER:
-      Variant = PPCMCExpr::VK_HIGHER;
-      break;
-    case PPCMCExpr::VK_HIGHERA:
-      Variant = PPCMCExpr::VK_HIGHERA;
-      break;
-    case PPCMCExpr::VK_HIGHEST:
-      Variant = PPCMCExpr::VK_HIGHEST;
-      break;
-    case PPCMCExpr::VK_HIGHESTA:
-      Variant = PPCMCExpr::VK_HIGHESTA;
-      break;
+    const auto *SRE = cast<MCSymbolRefExpr>(E);
+    switch (getSpecifier(SRE)) {
+    case PPCMCExpr::VK_None:
     default:
-      return nullptr;
+      break;
+    case PPCMCExpr::VK_LO:
+    case PPCMCExpr::VK_HI:
+    case PPCMCExpr::VK_HA:
+    case PPCMCExpr::VK_HIGH:
+    case PPCMCExpr::VK_HIGHA:
+    case PPCMCExpr::VK_HIGHER:
+    case PPCMCExpr::VK_HIGHERA:
+    case PPCMCExpr::VK_HIGHEST:
+    case PPCMCExpr::VK_HIGHESTA:
+      if (Spec == PPCMCExpr::VK_None)
+        Spec = getSpecifier(SRE);
+      else
+        Error(E->getLoc(), "cannot contain more than one relocation specifier");
+      return MCSymbolRefExpr::create(&SRE->getSymbol(), Context);
     }
-
-    return MCSymbolRefExpr::create(&SRE->getSymbol(), Context);
+    break;
   }
 
   case MCExpr::Unary: {
     const MCUnaryExpr *UE = cast<MCUnaryExpr>(E);
-    const MCExpr *Sub = extractSpecifier(UE->getSubExpr(), Variant);
-    if (!Sub)
-      return nullptr;
-    return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
+    const MCExpr *Sub = extractSpecifier(UE->getSubExpr(), Spec);
+    if (Spec != PPCMCExpr::VK_None)
+      return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
+    break;
   }
 
   case MCExpr::Binary: {
     const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
-    PPCMCExpr::Specifier LHSVariant, RHSVariant;
-    const MCExpr *LHS = extractSpecifier(BE->getLHS(), LHSVariant);
-    const MCExpr *RHS = extractSpecifier(BE->getRHS(), RHSVariant);
-
-    if (!LHS && !RHS)
-      return nullptr;
-
-    if (!LHS) LHS = BE->getLHS();
-    if (!RHS) RHS = BE->getRHS();
-
-    if (LHSVariant == PPCMCExpr::VK_None)
-      Variant = RHSVariant;
-    else if (RHSVariant == PPCMCExpr::VK_None)
-      Variant = LHSVariant;
-    else if (LHSVariant == RHSVariant)
-      Variant = LHSVariant;
-    else
-      return nullptr;
-
-    return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
+    const MCExpr *LHS = extractSpecifier(BE->getLHS(), Spec);
+    const MCExpr *RHS = extractSpecifier(BE->getRHS(), Spec);
+    if (Spec != PPCMCExpr::VK_None)
+      return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
+    break;
   }
   }
 
-  llvm_unreachable("Invalid expression kind!");
+  return E;
 }
 
 /// This differs from the default "parseExpression" in that it handles
-/// modifiers.
+/// specifiers.
 bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
   // (ELF Platforms)
   // Handle \code @l/@ha \endcode
   if (getParser().parseExpression(EVal))
     return true;
 
-  PPCMCExpr::Specifier Spec;
+  auto Spec = PPCMCExpr::VK_None;
   const MCExpr *E = extractSpecifier(EVal, Spec);
-  if (E)
+  if (Spec != PPCMCExpr::VK_None)
     EVal = PPCMCExpr::create(Spec, E, getParser().getContext());
 
   return false;

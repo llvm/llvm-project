@@ -35,9 +35,7 @@ class AMDGPURegBankSelect : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPURegBankSelect() : MachineFunctionPass(ID) {
-    initializeAMDGPURegBankSelectPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPURegBankSelect() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -55,8 +53,7 @@ public:
   // This pass assigns register banks to all virtual registers, and we maintain
   // this property in subsequent passes
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::RegBankSelected);
+    return MachineFunctionProperties().setRegBankSelected();
   }
 };
 
@@ -201,8 +198,7 @@ static Register getVReg(MachineOperand &Op) {
 }
 
 bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   // Setup the instruction builder with CSE.

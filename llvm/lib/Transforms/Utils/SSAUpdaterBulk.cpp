@@ -124,9 +124,8 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     LLVM_DEBUG(dbgs() << "SSAUpdater: rewriting " << R.Uses.size()
                       << " use(s)\n");
 
-    SmallPtrSet<BasicBlock *, 2> DefBlocks;
-    for (auto [BB, V] : R.Defines)
-      DefBlocks.insert(BB);
+    SmallPtrSet<BasicBlock *, 2> DefBlocks(llvm::from_range,
+                                           llvm::make_first_range(R.Defines));
     IDF.setDefiningBlocks(DefBlocks);
 
     SmallPtrSet<BasicBlock *, 2> UsingBlocks;

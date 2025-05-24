@@ -14362,5 +14362,3 @@ attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #2 = { strictfp }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

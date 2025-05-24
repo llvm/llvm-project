@@ -29,6 +29,10 @@ namespace Fortran::tools {
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
+    // ieee_denorm exception support is nonstandard.
+    targetCharacteristics.set_hasSubnormalExceptionSupport(/*kind=*/3);
+    targetCharacteristics.set_hasSubnormalExceptionSupport(/*kind=*/4);
+    targetCharacteristics.set_hasSubnormalExceptionSupport(/*kind=*/8);
   }
 
   if (targetTriple.isARM() || targetTriple.isAArch64()) {

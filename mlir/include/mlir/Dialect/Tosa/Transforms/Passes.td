@@ -22,8 +22,6 @@ def TosaLayerwiseConstantFoldPass : Pass<"tosa-layerwise-constant-fold", "func::
     Pass that enables folding of full-layer operations on constant tensors.
   }];
 
-  let constructor = "createTosaLayerwiseConstantFoldPass()";
-
   let options = [
       Option<"aggressiveReduceConstant", "aggressive-reduce-constant", "bool",
              /*default=*/"false",
@@ -32,14 +30,13 @@ def TosaLayerwiseConstantFoldPass : Pass<"tosa-layerwise-constant-fold", "func::
    ];
 }
 
-def TosaInferShapes : Pass<"tosa-infer-shapes", "func::FuncOp"> {
+def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
   let summary = "Propagate shapes across TOSA operations";
   let description = [{
     Pass that uses operand types and propagates shapes to TOSA operations.
     This includes legalizing rankless and dynamic shapes towards static.
   }];
 
-  let constructor = "createTosaInferShapesPass()";
   let dependentDialects = [
     "func::FuncDialect",
     "tensor::TensorDialect",
@@ -47,7 +44,8 @@ def TosaInferShapes : Pass<"tosa-infer-shapes", "func::FuncOp"> {
   ];
 }
 
-def TosaMakeBroadcastable : Pass<"tosa-make-broadcastable", "func::FuncOp"> {
+def TosaMakeBroadcastablePass
+    : Pass<"tosa-make-broadcastable", "func::FuncOp"> {
   let summary = "TOSA rank Reshape to enable Broadcasting";
   let description = [{
     Pass that enables broadcast by making all input arrays have the same
@@ -56,19 +54,15 @@ def TosaMakeBroadcastable : Pass<"tosa-make-broadcastable", "func::FuncOp"> {
     approach similar to step 1 of Numpy 4-step broadcasting:
     https://numpy.org/doc/stable/reference/ufuncs.html#broadcasting
   }];
-
-  let constructor = "createTosaMakeBroadcastablePass()";
 }
 
-def TosaOptionalDecompositions
-  : Pass<"tosa-optional-decompositions", "func::FuncOp"> {
+def TosaOptionalDecompositionsPass
+    : Pass<"tosa-optional-decompositions", "func::FuncOp"> {
   let summary = "Applies Tosa operations optional decompositions";
   let description = [{
     Pass to apply the Tosa operations decompositions
     exposed as populate functions in include/mlir/Dialect/Tosa/Transforms/Passes.h
   }];
-
-  let constructor = "tosa::createTosaOptionalDecompositions()";
 }
 
 def TosaLevelType : I32EnumAttr<"TosaLevelEnum", "Tosa level",
@@ -94,6 +88,11 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
       Option<"strictOpSpecAlignment", "strict-op-spec-alignment", "bool",
              /*default=*/"false",
              "Verify if the properties of certain operations align the spec requirement">,
+      Option<"allowInvalidOpDatatypeCombinations", "allow-invalid-op-datatype-combinations", "bool",
+             /*default=*/"false",
+             "Disable checks for operations that are determined to be invalid due to their "
+             "operand/result datatypes not aligning with the 'Supported Data Types' "
+             "sections of the specifciation">,
       Option<"level", "level", "mlir::tosa::TosaLevelEnum",
              /*default=*/"mlir::tosa::TosaLevelEnum::EightK",
              "Validate if operator parameters are within specfication for the given level",

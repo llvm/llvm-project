@@ -183,6 +183,7 @@ struct Configuration {
   bool deadStripDylibs = false;
   bool demangle = false;
   bool deadStrip = false;
+  bool interposable = false;
   bool errorForArchMismatch = false;
   bool ignoreAutoLink = false;
   // ld64 allows invalid auto link options as long as the link succeeds. LLD

@@ -94,8 +94,12 @@ void MCObjectStreamer::resolvePendingFixups() {
 static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
                                                   const MCSymbol *Lo) {
   assert(Hi && Lo);
-  if (!Hi->getFragment() || Hi->getFragment() != Lo->getFragment() ||
-      Hi->isVariable() || Lo->isVariable())
+  if (Lo == Hi)
+    return 0;
+  if (Hi->isVariable() || Lo->isVariable())
+    return std::nullopt;
+  auto *LoF = dyn_cast_or_null<MCDataFragment>(Lo->getFragment());
+  if (!LoF || Hi->getFragment() != LoF || LoF->isLinkerRelaxable())
     return std::nullopt;
 
   return Hi->getOffset() - Lo->getOffset();
@@ -104,20 +108,18 @@ static std::optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
 void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
                                               const MCSymbol *Lo,
                                               unsigned Size) {
-  if (!getAssembler().getContext().getTargetTriple().isRISCV())
-    if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
-      return emitIntValue(*Diff, Size);
-  MCStreamer::emitAbsoluteSymbolDiff(Hi, Lo, Size);
+  if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
+    emitIntValue(*Diff, Size);
+  else
+    MCStreamer::emitAbsoluteSymbolDiff(Hi, Lo, Size);
 }
 
 void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
                                                        const MCSymbol *Lo) {
-  if (!getAssembler().getContext().getTargetTriple().isRISCV())
-    if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo)) {
-      emitULEB128IntValue(*Diff);
-      return;
-    }
-  MCStreamer::emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
+  if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo))
+    emitULEB128IntValue(*Diff);
+  else
+    MCStreamer::emitAbsoluteSymbolDiffAsULEB128(Hi, Lo);
 }
 
 void MCObjectStreamer::reset() {
@@ -199,9 +201,8 @@ void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
     emitIntValue(AbsValue, Size);
     return;
   }
-  DF->getFixups().push_back(
-      MCFixup::create(DF->getContents().size(), Value,
-                      MCFixup::getKindForSize(Size, false), Loc));
+  DF->getFixups().push_back(MCFixup::create(
+      DF->getContents().size(), Value, MCFixup::getDataKindForSize(Size), Loc));
   DF->appendContents(Size, 0);
 }
 
@@ -462,6 +463,18 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
                          Label, PointerSize);
     return;
   }
+
+  // If the two labels are within the same fragment, then the address-offset is
+  // already a fixed constant and is not relaxable. Emit the advance-line-addr
+  // data immediately to save time and memory.
+  if (auto OptAddrDelta = absoluteSymbolDiff(Label, LastLabel)) {
+    SmallString<16> Tmp;
+    MCDwarfLineAddr::encode(getContext(), Assembler->getDWARFLinetableParams(),
+                            LineDelta, *OptAddrDelta, Tmp);
+    emitBytes(Tmp);
+    return;
+  }
+
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, SMLoc());
   insert(getContext().allocFragment<MCDwarfLineAddrFragment>(LineDelta,
                                                              *AddrDelta));
@@ -605,30 +618,30 @@ getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
       return std::nullopt;
     }
 
-    if (OffsetVal.getSymB())
+    if (OffsetVal.getSubSym())
       return std::make_pair(false,
                             std::string(".reloc symbol offset is not "
                                         "representable"));
 
-    const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*OffsetVal.getSymA());
-    if (!SRE.getSymbol().isDefined())
+    const MCSymbol &SA = *OffsetVal.getAddSym();
+    if (!SA.isDefined())
       return std::make_pair(false,
                             std::string("symbol used in the .reloc offset is "
                                         "not defined"));
 
-    if (SRE.getSymbol().isVariable())
+    if (SA.isVariable())
       return std::make_pair(false,
                             std::string("symbol used in the .reloc offset is "
                                         "variable"));
 
-    MCFragment *Fragment = SRE.getSymbol().getFragment();
+    MCFragment *Fragment = SA.getFragment();
     // FIXME Support symbols with no DF. For example:
     // .reloc .data, ENUM_VALUE, <some expr>
     if (!Fragment || Fragment->getKind() != MCFragment::FT_Data)
       return std::make_pair(false,
                             std::string("symbol in offset has no data "
                                         "fragment"));
-    RelocOffset = SRE.getSymbol().getOffset() + OffsetVal.getConstant();
+    RelocOffset = SA.getOffset() + OffsetVal.getConstant();
     DF = cast<MCDataFragment>(Fragment);
   } else {
     RelocOffset = Symbol.getOffset();
@@ -672,12 +685,11 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
         MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
     return std::nullopt;
   }
-  if (OffsetVal.getSymB())
+  if (OffsetVal.getSubSym())
     return std::make_pair(false,
                           std::string(".reloc offset is not representable"));
 
-  const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*OffsetVal.getSymA());
-  const MCSymbol &Symbol = SRE.getSymbol();
+  const MCSymbol &Symbol = *OffsetVal.getAddSym();
   if (Symbol.isDefined()) {
     uint32_t SymbolOffset = 0;
     std::optional<std::pair<bool, std::string>> Error =
@@ -693,8 +705,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
   }
 
   PendingFixups.emplace_back(
-      &SRE.getSymbol(), DF,
-      MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
+      &Symbol, DF, MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
   return std::nullopt;
 }
 

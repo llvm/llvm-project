@@ -78,11 +78,6 @@
 
 using namespace llvm;
 
-static const char LintAbortOnErrorArgName[] = "lint-abort-on-error";
-static cl::opt<bool>
-    LintAbortOnError(LintAbortOnErrorArgName, cl::init(false),
-                     cl::desc("In the Lint pass, abort on errors."));
-
 namespace {
 namespace MemRef {
 static const unsigned Read = 1;
@@ -349,19 +344,13 @@ void Lint::visitCallBase(CallBase &I) {
                            MMI->getSourceAlign(), nullptr, MemRef::Read);
       break;
     }
-    case Intrinsic::memset: {
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline: {
       MemSetInst *MSI = cast<MemSetInst>(&I);
       visitMemoryReference(I, MemoryLocation::getForDest(MSI),
                            MSI->getDestAlign(), nullptr, MemRef::Write);
       break;
     }
-    case Intrinsic::memset_inline: {
-      MemSetInlineInst *MSII = cast<MemSetInlineInst>(&I);
-      visitMemoryReference(I, MemoryLocation::getForDest(MSII),
-                           MSII->getDestAlign(), nullptr, MemRef::Write);
-      break;
-    }
-
     case Intrinsic::vastart:
       // vastart in non-varargs function is rejected by the verifier
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
@@ -747,11 +736,17 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   Lint L(Mod, DL, AA, AC, DT, TLI);
   L.visit(F);
   dbgs() << L.MessagesStr.str();
-  if (LintAbortOnError && !L.MessagesStr.str().empty())
-    report_fatal_error(Twine("Linter found errors, aborting. (enabled by --") +
-                           LintAbortOnErrorArgName + ")",
-                       false);
+  if (AbortOnError && !L.MessagesStr.str().empty())
+    report_fatal_error(
+        "linter found errors, aborting. (enabled by abort-on-error)", false);
   return PreservedAnalyses::all();
+}
+
+void LintPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  PassInfoMixin<LintPass>::printPipeline(OS, MapClassName2PassName);
+  if (AbortOnError)
+    OS << "<abort-on-error>";
 }
 
 //===----------------------------------------------------------------------===//
@@ -760,7 +755,7 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 /// lintFunction - Check a function for errors, printing messages on stderr.
 ///
-void llvm::lintFunction(const Function &f) {
+void llvm::lintFunction(const Function &f, bool AbortOnError) {
   Function &F = const_cast<Function &>(f);
   assert(!F.isDeclaration() && "Cannot lint external functions");
 
@@ -775,14 +770,14 @@ void llvm::lintFunction(const Function &f) {
     AA.registerFunctionAnalysis<TypeBasedAA>();
     return AA;
   });
-  LintPass().run(F, FAM);
+  LintPass(AbortOnError).run(F, FAM);
 }
 
 /// lintModule - Check a module for errors, printing messages on stderr.
 ///
-void llvm::lintModule(const Module &M) {
+void llvm::lintModule(const Module &M, bool AbortOnError) {
   for (const Function &F : M) {
     if (!F.isDeclaration())
-      lintFunction(F);
+      lintFunction(F, AbortOnError);
   }
 }

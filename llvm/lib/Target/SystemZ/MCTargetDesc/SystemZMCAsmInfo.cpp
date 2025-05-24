@@ -7,21 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMCAsmInfo.h"
+#include "MCTargetDesc/SystemZMCExpr.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_DTPOFF, "DTPOFF"},
-    {MCSymbolRefExpr::VK_GOT, "GOT"},
-    {MCSymbolRefExpr::VK_GOTENT, "GOTENT"},
-    {MCSymbolRefExpr::VK_INDNTPOFF, "INDNTPOFF"},
-    {MCSymbolRefExpr::VK_NTPOFF, "NTPOFF"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_TLSGD, "TLSGD"},
-    {MCSymbolRefExpr::VK_TLSLD, "TLSLD"},
-    {MCSymbolRefExpr::VK_TLSLDM, "TLSLDM"},
+    {SystemZMCExpr::VK_DTPOFF, "DTPOFF"},
+    {SystemZMCExpr::VK_GOT, "GOT"},
+    {SystemZMCExpr::VK_GOTENT, "GOTENT"},
+    {SystemZMCExpr::VK_INDNTPOFF, "INDNTPOFF"},
+    {SystemZMCExpr::VK_NTPOFF, "NTPOFF"},
+    {SystemZMCExpr::VK_PLT, "PLT"},
+    {SystemZMCExpr::VK_TLSGD, "TLSGD"},
+    {SystemZMCExpr::VK_TLSLD, "TLSLD"},
+    {SystemZMCExpr::VK_TLSLDM, "TLSLDM"},
 };
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {

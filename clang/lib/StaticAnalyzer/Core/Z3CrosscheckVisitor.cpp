@@ -41,6 +41,11 @@ STAT_COUNTER(NumTimesZ3QueryRejectReport,
 STAT_COUNTER(NumTimesZ3QueryRejectEQClass,
              "Number of times rejecting an report equivalenece class");
 
+STAT_COUNTER(TimeSpentSolvingZ3Queries,
+             "Total time spent solving Z3 queries excluding retries");
+STAT_MAX(MaxTimeSpentSolvingZ3Queries,
+         "Max time spent solving a Z3 query excluding retries");
+
 using namespace clang;
 using namespace ento;
 
@@ -145,6 +150,8 @@ Z3CrosscheckOracle::Z3Decision Z3CrosscheckOracle::interpretQueryResult(
     const Z3CrosscheckVisitor::Z3Result &Query) {
   ++NumZ3QueriesDone;
   AccumulatedZ3QueryTimeInEqClass += Query.Z3QueryTimeMilliseconds;
+  TimeSpentSolvingZ3Queries += Query.Z3QueryTimeMilliseconds;
+  MaxTimeSpentSolvingZ3Queries.updateMax(Query.Z3QueryTimeMilliseconds);
 
   if (Query.IsSAT && Query.IsSAT.value()) {
     ++NumTimesZ3QueryAcceptsReport;

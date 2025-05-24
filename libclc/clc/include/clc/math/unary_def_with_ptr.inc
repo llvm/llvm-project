@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <clc/utils.h>
 
 #ifndef __CLC_FUNCTION
@@ -18,3 +26,10 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(__CLC_GENTYPE x,
                                               local __CLC_GENTYPE *ptr) {
   return __CLC_FUNCTION(FUNCTION)(x, ptr);
 }
+
+#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(__CLC_GENTYPE x,
+                                              generic __CLC_GENTYPE *ptr) {
+  return __CLC_FUNCTION(FUNCTION)(x, ptr);
+}
+#endif

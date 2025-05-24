@@ -162,7 +162,7 @@ llvm.func @nvvm_rcp(%0: f32) -> f32 {
 
 // CHECK-LABEL: @llvm_nvvm_barrier0
 llvm.func @llvm_nvvm_barrier0() {
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   nvvm.barrier0
   llvm.return
 }
@@ -170,11 +170,11 @@ llvm.func @llvm_nvvm_barrier0() {
 // CHECK-LABEL: @llvm_nvvm_barrier(
 // CHECK-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
 llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {
-  // CHECK: call void @llvm.nvvm.barrier0()
-  nvvm.barrier 
-  // CHECK: call void @llvm.nvvm.barrier.n(i32 %[[barId]])
+  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
+  nvvm.barrier
+  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %[[barId]])
   nvvm.barrier id = %barID
-  // CHECK: call void @llvm.nvvm.barrier(i32 %[[barId]], i32 %[[numThreads]])
+  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %[[barId]], i32 %[[numThreads]])
   nvvm.barrier id = %barID number_of_threads = %numberOfThreads
   llvm.return
 }
@@ -255,7 +255,13 @@ llvm.func @nvvm_shfl_pred(
 // CHECK-LABEL: @nvvm_vote
 llvm.func @nvvm_vote(%0 : i32, %1 : i1) -> i32 {
   // CHECK: call i32 @llvm.nvvm.vote.ballot.sync(i32 %{{.*}}, i1 %{{.*}})
-  %3 = nvvm.vote.ballot.sync %0, %1 : i32
+  %3 = nvvm.vote.sync ballot %0, %1 -> i32
+  // CHECK: call i1 @llvm.nvvm.vote.all.sync(i32 %{{.*}}, i1 %{{.*}})
+  %4 = nvvm.vote.sync all %0, %1 -> i1
+  // CHECK: call i1 @llvm.nvvm.vote.any.sync(i32 %{{.*}}, i1 %{{.*}})
+  %5 = nvvm.vote.sync any %0, %1 -> i1
+  // CHECK: call i1 @llvm.nvvm.vote.uni.sync(i32 %{{.*}}, i1 %{{.*}})
+  %6 = nvvm.vote.sync uni %0, %1 -> i1
   llvm.return %3 : i32
 }
 
@@ -811,6 +817,7 @@ llvm.func @nvvm_redux_sync_f32(%value: f32, %offset: i32) {
   llvm.return
 }
 
+// -----
 // CHECK-LABEL: @nvvm_match_sync
 llvm.func @nvvm_match_sync(%mask: i32, %val32: i32, %val64: i64) {
   // CHECK: call i32 @llvm.nvvm.match.any.sync.i32(i32 %{{.*}}, i32 %{{.*}})
@@ -821,5 +828,41 @@ llvm.func @nvvm_match_sync(%mask: i32, %val32: i32, %val64: i64) {
   %2 = nvvm.match.sync any %mask, %val64 : i64 -> i32
   // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i64p(i32 %{{.*}}, i64 %{{.*}})
   %3 = nvvm.match.sync all %mask, %val64 : i64 -> !llvm.struct<(i32, i1)>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_st_bulk
+llvm.func @nvvm_st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
+  // CHECK: call void @llvm.nvvm.st.bulk(ptr %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_gen, size = %size : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_shared, size = %size: !llvm.ptr<3>
+  // CHECK: call void @llvm.nvvm.st.bulk(ptr %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_shared, size = %size, init = 0: !llvm.ptr<3>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_dot_accumulate_4way
+llvm.func @nvvm_dot_accumulate_4way(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) {
+  // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp4a.u.u(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
+  %0 = nvvm.dot.accumulate.4way %a <u8>, %b <u8>, %c: vector<4xi8>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp4a.s.u(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
+  %1 = nvvm.dot.accumulate.4way %a <s8>, %b <u8>, %c: vector<4xi8>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp4a.u.s(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
+  %2 = nvvm.dot.accumulate.4way %a <u8>, %b <s8>, %c: vector<4xi8>, vector<4xi8>
+  // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
+  // CHECK: call i32 @llvm.nvvm.idp4a.s.s(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
+  %3 = nvvm.dot.accumulate.4way %a <s8>, %b <s8>, %c: vector<4xi8>, vector<4xi8>
   llvm.return
 }

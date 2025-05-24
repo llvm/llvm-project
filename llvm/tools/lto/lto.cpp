@@ -475,8 +475,7 @@ void lto_set_debug_options(const char *const *options, int number) {
   // Need to put each suboption in a null-terminated string before passing to
   // parseCommandLineOptions().
   std::vector<std::string> Options;
-  for (int i = 0; i < number; ++i)
-    Options.push_back(options[i]);
+  llvm::append_range(Options, ArrayRef(options, number));
 
   llvm::parseCommandLineOptions(Options);
   optionParsingState = OptParsingState::Early;
@@ -497,9 +496,7 @@ void lto_codegen_debug_options_array(lto_code_gen_t cg,
                                      const char *const *options, int number) {
   assert(optionParsingState != OptParsingState::Early &&
          "early option processing already happened");
-  SmallVector<StringRef, 4> Options;
-  for (int i = 0; i < number; ++i)
-    Options.push_back(options[i]);
+  SmallVector<StringRef, 4> Options(ArrayRef(options, number));
   unwrap(cg)->setCodeGenDebugOptions(ArrayRef(Options));
 }
 

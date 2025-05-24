@@ -7,6 +7,10 @@ if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
   endif()
 endif()
 
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
 macro(add_host_subdirectory group)
   list(APPEND HOST_SOURCES ${ARGN})
   source_group(${group} FILES ${ARGN})
@@ -83,6 +87,7 @@ else()
     posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
     posix/ProcessLauncherPosixFork.cpp
+    posix/Support.cpp
     )
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")

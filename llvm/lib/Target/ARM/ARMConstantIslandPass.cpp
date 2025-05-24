@@ -193,7 +193,8 @@ namespace {
     struct ImmBranch {
       MachineInstr *MI;
       unsigned MaxDisp : 31;
-      bool isCond : 1;
+      LLVM_PREFERRED_TYPE(bool)
+      unsigned isCond : 1;
       unsigned UncondBr;
 
       ImmBranch(MachineInstr *mi, unsigned maxdisp, bool cond, unsigned ubr)
@@ -233,8 +234,7 @@ namespace {
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override {
@@ -1323,8 +1323,7 @@ bool ARMConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
   MachineBasicBlock *UserBB = U.MI->getParent();
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
   const Align CPEAlign = getCPEAlign(U.CPEMI);
-  unsigned MinNoSplitDisp =
-      BBInfo[UserBB->getNumber()].postOffset(CPEAlign) - UserOffset;
+  unsigned MinNoSplitDisp = BBInfo[UserBB->getNumber()].postOffset(CPEAlign);
   if (CloserWater && MinNoSplitDisp > U.getMaxDisp() / 2)
     return false;
   for (water_iterator IP = std::prev(WaterList.end()), B = WaterList.begin();;
