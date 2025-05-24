@@ -31,6 +31,10 @@
 #  include <cstddef>
 #  include <cstring>
 
+#  if _LIBCPP_STD_VER >= 26
+#    include <__text_encoding/text_encoding.h>
+#  endif
+
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 #    include <cwchar>
 #  else
@@ -99,6 +103,11 @@ public:
 
   // locale operations:
   string name() const;
+  
+#  if _LIBCPP_STD_VER >= 26 && __CHAR_BIT__ == 8
+  text_encoding encoding() const; 
+#  endif // _LIBCPP_STD_VER >= 26
+
   bool operator==(const locale&) const;
 #  if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const locale& __y) const { return !(*this == __y); }

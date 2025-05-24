@@ -172,7 +172,6 @@ headers_not_available = list(map(Header, [
     "spanstream",
     "stacktrace",
     "stdfloat",
-    "text_encoding",
 ]))
 
 header_restrictions = {
@@ -196,6 +195,7 @@ header_restrictions = {
     "streambuf": "_LIBCPP_HAS_LOCALIZATION",
     "strstream": "_LIBCPP_HAS_LOCALIZATION",
     "syncstream": "_LIBCPP_HAS_LOCALIZATION",
+    "text_encoding": "_LIBCPP_HAS_LOCALIZATION",
 }
 
 lit_header_restrictions = {
@@ -231,6 +231,7 @@ lit_header_restrictions = {
     "streambuf": "// UNSUPPORTED: no-localization",
     "strstream": "// UNSUPPORTED: no-localization",
     "syncstream": "// UNSUPPORTED: no-localization",
+    "text_encoding": "// UNSUPPORTED: no-localization",
     "thread": "// UNSUPPORTED: no-threads, c++03",
     "wchar.h": "// UNSUPPORTED: no-wide-characters",
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
