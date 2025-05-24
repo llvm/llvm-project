@@ -10,6 +10,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSPIRVObjectWriter.h"
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
@@ -26,17 +27,8 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    return createSPIRVObjectTargetWriter();
+    return std::make_unique<MCSPIRVObjectTargetWriter>();
   }
-
-
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override {
-    return false;
-  }
-
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {}
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {

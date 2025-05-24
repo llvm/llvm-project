@@ -18,9 +18,6 @@
 namespace llvm {
 
 class MCSPIRVObjectTargetWriter : public MCObjectTargetWriter {
-protected:
-  explicit MCSPIRVObjectTargetWriter() {}
-
 public:
   Triple::ObjectFormatType getFormat() const override { return Triple::SPIRV; }
   static bool classof(const MCObjectTargetWriter *W) {
