@@ -21,7 +21,6 @@ beq a0, a1, .LBB1+32
 
 c.j     .+32
 # CHECK-INSTR: c.j   0x30
-# CHECK-RELOC-NEXT:  R_RISCV_RVC_JUMP
 
 c.j     .LBB2+4
 # CHECK-INSTR: c.j   0x22
@@ -29,7 +28,7 @@ c.j     .LBB2+4
 
 c.beqz a0, .-2
 # CHECK-INSTR: c.beqz a0, 0x12
-# CHECK-RELOC-NEXT:  R_RISCV_RVC_BRANCH
 
 call relax
+# CHECK-RELOC-NEXT:  R_RISCV_CALL_PLT
 .LBB2:

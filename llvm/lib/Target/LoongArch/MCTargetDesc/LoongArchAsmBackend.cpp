@@ -504,7 +504,7 @@ bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
   IsResolved = Fallback();
   // If linker relaxation is enabled and supported by the current relocation,
   // append a RELAX relocation.
-  if (Fixup.needsRelax()) {
+  if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_LARCH_RELAX);
     Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
                                      FixedValueA);
