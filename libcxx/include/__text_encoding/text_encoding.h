@@ -36,7 +36,7 @@ _LIBCPP_PUSH_MACROS
 #  if _LIBCPP_STD_VER >= 26
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_EXPORTED_FROM_ABI text_encoding {
+struct text_encoding {
   static constexpr size_t max_name_length = 63;
 
 private:
