@@ -29,8 +29,7 @@ class RISCVAsmBackend : public MCAsmBackend {
   // Temporary symbol used to check whether a PC-relative fixup is resolved.
   MCSymbol *PCRelTemp = nullptr;
 
-  bool isPCRelFixupResolved(const MCAssembler &Asm, const MCSymbol *SymA,
-                            const MCFragment &F);
+  bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
