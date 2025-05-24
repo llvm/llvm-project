@@ -1187,7 +1187,7 @@ bool ELFObjectWriter::hasRelocationAddend() const {
   return TargetObjectWriter->hasRelocationAddend();
 }
 
-void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
+void ELFObjectWriter::executePostLayoutBinding() {
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
   for (const Symver &S : Symvers) {
@@ -1203,9 +1203,9 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
       Tail = Rest.substr(Symbol.isUndefined() ? 2 : 1);
 
     auto *Alias =
-        cast<MCSymbolELF>(Asm.getContext().getOrCreateSymbol(Prefix + Tail));
-    Asm.registerSymbol(*Alias);
-    const MCExpr *Value = MCSymbolRefExpr::create(&Symbol, Asm.getContext());
+        cast<MCSymbolELF>(Asm->getContext().getOrCreateSymbol(Prefix + Tail));
+    Asm->registerSymbol(*Alias);
+    const MCExpr *Value = MCSymbolRefExpr::create(&Symbol, Asm->getContext());
     Alias->setVariableValue(Value);
 
     // Aliases defined with .symvar copy the binding from the symbol they alias.
@@ -1219,15 +1219,15 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
 
     if (Symbol.isUndefined() && Rest.starts_with("@@") &&
         !Rest.starts_with("@@@")) {
-      Asm.getContext().reportError(S.Loc, "default version symbol " +
-                                              AliasName + " must be defined");
+      Asm->getContext().reportError(S.Loc, "default version symbol " +
+                                               AliasName + " must be defined");
       continue;
     }
 
     if (auto It = Renames.find(&Symbol);
         It != Renames.end() && It->second != Alias) {
-      Asm.getContext().reportError(S.Loc, Twine("multiple versions for ") +
-                                              Symbol.getName());
+      Asm->getContext().reportError(S.Loc, Twine("multiple versions for ") +
+                                               Symbol.getName());
       continue;
     }
 
@@ -1416,8 +1416,7 @@ bool ELFObjectWriter::usesRela(const MCTargetOptions *TO,
 }
 
 bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &SA, const MCFragment &FB,
-    bool InSet, bool IsPCRel) const {
+    const MCSymbol &SA, const MCFragment &FB, bool InSet, bool IsPCRel) const {
   const auto &SymA = cast<MCSymbolELF>(SA);
   if (IsPCRel) {
     assert(!InSet);

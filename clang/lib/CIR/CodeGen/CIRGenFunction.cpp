@@ -607,7 +607,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // respective address.
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
-  builder.createStore(loc, zeroValue, destPtr.getPointer());
+  builder.createStore(loc, zeroValue, destPtr);
 }
 
 } // namespace clang::CIRGen

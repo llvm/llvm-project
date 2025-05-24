@@ -330,7 +330,7 @@ struct AAAMDAttributes
                                             Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override { return "AAAMDAttributes"; }
+  StringRef getName() const override { return "AAAMDAttributes"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -356,9 +356,7 @@ struct AAUniformWorkGroupSize
                                                    Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override {
-    return "AAUniformWorkGroupSize";
-  }
+  StringRef getName() const override { return "AAUniformWorkGroupSize"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -938,9 +936,7 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override {
-    return "AAAMDFlatWorkGroupSize";
-  }
+  StringRef getName() const override { return "AAAMDFlatWorkGroupSize"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -1072,7 +1068,7 @@ struct AAAMDMaxNumWorkgroups
         /* ForceReplace= */ true);
   }
 
-  const std::string getName() const override { return "AAAMDMaxNumWorkgroups"; }
+  StringRef getName() const override { return "AAAMDMaxNumWorkgroups"; }
 
   const std::string getAsStr(Attributor *) const override {
     std::string Buffer = "AAAMDMaxNumWorkgroupsState[";
@@ -1180,7 +1176,7 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAAMDWavesPerEU"; }
+  StringRef getName() const override { return "AAAMDWavesPerEU"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -1286,7 +1282,7 @@ struct AAAMDGPUNoAGPR
                            {Attribute::get(Ctx, "amdgpu-agpr-alloc", "0")});
   }
 
-  const std::string getName() const override { return "AAAMDGPUNoAGPR"; }
+  StringRef getName() const override { return "AAAMDGPUNoAGPR"; }
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
