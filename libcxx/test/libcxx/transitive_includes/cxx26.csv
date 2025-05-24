@@ -1066,7 +1066,6 @@ system_error string_view
 system_error tuple
 system_error version
 text_encoding cctype
-text_encoding clocale
 text_encoding compare
 text_encoding cstdint
 text_encoding cstdio

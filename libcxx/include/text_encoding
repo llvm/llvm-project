@@ -23,7 +23,7 @@ struct text_encoding
 {
     static constexpr size_t max_name_length = 63;
 
-    // [text.encoding.id], enumeration text_encoding​::​id
+    // [text.encoding.id], enumeration text_encoding::id
     enum class id : int_least32_t {
       see below
     };
@@ -36,8 +36,8 @@ struct text_encoding
     constexpr id mib() const noexcept;
     constexpr const char* name() const noexcept;
 
-    // [text.encoding.aliases], class text_encoding​::​aliases_view
-    struct aliases_view;
+    // [text.encoding.aliases], class text_encoding::aliases_view
+    // struct aliases_view;
     constexpr aliases_view aliases() const noexcept;
 
     friend constexpr bool operator==(const text_encoding& a,
@@ -59,10 +59,12 @@ struct text_encoding
 
 #include <__config>
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
 #if _LIBCPP_STD_VER >= 26
 #  include <__text_encoding/text_encoding.h>
 #endif // _LIBCPP_STD_VER >= 26
-
-#include <version>
 
 #endif // _LIBCPP_TEXT_ENCODING
