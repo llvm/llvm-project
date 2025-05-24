@@ -96,8 +96,7 @@ public:
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
+                             const MCValue &Target) override;
 };
 
 } // end anonymous namespace
@@ -523,8 +522,7 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
-                                              const MCValue &Target,
-                                              const MCSubtargetInfo *STI) {
+                                              const MCValue &Target) {
   // The ADRP instruction adds some multiple of 0x1000 to the current PC &
   // ~0xfff. This means that the required offset to reach a symbol can vary by
   // up to one step depending on where the ADRP is in memory. For example:

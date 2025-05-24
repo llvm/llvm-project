@@ -246,11 +246,10 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 
 bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCFixup &Fixup,
-                                                const MCValue &Target,
-                                                const MCSubtargetInfo *STI) {
+                                                const MCValue &Target) {
   switch (Fixup.getTargetKind()) {
   default:
-    return STI->hasFeature(LoongArch::FeatureRelax);
+    return STI.hasFeature(LoongArch::FeatureRelax);
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -438,11 +437,10 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
                                    const MCFixup &Fixup, const MCValue &Target,
-                                   uint64_t &FixedValue, bool IsResolved,
-                                   const MCSubtargetInfo *CurSTI) {
+                                   uint64_t &FixedValue, bool IsResolved) {
   auto Fallback = [&]() {
-    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved,
-                                  CurSTI);
+    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
+                                  IsResolved);
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
@@ -504,7 +502,7 @@ bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
   IsResolved = Fallback();
   // If linker relaxation is enabled and supported by the current relocation,
   // append a RELAX relocation.
-  if (Fixup.needsRelax()) {
+  if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_LARCH_RELAX);
     Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
                                      FixedValueA);
