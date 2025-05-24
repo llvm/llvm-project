@@ -5981,6 +5981,15 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 
   assert(E->getOpcode() == BO_Assign && "unexpected binary l-value");
 
+  // Create a Key Instructions source location atom group that covers both
+  // LHS and RHS expressions. Nested RHS expressions may get subsequently
+  // separately grouped (1 below):
+  //
+  //   1. `a = b = c`  -> Two atoms.
+  //   2. `x = new(1)` -> One atom (for both addr store and value store).
+  //   3. Complex and agg assignment -> One atom.
+  ApplyAtomGroup Grp(getDebugInfo());
+
   // Note that in all of these cases, __block variables need the RHS
   // evaluated first just in case the variable gets moved by the RHS.
 
