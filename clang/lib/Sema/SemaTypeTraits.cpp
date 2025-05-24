@@ -1990,8 +1990,7 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
                                                   SourceLocation Loc,
                                                   const CXXRecordDecl *D) {
   for (const CXXBaseSpecifier &B : D->bases()) {
-    const auto *BaseDecl = B.getType()->getAsCXXRecordDecl();
-    assert(BaseDecl && "invalid base?");
+    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
     if (B.isVirtual())
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
           << diag::TraitNotSatisfiedReason::VBase << B.getType()
