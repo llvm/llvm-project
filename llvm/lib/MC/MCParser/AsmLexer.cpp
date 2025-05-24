@@ -15,7 +15,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/Support/Compiler.h"
@@ -27,8 +26,6 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
-#include <tuple>
-#include <utility>
 
 using namespace llvm;
 
