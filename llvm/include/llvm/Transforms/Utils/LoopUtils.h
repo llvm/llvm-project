@@ -175,10 +175,10 @@ bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
 /// \p AllowSpeculation is whether values should be hoisted even if they are not
 /// guaranteed to execute in the loop, but are safe to speculatively execute.
 bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
-                 AssumptionCache *, TargetLibraryInfo *, Loop *,
-                 MemorySSAUpdater &, ScalarEvolution *, ICFLoopSafetyInfo *,
-                 SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *, bool,
-                 bool AllowSpeculation);
+                 AssumptionCache *, TargetLibraryInfo *, TargetTransformInfo *,
+                 Loop *, MemorySSAUpdater &, ScalarEvolution *,
+                 ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
+                 OptimizationRemarkEmitter *, bool, bool AllowSpeculation);
 
 /// Return true if the induction variable \p IV in a Loop whose latch is
 /// \p LatchBlock would become dead if the exit test \p Cond were removed.
