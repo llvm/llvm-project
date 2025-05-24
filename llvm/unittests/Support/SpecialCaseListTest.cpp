@@ -315,7 +315,7 @@ TEST_F(SpecialCaseListTest, Version3) {
                                                              "src:def\n"
                                                              "[sect2]\n"
                                                              "src:def\n"
-                                                             "src:def\n");
+                                                             "src:de*\n");
   EXPECT_TRUE(SCL->inSection("sect1", "src", "fooz"));
   EXPECT_TRUE(SCL->inSection("sect1", "src", "barz"));
   EXPECT_FALSE(SCL->inSection("sect2", "src", "fooz"));
@@ -326,6 +326,7 @@ TEST_F(SpecialCaseListTest, Version3) {
   EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "src", "fooz"));
   EXPECT_EQ(4u, SCL->inSectionBlame("sect1", "src", "barz"));
   EXPECT_EQ(5u, SCL->inSectionBlame("sect1", "src", "def"));
-  EXPECT_EQ(8u, SCL->inSectionBlame("sect2", "src", "de*"));
+  EXPECT_EQ(8u, SCL->inSectionBlame("sect2", "src", "def"));
+  EXPECT_EQ(8u, SCL->inSectionBlame("sect2", "src", "dez"));
 }
 }
