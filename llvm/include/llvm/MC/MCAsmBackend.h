@@ -114,8 +114,7 @@ public:
     return false;
   }
 
-  virtual bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                                   const MCFragment *DF, const MCValue &Target,
+  virtual bool evaluateTargetFixup(const MCFixup &Fixup, const MCValue &Target,
                                    uint64_t &Value) {
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
