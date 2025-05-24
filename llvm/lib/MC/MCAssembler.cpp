@@ -978,7 +978,7 @@ void MCAssembler::Finish() {
   layout();
 
   // Write the object file.
-  stats::ObjectBytes += getWriter().writeObject(*this);
+  stats::ObjectBytes += getWriter().writeObject();
 
   HasLayout = false;
 }
@@ -990,7 +990,7 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   uint64_t Value;
   bool Resolved = evaluateFixup(DF, const_cast<MCFixup &>(Fixup), Target, Value,
                                 /*RecordReloc=*/false, {});
-  return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Target, Value,
+  return getBackend().fixupNeedsRelaxationAdvanced(Fixup, Target, Value,
                                                    Resolved);
 }
 

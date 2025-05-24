@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
