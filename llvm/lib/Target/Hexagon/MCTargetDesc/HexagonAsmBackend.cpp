@@ -594,7 +594,7 @@ public:
         if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
           ++relaxedCnt;
           *RelaxTarget = &MCI;
-          setExtender(Asm.getContext());
+          setExtender(getContext());
           return true;
         } else {
           return false;
@@ -632,7 +632,7 @@ public:
       if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
         ++relaxedCnt;
         *RelaxTarget = &MCI;
-        setExtender(Asm.getContext());
+        setExtender(getContext());
         return true;
       }
     }
@@ -722,7 +722,7 @@ public:
               break;
             }
             case MCFragment::FT_Relaxable: {
-              MCContext &Context = Asm.getContext();
+              MCContext &Context = getContext();
               auto &RF = cast<MCRelaxableFragment>(*Frags[K]);
               auto &Inst = const_cast<MCInst &>(RF.getInst());
 

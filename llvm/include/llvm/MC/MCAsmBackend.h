@@ -43,12 +43,18 @@ class MCAsmBackend {
 protected: // Can only create subclasses.
   MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation = false);
 
+  MCAssembler *Asm = nullptr;
+
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
   MCAsmBackend &operator=(const MCAsmBackend &) = delete;
   virtual ~MCAsmBackend();
 
   const llvm::endianness Endian;
+
+  void setAssembler(MCAssembler *A) { Asm = A; }
+
+  MCContext &getContext() const;
 
   /// True for RISC-V and LoongArch. Relaxable relocations are marked with a
   /// RELAX relocation.
