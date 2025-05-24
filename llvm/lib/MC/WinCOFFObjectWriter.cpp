@@ -166,6 +166,7 @@ public:
   int getSectionNumber(const MCSection &Section) const;
 
 private:
+  MCContext &getContext() const { return OWriter.getContext(); }
   COFFSymbol *createSymbol(StringRef Name);
   COFFSymbol *GetOrCreateCOFFSymbol(const MCSymbol *Symbol);
   COFFSection *createSection(StringRef Name);
@@ -841,15 +842,14 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
 
   const MCSymbol &A = *Target.getAddSym();
   if (!A.isRegistered()) {
-    Asm.getContext().reportError(Fixup.getLoc(), Twine("symbol '") +
-                                                     A.getName() +
-                                                     "' can not be undefined");
+    getContext().reportError(Fixup.getLoc(), Twine("symbol '") + A.getName() +
+                                                 "' can not be undefined");
     return;
   }
   if (A.isTemporary() && A.isUndefined()) {
-    Asm.getContext().reportError(Fixup.getLoc(), Twine("assembler label '") +
-                                                     A.getName() +
-                                                     "' can not be undefined");
+    getContext().reportError(Fixup.getLoc(), Twine("assembler label '") +
+                                                 A.getName() +
+                                                 "' can not be undefined");
     return;
   }
 
@@ -862,7 +862,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
   COFFSection *Sec = SectionMap[MCSec];
   if (const MCSymbol *B = Target.getSubSym()) {
     if (!B->getFragment()) {
-      Asm.getContext().reportError(
+      getContext().reportError(
           Fixup.getLoc(),
           Twine("symbol '") + B->getName() +
               "' can not be undefined in a subtraction expression");
@@ -920,7 +920,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
 
   Reloc.Data.VirtualAddress += Fixup.getOffset();
   Reloc.Data.Type = OWriter.TargetObjectWriter->getRelocType(
-      Asm.getContext(), Target, Fixup, Target.getSubSym(), Asm.getBackend());
+      getContext(), Target, Fixup, Target.getSubSym(), Asm.getBackend());
 
   // The *_REL32 relocations are relative to the end of the relocation,
   // not to the start.
@@ -1053,7 +1053,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
     // It's an error to try to associate with an undefined symbol or a symbol
     // without a section.
     if (!AssocMCSym->isInSection()) {
-      Asm.getContext().reportError(
+      getContext().reportError(
           SMLoc(), Twine("cannot make section ") + MCSec.getName() +
                        Twine(" associative with sectionless symbol ") +
                        AssocMCSym->getName());
@@ -1073,8 +1073,8 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 
   // Create the contents of the .llvm_addrsig section.
   if (Mode != DwoOnly && OWriter.getEmitAddrsigSection()) {
-    auto *Sec = Asm.getContext().getCOFFSection(
-        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE);
+    auto *Sec = getContext().getCOFFSection(".llvm_addrsig",
+                                            COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
@@ -1095,8 +1095,8 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 
   // Create the contents of the .llvm.call-graph-profile section.
   if (Mode != DwoOnly && !OWriter.getCGProfile().empty()) {
-    auto *Sec = Asm.getContext().getCOFFSection(
-        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE);
+    auto *Sec = getContext().getCOFFSection(".llvm.call-graph-profile",
+                                            COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
     raw_svector_ostream OS(Frag->getContents());
     for (const auto &CGPE : OWriter.getCGProfile()) {
@@ -1205,7 +1205,7 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
 uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm) {
   // If the assember had an error, then layout will not have completed, so we
   // cannot write an object file.
-  if (Asm.getContext().hadError())
+  if (getContext().hadError())
     return 0;
 
   uint64_t TotalSize = ObjWriter->writeObject(Asm);
