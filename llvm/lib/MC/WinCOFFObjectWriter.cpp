@@ -159,7 +159,7 @@ public:
 
   void reset();
   void executePostLayoutBinding(MCAssembler &Asm);
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+  void recordRelocation(MCAssembler &Asm, const MCFragment &F,
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue);
   uint64_t writeObject(MCAssembler &Asm);
@@ -834,8 +834,7 @@ void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
   assignSectionNumbers();
 }
 
-void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
-                                     const MCFragment *Fragment,
+void WinCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment &F,
                                      const MCFixup &Fixup, MCValue Target,
                                      uint64_t &FixedValue) {
   assert(Target.getAddSym() && "Relocation must reference a symbol!");
@@ -853,7 +852,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
     return;
   }
 
-  MCSection *MCSec = Fragment->getParent();
+  MCSection *MCSec = F.getParent();
 
   // Mark this symbol as requiring an entry in the symbol table.
   assert(SectionMap.contains(MCSec) &&
@@ -873,8 +872,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
     int64_t OffsetOfB = Asm.getSymbolOffset(*B);
 
     // Offset of the relocation in the section
-    int64_t OffsetOfRelocation =
-        Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
+    int64_t OffsetOfRelocation = Asm.getFragmentOffset(F) + Fixup.getOffset();
 
     FixedValue = (OffsetOfRelocation - OffsetOfB) + Target.getConstant();
   } else {
@@ -884,7 +882,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
   COFFRelocation Reloc;
 
   Reloc.Data.SymbolTableIndex = 0;
-  Reloc.Data.VirtualAddress = Asm.getFragmentOffset(*Fragment);
+  Reloc.Data.VirtualAddress = Asm.getFragmentOffset(F);
 
   // Turn relocations for temporary symbols into section relocations.
   if (A.isTemporary() && !SymbolMap[&A]) {
@@ -1193,13 +1191,11 @@ void WinCOFFObjectWriter::executePostLayoutBinding() {
     DwoWriter->executePostLayoutBinding(*Asm);
 }
 
-void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
-                                           const MCFragment *Fragment,
+void WinCOFFObjectWriter::recordRelocation(const MCFragment &F,
                                            const MCFixup &Fixup, MCValue Target,
                                            uint64_t &FixedValue) {
-  assert(!isDwoSection(*Fragment->getParent()) &&
-         "No relocation in Dwo sections");
-  ObjWriter->recordRelocation(Asm, Fragment, Fixup, Target, FixedValue);
+  assert(!isDwoSection(*F.getParent()) && "No relocation in Dwo sections");
+  ObjWriter->recordRelocation(*Asm, F, Fixup, Target, FixedValue);
 }
 
 uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm) {
