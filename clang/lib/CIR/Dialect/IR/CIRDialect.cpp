@@ -230,7 +230,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (isa<cir::ZeroAttr>(attrType)) {
-    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType>(opType))
+    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType, cir::ComplexType>(
+            opType))
       return success();
     return op->emitOpError("zero expects struct or array type");
   }
@@ -252,7 +253,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr>(attrType))
+  if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
+                cir::ConstComplexAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
