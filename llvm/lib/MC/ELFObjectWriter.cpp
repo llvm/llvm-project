@@ -183,8 +183,8 @@ public:
 
   void writeHeader(const MCAssembler &Asm);
 
-  void writeSymbol(const MCAssembler &Asm, SymbolTableWriter &Writer,
-                   uint32_t StringIndex, ELFSymbolData &MSD);
+  void writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
+                   ELFSymbolData &MSD);
 
   // Map from a signature symbol to the group section index
   using RevGroupMapTy = DenseMap<const MCSymbol *, unsigned>;
@@ -408,8 +408,8 @@ static bool isIFunc(const MCSymbolELF *Symbol) {
   return true;
 }
 
-void ELFWriter::writeSymbol(const MCAssembler &Asm, SymbolTableWriter &Writer,
-                            uint32_t StringIndex, ELFSymbolData &MSD) {
+void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
+                            ELFSymbolData &MSD) {
   const auto &Symbol = cast<MCSymbolELF>(*MSD.Symbol);
   const MCSymbolELF *Base =
       cast_or_null<MCSymbolELF>(Asm.getBaseSymbol(Symbol));
@@ -647,7 +647,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
                                ? 0
                                : StrTabBuilder.getOffset(MSD.Name);
     MSD.Symbol->setIndex(Index++);
-    writeSymbol(Asm, Writer, StringIndex, MSD);
+    writeSymbol(Writer, StringIndex, MSD);
   }
   for (; FileNameIt != FileNames.end(); ++FileNameIt) {
     Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
@@ -662,7 +662,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
   for (ELFSymbolData &MSD : ExternalSymbolData) {
     unsigned StringIndex = StrTabBuilder.getOffset(MSD.Name);
     MSD.Symbol->setIndex(Index++);
-    writeSymbol(Asm, Writer, StringIndex, MSD);
+    writeSymbol(Writer, StringIndex, MSD);
     assert(MSD.Symbol->getBinding() != ELF::STB_LOCAL);
   }
 
@@ -1248,8 +1248,7 @@ void ELFObjectWriter::executePostLayoutBinding() {
 // It is always valid to create a relocation with a symbol. It is preferable
 // to use a relocation with a section if that is possible. Using the section
 // allows us to omit some local symbols from the symbol table.
-bool ELFObjectWriter::useSectionSymbol(const MCAssembler &Asm,
-                                       const MCValue &Val,
+bool ELFObjectWriter::useSectionSymbol(const MCValue &Val,
                                        const MCSymbolELF *Sym, uint64_t C,
                                        unsigned Type) const {
   // Keep symbol type for a local ifunc because it may result in an IRELATIVE
@@ -1265,6 +1264,7 @@ bool ELFObjectWriter::useSectionSymbol(const MCAssembler &Asm,
   // If we change such a relocation to use the section, the linker would think
   // that it pointed to another string and subtracting 42 at runtime will
   // produce the wrong value.
+  auto EMachine = TargetObjectWriter->getEMachine();
   if (Sym->isInSection()) {
     auto &Sec = cast<MCSectionELF>(Sym->getSection());
     unsigned Flags = Sec.getFlags();
@@ -1274,8 +1274,7 @@ bool ELFObjectWriter::useSectionSymbol(const MCAssembler &Asm,
 
       // gold<2.34 incorrectly ignored the addend for R_386_GOTOFF (9)
       // (http://sourceware.org/PR16794).
-      if (TargetObjectWriter->getEMachine() == ELF::EM_386 &&
-          Type == ELF::R_386_GOTOFF)
+      if (EMachine == ELF::EM_386 && Type == ELF::R_386_GOTOFF)
         return false;
 
       // ld.lld handles R_MIPS_HI16/R_MIPS_LO16 separately, not as a whole, so
@@ -1285,8 +1284,7 @@ bool ELFObjectWriter::useSectionSymbol(const MCAssembler &Asm,
       // (like R_RISCV_PC_INDIRECT for R_RISCV_PCREL_HI20 / R_RISCV_PCREL_LO12)
       // but the complexity is unnecessary given that GNU as keeps the original
       // symbol for this case as well.
-      if (TargetObjectWriter->getEMachine() == ELF::EM_MIPS &&
-          !hasRelocationAddend())
+      if (EMachine == ELF::EM_MIPS && !hasRelocationAddend())
         return false;
     }
 
@@ -1302,7 +1300,7 @@ bool ELFObjectWriter::useSectionSymbol(const MCAssembler &Asm,
   // bit. With a symbol that is done by just having the symbol have that bit
   // set, so we would lose the bit if we relocated with the section.
   // FIXME: We could use the section but add the bit to the relocation value.
-  if (Asm.isThumbFunc(Sym))
+  if (EMachine == ELF::EM_ARM && Asm->isThumbFunc(Sym))
     return false;
 
   return !TargetObjectWriter->needsRelocateWithSymbol(Val, *Sym, Type);
@@ -1382,7 +1380,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   bool UseSectionSym =
       SymA && SymA->getBinding() == ELF::STB_LOCAL && !SymA->isUndefined();
   if (UseSectionSym) {
-    UseSectionSym = useSectionSymbol(*Asm, Target, SymA, Addend, Type);
+    UseSectionSym = useSectionSymbol(Target, SymA, Addend, Type);
 
     // Disable STT_SECTION adjustment for .reloc directives.
     UseSectionSym &= !mc::isRelocRelocation(Fixup.getKind());

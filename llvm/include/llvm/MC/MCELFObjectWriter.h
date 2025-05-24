@@ -180,8 +180,7 @@ public:
   bool hasRelocationAddend() const;
   bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
 
-  bool useSectionSymbol(const MCAssembler &Asm, const MCValue &Val,
-                        const MCSymbolELF *Sym, uint64_t C,
+  bool useSectionSymbol(const MCValue &Val, const MCSymbolELF *Sym, uint64_t C,
                         unsigned Type) const;
 
   bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
