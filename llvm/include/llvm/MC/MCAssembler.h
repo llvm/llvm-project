@@ -90,16 +90,15 @@ private:
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
   ///
+  /// \param F The fragment the fixup is inside.
   /// \param Fixup The fixup to evaluate.
-  /// \param DF The fragment the fixup is inside.
   /// \param Target [out] On return, the relocatable expression the fixup
   /// evaluates to.
   /// \param Value [out] On return, the value of the fixup as currently laid
   /// out.
   /// \param RecordReloc Record relocation if needed.
   /// relocation.
-  bool evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
-                     MCValue &Target, const MCSubtargetInfo *STI,
+  bool evaluateFixup(const MCFragment *F, const MCFixup &Fixup, MCValue &Target,
                      uint64_t &Value, bool RecordReloc,
                      MutableArrayRef<char> Contents) const;
 

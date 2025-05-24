@@ -189,15 +189,14 @@ bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
   }
 }
 
-void CSKYAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void CSKYAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                 const MCValue &Target,
                                 MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsResolved,
-                                const MCSubtargetInfo *STI) const {
+                                bool IsResolved) {
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Kind);
   if (!Value)
     return; // Doesn't change encoding.
@@ -251,8 +250,7 @@ bool CSKYAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   }
 }
 
-bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                           const MCFixup &Fixup,
+bool CSKYAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
                                            const MCValue &Target /*STI*/) {
   if (Target.getSpecifier())
     return true;

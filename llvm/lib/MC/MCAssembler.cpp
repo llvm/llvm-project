@@ -82,7 +82,12 @@ MCAssembler::MCAssembler(MCContext &Context,
                          std::unique_ptr<MCCodeEmitter> Emitter,
                          std::unique_ptr<MCObjectWriter> Writer)
     : Context(Context), Backend(std::move(Backend)),
-      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {}
+      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {
+  if (this->Backend)
+    this->Backend->setAssembler(this);
+  if (this->Writer)
+    this->Writer->setAssembler(this);
+}
 
 void MCAssembler::reset() {
   RelaxAll = false;
@@ -136,9 +141,9 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   return true;
 }
 
-bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
-                                MCValue &Target, const MCSubtargetInfo *STI,
-                                uint64_t &Value, bool RecordReloc,
+bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
+                                MCValue &Target, uint64_t &Value,
+                                bool RecordReloc,
                                 MutableArrayRef<char> Contents) const {
   ++stats::evaluateFixup;
 
@@ -159,8 +164,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   bool IsResolved = false;
   unsigned FixupFlags = getBackend().getFixupKindInfo(Fixup.getKind()).Flags;
   if (FixupFlags & MCFixupKindInfo::FKF_IsTarget) {
-    IsResolved =
-        getBackend().evaluateTargetFixup(*this, Fixup, DF, Target, Value);
+    IsResolved = getBackend().evaluateTargetFixup(Fixup, Target, Value);
   } else {
     const MCSymbol *Add = Target.getAddSym();
     const MCSymbol *Sub = Target.getSubSym();
@@ -185,7 +189,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
 
       if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
         IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
-            *this, *Add, *DF, false, true);
+            *Add, *DF, false, true);
       }
     } else {
       IsResolved = Target.isAbsolute();
@@ -198,10 +202,8 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
 
   if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
     IsResolved = false;
-  IsResolved = getBackend().addReloc(const_cast<MCAssembler &>(*this), *DF,
-                                     Fixup, Target, Value, IsResolved);
-  getBackend().applyFixup(*this, Fixup, Target, Contents, Value, IsResolved,
-                          STI);
+  IsResolved = getBackend().addReloc(*DF, Fixup, Target, Value, IsResolved);
+  getBackend().applyFixup(*DF, Fixup, Target, Contents, Value, IsResolved);
   return true;
 }
 
@@ -895,7 +897,7 @@ void MCAssembler::layout() {
 
   // Allow the object writer a chance to perform post-layout binding (for
   // example, to set the index fields in the symbol data).
-  getWriter().executePostLayoutBinding(*this);
+  getWriter().executePostLayoutBinding();
 
   // Fragment sizes are finalized. For RISC-V linker relaxation, this flag
   // helps check whether a PC-relative fixup is fully resolved.
@@ -906,7 +908,6 @@ void MCAssembler::layout() {
     for (MCFragment &Frag : Sec) {
       MutableArrayRef<MCFixup> Fixups;
       MutableArrayRef<char> Contents;
-      const MCSubtargetInfo *STI = nullptr;
 
       // Process MCAlignFragment and MCEncodedFragmentWithFixups here.
       switch (Frag.getKind()) {
@@ -924,16 +925,12 @@ void MCAssembler::layout() {
         MCDataFragment &DF = cast<MCDataFragment>(Frag);
         Fixups = DF.getFixups();
         Contents = DF.getContents();
-        STI = DF.getSubtargetInfo();
-        assert(!DF.hasInstructions() || STI != nullptr);
         break;
       }
       case MCFragment::FT_Relaxable: {
         MCRelaxableFragment &RF = cast<MCRelaxableFragment>(Frag);
         Fixups = RF.getFixups();
         Contents = RF.getContents();
-        STI = RF.getSubtargetInfo();
-        assert(!RF.hasInstructions() || STI != nullptr);
         break;
       }
       case MCFragment::FT_CVDefRange: {
@@ -970,7 +967,7 @@ void MCAssembler::layout() {
       for (const MCFixup &Fixup : Fixups) {
         uint64_t FixedValue;
         MCValue Target;
-        evaluateFixup(Fixup, &Frag, Target, STI, FixedValue,
+        evaluateFixup(&Frag, Fixup, Target, FixedValue,
                       /*RecordReloc=*/true, Contents);
       }
     }
@@ -991,9 +988,8 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   assert(getBackendPtr() && "Expected assembler backend");
   MCValue Target;
   uint64_t Value;
-  bool Resolved =
-      evaluateFixup(const_cast<MCFixup &>(Fixup), DF, Target,
-                    DF->getSubtargetInfo(), Value, /*RecordReloc=*/false, {});
+  bool Resolved = evaluateFixup(DF, const_cast<MCFixup &>(Fixup), Target, Value,
+                                /*RecordReloc=*/false, {});
   return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Target, Value,
                                                    Resolved);
 }
@@ -1052,7 +1048,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
                  : LF.getValue().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
     bool Relaxed, UseZeroPad;
-    std::tie(Relaxed, UseZeroPad) = getBackend().relaxLEB128(*this, LF, Value);
+    std::tie(Relaxed, UseZeroPad) = getBackend().relaxLEB128(LF, Value);
     if (!Relaxed) {
       getContext().reportError(LF.getValue().getLoc(),
                                Twine(LF.isSigned() ? ".s" : ".u") +
@@ -1140,7 +1136,7 @@ bool MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
 
 bool MCAssembler::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF) {
   bool WasRelaxed;
-  if (getBackend().relaxDwarfLineAddr(*this, DF, WasRelaxed))
+  if (getBackend().relaxDwarfLineAddr(DF, WasRelaxed))
     return WasRelaxed;
 
   MCContext &Context = getContext();
@@ -1162,7 +1158,7 @@ bool MCAssembler::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF) {
 
 bool MCAssembler::relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF) {
   bool WasRelaxed;
-  if (getBackend().relaxDwarfCFA(*this, DF, WasRelaxed))
+  if (getBackend().relaxDwarfCFA(DF, WasRelaxed))
     return WasRelaxed;
 
   MCContext &Context = getContext();

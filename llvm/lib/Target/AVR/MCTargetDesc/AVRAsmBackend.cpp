@@ -368,30 +368,29 @@ AVRAsmBackend::createObjectTargetWriter() const {
   return createAVRELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
-bool AVRAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
-                             const MCFixup &Fixup, const MCValue &Target,
-                             uint64_t &FixedValue, bool IsResolved) {
+bool AVRAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+                             const MCValue &Target, uint64_t &FixedValue,
+                             bool IsResolved) {
   // AVR sets the fixup value to bypass the assembly time overflow with a
   // relocation.
   if (IsResolved) {
     auto TargetVal = MCValue::get(Target.getAddSym(), Target.getSubSym(),
                                   FixedValue, Target.getSpecifier());
-    if (forceRelocation(Asm, F, Fixup, TargetVal))
+    if (forceRelocation(F, Fixup, TargetVal))
       IsResolved = false;
   }
   if (!IsResolved)
-    Asm.getWriter().recordRelocation(Asm, &F, Fixup, Target, FixedValue);
+    Asm->getWriter().recordRelocation(*Asm, &F, Fixup, Target, FixedValue);
   return IsResolved;
 }
 
-void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void AVRAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
+                               bool IsResolved) {
   if (mc::isRelocation(Fixup.getKind()))
     return;
-  adjustFixupValue(Fixup, Target, Value, &Asm.getContext());
+  adjustFixupValue(Fixup, Target, Value, &getContext());
   if (Value == 0)
     return; // Doesn't change encoding.
 
@@ -514,8 +513,7 @@ bool AVRAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool AVRAsmBackend::forceRelocation(const MCAssembler &Asm, const MCFragment &F,
-                                    const MCFixup &Fixup,
+bool AVRAsmBackend::forceRelocation(const MCFragment &F, const MCFixup &Fixup,
                                     const MCValue &Target) {
   switch ((unsigned)Fixup.getKind()) {
   default:
@@ -532,7 +530,7 @@ bool AVRAsmBackend::forceRelocation(const MCAssembler &Asm, const MCFragment &F,
     // hopes are that the module we're currently compiling won't be actually
     // linked to the final binary.
     return !adjust::adjustRelativeBranch(Size, Fixup, Offset,
-                                         Asm.getContext().getSubtargetInfo());
+                                         getContext().getSubtargetInfo());
   }
 
   case AVR::fixup_call:

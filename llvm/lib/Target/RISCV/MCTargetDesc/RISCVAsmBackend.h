@@ -45,18 +45,15 @@ public:
   bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                      MCAlignFragment &AF) override;
 
-  bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                           const MCFragment *DF, const MCValue &Target,
+  bool evaluateTargetFixup(const MCFixup &Fixup, const MCValue &Target,
                            uint64_t &Value) override;
 
-  bool addReloc(MCAssembler &Asm, const MCFragment &F, const MCFixup &Fixup,
-                const MCValue &Target, uint64_t &FixedValue,
-                bool IsResolved) override;
+  bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
+                uint64_t &FixedValue, bool IsResolved) override;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -75,11 +72,11 @@ public:
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
 
-  bool relaxDwarfLineAddr(const MCAssembler &Asm, MCDwarfLineAddrFragment &DF,
+  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
                           bool &WasRelaxed) const override;
-  bool relaxDwarfCFA(const MCAssembler &Asm, MCDwarfCallFrameFragment &DF,
+  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
                      bool &WasRelaxed) const override;
-  std::pair<bool, bool> relaxLEB128(const MCAssembler &Asm, MCLEBFragment &LF,
+  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
                                     int64_t &Value) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,

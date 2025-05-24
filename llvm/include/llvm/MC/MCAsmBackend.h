@@ -43,12 +43,18 @@ class MCAsmBackend {
 protected: // Can only create subclasses.
   MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation = false);
 
+  MCAssembler *Asm = nullptr;
+
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
   MCAsmBackend &operator=(const MCAsmBackend &) = delete;
   virtual ~MCAsmBackend();
 
   const llvm::endianness Endian;
+
+  void setAssembler(MCAssembler *A) { Asm = A; }
+
+  MCContext &getContext() const;
 
   /// True for RISC-V and LoongArch. Relaxable relocations are marked with a
   /// RELAX relocation.
@@ -89,8 +95,7 @@ public:
   virtual MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const;
 
   // Hook used by the default `addReloc` to check if a relocation is needed.
-  virtual bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                                     const MCValue &) {
+  virtual bool shouldForceRelocation(const MCFixup &, const MCValue &) {
     return false;
   }
 
@@ -109,26 +114,21 @@ public:
     return false;
   }
 
-  virtual bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                                   const MCFragment *DF, const MCValue &Target,
+  virtual bool evaluateTargetFixup(const MCFixup &Fixup, const MCValue &Target,
                                    uint64_t &Value) {
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
 
-  virtual bool addReloc(MCAssembler &Asm, const MCFragment &F,
-                        const MCFixup &Fixup, const MCValue &Target,
+  virtual bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                         uint64_t &FixedValue, bool IsResolved);
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
   /// reported via \p Ctx.
-  /// The  \p STI is present only for fragments of type MCRelaxableFragment and
-  /// MCDataFragment with hasInstructions() == true.
-  virtual void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+  virtual void applyFixup(const MCFragment &, const MCFixup &,
                           const MCValue &Target, MutableArrayRef<char> Data,
-                          uint64_t Value, bool IsResolved,
-                          const MCSubtargetInfo *STI) const = 0;
+                          uint64_t Value, bool IsResolved) = 0;
 
   /// @}
 
@@ -165,22 +165,20 @@ public:
   virtual void relaxInstruction(MCInst &Inst,
                                 const MCSubtargetInfo &STI) const {};
 
-  virtual bool relaxDwarfLineAddr(const MCAssembler &Asm,
-                                  MCDwarfLineAddrFragment &DF,
+  // Defined by linker relaxation targets.
+  virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
                                   bool &WasRelaxed) const {
     return false;
   }
-
-  virtual bool relaxDwarfCFA(const MCAssembler &Asm,
-                             MCDwarfCallFrameFragment &DF,
+  virtual bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
                              bool &WasRelaxed) const {
     return false;
   }
 
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.
-  virtual std::pair<bool, bool>
-  relaxLEB128(const MCAssembler &Asm, MCLEBFragment &LF, int64_t &Value) const {
+  virtual std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
+                                            int64_t &Value) const {
     return std::make_pair(false, false);
   }
 
@@ -215,6 +213,10 @@ public:
   }
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
+
+  // Return STI for fragments of type MCRelaxableFragment and MCDataFragment
+  // with hasInstructions() == true.
+  static const MCSubtargetInfo *getSubtargetInfo(const MCFragment &F);
 
 private:
   const bool LinkerRelaxation;

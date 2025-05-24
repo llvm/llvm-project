@@ -30,7 +30,7 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+  bool shouldForceRelocation(const MCFixup &Fixup,
                              const MCValue &Target) override;
 
   unsigned adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
@@ -38,10 +38,9 @@ public:
                             bool IsResolved, MCContext &Ctx,
                             const MCSubtargetInfo *STI) const;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   unsigned getRelaxedOpcode(unsigned Op, const MCSubtargetInfo &STI) const;
 
