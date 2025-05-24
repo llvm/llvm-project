@@ -16,24 +16,22 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_HAS_LOCALIZATION
-
-#  include <__algorithm/copy_n.h>
-#  include <__algorithm/lower_bound.h>
-#  include <__algorithm/min.h>
-#  include <__assert>
-#  include <__functional/hash.h>
-#  include <__iterator/iterator_traits.h>
-#  include <__ranges/view_interface.h>
-#  include <__string/char_traits.h>
-#  include <__utility/unreachable.h>
-#  include <cstdint>
-#  include <string_view>
+#include <__algorithm/copy_n.h>
+#include <__algorithm/lower_bound.h>
+#include <__algorithm/min.h>
+#include <__assert>
+#include <__functional/hash.h>
+#include <__iterator/iterator_traits.h>
+#include <__ranges/view_interface.h>
+#include <__string/char_traits.h>
+#include <__utility/unreachable.h>
+#include <cstdint>
+#include <string_view>
 
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#include <__undef_macros>
 
-#  if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 26
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct text_encoding {
@@ -474,13 +472,13 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() noexcept {
     // TODO: Remove this branch once we have __GNUC_EXECUTION_CHARSET_NAME or __clang_literal_encoding__ unconditionally
-#    ifdef __GNUC_EXECUTION_CHARSET_NAME
+#  ifdef __GNUC_EXECUTION_CHARSET_NAME
     return text_encoding(__GNUC_EXECUTION_CHARSET_NAME);
-#    elif defined(__clang_literal_encoding__)
+#  elif defined(__clang_literal_encoding__)
     return text_encoding(__clang_literal_encoding__);
-#    else
+#  else
     return text_encoding();
-#    endif
+#  endif
   }
 
   [[nodiscard]] static text_encoding environment();
@@ -1455,10 +1453,8 @@ inline constexpr bool enable_borrowed_range<text_encoding::aliases_view> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#  endif // _LIBCPP_STD_VER >= 26
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_POP_MACROS
-
-#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP___TEXT_ENCODING_TEXT_ENCODING_H
