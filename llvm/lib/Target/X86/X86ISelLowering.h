@@ -1669,6 +1669,8 @@ namespace llvm {
 
     Align getPrefLoopAlignment(MachineLoop *ML) const override;
 
+    bool isProfitableToHoist(Instruction *I) const override;
+
     EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const override {
       if (VT == MVT::f80)
         return EVT::getIntegerVT(Context, 96);
