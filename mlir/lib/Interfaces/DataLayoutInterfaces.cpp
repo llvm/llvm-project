@@ -312,6 +312,15 @@ mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
   return value.getValue().getZExtValue();
 }
 
+// Returns the function pointer alignment if specified in the given entry. If
+// the entry is empty the default alignment zero is returned.
+Attribute mlir::detail::getDefaultFunctionPointerAlignment(
+    DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return Attribute();
+  return entry.getValue();
+}
+
 std::optional<Attribute>
 mlir::detail::getDevicePropertyValue(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface())
@@ -708,6 +717,23 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
   else
     stackAlignment = detail::getDefaultStackAlignment(entry);
   return *stackAlignment;
+}
+
+Attribute mlir::DataLayout::getFunctionPointerAlignment() const {
+  checkValid();
+  if (functionPointerAlignment)
+    return *functionPointerAlignment;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getFunctionPointerAlignmentIdentifier(
+            originalLayout.getContext()));
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    functionPointerAlignment = iface.getFunctionPointerAlignment(entry);
+  else
+    functionPointerAlignment =
+        detail::getDefaultFunctionPointerAlignment(entry);
+  return *functionPointerAlignment;
 }
 
 std::optional<Attribute> mlir::DataLayout::getDevicePropertyValue(

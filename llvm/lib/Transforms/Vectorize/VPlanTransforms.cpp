@@ -2507,6 +2507,18 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
+void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
+  // Replace loop regions with explicity CFG.
+  SmallVector<VPRegionBlock *> LoopRegions;
+  for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    if (!R->isReplicator())
+      LoopRegions.push_back(R);
+  }
+  for (VPRegionBlock *R : LoopRegions)
+    R->dissolveToCFGLoop();
+}
+
 // Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.
 static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
   VPWidenCastRecipe *Ext;

@@ -327,9 +327,8 @@ public:
     Relocations[Sec].push_back(P);
   }
 
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 
   void bindIndirectSymbols(MCAssembler &Asm);
 
@@ -341,10 +340,9 @@ public:
 
   void computeSectionAddresses(const MCAssembler &Asm);
 
-  void executePostLayoutBinding(MCAssembler &Asm) override;
+  void executePostLayoutBinding() override;
 
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
 

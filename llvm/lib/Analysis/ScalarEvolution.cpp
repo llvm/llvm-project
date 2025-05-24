@@ -62,7 +62,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -8371,7 +8370,7 @@ ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   if (BTI.hasFullInfo())
     return BTI;
 
-  auto Pair = PredicatedBackedgeTakenCounts.insert({L, BackedgeTakenInfo()});
+  auto Pair = PredicatedBackedgeTakenCounts.try_emplace(L);
 
   if (!Pair.second)
     return Pair.first->second;
@@ -8390,7 +8389,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // code elsewhere that it shouldn't attempt to request a new
   // backedge-taken count, which could result in infinite recursion.
   std::pair<DenseMap<const Loop *, BackedgeTakenInfo>::iterator, bool> Pair =
-      BackedgeTakenCounts.insert({L, BackedgeTakenInfo()});
+      BackedgeTakenCounts.try_emplace(L);
   if (!Pair.second)
     return Pair.first->second;
 

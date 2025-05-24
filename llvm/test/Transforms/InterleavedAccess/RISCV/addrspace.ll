@@ -6,9 +6,9 @@
 define void @load_factor2(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @load_factor2(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <16 x i32>, ptr addrspace(1) [[PTR]], align 64
-; CHECK-NEXT:    [[V0:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:    [[V1:%.*]] = shufflevector <16 x i32> [[INTERLEAVED_VEC]], <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = call { <8 x i32>, <8 x i32> } @llvm.riscv.seg2.load.mask.v8i32.p1.i64(ptr addrspace(1) [[PTR]], <8 x i1> splat (i1 true), i64 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <8 x i32>, <8 x i32> } [[TMP1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x i32>, <8 x i32> } [[TMP1]], 0
 ; CHECK-NEXT:    ret void
 ;
   %interleaved.vec = load <16 x i32>, ptr addrspace(1) %ptr
@@ -20,8 +20,11 @@ define void @load_factor2(ptr addrspace(1) %ptr) {
 define void @load_factor2_vscale(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @load_factor2_vscale(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = load <vscale x 16 x i32>, ptr addrspace(1) [[PTR]], align 64
-; CHECK-NEXT:    [[V:%.*]] = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> [[INTERLEAVED_VEC]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv32i8_2t.p1.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr addrspace(1) [[PTR]], i64 -1, i64 5)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i32> @llvm.riscv.tuple.extract.nxv8i32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } poison, <vscale x 8 x i32> [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i32> @llvm.riscv.tuple.extract.nxv8i32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]], i32 1)
+; CHECK-NEXT:    [[V:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[TMP3]], <vscale x 8 x i32> [[TMP4]], 1
 ; CHECK-NEXT:    [[T0:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[V]], 0
 ; CHECK-NEXT:    [[T1:%.*]] = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } [[V]], 1
 ; CHECK-NEXT:    ret void

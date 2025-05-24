@@ -258,6 +258,20 @@ template <> struct DominatingValue<RValue> {
   }
 };
 
+/// A scoped helper to set the current source atom group for
+/// CGDebugInfo::addInstToCurrentSourceAtom. A source atom is a source construct
+/// that is "interesting" for debug stepping purposes. We use an atom group
+/// number to track the instruction(s) that implement the functionality for the
+/// atom, plus backup instructions/source locations.
+class ApplyAtomGroup {
+  uint64_t OriginalAtom = 0;
+  CGDebugInfo *DI = nullptr;
+
+public:
+  ApplyAtomGroup(CGDebugInfo *DI);
+  ~ApplyAtomGroup();
+};
+
 /// CodeGenFunction - This class organizes the per-function state that is used
 /// while generating LLVM code.
 class CodeGenFunction : public CodeGenTypeCache {
@@ -1748,6 +1762,11 @@ public:
   void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
                                    llvm::Value *Backup, uint64_t Atom);
 
+  /// Add \p KeyInstruction and an optional \p Backup instruction to a new atom
+  /// group (See ApplyAtomGroup for more info).
+  void addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
+                              llvm::Value *Backup);
+
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if
   /// current context is not in a switch.
@@ -3035,6 +3054,7 @@ public:
 
   /// Emit an aggregate assignment.
   void EmitAggregateAssign(LValue Dest, LValue Src, QualType EltTy) {
+    ApplyAtomGroup Grp(getDebugInfo());
     bool IsVolatile = hasVolatileMember(EltTy);
     EmitAggregateCopy(Dest, Src, EltTy, AggValueSlot::MayOverlap, IsVolatile);
   }
