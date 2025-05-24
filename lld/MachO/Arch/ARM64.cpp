@@ -559,35 +559,16 @@ static void applyAdrpLdrGotLdr(uint8_t *buf, const ConcatInputSection *isec,
     // adrp x1, _foo@GOTPAGE
     // ldr  x2, [x1, _foo@GOTPAGEOFF]
     // ldr  x3, [x2, #off]
-
-    uint32_t ins1 = read32le(buf + offset1);
     uint32_t ins3 = read32le(buf + offset3);
-    Adrp adrp;
     Ldr ldr3;
-    if (!parseAdrp(ins1, adrp) || !parseLdr(ins3, ldr3))
-      return;
-
-    if (ldr2.baseRegister != adrp.destRegister)
+    if (!parseLdr(ins3, ldr3))
       return;
     if (ldr3.baseRegister != ldr2.destRegister)
       return;
     // Loads from the GOT must be pointer sized.
     if (ldr2.p2Size != 3 || ldr2.isFloat)
       return;
-
-    uint64_t addr1 = isec->getVA() + offset1;
-    uint64_t addr2 = isec->getVA() + offset2;
-    uint64_t referent = pageBits(addr1) + adrp.addend + ldr2.offset;
-    // Load the GOT entry's address directly.
-    //   nop
-    //   ldr x2, _foo@GOTPAGE + _foo@GOTPAGEOFF
-    //   ldr x3, [x2, #off]
-    Ldr literalLdr = ldr2;
-    literalLdr.offset = referent - addr2;
-    if (isLiteralLdrEligible(literalLdr)) {
-      writeNop(buf + offset1);
-      writeLiteralLdr(buf + offset2, literalLdr);
-    }
+    applyAdrpLdr(buf, isec, offset1, offset2);
   }
 }
 
