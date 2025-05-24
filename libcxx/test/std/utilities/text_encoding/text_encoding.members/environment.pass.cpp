@@ -15,18 +15,18 @@
 // UNSUPPORTED: windows
 
 // libc++ is not built with C++26, and the implementation for this function is in a source file.
-// XFAIL: * 
+// XFAIL: *
 
 // class text_encoding
 
-// text_encoding text_encoding::environment(); 
+// text_encoding text_encoding::environment();
 
 // Concerns:
 // 1. text_encoding::environment() returns the encoding for the "C" locale, which should be the default for any C++ program.
 // 2. text_encoding::environment() still returns the "C" locale encoding when the locale is set to "en_US.UTF-8".
-// 3. text_encoding::environment() is affected by changes to the "LANG" environment variable. 
+// 3. text_encoding::environment() is affected by changes to the "LANG" environment variable.
 
-// The current implementation of text_encoding::environment() while conformant, 
+// The current implementation of text_encoding::environment() while conformant,
 // is unfortunately affected by changes to the "LANG" environment variable.
 
 #include <cassert>
@@ -35,14 +35,13 @@
 #include <string_view>
 #include <text_encoding>
 
-#include "platform_support.h" 
+#include "platform_support.h"
 #include "test_macros.h"
 #include "test_text_encoding.h"
 
 int main() {
-
   { // 1
-    auto te = std::text_encoding::environment(); 
+    auto te = std::text_encoding::environment();
 
     assert(te == std::text_encoding::environment());
     assert(te.mib() == std::text_encoding::id::ASCII);
@@ -68,7 +67,7 @@ int main() {
 
   { // 3
     setenv("LANG", LOCALE_en_US_UTF_8, 1);
-    
+
     auto te = std::text_encoding::environment();
 
     assert(te == std::text_encoding::environment());
@@ -78,6 +77,6 @@ int main() {
 
     assert(std::text_encoding::environment_is<std::text_encoding::id::UTF8>());
   }
-  
+
   return 0;
 }

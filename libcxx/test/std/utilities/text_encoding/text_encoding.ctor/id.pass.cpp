@@ -41,15 +41,15 @@ int main() {
     static_assert(std::is_nothrow_constructible<std::text_encoding, std::text_encoding::id>::value,
                   "Must be nothrow constructible with id");
   }
-  
+
   {
-    for (auto pair : unique_encoding_data){
+    for (auto pair : unique_encoding_data) {
       test_ctor(te_id{pair.mib}, te_id{pair.mib}, pair.name);
     }
   }
 
   {
-    for(int i = 2261; i < 2300; i++){ // test out of range id values
+    for (int i = 2261; i < 2300; i++) { // test out of range id values
       test_ctor(te_id{i}, te_id::unknown, "");
     }
   }

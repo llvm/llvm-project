@@ -14,7 +14,7 @@
 
 // class text_encoding
 
-// text_encoding operator==(const text_encoding&, id) _NOEXCEPT 
+// text_encoding operator==(const text_encoding&, id) _NOEXCEPT
 
 // Concerns:
 // 1. operator==(const text_encoding&, id) must be noexcept
@@ -31,7 +31,6 @@
 using id = std::text_encoding::id;
 
 int main() {
-
   { // 1
     auto te = std::text_encoding();
     ASSERT_NOEXCEPT(te == id::UTF8);

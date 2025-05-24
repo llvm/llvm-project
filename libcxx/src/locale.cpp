@@ -558,18 +558,18 @@ locale::locale(const locale& other, const locale& one, category c)
 
 string locale::name() const { return __locale_->name(); }
 
-#  if _LIBCPP_STD_VER >= 26 && __CHAR_BIT__ == 8
-  text_encoding locale::encoding() const {
-    std::string __name = this->name();
-    if(__name.size() == 1){
-      if(__name[0] == 'C')
-        return std::text_encoding(text_encoding::id::ASCII);
-      if(__name[0] == '*')
-        return std::text_encoding();
-    }
-    return std::text_encoding(__name);
+#if _LIBCPP_STD_VER >= 26 && __CHAR_BIT__ == 8
+text_encoding locale::encoding() const {
+  std::string __name = this->name();
+  if (__name.size() == 1) {
+    if (__name[0] == 'C')
+      return std::text_encoding(text_encoding::id::ASCII);
+    if (__name[0] == '*')
+      return std::text_encoding();
   }
-#  endif // _LIBCPP_STD_VER >= 26
+  return std::text_encoding(__name);
+}
+#endif // _LIBCPP_STD_VER >= 26
 
 void locale::__install_ctor(const locale& other, facet* f, long facet_id) {
   if (f)

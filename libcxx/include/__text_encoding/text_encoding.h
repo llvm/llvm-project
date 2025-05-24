@@ -18,22 +18,22 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 
-#include <__algorithm/copy_n.h>
-#include <__algorithm/lower_bound.h>
-#include <__algorithm/min.h>
-#include <__functional/hash.h>
-#include <__iterator/iterator_traits.h>
-#include <__locale_dir/locale_base_api.h>
-#include <__ranges/view_interface.h>
-#include <__string/char_traits.h>
-#include <__utility/unreachable.h>
-#include <cstdint>
-#include <string_view>
+#  include <__algorithm/copy_n.h>
+#  include <__algorithm/lower_bound.h>
+#  include <__algorithm/min.h>
+#  include <__functional/hash.h>
+#  include <__iterator/iterator_traits.h>
+#  include <__locale_dir/locale_base_api.h>
+#  include <__ranges/view_interface.h>
+#  include <__string/char_traits.h>
+#  include <__utility/unreachable.h>
+#  include <cstdint>
+#  include <string_view>
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#  include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 26
+#  if _LIBCPP_STD_VER >= 26
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct _LIBCPP_EXPORTED_FROM_ABI text_encoding {
@@ -340,12 +340,12 @@ public:
     constexpr aliases_view(const __encoding_data* __d) : __view_data_(__d) {}
     struct __end_sentinel {};
     struct __iterator {
-      using value_type        = const char*;
-      using reference         = const char*;
-      using difference_type   = ptrdiff_t;
+      using value_type      = const char*;
+      using reference       = const char*;
+      using difference_type = ptrdiff_t;
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator() noexcept = default; 
-      
+      _LIBCPP_HIDE_FROM_ABI constexpr __iterator() noexcept = default;
+
       _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const {
         if (__can_dereference())
           return __data_->__name;
@@ -368,19 +368,18 @@ public:
       }
 
       _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __it, difference_type __n) {
-        __it -= __n; 
+        __it -= __n;
         return __it;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const __iterator& __other) const 
-      {
-        if(__other.__mib_rep_ == __mib_rep_)
+      _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const __iterator& __other) const {
+        if (__other.__mib_rep_ == __mib_rep_)
           return __mib_rep_ - __other.__mib_rep_;
         std::unreachable();
       }
 
       _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(difference_type __n, __iterator& __it) {
-        __it -= __n; 
+        __it -= __n;
         return __it;
       }
 
@@ -1474,7 +1473,7 @@ inline constexpr bool enable_borrowed_range<text_encoding::aliases_view> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 26
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_POP_MACROS
 

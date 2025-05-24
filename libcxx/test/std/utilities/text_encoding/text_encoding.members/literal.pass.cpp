@@ -30,7 +30,7 @@
 
 int main() {
 #if __CHAR_BIT__ == 8
- 
+
   {
     auto te = std::text_encoding::literal();
 #  ifdef __GNUC_EXECUTION_CHARSET_NAME

@@ -14,7 +14,7 @@
 
 // class text_encoding
 
-// text_encoding text_encoding::environment(); 
+// text_encoding text_encoding::environment();
 
 // Concerns:
 // 1. An alias_view of a text_encoding object for "other" is empty
@@ -26,25 +26,15 @@
 #include <ranges>
 #include <text_encoding>
 
-#include "platform_support.h" 
+#include "platform_support.h"
 #include "test_macros.h"
 #include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
 
-int main(){
-
+int main() {
   {
-    auto te = std::text_encoding(id::other);
-    auto empty_range = te.aliases();
-    
-    assert(std::ranges::empty(empty_range));
-    assert(empty_range.empty());
-    assert(!bool(empty_range));
-  }
-
-  {
-    auto te = std::text_encoding(id::unknown);
+    auto te          = std::text_encoding(id::other);
     auto empty_range = te.aliases();
 
     assert(std::ranges::empty(empty_range));
@@ -53,12 +43,20 @@ int main(){
   }
 
   {
-    auto te = std::text_encoding(id::UTF8);
+    auto te          = std::text_encoding(id::unknown);
+    auto empty_range = te.aliases();
+
+    assert(std::ranges::empty(empty_range));
+    assert(empty_range.empty());
+    assert(!bool(empty_range));
+  }
+
+  {
+    auto te    = std::text_encoding(id::UTF8);
     auto range = te.aliases();
 
     assert(!std::ranges::empty(range));
     assert(!range.empty());
     assert(bool(range));
   }
-
 }
