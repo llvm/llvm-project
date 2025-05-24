@@ -4414,6 +4414,8 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
   raw_string_ostream Msg(msg);
   Msg << "Cannot select: ";
 
+  Msg.enable_colors(errs().has_colors());
+
   if (N->getOpcode() != ISD::INTRINSIC_W_CHAIN &&
       N->getOpcode() != ISD::INTRINSIC_WO_CHAIN &&
       N->getOpcode() != ISD::INTRINSIC_VOID) {
