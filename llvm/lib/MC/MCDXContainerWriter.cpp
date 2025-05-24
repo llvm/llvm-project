@@ -86,7 +86,7 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm) {
       dxbc::ProgramHeader Header;
       memset(reinterpret_cast<void *>(&Header), 0, sizeof(dxbc::ProgramHeader));
 
-      const Triple &TT = Asm.getContext().getTargetTriple();
+      const Triple &TT = getContext().getTargetTriple();
       VersionTuple Version = TT.getOSVersion();
       uint8_t MajorVersion = static_cast<uint8_t>(Version.getMajor());
       uint8_t MinorVersion =

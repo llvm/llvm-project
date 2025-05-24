@@ -170,9 +170,8 @@ public:
 
   void reset() override;
   void executePostLayoutBinding() override;
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
@@ -181,8 +180,7 @@ public:
   bool hasRelocationAddend() const;
   bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
 
-  bool useSectionSymbol(const MCAssembler &Asm, const MCValue &Val,
-                        const MCSymbolELF *Sym, uint64_t C,
+  bool useSectionSymbol(const MCValue &Val, const MCSymbolELF *Sym, uint64_t C,
                         unsigned Type) const;
 
   bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
