@@ -237,7 +237,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
   MCValue Value = MaxBytesToEmit >= InsertedNopBytes
                       ? MCValue::get(InsertedNopBytes)
                       : createExtendedValue();
-  Asm.getWriter().recordRelocation(Asm, &AF, Fixup, Value, FixedValue);
+  Asm.getWriter().recordRelocation(AF, Fixup, Value, FixedValue);
 
   return true;
 }
@@ -486,8 +486,8 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
     MCValue B = MCValue::get(Target.getSubSym());
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
     auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
-    Asm->getWriter().recordRelocation(*Asm, &F, FA, A, FixedValueA);
-    Asm->getWriter().recordRelocation(*Asm, &F, FB, B, FixedValueB);
+    Asm->getWriter().recordRelocation(F, FA, A, FixedValueA);
+    Asm->getWriter().recordRelocation(F, FB, B, FixedValueB);
     FixedValue = FixedValueA - FixedValueB;
     return false;
   }
@@ -497,7 +497,7 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   // append a RELAX relocation.
   if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_LARCH_RELAX);
-    Asm->getWriter().recordRelocation(*Asm, &F, FA, MCValue::get(nullptr),
+    Asm->getWriter().recordRelocation(F, FA, MCValue::get(nullptr),
                                       FixedValueA);
   }
 

@@ -292,9 +292,8 @@ private:
 
   void writeHeader(const MCAssembler &Asm);
 
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 
   void executePostLayoutBinding() override;
   void prepareImports(SmallVectorImpl<wasm::WasmImport> &Imports,
@@ -476,18 +475,17 @@ void WasmObjectWriter::executePostLayoutBinding() {
   }
 }
 
-void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
-                                        const MCFragment *Fragment,
+void WasmObjectWriter::recordRelocation(const MCFragment &F,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
   // The WebAssembly backend should never generate FKF_IsPCRel fixups
-  assert(!(Asm.getBackend().getFixupKindInfo(Fixup.getKind()).Flags &
+  assert(!(Asm->getBackend().getFixupKindInfo(Fixup.getKind()).Flags &
            MCFixupKindInfo::FKF_IsPCRel));
 
-  const auto &FixupSection = cast<MCSectionWasm>(*Fragment->getParent());
+  const auto &FixupSection = cast<MCSectionWasm>(*F.getParent());
   uint64_t C = Target.getConstant();
-  uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
-  MCContext &Ctx = Asm.getContext();
+  uint64_t FixupOffset = Asm->getFragmentOffset(F) + Fixup.getOffset();
+  MCContext &Ctx = getContext();
   bool IsLocRel = false;
 
   if (const auto *RefB = Target.getSubSym()) {
@@ -515,7 +513,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       return;
     }
     IsLocRel = true;
-    C += FixupOffset - Asm.getSymbolOffset(SymB);
+    C += FixupOffset - Asm->getSymbolOffset(SymB);
   }
 
   // We either rejected the fixup or folded B into C at this point.
@@ -571,7 +569,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     if (!SectionSymbol)
       report_fatal_error("section symbol is required for relocation");
 
-    C += Asm.getSymbolOffset(*SymA);
+    C += Asm->getSymbolOffset(*SymA);
     SymA = cast<MCSymbolWasm>(SectionSymbol);
   }
 
@@ -592,7 +590,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
         report_fatal_error("__indirect_function_table symbol has wrong type");
       // Ensure that __indirect_function_table reaches the output.
       Sym->setNoStrip();
-      Asm.registerSymbol(*Sym);
+      Asm->registerSymbol(*Sym);
     }
   }
 
@@ -1929,7 +1927,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     writeGlobalSection(Globals);
     writeExportSection(Exports);
     const MCSymbol *IndirectFunctionTable =
-        Asm.getContext().lookupSymbol("__indirect_function_table");
+        getContext().lookupSymbol("__indirect_function_table");
     writeElemSection(cast_or_null<const MCSymbolWasm>(IndirectFunctionTable),
                      TableElems);
     writeDataCountSection();

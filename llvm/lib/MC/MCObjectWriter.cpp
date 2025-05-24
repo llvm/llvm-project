@@ -11,6 +11,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
 namespace llvm {
 class MCSection;
 }
@@ -19,6 +20,8 @@ using namespace llvm;
 
 MCObjectWriter::~MCObjectWriter() = default;
 
+MCContext &MCObjectWriter::getContext() const { return Asm->getContext(); }
+
 void MCObjectWriter::reset() {
   FileNames.clear();
   AddrsigSyms.clear();
@@ -26,6 +29,9 @@ void MCObjectWriter::reset() {
   SubsectionsViaSymbols = false;
   CGProfile.clear();
 }
+
+void MCObjectWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                                      MCValue Target, uint64_t &FixedValue) {}
 
 bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(const MCSymbol &SA,
                                                         const MCSymbol &SB,
