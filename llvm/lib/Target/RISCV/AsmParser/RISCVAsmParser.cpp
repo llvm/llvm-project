@@ -2885,21 +2885,6 @@ bool RISCVAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 bool RISCVAsmParser::parseInstruction(ParseInstructionInfo &Info,
                                       StringRef Name, SMLoc NameLoc,
                                       OperandVector &Operands) {
-  // Ensure that if the instruction occurs when relaxation is enabled,
-  // relocations are forced for the file. Ideally this would be done when there
-  // is enough information to reliably determine if the instruction itself may
-  // cause relaxations. Unfortunately instruction processing stage occurs in the
-  // same pass as relocation emission, so it's too late to set a 'sticky bit'
-  // for the entire file.
-  if (getSTI().hasFeature(RISCV::FeatureRelax)) {
-    auto *Assembler = getTargetStreamer().getStreamer().getAssemblerPtr();
-    if (Assembler != nullptr) {
-      RISCVAsmBackend &MAB =
-          static_cast<RISCVAsmBackend &>(Assembler->getBackend());
-      MAB.setForceRelocs();
-    }
-  }
-
   // Apply mnemonic aliases because the destination mnemonic may have require
   // custom operand parsing. The generic tblgen'erated code does this later, at
   // the start of MatchInstructionImpl(), but that's too late for custom

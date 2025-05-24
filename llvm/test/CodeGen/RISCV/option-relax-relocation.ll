@@ -13,7 +13,6 @@
 ; RELAX-NEXT:           R_RISCV_RELAX        *ABS*
 ; CHECK-NEXT:   jalr    ra
 ; CHECK-NEXT:   j       {{.*}}
-; RELAX-NEXT:           R_RISCV_JAL  .LBB0_{{.*}}
 ; CHECK-NEXT:   j       {{.*}}
 ; RELAX-NEXT:           R_RISCV_JAL  .L0
 ; NORELAX-NEXT: li      a0, 0x0

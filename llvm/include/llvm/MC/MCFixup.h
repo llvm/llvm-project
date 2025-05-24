@@ -73,9 +73,9 @@ class MCFixup {
   /// determine how the operand value should be encoded into the instruction.
   MCFixupKind Kind = FK_NONE;
 
-  /// Used by RISC-V style linker relaxation. If the fixup is unresolved,
-  /// whether a RELAX relocation should follow.
-  bool NeedsRelax = false;
+  /// Used by RISC-V style linker relaxation. Whether the fixup is
+  /// linker-relaxable.
+  bool LinkerRelaxable = false;
 
   /// Consider bit fields if we need more flags.
 
@@ -105,8 +105,8 @@ public:
 
   const MCExpr *getValue() const { return Value; }
 
-  bool needsRelax() const { return NeedsRelax; }
-  void setNeedsRelax() { NeedsRelax = true; }
+  bool isLinkerRelaxable() const { return LinkerRelaxable; }
+  void setLinkerRelaxable() { LinkerRelaxable = true; }
 
   /// Return the generic fixup kind for a value with the given size. It
   /// is an error to pass an unsupported size.
