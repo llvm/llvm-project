@@ -269,6 +269,20 @@ protocol::Source CreateSource(const lldb::SBLineEntry &line_entry);
 ///     definition outlined by Microsoft.
 protocol::Source CreateSource(llvm::StringRef source_path);
 
+/// Create a "Source" object for a given frame, using its assembly for source.
+///
+/// \param[in] target
+///     The relevant target.
+///
+/// \param[in] address
+///     The address to use when creating the "Source" object.
+///
+/// \return
+///     A "Source" JSON object that follows the formal JSON
+///     definition outlined by Microsoft.
+protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
+                                      lldb::SBAddress &address);
+
 /// Return true if the given line entry should be displayed as assembly.
 ///
 /// \param[in] line_entry
@@ -530,7 +544,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 ///     Microsoft.
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
-    const llvm::StringMap<std::string> env, llvm::StringRef cwd,
+    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid);
 
 /// Create a "Terminated" JSON object that contains statistics
