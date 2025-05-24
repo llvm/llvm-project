@@ -326,6 +326,6 @@ TEST_F(SpecialCaseListTest, Version3) {
   EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "src", "fooz"));
   EXPECT_EQ(4u, SCL->inSectionBlame("sect1", "src", "barz"));
   EXPECT_EQ(5u, SCL->inSectionBlame("sect1", "src", "def"));
-  EXPECT_EQ(8u, SCL->inSectionBlame("sect2", "src", "def"));
+  EXPECT_EQ(8u, SCL->inSectionBlame("sect2", "src", "de*"));
 }
 }

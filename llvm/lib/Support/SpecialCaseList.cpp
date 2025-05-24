@@ -66,12 +66,12 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
 }
 
 unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
-  for (const auto &Glob : Globs)
-    if (Glob->Pattern.match(Query))
-      return Glob->LineNo;
-  for (const auto &[Regex, LineNumber] : RegExes)
-    if (Regex->match(Query))
-      return LineNumber;
+  for (auto it = Globs.crbegin(); it != Globs.crend(); ++it)
+    if ((*it)->Pattern.match(Query))
+      return (*it)->LineNo;
+  for (auto it = RegExes.crbegin(); it != RegExes.crend(); ++it)
+    if (it->first->match(Query))
+      return it->second;
   return 0;
 }
 
