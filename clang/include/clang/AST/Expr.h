@@ -6155,9 +6155,8 @@ public:
 
   /// Determine whether this initializer list contains a designated initializer.
   bool hasDesignatedInit() const {
-    return std::any_of(begin(), end(), [](const Stmt *S) {
-      return isa<DesignatedInitExpr>(S);
-    });
+    return llvm::any_of(
+        *this, [](const Stmt *S) { return isa<DesignatedInitExpr>(S); });
   }
 
   /// If this initializes a union, specifies which field in the
