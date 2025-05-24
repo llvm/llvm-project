@@ -1041,9 +1041,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       Input.getInputArg().renderAsInput(Args, CmdArgs);
   }
 
-  checkForAMDProprietaryOptOptions(TC, D, Args, CmdArgs, false /*isLLD*/,
-                                   false /*checkOnly*/);
-
   const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),

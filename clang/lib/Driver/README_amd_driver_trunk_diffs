@@ -43,9 +43,6 @@ These are the areas where amd-staging differs from the trunk:
 - Support for certain optimizations such as cross team reductions and  
    -plugin-opt=-amdgpu-spill-cfi-saved-regs
 
-- Deprecation of ProprietaryToolChain. Currently warnings are generated when
-  these options are used.  These differences will eventually go away.
-
 - Support for AMDGPU Code object version. 
 
 - Support for Static Device Libs (SDL).  This support was introduced by amd
