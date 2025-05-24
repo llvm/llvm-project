@@ -2106,8 +2106,7 @@ static Constant *unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
     Constant *Splat = C->getSplatValue();
     if (!Splat)
       return nullptr;
-    return ConstantVector::getSplat(
-        cast<VectorType>(C->getType())->getElementCount(), Splat);
+    return ConstantVector::getSplat(NewCTy->getElementCount(), Splat);
   }
 
   if (cast<FixedVectorType>(NewCTy)->getNumElements() >

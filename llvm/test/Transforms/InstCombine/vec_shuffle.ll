@@ -652,6 +652,17 @@ define <4 x i8> @widening_shuffle_add_1(<2 x i8> %x) {
   ret <4 x i8> %r
 }
 
+define <vscale x 4 x i8> @widening_shuffle_add_1_scalable(<vscale x 2 x i8> %x) {
+; CHECK-LABEL: @widening_shuffle_add_1_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 2 x i8> [[X:%.*]], splat (i8 42)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x i8> [[R]]
+;
+  %widex = shufflevector <vscale x 2 x i8> %x, <vscale x 2 x i8> undef, <vscale x 4 x i32> zeroinitializer
+  %r = add <vscale x 4 x i8> %widex, splat (i8 42)
+  ret <vscale x 4 x i8> %r
+}
+
 ; Reduce the width of the binop by moving it ahead of a shuffle.
 
 define <4 x i8> @widening_shuffle_add_2(<2 x i8> %x) {
