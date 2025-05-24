@@ -27,18 +27,17 @@ void MCObjectWriter::reset() {
   CGProfile.clear();
 }
 
-bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(const MCAssembler &Asm,
-                                                        const MCSymbol &SA,
+bool MCObjectWriter::isSymbolRefDifferenceFullyResolved(const MCSymbol &SA,
                                                         const MCSymbol &SB,
                                                         bool InSet) const {
   assert(!SA.isUndefined() && !SB.isUndefined());
-  return isSymbolRefDifferenceFullyResolvedImpl(Asm, SA, *SB.getFragment(),
-                                                InSet, /*IsPCRel=*/false);
+  return isSymbolRefDifferenceFullyResolvedImpl(SA, *SB.getFragment(), InSet,
+                                                /*IsPCRel=*/false);
 }
 
 bool MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
-    bool InSet, bool IsPCRel) const {
+    const MCSymbol &SymA, const MCFragment &FB, bool InSet,
+    bool IsPCRel) const {
   const MCSection &SecA = SymA.getSection();
   const MCSection &SecB = *FB.getParent();
   // On ELF and COFF  A - B is absolute if A and B are in the same section.

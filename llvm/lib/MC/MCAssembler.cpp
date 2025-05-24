@@ -85,6 +85,8 @@ MCAssembler::MCAssembler(MCContext &Context,
       Emitter(std::move(Emitter)), Writer(std::move(Writer)) {
   if (this->Backend)
     this->Backend->setAssembler(this);
+  if (this->Writer)
+    this->Writer->setAssembler(this);
 }
 
 void MCAssembler::reset() {
@@ -187,7 +189,7 @@ bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
 
       if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
         IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
-            *this, *Add, *DF, false, true);
+            *Add, *DF, false, true);
       }
     } else {
       IsResolved = Target.isAbsolute();
@@ -895,7 +897,7 @@ void MCAssembler::layout() {
 
   // Allow the object writer a chance to perform post-layout binding (for
   // example, to set the index fields in the symbol data).
-  getWriter().executePostLayoutBinding(*this);
+  getWriter().executePostLayoutBinding();
 
   // Fragment sizes are finalized. For RISC-V linker relaxation, this flag
   // helps check whether a PC-relative fixup is fully resolved.
