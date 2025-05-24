@@ -384,14 +384,13 @@ bool AVRAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
   return IsResolved;
 }
 
-void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void AVRAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
+                               bool IsResolved) {
   if (mc::isRelocation(Fixup.getKind()))
     return;
-  adjustFixupValue(Fixup, Target, Value, &Asm.getContext());
+  adjustFixupValue(Fixup, Target, Value, &getContext());
   if (Value == 0)
     return; // Doesn't change encoding.
 
@@ -532,7 +531,7 @@ bool AVRAsmBackend::forceRelocation(const MCAssembler &Asm, const MCFragment &F,
     // hopes are that the module we're currently compiling won't be actually
     // linked to the final binary.
     return !adjust::adjustRelativeBranch(Size, Fixup, Offset,
-                                         Asm.getContext().getSubtargetInfo());
+                                         getContext().getSubtargetInfo());
   }
 
   case AVR::fixup_call:

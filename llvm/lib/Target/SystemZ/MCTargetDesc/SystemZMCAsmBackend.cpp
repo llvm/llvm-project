@@ -115,10 +115,9 @@ public:
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
                              const MCValue &) override;
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 };
@@ -161,12 +160,10 @@ bool SystemZMCAsmBackend::shouldForceRelocation(const MCAssembler &,
   return Target.getSpecifier();
 }
 
-void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,
-                                     const MCFixup &Fixup,
+void SystemZMCAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                      const MCValue &Target,
                                      MutableArrayRef<char> Data, uint64_t Value,
-                                     bool IsResolved,
-                                     const MCSubtargetInfo *STI) const {
+                                     bool IsResolved) {
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
@@ -177,7 +174,7 @@ void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,
   assert(Offset + Size <= Data.size() && "Invalid fixup offset!");
 
   // Big-endian insertion of Size bytes.
-  Value = extractBitsForFixup(Kind, Value, Fixup, Asm.getContext());
+  Value = extractBitsForFixup(Kind, Value, Fixup, getContext());
   if (BitSize < 64)
     Value &= ((uint64_t)1 << BitSize) - 1;
   unsigned ShiftValue = (Size * 8) - 8;

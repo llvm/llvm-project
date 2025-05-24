@@ -172,10 +172,9 @@ public:
   bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
                              const MCValue &) override;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
@@ -697,10 +696,9 @@ bool X86AsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
   return Target.getSpecifier();
 }
 
-void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void X86AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                const MCValue &, MutableArrayRef<char> Data,
-                               uint64_t Value, bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
+                               uint64_t Value, bool IsResolved) {
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
@@ -713,8 +711,8 @@ void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
       getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel) {
     // check that PC relative fixup fits into the fixup size.
     if (Size > 0 && !isIntN(Size * 8, SignedValue))
-      Asm.getContext().reportError(
-                                   Fixup.getLoc(), "value of " + Twine(SignedValue) +
+      getContext().reportError(Fixup.getLoc(),
+                               "value of " + Twine(SignedValue) +
                                    " is too large for field of " + Twine(Size) +
                                    ((Size == 1) ? " byte." : " bytes."));
   } else {

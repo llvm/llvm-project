@@ -475,7 +475,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // Other relocation types don't want this bit though (branches couldn't encode
   // it if it *was* present, and no other relocations exist) and it can
   // interfere with checking valid expressions.
-  bool IsMachO = Asm.getContext().getObjectFileType() == MCContext::IsMachO;
+  bool IsMachO = getContext().getObjectFileType() == MCContext::IsMachO;
   if (const auto *SA = Target.getAddSym()) {
     if (IsMachO && Asm.isThumbFunc(SA) && SA->isExternal() &&
         (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
@@ -1127,16 +1127,16 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   }
 }
 
-void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo* STI) const {
+                               bool IsResolved) {
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
-  MCContext &Ctx = Asm.getContext();
-  Value = adjustFixupValue(Asm, Fixup, Target, Value, IsResolved, Ctx, STI);
+  MCContext &Ctx = getContext();
+  Value = adjustFixupValue(*Asm, Fixup, Target, Value, IsResolved, Ctx,
+                           getSubtargetInfo(F));
   if (!Value)
     return; // Doesn't change encoding.
   const unsigned NumBytes = getFixupKindNumBytes(Kind);
