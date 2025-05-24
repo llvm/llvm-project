@@ -25,7 +25,8 @@ test:
 # CHECK-INST-C-RELAX-NEXT:  jal     zero, {{.*}}
 # CHECK-INST-C-RELAX-NEXT:  R_RISCV_JAL .L1
    bne a0, a1, .L1
-.fill 1300, 4, 0
+   call relax
+.fill 1300-2, 4, 0
 .L1:
    ret
 # CHECK-INST:         bne     a0, a1, 0x1464

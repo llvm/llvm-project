@@ -489,6 +489,7 @@ public:
 enum RVVRequire {
   RVV_REQ_RV64,
   RVV_REQ_Zvfhmin,
+  RVV_REQ_Xandesvpackfph,
   RVV_REQ_Xsfvcp,
   RVV_REQ_Xsfvfnrclipxfqf,
   RVV_REQ_Xsfvfwmaccqqq,

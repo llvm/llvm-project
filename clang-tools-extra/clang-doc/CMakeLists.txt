@@ -16,6 +16,7 @@ add_clang_library(clangDoc STATIC
   Representation.cpp
   Serialize.cpp
   YAMLGenerator.cpp
+  HTMLMustacheGenerator.cpp
 
   DEPENDS
   omp_gen
@@ -24,7 +25,7 @@ add_clang_library(clangDoc STATIC
 
 clang_target_link_libraries(clangDoc
   PRIVATE
-  clangDocSupport        
+  clangDocSupport
   clangAnalysis
   clangAST
   clangASTMatchers
