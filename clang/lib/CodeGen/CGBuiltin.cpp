@@ -4453,6 +4453,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
     Address Src = EmitPointerWithAlignment(E->getArg(1));
     Value *SizeVal = EmitScalarExpr(E->getArg(2));
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_trivially_relocate)
+      SizeVal = Builder.CreateMul(
+          SizeVal,
+          ConstantInt::get(
+              SizeVal->getType(),
+              getContext()
+                  .getTypeSizeInChars(E->getArg(0)->getType()->getPointeeType())
+                  .getQuantity()));
     EmitArgCheck(TCK_Store, Dest, E->getArg(0), 0);
     EmitArgCheck(TCK_Load, Src, E->getArg(1), 1);
     Builder.CreateMemMove(Dest, Src, SizeVal, false);
