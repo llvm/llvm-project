@@ -2604,8 +2604,8 @@ public:
   /// Check for comparisons of floating-point values using == and !=. Issue a
   /// warning if the comparison is not likely to do what the programmer
   /// intended.
-  void CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
-                            BinaryOperatorKind Opcode);
+  void CheckFloatComparison(SourceLocation Loc, const Expr *LHS,
+                            const Expr *RHS, BinaryOperatorKind Opcode);
 
   /// Register a magic integral constant to be used as a type tag.
   void RegisterTypeTagForDatatype(const IdentifierInfo *ArgumentKind,
@@ -3013,7 +3013,8 @@ private:
   // Warn on anti-patterns as the 'size' argument to strncat.
   // The correct size argument should look like following:
   //   strncat(dst, src, sizeof(dst) - strlen(dest) - 1);
-  void CheckStrncatArguments(const CallExpr *Call, IdentifierInfo *FnName);
+  void CheckStrncatArguments(const CallExpr *Call,
+                             const IdentifierInfo *FnName);
 
   /// Alerts the user that they are attempting to free a non-malloc'd object.
   void CheckFreeArguments(const CallExpr *E);
