@@ -7797,8 +7797,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fgnu_inline_asm,
                      options::OPT_fno_gnu_inline_asm);
 
-  bool ProprietaryToolChainNeeded =
-    checkForAMDProprietaryOptOptions(TC, D, Args, CmdArgs, false /*isLLD*/);
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
   ParseMPreferVectorWidth(D, Args, CmdArgs);
@@ -8008,9 +8006,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   std::string AltPath = D.getInstalledDir();
   AltPath += "/../alt/bin/clang-" + std::to_string(LLVM_VERSION_MAJOR);
 
-  const char *Exec = ProprietaryToolChainNeeded
-         ? C.getArgs().MakeArgString(AltPath.c_str())
-	 : D.getClangProgramPath();
+  const char *Exec = D.getClangProgramPath();
   // Optionally embed the -cc1 level arguments into the debug info or a
   // section, for build analysis.
   // Also record command line arguments into the debug info if
@@ -8329,7 +8325,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Input.getInputArg().renderAsInput(Args, CmdArgs);
   }
 
-  if (D.CC1Main && !D.CCGenDiagnostics && !ProprietaryToolChainNeeded) {
+  if (D.CC1Main && !D.CCGenDiagnostics) {
     // Invoke the CC1 directly in this process
     C.addCommand(std::make_unique<CC1Command>(
         JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,

@@ -19,7 +19,6 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
-#include "AmdOptArgs.h"
 
 namespace clang {
 namespace driver {

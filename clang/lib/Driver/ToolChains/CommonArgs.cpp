@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommonArgs.h"
-#include "AmdOptArgs.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "Arch/CSKY.h"
@@ -877,8 +876,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ);
   const char *LinkerPath = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
-  checkForAMDProprietaryOptOptions(ToolChain, D, Args, CmdArgs, /*isLLD=*/false,
-                                   /*checkOnly=*/true);
 
   const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
                                      options::OPT_fno_fat_lto_objects, false);
