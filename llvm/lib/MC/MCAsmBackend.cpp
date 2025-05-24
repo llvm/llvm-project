@@ -120,8 +120,7 @@ bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
 
 bool MCAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
                             const MCFixup &Fixup, const MCValue &Target,
-                            uint64_t &FixedValue, bool IsResolved,
-                            const MCSubtargetInfo *STI) {
+                            uint64_t &FixedValue, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Asm, Fixup, Target))
     IsResolved = false;
   if (!IsResolved)

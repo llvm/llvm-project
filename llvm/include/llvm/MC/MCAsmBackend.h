@@ -117,8 +117,7 @@ public:
 
   virtual bool addReloc(MCAssembler &Asm, const MCFragment &F,
                         const MCFixup &Fixup, const MCValue &Target,
-                        uint64_t &FixedValue, bool IsResolved,
-                        const MCSubtargetInfo *);
+                        uint64_t &FixedValue, bool IsResolved);
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
