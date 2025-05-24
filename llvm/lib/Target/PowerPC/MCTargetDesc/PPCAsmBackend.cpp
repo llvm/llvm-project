@@ -135,15 +135,15 @@ public:
   }
 
   bool addReloc(MCAssembler &Asm, const MCFragment &F, const MCFixup &Fixup,
-                const MCValue &TargetVal, uint64_t &FixedValue, bool IsResolved,
-                const MCSubtargetInfo *STI) override {
+                const MCValue &TargetVal, uint64_t &FixedValue,
+                bool IsResolved) override {
     // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
     // reference the null symbol.
     auto Target = TargetVal;
     if (Target.getSpecifier() == PPCMCExpr::VK_TOCBASE)
       Target.setAddSym(nullptr);
-    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved,
-                                  STI);
+    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
+                                  IsResolved);
   }
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,

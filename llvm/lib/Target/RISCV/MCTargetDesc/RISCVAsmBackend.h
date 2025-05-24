@@ -50,8 +50,8 @@ public:
                            uint64_t &Value) override;
 
   bool addReloc(MCAssembler &Asm, const MCFragment &F, const MCFixup &Fixup,
-                const MCValue &Target, uint64_t &FixedValue, bool IsResolved,
-                const MCSubtargetInfo *) override;
+                const MCValue &Target, uint64_t &FixedValue,
+                bool IsResolved) override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

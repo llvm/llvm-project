@@ -370,8 +370,7 @@ AVRAsmBackend::createObjectTargetWriter() const {
 
 bool AVRAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
                              const MCFixup &Fixup, const MCValue &Target,
-                             uint64_t &FixedValue, bool IsResolved,
-                             const MCSubtargetInfo *STI) {
+                             uint64_t &FixedValue, bool IsResolved) {
   // AVR sets the fixup value to bypass the assembly time overflow with a
   // relocation.
   if (IsResolved) {
