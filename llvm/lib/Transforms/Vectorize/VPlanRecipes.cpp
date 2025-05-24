@@ -462,6 +462,26 @@ Value *VPInstruction::generatePerLane(VPTransformState &State,
                               State.get(getOperand(1), Lane), Name);
 }
 
+/// Create a conditional branch using \p Cond branching to the successors of \p
+/// VPBB. Note that the first successor is always forward (i.e. not created yet)
+/// while the second successor may already have been created (if it is a header
+/// block and VPBB is a latch).
+static BranchInst *createCondBranch(Value *Cond, VPBasicBlock *VPBB,
+                                    VPTransformState &State) {
+  // Replace the temporary unreachable terminator with a new conditional
+  // branch, hooking it up to backward destination (header) for latch blocks
+  // now, and to forward destination(s) later when they are created.
+  // Second successor may be backwards - iff it is already in VPBB2IRBB.
+  VPBasicBlock *SecondVPSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
+  BasicBlock *SecondIRSucc = State.CFG.VPBB2IRBB.lookup(SecondVPSucc);
+  BasicBlock *IRBB = State.CFG.VPBB2IRBB[VPBB];
+  BranchInst *CondBr = State.Builder.CreateCondBr(Cond, IRBB, SecondIRSucc);
+  // First successor is always forward, reset it to nullptr
+  CondBr->setSuccessor(0, nullptr);
+  IRBB->getTerminator()->eraseFromParent();
+  return CondBr;
+}
+
 Value *VPInstruction::generate(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
 
@@ -581,43 +601,14 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::BranchOnCond: {
     Value *Cond = State.get(getOperand(0), VPLane(0));
-    // Replace the temporary unreachable terminator with a new conditional
-    // branch, hooking it up to backward destination for exiting blocks now and
-    // to forward destination(s) later when they are created.
-    BranchInst *CondBr =
-        Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
-    CondBr->setSuccessor(0, nullptr);
-    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
-
-    if (!getParent()->isExiting())
-      return CondBr;
-
-    VPRegionBlock *ParentRegion = getParent()->getParent();
-    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
-    CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
-    return CondBr;
+    return createCondBranch(Cond, getParent(), State);
   }
   case VPInstruction::BranchOnCount: {
     // First create the compare.
     Value *IV = State.get(getOperand(0), /*IsScalar*/ true);
     Value *TC = State.get(getOperand(1), /*IsScalar*/ true);
     Value *Cond = Builder.CreateICmpEQ(IV, TC);
-
-    // Now create the branch.
-    auto *Plan = getParent()->getPlan();
-    VPRegionBlock *TopRegion = Plan->getVectorLoopRegion();
-    VPBasicBlock *Header = TopRegion->getEntry()->getEntryBasicBlock();
-
-    // Replace the temporary unreachable terminator with a new conditional
-    // branch, hooking it up to backward destination (the header) now and to the
-    // forward destination (the exit/middle block) later when it is created.
-    // Note that CreateCondBr expects a valid BB as first argument, so we need
-    // to set it to nullptr later.
-    BranchInst *CondBr = Builder.CreateCondBr(Cond, Builder.GetInsertBlock(),
-                                              State.CFG.VPBB2IRBB[Header]);
-    CondBr->setSuccessor(0, nullptr);
-    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
-    return CondBr;
+    return createCondBranch(Cond, getParent(), State);
   }
   case VPInstruction::Broadcast: {
     return Builder.CreateVectorSplat(
@@ -1127,10 +1118,6 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
 
 void VPPhi::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
-  assert(getParent() ==
-             getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
-         "VPInstructions with PHI opcodes must be used for header phis only "
-         "at the moment");
   BasicBlock *VectorPH = State.CFG.VPBB2IRBB.at(getIncomingBlock(0));
   Value *Start = State.get(getIncomingValue(0), VPLane(0));
   PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, getName());

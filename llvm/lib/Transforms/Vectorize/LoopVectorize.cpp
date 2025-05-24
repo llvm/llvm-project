@@ -2781,13 +2781,13 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   PSE.getSE()->forgetLoop(OrigLoop);
   PSE.getSE()->forgetBlockAndLoopDispositions();
 
-  // Don't apply optimizations below when no vector region remains, as they all
-  // require a vector loop at the moment.
-  if (!State.Plan->getVectorLoopRegion())
+  // Don't apply optimizations below when no (vector) loop remains, as they all
+  // require one at the moment.
+  VPBasicBlock *HeaderVPBB =
+      vputils::getFirstLoopHeader(*State.Plan, State.VPDT);
+  if (!HeaderVPBB)
     return;
 
-  VPRegionBlock *VectorRegion = State.Plan->getVectorLoopRegion();
-  VPBasicBlock *HeaderVPBB = VectorRegion->getEntryBasicBlock();
   BasicBlock *HeaderBB = State.CFG.VPBB2IRBB[HeaderVPBB];
 
   // Remove redundant induction instructions.
@@ -2812,7 +2812,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
 }
 
 void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
-  auto Iter = vp_depth_first_deep(Plan.getEntry());
+  auto Iter = vp_depth_first_shallow(Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &P : VPBB->phis()) {
       VPWidenPHIRecipe *VPPhi = dyn_cast<VPWidenPHIRecipe>(&P);
@@ -7623,6 +7623,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
+
+  // Retrieve and store the middle block before dissolving regions. Regions are
+  // dissolved after optimizing for VF and UF, which completely removes unneeded
+  // loop regions first.
+  VPBasicBlock *MiddleVPBB =
+      BestVPlan.getVectorLoopRegion() ? BestVPlan.getMiddleBlock() : nullptr;
+  VPlanTransforms::dissolveLoopRegions(BestVPlan);
   VPlanTransforms::convertToConcreteRecipes(BestVPlan,
                                             *Legal->getWidestInductionType());
   // Perform the actual loop transformation.
@@ -7720,14 +7727,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 2.6. Maintain Loop Hints
   // Keep all loop hints from the original loop on the vector loop (we'll
   // replace the vectorizer-specific hints below).
-  if (auto *LoopRegion = BestVPlan.getVectorLoopRegion()) {
+  VPBasicBlock *HeaderVPBB = vputils::getFirstLoopHeader(BestVPlan, State.VPDT);
+  if (HeaderVPBB) {
     MDNode *OrigLoopID = OrigLoop->getLoopID();
 
     std::optional<MDNode *> VectorizedLoopID =
         makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                         LLVMLoopVectorizeFollowupVectorized});
 
-    VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
     Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
     if (VectorizedLoopID) {
       L->setLoopID(*VectorizedLoopID);
@@ -7773,8 +7780,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   ILV.printDebugTracesAtEnd();
 
   // 4. Adjust branch weight of the branch in the middle block.
-  if (BestVPlan.getVectorLoopRegion()) {
-    auto *MiddleVPBB = BestVPlan.getMiddleBlock();
+  if (HeaderVPBB) {
     auto *MiddleTerm =
         cast<BranchInst>(State.CFG.VPBB2IRBB[MiddleVPBB]->getTerminator());
     if (MiddleTerm->isConditional() &&
