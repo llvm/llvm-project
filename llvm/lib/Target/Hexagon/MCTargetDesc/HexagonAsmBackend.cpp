@@ -407,10 +407,9 @@ public:
   /// ApplyFixup - Apply the \arg Value for given \arg Fixup into the provided
   /// data fragment, at the offset specified by the fixup and following the
   /// fixup kind as appropriate.
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+  void applyFixup(const MCFragment &, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t FixupValue, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
+                  uint64_t FixupValue, bool IsResolved) override {
 
     // When FixupValue is 0 the relocation is external and there
     // is nothing for us to do.
