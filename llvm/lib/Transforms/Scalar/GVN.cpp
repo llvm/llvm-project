@@ -42,6 +42,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -832,6 +833,7 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
   auto *MemDep =
       isMemDepEnabled() ? &AM.getResult<MemoryDependenceAnalysis>(F) : nullptr;
@@ -843,7 +845,7 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
     MSSA = &AM.getResult<MemorySSAAnalysis>(F);
   }
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
+  bool Changed = runImpl(F, AC, DT, TLI, TTI, AA, MemDep, LI, &ORE,
                          MSSA ? &MSSA->getMSSA() : nullptr);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -2719,6 +2721,16 @@ bool GVNPass::processInstruction(Instruction *I) {
     return false;
   }
 
+  // If this GVN would effectively hoist the instruction and that's known to be
+  // unprofitable, don't do it. Remember the instruction so that it can be used
+  // by other instructions in the same block.
+  if (auto *ReplI = dyn_cast<Instruction>(I)) {
+    if (ReplI->getParent() != I->getParent() && !TTI->isProfitableToHoist(I)) {
+      LeaderTable.insert(Num, I, I->getParent());
+      return false;
+    }
+  }
+
   // Remove it!
   patchAndReplaceAllUsesWith(I, Repl);
   if (MD && Repl->getType()->isPtrOrPtrVectorTy())
@@ -2729,13 +2741,15 @@ bool GVNPass::processInstruction(Instruction *I) {
 
 /// runOnFunction - This is the main transformation entry point for a function.
 bool GVNPass::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
-                      const TargetLibraryInfo &RunTLI, AAResults &RunAA,
+                      const TargetLibraryInfo &RunTLI,
+                      const TargetTransformInfo &RunTTI, AAResults &RunAA,
                       MemoryDependenceResults *RunMD, LoopInfo &LI,
                       OptimizationRemarkEmitter *RunORE, MemorySSA *MSSA) {
   AC = &RunAC;
   DT = &RunDT;
   VN.setDomTree(DT);
   TLI = &RunTLI;
+  TTI = &RunTTI;
   VN.setAliasAnalysis(&RunAA);
   MD = RunMD;
   ImplicitControlFlowTracking ImplicitCFT;
@@ -3295,6 +3309,7 @@ public:
         F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
         getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F),
+        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
         getAnalysis<AAResultsWrapperPass>().getAAResults(),
         Impl.isMemDepEnabled()
             ? &getAnalysis<MemoryDependenceWrapperPass>().getMemDep()
@@ -3308,6 +3323,7 @@ public:
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     if (Impl.isMemDepEnabled())
       AU.addRequired<MemoryDependenceWrapperPass>();
