@@ -301,8 +301,12 @@ $insert_f[[]]$insert_vector[[]]
   Findings.UnusedIncludes.clear();
   std::vector<clangd::Diag> Diags = issueIncludeCleanerDiagnostics(
       AST, TU.Code, Findings, MockFS(),
-      {[](llvm::StringRef Header) { return Header.ends_with("buzz.h"); }},
-      {[](llvm::StringRef Header) { return Header.contains("b_angled.h"); }});
+      /*IgnoreHeaders=*/{[](llvm::StringRef Header) {
+        return Header.ends_with("buzz.h");
+      }},
+      /*AngledHeaders=*/{[](llvm::StringRef Header) {
+        return Header.contains("b_angled.h");
+      }});
   EXPECT_THAT(
       Diags,
       UnorderedElementsAre(
