@@ -1,0 +1,68 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_TEXT_ENCODING
+#define _LIBCPP_TEXT_ENCODING
+
+/* text_encoding synopsis 
+namespace std {
+
+struct text_encoding;
+
+// [text.encoding.hash], hash support
+template<class T> struct hash;
+template<> struct hash<text_encoding>;
+
+struct text_encoding 
+{
+    static constexpr size_t max_name_length = 63;
+
+    // [text.encoding.id], enumeration text_encoding​::​id
+    enum class id : int_least32_t {
+      see below
+    };
+    using enum id;
+
+    constexpr text_encoding() = default;
+    constexpr explicit text_encoding(string_view enc) noexcept;
+    constexpr text_encoding(id i) noexcept;
+
+    constexpr id mib() const noexcept;
+    constexpr const char* name() const noexcept;
+
+    // [text.encoding.aliases], class text_encoding​::​aliases_view
+    struct aliases_view;
+    constexpr aliases_view aliases() const noexcept;
+
+    friend constexpr bool operator==(const text_encoding& a,
+                                     const text_encoding& b) noexcept;
+    friend constexpr bool operator==(const text_encoding& encoding, id i) noexcept;
+
+    static consteval text_encoding literal() noexcept;
+    static text_encoding environment();
+    template<id i> static bool environment_is();
+
+  private:
+    id mib_ = id::unknown;                                              // exposition only
+    char name_[max_name_length + 1] = {0};                              // exposition only
+    static constexpr bool comp-name(string_view a, string_view b);      // exposition only
+};
+}
+
+*/
+
+#include <__config>
+
+#if _LIBCPP_STD_VER >= 26
+#    include <__text_encoding/text_encoding.h> 
+#endif // _LIBCPP_STD_VER >= 26
+
+#include <version> 
+
+#endif // _LIBCPP_TEXT_ENCODING 
