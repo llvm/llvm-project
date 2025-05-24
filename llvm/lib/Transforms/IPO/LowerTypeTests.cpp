@@ -983,11 +983,10 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
   auto ImportGlobal = [&](StringRef Name) {
     // Give the global a type of length 0 so that it is not assumed not to alias
     // with any other global.
-    Constant *C = M.getOrInsertGlobal(("__typeid_" + TypeId + "_" + Name).str(),
-                                      Int8Arr0Ty);
-    if (auto *GV = dyn_cast<GlobalVariable>(C))
-      GV->setVisibility(GlobalValue::HiddenVisibility);
-    return C;
+    GlobalVariable *GV = M.getOrInsertGlobal(
+        ("__typeid_" + TypeId + "_" + Name).str(), Int8Arr0Ty);
+    GV->setVisibility(GlobalValue::HiddenVisibility);
+    return GV;
   };
 
   auto ImportConstant = [&](StringRef Name, uint64_t Const, unsigned AbsWidth,
@@ -1020,8 +1019,14 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
     return C;
   };
 
-  if (TIL.TheKind != TypeTestResolution::Unsat)
-    TIL.OffsetedGlobal = ImportGlobal("global_addr");
+  if (TIL.TheKind != TypeTestResolution::Unsat) {
+    auto *GV = ImportGlobal("global_addr");
+    // This is either a vtable (in .data.rel.ro) or a jump table (in .text).
+    // Either way it's expected to be in the low 2 GiB, so set the small code
+    // model.
+    GV->setCodeModel(CodeModel::Small);
+    TIL.OffsetedGlobal = GV;
+  }
 
   if (TIL.TheKind == TypeTestResolution::ByteArray ||
       TIL.TheKind == TypeTestResolution::Inline ||
