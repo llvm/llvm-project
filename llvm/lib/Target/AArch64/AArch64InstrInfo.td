@@ -1943,7 +1943,7 @@ let Predicates = [HasPAuth] in {
   def AUT : Pseudo<(outs), (ins i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
                    []>, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
-    let hasSideEffects = 1;
+    let hasSideEffects = 0;
     let mayStore = 0;
     let mayLoad = 0;
     let Size = 32;
@@ -1960,7 +1960,7 @@ let Predicates = [HasPAuth] in {
                     i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
                []>, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
-    let hasSideEffects = 1;
+    let hasSideEffects = 0;
     let mayStore = 0;
     let mayLoad = 0;
     let Size = 48;
