@@ -17,7 +17,13 @@
 
 namespace opts {
 
-extern bool HeatmapMode;
+enum HeatmapModeKind {
+  HM_None = 0,
+  HM_Exclusive, // llvm-bolt-heatmap
+  HM_Optional   // perf2bolt --heatmap
+};
+
+extern HeatmapModeKind HeatmapMode;
 extern bool BinaryAnalysisMode;
 
 extern llvm::cl::OptionCategory BoltCategory;
@@ -45,6 +51,7 @@ extern llvm::cl::opt<unsigned> HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
 extern llvm::cl::opt<bool> HeatmapPrintMappings;
+extern llvm::cl::opt<std::string> HeatmapOutput;
 extern llvm::cl::opt<bool> HotData;
 extern llvm::cl::opt<bool> HotFunctionsAtEnd;
 extern llvm::cl::opt<bool> HotText;

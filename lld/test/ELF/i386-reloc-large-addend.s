@@ -4,7 +4,7 @@
 // RUN: echo ".global foo; foo = 0x1" > %t1.s
 // RUN: llvm-mc %t1.s -o %t1.o -triple i386-pc-linux -filetype=obj
 
-// RUN: ld.lld -Ttext 0x7000 %t.o %t1.o -o %t
+// RUN: ld.lld --image-base=0x7000 -Ttext 0x7000 %t.o %t1.o -o %t
 // RUN: llvm-objdump -d --triple=i386-pc-linux-code16 %t | FileCheck %s
 
 // CHECK:        Disassembly of section .text:

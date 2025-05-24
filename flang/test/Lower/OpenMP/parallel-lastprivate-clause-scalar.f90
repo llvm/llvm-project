@@ -226,8 +226,7 @@ end subroutine
 ! Firstprivate update
 
 
-!CHECK-NEXT: omp.barrier
-!CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[CLONE1:.*]], @{{.*}} %{{.*}}#0 -> %[[IV:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+!CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[CLONE1:.*]], @{{.*}} %{{.*}}#0 -> %[[IV:.*]] : !fir.ref<i32>, !fir.ref<i32>) private_barrier {
 !CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 !CHECK: %[[CLONE1_DECL:.*]]:2 = hlfir.declare %[[CLONE1]] {uniq_name = "_QFfirstpriv_lastpriv_int2Earg1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 

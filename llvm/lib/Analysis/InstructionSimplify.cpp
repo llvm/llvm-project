@@ -26,6 +26,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
