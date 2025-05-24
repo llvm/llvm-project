@@ -105,6 +105,36 @@ def dump_dap_log(log_file):
     print("========= END =========", file=sys.stderr)
 
 
+class Source(object):
+    def __init__(
+        self, path: Optional[str] = None, source_reference: Optional[int] = None
+    ):
+        self._name = None
+        self._path = None
+        self._source_reference = None
+
+        if path is not None:
+            self._name = os.path.basename(path)
+            self._path = path
+        elif source_reference is not None:
+            self._source_reference = source_reference
+        else:
+            raise ValueError("Either path or source_reference must be provided")
+
+    def __str__(self):
+        return f"Source(name={self.name}, path={self.path}), source_reference={self.source_reference})"
+
+    def as_dict(self):
+        source_dict = {}
+        if self._name is not None:
+            source_dict["name"] = self._name
+        if self._path is not None:
+            source_dict["path"] = self._path
+        if self._source_reference is not None:
+            source_dict["sourceReference"] = self._source_reference
+        return source_dict
+
+
 class DebugCommunication(object):
     def __init__(
         self,
@@ -949,15 +979,13 @@ class DebugCommunication(object):
         command_dict = {"command": "scopes", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_setBreakpoints(self, file_path, line_array, data=None):
+    def request_setBreakpoints(self, source: Source, line_array, data=None):
         """data is array of parameters for breakpoints in line_array.
         Each parameter object is 1:1 mapping with entries in line_entry.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        (dir, base) = os.path.split(file_path)
-        source_dict = {"name": base, "path": file_path}
         args_dict = {
-            "source": source_dict,
+            "source": source.as_dict(),
             "sourceModified": False,
         }
         if line_array is not None:
@@ -1382,7 +1410,7 @@ def run_vscode(dbg, args, options):
                 else:
                     source_to_lines[path] = [int(line)]
         for source in source_to_lines:
-            dbg.request_setBreakpoints(source, source_to_lines[source])
+            dbg.request_setBreakpoints(Source(source), source_to_lines[source])
     if options.funcBreakpoints:
         dbg.request_setFunctionBreakpoints(options.funcBreakpoints)
 

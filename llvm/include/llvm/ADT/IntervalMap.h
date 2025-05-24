@@ -2132,9 +2132,10 @@ class IntervalMapOverlaps {
       posB.advanceTo(posA.start());
       if (!posB.valid() || !Traits::stopLess(posA.stop(), posB.start()))
         return;
-    } else
+    } else {
       // Already overlapping.
       return;
+    }
 
     while (true) {
       // Make a.end > b.start.
