@@ -2094,12 +2094,12 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
   return true;
 }
 
-// Find constant NewC that has property:
-//   shuffle(NewC, ShMask) = C
-// Returns nullptr if such a constant does not exist e.g. ShMask=<0,0> C=<1,2>
-//
-// A 1-to-1 mapping is not required. Example:
-// ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <poison,5,6,poison>
+/// Find a constant NewC that has property:
+///   shuffle(NewC, ShMask) = C
+/// Returns nullptr if such a constant does not exist e.g. ShMask=<0,0> C=<1,2>
+///
+/// A 1-to-1 mapping is not required. Example:
+/// ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <poison,5,6,poison>
 static Constant *unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
                                    VectorType *NewCTy) {
   if (isa<ScalableVectorType>(NewCTy)) {
