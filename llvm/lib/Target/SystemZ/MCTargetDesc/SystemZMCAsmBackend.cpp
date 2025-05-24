@@ -114,7 +114,7 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                             const MCValue &, const MCSubtargetInfo *) override;
+                             const MCValue &) override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -157,8 +157,7 @@ MCFixupKindInfo SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
 bool SystemZMCAsmBackend::shouldForceRelocation(const MCAssembler &,
                                                 const MCFixup &,
-                                                const MCValue &Target,
-                                                const MCSubtargetInfo *) {
+                                                const MCValue &Target) {
   return Target.getSpecifier();
 }
 

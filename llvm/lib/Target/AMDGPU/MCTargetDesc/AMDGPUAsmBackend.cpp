@@ -53,7 +53,7 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                             const MCValue &, const MCSubtargetInfo *) override;
+                             const MCValue &) override;
 };
 
 } //End anonymous namespace
@@ -194,8 +194,7 @@ MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
 bool AMDGPUAsmBackend::shouldForceRelocation(const MCAssembler &,
                                              const MCFixup &,
-                                             const MCValue &Target,
-                                             const MCSubtargetInfo *) {
+                                             const MCValue &Target) {
   return Target.getSpecifier();
 }
 
