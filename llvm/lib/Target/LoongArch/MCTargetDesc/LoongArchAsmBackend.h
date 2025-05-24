@@ -51,7 +51,7 @@ public:
   bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                      MCAlignFragment &AF) override;
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+  bool shouldForceRelocation(const MCFixup &Fixup,
                              const MCValue &Target) override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;

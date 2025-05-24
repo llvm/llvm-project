@@ -250,8 +250,7 @@ bool CSKYAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   }
 }
 
-bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                           const MCFixup &Fixup,
+bool CSKYAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
                                            const MCValue &Target /*STI*/) {
   if (Target.getSpecifier())
     return true;

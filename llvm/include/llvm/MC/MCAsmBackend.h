@@ -95,8 +95,7 @@ public:
   virtual MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const;
 
   // Hook used by the default `addReloc` to check if a relocation is needed.
-  virtual bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                                     const MCValue &) {
+  virtual bool shouldForceRelocation(const MCFixup &, const MCValue &) {
     return false;
   }
 
