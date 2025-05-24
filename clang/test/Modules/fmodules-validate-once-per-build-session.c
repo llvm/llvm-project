@@ -60,6 +60,7 @@
 
 // ===
 // Change the sources.
+// RUN: sleep 1
 // RUN: echo 'void meow2(void);' > %t/Inputs/foo.h
 // RUN: echo 'module Bar { header "bar.h" export * }' > %t/Inputs/bar.modulemap
 
@@ -95,7 +96,7 @@
 // ===
 // Recompile the module if the today's date is before 01 January 2100.
 // RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=4102441200 -fmodules-validate-once-per-build-session %s
-// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user -fsyntax-only -I %t/Inputs -fno-modules-force-validate-user-headers -fmodules-validate-system-headers -fbuild-session-timestamp=4102441200 -fmodules-validate-once-per-build-session %s
+// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user -fsyntax-only -I %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=4102441200 -fmodules-validate-once-per-build-session %s
 // RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user-no-force -fsyntax-only -I %t/Inputs -fno-modules-force-validate-user-headers -fmodules-validate-system-headers -fbuild-session-timestamp=4102441200 -fmodules-validate-once-per-build-session %s
 // RUN: ls -R %t/modules-cache | grep Foo.pcm.timestamp
 // RUN: ls -R %t/modules-cache | grep Bar.pcm.timestamp

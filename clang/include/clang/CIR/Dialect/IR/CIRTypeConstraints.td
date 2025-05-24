@@ -32,6 +32,12 @@ class CIR_ConfinedType<Type type, list<Pred> preds, string summary = "">
          summary, type.cppType>;
 
 //===----------------------------------------------------------------------===//
+// Bool Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_AnyBoolType : CIR_TypeBase<"::cir::BoolType", "boolean type">;
+
+//===----------------------------------------------------------------------===//
 // IntType predicates
 //===----------------------------------------------------------------------===//
 
@@ -173,5 +179,36 @@ def CIR_PtrToVoidPtrType
       BuildableType<"$_builder.getType<" # cppType # ">("
         "$_builder.getType<" # cppType # ">("
         "cir::VoidType::get($_builder.getContext())))">;
+
+//===----------------------------------------------------------------------===//
+// Vector Type predicates
+//===----------------------------------------------------------------------===//
+
+// Vector of integral type
+def IntegerVector : Type<
+    And<[
+      CPred<"::mlir::isa<::cir::VectorType>($_self)">,
+      CPred<"::mlir::isa<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getElementType())">,
+      CPred<"::mlir::cast<::cir::IntType>("
+            "::mlir::cast<::cir::VectorType>($_self).getElementType())"
+            ".isFundamental()">
+    ]>, "!cir.vector of !cir.int"> {
+}
+
+// Any Integer or Vector of Integer Constraints
+def CIR_AnyIntOrVecOfInt: AnyTypeOf<[CIR_AnyIntType, IntegerVector]>;
+
+//===----------------------------------------------------------------------===//
+// Scalar Type predicates
+//===----------------------------------------------------------------------===//
+
+defvar CIR_ScalarTypes = [
+    CIR_AnyBoolType, CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType
+];
+
+def CIR_AnyScalarType : AnyTypeOf<CIR_ScalarTypes, "cir scalar type"> {
+  let cppFunctionName = "isScalarType";
+}
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPECONSTRAINTS_TD
