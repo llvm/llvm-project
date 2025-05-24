@@ -25,15 +25,17 @@ class RISCVAsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
   uint8_t OSABI;
   bool Is64Bit;
-  bool ForceRelocs = false;
   const MCTargetOptions &TargetOptions;
+  // Temporary symbol used to check whether a PC-relative fixup is resolved.
+  MCSymbol *PCRelTemp = nullptr;
+
+  bool isPCRelFixupResolved(const MCAssembler &Asm, const MCSymbol *SymA,
+                            const MCFragment &F);
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options);
   ~RISCVAsmBackend() override = default;
-
-  void setForceRelocs() { ForceRelocs = true; }
 
   // Return Size with extra Nop Bytes for alignment directive in code section.
   bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
@@ -59,10 +61,6 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
-
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
 
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                     const MCFixup &, const MCValue &, uint64_t,
