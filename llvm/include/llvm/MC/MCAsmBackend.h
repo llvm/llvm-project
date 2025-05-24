@@ -120,8 +120,7 @@ public:
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
 
-  virtual bool addReloc(MCAssembler &Asm, const MCFragment &F,
-                        const MCFixup &Fixup, const MCValue &Target,
+  virtual bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                         uint64_t &FixedValue, bool IsResolved);
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
