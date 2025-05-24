@@ -24,7 +24,6 @@
 #  include <__assert>
 #  include <__functional/hash.h>
 #  include <__iterator/iterator_traits.h>
-#  include <__locale_dir/locale_base_api.h>
 #  include <__ranges/view_interface.h>
 #  include <__string/char_traits.h>
 #  include <__utility/unreachable.h>
