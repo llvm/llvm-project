@@ -143,7 +143,7 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
 
     llvm::StringRef HeaderRef{Spelling};
     bool Angled = HeaderRef.starts_with("<");
-    for (auto Filter : AngledHeaders) {
+    for (auto &Filter : AngledHeaders) {
       if (Filter(HeaderRef)) {
         Angled = true;
         break;
