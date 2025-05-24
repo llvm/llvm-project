@@ -51,8 +51,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
   StringRef getPassName() const override {

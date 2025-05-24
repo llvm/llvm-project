@@ -164,6 +164,8 @@ def err_ice_too_large : Error<
   "integer constant expression evaluates to value %0 that cannot be "
   "represented in a %1-bit %select{signed|unsigned}2 integer type">;
 def err_expr_not_string_literal : Error<"expression is not a string literal">;
+def note_constexpr_assert_failed : Note<
+  "assertion failed during evaluation of constant expression">;
 
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<
@@ -3255,8 +3257,7 @@ def err_attribute_too_few_arguments : Error<
   "%0 attribute takes at least %1 argument%s1">;
 def err_attribute_invalid_vector_type : Error<"invalid vector element type %0">;
 def err_attribute_invalid_bitint_vector_type : Error<
-  "'_BitInt' %select{vector|matrix}0 element width must be %select{a power of 2|"
-  "at least as wide as 'CHAR_BIT'}1">;
+  "'_BitInt' %select{vector|matrix}0 element width must be a power of 2">;
 def err_attribute_invalid_matrix_type : Error<"invalid matrix element type %0">;
 def err_attribute_bad_neon_vector_size : Error<
   "Neon vector size must be 64 or 128 bits">;
@@ -4366,6 +4367,29 @@ def warn_address_of_reference_bool_conversion : Warning<
   "reference cannot be bound to dereferenced null pointer in well-defined C++ "
   "code; pointer may be assumed to always convert to true">,
   InGroup<UndefinedBoolConversion>;
+
+def warn_impcast_unicode_char_type
+    : Warning<"implicit conversion from %0 to %1 may change the meaning of the "
+              "represented code unit">,
+      InGroup<CharacterConversion>;
+def warn_impcast_unicode_precision
+    : Warning<"implicit conversion from %0 to %1 may lose precision and change "
+              "the meaning of the represented code unit">,
+      InGroup<CharacterConversion>;
+def warn_impcast_unicode_char_type_constant
+    : Warning<"implicit conversion from %0 to %1 changes the meaning of the "
+              "%select{code unit|code point}2 '%3'">,
+      InGroup<CharacterConversion>;
+
+def warn_comparison_unicode_mixed_types
+    : Warning<"comparing values of different Unicode code unit types %0 and %1 "
+              "may compare different code points">,
+      InGroup<CharacterConversion>;
+
+def warn_comparison_unicode_mixed_types_constant
+    : Warning<"comparing values of different Unicode code unit types %0 and %1 "
+              "compares unrelated code units '%2' and '%3'">,
+      InGroup<CharacterConversion>;
 
 def warn_xor_used_as_pow : Warning<
   "result of '%0' is %1; did you mean exponentiation?">,
@@ -6014,6 +6038,8 @@ def note_not_found_by_two_phase_lookup : Note<"%0 should be declared prior to th
 def err_undeclared_use : Error<"use of undeclared %0">;
 def warn_deprecated : Warning<"%0 is deprecated">,
     InGroup<DeprecatedDeclarations>;
+def warn_deprecated_switch_case : Warning<warn_deprecated.Summary>,
+    InGroup<DeprecatedSwitchCase>;
 def note_from_diagnose_if : Note<"from 'diagnose_if' attribute on %0:">;
 def warn_property_method_deprecated :
     Warning<"property access is using %0 method which is deprecated">,
@@ -6541,6 +6567,13 @@ def note_change_bitfield_sign : Note<
   "consider making the bit-field type %select{unsigned|signed}0">;
 def note_bitfield_preferred_type
     : Note<"preferred type for bit-field %0 specified here">;
+def warn_ms_bitfield_mismatched_storage_packing : Warning<
+  "bit-field %0 of type %1 has a different storage size than the "
+  "preceding bit-field (%2 vs %3 bytes) and will not be packed under "
+  "the Microsoft ABI">,
+  InGroup<MSBitfieldCompatibility>, DefaultIgnore;
+def note_ms_bitfield_mismatched_storage_size_previous : Note<
+  "preceding bit-field %0 declared here with type %1">;
 
 def warn_missing_braces : Warning<
   "suggest braces around initialization of subobject">,
@@ -6825,7 +6858,7 @@ def err_counted_by_on_incomplete_type_on_use : Error <
 
 def note_counted_by_consider_completing_pointee_ty : Note<
   "consider providing a complete definition for %0">;
-  
+
 def note_counted_by_consider_using_sized_by : Note<
   "consider using '__sized_by%select{|_or_null}0' instead of "
   "'__counted_by%select{|_or_null}0'">;
@@ -7723,6 +7756,11 @@ def warn_comparison_of_mixed_enum_types_switch : Warning<
   "comparison of different enumeration types in switch statement"
   "%diff{ ($ and $)|}0,1">,
   InGroup<EnumCompareSwitch>;
+
+def warn_arith_conv_mixed_unicode_types
+    : Warning<"%sub{select_arith_conv_kind}0 "
+              "different Unicode character types %1 and %2">,
+      InGroup<CharacterConversion>;
 
 def err_typecheck_assign_const : Error<
   "%select{"
@@ -10176,6 +10214,9 @@ def note_defaulted_comparison_no_viable_function_synthesized : Note<
 def note_defaulted_comparison_not_rewritten_callee : Note<
   "defaulted %0 is implicitly deleted because this non-rewritten comparison "
   "function would be the best match for the comparison">;
+def note_defaulted_comparison_vector_types : Note<
+  "defaulted %0 is implicitly deleted because defaulted comparison of vector "
+  "types is not supported">;
 def note_defaulted_comparison_not_rewritten_conversion : Note<
   "defaulted %0 is implicitly deleted because a builtin comparison function "
   "using this conversion would be the best match for the comparison">;
@@ -12405,6 +12446,10 @@ def warn_zero_as_null_pointer_constant : Warning<
   "zero as null pointer constant">,
   InGroup<DiagGroup<"zero-as-null-pointer-constant">>, DefaultIgnore;
 
+def warn_not_eliding_copy_on_return : Warning<
+  "not eliding copy on return">, 
+  InGroup<DiagGroup<"nrvo">>, DefaultIgnore;
+
 def err_nullability_cs_multilevel : Error<
   "nullability keyword %0 cannot be applied to multi-level pointer type %1">;
 def note_nullability_type_specifier : Note<
@@ -12668,7 +12713,7 @@ def err_builtin_invalid_arg_type: Error<
   // An 'or' if non-empty second and third components are combined
   "%plural{0:|:%plural{0:|:or }2}3"
   // Third component: floating-point types
-  "%select{|floating-point}3"
+  "%select{|floating-point|16 or 32 bit floating-point}3"
   // A space after a non-empty third component
   "%plural{0:|: }3"
   "%plural{[0,3]:type|:types}1 (was %4)">;
@@ -13005,6 +13050,8 @@ def err_wasm_reftype_multidimensional_array : Error<
   "multi-dimensional arrays of WebAssembly references are not allowed">;
 def err_wasm_builtin_arg_must_be_table_type : Error <
   "%ordinal0 argument must be a WebAssembly table">;
+def err_wasm_builtin_arg_must_be_externref_type : Error <
+  "%ordinal0 argument must be an externref">;
 def err_wasm_builtin_arg_must_match_table_element_type : Error <
   "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
 def err_wasm_builtin_arg_must_be_integer_type : Error <

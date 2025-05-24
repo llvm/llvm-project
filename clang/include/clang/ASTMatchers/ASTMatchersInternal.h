@@ -2161,8 +2161,10 @@ inline const Expr *getSubExpr(const NodeType &Node) {
 template <>
 inline const Expr *
 getSubExpr<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
-  if (!internal::equivalentUnaryOperator(Node))
+  if (!internal::equivalentUnaryOperator(Node) &&
+      Node.getOperator() != OO_Arrow) {
     return nullptr;
+  }
   return Node.getArg(0);
 }
 
@@ -2223,14 +2225,9 @@ inline StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
   return Node.getOpcodeStr();
 }
 inline std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
-  auto optBinaryOpcode = equivalentBinaryOperator(Node);
-  if (!optBinaryOpcode) {
-    auto optUnaryOpcode = equivalentUnaryOperator(Node);
-    if (!optUnaryOpcode)
-      return std::nullopt;
-    return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
-  }
-  return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+  if (const char *Str = getOperatorSpelling(Node.getOperator()))
+    return Str;
+  return std::nullopt;
 }
 inline StringRef getOpName(const CXXFoldExpr &Node) {
   return BinaryOperator::getOpcodeStr(Node.getOperator());
@@ -2271,14 +2268,9 @@ private:
     return Node.getOpcodeStr();
   }
   static std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
-    auto optBinaryOpcode = equivalentBinaryOperator(Node);
-    if (!optBinaryOpcode) {
-      auto optUnaryOpcode = equivalentUnaryOperator(Node);
-      if (!optUnaryOpcode)
-        return std::nullopt;
-      return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
-    }
-    return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+    if (const char *Str = getOperatorSpelling(Node.getOperator()))
+      return Str;
+    return std::nullopt;
   }
 
   std::vector<std::string> Names;
