@@ -437,11 +437,10 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
                                    const MCFixup &Fixup, const MCValue &Target,
-                                   uint64_t &FixedValue, bool IsResolved,
-                                   const MCSubtargetInfo *CurSTI) {
+                                   uint64_t &FixedValue, bool IsResolved) {
   auto Fallback = [&]() {
-    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved,
-                                  CurSTI);
+    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
+                                  IsResolved);
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
