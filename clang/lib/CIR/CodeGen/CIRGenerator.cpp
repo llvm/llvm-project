@@ -69,6 +69,20 @@ bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
   return true;
 }
 
+void CIRGenerator::HandleTranslationUnit(ASTContext &astContext) {
+  // Release the Builder when there is no error.
+  if (!diags.hasErrorOccurred() && cgm)
+    cgm->release();
+
+  // If there are errors before or when releasing the CGM, reset the module to
+  // stop here before invoking the backend.
+  if (diags.hasErrorOccurred()) {
+    if (cgm)
+      // TODO: cgm->clear();
+      return;
+  }
+}
+
 void CIRGenerator::HandleInlineFunctionDefinition(FunctionDecl *d) {
   if (diags.hasErrorOccurred())
     return;
