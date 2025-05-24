@@ -126,7 +126,7 @@ bool MCAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;
   if (!IsResolved)
-    Asm->getWriter().recordRelocation(*Asm, &F, Fixup, Target, FixedValue);
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
   return IsResolved;
 }
 

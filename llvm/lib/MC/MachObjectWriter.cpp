@@ -511,8 +511,7 @@ static bool isFixupTargetValid(const MCValue &Target) {
   return true;
 }
 
-void MachObjectWriter::recordRelocation(MCAssembler &Asm,
-                                        const MCFragment *Fragment,
+void MachObjectWriter::recordRelocation(const MCFragment &F,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
   if (!isFixupTargetValid(Target)) {
@@ -521,7 +520,7 @@ void MachObjectWriter::recordRelocation(MCAssembler &Asm,
     return;
   }
 
-  TargetObjectWriter->recordRelocation(this, Asm, Fragment, Fixup, Target,
+  TargetObjectWriter->recordRelocation(this, *Asm, &F, Fixup, Target,
                                        FixedValue);
 }
 
