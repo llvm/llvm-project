@@ -173,7 +173,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::EXP10_F64, "__exp10");
   }
 
-  if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
+  if (TT.isGNUEnvironment() || TT.isOSFuchsia() || TT.isAmazonLinux() ||
       (TT.isAndroid() && !TT.isAndroidVersionLT(9))) {
     setLibcallName(RTLIB::SINCOS_F32, "sincosf");
     setLibcallName(RTLIB::SINCOS_F64, "sincos");
