@@ -21,7 +21,7 @@
 // 2. Default constructing a text_encoding object makes it so that mib() == id::unknown, and its name is empty
 
 #include <cassert>
-#include <cstring>
+#include <string_view>
 #include <text_encoding>
 #include <type_traits>
 
@@ -34,6 +34,11 @@ int main(int, char**) {
   {
     auto te = std::text_encoding();
     assert(te.mib() == std::text_encoding::id::unknown);
-    assert(strcmp(te.name(), "") == 0);
+    assert(std::string_view("").compare(te.name()) == 0);
+  }
+  {
+    constexpr auto te = std::text_encoding();
+    static_assert(te.mib() == std::text_encoding::id::unknown);
+    static_assert(std::string_view("").compare(te.name()) == 0);
   }
 }

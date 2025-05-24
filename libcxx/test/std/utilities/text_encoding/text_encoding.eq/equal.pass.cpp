@@ -14,7 +14,7 @@
 
 // class text_encoding
 
-// text_encoding operator==(const text_encoding&, const text_encoding&) _NOEXCEPT 
+// text_encoding operator==(const text_encoding&, const text_encoding&) _NOEXCEPT
 
 // Concerns:
 // 1. operator==(const text_encoding&, const text_encoding&) must be noexcept
@@ -25,15 +25,13 @@
 
 #include <cassert>
 #include <text_encoding>
-#include <type_traits>
 
 #include "test_macros.h"
 #include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
 
-int main(){
-  
+int main() {
   { // 1
     auto te1 = std::text_encoding();
     auto te2 = std::text_encoding();

@@ -18,6 +18,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#if __has_include(<langinfo.h>)
+#  include <langinfo.h>
+#endif
+
 #include "cstdlib"
 
 #if defined(__MVS__)
@@ -104,5 +108,11 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   }
   return str_size;
 }
+
+#if __has_include(<langinfo.h>)
+inline _LIBCPP_HIDE_FROM_ABI char* __nl_langinfo_l(int __category_mask, __locale_t __l) {
+  return ::nl_langinfo_l(__category_mask, __l);
+}
+#endif
 
 #endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_IBM_H

@@ -9,8 +9,10 @@
 
 export namespace std {
 #if _LIBCPP_STD_VER >= 26
-  using ::std::hash;
+  using std::hash;
+  namespace ranges {
+    using std::ranges::enable_borrowed_range;
+  }
   using std::text_encoding;
-  using ::std::ranges::enable_borrowed_range;
 #endif
 } // namespace std

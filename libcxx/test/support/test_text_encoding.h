@@ -9,15 +9,20 @@
 #ifndef SUPPORT_TEST_TEXT_ENCODING_H
 #define SUPPORT_TEST_TEXT_ENCODING_H
 
-#include "test_macros.h"
+#include <array>
 #include <cstdint>
+#include <iostream>
+#include <print>
+
+#include "test_macros.h"
 
 struct encoding_pair {
   int_least32_t mib;
   const char* name;
 };
 
-constexpr encoding_pair all_encoding_data[] = {
+constexpr std::array<const encoding_pair, 882> all_encoding_data{{
+
     {1, ""},
     {2, ""},
     {3, "ANSI_X3.4-1968"},
@@ -169,12 +174,6 @@ constexpr encoding_pair all_encoding_data[] = {
     {32, "NATS-SEFI-ADD"},
     {32, "csNATSSEFIADD"},
     {32, "iso-ir-8-2"},
-    {33, "NATS-DANO"},
-    {33, "csNATSDANO"},
-    {33, "iso-ir-9-1"},
-    {34, "NATS-DANO-ADD"},
-    {34, "csNATSDANOADD"},
-    {34, "iso-ir-9-2"},
     {35, "SEN_850200_B"},
     {35, "FI"},
     {35, "ISO646-FI"},
@@ -906,10 +905,9 @@ constexpr encoding_pair all_encoding_data[] = {
     {2259, "csTIS620"},
     {2260, "CP50220"},
     {2260, "csCP50220"},
-    {0, nullptr} // sentinel
-};
+}};
 
-constexpr encoding_pair unique_encoding_data[] = {
+constexpr std::array<const encoding_pair, 256> unique_encoding_data{{
     {3, "ANSI_X3.4-1968"},
     {4, "ISO-8859-1"},
     {5, "ISO-8859-2"},
@@ -940,8 +938,6 @@ constexpr encoding_pair unique_encoding_data[] = {
     {30, "ISO_646.irv:1983"},
     {31, "NATS-SEFI"},
     {32, "NATS-SEFI-ADD"},
-    {33, "NATS-DANO"},
-    {34, "NATS-DANO-ADD"},
     {35, "SEN_850200_B"},
     {36, "KS_C_5601-1987"},
     {37, "ISO-2022-KR"},
@@ -1168,6 +1164,28 @@ constexpr encoding_pair unique_encoding_data[] = {
     {2258, "windows-1258"},
     {2259, "TIS-620"},
     {2260, "CP50220"},
-};
+}};
+
+inline bool checkTextEncoding(std::text_encoding te1, std::text_encoding te2) {
+  if (te1 != te2) {
+    std::println(
+        std::cerr,
+        "Text encoding mismatch! [{}] {} vs [{}] {}",
+        int(te1.mib()),
+        te1.name(),
+        int(te2.mib()),
+        te2.name());
+    return false;
+  }
+
+  if (te1.mib() != te2) {
+    std::println(std::cerr, "text encoding id mismatch! {} vs {}", int(te1.mib()), int(te2.mib()));
+  }
+
+  if (std::string_view(te1.name()) != std::string_view(te2.name())) {
+    std::println(std::cerr, "text encoding name mismatch! {} vs {}", te1.name(), te2.name());
+  }
+  return true;
+}
 
 #endif // SUPPORT_TEST_TEXT_ENCODING_H

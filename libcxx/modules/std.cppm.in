@@ -110,9 +110,7 @@ module;
 #include <strstream>
 #include <syncstream>
 #include <system_error>
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <text_encoding>
-#endif
+#include <text_encoding>
 #include <thread>
 #include <tuple>
 #include <type_traits>
