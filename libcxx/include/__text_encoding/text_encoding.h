@@ -529,6 +529,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr const __encoding_data* __find_encoding_data(string_view __a) {
+    _LIBCPP_ASSERT(__a.size() <= max_name_length, "Passing encoding name longer than max_name_length!");
     auto __data_ptr = __text_encoding_data + 2, __data_last = std::end(__text_encoding_data) - 1;
 
     for (; __data_ptr != __data_last; __data_ptr++) {
@@ -544,6 +545,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr const __encoding_data* __find_encoding_data_by_id(id __i) {
+    _LIBCPP_ASSERT(__i >= id::other && __i <= id::CP50220, "Passing invalid id to text_encoding constructor!");
     auto __found = std::lower_bound(
         std::begin(__text_encoding_data), std::end(__text_encoding_data) - 1, __encoding_data::__id_rep(__i));
     return __found != std::end(__text_encoding_data) - 1 ? __found : __text_encoding_data + 1; // unknown
