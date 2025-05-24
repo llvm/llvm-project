@@ -1168,11 +1168,16 @@ VPlan *VPlan::duplicate() {
   const auto &[NewEntry, __] = cloneFrom(Entry);
 
   BasicBlock *ScalarHeaderIRBB = getScalarHeader()->getIRBasicBlock();
-  VPIRBasicBlock *NewScalarHeader = cast<VPIRBasicBlock>(*find_if(
-      vp_depth_first_shallow(NewEntry), [ScalarHeaderIRBB](VPBlockBase *VPB) {
-        auto *VPIRBB = dyn_cast<VPIRBasicBlock>(VPB);
-        return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
-      }));
+  VPIRBasicBlock *NewScalarHeader = nullptr;
+  if (getScalarHeader()->getNumPredecessors() == 0) {
+    NewScalarHeader = createVPIRBasicBlock(ScalarHeaderIRBB);
+  } else {
+    NewScalarHeader = cast<VPIRBasicBlock>(*find_if(
+        vp_depth_first_shallow(NewEntry), [ScalarHeaderIRBB](VPBlockBase *VPB) {
+          auto *VPIRBB = dyn_cast<VPIRBasicBlock>(VPB);
+          return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
+        }));
+  }
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
@@ -1187,8 +1192,7 @@ VPlan *VPlan::duplicate() {
     NewPlan->BackedgeTakenCount = new VPValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
   }
-  assert(TripCount && "trip count must be set");
-  if (TripCount->isLiveIn())
+  if (TripCount && TripCount->isLiveIn())
     Old2NewVPValues[TripCount] =
         NewPlan->getOrAddLiveIn(TripCount->getLiveInIRValue());
   // else NewTripCount will be created and inserted into Old2NewVPValues when
@@ -1201,9 +1205,11 @@ VPlan *VPlan::duplicate() {
   NewPlan->UFs = UFs;
   // TODO: Adjust names.
   NewPlan->Name = Name;
-  assert(Old2NewVPValues.contains(TripCount) &&
-         "TripCount must have been added to Old2NewVPValues");
-  NewPlan->TripCount = Old2NewVPValues[TripCount];
+  if (TripCount) {
+    assert(Old2NewVPValues.contains(TripCount) &&
+           "TripCount must have been added to Old2NewVPValues");
+    NewPlan->TripCount = Old2NewVPValues[TripCount];
+  }
 
   // Transfer all cloned blocks (the second half of all current blocks) from
   // current to new VPlan.

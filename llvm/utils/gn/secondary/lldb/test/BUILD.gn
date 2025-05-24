@@ -1,5 +1,6 @@
 import("//llvm/triples.gni")
 
+import("//llvm/utils/gn/build/buildflags.gni")
 #import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
@@ -92,6 +93,12 @@ write_lit_cfg("lit_api_site_cfg") {
     "CMAKE_CXX_COMPILER=c++",  # XXX use bin/clang++ instead?
     "HOST_OS=$host_os",  # XXX
   ]
+
+  if (is_debug) {
+    extra_values += [ "CMAKE_BUILD_TYPE=Debug" ]
+  } else {
+    extra_values += [ "CMAKE_BUILD_TYPE=Releas" ]
+  }
 
   dir = get_path_info(output, "dir")
   if (host_os == "win") {

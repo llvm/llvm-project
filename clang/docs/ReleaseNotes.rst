@@ -565,6 +565,33 @@ Improvements to Clang's diagnostics
 
 - Clang now suggests corrections for unknown attribute names.
 
+- ``-Wswitch`` will now diagnose unhandled enumerators in switches also when
+  the enumerator is deprecated. Warnings about using deprecated enumerators in
+  switch cases have moved behind a new ``-Wdeprecated-switch-case`` flag.
+
+  For example:
+
+  .. code-block:: c
+
+    enum E {
+      Red,
+      Green,
+      Blue [[deprecated]]
+    };
+    void example(enum E e) {
+      switch (e) {
+      case Red:   // stuff...
+      case Green: // stuff...
+      }
+    }
+
+  will result in a warning about ``Blue`` not being handled in the switch.
+
+  The warning can be fixed either by adding a ``default:``, or by adding
+  ``case Blue:``. Since the enumerator is deprecated, the latter approach will
+  trigger a ``'Blue' is deprecated`` warning, which can be turned off with
+  ``-Wno-deprecated-switch-case``.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -767,6 +794,7 @@ Bug Fixes to C++ Support
 - Clang could incorrectly instantiate functions in discarded contexts (#GH140449)
 - Fix instantiation of default-initialized variable template specialization. (#GH140632) (#GH140622)
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
+- Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
