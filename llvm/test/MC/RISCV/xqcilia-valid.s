@@ -92,3 +92,13 @@ qc.e.addi x5, x5, 20
 # CHECK-NOALIAS: c.andi s1, -10
 # CHECK-ENC: encoding: [0xd9,0x98]
 qc.e.andi x9, x9, -10
+
+# CHECK-ALIAS: mv t0, t1
+# CHECK-NOALIAS: c.mv t0, t1
+# CHECK-ENC: encoding: [0x9a,0x82]
+qc.e.addi x5, x6, 0
+
+# CHECK-ALIAS: addi sp, sp, 48
+# CHECK-NOALIAS: c.addi16sp sp, 48
+# CHECK-ENC: encoding: [0x45,0x61]
+qc.e.addi x2, x2, 48
