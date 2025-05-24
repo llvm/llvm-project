@@ -46,7 +46,7 @@ public:
   void setBuildVersion(unsigned Major, unsigned Minor, unsigned Bound);
 
 private:
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
   void writeHeader(const MCAssembler &Asm);
 };
 
