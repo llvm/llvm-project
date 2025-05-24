@@ -82,7 +82,12 @@ MCAssembler::MCAssembler(MCContext &Context,
                          std::unique_ptr<MCCodeEmitter> Emitter,
                          std::unique_ptr<MCObjectWriter> Writer)
     : Context(Context), Backend(std::move(Backend)),
-      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {}
+      Emitter(std::move(Emitter)), Writer(std::move(Writer)) {
+  if (this->Backend)
+    this->Backend->setAssembler(this);
+  if (this->Writer)
+    this->Writer->setAssembler(this);
+}
 
 void MCAssembler::reset() {
   RelaxAll = false;
@@ -136,9 +141,10 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   return true;
 }
 
-bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
-                                MCValue &Target, const MCSubtargetInfo *STI,
-                                uint64_t &Value, bool RecordReloc) const {
+bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
+                                MCValue &Target, uint64_t &Value,
+                                bool RecordReloc,
+                                MutableArrayRef<char> Contents) const {
   ++stats::evaluateFixup;
 
   // FIXME: This code has some duplication with recordRelocation. We should
@@ -158,8 +164,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   bool IsResolved = false;
   unsigned FixupFlags = getBackend().getFixupKindInfo(Fixup.getKind()).Flags;
   if (FixupFlags & MCFixupKindInfo::FKF_IsTarget) {
-    IsResolved =
-        getBackend().evaluateTargetFixup(*this, Fixup, DF, Target, STI, Value);
+    IsResolved = getBackend().evaluateTargetFixup(Fixup, Target, Value);
   } else {
     const MCSymbol *Add = Target.getAddSym();
     const MCSymbol *Sub = Target.getSubSym();
@@ -183,9 +188,8 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       Value -= Offset;
 
       if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
-        IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
-                     getWriter().isSymbolRefDifferenceFullyResolvedImpl(
-                         *this, *Add, *DF, false, true);
+        IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
+            *Add, *DF, false, true);
       }
     } else {
       IsResolved = Target.isAbsolute();
@@ -196,21 +200,11 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   if (!RecordReloc)
     return IsResolved;
 
-  // .reloc directive and the backend might force the relocation.
-  // Backends that customize shouldForceRelocation generally just need the fixup
-  // kind. AVR needs the fixup value to bypass the assembly time overflow with a
-  // relocation.
-  if (IsResolved) {
-    auto TargetVal = Target;
-    TargetVal.Cst = Value;
-    if (mc::isRelocRelocation(Fixup.getKind()) ||
-        getBackend().shouldForceRelocation(*this, Fixup, TargetVal, STI))
-      IsResolved = false;
-  }
-  if (!IsResolved)
-    getWriter().recordRelocation(const_cast<MCAssembler &>(*this), DF, Fixup,
-                                 Target, Value);
-  return IsResolved;
+  if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
+    IsResolved = false;
+  IsResolved = getBackend().addReloc(*DF, Fixup, Target, Value, IsResolved);
+  getBackend().applyFixup(*DF, Fixup, Target, Contents, Value, IsResolved);
+  return true;
 }
 
 uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
@@ -903,14 +897,17 @@ void MCAssembler::layout() {
 
   // Allow the object writer a chance to perform post-layout binding (for
   // example, to set the index fields in the symbol data).
-  getWriter().executePostLayoutBinding(*this);
+  getWriter().executePostLayoutBinding();
+
+  // Fragment sizes are finalized. For RISC-V linker relaxation, this flag
+  // helps check whether a PC-relative fixup is fully resolved.
+  this->HasFinalLayout = true;
 
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {
     for (MCFragment &Frag : Sec) {
-      ArrayRef<MCFixup> Fixups;
+      MutableArrayRef<MCFixup> Fixups;
       MutableArrayRef<char> Contents;
-      const MCSubtargetInfo *STI = nullptr;
 
       // Process MCAlignFragment and MCEncodedFragmentWithFixups here.
       switch (Frag.getKind()) {
@@ -928,16 +925,12 @@ void MCAssembler::layout() {
         MCDataFragment &DF = cast<MCDataFragment>(Frag);
         Fixups = DF.getFixups();
         Contents = DF.getContents();
-        STI = DF.getSubtargetInfo();
-        assert(!DF.hasInstructions() || STI != nullptr);
         break;
       }
       case MCFragment::FT_Relaxable: {
         MCRelaxableFragment &RF = cast<MCRelaxableFragment>(Frag);
         Fixups = RF.getFixups();
         Contents = RF.getContents();
-        STI = RF.getSubtargetInfo();
-        assert(!RF.hasInstructions() || STI != nullptr);
         break;
       }
       case MCFragment::FT_CVDefRange: {
@@ -974,10 +967,8 @@ void MCAssembler::layout() {
       for (const MCFixup &Fixup : Fixups) {
         uint64_t FixedValue;
         MCValue Target;
-        bool IsResolved = evaluateFixup(Fixup, &Frag, Target, STI, FixedValue,
-                                        /*RecordReloc=*/true);
-        getBackend().applyFixup(*this, Fixup, Target, Contents, FixedValue,
-                                IsResolved, STI);
+        evaluateFixup(&Frag, Fixup, Target, FixedValue,
+                      /*RecordReloc=*/true, Contents);
       }
     }
   }
@@ -997,8 +988,8 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   assert(getBackendPtr() && "Expected assembler backend");
   MCValue Target;
   uint64_t Value;
-  bool Resolved = evaluateFixup(Fixup, DF, Target, DF->getSubtargetInfo(),
-                                Value, /*RecordReloc=*/false);
+  bool Resolved = evaluateFixup(DF, const_cast<MCFixup &>(Fixup), Target, Value,
+                                /*RecordReloc=*/false, {});
   return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Target, Value,
                                                    Resolved);
 }
@@ -1057,7 +1048,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
                  : LF.getValue().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
     bool Relaxed, UseZeroPad;
-    std::tie(Relaxed, UseZeroPad) = getBackend().relaxLEB128(*this, LF, Value);
+    std::tie(Relaxed, UseZeroPad) = getBackend().relaxLEB128(LF, Value);
     if (!Relaxed) {
       getContext().reportError(LF.getValue().getLoc(),
                                Twine(LF.isSigned() ? ".s" : ".u") +
@@ -1145,7 +1136,7 @@ bool MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
 
 bool MCAssembler::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF) {
   bool WasRelaxed;
-  if (getBackend().relaxDwarfLineAddr(*this, DF, WasRelaxed))
+  if (getBackend().relaxDwarfLineAddr(DF, WasRelaxed))
     return WasRelaxed;
 
   MCContext &Context = getContext();
@@ -1167,7 +1158,7 @@ bool MCAssembler::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF) {
 
 bool MCAssembler::relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF) {
   bool WasRelaxed;
-  if (getBackend().relaxDwarfCFA(*this, DF, WasRelaxed))
+  if (getBackend().relaxDwarfCFA(DF, WasRelaxed))
     return WasRelaxed;
 
   MCContext &Context = getContext();

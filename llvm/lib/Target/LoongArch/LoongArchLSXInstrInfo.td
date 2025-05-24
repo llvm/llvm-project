@@ -23,7 +23,7 @@ def SDT_LoongArchV2R : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                      SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>]>;
 def SDT_LoongArchV1RUimm: SDTypeProfile<1, 2, [SDTCisVec<0>,
                                         SDTCisSameAs<0,1>, SDTCisVT<2, i64>]>;
-def SDT_LoongArchVShuf4i_D
+def SDT_LoongArchV2RUimm
     : SDTypeProfile<1, 3,
                     [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                      SDTCisVT<3, i64>]>;
@@ -57,8 +57,7 @@ def loongarch_vilvl: SDNode<"LoongArchISD::VILVL", SDT_LoongArchV2R>;
 def loongarch_vilvh: SDNode<"LoongArchISD::VILVH", SDT_LoongArchV2R>;
 
 def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
-def loongarch_vshuf4i_d
-    : SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchVShuf4i_D>;
+def loongarch_vshuf4i_d : SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV2RUimm>;
 def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
 def loongarch_vreplgr2vr: SDNode<"LoongArchISD::VREPLGR2VR", SDT_LoongArchVreplgr2vr>;
 
@@ -1452,6 +1451,20 @@ multiclass VldreplPat<ValueType vt, LAInst Inst, Operand ImmOpnd> {
             (Inst BaseAddr:$rj, ImmOpnd:$imm)>;
 }
 
+multiclass VstelmPat<PatFrag StoreOp, ValueType vt, LAInst Inst,
+                     Operand ImmOpnd, Operand IdxOpnd, ValueType elt = i64> {
+  def : Pat<(StoreOp(elt(vector_extract vt:$vd, IdxOpnd:$idx)), BaseAddr:$rj),
+            (Inst vt:$vd, BaseAddr:$rj, 0, IdxOpnd:$idx)>;
+
+  def : Pat<(StoreOp(elt(vector_extract vt:$vd, IdxOpnd:$idx)),
+                (AddrConstant GPR:$rj, ImmOpnd:$imm)),
+            (Inst vt:$vd, GPR:$rj, ImmOpnd:$imm, IdxOpnd:$idx)>;
+
+  def : Pat<(StoreOp(elt(vector_extract vt:$vd, IdxOpnd:$idx)),
+                (AddLike BaseAddr:$rj, ImmOpnd:$imm)),
+            (Inst vt:$vd, BaseAddr:$rj, ImmOpnd:$imm, IdxOpnd:$idx)>;
+}
+
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
@@ -1944,6 +1957,13 @@ def : Pat<(lsxsplatf32 FPR32:$fj),
           (VREPLVEI_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)>;
 def : Pat<(lsxsplatf64 FPR64:$fj),
           (VREPLVEI_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)>;
+
+defm : VstelmPat<truncstorei8, v16i8, VSTELM_B, simm8, uimm4>;
+defm : VstelmPat<truncstorei16, v8i16, VSTELM_H, simm8_lsl1, uimm3>;
+defm : VstelmPat<truncstorei32, v4i32, VSTELM_W, simm8_lsl2, uimm2>;
+defm : VstelmPat<store, v2i64, VSTELM_D, simm8_lsl3, uimm1>;
+defm : VstelmPat<store, v4f32, VSTELM_W, simm8_lsl2, uimm2, f32>;
+defm : VstelmPat<store, v2f64, VSTELM_D, simm8_lsl3, uimm1, f64>;
 
 // Loads/Stores
 foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
