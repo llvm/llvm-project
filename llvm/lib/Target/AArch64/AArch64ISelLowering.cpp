@@ -6029,12 +6029,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
   case Intrinsic::aarch64_sme_za_enable:
     return DAG.getNode(
-        AArch64ISD::SMSTART, DL, MVT::Other,
+        AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue),
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
   case Intrinsic::aarch64_sme_za_disable:
     return DAG.getNode(
-        AArch64ISD::SMSTOP, DL, MVT::Other,
+        AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue),
         Op->getOperand(0), // Chain
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
   }
@@ -8539,8 +8539,8 @@ SDValue AArch64TargetLowering::LowerCallResult(
     }
 
     if (RequiresSMChange && isPassedInFPR(VA.getValVT()))
-      Val = DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL, Val.getValueType(),
-                        Val);
+      Val = DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL,
+                        DAG.getVTList(Val.getValueType(), MVT::Glue), Val);
 
     InVals.push_back(Val);
   }
@@ -9373,7 +9373,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         // smstart/smstop and the call by the simple register coalescer.
         if (RequiresSMChange && isPassedInFPR(Arg.getValueType()))
           Arg = DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL,
-                            Arg.getValueType(), Arg);
+                            DAG.getVTList(Arg.getValueType(), MVT::Glue), Arg);
         RegsToPass.emplace_back(VA.getLocReg(), Arg);
         RegsUsed.insert(VA.getLocReg());
         const TargetOptions &Options = DAG.getTarget().Options;
@@ -9851,8 +9851,10 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   for (auto &RetVal : RetVals) {
     if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface() &&
         isPassedInFPR(RetVal.second.getValueType()))
-      RetVal.second = DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL,
-                                  RetVal.second.getValueType(), RetVal.second);
+      RetVal.second =
+          DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL,
+                      DAG.getVTList(RetVal.second.getValueType(), MVT::Glue),
+                      RetVal.second);
     Chain = DAG.getCopyToReg(Chain, DL, RetVal.first, RetVal.second, Glue);
     Glue = Chain.getValue(1);
     RetOps.push_back(
