@@ -8,7 +8,6 @@
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -296,7 +295,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
   const MCSymbol &SA = *A, &SB = *B;
   if (SA.isUndefined() || SB.isUndefined())
     return;
-  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, SA, SB, InSet))
+  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(SA, SB, InSet))
     return;
 
   auto FinalizeFolding = [&]() {
