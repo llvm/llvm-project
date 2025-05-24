@@ -180,7 +180,6 @@ _LIBCPP_PUSH_MACROS
 #  include <__stacktrace/base.h>
 #  include <__stacktrace/basic.h>
 #  include <__stacktrace/entry.h>
-#  include <__stacktrace/format.h>
 #  include <__stacktrace/hash.h>
 #  include <__stacktrace/nonmem.h>
 #  include <__stacktrace/to_string.h>
