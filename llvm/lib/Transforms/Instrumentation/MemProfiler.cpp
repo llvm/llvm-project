@@ -1218,6 +1218,23 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
           // Check if this is an indirect call and we have GUID information
           // from CallSiteInfo to attach value profile metadata
           if (!CalledFunction && ClMemProfAttachCalleeGuids) {
+            // Check if the instruction already has value profile metadata from
+            // FDO. If it does, skip adding MemProf value profiles to avoid
+            // conflicts. FDO profiles typically have more accurate count data,
+            // so they take precedence over MemProf synthetic counts.
+            if (I.getMetadata(LLVMContext::MD_prof)) {
+              // Use the existing helper function to check for indirect call
+              // target value profiling metadata
+              uint64_t TotalCount;
+              auto ExistingVD = getValueProfDataFromInst(
+                  I, IPVK_IndirectCallTarget, ~0U, TotalCount);
+              if (!ExistingVD.empty()) {
+                // Instruction already has FDO value profile metadata for
+                // indirect call targets, skip adding MemProf value profiles
+                break;
+              }
+            }
+
             // This is an indirect call, look for CallSites with matching stacks
             // that have CalleeGuids information
             for (auto &CS : MemProfRec->CallSites) {
