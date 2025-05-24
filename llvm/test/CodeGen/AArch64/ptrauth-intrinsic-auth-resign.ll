@@ -10,9 +10,9 @@
 ; RUN:                                     | FileCheck %s -DL="L" --check-prefixes=CHECKED,CHECKED-DARWIN
 
 ; RUN: llc < %s -mtriple arm64e-apple-darwin -global-isel=0                    -verify-machineinstrs \
-; RUN:   -aarch64-ptrauth-auth-checks=trap | FileCheck %s -DL="L" --check-prefix=TRAP
+; RUN:   -aarch64-ptrauth-auth-checks=trap | FileCheck %s -DL="L" --check-prefixes=TRAP,TRAP-DARWIN
 ; RUN: llc < %s -mtriple arm64e-apple-darwin -global-isel -global-isel-abort=1 -verify-machineinstrs \
-; RUN:   -aarch64-ptrauth-auth-checks=trap | FileCheck %s -DL="L" --check-prefix=TRAP
+; RUN:   -aarch64-ptrauth-auth-checks=trap | FileCheck %s -DL="L" --check-prefixes=TRAP,TRAP-DARWIN
 
 ; RUN: llc < %s -mtriple aarch64-linux-gnu -mattr=+pauth -global-isel=0                    -verify-machineinstrs \
 ; RUN:   -aarch64-ptrauth-auth-checks=none | FileCheck %s -DL=".L" --check-prefixes=UNCHECKED,UNCHECKED-ELF
@@ -25,9 +25,9 @@
 ; RUN:                                     | FileCheck %s -DL=".L" --check-prefixes=CHECKED,CHECKED-ELF
 
 ; RUN: llc < %s -mtriple aarch64-linux-gnu -mattr=+pauth -global-isel=0                    -verify-machineinstrs \
-; RUN:   -aarch64-ptrauth-auth-checks=trap | FileCheck %s -DL=".L" --check-prefix=TRAP
+; RUN:   -aarch64-ptrauth-auth-checks=trap | FileCheck %s -DL=".L" --check-prefixes=TRAP,TRAP-ELF
 ; RUN: llc < %s -mtriple aarch64-linux-gnu -mattr=+pauth -global-isel -global-isel-abort=1 -verify-machineinstrs \
-; RUN:   -aarch64-ptrauth-auth-checks=trap | FileCheck %s -DL=".L" --check-prefix=TRAP
+; RUN:   -aarch64-ptrauth-auth-checks=trap | FileCheck %s -DL=".L" --check-prefixes=TRAP,TRAP-ELF
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
@@ -50,15 +50,19 @@ define i64 @test_auth_ia(i64 %arg, i64 %arg1) {
 ;
 ; TRAP-LABEL: test_auth_ia:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    autia x16, x1
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpaci x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:   mov x16, x0
+; TRAP-DARWIN-NEXT:   autia x16, x1
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpaci x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autia x0, x1
+; TRAP-ELF-NEXT:   mov x8, x0
+; TRAP-ELF-NEXT:   xpaci x8
+; TRAP-ELF-NEXT:   cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_0
 ; TRAP-NEXT:    brk #0xc470
 ; TRAP-NEXT:  Lauth_success_0:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 0, i64 %arg1)
   ret i64 %tmp
@@ -83,15 +87,19 @@ define i64 @test_auth_ia_zero(i64 %arg) {
 ;
 ; TRAP-LABEL: test_auth_ia_zero:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    autiza x16
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpaci x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:   mov x16, x0
+; TRAP-DARWIN-NEXT:   autiza x16
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpaci x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autiza x0
+; TRAP-ELF-NEXT:   mov x8, x0
+; TRAP-ELF-NEXT:   xpaci x8
+; TRAP-ELF-NEXT:   cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_1
 ; TRAP-NEXT:    brk #0xc470
 ; TRAP-NEXT:  Lauth_success_1:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 0, i64 0)
   ret i64 %tmp
@@ -116,15 +124,19 @@ define i64 @test_auth_ib(i64 %arg, i64 %arg1) {
 ;
 ; TRAP-LABEL: test_auth_ib:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    autib x16, x1
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpaci x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:   mov x16, x0
+; TRAP-DARWIN-NEXT:   autib x16, x1
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpaci x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autib x0, x1
+; TRAP-ELF-NEXT:   mov x8, x0
+; TRAP-ELF-NEXT:   xpaci x8
+; TRAP-ELF-NEXT:   cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_2
 ; TRAP-NEXT:    brk #0xc471
 ; TRAP-NEXT:  Lauth_success_2:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 1, i64 %arg1)
   ret i64 %tmp
@@ -149,15 +161,19 @@ define i64 @test_auth_ib_zero(i64 %arg) {
 ;
 ; TRAP-LABEL: test_auth_ib_zero:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    autizb x16
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpaci x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:   mov x16, x0
+; TRAP-DARWIN-NEXT:   autizb x16
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpaci x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autizb x0
+; TRAP-ELF-NEXT:   mov x8, x0
+; TRAP-ELF-NEXT:   xpaci x8
+; TRAP-ELF-NEXT:   cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_3
 ; TRAP-NEXT:    brk #0xc471
 ; TRAP-NEXT:  Lauth_success_3:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 1, i64 0)
   ret i64 %tmp
@@ -182,15 +198,19 @@ define i64 @test_auth_da(i64 %arg, i64 %arg1) {
 ;
 ; TRAP-LABEL: test_auth_da:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    autda x16, x1
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpacd x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:   mov x16, x0
+; TRAP-DARWIN-NEXT:   autda x16, x1
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpacd x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autda x0, x1
+; TRAP-ELF-NEXT:   mov x8, x0
+; TRAP-ELF-NEXT:   xpacd x8
+; TRAP-ELF-NEXT:   cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_4
 ; TRAP-NEXT:    brk #0xc472
 ; TRAP-NEXT:  Lauth_success_4:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 2, i64 %arg1)
   ret i64 %tmp
@@ -215,15 +235,19 @@ define i64 @test_auth_da_zero(i64 %arg) {
 ;
 ; TRAP-LABEL: test_auth_da_zero:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    autdza x16
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpacd x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:   mov x16, x0
+; TRAP-DARWIN-NEXT:   autdza x16
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpacd x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autdza x0
+; TRAP-ELF-NEXT:   mov x8, x0
+; TRAP-ELF-NEXT:   xpacd x8
+; TRAP-ELF-NEXT:   cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_5
 ; TRAP-NEXT:    brk #0xc472
 ; TRAP-NEXT:  Lauth_success_5:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 2, i64 0)
   ret i64 %tmp
@@ -248,15 +272,19 @@ define i64 @test_auth_db(i64 %arg, i64 %arg1) {
 ;
 ; TRAP-LABEL: test_auth_db:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    autdb x16, x1
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpacd x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:   mov x16, x0
+; TRAP-DARWIN-NEXT:   autdb x16, x1
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpacd x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autdb x0, x1
+; TRAP-ELF-NEXT:   mov x8, x0
+; TRAP-ELF-NEXT:   xpacd x8
+; TRAP-ELF-NEXT:   cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_6
 ; TRAP-NEXT:    brk #0xc473
 ; TRAP-NEXT:  Lauth_success_6:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 3, i64 %arg1)
   ret i64 %tmp
@@ -281,15 +309,19 @@ define i64 @test_auth_db_zero(i64 %arg) {
 ;
 ; TRAP-LABEL: test_auth_db_zero:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    autdzb x16
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpacd x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:   mov x16, x0
+; TRAP-DARWIN-NEXT:   autdzb x16
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpacd x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autdzb x0
+; TRAP-ELF-NEXT:   mov x8, x0
+; TRAP-ELF-NEXT:   xpacd x8
+; TRAP-ELF-NEXT:   cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_7
 ; TRAP-NEXT:    brk #0xc473
 ; TRAP-NEXT:  Lauth_success_7:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 3, i64 0)
   ret i64 %tmp
@@ -552,35 +584,44 @@ define i64 @test_resign_da_dzb(i64 %arg, i64 %arg1, i64 %arg2) {
 define i64 @test_auth_trap_attribute(i64 %arg, i64 %arg1) "ptrauth-auth-traps" {
 ; UNCHECKED-LABEL: test_auth_trap_attribute:
 ; UNCHECKED:     %bb.0:
-; UNCHECKED-NEXT:  mov x16, x0
-; UNCHECKED-NEXT:  autia x16, x1
-; UNCHECKED-NEXT:  mov x0, x16
+; UNCHECKED-DARWIN-NEXT:  mov x16, x0
+; UNCHECKED-DARWIN-NEXT:  autia x16, x1
+; UNCHECKED-DARWIN-NEXT:  mov x0, x16
+; UNCHECKED-ELF-NEXT:  autia x0, x1
 ; UNCHECKED-NEXT:  ret
 ;
 ; CHECKED-LABEL: test_auth_trap_attribute:
 ; CHECKED:      %bb.0:
-; CHECKED-NEXT:   mov x16, x0
-; CHECKED-NEXT:   autia x16, x1
-; CHECKED-NEXT:   mov x17, x16
-; CHECKED-NEXT:   xpaci x17
-; CHECKED-NEXT:   cmp x16, x17
+; CHECKED-DARWIN-NEXT:   mov x16, x0
+; CHECKED-DARWIN-NEXT:   autia x16, x1
+; CHECKED-DARWIN-NEXT:   mov x17, x16
+; CHECKED-DARWIN-NEXT:   xpaci x17
+; CHECKED-DARWIN-NEXT:   cmp x16, x17
+; CHECKED-ELF-NEXT:   autia x0, x1
+; CHECKED-ELF-NEXT:   mov x8, x0
+; CHECKED-ELF-NEXT:   xpaci x8
+; CHECKED-ELF-NEXT:   cmp x0, x8
 ; CHECKED-NEXT:   b.eq [[L]]auth_success_6
 ; CHECKED-NEXT:   brk #0xc470
 ; CHECKED-NEXT: Lauth_success_6:
-; CHECKED-NEXT:   mov x0, x16
+; CHECKED-DARWIN-NEXT:   mov x0, x16
 ; CHECKED-NEXT:   ret
 ;
 ; TRAP-LABEL: test_auth_trap_attribute:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    autia x16, x1
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpaci x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:   mov x16, x0
+; TRAP-DARWIN-NEXT:   autia x16, x1
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpaci x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autia x0, x1
+; TRAP-ELF-NEXT:   mov x8, x0
+; TRAP-ELF-NEXT:   xpaci x8
+; TRAP-ELF-NEXT:   cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_14
 ; TRAP-NEXT:    brk #0xc470
 ; TRAP-NEXT:  Lauth_success_14:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 0, i64 %arg1)
   ret i64 %tmp
@@ -593,7 +634,7 @@ define i64 @test_auth_ia_constdisc(i64 %arg) {
 ; UNCHECKED-DARWIN-NEXT: mov x17, #256
 ; UNCHECKED-DARWIN-NEXT: autia x16, x17
 ; UNCHECKED-DARWIN-NEXT: mov x0, x16
-; UNCHECKED-ELF-NEXT:    mov w8, #256
+; UNCHECKED-ELF-NEXT:    mov x8, #256
 ; UNCHECKED-ELF-NEXT:    autia x0, x8
 ; UNCHECKED-NEXT:        ret
 ;
@@ -603,22 +644,27 @@ define i64 @test_auth_ia_constdisc(i64 %arg) {
 ; CHECKED-DARWIN-NEXT: mov x17, #256
 ; CHECKED-DARWIN-NEXT: autia x16, x17
 ; CHECKED-DARWIN-NEXT: mov x0, x16
-; CHECKED-ELF-NEXT:    mov w8, #256
+; CHECKED-ELF-NEXT:    mov x8, #256
 ; CHECKED-ELF-NEXT:    autia x0, x8
 ; CHECKED-NEXT:        ret
 ;
 ; TRAP-LABEL: test_auth_ia_constdisc:
 ; TRAP:       %bb.0:
-; TRAP-NEXT:    mov x16, x0
-; TRAP-NEXT:    mov x17, #256
-; TRAP-NEXT:    autia x16, x17
-; TRAP-NEXT:    mov x17, x16
-; TRAP-NEXT:    xpaci x17
-; TRAP-NEXT:    cmp x16, x17
+; TRAP-DARWIN-NEXT:    mov x16, x0
+; TRAP-DARWIN-NEXT:    mov x17, #256
+; TRAP-DARWIN-NEXT:    autia x16, x17
+; TRAP-DARWIN-NEXT:    mov x17, x16
+; TRAP-DARWIN-NEXT:    xpaci x17
+; TRAP-DARWIN-NEXT:    cmp x16, x17
+; TRAP-ELF-NEXT:    mov x8, #256
+; TRAP-ELF-NEXT:    autia x0, x8
+; TRAP-ELF-NEXT:    mov x8, x0
+; TRAP-ELF-NEXT:    xpaci x8
+; TRAP-ELF-NEXT:    cmp x0, x8
 ; TRAP-NEXT:    b.eq [[L]]auth_success_15
 ; TRAP-NEXT:    brk #0xc470
 ; TRAP-NEXT:  Lauth_success_15:
-; TRAP-NEXT:    mov x0, x16
+; TRAP-DARWIN-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 0, i64 256)
   ret i64 %tmp

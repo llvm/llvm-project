@@ -367,7 +367,6 @@ struct Config {
   bool zCopyreloc;
   bool zForceBti;
   bool zForceIbt;
-  bool zGlibc228Compat;
   bool zGlobal;
   bool zHazardplt;
   bool zIfuncNoplt;

@@ -5756,8 +5756,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    NamedDecl *ND = Function;
-    DeclContext *DC = ND->getLexicalDeclContext();
+    DeclContext *DC = Function->getLexicalDeclContext();
     std::optional<ArrayRef<TemplateArgument>> Innermost;
     if (auto *Primary = Function->getPrimaryTemplate();
         Primary &&
@@ -6070,22 +6069,20 @@ void Sema::InstantiateVariableInitializer(
   else if (OldVar->isInline())
     Var->setImplicitlyInline();
 
+  ContextRAII SwitchContext(*this, Var->getDeclContext());
+
+  EnterExpressionEvaluationContext Evaluated(
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
+  currentEvaluationContext().InLifetimeExtendingContext =
+      parentEvaluationContext().InLifetimeExtendingContext;
+  currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+      parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
+
   if (OldVar->getInit()) {
-    EnterExpressionEvaluationContext Evaluated(
-        *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
-
-    currentEvaluationContext().InLifetimeExtendingContext =
-        parentEvaluationContext().InLifetimeExtendingContext;
-    currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
-        parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
     // Instantiate the initializer.
-    ExprResult Init;
-
-    {
-      ContextRAII SwitchContext(*this, Var->getDeclContext());
-      Init = SubstInitializer(OldVar->getInit(), TemplateArgs,
-                              OldVar->getInitStyle() == VarDecl::CallInit);
-    }
+    ExprResult Init =
+        SubstInitializer(OldVar->getInit(), TemplateArgs,
+                         OldVar->getInitStyle() == VarDecl::CallInit);
 
     if (!Init.isInvalid()) {
       Expr *InitExpr = Init.get();

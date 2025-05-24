@@ -338,7 +338,7 @@ In the above figure, ``X`` and ``Y`` are atomic operations on a
 location in the ``global``  address space. If ``X`` synchronizes with
 ``Y``, then ``B`` happens-before ``C`` in the ``local`` address
 space. But no such statement can be made about operations ``A`` and
-``D``, although they are peformed on a location in the ``global``
+``D``, although they are performed on a location in the ``global``
 address space.
 
 Implementation Example: Adding Address Space Information to Fences
