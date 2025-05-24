@@ -6232,6 +6232,36 @@ foreach vti = AllIntegerVectors in {
   }
 }
 
+// (add v, C) -> (sub v, -C) if -C cheaper to materialize
+defvar I64IntegerVectors = !filter(vti, AllIntegerVectors, !eq(vti.SEW, 64));
+foreach vti = I64IntegerVectors in {
+  let Predicates = [HasVInstructionsI64] in {
+    def : Pat<(vti.Vector (int_riscv_vadd (vti.Vector vti.RegClass:$passthru),
+                                          (vti.Vector vti.RegClass:$rs1),
+                                          (i64 negImm:$rs2),
+                                          VLOpFrag)),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX)
+                                             vti.RegClass:$passthru,
+                                             vti.RegClass:$rs1,
+                                             negImm:$rs2,
+                                             GPR:$vl, vti.Log2SEW, TU_MU)>;
+    def : Pat<(vti.Vector (int_riscv_vadd_mask (vti.Vector vti.RegClass:$passthru),
+                                               (vti.Vector vti.RegClass:$rs1),
+                                               (i64 negImm:$rs2),
+                                               (vti.Mask VMV0:$vm),
+                                               VLOpFrag,
+                                               (i64 timm:$policy))),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX#"_MASK")
+                                             vti.RegClass:$passthru,
+                                             vti.RegClass:$rs1,
+                                             negImm:$rs2,
+                                             (vti.Mask VMV0:$vm),
+                                             GPR:$vl,
+                                             vti.Log2SEW,
+                                             (i64 timm:$policy))>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // 11.2. Vector Widening Integer Add/Subtract
 //===----------------------------------------------------------------------===//
@@ -6703,9 +6733,9 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     Sched<[WriteVMovXS, ReadVMovXS]>,
     RISCVVPseudo;
   let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X, isReMaterializable = 1,
-      Constraints = "$rd = $rs1" in
+      Constraints = "$rd = $passthru" in
   def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
-                            (ins VR:$rs1, GPR:$rs2, AVL:$vl, sew:$sew),
+                            (ins VR:$passthru, GPR:$rs1, AVL:$vl, sew:$sew),
                             []>,
     Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>,
     RISCVVPseudo;
@@ -6726,10 +6756,10 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
       Sched<[WriteVMovFS, ReadVMovFS]>,
       RISCVVPseudo;
     let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F, isReMaterializable = 1,
-        Constraints = "$rd = $rs1" in
+        Constraints = "$rd = $passthru" in
     def "PseudoVFMV_S_" # f.FX :
       Pseudo<(outs VR:$rd),
-             (ins VR:$rs1, f.fprclass:$rs2, AVL:$vl, sew:$sew),
+             (ins VR:$passthru, f.fprclass:$rs1, AVL:$vl, sew:$sew),
              []>,
       Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
       RISCVVPseudo;

@@ -155,6 +155,7 @@ public:
       }
     }
     setBranchProtectionFnAttributes(BPI, *Fn);
+    setPointerAuthFnAttributes(CGM.getCodeGenOpts().PointerAuth, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
