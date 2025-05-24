@@ -526,8 +526,8 @@ void MachObjectWriter::recordRelocation(MCAssembler &Asm,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
   if (!isFixupTargetValid(Target)) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                 "unsupported relocation expression");
+    getContext().reportError(Fixup.getLoc(),
+                             "unsupported relocation expression");
     return;
   }
 
@@ -788,7 +788,7 @@ static MachO::LoadCommandType getLCFromMCVM(MCVersionMinType Type) {
 
 void MachObjectWriter::populateAddrSigSection(MCAssembler &Asm) {
   MCSection *AddrSigSection =
-      Asm.getContext().getObjectFileInfo()->getAddrSigSection();
+      getContext().getObjectFileInfo()->getAddrSigSection();
   unsigned Log2Size = is64Bit() ? 3 : 2;
   for (const MCSymbol *S : getAddrsigSyms()) {
     if (!S->isRegistered())
@@ -809,7 +809,7 @@ void MachObjectWriter::prepareObject(MCAssembler &Asm) {
                      UndefinedSymbolData);
 
   if (!CGProfile.empty()) {
-    MCSection *CGProfileSection = Asm.getContext().getMachOSection(
+    MCSection *CGProfileSection = getContext().getMachOSection(
         "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
     auto &Frag = cast<MCDataFragment>(*CGProfileSection->begin());
     Frag.getContents().clear();
@@ -944,12 +944,12 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
       Flags |= MachO::S_ATTR_SOME_INSTRUCTIONS;
     if (!cast<MCSectionMachO>(Sec).isVirtualSection() &&
         !isUInt<32>(SectionStart)) {
-      Asm.getContext().reportError(
+      getContext().reportError(
           SMLoc(), "cannot encode offset of section; object file too large");
       return;
     }
     if (NumRelocs && !isUInt<32>(RelocTableEnd)) {
-      Asm.getContext().reportError(
+      getContext().reportError(
           SMLoc(),
           "cannot encode offset of relocations; object file too large");
       return;

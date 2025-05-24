@@ -57,6 +57,8 @@ public:
 
   void setAssembler(MCAssembler *A) { Asm = A; }
 
+  MCContext &getContext() const;
+
   /// lifetime management
   virtual void reset();
 

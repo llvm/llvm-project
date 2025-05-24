@@ -487,7 +487,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   const auto &FixupSection = cast<MCSectionWasm>(*Fragment->getParent());
   uint64_t C = Target.getConstant();
   uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   bool IsLocRel = false;
 
   if (const auto *RefB = Target.getSubSym()) {
@@ -1929,7 +1929,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     writeGlobalSection(Globals);
     writeExportSection(Exports);
     const MCSymbol *IndirectFunctionTable =
-        Asm.getContext().lookupSymbol("__indirect_function_table");
+        getContext().lookupSymbol("__indirect_function_table");
     writeElemSection(cast_or_null<const MCSymbolWasm>(IndirectFunctionTable),
                      TableElems);
     writeDataCountSection();

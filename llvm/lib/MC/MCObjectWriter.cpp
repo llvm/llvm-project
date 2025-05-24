@@ -19,6 +19,8 @@ using namespace llvm;
 
 MCObjectWriter::~MCObjectWriter() = default;
 
+MCContext &MCObjectWriter::getContext() const { return Asm->getContext(); }
+
 void MCObjectWriter::reset() {
   FileNames.clear();
   AddrsigSyms.clear();
