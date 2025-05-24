@@ -139,6 +139,7 @@ private:
   COFFPlatform(
       ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
       std::unique_ptr<StaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
+      std::set<std::string> DylibsToPreload,
       std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer,
       std::unique_ptr<object::Archive> OrcRuntimeArchive,
       LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
