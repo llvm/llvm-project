@@ -175,7 +175,7 @@ public:
   bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 
   bool hasRelocationAddend() const;
   bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;

@@ -298,7 +298,7 @@ private:
   void executePostLayoutBinding() override;
   void prepareImports(SmallVectorImpl<wasm::WasmImport> &Imports,
                       MCAssembler &Asm);
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 
   uint64_t writeOneObject(MCAssembler &Asm, DwoMode Mode);
 
@@ -1433,17 +1433,17 @@ void WasmObjectWriter::prepareImports(
   }
 }
 
-uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t WasmObjectWriter::writeObject() {
   support::endian::Writer MainWriter(*OS, llvm::endianness::little);
   W = &MainWriter;
   if (IsSplitDwarf) {
-    uint64_t TotalSize = writeOneObject(Asm, DwoMode::NonDwoOnly);
+    uint64_t TotalSize = writeOneObject(*Asm, DwoMode::NonDwoOnly);
     assert(DwoOS);
     support::endian::Writer DwoWriter(*DwoOS, llvm::endianness::little);
     W = &DwoWriter;
-    return TotalSize + writeOneObject(Asm, DwoMode::DwoOnly);
+    return TotalSize + writeOneObject(*Asm, DwoMode::DwoOnly);
   } else {
-    return writeOneObject(Asm, DwoMode::AllSections);
+    return writeOneObject(*Asm, DwoMode::AllSections);
   }
 }
 
