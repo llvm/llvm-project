@@ -181,11 +181,8 @@ define void @test_tailcall_omit_mov_x16_x16(ptr %objptr) #0 {
 ; ELF-NEXT:       movk    x8, #6503, lsl #48
 ; ELF-NEXT:       autda   x1, x8
 ; ELF-NEXT:       ldr     x2, [x1]
-; FIXME: Get rid of the x16/x17 constraint on non-Darwin so we can eliminate
-; this mov.
-; ELF-NEXT:       mov     x16, x1
-; ELF-NEXT:       movk    x16, #54167, lsl #48
-; ELF-NEXT:       braa    x2, x16
+; ELF-NEXT:       movk    x1, #54167, lsl #48
+; ELF-NEXT:       braa    x2, x1
   %vtable.signed = load ptr, ptr %objptr, align 8
   %objptr.int = ptrtoint ptr %objptr to i64
   %vtable.discr = tail call i64 @llvm.ptrauth.blend(i64 %objptr.int, i64 6503)
@@ -216,11 +213,8 @@ define i32 @test_call_omit_extra_moves(ptr %objptr) #0 {
 ; ELF-NEXT:      movk    x9, #6503, lsl #48
 ; ELF-NEXT:      autda   x8, x9
 ; ELF-NEXT:      ldr     x9, [x8]
-; FIXME: Get rid of the x16/x17 constraint on non-Darwin so we can eliminate
-; this mov.
-; ELF-NEXT:      mov     x17, x8
-; ELF-NEXT:      movk    x17, #34646, lsl #48
-; ELF-NEXT:      blraa   x9, x17
+; ELF-NEXT:      movk    x8, #34646, lsl #48
+; ELF-NEXT:      blraa   x9, x8
 ; ELF-NEXT:      mov     w0, #42
 ; ELF-NEXT:      ldr     x30, [sp], #16
 ; CHECK-NEXT:    ret

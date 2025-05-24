@@ -544,7 +544,6 @@ TYPE_TRAIT_2(__is_pointer_interconvertible_base_of, IsPointerInterconvertibleBas
 #include "clang/Basic/TransformTypeTraits.def"
 
 // Clang-only C++ Type Traits
-TYPE_TRAIT_1(__has_non_relocatable_fields, HasNonRelocatableFields, KEYCXX)
 TYPE_TRAIT_1(__is_trivially_equality_comparable, IsTriviallyEqualityComparable, KEYCXX)
 TYPE_TRAIT_1(__is_bounded_array, IsBoundedArray, KEYCXX)
 TYPE_TRAIT_1(__is_unbounded_array, IsUnboundedArray, KEYCXX)

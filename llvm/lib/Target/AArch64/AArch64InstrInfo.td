@@ -66,14 +66,6 @@ def HasLOR           : Predicate<"Subtarget->hasLOR()">,
 def HasPAuth         : Predicate<"Subtarget->hasPAuth()">,
                        AssemblerPredicateWithAll<(all_of FeaturePAuth), "pauth">;
 
-// On most operating systems, the x16 and x17 registers are not special, so
-// there is no benefit, and only a code size cost, to constraining PAC
-// instructions to only using them. This predicate may be used to guard patterns
-// that allow PAC instructions to be used with any register.
-let RecomputePerFunction = 1 in {
-  def X16X17NotSafer   : Predicate<"!Subtarget->isX16X17Safer(*MF)">;
-}
-
 def HasPAuthLR       : Predicate<"Subtarget->hasPAuthLR()">,
                        AssemblerPredicateWithAll<(all_of FeaturePAuthLR), "pauth-lr">;
 
@@ -1129,7 +1121,7 @@ let RecomputePerFunction = 1 in {
   // SelectionDAG's behaviour.
   // FIXME: One day there will probably be a nicer way to check for this, but
   // today is not that day.
-  def OptimizedGISelOrOtherSelector : Predicate<"!MF->getFunction().hasOptNone() || MF->getProperties().hasProperty(MachineFunctionProperties::Property::FailedISel) || !MF->getProperties().hasProperty(MachineFunctionProperties::Property::Legalized)">;
+  def OptimizedGISelOrOtherSelector : Predicate<"!MF->getFunction().hasOptNone() || MF->getProperties().hasFailedISel() || !MF->getProperties().hasLegalized()">;
 }
 
 include "AArch64InstrFormats.td"
@@ -1854,9 +1846,7 @@ let Predicates = [HasPAuth] in {
   }
 
   defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
-  let Predicates = [HasPAuth, X16X17NotSafer] in {
-    defm AUT : SignAuth<0b001, 0b011, "aut", int_ptrauth_auth>;
-  }
+  defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
   def XPACI : ClearAuth<0, "xpaci">;
   def : Pat<(int_ptrauth_strip GPR64:$Rd, 0), (XPACI GPR64:$Rd)>;
@@ -1952,7 +1942,7 @@ let Predicates = [HasPAuth] in {
   // certain OSs guarantee are safe to use for sensitive operations.
   def AUTx16x17 : Pseudo<(outs), (ins i32imm:$Key, i64imm:$Disc,
                                       GPR64noip:$AddrDisc),
-                      []>, Sched<[WriteI, ReadI]> {
+                         []>, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -1960,6 +1950,20 @@ let Predicates = [HasPAuth] in {
     let Size = 32;
     let Defs = [X16,X17,NZCV];
     let Uses = [X16];
+  }
+
+  def AUTxMxN : Pseudo<(outs GPR64:$AuthVal, GPR64common:$Scratch),
+                       (ins GPR64:$Val, i32imm:$Key,
+                            i64imm:$Disc, GPR64:$AddrDisc),
+                       []>, Sched<[WriteI, ReadI]> {
+    let Constraints = "$AuthVal = $Val";
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 0;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 32;
+    let Defs = [NZCV];
+    let Uses = [];
   }
 
   // AUT and re-PAC a value, using different keys/data.
@@ -2107,6 +2111,7 @@ def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
 let Predicates = [HasFlagM], Defs = [NZCV], Uses = [NZCV] in {
 def CFINV : SimpleSystemI<0, (ins), "cfinv", "">, Sched<[WriteSys]> {
   let Inst{20-5} = 0b0000001000000000;
+  let Unpredictable{11-8} = 0b1111;
 }
 def SETF8  : BaseFlagManipulation<0, 0, (ins GPR32:$Rn), "setf8", "{\t$Rn}">;
 def SETF16 : BaseFlagManipulation<0, 1, (ins GPR32:$Rn), "setf16", "{\t$Rn}">;
@@ -7369,7 +7374,8 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 
 // Patterns for i8/i16 -> v2i32/v4i16 lane moves via insert and extract that go via i32.
 multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType OutVT,
-                                    Instruction INS, SDNodeXForm VecIndexMult> {
+                                    Instruction INS, Instruction DUP, SubRegIndex DUPSub,
+                                    SDNodeXForm VecIndexMult> {
   // VT64->OutVT
   def : Pat<(OutVT (vector_insert (OutVT V64:$src),
                                   (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
@@ -7380,8 +7386,10 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               dsub)>;
   def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
-              (INS (IMPLICIT_DEF), 0,
-                   (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
+              (VT128 (SUBREG_TO_REG
+                (i64 0),
+                (DUP (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
+                DUPSub)),
               dsub)>;
 
   // VT128->OutVT
@@ -7394,24 +7402,37 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               dsub)>;
   def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
-              (INS (IMPLICIT_DEF), 0, V128:$Rn, imm:$Immn),
+              (VT128 (SUBREG_TO_REG
+                (i64 0),
+                (DUP V128:$Rn, imm:$Immn),
+                DUPSub)),
               dsub)>;
 }
 
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, INSvi8lane, VecIndex_x2>;
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, INSvi8lane, VecIndex_x4>;
-defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, INSvi16lane, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, INSvi8lane, DUPi8, bsub, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
+defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
 
 // bitcast of an extract
-// f32 bitcast(vector_extract(v4i32 src, lane)) -> EXTRACT_SUBREG(INSvi32lane(-, 0, src, lane))
-def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
-          (EXTRACT_SUBREG (INSvi32lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), ssub)>;
+// f32 bitcast(vector_extract(v4i32 src, 0)) -> EXTRACT_SUBREG(src)
+def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, (i64 0))))),
+          (EXTRACT_SUBREG V128:$src, bsub)>;
+def : Pat<(f32 (bitconvert (i32 (vector_extract v8i16:$src, (i64 0))))),
+          (EXTRACT_SUBREG V128:$src, hsub)>;
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, ssub)>;
-def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
-          (EXTRACT_SUBREG (INSvi64lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), dsub)>;
 def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, dsub)>;
+
+// f32 bitcast(vector_extract(v4i32 src, lane)) -> DUPi32(src, lane)
+def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, imm:$Immd)))),
+          (EXTRACT_SUBREG (v16i8 (SUBREG_TO_REG (i64 0), (DUPi8 V128:$src, imm:$Immd), bsub)), ssub)>;
+def : Pat<(f32 (bitconvert (i32 (vector_extract v8i16:$src, imm:$Immd)))),
+          (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (i64 0), (DUPi16 V128:$src, imm:$Immd), hsub)), ssub)>;
+def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
+          (DUPi32 V128:$src, imm:$Immd)>;
+def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
+          (DUPi64 V128:$src, imm:$Immd)>;
 
 // Floating point vector extractions are codegen'd as either a sequence of
 // subregister extractions, or a MOV (aka DUP here) if

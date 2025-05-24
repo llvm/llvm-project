@@ -1022,12 +1022,12 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   // JavaScript from escaping characters incorrectly, and introducing  bad paths
   // in the URLs.
   std::string RootPathEscaped = RootPath.str().str();
-  std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
+  llvm::replace(RootPathEscaped, '\\', '/');
   OS << "var RootPath = \"" << RootPathEscaped << "\";\n";
 
   llvm::SmallString<128> Base(CDCtx.Base);
   std::string BaseEscaped = Base.str().str();
-  std::replace(BaseEscaped.begin(), BaseEscaped.end(), '\\', '/');
+  llvm::replace(BaseEscaped, '\\', '/');
   OS << "var Base = \"" << BaseEscaped << "\";\n";
 
   CDCtx.Idx.sort();

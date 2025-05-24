@@ -4359,3 +4359,25 @@ bool llvm::inferAttributesFromOthers(Function &F) {
 
   return Changed;
 }
+
+void OverflowTracking::mergeFlags(Instruction &I) {
+  if (isa<OverflowingBinaryOperator>(&I)) {
+    HasNUW &= I.hasNoUnsignedWrap();
+    HasNSW &= I.hasNoSignedWrap();
+  }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    IsDisjoint &= DisjointOp->isDisjoint();
+}
+
+void OverflowTracking::applyFlags(Instruction &I) {
+  I.clearSubclassOptionalData();
+  if (I.getOpcode() == Instruction::Add ||
+      (I.getOpcode() == Instruction::Mul && AllKnownNonZero)) {
+    if (HasNUW)
+      I.setHasNoUnsignedWrap();
+    if (HasNSW && (AllKnownNonNegative || HasNUW))
+      I.setHasNoSignedWrap();
+  }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    DisjointOp->setIsDisjoint(IsDisjoint);
+}
