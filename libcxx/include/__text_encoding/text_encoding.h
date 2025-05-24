@@ -88,8 +88,6 @@ public:
     ISO2IntlRefVersion      = 30,
     NATSSEFI                = 31,
     NATSSEFIADD             = 32,
-    NATSDANO                = 33,
-    NATSDANOADD             = 34,
     ISO10Swedish            = 35,
     KSC56011987             = 36,
     ISO2022KR               = 37,
@@ -255,7 +253,7 @@ public:
     IBM880                  = 2057,
     IBM891                  = 2058,
     IBM903                  = 2059,
-    IBBM904                 = 2060,
+    IBM904                  = 2060,
     IBM905                  = 2061,
     IBM918                  = 2062,
     IBM1026                 = 2063,
@@ -315,8 +313,7 @@ public:
     windows1257             = 2257,
     windows1258             = 2258,
     TIS620                  = 2259,
-    CP50220                 = 2260,
-    reserved                = 3000
+    CP50220                 = 2260
   };
 
   using enum id;
@@ -705,12 +702,6 @@ private:
       {32, "NATS-SEFI-ADD"},
       {32, "csNATSSEFIADD"},
       {32, "iso-ir-8-2"},
-      {33, "NATS-DANO"},
-      {33, "csNATSDANO"},
-      {33, "iso-ir-9-1"},
-      {34, "NATS-DANO-ADD"},
-      {34, "csNATSDANOADD"},
-      {34, "iso-ir-9-2"},
       {35, "SEN_850200_B"},
       {35, "FI"},
       {35, "ISO646-FI"},
