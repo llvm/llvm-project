@@ -569,9 +569,11 @@ bool RISCVAsmBackend::isPCRelFixupResolved(const MCAssembler &Asm,
   return !Res.getSubSym();
 }
 
-bool RISCVAsmBackend::evaluateTargetFixup(
-    const MCAssembler &Asm, const MCFixup &Fixup, const MCFragment *DF,
-    const MCValue &Target, const MCSubtargetInfo *STI, uint64_t &Value) {
+bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
+                                          const MCFixup &Fixup,
+                                          const MCFragment *DF,
+                                          const MCValue &Target,
+                                          uint64_t &Value) {
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
@@ -618,8 +620,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(
 
 bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
                                const MCFixup &Fixup, const MCValue &Target,
-                               uint64_t &FixedValue, bool IsResolved,
-                               const MCSubtargetInfo *STI) {
+                               uint64_t &FixedValue, bool IsResolved) {
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
     assert(Target.getSpecifier() == 0 &&
@@ -666,8 +667,8 @@ bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
   if (IsResolved &&
       (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
     IsResolved = isPCRelFixupResolved(Asm, Target.getAddSym(), F);
-  IsResolved = MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
-                                      IsResolved, STI);
+  IsResolved =
+      MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved);
 
   if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
