@@ -314,6 +314,9 @@ C++2c Feature Support
 
 - Implemented `P3176R1 The Oxford variadic comma <https://wg21.link/P3176R1>`_
 
+- The error produced when doing arithmetic operations on enums of different types
+  can be disabled with ``-Wno-enum-enum-conversion``. (#GH92340)
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Removed the restriction to literal types in constexpr functions in C++23 mode.
@@ -909,6 +912,8 @@ Bug Fixes in This Version
   being deleted has a potentially throwing destructor (#GH118660).
 - Clang now outputs correct values when #embed data contains bytes with negative
   signed char values (#GH102798).
+- Fix crash due to unknown references and pointer implementation and handling of
+  base classes. (GH139452)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1466,6 +1471,9 @@ Crash and bug fixes
 
 - The ``unix.BlockInCriticalSection`` now recognizes the ``lock()`` member function
   as expected, even if it's inherited from a base class. Fixes (#GH104241).
+
+- Fixed a crash when C++20 parenthesized initializer lists are used. This issue
+  was causing a crash in clang-tidy. (#GH136041)
 
 Improvements
 ^^^^^^^^^^^^
