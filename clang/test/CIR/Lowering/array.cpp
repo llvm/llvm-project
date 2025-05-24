@@ -7,12 +7,6 @@ int a[10];
 int aa[10][5];
 // CHECK: @aa = dso_local global [10 x [5 x i32]] zeroinitializer
 
-extern int b[10];
-// CHECK: @b = dso_local global [10 x i32] zeroinitializer
-
-extern int bb[10][5];
-// CHECK: @bb = dso_local global [10 x [5 x i32]] zeroinitializer
-
 int c[10] = {};
 // CHECK: @c = dso_local global [10 x i32] zeroinitializer
 
@@ -29,6 +23,18 @@ int e[10] = {1, 2};
 
 int f[5] = {1, 2};
 // CHECK: @f = dso_local global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
+
+extern int b[10];
+// CHECK: @b = external dso_local global [10 x i32]
+
+extern int bb[10][5];
+// CHECK: @bb = external dso_local global [10 x [5 x i32]]
+
+// This function is only here to make sure the external globals are emitted.
+void reference_externs() {
+  b;
+  bb;
+}
 
 void func() {
   int arr[10];
