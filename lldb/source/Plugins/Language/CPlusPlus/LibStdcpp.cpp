@@ -379,7 +379,7 @@ LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
 
 lldb::ValueObjectSP
 LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
-  if (idx == 0)
+  if (idx == 0 && m_ptr_obj)
     return m_ptr_obj->GetSP();
   if (idx == 1) {
     if (m_ptr_obj && !m_obj_obj) {
