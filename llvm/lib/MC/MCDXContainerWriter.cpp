@@ -18,7 +18,8 @@ using namespace llvm;
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() {}
 
-uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t DXContainerObjectWriter::writeObject() {
+  auto &Asm = *this->Asm;
   // Start the file size as the header plus the size of the part offsets.
   // Presently DXContainer files usually contain 7-10 parts. Reserving space for
   // 16 part offsets gives us a little room for growth.

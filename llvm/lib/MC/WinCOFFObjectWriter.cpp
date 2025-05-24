@@ -1198,15 +1198,15 @@ void WinCOFFObjectWriter::recordRelocation(const MCFragment &F,
   ObjWriter->recordRelocation(*Asm, F, Fixup, Target, FixedValue);
 }
 
-uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t WinCOFFObjectWriter::writeObject() {
   // If the assember had an error, then layout will not have completed, so we
   // cannot write an object file.
   if (getContext().hadError())
     return 0;
 
-  uint64_t TotalSize = ObjWriter->writeObject(Asm);
+  uint64_t TotalSize = ObjWriter->writeObject(*Asm);
   if (DwoWriter)
-    TotalSize += DwoWriter->writeObject(Asm);
+    TotalSize += DwoWriter->writeObject(*Asm);
   return TotalSize;
 }
 

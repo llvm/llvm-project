@@ -348,7 +348,7 @@ public:
 
   void populateAddrSigSection(MCAssembler &Asm);
 
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 };
 } // end namespace llvm
 

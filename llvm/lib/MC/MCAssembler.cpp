@@ -978,7 +978,7 @@ void MCAssembler::Finish() {
   layout();
 
   // Write the object file.
-  stats::ObjectBytes += getWriter().writeObject(*this);
+  stats::ObjectBytes += getWriter().writeObject();
 
   HasLayout = false;
 }

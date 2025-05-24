@@ -353,7 +353,7 @@ class XCOFFWriter final : public XCOFFObjectWriter {
   void recordRelocation(const MCFragment &, const MCFixup &, MCValue,
                         uint64_t &) override;
 
-  uint64_t writeObject(MCAssembler &) override;
+  uint64_t writeObject() override;
 
   bool is64Bit() const { return TargetObjectWriter->is64Bit(); }
   bool nameShouldBeInStringTable(const StringRef &);
@@ -818,7 +818,7 @@ void XCOFFWriter::writeSections(const MCAssembler &Asm) {
                                       CurrentAddressLocation);
 }
 
-uint64_t XCOFFWriter::writeObject(MCAssembler &Asm) {
+uint64_t XCOFFWriter::writeObject() {
   // We always emit a timestamp of 0 for reproducibility, so ensure incremental
   // linking is not enabled, in case, like with Windows COFF, such a timestamp
   // is incompatible with incremental linking of XCOFF.
@@ -829,9 +829,9 @@ uint64_t XCOFFWriter::writeObject(MCAssembler &Asm) {
   writeFileHeader();
   writeAuxFileHeader();
   writeSectionHeaderTable();
-  writeSections(Asm);
+  writeSections(*Asm);
   writeRelocations();
-  writeSymbolTable(Asm);
+  writeSymbolTable(*Asm);
   // Write the string table.
   Strings.write(W.OS);
 

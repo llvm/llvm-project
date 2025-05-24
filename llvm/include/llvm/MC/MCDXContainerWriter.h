@@ -42,7 +42,7 @@ public:
                           raw_pwrite_stream &OS)
       : W(OS, llvm::endianness::little), TargetObjectWriter(std::move(MOTW)) {}
 
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 };
 } // end namespace llvm
 

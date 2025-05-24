@@ -211,7 +211,7 @@ public:
 
   void writeRelocations(const MCSectionELF &Sec);
 
-  uint64_t writeObject(MCAssembler &Asm);
+  uint64_t writeObject();
   void writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
                           uint64_t Size, const MCSectionELF &Section);
 };
@@ -1017,7 +1017,7 @@ void ELFWriter::writeSectionHeaders(const MCAssembler &Asm) {
   stats::SectionHeaderBytes += W.OS.tell() - Start;
 }
 
-uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
+uint64_t ELFWriter::writeObject() {
   uint64_t StartOffset = W.OS.tell();
 
   MCContext &Ctx = getContext();
@@ -1426,13 +1426,13 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   return &SymA.getSection() == FB.getParent();
 }
 
-uint64_t ELFObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t ELFObjectWriter::writeObject() {
   uint64_t Size =
-      ELFWriter(Asm, *this, OS, IsLittleEndian,
+      ELFWriter(*Asm, *this, OS, IsLittleEndian,
                 DwoOS ? ELFWriter::NonDwoOnly : ELFWriter::AllSections)
-          .writeObject(Asm);
+          .writeObject();
   if (DwoOS)
-    Size += ELFWriter(Asm, *this, *DwoOS, IsLittleEndian, ELFWriter::DwoOnly)
-                .writeObject(Asm);
+    Size += ELFWriter(*Asm, *this, *DwoOS, IsLittleEndian, ELFWriter::DwoOnly)
+                .writeObject();
   return Size;
 }
