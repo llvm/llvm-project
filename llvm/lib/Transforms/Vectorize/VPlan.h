@@ -1697,7 +1697,10 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getOperand(0) && isPointerLoopInvariant();
+    if (Op == getOperand(0))
+      return isPointerLoopInvariant();
+    else
+      return !isPointerLoopInvariant() && Op->isDefinedOutsideLoopRegions();
   }
 };
 
