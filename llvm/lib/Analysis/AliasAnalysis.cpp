@@ -693,8 +693,8 @@ AnalysisKey AAManager::Key;
 
 ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {}
 
-ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB)
-    : ImmutablePass(ID), CB(std::move(CB)) {}
+ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB, bool RunEarly)
+    : ImmutablePass(ID), CB(std::move(CB)), RunEarly(RunEarly) {}
 
 char ExternalAAWrapperPass::ID = 0;
 
@@ -741,7 +741,7 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
 
   // Add any target-specific alias analyses that should be run early.
   auto *ExtWrapperPass = getAnalysisIfAvailable<ExternalAAWrapperPass>();
-  if (ExtWrapperPass && ExtWrapperPass->runEarly() && ExtWrapperPass->CB) {
+  if (ExtWrapperPass && ExtWrapperPass->RunEarly && ExtWrapperPass->CB) {
     LLVM_DEBUG(dbgs() << "AAResults register Early ExternalAA: "
                       << ExtWrapperPass->getPassName() << "\n");
     ExtWrapperPass->CB(*this, F, *AAR);
@@ -777,7 +777,7 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
 
   // If available, run an external AA providing callback over the results as
   // well.
-  if (ExtWrapperPass && !ExtWrapperPass->runEarly() && ExtWrapperPass->CB) {
+  if (ExtWrapperPass && !ExtWrapperPass->RunEarly && ExtWrapperPass->CB) {
     LLVM_DEBUG(dbgs() << "AAResults register Late ExternalAA: "
                       << ExtWrapperPass->getPassName() << "\n");
     ExtWrapperPass->CB(*this, F, *AAR);

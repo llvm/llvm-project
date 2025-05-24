@@ -221,7 +221,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     std::string VerStr = DirName.drop_front(strlen("rocm-")).str();
     // The ROCm directory name follows the format of
     // rocm-{major}.{minor}.{subMinor}[-{build}]
-    std::replace(VerStr.begin(), VerStr.end(), '-', '.');
+    llvm::replace(VerStr, '-', '.');
     V.tryParse(VerStr);
     return V;
   };
@@ -560,7 +560,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().isUsingLTO()) {
     const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0], ThinLTO);
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs, ThinLTO);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +

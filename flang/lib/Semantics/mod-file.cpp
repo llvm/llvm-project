@@ -24,6 +24,7 @@
 #include <fstream>
 #include <set>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace Fortran::semantics {
@@ -638,8 +639,14 @@ static void PutOpenACCDeviceTypeRoutineInfo(
   if (info.isWorker()) {
     os << " worker";
   }
-  if (info.bindName()) {
-    os << " bind(" << *info.bindName() << ")";
+  if (const std::variant<std::string, SymbolRef> *bindName{info.bindName()}) {
+    os << " bind(";
+    if (std::holds_alternative<std::string>(*bindName)) {
+      os << "\"" << std::get<std::string>(*bindName) << "\"";
+    } else {
+      os << std::get<SymbolRef>(*bindName)->name();
+    }
+    os << ")";
   }
 }
 
@@ -1388,6 +1395,9 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   parser::Options options;
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC)) {
+    options.features.Enable(common::LanguageFeature::OpenACC);
+  }
   options.features.Enable(common::LanguageFeature::OpenMP);
   options.features.Enable(common::LanguageFeature::CUDA);
   if (!isIntrinsic.value_or(false) && !notAModule) {
@@ -1538,6 +1548,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // created under -fhermetic-module-files?  If so, process them first in
   // their own nested scope that will be visible only to USE statements
   // within the module file.
+  Scope *previousHermetic{context_.currentHermeticModuleFileScope()};
   if (parseTree.v.size() > 1) {
     parser::Program hermeticModules{std::move(parseTree.v)};
     parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
@@ -1553,7 +1564,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_moduleFileName(wasModuleFileName);
-  context_.set_currentHermeticModuleFileScope(nullptr);
+  context_.set_currentHermeticModuleFileScope(previousHermetic);
   if (!moduleSymbol) {
     // Submodule symbols' storage are owned by their parents' scopes,
     // but their names are not in their parents' dictionaries -- we

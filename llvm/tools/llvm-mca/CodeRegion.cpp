@@ -158,7 +158,7 @@ void InstrumentRegions::endRegion(StringRef Description, SMLoc Loc) {
   }
 }
 
-const SmallVector<Instrument *>
+SmallVector<Instrument *>
 InstrumentRegions::getActiveInstruments(SMLoc Loc) const {
   SmallVector<Instrument *> AI;
   for (auto &R : Regions) {
