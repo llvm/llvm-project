@@ -187,6 +187,11 @@ Changes in existing checks
   <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
   where ``strerror`` was flagged as MT-unsafe.
 
+- Improved :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing
+  false negatives where math expressions are the operand of assignment operators
+  or comparison operators.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
