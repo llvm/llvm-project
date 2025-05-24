@@ -731,7 +731,6 @@ set(files
   __stacktrace/base.h
   __stacktrace/basic.h
   __stacktrace/entry.h
-  __stacktrace/format.h
   __stacktrace/hash.h
   __stacktrace/nonmem.h
   __stacktrace/to_string.h
