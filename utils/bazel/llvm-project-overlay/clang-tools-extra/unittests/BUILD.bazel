@@ -56,12 +56,17 @@ cc_test(
 )
 
 expand_template(
-    name = "clang_doc_config",
+    name = "clang_doc_config_h",
     out = "clang-doc/config.h",
     substitutions = {
         "#define CLANG_DOC_TEST_ASSET_DIR \"${CLANG_DOC_TEST_ASSET_DIR}\"": "#define CLANG_DOC_TEST_ASSET_DIR \"clang-tools-extra/clang-doc/assets\"",
     },
     template = "clang-doc/config.h.cmake",
+)
+
+cc_library(
+    name = "clang_doc_config",
+    hdrs = ["clang-doc/config.h"],
 )
 
 cc_test(
@@ -73,9 +78,12 @@ cc_test(
             "clang-doc/*.h",
         ],
         allow_empty = False,
+        exclude = ["clang-doc/config.h"],
     ),
     data = ["//clang-tools-extra/clang-doc:assets"],
+    includes = ["clang-doc"],
     deps = [
+        ":clang_doc_config",
         "//clang:ast",
         "//clang:basic",
         "//clang-tools-extra/clang-doc:generators",
