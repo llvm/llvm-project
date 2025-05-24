@@ -569,9 +569,7 @@ bool RISCVAsmBackend::isPCRelFixupResolved(const MCAssembler &Asm,
   return !Res.getSubSym();
 }
 
-bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
-                                          const MCFixup &Fixup,
-                                          const MCFragment *DF,
+bool RISCVAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
                                           const MCValue &Target,
                                           uint64_t &Value) {
   const MCFixup *AUIPCFixup;
@@ -592,7 +590,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
     // MCAssembler::evaluateFixup will emit an error for this case when it sees
     // the %pcrel_hi, so don't duplicate it when also seeing the %pcrel_lo.
     const MCExpr *AUIPCExpr = AUIPCFixup->getValue();
-    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Asm))
+    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, Asm))
       return true;
     break;
   }
@@ -611,11 +609,11 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   if (!IsResolved)
     return false;
 
-  Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
-  Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
+  Value = Asm->getSymbolOffset(SA) + AUIPCTarget.getConstant();
+  Value -= Asm->getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
   return AUIPCFixup->getTargetKind() == RISCV::fixup_riscv_pcrel_hi20 &&
-         isPCRelFixupResolved(Asm, AUIPCTarget.getAddSym(), *AUIPCDF);
+         isPCRelFixupResolved(*Asm, AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
 bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
