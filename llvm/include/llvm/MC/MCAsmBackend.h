@@ -108,7 +108,7 @@ public:
 
   // Hook used by the default `addReloc` to check if a relocation is needed.
   virtual bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                                     const MCValue &, const MCSubtargetInfo *) {
+                                     const MCValue &) {
     return false;
   }
 
@@ -129,7 +129,6 @@ public:
 
   virtual bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                    const MCFragment *DF, const MCValue &Target,
-                                   const MCSubtargetInfo *STI,
                                    uint64_t &Value) {
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }

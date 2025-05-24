@@ -47,7 +47,6 @@ public:
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                            const MCFragment *DF, const MCValue &Target,
-                           const MCSubtargetInfo *STI,
                            uint64_t &Value) override;
 
   bool addReloc(MCAssembler &Asm, const MCFragment &F, const MCFixup &Fixup,
