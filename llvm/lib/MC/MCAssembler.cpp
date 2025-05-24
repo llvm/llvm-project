@@ -897,6 +897,10 @@ void MCAssembler::layout() {
   // example, to set the index fields in the symbol data).
   getWriter().executePostLayoutBinding(*this);
 
+  // Fragment sizes are finalized. For RISC-V linker relaxation, this flag
+  // helps check whether a PC-relative fixup is fully resolved.
+  this->HasFinalLayout = true;
+
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {
     for (MCFragment &Frag : Sec) {
