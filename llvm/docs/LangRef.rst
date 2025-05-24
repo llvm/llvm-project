@@ -11433,6 +11433,12 @@ If ``<value>`` is of aggregate type, padding is filled with
 :ref:`undef <undefvalues>`.
 If ``<pointer>`` is not a well-defined value, the behavior is undefined.
 
+If ``<value>`` is poison, then behavior currently is effectively undefined due
+to the fact that many LLVM passes assume they can do load widening, and having
+poison in memory would "infect" the entire widened load. This can hopefully be
+alleviated in the future, but until then, frontends should refrain from
+generating code that stores poison values in memory.
+
 Example:
 """"""""
 
