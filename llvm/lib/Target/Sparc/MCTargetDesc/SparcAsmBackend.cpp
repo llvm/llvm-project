@@ -212,12 +212,6 @@ namespace {
       return Info;
     }
 
-    bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                               const MCValue &,
-                               const MCSubtargetInfo *) override {
-      return false;
-    }
-
     void relaxInstruction(MCInst &Inst,
                           const MCSubtargetInfo &STI) const override {
       // FIXME.

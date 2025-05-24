@@ -84,6 +84,7 @@ private:
 
   ASTNodeUP ParseExpression();
   ASTNodeUP ParseUnaryExpression();
+  ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
 
   std::string ParseNestedNameSpecifier();
@@ -117,6 +118,8 @@ private:
 
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
+  bool m_fragile_ivar;
+  bool m_check_ptr_vs_member;
 }; // class DILParser
 
 } // namespace lldb_private::dil

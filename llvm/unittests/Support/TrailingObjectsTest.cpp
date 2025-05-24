@@ -17,14 +17,12 @@ namespace {
 // This class, beyond being used by the test case, a nice
 // demonstration of the intended usage of TrailingObjects, with a
 // single trailing array.
-class Class1 final : protected TrailingObjects<Class1, short> {
+class Class1 final : private TrailingObjects<Class1, short> {
   friend TrailingObjects;
 
   unsigned NumShorts;
 
 protected:
-  size_t numTrailingObjects(OverloadToken<short>) const { return NumShorts; }
-
   Class1(ArrayRef<int> ShortArray) : NumShorts(ShortArray.size()) {
     // This tests the non-templated getTrailingObjects() that returns a pointer
     // when using a single trailing type.
@@ -52,18 +50,15 @@ public:
   using TrailingObjects::getTrailingObjects;
 };
 
-// Here, there are two singular optional object types appended.  Note
+// Here, there are two singular optional object types appended. Note
 // that the alignment of Class2 is automatically increased to account
 // for the alignment requirements of the trailing objects.
-class Class2 final : protected TrailingObjects<Class2, double, short> {
+class Class2 final : private TrailingObjects<Class2, double, short> {
   friend TrailingObjects;
 
   bool HasShort, HasDouble;
 
 protected:
-  size_t numTrailingObjects(OverloadToken<short>) const {
-    return HasShort ? 1 : 0;
-  }
   size_t numTrailingObjects(OverloadToken<double>) const {
     return HasDouble ? 1 : 0;
   }
@@ -179,14 +174,23 @@ TEST(TrailingObjects, TwoArg) {
 }
 
 // This test class is not trying to be a usage demo, just asserting
-// that three args does actually work too (it's the same code as
+// that three args does actually work too (it's the same code that
 // handles the second arg, so it's basically covered by the above, but
 // just in case..)
-class Class3 final : public TrailingObjects<Class3, double, short, bool> {
+class Class3 final : private TrailingObjects<Class3, double, short, bool> {
   friend TrailingObjects;
 
   size_t numTrailingObjects(OverloadToken<double>) const { return 1; }
   size_t numTrailingObjects(OverloadToken<short>) const { return 1; }
+
+public:
+  // Pull some protected members in as public, for testability.
+  template <typename... Ty>
+  using FixedSizeStorage = TrailingObjects::FixedSizeStorage<Ty...>;
+
+  using TrailingObjects::additionalSizeToAlloc;
+  using TrailingObjects::getTrailingObjects;
+  using TrailingObjects::totalSizeToAlloc;
 };
 
 TEST(TrailingObjects, ThreeArg) {
@@ -216,9 +220,18 @@ TEST(TrailingObjects, ThreeArg) {
           1));
 }
 
-class Class4 final : public TrailingObjects<Class4, char, long> {
+class Class4 final : private TrailingObjects<Class4, char, long> {
   friend TrailingObjects;
   size_t numTrailingObjects(OverloadToken<char>) const { return 1; }
+
+public:
+  // Pull some protected members in as public, for testability.
+  template <typename... Ty>
+  using FixedSizeStorage = TrailingObjects::FixedSizeStorage<Ty...>;
+
+  using TrailingObjects::additionalSizeToAlloc;
+  using TrailingObjects::getTrailingObjects;
+  using TrailingObjects::totalSizeToAlloc;
 };
 
 TEST(TrailingObjects, Realignment) {
@@ -254,11 +267,6 @@ class Class5Tmpl : private llvm::TrailingObjects<Derived, float, int> {
   size_t numTrailingObjects(
       typename TrailingObjects::template OverloadToken<float>) const {
     return 1;
-  }
-
-  size_t numTrailingObjects(
-      typename TrailingObjects::template OverloadToken<int>) const {
-    return 2;
   }
 };
 
