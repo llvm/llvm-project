@@ -50,8 +50,7 @@ public:
   const char *reasonForFixupRelaxation(const MCFixup &Fixup,
                                        uint64_t Value) const;
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                    const MCFixup &, const MCValue &, uint64_t,
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &, uint64_t,
                                     bool) const override;
 
   void relaxInstruction(MCInst &Inst,
