@@ -155,8 +155,8 @@ subroutine acc_data
   !$acc data present(a) async
   !$acc end data
 
-! CHECK: acc.data dataOperands(%{{.*}}) {
-! CHECK: } attributes {asyncOnly = [#acc.device_type<none>]}
+! CHECK: acc.data async dataOperands(%{{.*}}) {
+! CHECK: }
 
   !$acc data copy(a) async(1)
   !$acc end data

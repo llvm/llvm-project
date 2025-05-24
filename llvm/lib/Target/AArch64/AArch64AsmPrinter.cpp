@@ -70,6 +70,15 @@
 
 using namespace llvm;
 
+enum PtrauthCheckMode { Default, Unchecked, Poison, Trap };
+static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
+    "aarch64-ptrauth-auth-checks", cl::Hidden,
+    cl::values(clEnumValN(Unchecked, "none", "don't test for failure"),
+               clEnumValN(Poison, "poison", "poison on failure"),
+               clEnumValN(Trap, "trap", "trap on failure")),
+    cl::desc("Check pointer authentication auth/resign failures"),
+    cl::init(Default));
+
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
@@ -159,7 +168,12 @@ public:
   void emitPtrauthTailCallHardening(const MachineInstr *TC);
 
   // Emit the sequence for AUT or AUTPAC.
-  void emitPtrauthAuthResign(const MachineInstr *MI);
+  void emitPtrauthAuthResign(Register AUTVal, AArch64PACKey::ID AUTKey,
+                             uint64_t AUTDisc,
+                             const MachineOperand *AUTAddrDisc,
+                             Register Scratch,
+                             std::optional<AArch64PACKey::ID> PACKey,
+                             uint64_t PACDisc, unsigned PACAddrDisc);
 
   // Emit the sequence to compute the discriminator.
   //
@@ -952,7 +966,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     // implementation of multiple entry points).  If this doesn't occur, the
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
-    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitSubsectionsViaSymbols();
   }
 
   if (TT.isOSBinFormatELF()) {
@@ -1335,10 +1349,12 @@ AArch64AsmPrinter::getCodeViewJumpTableInfo(int JTI,
 }
 
 void AArch64AsmPrinter::emitFunctionEntryLabel() {
-  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
-      MF->getFunction().getCallingConv() ==
-          CallingConv::AArch64_SVE_VectorCall ||
-      MF->getInfo<AArch64FunctionInfo>()->isSVECC()) {
+  const Triple &TT = TM.getTargetTriple();
+  if (TT.isOSBinFormatELF() &&
+      (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
+       MF->getFunction().getCallingConv() ==
+           CallingConv::AArch64_SVE_VectorCall ||
+       MF->getInfo<AArch64FunctionInfo>()->isSVECC())) {
     auto *TS =
         static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
     TS->emitDirectiveVariantPCS(CurrentFnSym);
@@ -1346,8 +1362,7 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
 
   AsmPrinter::emitFunctionEntryLabel();
 
-  if (TM.getTargetTriple().isWindowsArm64EC() &&
-      !MF->getFunction().hasLocalLinkage()) {
+  if (TT.isWindowsArm64EC() && !MF->getFunction().hasLocalLinkage()) {
     // For ARM64EC targets, a function definition's name is mangled differently
     // from the normal symbol, emit required aliases here.
     auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
@@ -1856,7 +1871,6 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
                                                      Register AddrDisc,
                                                      Register ScratchReg,
                                                      bool MayUseAddrAsScratch) {
-  assert(ScratchReg == AArch64::X16 || ScratchReg == AArch64::X17);
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
   if (AddrDisc == AArch64::NoRegister)
     AddrDisc = AArch64::XZR;
@@ -1876,7 +1890,8 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
 
   // Check if we can save one MOV instruction.
   assert(MayUseAddrAsScratch || ScratchReg != AddrDisc);
-  bool AddrDiscIsSafe = AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17;
+  bool AddrDiscIsSafe = AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17 ||
+                        !STI->isX16X17Safer();
   if (MayUseAddrAsScratch && AddrDiscIsSafe)
     ScratchReg = AddrDisc;
   else
@@ -2054,8 +2069,12 @@ void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
       /*ShouldTrap=*/true, /*OnFailure=*/nullptr);
 }
 
-void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
-  const bool IsAUTPAC = MI->getOpcode() == AArch64::AUTPAC;
+void AArch64AsmPrinter::emitPtrauthAuthResign(
+    Register AUTVal, AArch64PACKey::ID AUTKey, uint64_t AUTDisc,
+    const MachineOperand *AUTAddrDisc, Register Scratch,
+    std::optional<AArch64PACKey::ID> PACKey, uint64_t PACDisc,
+    unsigned PACAddrDisc) {
+  const bool IsAUTPAC = PACKey.has_value();
 
   // We expand AUT/AUTPAC into a sequence of the form
   //
@@ -2094,14 +2113,10 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
     break;
   }
 
-  auto AUTKey = (AArch64PACKey::ID)MI->getOperand(0).getImm();
-  uint64_t AUTDisc = MI->getOperand(1).getImm();
-  unsigned AUTAddrDisc = MI->getOperand(2).getReg();
-
   // Compute aut discriminator into x17
   assert(isUInt<16>(AUTDisc));
-  Register AUTDiscReg =
-      emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc, AArch64::X17);
+  Register AUTDiscReg = emitPtrauthDiscriminator(
+      AUTDisc, AUTAddrDisc->getReg(), Scratch, AUTAddrDisc->isKill());
   bool AUTZero = AUTDiscReg == AArch64::XZR;
   unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
 
@@ -2109,8 +2124,8 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   //  autia x16, x17  ; if !AUTZero
   MCInst AUTInst;
   AUTInst.setOpcode(AUTOpc);
-  AUTInst.addOperand(MCOperand::createReg(AArch64::X16));
-  AUTInst.addOperand(MCOperand::createReg(AArch64::X16));
+  AUTInst.addOperand(MCOperand::createReg(AUTVal));
+  AUTInst.addOperand(MCOperand::createReg(AUTVal));
   if (!AUTZero)
     AUTInst.addOperand(MCOperand::createReg(AUTDiscReg));
   EmitToStreamer(*OutStreamer, AUTInst);
@@ -2125,7 +2140,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
     if (IsAUTPAC && !ShouldTrap)
       EndSym = createTempSymbol("resign_end_");
 
-    emitPtrauthCheckAuthenticatedValue(AArch64::X16, AArch64::X17, AUTKey,
+    emitPtrauthCheckAuthenticatedValue(AUTVal, Scratch, AUTKey,
                                        AArch64PAuth::AuthCheckMethod::XPAC,
                                        ShouldTrap, EndSym);
   }
@@ -2136,23 +2151,19 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   if (!IsAUTPAC)
     return;
 
-  auto PACKey = (AArch64PACKey::ID)MI->getOperand(3).getImm();
-  uint64_t PACDisc = MI->getOperand(4).getImm();
-  unsigned PACAddrDisc = MI->getOperand(5).getReg();
-
   // Compute pac discriminator into x17
   assert(isUInt<16>(PACDisc));
   Register PACDiscReg =
-      emitPtrauthDiscriminator(PACDisc, PACAddrDisc, AArch64::X17);
+      emitPtrauthDiscriminator(PACDisc, PACAddrDisc, Scratch);
   bool PACZero = PACDiscReg == AArch64::XZR;
-  unsigned PACOpc = getPACOpcodeForKey(PACKey, PACZero);
+  unsigned PACOpc = getPACOpcodeForKey(*PACKey, PACZero);
 
   //  pacizb x16      ; if  PACZero
   //  pacib x16, x17  ; if !PACZero
   MCInst PACInst;
   PACInst.setOpcode(PACOpc);
-  PACInst.addOperand(MCOperand::createReg(AArch64::X16));
-  PACInst.addOperand(MCOperand::createReg(AArch64::X16));
+  PACInst.addOperand(MCOperand::createReg(AUTVal));
+  PACInst.addOperand(MCOperand::createReg(AUTVal));
   if (!PACZero)
     PACInst.addOperand(MCOperand::createReg(PACDiscReg));
   EmitToStreamer(*OutStreamer, PACInst);
@@ -2852,8 +2863,25 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   case AArch64::AUTx16x17:
+    emitPtrauthAuthResign(AArch64::X16,
+                          (AArch64PACKey::ID)MI->getOperand(0).getImm(),
+                          MI->getOperand(1).getImm(), &MI->getOperand(2),
+                          AArch64::X17, std::nullopt, 0, 0);
+    return;
+
+  case AArch64::AUTxMxN:
+    emitPtrauthAuthResign(MI->getOperand(0).getReg(),
+                          (AArch64PACKey::ID)MI->getOperand(3).getImm(),
+                          MI->getOperand(4).getImm(), &MI->getOperand(5),
+                          MI->getOperand(1).getReg(), std::nullopt, 0, 0);
+    return;
+
   case AArch64::AUTPAC:
-    emitPtrauthAuthResign(MI);
+    emitPtrauthAuthResign(
+        AArch64::X16, (AArch64PACKey::ID)MI->getOperand(0).getImm(),
+        MI->getOperand(1).getImm(), &MI->getOperand(2), AArch64::X17,
+        (AArch64PACKey::ID)MI->getOperand(3).getImm(),
+        MI->getOperand(4).getImm(), MI->getOperand(5).getReg());
     return;
 
   case AArch64::LOADauthptrstatic:
