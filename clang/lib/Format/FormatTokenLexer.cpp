@@ -694,6 +694,49 @@ bool FormatTokenLexer::canPrecedeRegexLiteral(FormatToken *Prev) {
   return true;
 }
 
+void FormatTokenLexer::tryParseJavaTextBlock() {
+  if (FormatTok->TokenText != "\"\"")
+    return;
+
+  const auto *Str = Lex->getBufferLocation();
+  const auto *End = Lex->getBuffer().end();
+
+  if (Str == End || *Str != '\"')
+    return;
+
+  // Skip the `"""` that begins a text block.
+  const auto *S = Str + 1;
+
+  // From docs.oracle.com/en/java/javase/15/text-blocks/#text-block-syntax:
+  // A text block begins with three double-quote characters followed by a line
+  // terminator.
+  while (S < End && *S != '\n') {
+    if (!isblank(*S))
+      return;
+    ++S;
+  }
+
+  // Find the `"""` that ends the text block.
+  for (int Count = 0; Count < 3; ++S) {
+    if (S == End)
+      return;
+
+    switch (*S) {
+    case '\\':
+      Count = -1;
+      break;
+    case '\"':
+      ++Count;
+      break;
+    default:
+      Count = 0;
+    }
+  }
+
+  // Skip the text block.
+  resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(S)));
+}
+
 // Tries to parse a JavaScript Regex literal starting at the current token,
 // if that begins with a slash and is in a location where JavaScript allows
 // regex literals. Changes the current token to a regex literal and updates
@@ -1374,6 +1417,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
     FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
     ++Column;
     StateStack.push(LexerState::TOKEN_STASHED);
+  } else if (Style.isJava() && FormatTok->is(tok::string_literal)) {
+    tryParseJavaTextBlock();
   }
 
   if (Style.isVerilog() && Tokens.size() > 0 &&
