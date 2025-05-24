@@ -33,6 +33,7 @@
 #define LOCALE_ru_RU_UTF_8     "ru_RU.UTF-8"
 #define LOCALE_zh_CN_UTF_8     "zh_CN.UTF-8"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>

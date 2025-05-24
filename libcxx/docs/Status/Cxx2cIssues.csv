@@ -56,7 +56,7 @@
 "`LWG4035 <https://wg21.link/LWG4035>`__","``single_view`` should provide ``empty``","2024-03 (Tokyo)","|Complete|","19","`#105328 <https://github.com/llvm/llvm-project/issues/105328>`__",""
 "`LWG4036 <https://wg21.link/LWG4036>`__","``__alignof_is_defined`` is only implicitly specified in C++ and not yet deprecated","2024-03 (Tokyo)","","","`#105329 <https://github.com/llvm/llvm-project/issues/105329>`__",""
 "`LWG4037 <https://wg21.link/LWG4037>`__","Static data members of ``ctype_base`` are not yet required to be usable in constant expressions","2024-03 (Tokyo)","","","`#105330 <https://github.com/llvm/llvm-project/issues/105330>`__",""
-"`LWG4038 <https://wg21.link/LWG4038>`__","``std::text_encoding::aliases_view`` should have constexpr iterators","2024-03 (Tokyo)","","","`#105332 <https://github.com/llvm/llvm-project/issues/105332>`__",""
+"`LWG4038 <https://wg21.link/LWG4038>`__","``std::text_encoding::aliases_view`` should have constexpr iterators","2024-03 (Tokyo)","|Complete|","","`#105332 <https://github.com/llvm/llvm-project/issues/105332>`__",""
 "`LWG4043 <https://wg21.link/LWG4043>`__","""ASCII"" is not a registered character encoding","2024-03 (Tokyo)","|Nothing To Do|","","`#105335 <https://github.com/llvm/llvm-project/issues/105335>`__",""
 "`LWG4045 <https://wg21.link/LWG4045>`__","``tuple`` can create dangling references from ``tuple-like``","2024-03 (Tokyo)","","","`#105337 <https://github.com/llvm/llvm-project/issues/105337>`__",""
 "`LWG4053 <https://wg21.link/LWG4053>`__","Unary call to ``std::views::repeat`` does not decay the argument","2024-03 (Tokyo)","|Complete|","19","`#105338 <https://github.com/llvm/llvm-project/issues/105338>`__",""

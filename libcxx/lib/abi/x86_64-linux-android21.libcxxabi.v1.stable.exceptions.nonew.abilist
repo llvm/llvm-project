@@ -1558,6 +1558,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk19__num_putIcE23__widen_and_group_floatEPcS2_S2_S2_RS2_S3_RKNS_6localeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19__num_putIwE21__widen_and_group_intEPcS2_S2_PwRS3_S4_RKNS_6localeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19__num_putIwE23__widen_and_group_floatEPcS2_S2_PwRS3_S4_RKNS_6localeE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk19__te_impl13__environmentEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19basic_iosIcNS_11char_traitsIcEEE7copyfmtERKS3_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19basic_iosIcNS_11char_traitsIcEEED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk19basic_iosIcNS_11char_traitsIcEEED1Ev', 'type': 'FUNC'}

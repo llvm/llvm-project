@@ -71,7 +71,6 @@
 // clang-format off
 
 // LLVM 22
-// TODO: Fill this in
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22 0
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE __attribute__((unavailable))
 
@@ -294,6 +293,10 @@
 // See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
+
+// Controls whether the internal implementation for text_encoding::environment() -> te_impl::__environment() is available
+#define _LIBCPP_AVAILABILITY_HAS_TE_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_22
+#define _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE
 
 // Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
 #  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
