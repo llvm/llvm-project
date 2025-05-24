@@ -28,6 +28,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
@@ -151,7 +152,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
         SinkCandidate->mayReadOrWriteMemory())
       continue;
     if (auto *RepR = dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
-      if (!ScalarVFOnly && RepR->isUniform())
+      if (!ScalarVFOnly && RepR->isSingleScalar())
         continue;
     } else if (!isa<VPScalarIVStepsRecipe>(SinkCandidate))
       continue;
@@ -347,7 +348,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   auto *RecipeWithoutMask = new VPReplicateRecipe(
       PredRecipe->getUnderlyingInstr(),
       make_range(PredRecipe->op_begin(), std::prev(PredRecipe->op_end())),
-      PredRecipe->isUniform(), nullptr /*Mask*/, *PredRecipe);
+      PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe);
   auto *Pred =
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
 
@@ -643,12 +644,11 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       // Skip recipes that shouldn't be narrowed.
       if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
           Def->getNumUsers() == 0 || !Def->getUnderlyingValue() ||
-          (RepR && (RepR->isUniform() || RepR->isPredicated())))
+          (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
         continue;
 
       // Skip recipes that may have other lanes than their first used.
-      if (!vputils::isUniformAfterVectorization(Def) &&
-          !vputils::onlyFirstLaneUsed(Def))
+      if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
         continue;
 
       auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
@@ -939,9 +939,86 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
   }
 }
 
+/// Try to fold \p R using TargetFolder to a constant. Will succeed and return a
+/// non-nullptr Value for a handled \p Opcode if all \p Operands are constant.
+static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
+                                ArrayRef<VPValue *> Operands,
+                                const DataLayout &DL,
+                                VPTypeAnalysis &TypeInfo) {
+  SmallVector<Value *, 4> Ops;
+  for (VPValue *Op : Operands) {
+    if (!Op->isLiveIn() || !Op->getLiveInIRValue())
+      return nullptr;
+    Ops.push_back(Op->getLiveInIRValue());
+  }
+
+  TargetFolder Folder(DL);
+  if (Instruction::isBinaryOp(Opcode))
+    return Folder.FoldBinOp(static_cast<Instruction::BinaryOps>(Opcode), Ops[0],
+                            Ops[1]);
+  if (Instruction::isCast(Opcode))
+    return Folder.FoldCast(static_cast<Instruction::CastOps>(Opcode), Ops[0],
+                           TypeInfo.inferScalarType(R.getVPSingleValue()));
+  switch (Opcode) {
+  case VPInstruction::LogicalAnd:
+    return Folder.FoldSelect(Ops[0], Ops[1],
+                             ConstantInt::getNullValue(Ops[1]->getType()));
+  case VPInstruction::Not:
+    return Folder.FoldBinOp(Instruction::BinaryOps::Xor, Ops[0],
+                            Constant::getAllOnesValue(Ops[0]->getType()));
+  case Instruction::Select:
+    return Folder.FoldSelect(Ops[0], Ops[1], Ops[2]);
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+    return Folder.FoldCmp(cast<VPRecipeWithIRFlags>(R).getPredicate(), Ops[0],
+                          Ops[1]);
+  case Instruction::GetElementPtr: {
+    auto &RFlags = cast<VPRecipeWithIRFlags>(R);
+    auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
+    return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0], drop_begin(Ops),
+                          RFlags.getGEPNoWrapFlags());
+  }
+  case VPInstruction::PtrAdd:
+    return Folder.FoldGEP(IntegerType::getInt8Ty(TypeInfo.getContext()), Ops[0],
+                          Ops[1],
+                          cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
+  case Instruction::InsertElement:
+    return Folder.FoldInsertElement(Ops[0], Ops[1], Ops[2]);
+  case Instruction::ExtractElement:
+    return Folder.FoldExtractElement(Ops[0], Ops[1]);
+  }
+  return nullptr;
+}
+
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
+
+  // Constant folding.
+  if (TypeSwitch<VPRecipeBase *, bool>(&R)
+          .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+                VPReplicateRecipe>([&](auto *I) {
+            VPlan *Plan = R.getParent()->getPlan();
+            const DataLayout &DL =
+                Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
+            Value *V = tryToConstantFold(*I, I->getOpcode(), I->operands(), DL,
+                                         TypeInfo);
+            if (V)
+              I->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
+            return V;
+          })
+          .Default([](auto *) { return false; }))
+    return;
+
+  // Fold PredPHI constant -> constant.
+  if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
+    VPlan *Plan = R.getParent()->getPlan();
+    VPValue *Op = PredPHI->getOperand(0);
+    if (!Op->isLiveIn() || !Op->getLiveInIRValue())
+      return;
+    if (auto *C = dyn_cast<Constant>(Op->getLiveInIRValue()))
+      PredPHI->replaceAllUsesWith(Plan->getOrAddLiveIn(C));
+  }
 
   // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
   // part 0 can be replaced by their start value, if only the first lane is
@@ -1082,6 +1159,42 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
+    }
+  }
+}
+
+static void narrowToSingleScalarRecipes(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  // Try to narrow wide and replicating recipes to single scalar recipes,
+  // based on VPlan analysis. Only process blocks in the loop region for now,
+  // without traversing into nested regions, as recipes in replicate regions
+  // cannot be converted yet.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (!RepR && !isa<VPWidenRecipe>(&R))
+        continue;
+      if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
+        continue;
+
+      auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
+      // Skip recipes that aren't single scalars or don't have only their
+      // scalar results used. In the latter case, we would introduce extra
+      // broadcasts.
+      if (!vputils::isSingleScalar(RepOrWidenR) ||
+          any_of(RepOrWidenR->users(), [RepOrWidenR](VPUser *U) {
+            return !U->usesScalars(RepOrWidenR);
+          }))
+        continue;
+
+      auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
+                                          RepOrWidenR->operands(),
+                                          true /*IsSingleScalar*/);
+      Clone->insertBefore(RepOrWidenR);
+      RepOrWidenR->replaceAllUsesWith(Clone);
     }
   }
 }
@@ -1780,6 +1893,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
   runPass(simplifyBlends, Plan);
   runPass(removeDeadRecipes, Plan);
+  runPass(narrowToSingleScalarRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
@@ -2392,6 +2506,81 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
+// Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.
+static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
+  VPWidenCastRecipe *Ext;
+  // Only ZExt contains non-neg flags.
+  if (ExtRed->isZExt())
+    Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
+                                ExtRed->getResultType(), ExtRed->isNonNeg(),
+                                ExtRed->getDebugLoc());
+  else
+    Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
+                                ExtRed->getResultType(), ExtRed->getDebugLoc());
+
+  auto *Red = new VPReductionRecipe(
+      ExtRed->getRecurrenceKind(), FastMathFlags(), ExtRed->getChainOp(), Ext,
+      ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getDebugLoc());
+  Ext->insertBefore(ExtRed);
+  Red->insertBefore(ExtRed);
+  ExtRed->replaceAllUsesWith(Red);
+  ExtRed->eraseFromParent();
+}
+
+// Expand VPMulAccumulateReductionRecipe to VPWidenRecipe (mul) +
+// VPReductionRecipe (reduce.add)
+// + VPWidenCastRecipe (optional).
+static void
+expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
+  // Generate inner VPWidenCastRecipes if necessary.
+  // Note that we will drop the extend after mul which transforms
+  // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
+  VPValue *Op0, *Op1;
+  if (MulAcc->isExtended()) {
+    Type *RedTy = MulAcc->getResultType();
+    if (MulAcc->isZExt())
+      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
+                                  RedTy, MulAcc->isNonNeg(),
+                                  MulAcc->getDebugLoc());
+    else
+      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
+                                  RedTy, MulAcc->getDebugLoc());
+    Op0->getDefiningRecipe()->insertBefore(MulAcc);
+    // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
+    // VPWidenCastRecipe.
+    if (MulAcc->getVecOp0() == MulAcc->getVecOp1()) {
+      Op1 = Op0;
+    } else {
+      if (MulAcc->isZExt())
+        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
+                                    RedTy, MulAcc->isNonNeg(),
+                                    MulAcc->getDebugLoc());
+      else
+        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
+                                    RedTy, MulAcc->getDebugLoc());
+      Op1->getDefiningRecipe()->insertBefore(MulAcc);
+    }
+  } else {
+    // No extends in this MulAccRecipe.
+    Op0 = MulAcc->getVecOp0();
+    Op1 = MulAcc->getVecOp1();
+  }
+
+  std::array<VPValue *, 2> MulOps = {Op0, Op1};
+  auto *Mul = new VPWidenRecipe(
+      Instruction::Mul, ArrayRef(MulOps), MulAcc->hasNoUnsignedWrap(),
+      MulAcc->hasNoSignedWrap(), MulAcc->getDebugLoc());
+  Mul->insertBefore(MulAcc);
+
+  auto *Red = new VPReductionRecipe(
+      MulAcc->getRecurrenceKind(), FastMathFlags(), MulAcc->getChainOp(), Mul,
+      MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getDebugLoc());
+  Red->insertBefore(MulAcc);
+
+  MulAcc->replaceAllUsesWith(Red);
+  MulAcc->eraseFromParent();
+}
+
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
                                                Type &CanonicalIVTy) {
   using namespace llvm::VPlanPatternMatch;
@@ -2454,6 +2643,14 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
       VPI->replaceAllUsesWith(VectorStep);
       ToRemove.push_back(VPI);
     }
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (auto *ExtRed = dyn_cast<VPExtendedReductionRecipe>(&R)) {
+        expandVPExtendedReduction(ExtRed);
+        continue;
+      }
+      if (auto *MulAcc = dyn_cast<VPMulAccumulateReductionRecipe>(&R))
+        expandVPMulAccumulateReduction(MulAcc);
+    }
   }
 
   for (VPRecipeBase *R : ToRemove)
@@ -2461,63 +2658,56 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 }
 
 void VPlanTransforms::handleUncountableEarlyExit(
-    VPlan &Plan, Loop *OrigLoop, BasicBlock *UncountableExitingBlock,
-    VPRecipeBuilder &RecipeBuilder, VFRange &Range) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
+    VPBasicBlock *EarlyExitingVPBB, VPBasicBlock *EarlyExitVPBB, VPlan &Plan,
+    VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VFRange &Range) {
+  using namespace llvm::VPlanPatternMatch;
+
+  VPBlockBase *MiddleVPBB = LatchVPBB->getSuccessors()[0];
+  if (!EarlyExitVPBB->getSinglePredecessor() &&
+      EarlyExitVPBB->getPredecessors()[1] == MiddleVPBB) {
+    assert(EarlyExitVPBB->getNumPredecessors() == 2 &&
+           EarlyExitVPBB->getPredecessors()[0] == EarlyExitingVPBB &&
+           "unsupported early exit VPBB");
+    // Early exit operand should always be last phi operand. If EarlyExitVPBB
+    // has two predecessors and EarlyExitingVPBB is the first, swap the operands
+    // of the phis.
+    for (VPRecipeBase &R : EarlyExitVPBB->phis())
+      cast<VPIRPhi>(&R)->swapOperands();
+  }
+
   VPBuilder Builder(LatchVPBB->getTerminator());
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPValue *IsEarlyExitTaken = nullptr;
+  VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
+  assert(
+      match(EarlyExitingVPBB->getTerminator(), m_BranchOnCond(m_VPValue())) &&
+      "Terminator must be be BranchOnCond");
+  VPValue *CondOfEarlyExitingVPBB =
+      EarlyExitingVPBB->getTerminator()->getOperand(0);
+  auto *CondToEarlyExit = TrueSucc == EarlyExitVPBB
+                              ? CondOfEarlyExitingVPBB
+                              : Builder.createNot(CondOfEarlyExitingVPBB);
 
-  // Process the uncountable exiting block. Update IsEarlyExitTaken, which
-  // tracks if the uncountable early exit has been taken. Also split the middle
-  // block and have it conditionally branch to the early exit block if
-  // EarlyExitTaken.
-  auto *EarlyExitingBranch =
-      cast<BranchInst>(UncountableExitingBlock->getTerminator());
-  BasicBlock *TrueSucc = EarlyExitingBranch->getSuccessor(0);
-  BasicBlock *FalseSucc = EarlyExitingBranch->getSuccessor(1);
-  BasicBlock *EarlyExitIRBB =
-      !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc;
-  VPIRBasicBlock *VPEarlyExitBlock = Plan.getExitBlock(EarlyExitIRBB);
-
-  VPValue *EarlyExitNotTakenCond = RecipeBuilder.getBlockInMask(
-      OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-  auto *EarlyExitTakenCond = Builder.createNot(EarlyExitNotTakenCond);
-  IsEarlyExitTaken =
-      Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
-
+  // Split the middle block and have it conditionally branch to the early exit
+  // block if CondToEarlyExit.
+  VPValue *IsEarlyExitTaken =
+      Builder.createNaryOp(VPInstruction::AnyOf, {CondToEarlyExit});
   VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
   VPBasicBlock *VectorEarlyExitVPBB =
       Plan.createVPBasicBlock("vector.early.exit");
-  VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
+  VPBlockUtils::insertOnEdge(LatchVPBB, MiddleVPBB, NewMiddle);
   VPBlockUtils::connectBlocks(NewMiddle, VectorEarlyExitVPBB);
   NewMiddle->swapSuccessors();
 
-  VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, VPEarlyExitBlock);
+  VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
 
   // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-  for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
+  for (VPRecipeBase &R : EarlyExitVPBB->phis()) {
     auto *ExitIRI = cast<VPIRPhi>(&R);
-    // Early exit operand should always be last, i.e., 0 if VPEarlyExitBlock has
+    // Early exit operand should always be last, i.e., 0 if EarlyExitVPBB has
     // a single predecessor and 1 if it has two.
     unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
-    if (!VPEarlyExitBlock->getSinglePredecessor()) {
-      // If VPEarlyExitBlock has two predecessors, they are already ordered such
-      // that early exit is second (and latch exit is first), by construction.
-      // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
-      // ordered the other way around, and it is the order of the latter which
-      // corresponds to the order of operands of VPEarlyExitBlock's phi recipes.
-      // Therefore, if early exit (UncountableExitingBlock) is the first
-      // predecessor of EarlyExitIRBB, we swap the operands of phi recipes,
-      // thereby bringing them to match VPEarlyExitBlock's predecessor order,
-      // with early exit being last (second). Otherwise they already match.
-      if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) ==
-          UncountableExitingBlock)
-        ExitIRI->swapOperands();
-
+    if (ExitIRI->getNumOperands() != 1) {
       // The first of two operands corresponds to the latch exit, via MiddleVPBB
       // predecessor. Extract its last lane.
       ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);
@@ -2533,7 +2723,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
         LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
       // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
-          VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
+          VPInstruction::FirstActiveLane, {CondToEarlyExit}, nullptr,
           "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
           Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
@@ -2556,6 +2746,171 @@ void VPlanTransforms::handleUncountableEarlyExit(
       Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
+}
+
+/// This function tries convert extended in-loop reductions to
+/// VPExtendedReductionRecipe and clamp the \p Range if it is beneficial and
+/// valid. The created recipe must be lowered to concrete
+/// recipes before execution.
+static VPExtendedReductionRecipe *
+tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
+                                     VFRange &Range) {
+  using namespace VPlanPatternMatch;
+
+  Type *RedTy = Ctx.Types.inferScalarType(Red);
+  VPValue *VecOp = Red->getVecOp();
+
+  // Clamp the range if using extended-reduction is profitable.
+  auto IsExtendedRedValidAndClampRange = [&](unsigned Opcode, bool isZExt,
+                                             Type *SrcTy) -> bool {
+    return LoopVectorizationPlanner::getDecisionAndClampRange(
+        [&](ElementCount VF) {
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+          TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+          InstructionCost ExtRedCost = Ctx.TTI.getExtendedReductionCost(
+              Opcode, isZExt, RedTy, SrcVecTy, Red->getFastMathFlags(),
+              CostKind);
+          InstructionCost ExtCost =
+              cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
+          InstructionCost RedCost = Red->computeCost(VF, Ctx);
+          return ExtRedCost.isValid() && ExtRedCost < ExtCost + RedCost;
+        },
+        Range);
+  };
+
+  VPValue *A;
+  // Match reduce(ext)).
+  if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
+      IsExtendedRedValidAndClampRange(
+          RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
+          cast<VPWidenCastRecipe>(VecOp)->getOpcode() ==
+              Instruction::CastOps::ZExt,
+          Ctx.Types.inferScalarType(A)))
+    return new VPExtendedReductionRecipe(Red, cast<VPWidenCastRecipe>(VecOp));
+
+  return nullptr;
+}
+
+/// This function tries convert extended in-loop reductions to
+/// VPMulAccumulateReductionRecipe and clamp the \p Range if it is beneficial
+/// and valid. The created VPExtendedReductionRecipe must be lower to concrete
+/// recipes before execution. Patterns of MulAccumulateReduction:
+///   reduce.add(mul(...)),
+///   reduce.add(mul(ext(A), ext(B))),
+///   reduce.add(ext(mul(ext(A), ext(B)))).
+static VPMulAccumulateReductionRecipe *
+tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
+                                          VPCostContext &Ctx, VFRange &Range) {
+  using namespace VPlanPatternMatch;
+
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+  if (Opcode != Instruction::Add)
+    return nullptr;
+
+  Type *RedTy = Ctx.Types.inferScalarType(Red);
+
+  // Clamp the range if using multiply-accumulate-reduction is profitable.
+  auto IsMulAccValidAndClampRange =
+      [&](bool isZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
+          VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt) -> bool {
+    return LoopVectorizationPlanner::getDecisionAndClampRange(
+        [&](ElementCount VF) {
+          TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+          Type *SrcTy =
+              Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+          InstructionCost MulAccCost =
+              Ctx.TTI.getMulAccReductionCost(isZExt, RedTy, SrcVecTy, CostKind);
+          InstructionCost MulCost = Mul->computeCost(VF, Ctx);
+          InstructionCost RedCost = Red->computeCost(VF, Ctx);
+          InstructionCost ExtCost = 0;
+          if (Ext0)
+            ExtCost += Ext0->computeCost(VF, Ctx);
+          if (Ext1)
+            ExtCost += Ext1->computeCost(VF, Ctx);
+          if (OuterExt)
+            ExtCost += OuterExt->computeCost(VF, Ctx);
+
+          return MulAccCost.isValid() &&
+                 MulAccCost < ExtCost + MulCost + RedCost;
+        },
+        Range);
+  };
+
+  VPValue *VecOp = Red->getVecOp();
+  VPValue *A, *B;
+  // Try to match reduce.add(mul(...)).
+  if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
+    auto *RecipeA =
+        dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
+    auto *RecipeB =
+        dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
+    auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
+
+    // Match reduce.add(mul(ext, ext)).
+    if (RecipeA && RecipeB &&
+        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B) &&
+        match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
+        match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
+        IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
+                                       Instruction::CastOps::ZExt,
+                                   Mul, RecipeA, RecipeB, nullptr))
+      return new VPMulAccumulateReductionRecipe(Red, Mul, RecipeA, RecipeB,
+                                                RecipeA->getResultType());
+    // Match reduce.add(mul).
+    if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
+      return new VPMulAccumulateReductionRecipe(Red, Mul, RedTy);
+  }
+  // Match reduce.add(ext(mul(ext(A), ext(B)))).
+  // All extend recipes must have same opcode or A == B
+  // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
+  if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                      m_ZExtOrSExt(m_VPValue()))))) {
+    auto *Ext = cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
+    auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
+    auto *Ext0 =
+        cast<VPWidenCastRecipe>(Mul->getOperand(0)->getDefiningRecipe());
+    auto *Ext1 =
+        cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
+    if ((Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
+        Ext0->getOpcode() == Ext1->getOpcode() &&
+        IsMulAccValidAndClampRange(Ext0->getOpcode() ==
+                                       Instruction::CastOps::ZExt,
+                                   Mul, Ext0, Ext1, Ext))
+      return new VPMulAccumulateReductionRecipe(Red, Mul, Ext0, Ext1,
+                                                Ext->getResultType());
+  }
+  return nullptr;
+}
+
+/// This function tries to create abstract recipes from the reduction recipe for
+/// following optimizations and cost estimation.
+static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
+                                               VPCostContext &Ctx,
+                                               VFRange &Range) {
+  VPReductionRecipe *AbstractR = nullptr;
+
+  if (auto *MulAcc = tryToMatchAndCreateMulAccumulateReduction(Red, Ctx, Range))
+    AbstractR = MulAcc;
+  else if (auto *ExtRed = tryToMatchAndCreateExtendedReduction(Red, Ctx, Range))
+    AbstractR = ExtRed;
+  // Cannot create abstract inloop reduction recipes.
+  if (!AbstractR)
+    return;
+
+  AbstractR->insertBefore(Red);
+  Red->replaceAllUsesWith(AbstractR);
+}
+
+void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
+                                               VFRange &Range) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      if (auto *Red = dyn_cast<VPReductionRecipe>(&R))
+        tryToCreateAbstractReductionRecipe(Red, Ctx, Range);
+    }
+  }
 }
 
 void VPlanTransforms::materializeStepVectors(VPlan &Plan) {
