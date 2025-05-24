@@ -277,6 +277,40 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ConstComplexAttr
+//===----------------------------------------------------------------------===//
+
+def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex", [TypedAttrInterface]> {
+  let summary = "An attribute that contains a constant complex value";
+  let description = [{
+    The `#cir.const_complex` attribute contains a constant value of complex number
+    type. The `real` parameter gives the real part of the complex number and the
+    `imag` parameter gives the imaginary part of the complex number.
+
+    The `real` and `imag` parameter must be either an IntAttr or an FPAttr that
+    contains values of the same CIR type.
+  }];
+
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "cir::ComplexType">:$type,
+    "mlir::TypedAttr":$real, "mlir::TypedAttr":$imag);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::ComplexType":$type,
+                                        "mlir::TypedAttr":$real,
+                                        "mlir::TypedAttr":$imag), [{
+      return $_get(type.getContext(), type, real, imag);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` qualified($real) `,` qualified($imag) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VisibilityAttr
 //===----------------------------------------------------------------------===//
 
