@@ -178,7 +178,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
-  fix false positives related to operator overloading and templates.
+  fixing false positives when calling indexing operators that do not perform
+  pointer arithmetic in template, for example ``std::map::operator[]``.
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
