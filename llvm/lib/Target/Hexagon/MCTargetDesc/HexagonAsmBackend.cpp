@@ -198,7 +198,7 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+  bool shouldForceRelocation(const MCFixup &Fixup,
                              const MCValue &Target) override {
     switch(Fixup.getTargetKind()) {
       default:

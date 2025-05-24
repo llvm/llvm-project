@@ -123,7 +123,7 @@ bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
 bool MCAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
                             const MCFixup &Fixup, const MCValue &Target,
                             uint64_t &FixedValue, bool IsResolved) {
-  if (IsResolved && shouldForceRelocation(Asm, Fixup, Target))
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;
   if (!IsResolved)
     Asm.getWriter().recordRelocation(Asm, &F, Fixup, Target, FixedValue);

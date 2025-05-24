@@ -168,7 +168,7 @@ public:
     }
   }
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+  bool shouldForceRelocation(const MCFixup &Fixup,
                              const MCValue &Target) override {
     // If there is a @ specifier, unless it is optimized out (e.g. constant @l),
     // force a relocation.

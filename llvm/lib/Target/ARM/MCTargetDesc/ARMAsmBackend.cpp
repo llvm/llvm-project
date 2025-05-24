@@ -969,8 +969,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
 }
 
-bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                          const MCFixup &Fixup,
+bool ARMAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
                                           const MCValue &Target) {
   const MCSymbol *Sym = Target.getAddSym();
   const unsigned FixupKind = Fixup.getKind();
@@ -987,7 +986,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   }
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
-  if (needsInterworking(Asm, Sym, Fixup.getTargetKind()))
+  if (needsInterworking(*Asm, Sym, Fixup.getTargetKind()))
     return true;
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination

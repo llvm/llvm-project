@@ -556,8 +556,7 @@ bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                           const MCFixup &Fixup,
+bool MipsAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
                                            const MCValue &Target) {
   const unsigned FixupKind = Fixup.getKind();
   switch (FixupKind) {
