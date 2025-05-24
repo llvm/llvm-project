@@ -18,6 +18,7 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -1253,6 +1254,34 @@ CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   return id;
 }
 
+mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkSharedCTAToGlobalOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Intrinsic::ID id =
+      llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getDstMem()));
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  // Choose the bytemask variant
+  if (mlir::Value byteMask = thisOp.getByteMask()) {
+    args.push_back(mt.lookupValue(byteMask));
+    id = llvm::Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global_bytemask;
+  }
+
+  return {id, std::move(args)};
+}
+
 llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
                                                                 bool isIm2Col) {
   switch (tensorDims) {
@@ -1710,7 +1739,7 @@ LogicalResult
 NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        int optLevel, StringRef triple, StringRef chip,
                        StringRef features, DictionaryAttr flags,
-                       ArrayAttr files) {
+                       ArrayAttr files, bool verifyTarget) {
   if (optLevel < 0 || optLevel > 3) {
     emitError() << "The optimization level must be a number between 0 and 3.";
     return failure();
@@ -1729,6 +1758,37 @@ NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     emitError() << "All the elements in the `link` array must be strings.";
     return failure();
   }
+  return success();
+}
+
+LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
+  if (!getVerifyTarget())
+    return success();
+
+  auto gpuModuleOp = llvm::dyn_cast<gpu::GPUModuleOp>(gpuModule);
+  if (!gpuModuleOp) {
+    return emitError(gpuModule->getLoc(),
+                     "NVVM target attribute must be attached to a GPU module");
+  }
+
+  const NVVMCheckSMVersion targetSMVersion =
+      NVVMCheckSMVersion::getTargetSMVersionFromStr(getChip());
+  if (!targetSMVersion.isMinimumSMVersion()) {
+    return emitError(gpuModule->getLoc(),
+                     "Minimum NVVM target SM version is sm_20");
+  }
+
+  gpuModuleOp->walk([&](Operation *op) {
+    if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
+      const NVVMCheckSMVersion requirement = reqOp.getRequiredMinSMVersion();
+      if (!requirement.isCompatibleWith(targetSMVersion)) {
+        op->emitOpError() << "is not supported on " << getChip();
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+
   return success();
 }
 

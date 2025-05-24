@@ -25,6 +25,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if defined(_LIBCPP_WIN32API)
 
@@ -61,4 +62,5 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
 _LIBCPP_EXPORTED_FROM_ABI bool __is_posix_terminal(FILE* __stream) { return isatty(fileno(__stream)); }
 #endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

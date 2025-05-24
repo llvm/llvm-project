@@ -2402,7 +2402,7 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
     }
   }
   name.reserve(128);
-  std::replace(name.begin(), name.end(), '.', '_');
+  llvm::replace(name, '.', '_');
   llvm::raw_string_ostream ss(name);
   ss << "_" << fun;
   for (Type t : op->getOperandTypes()) {
@@ -4488,8 +4488,7 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Return true if we have a zero-value tile.
   auto hasZeros = [&](ArrayRef<OpFoldResult> tiles) {
-    return llvm::any_of(
-        tiles, [](OpFoldResult tile) { return isConstantIntValue(tile, 0); });
+    return llvm::any_of(tiles, isZeroInteger);
   };
 
   // Verify tiles. Do not allow zero tiles.
