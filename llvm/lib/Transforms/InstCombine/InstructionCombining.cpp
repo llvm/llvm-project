@@ -2094,6 +2094,49 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
   return true;
 }
 
+/// Find a constant NewC that has property:
+///   shuffle(NewC, ShMask) = C
+/// Returns nullptr if such a constant does not exist e.g. ShMask=<0,0> C=<1,2>
+///
+/// A 1-to-1 mapping is not required. Example:
+/// ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <poison,5,6,poison>
+static Constant *unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
+                                   VectorType *NewCTy) {
+  if (isa<ScalableVectorType>(NewCTy)) {
+    Constant *Splat = C->getSplatValue();
+    if (!Splat)
+      return nullptr;
+    return ConstantVector::getSplat(NewCTy->getElementCount(), Splat);
+  }
+
+  if (cast<FixedVectorType>(NewCTy)->getNumElements() >
+      cast<FixedVectorType>(C->getType())->getNumElements())
+    return nullptr;
+
+  unsigned NewCNumElts = cast<FixedVectorType>(NewCTy)->getNumElements();
+  PoisonValue *PoisonScalar = PoisonValue::get(C->getType()->getScalarType());
+  SmallVector<Constant *, 16> NewVecC(NewCNumElts, PoisonScalar);
+  unsigned NumElts = cast<FixedVectorType>(C->getType())->getNumElements();
+  for (unsigned I = 0; I < NumElts; ++I) {
+    Constant *CElt = C->getAggregateElement(I);
+    if (ShMask[I] >= 0) {
+      assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
+      Constant *NewCElt = NewVecC[ShMask[I]];
+      // Bail out if:
+      // 1. The constant vector contains a constant expression.
+      // 2. The shuffle needs an element of the constant vector that can't
+      //    be mapped to a new constant vector.
+      // 3. This is a widening shuffle that copies elements of V1 into the
+      //    extended elements (extending with poison is allowed).
+      if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
+          I >= NewCNumElts)
+        return nullptr;
+      NewVecC[ShMask[I]] = CElt;
+    }
+  }
+  return ConstantVector::get(NewVecC);
+}
+
 Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   if (!isa<VectorType>(Inst.getType()))
     return nullptr;
@@ -2213,80 +2256,24 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   // other binops, so they can be folded. It may also enable demanded elements
   // transforms.
   Constant *C;
-  auto *InstVTy = dyn_cast<FixedVectorType>(Inst.getType());
-  if (InstVTy &&
-      match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
+  if (match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
                                                 m_Mask(Mask))),
-                             m_ImmConstant(C))) &&
-      cast<FixedVectorType>(V1->getType())->getNumElements() <=
-          InstVTy->getNumElements()) {
-    assert(InstVTy->getScalarType() == V1->getType()->getScalarType() &&
+                             m_ImmConstant(C)))) {
+    assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
 
-    // Find constant NewC that has property:
-    //   shuffle(NewC, ShMask) = C
-    // If such constant does not exist (example: ShMask=<0,0> and C=<1,2>)
-    // reorder is not possible. A 1-to-1 mapping is not required. Example:
-    // ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <undef,5,6,undef>
     bool ConstOp1 = isa<Constant>(RHS);
-    ArrayRef<int> ShMask = Mask;
-    unsigned SrcVecNumElts =
-        cast<FixedVectorType>(V1->getType())->getNumElements();
-    PoisonValue *PoisonScalar = PoisonValue::get(C->getType()->getScalarType());
-    SmallVector<Constant *, 16> NewVecC(SrcVecNumElts, PoisonScalar);
-    bool MayChange = true;
-    unsigned NumElts = InstVTy->getNumElements();
-    for (unsigned I = 0; I < NumElts; ++I) {
-      Constant *CElt = C->getAggregateElement(I);
-      if (ShMask[I] >= 0) {
-        assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
-        Constant *NewCElt = NewVecC[ShMask[I]];
-        // Bail out if:
-        // 1. The constant vector contains a constant expression.
-        // 2. The shuffle needs an element of the constant vector that can't
-        //    be mapped to a new constant vector.
-        // 3. This is a widening shuffle that copies elements of V1 into the
-        //    extended elements (extending with poison is allowed).
-        if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
-            I >= SrcVecNumElts) {
-          MayChange = false;
-          break;
-        }
-        NewVecC[ShMask[I]] = CElt;
-      }
-    }
-    if (MayChange) {
-      Constant *NewC = ConstantVector::get(NewVecC);
-      // Lanes of NewC not used by the shuffle will be poison which will cause
-      // UB for div/rem. Mask them with a safe constant.
-      if (Inst.isIntDivRem())
+    if (Constant *NewC =
+            unshuffleConstant(Mask, C, cast<VectorType>(V1->getType()))) {
+      // For fixed vectors, lanes of NewC not used by the shuffle will be poison
+      // which will cause UB for div/rem. Mask them with a safe constant.
+      if (isa<FixedVectorType>(V1->getType()) && Inst.isIntDivRem())
         NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
       // Op(C, shuffle(V1, Mask)) -> shuffle(Op(NewC, V1), Mask)
       Value *NewLHS = ConstOp1 ? V1 : NewC;
       Value *NewRHS = ConstOp1 ? NewC : V1;
-      return createBinOpShuffle(NewLHS, NewRHS, Mask);
-    }
-  }
-
-  // Similar to the combine above, but handles the case for scalable vectors
-  // where both shuffle(V1, 0) and C are splats.
-  //
-  // Op(shuffle(V1, 0), (splat C)) -> shuffle(Op(V1, (splat C)), 0)
-  if (isa<ScalableVectorType>(Inst.getType()) &&
-      match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
-                                                m_ZeroMask())),
-                             m_ImmConstant(C)))) {
-    if (Constant *Splat = C->getSplatValue()) {
-      bool ConstOp1 = isa<Constant>(RHS);
-      VectorType *V1Ty = cast<VectorType>(V1->getType());
-      Constant *NewC = ConstantVector::getSplat(V1Ty->getElementCount(), Splat);
-
-      Value *NewLHS = ConstOp1 ? V1 : NewC;
-      Value *NewRHS = ConstOp1 ? NewC : V1;
-      VectorType *VTy = cast<VectorType>(Inst.getType());
-      SmallVector<int> Mask(VTy->getElementCount().getKnownMinValue(), 0);
       return createBinOpShuffle(NewLHS, NewRHS, Mask);
     }
   }

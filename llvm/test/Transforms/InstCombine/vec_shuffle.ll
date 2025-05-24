@@ -652,6 +652,17 @@ define <4 x i8> @widening_shuffle_add_1(<2 x i8> %x) {
   ret <4 x i8> %r
 }
 
+define <vscale x 4 x i8> @widening_shuffle_add_1_scalable(<vscale x 2 x i8> %x) {
+; CHECK-LABEL: @widening_shuffle_add_1_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 2 x i8> [[X:%.*]], splat (i8 42)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x i8> [[R]]
+;
+  %widex = shufflevector <vscale x 2 x i8> %x, <vscale x 2 x i8> poison, <vscale x 4 x i32> zeroinitializer
+  %r = add <vscale x 4 x i8> %widex, splat (i8 42)
+  ret <vscale x 4 x i8> %r
+}
+
 ; Reduce the width of the binop by moving it ahead of a shuffle.
 
 define <4 x i8> @widening_shuffle_add_2(<2 x i8> %x) {
@@ -938,6 +949,28 @@ define <2 x i32> @shl_splat_constant1(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
+define <vscale x 2 x i32> @shl_splat_constant0_scalable(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @shl_splat_constant0_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <vscale x 2 x i32> splat (i32 5), [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+;
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = shl <vscale x 2 x i32> splat (i32 5), %splat
+  ret <vscale x 2 x i32> %r
+}
+
+define <vscale x 2 x i32> @shl_splat_constant1_scalable(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @shl_splat_constant1_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <vscale x 2 x i32> [[X:%.*]], splat (i32 5)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+;
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = shl <vscale x 2 x i32> %splat, splat (i32 5)
+  ret <vscale x 2 x i32> %r
+}
+
 define <2 x i32> @ashr_splat_constant0(<2 x i32> %x) {
 ; CHECK-LABEL: @ashr_splat_constant0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> <i32 5, i32 poison>, [[X:%.*]]
@@ -1046,6 +1079,28 @@ define <2 x i32> @udiv_splat_constant1(<2 x i32> %x) {
   %splat = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> zeroinitializer
   %r = udiv <2 x i32> %splat, <i32 42, i32 42>
   ret <2 x i32> %r
+}
+
+define <vscale x 2 x i32> @udiv_splat_constant0_scalable(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @udiv_splat_constant0_scalable(
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[X:%.*]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = udiv <vscale x 2 x i32> splat (i32 42), [[SPLAT]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+;
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = udiv <vscale x 2 x i32> splat (i32 42), %splat
+  ret <vscale x 2 x i32> %r
+}
+
+define <vscale x 2 x i32> @udiv_splat_constant1_scalable(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @udiv_splat_constant1_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <vscale x 2 x i32> [[X:%.*]], splat (i32 42)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+;
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = udiv <vscale x 2 x i32> %splat, splat (i32 42)
+  ret <vscale x 2 x i32> %r
 }
 
 define <2 x i32> @sdiv_splat_constant0(<2 x i32> %x) {
