@@ -1711,8 +1711,22 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
           F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
       FAlias->takeName(F);
-      if (FAlias->hasName())
+      if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
+        // For COFF we should also rename the comdat if this function also
+        // happens to be the key function. Even if the comdat name changes, this
+        // should still be fine since comdat and symbol resolution happens
+        // before LTO, so all symbols which would prevail have been selected.
+        if (F->hasComdat() && ObjectFormat == Triple::COFF &&
+            F->getComdat()->getName() == FAlias->getName()) {
+          Comdat *OldComdat = F->getComdat();
+          Comdat *NewComdat = M.getOrInsertComdat(F->getName());
+          for (GlobalObject &GO : M.global_objects()) {
+            if (GO.getComdat() == OldComdat)
+              GO.setComdat(NewComdat);
+          }
+        }
+      }
       replaceCfiUses(F, FAlias, IsJumpTableCanonical);
       if (!F->hasLocalLinkage())
         F->setVisibility(GlobalVariable::HiddenVisibility);
