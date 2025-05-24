@@ -21,6 +21,7 @@
 #  include <__algorithm/copy_n.h>
 #  include <__algorithm/lower_bound.h>
 #  include <__algorithm/min.h>
+#  include <__assert>
 #  include <__functional/hash.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__locale_dir/locale_base_api.h>
@@ -347,9 +348,8 @@ public:
       _LIBCPP_HIDE_FROM_ABI constexpr __iterator() noexcept = default;
 
       _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const {
-        if (__can_dereference())
-          return __data_->__name;
-        std::unreachable();
+        _LIBCPP_ASSERT(__can_dereference(), "Dereferencing invalid aliases_view iterator!");
+        return __data_->__name;
       }
 
       _LIBCPP_HIDE_FROM_ABI constexpr value_type operator[](difference_type __n) const {
@@ -373,9 +373,8 @@ public:
       }
 
       _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const __iterator& __other) const {
-        if (__other.__mib_rep_ == __mib_rep_)
-          return __mib_rep_ - __other.__mib_rep_;
-        std::unreachable();
+        _LIBCPP_ASSERT(__other.__mib_rep_ == __mib_rep_, "Subtracting ranges of two different text encodings!");
+        return __mib_rep_ - __other.__mib_rep_;
       }
 
       _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(difference_type __n, __iterator& __it) {
