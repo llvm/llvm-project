@@ -870,7 +870,7 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
 
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
-                          const InputInfo &Input, bool IsThinLTO) {
+                          const InputInfoList &Inputs, bool IsThinLTO) {
   const llvm::Triple &Triple = ToolChain.getTriple();
   const bool IsOSAIX = Triple.isOSAIX();
   const bool IsAMDGCN = Triple.isAMDGCN();
@@ -883,6 +883,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
                                      options::OPT_fno_fat_lto_objects, false);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
+
+  assert(!Inputs.empty() && "Must have at least one input.");
+
+  auto Input = llvm::find_if(
+      Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+  if (Input == Inputs.end()) {
+    // For a very rare case, all of the inputs to the linker are
+    // InputArg. If that happens, just use the first InputInfo.
+    Input = Inputs.begin();
+  }
+
   if (Linker != "lld" && Linker != "lld-link" &&
       llvm::sys::path::filename(LinkerPath) != "ld.lld" &&
       llvm::sys::path::stem(LinkerPath) != "ld.lld" && !Triple.isOSOpenBSD()) {
@@ -1176,7 +1187,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         Args.MakeArgString(Twine(PluginOptPrefix) + "-stack-size-section"));
 
   // Setup statistics file output.
-  SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
+  SmallString<128> StatsFile = getStatsFileName(Args, Output, *Input, D);
   if (!StatsFile.empty())
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "stats-file=" + StatsFile));
@@ -1194,7 +1205,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // Handle serialized remarks options: '-fsave-optimization-record'
   // and '-foptimization-record-*'.
   if (willEmitRemarks(Args))
-    renderRemarksOptions(Args, CmdArgs, ToolChain.getEffectiveTriple(), Input,
+    renderRemarksOptions(Args, CmdArgs, ToolChain.getEffectiveTriple(), *Input,
                          Output, PluginOptPrefix);
 
   // Handle remarks hotness/threshold related options.
