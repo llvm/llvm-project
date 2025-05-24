@@ -110,6 +110,7 @@ public:
 };
 
 struct ELFWriter {
+  MCAssembler &Asm;
   ELFObjectWriter &OWriter;
   support::endian::Writer W;
 
@@ -160,11 +161,14 @@ struct ELFWriter {
                              Align Alignment);
 
 public:
-  ELFWriter(ELFObjectWriter &OWriter, raw_pwrite_stream &OS,
+  ELFWriter(MCAssembler &Asm, ELFObjectWriter &OWriter, raw_pwrite_stream &OS,
             bool IsLittleEndian, DwoMode Mode)
-      : OWriter(OWriter), W(OS, IsLittleEndian ? llvm::endianness::little
-                                               : llvm::endianness::big),
+      : Asm(Asm), OWriter(OWriter),
+        W(OS,
+          IsLittleEndian ? llvm::endianness::little : llvm::endianness::big),
         Mode(Mode) {}
+
+  MCContext &getContext() const { return Asm.getContext(); }
 
   void writeWord(uint64_t Word) {
     if (is64Bit())
@@ -205,7 +209,7 @@ public:
                                uint32_t Link, uint32_t Info,
                                MaybeAlign Alignment, uint64_t EntrySize);
 
-  void writeRelocations(const MCAssembler &Asm, const MCSectionELF &Sec);
+  void writeRelocations(const MCSectionELF &Sec);
 
   uint64_t writeObject(MCAssembler &Asm);
   void writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
@@ -818,10 +822,9 @@ static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &OS) {
   });
 }
 
-void ELFWriter::writeRelocations(const MCAssembler &Asm,
-                                       const MCSectionELF &Sec) {
+void ELFWriter::writeRelocations(const MCSectionELF &Sec) {
   std::vector<ELFRelocationEntry> &Relocs = OWriter.Relocations[&Sec];
-  const MCTargetOptions *TO = Asm.getContext().getTargetOptions();
+  const MCTargetOptions *TO = getContext().getTargetOptions();
   const bool Rela = OWriter.usesRela(TO, Sec);
 
   // Sort the relocation entries. MIPS needs this.
@@ -1017,7 +1020,7 @@ void ELFWriter::writeSectionHeaders(const MCAssembler &Asm) {
 uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
   uint64_t StartOffset = W.OS.tell();
 
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   MCSectionELF *StrtabSection =
       Ctx.getELFSection(".strtab", ELF::SHT_STRTAB, 0);
   StringTableIndex = addToSectionTable(StrtabSection);
@@ -1111,8 +1114,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
       // Remember the offset into the file for this section.
       const uint64_t SecStart = align(RelSection->getAlign());
 
-      writeRelocations(Asm,
-                       cast<MCSectionELF>(*RelSection->getLinkedToSection()));
+      writeRelocations(cast<MCSectionELF>(*RelSection->getLinkedToSection()));
 
       uint64_t SecEnd = W.OS.tell();
       RelSection->setOffsets(SecStart, SecEnd);
@@ -1326,7 +1328,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
                                        uint64_t &FixedValue) {
   MCAsmBackend &Backend = Asm.getBackend();
   const MCSectionELF &FixupSection = cast<MCSectionELF>(*Fragment->getParent());
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
 
   const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
   bool ViaWeakRef = false;
@@ -1429,11 +1431,11 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
 
 uint64_t ELFObjectWriter::writeObject(MCAssembler &Asm) {
   uint64_t Size =
-      ELFWriter(*this, OS, IsLittleEndian,
+      ELFWriter(Asm, *this, OS, IsLittleEndian,
                 DwoOS ? ELFWriter::NonDwoOnly : ELFWriter::AllSections)
           .writeObject(Asm);
   if (DwoOS)
-    Size += ELFWriter(*this, *DwoOS, IsLittleEndian, ELFWriter::DwoOnly)
+    Size += ELFWriter(Asm, *this, *DwoOS, IsLittleEndian, ELFWriter::DwoOnly)
                 .writeObject(Asm);
   return Size;
 }
