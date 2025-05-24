@@ -7082,6 +7082,11 @@ InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
   return CM.getInstructionCost(UI, VF);
 }
 
+bool VPCostContext::isLegacyUniformAfterVectorization(Instruction *I,
+                                                      ElementCount VF) const {
+  return CM.isUniformAfterVectorization(I, VF);
+}
+
 bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
   return CM.ValuesToIgnore.contains(UI) ||
          (IsVector && CM.VecValuesToIgnore.contains(UI)) ||
@@ -7315,7 +7320,8 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
 /// cost-model did not account for.
 static bool planContainsAdditionalSimplifications(VPlan &Plan,
                                                   VPCostContext &CostCtx,
-                                                  Loop *TheLoop) {
+                                                  Loop *TheLoop,
+                                                  ElementCount VF) {
   // First collect all instructions for the recipes in Plan.
   auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction * {
     if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
@@ -7352,6 +7358,16 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // comparing against the legacy cost isn't desirable.
       if (isa<VPPartialReductionRecipe>(&R))
         return true;
+
+      /// If a VPlan transform folded a recipe to one producing a single-scalar,
+      /// but the original instruction wasn't uniform-after-vectorization in the
+      /// legacy cost model, the legacy cost overestimates the actual cost.
+      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
+        if (RepR->isSingleScalar() &&
+            !CostCtx.isLegacyUniformAfterVectorization(
+                RepR->getUnderlyingInstr(), VF))
+          return true;
+      }
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
@@ -7477,9 +7493,10 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // legacy cost model doesn't properly model costs for such loops.
   assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
-                                                CostCtx, OrigLoop) ||
-          planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
-                                                CostCtx, OrigLoop)) &&
+                                                CostCtx, OrigLoop,
+                                                BestFactor.Width) ||
+          planContainsAdditionalSimplifications(
+              getPlanFor(LegacyVF.Width), CostCtx, OrigLoop, LegacyVF.Width)) &&
          " VPlan cost model and legacy cost model disagreed");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
