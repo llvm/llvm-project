@@ -2307,7 +2307,7 @@ bool SemaOpenMP::isInOpenMPTargetExecutionDirective() const {
 
 bool SemaOpenMP::isOpenMPRebuildMemberExpr(ValueDecl *D) {
   // Only rebuild for Field.
-  if (!dyn_cast<FieldDecl>(D))
+  if (!isa<FieldDecl>(D))
     return false;
   DSAStackTy::DSAVarData DVarPrivate = DSAStack->hasDSA(
       D,
@@ -9648,6 +9648,13 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                 DSAStackTy &DSA,
                 SemaOpenMP::VarsWithInheritedDSAType &VarsWithImplicitDSA,
                 OMPLoopBasedDirective::HelperExprs &Built) {
+  // If either of the loop expressions exist and contain errors, we bail out
+  // early because diagnostics have already been emitted and we can't reliably
+  // check more about the loop.
+  if ((CollapseLoopCountExpr && CollapseLoopCountExpr->containsErrors()) ||
+      (OrderedLoopCountExpr && OrderedLoopCountExpr->containsErrors()))
+    return 0;
+
   unsigned NestedLoopCount = 1;
   bool SupportsNonPerfectlyNested = (SemaRef.LangOpts.OpenMP >= 50) &&
                                     !isOpenMPLoopTransformationDirective(DKind);
@@ -14544,7 +14551,10 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
 
   const auto *SizesClause =
       OMPExecutableDirective::getSingleClause<OMPSizesClause>(Clauses);
-  if (!SizesClause || llvm::is_contained(SizesClause->getSizesRefs(), nullptr))
+  if (!SizesClause ||
+      llvm::any_of(SizesClause->getSizesRefs(), [](const Expr *SizeExpr) {
+        return !SizeExpr || SizeExpr->containsErrors();
+      }))
     return StmtError();
   unsigned NumLoops = SizesClause->getNumSizes();
 
@@ -15937,6 +15947,13 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
         << E->getSourceRange();
     return ExprError();
   }
+
+  if (!Result.isRepresentableByInt64()) {
+    Diag(E->getExprLoc(), diag::err_omp_large_expression_in_clause)
+        << getOpenMPClauseNameForDiag(CKind) << E->getSourceRange();
+    return ExprError();
+  }
+
   if (CKind == OMPC_collapse && DSAStack->getAssociatedLoops() == 1)
     DSAStack->setAssociatedLoops(Result.getExtValue());
   else if (CKind == OMPC_ordered)

@@ -14,11 +14,16 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/raw_ostream.h"
 #include <variant>
 
 namespace llvm {
+class LLVMContext;
+class MDNode;
+class Metadata;
+
 namespace hlsl {
 namespace rootsig {
 
@@ -80,13 +85,24 @@ struct RootConstants {
   ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
+using DescriptorType = llvm::dxil::ResourceClass;
+// Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
+struct RootDescriptor {
+  DescriptorType Type;
+  Register Reg;
+  uint32_t Space = 0;
+  ShaderVisibility Visibility = ShaderVisibility::All;
+};
+
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
   ShaderVisibility Visibility = ShaderVisibility::All;
-  uint32_t NumClauses = 0; // The number of clauses in the table
-
-  void dump(raw_ostream &OS) const;
+  // Denotes that the previous NumClauses in the RootElement array
+  // are the clauses in the table.
+  uint32_t NumClauses = 0;
 };
+
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
 static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
@@ -114,13 +130,50 @@ struct DescriptorTableClause {
       break;
     }
   }
-
-  void dump(raw_ostream &OS) const;
 };
 
-// Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
-using RootElement = std::variant<RootFlags, RootConstants, DescriptorTable,
-                                 DescriptorTableClause>;
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
+
+/// Models RootElement : RootFlags | RootConstants | RootDescriptor
+///  | DescriptorTable | DescriptorTableClause
+///
+/// A Root Signature is modeled in-memory by an array of RootElements. These
+/// aim to map closely to their DSL grammar reprsentation defined in the spec.
+///
+/// Each optional parameter has its default value defined in the struct, and,
+/// each mandatory parameter does not have a default initialization.
+///
+/// For the variants RootFlags, RootConstants and DescriptorTableClause: each
+/// data member maps directly to a parameter in the grammar.
+///
+/// The DescriptorTable is modelled by having its Clauses as the previous
+/// RootElements in the array, and it holds a data member for the Visibility
+/// parameter.
+using RootElement = std::variant<RootFlags, RootConstants, RootDescriptor,
+                                 DescriptorTable, DescriptorTableClause>;
+
+void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
+
+class MetadataBuilder {
+public:
+  MetadataBuilder(llvm::LLVMContext &Ctx, ArrayRef<RootElement> Elements)
+      : Ctx(Ctx), Elements(Elements) {}
+
+  /// Iterates through the elements and dispatches onto the correct Build method
+  ///
+  /// Accumulates the root signature and returns the Metadata node that is just
+  /// a list of all the elements
+  MDNode *BuildRootSignature();
+
+private:
+  /// Define the various builders for the different metadata types
+  MDNode *BuildDescriptorTable(const DescriptorTable &Table);
+  MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
+
+  llvm::LLVMContext &Ctx;
+  ArrayRef<RootElement> Elements;
+  SmallVector<Metadata *> GeneratedMetadata;
+};
 
 } // namespace rootsig
 } // namespace hlsl

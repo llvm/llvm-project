@@ -149,6 +149,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMSwitchFlatOpLowering
+    : public mlir::OpConversionPattern<cir::SwitchFlatOp> {
+public:
+  using mlir::OpConversionPattern<cir::SwitchFlatOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::SwitchFlatOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMGetGlobalOpLowering
     : public mlir::OpConversionPattern<cir::GetGlobalOp> {
 public:
@@ -319,6 +329,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::VecExtractOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecInsertOpLowering
+    : public mlir::OpConversionPattern<cir::VecInsertOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecInsertOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecInsertOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
