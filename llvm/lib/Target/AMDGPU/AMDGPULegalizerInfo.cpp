@@ -960,6 +960,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &MinNumMaxNum = getActionDefinitionsBuilder({
       G_FMINNUM, G_FMAXNUM, G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
 
+  // TODO: These should be custom lowered and are directly legal with IEEE=0
+  auto &MinimumNumMaximumNum =
+      getActionDefinitionsBuilder({G_FMINIMUMNUM, G_FMAXIMUMNUM});
+
   if (ST.hasVOP3PInsts()) {
     MinNumMaxNum.customFor(FPTypesPK16)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
@@ -975,6 +979,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampScalar(0, S32, S64)
       .scalarize(0);
   }
+
+  MinimumNumMaximumNum.lower();
 
   if (ST.hasVOP3PInsts())
     FPOpActions.clampMaxNumElementsStrict(0, S16, 2);
@@ -1759,7 +1765,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         // 32-bit amount.
         const LLT ValTy = Query.Types[0];
         const LLT AmountTy = Query.Types[1];
-        return ValTy.getSizeInBits() <= 16 &&
+        return ValTy.isScalar() && ValTy.getSizeInBits() <= 16 &&
                AmountTy.getSizeInBits() < 16;
       }, changeTo(1, S16));
     Shifts.maxScalarIf(typeIs(0, S16), 1, S16);
