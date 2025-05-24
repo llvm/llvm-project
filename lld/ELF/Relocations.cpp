@@ -992,8 +992,9 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (e == R_GOT || e == R_PLT)
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
 
-  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
-  if (sym.isPreemptible || e == RE_AARCH64_AUTH)
+  // R_AARCH64_AUTH_ABS64 and iRelSymbolicRel require a dynamic relocation.
+  if (sym.isPreemptible || e == RE_AARCH64_AUTH ||
+      type == ctx.target->iRelSymbolicRel)
     return false;
   if (!ctx.arg.isPic)
     return true;
@@ -1170,6 +1171,24 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
                                   addend, R_ABS});
         }
         return;
+      }
+      if (LLVM_UNLIKELY(type == ctx.target->iRelSymbolicRel)) {
+        if (sym.isPreemptible) {
+          auto diag = Err(ctx);
+          diag << "relocation " << type
+               << " cannot be used against preemptible symbol '" << &sym << "'";
+          printLocation(diag, *sec, sym, offset);
+        } else if (isIfunc) {
+          auto diag = Err(ctx);
+          diag << "relocation " << type
+               << " cannot be used against ifunc symbol '" << &sym << "'";
+          printLocation(diag, *sec, sym, offset);
+        } else {
+          part.relaDyn->addReloc({ctx.target->iRelativeRel, sec, offset,
+                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
+                                  addend, R_ABS});
+          return;
+        }
       }
       part.relaDyn->addSymbolReloc(rel, *sec, offset, sym, addend, type);
 

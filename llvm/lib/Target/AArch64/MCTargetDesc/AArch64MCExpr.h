@@ -42,6 +42,7 @@ public:
     VK_AUTHADDR     = 0x00b,
     VK_GOT_AUTH     = 0x00c,
     VK_TLSDESC_AUTH = 0x00d,
+    VK_FUNCINIT     = 0x00e,
     VK_SymLocBits   = 0x00f,
 
     // Variants specifying which part of the final address calculation is
