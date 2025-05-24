@@ -141,7 +141,7 @@ void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   if (mc::isRelocation(Fixup.getKind()))
     return;
 
-  Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
+  Value = adjustFixupValue(Fixup, Value, &getContext());
   if (!Value)
     return; // Doesn't change encoding.
 

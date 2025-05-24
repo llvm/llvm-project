@@ -29,6 +29,8 @@ MCAsmBackend::MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation)
 
 MCAsmBackend::~MCAsmBackend() = default;
 
+MCContext &MCAsmBackend::getContext() const { return Asm->getContext(); }
+
 std::unique_ptr<MCObjectWriter>
 MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   auto TW = createObjectTargetWriter();
