@@ -110,17 +110,17 @@ public:
 
   /// Return the generic fixup kind for a value with the given size. It
   /// is an error to pass an unsupported size.
-  static MCFixupKind getKindForSize(unsigned Size, bool IsPCRel) {
+  static MCFixupKind getDataKindForSize(unsigned Size) {
     switch (Size) {
     default: llvm_unreachable("Invalid generic fixup size!");
     case 1:
-      return IsPCRel ? FK_PCRel_1 : FK_Data_1;
+      return FK_Data_1;
     case 2:
-      return IsPCRel ? FK_PCRel_2 : FK_Data_2;
+      return FK_Data_2;
     case 4:
-      return IsPCRel ? FK_PCRel_4 : FK_Data_4;
+      return FK_Data_4;
     case 8:
-      return IsPCRel ? FK_PCRel_8 : FK_Data_8;
+      return FK_Data_8;
     }
   }
 

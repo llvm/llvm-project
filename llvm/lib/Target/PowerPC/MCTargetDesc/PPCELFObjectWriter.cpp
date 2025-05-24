@@ -167,11 +167,9 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       }
       break;
     case FK_Data_4:
-    case FK_PCRel_4:
       Type = ELF::R_PPC_REL32;
       break;
     case FK_Data_8:
-    case FK_PCRel_8:
       Type = ELF::R_PPC64_REL64;
       break;
     }

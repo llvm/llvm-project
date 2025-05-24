@@ -67,12 +67,10 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                       "1-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
     case FK_Data_2:
-    case FK_PCRel_2:
       Ctx.reportError(Fixup.getLoc(),
                       "2-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
     case FK_Data_4:
-    case FK_PCRel_4:
       return ELF::R_VE_SREL32;
     case FK_Data_8:
     case FK_PCRel_8:

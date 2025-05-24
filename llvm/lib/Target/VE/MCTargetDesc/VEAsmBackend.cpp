@@ -28,10 +28,6 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
-  case FK_PCRel_1:
-  case FK_PCRel_2:
-  case FK_PCRel_4:
-  case FK_PCRel_8:
     return Value;
   case VE::fixup_ve_hi32:
   case VE::fixup_ve_pc_hi32:
@@ -60,14 +56,11 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case FK_Data_1:
-  case FK_PCRel_1:
     return 1;
   case FK_Data_2:
-  case FK_PCRel_2:
     return 2;
     return 4;
   case FK_Data_4:
-  case FK_PCRel_4:
   case VE::fixup_ve_reflong:
   case VE::fixup_ve_srel32:
   case VE::fixup_ve_hi32:
