@@ -331,8 +331,8 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
       // TargetLoweringBase::getVectorTypeBreakdown() which is invoked in
       // ComputePTXValueVTs() cannot currently break down non-power-of-2 sized
       // vectors.
-      if ((Is16bitsType(EltVT.getSimpleVT())) && NumElts % 2 == 0 &&
-          isPowerOf2_32(NumElts)) {
+      if ((Is16bitsType(EltVT.getSimpleVT()) || EltVT == MVT::f32) &&
+          NumElts % 2 == 0 && isPowerOf2_32(NumElts)) {
         // Vectors with an even number of f16 elements will be passed to
         // us as an array of v2f16/v2bf16 elements. We must match this so we
         // stay in sync with Ins/Outs.
@@ -345,6 +345,9 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
           break;
         case MVT::i16:
           EltVT = MVT::v2i16;
+          break;
+        case MVT::f32:
+          EltVT = MVT::v2f32;
           break;
         default:
           llvm_unreachable("Unexpected type");
@@ -612,6 +615,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   addRegisterClass(MVT::v2f16, &NVPTX::Int32RegsRegClass);
   addRegisterClass(MVT::bf16, &NVPTX::Int16RegsRegClass);
   addRegisterClass(MVT::v2bf16, &NVPTX::Int32RegsRegClass);
+  addRegisterClass(MVT::v2f32, &NVPTX::Int64RegsRegClass);
 
   // Conversion to/from FP16/FP16x2 is always legal.
   setOperationAction(ISD::BUILD_VECTOR, MVT::v2f16, Custom);
@@ -648,6 +652,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i8, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i8, Custom);
 
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f32, Custom);
+  setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f32, Expand);
+  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f32, Expand);
+
   // Custom conversions to/from v2i8.
   setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
 
@@ -673,8 +681,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // Operations not directly supported by NVPTX.
   for (MVT VT : {MVT::bf16, MVT::f16, MVT::v2bf16, MVT::v2f16, MVT::f32,
-                 MVT::f64, MVT::i1, MVT::i8, MVT::i16, MVT::v2i16, MVT::v4i8,
-                 MVT::i32, MVT::i64}) {
+                 MVT::v2f32, MVT::f64, MVT::i1, MVT::i8, MVT::i16, MVT::v2i16,
+                 MVT::v4i8, MVT::i32, MVT::i64}) {
+    setOperationAction(ISD::VSELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
     setOperationAction(ISD::BR_CC, VT, Expand);
   }
@@ -856,7 +865,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
                        ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
-                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST});
+                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::FP_ROUND,
+                       ISD::TRUNCATE, ISD::LOAD, ISD::STORE, ISD::BITCAST});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -877,6 +887,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setBF16OperationAction(Op, MVT::bf16, Legal, Promote);
     if (getOperationAction(Op, MVT::bf16) == Promote)
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
+    setOperationAction(Op, MVT::v2f32,
+                       STI.hasF32x2Instructions() ? Legal : Expand);
   }
 
   // On SM80, we select add/mul/sub as fma to avoid promotion to float
@@ -922,6 +934,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       setOperationAction(ISD::FP_ROUND, VT, Custom);
     }
   }
+  setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
 
   // sm_80 only has conversions between f32 and bf16. Custom lower all other
   // bf16 conversions.
@@ -959,6 +972,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
        {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
+    setOperationAction(Op, MVT::v2f32, Expand);
     setOperationAction(Op, MVT::f64, Legal);
     setOperationAction(Op, MVT::v2f16, Expand);
     setOperationAction(Op, MVT::v2bf16, Expand);
@@ -1014,6 +1028,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setFP16OperationAction(ISD::FEXP2, MVT::v2f16, Legal, Expand);
   setBF16OperationAction(ISD::FEXP2, MVT::bf16, Legal, Promote);
   setBF16OperationAction(ISD::FEXP2, MVT::v2bf16, Legal, Expand);
+  setOperationAction(ISD::FEXP2, MVT::v2f32, Expand);
 
   // FLOG2 supports f32 only
   // f16/bf16 types aren't supported, but they are promoted/expanded to f32.
@@ -1021,7 +1036,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::FLOG2, MVT::f32, Legal);
     setOperationPromotedToType(ISD::FLOG2, MVT::f16, MVT::f32);
     setOperationPromotedToType(ISD::FLOG2, MVT::bf16, MVT::f32);
-    setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16}, Expand);
+    setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16, MVT::v2f32},
+                       Expand);
   }
 
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
@@ -2311,7 +2327,8 @@ SDValue NVPTXTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     return Op;
 
   // Extract individual elements and select one of them.
-  assert(Isv2x16VT(VectorVT) && "Unexpected vector type.");
+  assert((Isv2x16VT(VectorVT) || VectorVT == MVT::v2f32) &&
+         "Unexpected vector type.");
   EVT EltVT = VectorVT.getVectorElementType();
 
   SDLoc dl(Op.getNode());
@@ -3226,10 +3243,10 @@ SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (Op.getValueType() == MVT::i1)
     return LowerLOADi1(Op, DAG);
 
-  // v2f16/v2bf16/v2i16/v4i8 are legal, so we can't rely on legalizer to handle
-  // unaligned loads and have to handle it here.
+  // v2f16/v2bf16/v2i16/v4i8/v2f32 are legal, so we can't rely on legalizer to
+  // handle unaligned loads and have to handle it here.
   EVT VT = Op.getValueType();
-  if (Isv2x16VT(VT) || VT == MVT::v4i8) {
+  if (Isv2x16VT(VT) || VT == MVT::v4i8 || VT == MVT::v2f32) {
     LoadSDNode *Load = cast<LoadSDNode>(Op);
     EVT MemVT = Load->getMemoryVT();
     if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
@@ -3273,22 +3290,23 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   if (VT == MVT::i1)
     return LowerSTOREi1(Op, DAG);
 
-  // v2f16 is legal, so we can't rely on legalizer to handle unaligned
-  // stores and have to handle it here.
-  if ((Isv2x16VT(VT) || VT == MVT::v4i8) &&
+  // v2f16/v2bf16/v2i16/v4i8/v2f32 are legal, so we can't rely on legalizer to
+  // handle unaligned stores and have to handle it here.
+  if ((Isv2x16VT(VT) || VT == MVT::v4i8 || VT == MVT::v2f32) &&
       !allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                       VT, *Store->getMemOperand()))
     return expandUnalignedStore(Store, DAG);
 
-  // v2f16, v2bf16 and v2i16 don't need special handling.
-  if (Isv2x16VT(VT) || VT == MVT::v4i8)
+  // v2f16/v2bf16/v2i16/v4i8/v2f32 don't need special handling.
+  if (Isv2x16VT(VT) || VT == MVT::v4i8 || VT == MVT::v2f32)
     return SDValue();
 
   return LowerSTOREVector(Op, DAG);
 }
 
-SDValue
-NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
+static SDValue convertVectorStore(SDValue Op, SelectionDAG &DAG,
+                                  const SmallVectorImpl<SDValue> &Elements,
+                                  const NVPTXSubtarget &STI) {
   MemSDNode *N = cast<MemSDNode>(Op.getNode());
   SDValue Val = N->getOperand(1);
   SDLoc DL(N);
@@ -3353,6 +3371,8 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
                                 NumEltsPerSubVector);
       Ops.push_back(DAG.getBuildVector(EltVT, DL, SubVectorElts));
     }
+  } else if (!Elements.empty()) {
+    Ops.insert(Ops.end(), Elements.begin(), Elements.end());
   } else {
     SDValue V = DAG.getBitcast(MVT::getVectorVT(EltVT, NumElts), Val);
     for (const unsigned I : llvm::seq(NumElts)) {
@@ -3376,8 +3396,18 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
       DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
                               N->getMemoryVT(), N->getMemOperand());
 
-  // return DCI.CombineTo(N, NewSt, true);
   return NewSt;
+}
+
+// Default variant where we don't pass in elements.
+static SDValue convertVectorStore(SDValue Op, SelectionDAG &DAG,
+                                  const NVPTXSubtarget &STI) {
+  return convertVectorStore(Op, DAG, SmallVector<SDValue>{}, STI);
+}
+
+SDValue NVPTXTargetLowering::LowerSTOREVector(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  return convertVectorStore(Op, DAG, STI);
 }
 
 // st i1 v, addr
@@ -3568,6 +3598,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             // vectors which contain v2f16 or v2bf16 elements. So we must load
             // using i32 here and then bitcast back.
             LoadVT = MVT::i32;
+          else if (EltVT == MVT::v2f32)
+            LoadVT = MVT::i64;
 
           EVT VecVT = EVT::getVectorVT(F->getContext(), LoadVT, NumElts);
           SDValue VecAddr =
@@ -5171,26 +5203,525 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-static SDValue PerformStoreCombineHelper(SDNode *N, std::size_t Front,
-                                         std::size_t Back) {
+/// OverrideVT - allows overriding result and memory type
+static std::optional<std::pair<SDValue, SDValue>>
+convertVectorLoad(SDNode *N, SelectionDAG &DAG, const NVPTXSubtarget &STI,
+                  bool BuildVector,
+                  std::optional<EVT> OverrideVT = std::nullopt) {
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  const EVT ResVT = OverrideVT.value_or(LD->getValueType(0));
+  const EVT MemVT = OverrideVT.value_or(LD->getMemoryVT());
+
+  // If we're doing sign/zero extension as part of the load, avoid lowering to
+  // a LoadV node. TODO: consider relaxing this restriction.
+  if (ResVT != MemVT)
+    return {};
+
+  const auto NumEltsAndEltVT = getVectorLoweringShape(
+      ResVT, STI.has256BitVectorLoadStore(LD->getAddressSpace()));
+  if (!NumEltsAndEltVT)
+    return {};
+  const auto [NumElts, EltVT] = NumEltsAndEltVT.value();
+
+  Align Alignment = LD->getAlign();
+  const auto &TD = DAG.getDataLayout();
+  Align PrefAlign = TD.getPrefTypeAlign(MemVT.getTypeForEVT(*DAG.getContext()));
+  if (Alignment < PrefAlign) {
+    // This load is not sufficiently aligned, so bail out and let this vector
+    // load be scalarized.  Note that we may still be able to emit smaller
+    // vector loads.  For example, if we are loading a <4 x float> with an
+    // alignment of 8, this check will fail but the legalizer will try again
+    // with 2 x <2 x float>, which will succeed with an alignment of 8.
+    return {};
+  }
+
+  // Since LoadV2 is a target node, we cannot rely on DAG type legalization.
+  // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
+  // loaded type to i16 and propagate the "real" type as the memory type.
+  const MVT LoadEltVT = (EltVT.getSizeInBits() < 16) ? MVT::i16 : EltVT;
+
+  unsigned Opcode;
+  switch (NumElts) {
+  default:
+    return {};
+  case 2:
+    Opcode = NVPTXISD::LoadV2;
+    break;
+  case 4:
+    Opcode = NVPTXISD::LoadV4;
+    break;
+  case 8:
+    Opcode = NVPTXISD::LoadV8;
+    break;
+  }
+  auto ListVTs = SmallVector<EVT, 9>(NumElts, LoadEltVT);
+  ListVTs.push_back(MVT::Other);
+  SDVTList LdResVTs = DAG.getVTList(ListVTs);
+
+  SDLoc DL(LD);
+
+  // Copy regular operands
+  SmallVector<SDValue, 8> OtherOps(LD->ops());
+
+  // The select routine does not have access to the LoadSDNode instance, so
+  // pass along the extension information
+  OtherOps.push_back(DAG.getIntPtrConstant(LD->getExtensionType(), DL));
+
+  SDValue NewLD = DAG.getMemIntrinsicNode(Opcode, DL, LdResVTs, OtherOps, MemVT,
+                                          LD->getMemOperand());
+
+  SmallVector<SDValue> ScalarRes;
+  if (EltVT.isVector()) {
+    assert(EVT(EltVT.getVectorElementType()) == ResVT.getVectorElementType());
+    assert(NumElts * EltVT.getVectorNumElements() ==
+           ResVT.getVectorNumElements());
+    // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
+    // into individual elements.
+    for (const unsigned I : llvm::seq(NumElts)) {
+      SDValue SubVector = NewLD.getValue(I);
+      DAG.ExtractVectorElements(SubVector, ScalarRes);
+    }
+  } else {
+    for (const unsigned I : llvm::seq(NumElts)) {
+      SDValue Res = NewLD.getValue(I);
+      if (LoadEltVT != EltVT)
+        Res = DAG.getNode(ISD::TRUNCATE, DL, EltVT, Res);
+      ScalarRes.push_back(Res);
+    }
+  }
+
+  SDValue LoadChain = NewLD.getValue(NumElts);
+
+  if (BuildVector) {
+    SmallVector<SDValue> ScalarRes;
+    if (EltVT.isVector()) {
+      assert(EVT(EltVT.getVectorElementType()) == ResVT.getVectorElementType());
+      assert(NumElts * EltVT.getVectorNumElements() ==
+             ResVT.getVectorNumElements());
+      // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
+      // into individual elements.
+      for (const unsigned I : llvm::seq(NumElts)) {
+        SDValue SubVector = NewLD.getValue(I);
+        DAG.ExtractVectorElements(SubVector, ScalarRes);
+      }
+    } else {
+      for (const unsigned I : llvm::seq(NumElts)) {
+        SDValue Res = NewLD.getValue(I);
+        if (LoadEltVT != EltVT)
+          Res = DAG.getNode(ISD::TRUNCATE, DL, EltVT, Res);
+        ScalarRes.push_back(Res);
+      }
+    }
+
+    const MVT BuildVecVT =
+        MVT::getVectorVT(EltVT.getScalarType(), ScalarRes.size());
+    SDValue BuildVec = DAG.getBuildVector(BuildVecVT, DL, ScalarRes);
+    SDValue LoadValue = DAG.getBitcast(ResVT, BuildVec);
+
+    return {{LoadValue, LoadChain}};
+  }
+
+  return {{NewLD, LoadChain}};
+}
+
+static MachineMemOperand *
+getMachineMemOperandForType(const SelectionDAG &DAG,
+                            const MachineMemOperand *MMO,
+                            const MachinePointerInfo &PointerInfo, MVT VT) {
+  return DAG.getMachineFunction().getMachineMemOperand(MMO, PointerInfo,
+                                                       LLT(VT));
+}
+
+// These are Combiner rules for expanding v2f32 load results when they are
+// really being used as their individual f32 components. Now that v2f32 is a
+// legal type for a register, LowerFormalArguments() and ReplaceLoadVector()
+// will pack two f32s into a single 64-bit register, leading to ld.b64 instead
+// of ld.v2.f32 or ld.v2.b64 instead of ld.v4.f32. Sometimes this is ideal if
+// the results stay packed because they're passed to another instruction that
+// supports packed f32s (e.g. fmul.f32x2) or (rarely) if v2f32 really is being
+// reinterpreted as an i64, and then stored.
+//
+// Otherwise, SelectionDAG will unpack the results with a sequence of bitcasts,
+// extensions, and extracts if they go through any other kind of instruction.
+// This is not ideal, so we undo these patterns and rewrite the load to output
+// twice as many registers: two f32s for every one i64. This preserves PTX
+// codegen for programs that don't use packed f32s.
+//
+// Also, LowerFormalArguments() and ReplaceLoadVector() happen too early for us
+// to know whether the def-use chain for a particular load will eventually
+// include instructions supporting packed f32s. That is why we prefer to resolve
+// this problem within DAG Combiner.
+//
+// This rule proceeds in three general steps:
+//
+// 1. Identify the pattern, by traversing the def-use chain.
+// 2. Rewrite the load, by splitting each 64-bit result into two f32 registers.
+// 3. Rewrite all uses of the load, including chain and glue uses.
+//
+// This has the effect of combining multiple instructions into a single load.
+// For example:
+//
+// (before, ex1)
+// v: v2f32 = LoadParam [p]
+// f1: f32 = extractelt v, 0
+// f2: f32 = extractelt v, 1
+// r = add.f32 f1, f2
+//
+// ...or...
+//
+// (before, ex2)
+// i: i64 = LoadParam [p]
+// v: v2f32 = bitcast i
+// f1: f32 = extractelt v, 0
+// f2: f32 = extractelt v, 1
+// r = add.f32 f1, f2
+//
+// ...will become...
+//
+// (after for both)
+// vf: f32,f32 = LoadParamV2 [p]
+// r = add.f32 vf:0, vf:1
+static SDValue PerformLoadCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const NVPTXSubtarget &STI) {
+  if (DCI.DAG.getOptLevel() == CodeGenOptLevel::None)
+    return {};
+
+  auto *MemN = cast<MemSDNode>(N);
+  // only operate on vectors of f32s / i64s
+  if (EVT MemVT = MemN->getMemoryVT();
+      !(MemVT == MVT::i64 ||
+        (MemVT.isVector() && (MemVT.getVectorElementType() == MVT::f32 ||
+                              MemVT.getVectorElementType() == MVT::i64))))
+    return SDValue();
+
+  const unsigned OrigNumResults =
+      llvm::count_if(N->values(), [](const auto &VT) {
+        return VT == MVT::i64 || VT == MVT::f32 || VT.isVector();
+      });
+
+  // (1) All we are doing here is looking for patterns.
+  SmallDenseMap<SDNode *, unsigned> ExtractElts;
+  SmallVector<SDNode *> ProxyRegs(OrigNumResults, nullptr);
+  SmallVector<std::pair<SDNode *, unsigned>> WorkList{{N, {}}};
+  bool ProcessingInitialLoad = true;
+  while (!WorkList.empty()) {
+    auto [V, Offset] = WorkList.pop_back_val();
+
+    // follow users of this to an extractelt, along the way collecting proxy
+    // regs and  bitcasts
+    for (SDUse &U : V->uses()) {
+      if (U.getValueType() == MVT::Other || U.getValueType() == MVT::Glue)
+        continue; // we'll process chain/glue later
+
+      if (ProcessingInitialLoad)
+        Offset = U.getResNo();
+
+      SDNode *User = U.getUser();
+      if (User->getOpcode() == NVPTXISD::ProxyReg) {
+        SDNode *&ProxyReg = ProxyRegs[Offset];
+
+        // We shouldn't have multiple proxy regs for the same value from the
+        // load, but bail out anyway since we don't handle this.
+        if (ProxyReg)
+          return SDValue();
+
+        ProxyReg = User;
+      } else if (User->getOpcode() == ISD::BITCAST &&
+                 User->getValueType(0) == MVT::v2f32 &&
+                 U.getValueType() == MVT::i64) {
+        // match v2f32 = bitcast i64
+        // continue and push the instruction
+      } else if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+                 User->getValueType(0) == MVT::f32) {
+        // match f32 = extractelt v2f32
+        if (auto *CI = dyn_cast<ConstantSDNode>(User->getOperand(1))) {
+          unsigned Index = CI->getZExtValue();
+          ExtractElts[User] = 2 * Offset + Index;
+          continue; // don't search
+        }
+        return SDValue(); // could not match
+      } else
+        return SDValue(); // couldn't match
+
+      // enqueue this to visit its uses
+      WorkList.push_back({User, Offset});
+    }
+
+    // After we're done with the load, propagate the result offsets.
+    ProcessingInitialLoad = false;
+  }
+
+  // Did we find any patterns? All patterns we're interested in end with an
+  // extractelt.
+  if (ExtractElts.empty())
+    return SDValue();
+
+  // (2) Now, we will decide what load to create.
+
+  // Do we have to tweak the opcode for an NVPTXISD::Load* or do we have to
+  // rewrite an ISD::LOAD?
+  std::optional<NVPTXISD::NodeType> NewOpcode;
+
+  // LoadV's are handled slightly different in ISelDAGToDAG. See below.
+  bool IsLoadV = false;
+  switch (N->getOpcode()) {
+  case NVPTXISD::LoadV2:
+    NewOpcode = NVPTXISD::LoadV4;
+    IsLoadV = true;
+    break;
+  case NVPTXISD::LoadParam:
+    NewOpcode = NVPTXISD::LoadParamV2;
+    break;
+  case NVPTXISD::LoadParamV2:
+    NewOpcode = NVPTXISD::LoadParamV4;
+    break;
+  }
+
+  // We haven't created the new load yet, but we're saving some information
+  // about the old load because we will need to replace all uses of it later.
+  // Because our pattern is generic, we're matching ISD::LOAD and
+  // NVPTXISD::Load*, and we just search for the chain and glue outputs rather
+  // than have a case for each type of load.
+  const bool HaveProxyRegs =
+      llvm::any_of(ProxyRegs, [](const SDNode *PR) { return PR != nullptr; });
+
+  SDValue OldChain, OldGlue /* optional */;
+  for (unsigned I = 0, E = N->getNumValues(); I != E; ++I) {
+    if (N->getValueType(I) == MVT::Other)
+      OldChain = SDValue(N, I);
+    else if (N->getValueType(I) == MVT::Glue)
+      OldGlue = SDValue(N, I);
+  }
+
+  SDValue NewLoad, NewChain, NewGlue /* (optional) */;
+  unsigned NumElts = 0;
+  if (NewOpcode) {
+    // Here, we are tweaking a NVPTXISD::Load* opcode to output N*2 results.
+    SmallVector<EVT> VTs;
+
+    // should always be non-null after this
+    std::optional<unsigned> NewChainIdx;
+    std::optional<unsigned> NewGlueIdx;
+    for (const EVT &V : N->values()) {
+      if (V == MVT::i64 || V == MVT::v2f32) {
+        VTs.append({MVT::f32, MVT::f32});
+        NumElts += 2;
+      } else {
+        assert((V == MVT::Other || V == MVT::Glue) &&
+               "expected i64,...,ch,glue = load or v2f32,ch = load");
+        if (V == MVT::Other)
+          NewChainIdx = VTs.size();
+        else
+          NewGlueIdx = VTs.size();
+        VTs.push_back(V);
+      }
+    }
+
+    MVT LoadVT = MVT::f32;
+    MachineMemOperand *MMO = MemN->getMemOperand();
+
+    if (IsLoadV) {
+      // Some loads must have an operand type that matches the number of results
+      // and the type of each result. Because we changed a vNi64 to v(N*2)f32 we
+      // have to update it here. Note that LoadParam is not handled the same way
+      // in NVPXISelDAGToDAG so we only do this for LoadV*.
+      LoadVT = MVT::getVectorVT(MVT::f32, NumElts);
+      MMO = getMachineMemOperandForType(DCI.DAG, MMO, MemN->getPointerInfo(),
+                                        LoadVT);
+    }
+
+    NewLoad = DCI.DAG.getMemIntrinsicNode(
+        *NewOpcode, SDLoc(N), DCI.DAG.getVTList(VTs),
+        SmallVector<SDValue>(N->ops()), LoadVT, MMO);
+    NewChain = NewLoad.getValue(*NewChainIdx);
+    if (NewGlueIdx)
+      NewGlue = NewLoad.getValue(*NewGlueIdx);
+  } else if (N->getOpcode() == ISD::LOAD) { // rewrite a load
+    // Here, we are lowering an ISD::LOAD to an NVPTXISD::Load*. For example:
+    //
+    // (before)
+    // v2f32,ch,glue = ISD::LOAD [p]
+    //
+    // ...becomes...
+    //
+    // (after)
+    // f32,f32,ch,glue = NVPTXISD::LoadV2 [p]
+    std::optional<EVT> CastToType;
+    EVT ResVT = N->getValueType(0);
+    if (ResVT == MVT::i64) {
+      // ld.b64 is treated as a vector by subsequent code
+      CastToType = MVT::v2f32;
+    }
+    if (auto Result = convertVectorLoad(N, DCI.DAG, STI, /*BuildVector=*/false,
+                                        CastToType)) {
+      std::tie(NewLoad, NewChain) = *Result;
+      NumElts =
+          CastToType.value_or(cast<MemSDNode>(NewLoad.getNode())->getMemoryVT())
+              .getVectorNumElements();
+      if (NewLoad->getValueType(NewLoad->getNumValues() - 1) == MVT::Glue)
+        NewGlue = NewLoad.getValue(NewLoad->getNumValues() - 1);
+    }
+  }
+
+  // If this was some other type of load we couldn't handle, we bail.
+  if (!NewLoad)
+    return SDValue();
+
+  // (3) We successfully rewrote the load. Now we must rewrite all uses of the
+  // old load.
+  SmallVector<SDValue> NewOutputsF32;
+
+  if (!HaveProxyRegs) {
+    // The case without proxy registers in the def-use chain is simple. Each
+    // extractelt is matched to an output of the new load (see calls to
+    // DCI.CombineTo() below).
+    for (unsigned I = 0, E = NumElts; I != E; ++I)
+      if (NewLoad->getValueType(I) == MVT::f32)
+        NewOutputsF32.push_back(NewLoad.getValue(I));
+
+    // replace all glue and chain nodes
+    DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
+    if (OldGlue)
+      DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
+  } else {
+    // The case with proxy registers is slightly more complicated. We have to
+    // expand those too.
+
+    // First,  rewrite all uses of chain and glue from the old load to the new
+    // load. This is one less thing to worry about.
+    DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
+    DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
+
+    // Now we will expand all the proxy registers for each output.
+    for (unsigned ProxyI = 0, ProxyE = ProxyRegs.size(); ProxyI != ProxyE;
+         ++ProxyI) {
+      SDNode *ProxyReg = ProxyRegs[ProxyI];
+
+      // No proxy reg might mean this result is unused.
+      if (!ProxyReg)
+        continue;
+
+      // Update the new chain and glue to be old inputs to the proxyreg, if they
+      // came from an intervening instruction between this proxyreg and the
+      // original load (ex: callseq_end). Other than bitcasts and extractelts,
+      // we followed all other nodes by chain and glue accesses.
+      if (SDValue OldInChain = ProxyReg->getOperand(0);
+          OldInChain.getNode() != N)
+        NewChain = OldInChain;
+      if (SDValue OldInGlue = ProxyReg->getOperand(2); OldInGlue.getNode() != N)
+        NewGlue = OldInGlue;
+
+      // Update OldChain, OldGlue to the outputs of ProxyReg, which we will
+      // replace later.
+      OldChain = SDValue(ProxyReg, 1);
+      OldGlue = SDValue(ProxyReg, 2);
+
+      // Generate the scalar proxy regs.
+      for (unsigned I = 0, E = 2; I != E; ++I) {
+        SDValue ProxyRegElem = DCI.DAG.getNode(
+            NVPTXISD::ProxyReg, SDLoc(ProxyReg),
+            DCI.DAG.getVTList(MVT::f32, MVT::Other, MVT::Glue),
+            {NewChain, NewLoad.getValue(ProxyI * 2 + I), NewGlue});
+        NewChain = ProxyRegElem.getValue(1);
+        NewGlue = ProxyRegElem.getValue(2);
+        NewOutputsF32.push_back(ProxyRegElem);
+      }
+
+      // replace all uses of the glue and chain from the old proxy reg
+      DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
+      DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
+    }
+  }
+
+  // Replace all extractelts with the new outputs. This leaves the old load and
+  // unpacking instructions dead.
+  for (auto &[Extract, Index] : ExtractElts)
+    DCI.CombineTo(Extract, NewOutputsF32[Index], false);
+
+  return SDValue();
+}
+
+static SDValue PerformStoreCombineHelper(SDNode *N,
+                                         TargetLowering::DAGCombinerInfo &DCI,
+                                         std::size_t Front, std::size_t Back) {
   if (all_of(N->ops().drop_front(Front).drop_back(Back),
              [](const SDUse &U) { return U.get()->isUndef(); }))
     // Operand 0 is the previous value in the chain. Cannot return EntryToken
     // as the previous value will become unused and eliminated later.
     return N->getOperand(0);
 
+  if (DCI.DAG.getOptLevel() == CodeGenOptLevel::None)
+    return {};
+
+  auto *MemN = cast<MemSDNode>(N);
+  if (MemN->getMemoryVT() == MVT::v2f32) {
+    // try to fold, and expand:
+    //   c: v2f32 = BUILD_VECTOR (a: f32, b: f32)
+    //   StoreRetval c
+    // -->
+    //   StoreRetvalV2 {a, b}
+    // likewise for V2 -> V4 case
+    //
+    // We also handle target-independent stores, which require us to first
+    // convert to StoreV2.
+
+    std::optional<NVPTXISD::NodeType> NewOpcode;
+    switch (N->getOpcode()) {
+    case NVPTXISD::StoreParam:
+      NewOpcode = NVPTXISD::StoreParamV2;
+      break;
+    case NVPTXISD::StoreParamV2:
+      NewOpcode = NVPTXISD::StoreParamV4;
+      break;
+    case NVPTXISD::StoreRetval:
+      NewOpcode = NVPTXISD::StoreRetvalV2;
+      break;
+    case NVPTXISD::StoreRetvalV2:
+      NewOpcode = NVPTXISD::StoreRetvalV4;
+      break;
+    }
+
+    if (NewOpcode) {
+      // copy chain, offset from existing store
+      SmallVector<SDValue> NewOps = {N->getOperand(0), N->getOperand(1)};
+      unsigned NumElts = 0;
+      // gather all operands to expand
+      for (unsigned I = 2, E = N->getNumOperands(); I < E; ++I) {
+        SDValue CurrentOp = N->getOperand(I);
+        if (CurrentOp->getOpcode() == ISD::BUILD_VECTOR) {
+          assert(CurrentOp.getValueType() == MVT::v2f32);
+          NewOps.push_back(CurrentOp.getOperand(0));
+          NewOps.push_back(CurrentOp.getOperand(1));
+          NumElts += 2;
+        } else {
+          NewOps.clear();
+          break;
+        }
+      }
+
+      if (!NewOps.empty()) {
+        return DCI.DAG.getMemIntrinsicNode(*NewOpcode, SDLoc(N), N->getVTList(),
+                                           NewOps, MVT::f32,
+                                           MemN->getMemOperand());
+      }
+    }
+  }
+
   return SDValue();
 }
 
-static SDValue PerformStoreParamCombine(SDNode *N) {
+static SDValue PerformStoreParamCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI) {
   // Operands from the 3rd to the 2nd last one are the values to be stored.
   //   {Chain, ArgID, Offset, Val, Glue}
-  return PerformStoreCombineHelper(N, 3, 1);
+  return PerformStoreCombineHelper(N, DCI, 3, 1);
 }
 
-static SDValue PerformStoreRetvalCombine(SDNode *N) {
+static SDValue PerformStoreRetvalCombine(SDNode *N,
+                                         TargetLowering::DAGCombinerInfo &DCI) {
   // Operands from the 2nd to the last one are the values to be stored
-  return PerformStoreCombineHelper(N, 2, 0);
+  return PerformStoreCombineHelper(N, DCI, 2, 0);
 }
 
 /// PerformADDCombine - Target-specific dag combine xforms for ISD::ADD.
@@ -5653,10 +6184,10 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
       IsPTXVectorType(VectorVT.getSimpleVT()))
     return SDValue(); // Native vector loads already combine nicely w/
                       // extract_vector_elt.
-  // Don't mess with singletons or v2*16, v4i8 and v8i8 types, we already
+  // Don't mess with singletons or v2*16, v2f32, v4i8 and v8i8 types, we already
   // handle them OK.
   if (VectorVT.getVectorNumElements() == 1 || Isv2x16VT(VectorVT) ||
-      VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
+      VectorVT == MVT::v2f32 || VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
     return SDValue();
 
   // Don't mess with undef values as sra may be simplified to 0, not undef.
@@ -5801,6 +6332,157 @@ static SDValue combineADDRSPACECAST(SDNode *N,
   return SDValue();
 }
 
+// Combiner rule for v2[b]f16 = fp_round v2f32:
+//
+// Now that v2f32 is a legal type for a register, this node will go straight to
+// instruction selection. Instead, we want to break it up into two nodes, which
+// can be combined in instruction selection to cvt.[b]f16x2.f32, which requires
+// two f32 registers.
+static SDValue PerformFP_ROUNDCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+  SDValue Trunc = N->getOperand(1);
+  EVT NarrowVT = N->getValueType(0);
+  EVT WideVT = Op.getValueType();
+
+  // v2[b]f16 = fp_round (v2f32 A)
+  // -> v2[b]f16 = (build_vector ([b]f16 = fp_round (extractelt A, 0)),
+  //                             ([b]f16 = fp_round (extractelt A, 1)))
+  if ((NarrowVT == MVT::v2bf16 || NarrowVT == MVT::v2f16) &&
+      WideVT == MVT::v2f32) {
+    SDValue F32Op0, F32Op1;
+    if (Op.getOpcode() == ISD::BUILD_VECTOR) {
+      F32Op0 = Op.getOperand(0);
+      F32Op1 = Op.getOperand(1);
+    } else {
+      F32Op0 = DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Op,
+                               DCI.DAG.getIntPtrConstant(0, DL));
+      F32Op1 = DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Op,
+                               DCI.DAG.getIntPtrConstant(1, DL));
+    }
+    return DCI.DAG.getBuildVector(
+        NarrowVT, DL,
+        {DCI.DAG.getNode(ISD::FP_ROUND, DL, NarrowVT.getScalarType(), F32Op0,
+                         Trunc),
+         DCI.DAG.getNode(ISD::FP_ROUND, DL, NarrowVT.getScalarType(), F32Op1,
+                         Trunc)});
+  }
+
+  return SDValue();
+}
+
+static SDValue PerformTRUNCATECombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  SDLoc DL(N);
+  SDValue Op = N->getOperand(0);
+  EVT FromVT = Op.getValueType();
+  EVT ResultVT = N->getValueType(0);
+
+  if (FromVT == MVT::i64 && ResultVT == MVT::i32) {
+    // i32 = truncate (i64 = bitcast (v2f32 = BUILD_VECTOR (f32 A, f32 B)))
+    // -> i32 = bitcast (f32 A)
+    if (Op.getOpcode() == ISD::BITCAST) {
+      SDValue BV = Op.getOperand(0);
+      if (BV.getOpcode() == ISD::BUILD_VECTOR &&
+          BV.getValueType() == MVT::v2f32) {
+        // get lower
+        return DCI.DAG.getNode(ISD::BITCAST, DL, ResultVT, BV.getOperand(0));
+      }
+    }
+
+    // i32 = truncate (i64 = srl
+    //                      (i64 = bitcast
+    //                             (v2f32 = BUILD_VECTOR (f32 A, f32 B))), 32)
+    // -> i32 = bitcast (f32 B)
+    if (Op.getOpcode() == ISD::SRL) {
+      if (auto *ShAmt = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+          ShAmt && ShAmt->getAsAPIntVal() == 32) {
+        SDValue Cast = Op.getOperand(0);
+        if (Cast.getOpcode() == ISD::BITCAST) {
+          SDValue BV = Cast.getOperand(0);
+          if (BV.getOpcode() == ISD::BUILD_VECTOR &&
+              BV.getValueType() == MVT::v2f32) {
+            // get upper
+            return DCI.DAG.getNode(ISD::BITCAST, DL, ResultVT,
+                                   BV.getOperand(1));
+          }
+        }
+      }
+    }
+  }
+
+  return SDValue();
+}
+
+static SDValue PerformBITCASTCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  if (N->getValueType(0) != MVT::v2f32)
+    return SDValue();
+
+  SDValue Operand = N->getOperand(0);
+  if (Operand.getValueType() != MVT::i64)
+    return SDValue();
+
+  // DAGCombiner handles bitcast(ISD::LOAD) already. For these, we'll do the
+  // same thing, by changing their output values from i64 to v2f32. Then the
+  // rule for combining loads (see PerformLoadCombine) may split these loads
+  // further.
+  if (Operand.getOpcode() == NVPTXISD::LoadV2 ||
+      Operand.getOpcode() == NVPTXISD::LoadParam ||
+      Operand.getOpcode() == NVPTXISD::LoadParamV2) {
+    // check for all bitcasts
+    SmallVector<std::pair<SDNode *, unsigned /* resno */>> OldUses;
+    for (SDUse &U : Operand->uses()) {
+      SDNode *User = U.getUser();
+      if (!(User->getOpcode() == ISD::BITCAST &&
+            User->getValueType(0) == MVT::v2f32 &&
+            U.getValueType() == MVT::i64))
+        return SDValue(); // unhandled pattern
+      OldUses.push_back({User, U.getResNo()});
+    }
+
+    auto *MemN = cast<MemSDNode>(Operand);
+    SmallVector<EVT> VTs;
+    for (const auto &VT : Operand->values()) {
+      if (VT == MVT::i64)
+        VTs.push_back(MVT::v2f32);
+      else
+        VTs.push_back(VT);
+    }
+
+    SDValue NewLoad = DCI.DAG.getMemIntrinsicNode(
+        Operand.getOpcode(), SDLoc(Operand), DCI.DAG.getVTList(VTs),
+        SmallVector<SDValue>(Operand->ops()), MemN->getMemoryVT(),
+        MemN->getMemOperand());
+
+    // replace all chain/glue uses of the old load
+    for (unsigned I = 0, E = Operand->getNumValues(); I != E; ++I)
+      if (Operand->getValueType(I) != MVT::i64)
+        DCI.DAG.ReplaceAllUsesOfValueWith(SDValue(MemN, I),
+                                          NewLoad.getValue(I));
+
+    // replace all bitcasts with values from the new load
+    for (auto &[BC, ResultNum] : OldUses)
+      DCI.CombineTo(BC, NewLoad.getValue(ResultNum), false);
+  }
+
+  return SDValue();
+}
+
+static SDValue PerformStoreCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const NVPTXSubtarget &STI) {
+  // check if the store'd value can be scalarized
+  SDValue StoredVal = N->getOperand(1);
+  if (StoredVal.getValueType() == MVT::v2f32 &&
+      StoredVal.getOpcode() == ISD::BUILD_VECTOR) {
+    SmallVector<SDValue> Elements(StoredVal->op_values());
+    return convertVectorStore(SDValue(N, 0), DCI.DAG, Elements, STI);
+  }
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5824,11 +6506,18 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case NVPTXISD::StoreRetval:
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
-      return PerformStoreRetvalCombine(N);
+      return PerformStoreRetvalCombine(N, DCI);
+    case ISD::LOAD:
+    case NVPTXISD::LoadV2:
+    case NVPTXISD::LoadParam:
+    case NVPTXISD::LoadParamV2:
+      return PerformLoadCombine(N, DCI, STI);
+    case ISD::STORE:
+      return PerformStoreCombine(N, DCI, STI);
     case NVPTXISD::StoreParam:
     case NVPTXISD::StoreParamV2:
     case NVPTXISD::StoreParamV4:
-      return PerformStoreParamCombine(N);
+      return PerformStoreParamCombine(N, DCI);
     case ISD::EXTRACT_VECTOR_ELT:
       return PerformEXTRACTCombine(N, DCI);
     case ISD::VSELECT:
@@ -5837,6 +6526,12 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformBUILD_VECTORCombine(N, DCI);
     case ISD::ADDRSPACECAST:
       return combineADDRSPACECAST(N, DCI);
+    case ISD::FP_ROUND:
+      return PerformFP_ROUNDCombine(N, DCI);
+    case ISD::TRUNCATE:
+      return PerformTRUNCATECombine(N, DCI);
+    case ISD::BITCAST:
+      return PerformBITCASTCombine(N, DCI);
   }
   return SDValue();
 }
@@ -5867,97 +6562,11 @@ static void ReplaceBITCAST(SDNode *Node, SelectionDAG &DAG,
 static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
                               SmallVectorImpl<SDValue> &Results,
                               const NVPTXSubtarget &STI) {
-  LoadSDNode *LD = cast<LoadSDNode>(N);
-  const EVT ResVT = LD->getValueType(0);
-  const EVT MemVT = LD->getMemoryVT();
-
-  // If we're doing sign/zero extension as part of the load, avoid lowering to
-  // a LoadV node. TODO: consider relaxing this restriction.
-  if (ResVT != MemVT)
-    return;
-
-  const auto NumEltsAndEltVT = getVectorLoweringShape(
-      ResVT, STI.has256BitVectorLoadStore(LD->getAddressSpace()));
-  if (!NumEltsAndEltVT)
-    return;
-  const auto [NumElts, EltVT] = NumEltsAndEltVT.value();
-
-  Align Alignment = LD->getAlign();
-  const auto &TD = DAG.getDataLayout();
-  Align PrefAlign = TD.getPrefTypeAlign(MemVT.getTypeForEVT(*DAG.getContext()));
-  if (Alignment < PrefAlign) {
-    // This load is not sufficiently aligned, so bail out and let this vector
-    // load be scalarized.  Note that we may still be able to emit smaller
-    // vector loads.  For example, if we are loading a <4 x float> with an
-    // alignment of 8, this check will fail but the legalizer will try again
-    // with 2 x <2 x float>, which will succeed with an alignment of 8.
-    return;
+  if (auto Outputs = convertVectorLoad(N, DAG, STI, /*BuildVector=*/true)) {
+    auto [BuildVec, LoadChain] = *Outputs;
+    Results.push_back(BuildVec);
+    Results.push_back(LoadChain);
   }
-
-  // Since LoadV2 is a target node, we cannot rely on DAG type legalization.
-  // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
-  // loaded type to i16 and propagate the "real" type as the memory type.
-  const MVT LoadEltVT = (EltVT.getSizeInBits() < 16) ? MVT::i16 : EltVT;
-
-  unsigned Opcode;
-  switch (NumElts) {
-  default:
-    return;
-  case 2:
-    Opcode = NVPTXISD::LoadV2;
-    break;
-  case 4:
-    Opcode = NVPTXISD::LoadV4;
-    break;
-  case 8:
-    Opcode = NVPTXISD::LoadV8;
-    break;
-  }
-  auto ListVTs = SmallVector<EVT, 9>(NumElts, LoadEltVT);
-  ListVTs.push_back(MVT::Other);
-  SDVTList LdResVTs = DAG.getVTList(ListVTs);
-
-  SDLoc DL(LD);
-
-  // Copy regular operands
-  SmallVector<SDValue, 8> OtherOps(LD->ops());
-
-  // The select routine does not have access to the LoadSDNode instance, so
-  // pass along the extension information
-  OtherOps.push_back(DAG.getIntPtrConstant(LD->getExtensionType(), DL));
-
-  SDValue NewLD = DAG.getMemIntrinsicNode(Opcode, DL, LdResVTs, OtherOps,
-                                          LD->getMemoryVT(),
-                                          LD->getMemOperand());
-
-  SmallVector<SDValue> ScalarRes;
-  if (EltVT.isVector()) {
-    assert(EVT(EltVT.getVectorElementType()) == ResVT.getVectorElementType());
-    assert(NumElts * EltVT.getVectorNumElements() ==
-           ResVT.getVectorNumElements());
-    // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
-    // into individual elements.
-    for (const unsigned I : llvm::seq(NumElts)) {
-      SDValue SubVector = NewLD.getValue(I);
-      DAG.ExtractVectorElements(SubVector, ScalarRes);
-    }
-  } else {
-    for (const unsigned I : llvm::seq(NumElts)) {
-      SDValue Res = NewLD.getValue(I);
-      if (LoadEltVT != EltVT)
-        Res = DAG.getNode(ISD::TRUNCATE, DL, EltVT, Res);
-      ScalarRes.push_back(Res);
-    }
-  }
-
-  SDValue LoadChain = NewLD.getValue(NumElts);
-
-  const MVT BuildVecVT =
-      MVT::getVectorVT(EltVT.getScalarType(), ScalarRes.size());
-  SDValue BuildVec = DAG.getBuildVector(BuildVecVT, DL, ScalarRes);
-  SDValue LoadValue = DAG.getBitcast(ResVT, BuildVec);
-
-  Results.append({LoadValue, LoadChain});
 }
 
 // Lower vector return type of tcgen05.ld intrinsics

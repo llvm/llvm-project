@@ -26,7 +26,7 @@ define <4 x float> @t2(ptr %p1) {
 ; CHECK-LABEL: t3
 define <4 x float> @t3(ptr %p1) {
 ; CHECK-NOT: ld.v4
-; CHECK: ld.v2
+; CHECK: ld.b64
   %r = load <4 x float>, ptr %p1, align 8
   ret <4 x float> %r
 }
