@@ -1736,8 +1736,9 @@ static void licm(VPlan &Plan) {
       // TODO: Relax checks in the future, e.g. we could also hoist reads, if
       // their memory location is not modified in the vector loop.
       if (R.mayHaveSideEffects() || R.mayReadFromMemory() || R.isPhi() ||
-          any_of(R.operands(),
-                 [](VPValue *Op) { return !Op->isDefinedOutsideLoop(); }))
+          any_of(R.operands(), [](VPValue *Op) {
+            return !Op->isDefinedOutsideLoopRegions();
+          }))
         continue;
       R.moveBefore(*Preheader, Preheader->end());
     }
@@ -2514,7 +2515,7 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
       LoopRegions.push_back(R);
   }
   for (VPRegionBlock *R : LoopRegions)
-    R->removeRegion();
+    R->dissolveToCFGLoop();
 }
 
 // Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.

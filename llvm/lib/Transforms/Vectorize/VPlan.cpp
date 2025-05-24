@@ -450,10 +450,12 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
   if (ParentLoop && !State.LI->getLoopFor(NewBB))
     ParentLoop->addBasicBlockToLoop(NewBB, *State.LI);
 
-  auto Preds = to_vector(getHierarchicalPredecessors());
+  SmallVector<VPBlockBase *> Preds;
   if (VPBlockUtils::isHeader(this, State.VPDT)) {
     // There's no block for the latch yet, connect to the preheader only.
-    Preds = {Preds[0]};
+    Preds = {getPredecessors()[0]};
+  } else {
+    Preds = to_vector(getPredecessors());
   }
 
   // Hook up the new basic block to its predecessors.
@@ -879,11 +881,10 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPRegionBlock::removeRegion() {
+void VPRegionBlock::dissolveToCFGLoop() {
   auto *Header = cast<VPBasicBlock>(getEntry());
   VPBlockBase *Preheader = getSinglePredecessor();
-  auto *Exiting = cast<VPBasicBlock>(getExiting());
-
+  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   VPBlockBase *Middle = getSingleSuccessor();
   VPBlockUtils::disconnectBlocks(Preheader, this);
   VPBlockUtils::disconnectBlocks(this, Middle);
@@ -892,8 +893,8 @@ void VPRegionBlock::removeRegion() {
     VPB->setParent(getParent());
 
   VPBlockUtils::connectBlocks(Preheader, Header);
-  VPBlockUtils::connectBlocks(Exiting, Middle);
-  VPBlockUtils::connectBlocks(Exiting, Header);
+  VPBlockUtils::connectBlocks(ExitingLatch, Middle);
+  VPBlockUtils::connectBlocks(ExitingLatch, Header);
 }
 
 VPlan::VPlan(Loop *L) {
@@ -1004,6 +1005,8 @@ void VPlan::execute(VPTransformState *State) {
   // successor blocks including the middle, exit and scalar preheader blocks.
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
+
+  State->CFG.DTU.flush();
 
   VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
   if (!Header)
@@ -1427,7 +1430,7 @@ static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
                   DefR->getParent()->getEnclosingLoopRegion());
 }
 
-bool VPValue::isDefinedOutsideLoop() const {
+bool VPValue::isDefinedOutsideLoopRegions() const {
   return !isDefinedInsideLoopRegions(this);
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {

@@ -1631,7 +1631,9 @@ struct VPWidenSelectRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
     return getOperand(0);
   }
 
-  bool isInvariantCond() const { return getCond()->isDefinedOutsideLoop(); }
+  bool isInvariantCond() const {
+    return getCond()->isDefinedOutsideLoopRegions();
+  }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
@@ -1644,16 +1646,17 @@ struct VPWidenSelectRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 /// A recipe for handling GEP instructions.
 class VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoop();
+    return getOperand(0)->isDefinedOutsideLoopRegions();
   }
 
   bool isIndexLoopInvariant(unsigned I) const {
-    return getOperand(I + 1)->isDefinedOutsideLoop();
+    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
   }
 
   bool areAllOperandsInvariant() const {
-    return all_of(operands(),
-                  [](VPValue *Op) { return Op->isDefinedOutsideLoop(); });
+    return all_of(operands(), [](VPValue *Op) {
+      return Op->isDefinedOutsideLoopRegions();
+    });
   }
 
 public:
@@ -3868,8 +3871,8 @@ public:
   VPRegionBlock *clone() override;
 
   /// Remove the current region from its VPlan, connecting its predecessor to
-  /// its entry and exiting block to its successor.
-  void removeRegion();
+  /// its entry, and its exiting block to its successor.
+  void dissolveToCFGLoop();
 };
 
 /// VPlan models a candidate for vectorization, encoding various decisions take

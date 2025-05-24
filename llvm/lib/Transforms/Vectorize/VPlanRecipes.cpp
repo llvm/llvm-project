@@ -465,7 +465,7 @@ Value *VPInstruction::generatePerLane(VPTransformState &State,
 /// Create a conditional branch using \p Cond branching to the successors of \p
 /// VPBB. Note that the first successor is always forward (i.e. not created yet)
 /// while the second successor may already have been created (if it is a header
-/// block and VPBB is a header).
+/// block and VPBB is a latch).
 static BranchInst *createCondBranch(Value *Cond, VPBasicBlock *VPBB,
                                     VPTransformState &State) {
   // Replace the temporary unreachable terminator with a new conditional
@@ -1557,7 +1557,7 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
 InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
   SelectInst *SI = cast<SelectInst>(getUnderlyingValue());
-  bool ScalarCond = getOperand(0)->isDefinedOutsideLoop();
+  bool ScalarCond = getOperand(0)->isDefinedOutsideLoopRegions();
   Type *ScalarTy = Ctx.Types.inferScalarType(this);
   Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
 
@@ -1778,7 +1778,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     TargetTransformInfo::OperandValueInfo RHSInfo = Ctx.getOperandInfo(RHS);
 
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
-        getOperand(1)->isDefinedOutsideLoop())
+        getOperand(1)->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
@@ -2677,12 +2677,13 @@ static void scalarizeInstruction(const Instruction *Instr,
   if (auto *II = dyn_cast<AssumeInst>(Cloned))
     State.AC->registerAssumption(II);
 
-  assert((RepRecipe->getParent()->getParent() ||
-          !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
-          all_of(RepRecipe->operands(),
-                 [](VPValue *Op) { return Op->isDefinedOutsideLoop(); })) &&
-         "Expected a recipe is either within a region or all of its operands "
-         "are defined outside the vectorized region.");
+  assert(
+      (RepRecipe->getParent()->getParent() ||
+       !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
+       all_of(RepRecipe->operands(),
+              [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); })) &&
+      "Expected a recipe is either within a region or all of its operands "
+      "are defined outside the vectorized region.");
 }
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
