@@ -264,6 +264,8 @@ public:
 
   ThreadSafeASTContext GetASTContext();
 
+  ThreadSafeASTContext GetASTContext() const;
+
   swift::IRGenDebugInfoLevel GetGenerateDebugInfo();
 
   static swift::PrintOptions
@@ -305,8 +307,6 @@ public:
   void SetPlatformSDKPath(llvm::StringRef path) {
     m_platform_sdk_path = path.str();
   }
-
-  const swift::SearchPathOptions *GetSearchPathOptions() const;
 
   /// \return the ExtraArgs of the ClangImporterOptions.
   const std::vector<std::string> &GetClangArguments();
