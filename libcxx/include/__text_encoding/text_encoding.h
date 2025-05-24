@@ -473,15 +473,14 @@ public:
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() noexcept {
-#      ifdef __GNUC_EXECUTION_CHARSET_NAME
+    // TODO: Remove this branch once we have __GNUC_EXECUTION_CHARSET_NAME or __clang_literal_encoding__ unconditionally
+#    ifdef __GNUC_EXECUTION_CHARSET_NAME
     return text_encoding(__GNUC_EXECUTION_CHARSET_NAME);
-#      elif defined(__clang_literal_encoding__)
+#    elif defined(__clang_literal_encoding__)
     return text_encoding(__clang_literal_encoding__);
-#      elif defined(__clang__)
-    return text_encoding(id::UTF8);
-#      else
-    return {};
-#      endif
+#    else
+    return text_encoding();
+#    endif
   }
 
   [[nodiscard]] static text_encoding environment();
