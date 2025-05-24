@@ -13,6 +13,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -219,6 +220,22 @@ static bool IsEligibleForReplacement(Sema &SemaRef, const CXXRecordDecl *D) {
   return !D->hasDeletedDestructor();
 }
 
+static bool IsImplementationDefinedNonRelocatable(Sema &SemaRef,
+                                                  const CXXRecordDecl *D) {
+  // FIXME: Should also check for polymorphic union members here if PAuth ABI is
+  // enabled.
+
+  // FIXME: PFP should not affect trivial relocatability except in cases where a
+  // PFP field is a member of a union, instead it should affect the
+  // implementation of std::trivially_relocate. See:
+  // https://discourse.llvm.org/t/rfc-structure-protection-a-family-of-uaf-mitigation-techniques/85555/16?u=pcc
+  if (!SemaRef.Context.arePFPFieldsTriviallyRelocatable(D) &&
+      SemaRef.Context.hasPFPFields(QualType(D->getTypeForDecl(), 0)))
+    return true;
+
+  return false;
+}
+
 ASTContext::CXXRecordDeclRelocationInfo
 Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
   ASTContext::CXXRecordDeclRelocationInfo Info{false, false};
@@ -258,6 +275,11 @@ Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
 
     // if it is eligible for trivial relocation
     if (!IsEligibleForTrivialRelocation(*this, D))
+      return false;
+
+    // if it does not meet implementation-defined criteria for inhibiting
+    // trivially-relocatable,
+    if (IsImplementationDefinedNonRelocatable(*this, D))
       return false;
 
     // has the trivially_relocatable_if_eligible class-property-specifier,

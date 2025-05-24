@@ -109,4 +109,14 @@
 #  define _LIBCXXABI_NOEXCEPT noexcept
 #endif
 
+#if defined(_LIBCXXABI_COMPILER_CLANG)
+#  if __has_feature(pointer_field_protection)
+#    define _LIBCXXABI_NO_PFP [[clang::no_field_protection]]
+#  else
+#    define _LIBCXXABI_NO_PFP
+#  endif
+#else
+#  define _LIBCXXABI_NO_PFP
+#endif
+
 #endif // ____CXXABI_CONFIG_H

@@ -1810,6 +1810,9 @@ public:
     return !getLangOpts().CPlusPlus;
   }
 
+  std::string getPFPFieldName(const FieldDecl *FD);
+  llvm::GlobalValue *getPFPDeactivationSymbol(FieldDecl *FD);
+
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 
@@ -2004,6 +2007,10 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix);
+
+  /// Emit deactivation symbols for any PFP fields whose offset is taken with
+  /// offsetof.
+  void emitPFPFieldsWithEvaluatedOffset();
 };
 
 }  // end namespace CodeGen
