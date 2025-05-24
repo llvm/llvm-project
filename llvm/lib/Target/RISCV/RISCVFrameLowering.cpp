@@ -573,16 +573,12 @@ getPushOrLibCallsSavedInfo(const MachineFunction &MF,
       // `QC.CM.PUSH(FP)`. In these cases, prioritise the CFI info that points
       // to the versions saved by `QC.C.MIENTER(.NEST)` which is what FP
       // unwinding would use.
-      const auto *FII = llvm::find_if(FixedCSRFIQCIInterruptMap, [&](auto P) {
-        return P.first == CS.getReg();
-      });
-      if (FII != std::end(FixedCSRFIQCIInterruptMap))
+      if (llvm::is_contained(llvm::make_first_range(FixedCSRFIQCIInterruptMap),
+                             CS.getReg()))
         continue;
     }
 
-    const auto *FII = llvm::find_if(
-        FixedCSRFIMap, [&](MCPhysReg P) { return P == CS.getReg(); });
-    if (FII != std::end(FixedCSRFIMap))
+    if (llvm::is_contained(FixedCSRFIMap, CS.getReg()))
       PushOrLibCallsCSI.push_back(CS);
   }
 
@@ -599,10 +595,8 @@ getQCISavedInfo(const MachineFunction &MF,
     return QCIInterruptCSI;
 
   for (const auto &CS : CSI) {
-    const auto *FII = llvm::find_if(FixedCSRFIQCIInterruptMap, [&](auto P) {
-      return P.first == CS.getReg();
-    });
-    if (FII != std::end(FixedCSRFIQCIInterruptMap))
+    if (llvm::is_contained(llvm::make_first_range(FixedCSRFIQCIInterruptMap),
+                           CS.getReg()))
       QCIInterruptCSI.push_back(CS);
   }
 
