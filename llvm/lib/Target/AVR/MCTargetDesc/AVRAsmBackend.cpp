@@ -377,7 +377,7 @@ bool AVRAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
   if (IsResolved) {
     auto TargetVal = MCValue::get(Target.getAddSym(), Target.getSubSym(),
                                   FixedValue, Target.getSpecifier());
-    if (forceRelocation(Asm, Fixup, TargetVal, STI))
+    if (forceRelocation(Asm, F, Fixup, TargetVal))
       IsResolved = false;
   }
   if (!IsResolved)
@@ -515,9 +515,9 @@ bool AVRAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool AVRAsmBackend::forceRelocation(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, const MCValue &Target,
-                                    const MCSubtargetInfo *STI) {
+bool AVRAsmBackend::forceRelocation(const MCAssembler &Asm, const MCFragment &F,
+                                    const MCFixup &Fixup,
+                                    const MCValue &Target) {
   switch ((unsigned)Fixup.getKind()) {
   default:
     return false;
@@ -532,7 +532,8 @@ bool AVRAsmBackend::forceRelocation(const MCAssembler &Asm,
     // Note that trying to actually link that relocation *would* fail, but the
     // hopes are that the module we're currently compiling won't be actually
     // linked to the final binary.
-    return !adjust::adjustRelativeBranch(Size, Fixup, Offset, STI);
+    return !adjust::adjustRelativeBranch(Size, Fixup, Offset,
+                                         Asm.getContext().getSubtargetInfo());
   }
 
   case AVR::fixup_call:
