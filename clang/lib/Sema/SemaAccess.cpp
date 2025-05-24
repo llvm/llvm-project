@@ -1497,9 +1497,37 @@ void Sema::HandleDelayedAccessCheck(DelayedDiagnostic &DD, Decl *D) {
     DC = D->getLexicalDeclContext();
   } else if (FunctionDecl *FN = dyn_cast<FunctionDecl>(D)) {
     DC = FN;
+    // C++ [class.access.general]p4:
+    //   Access control is applied uniformly to declarations and expressions.
+    // C++ [class.access.general]p6:
+    //   All access controls in [class.access] affect the ability to name a
+    //   class member from the declaration, including parts of the declaration
+    //   preceding the name of the entity being declared [...]
+    //
+    // A friend function declaration might name an entity to which it has access
+    // in the particular context, but it doesn't implicitly grant access
+    // to that entity in other declaration contexts. For example:
+    //
+    //   class A {
+    //     using T = int;
+    //     friend void foo(T);     // #1
+    //   };
+    //   class B {
+    //     friend void foo(A::T);  // #2
+    //   };
+    //
+    // The friend declaration at #1 does not give B access to A::T, nor does it
+    // befriend B. Therefore, the friend declaration should not serve
+    // as an effective context.
+    if (FN->getFriendObjectKind())
+      DC = FN->getLexicalDeclContext();
   } else if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D)) {
-    if (auto *D = dyn_cast_if_present<DeclContext>(TD->getTemplatedDecl()))
+    if (auto *D = dyn_cast_if_present<DeclContext>(TD->getTemplatedDecl())) {
       DC = D;
+      if (FunctionDecl *FN = dyn_cast<FunctionDecl>(DC);
+          FN && FN->getFriendObjectKind())
+        DC = FN->getLexicalDeclContext();
+    }
   } else if (auto *RD = dyn_cast<RequiresExprBodyDecl>(D)) {
     DC = RD;
   }
