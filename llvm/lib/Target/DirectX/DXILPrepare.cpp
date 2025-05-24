@@ -204,15 +204,6 @@ public:
 
           I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
 
-          if (I.getOpcode() == Instruction::FNeg) {
-            Builder.SetInsertPoint(&I);
-            Value *In = I.getOperand(0);
-            Value *Zero = ConstantFP::get(In->getType(), -0.0);
-            I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
-            I.eraseFromParent();
-            continue;
-          }
-
           // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
           // unmodified as it reserves instruction IDs during contruction.
           if (auto LI = dyn_cast<LoadInst>(&I)) {

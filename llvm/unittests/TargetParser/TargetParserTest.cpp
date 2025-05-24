@@ -58,11 +58,8 @@ std::string FormatExtensionFlags(int64_t Flags) {
 
   // The target parser also includes every extension you don't have.
   // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
-  Features.erase(std::remove_if(Features.begin(), Features.end(),
-                                [](StringRef extension) {
-                                  return extension.starts_with("-");
-                                }),
-                 Features.end());
+  llvm::erase_if(
+      Features, [](StringRef extension) { return extension.starts_with("-"); });
 
   return llvm::join(Features, ", ");
 }
@@ -1085,6 +1082,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUTests, AArch64CPUTestFixture,
     ::testing::Values(AArch64CPUTestParams("cortex-a34", "armv8-a"),
                       AArch64CPUTestParams("cortex-a35", "armv8-a"),
+                      AArch64CPUTestParams("cortex-a320", "armv9.2-a"),
                       AArch64CPUTestParams("cortex-a53", "armv8-a"),
                       AArch64CPUTestParams("cortex-a55", "armv8.2-a"),
                       AArch64CPUTestParams("cortex-a510", "armv9-a"),
@@ -1262,7 +1260,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 89;
+static constexpr unsigned NumAArch64CPUArchs = 90;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

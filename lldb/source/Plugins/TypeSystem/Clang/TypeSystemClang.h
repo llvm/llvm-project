@@ -889,6 +889,12 @@ public:
 
   static uint32_t GetNumPointeeChildren(clang::QualType type);
 
+  llvm::Expected<CompilerType>
+  GetDereferencedType(lldb::opaque_compiler_type_t type,
+                      ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) override;
+
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
@@ -1198,6 +1204,7 @@ private:
   std::unique_ptr<clang::LangOptions> m_language_options_up;
   std::unique_ptr<clang::FileManager> m_file_manager_up;
   std::unique_ptr<clang::SourceManager> m_source_manager_up;
+  std::unique_ptr<clang::DiagnosticOptions> m_diagnostic_options_up;
   std::unique_ptr<clang::DiagnosticsEngine> m_diagnostics_engine_up;
   std::unique_ptr<clang::DiagnosticConsumer> m_diagnostic_consumer_up;
   std::shared_ptr<clang::TargetOptions> m_target_options_rp;

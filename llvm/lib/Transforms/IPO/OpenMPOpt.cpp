@@ -2277,7 +2277,7 @@ struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
   InternalControlVar TrackableICVs[1] = {ICV_nthreads};
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAICVTracker"; }
+  StringRef getName() const override { return "AAICVTracker"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3391,7 +3391,7 @@ struct AAHeapToShared : public StateWrapper<BooleanState, AbstractAttribute> {
   virtual bool isAssumedHeapToSharedRemovedFree(CallBase &CB) const = 0;
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override { return "AAHeapToShared"; }
+  StringRef getName() const override { return "AAHeapToShared"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -3644,7 +3644,7 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   static AAKernelInfo &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAKernelInfo"; }
+  StringRef getName() const override { return "AAKernelInfo"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5178,7 +5178,7 @@ struct AAFoldRuntimeCall
                                               Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAFoldRuntimeCall"; }
+  StringRef getName() const override { return "AAFoldRuntimeCall"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }

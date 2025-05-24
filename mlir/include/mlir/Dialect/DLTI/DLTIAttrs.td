@@ -92,6 +92,9 @@ def DLTI_DataLayoutSpecAttr :
     /// Returns the stack alignment identifier.
     StringAttr getStackAlignmentIdentifier(MLIRContext *context) const;
 
+    /// Returns the function pointer alignment identifier.
+    StringAttr getFunctionPointerAlignmentIdentifier(MLIRContext *context) const;
+
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) {
       return ::llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
@@ -248,5 +251,36 @@ def DLTI_TargetDeviceSpecAttr :
     }
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// FunctionPointerAlignmentAttr
+//===----------------------------------------------------------------------===//
+
+def DLTI_FunctionPointerAlignmentAttr :
+    DLTIAttr<"FunctionPointerAlignment", []> {
+  let summary = "An attribute to represent function pointer alignment.";
+  let description = [{
+    Function pointer alignment specifies the minimum alignment of function
+    pointers, it's a multiple of `alignment`. This alignment can also depend
+    on the target function, indicated by `function_dependent`.
+    Example:
+    ```
+    #dlti.dl_entry<"dlti.function_pointer_alignment",
+               #dlti.function_pointer_alignment<64, function_dependent = false>>
+    ```
+  }];
+  let parameters = (ins
+    "uint64_t":$alignment,
+    "bool":$function_dependent
+  );
+  let assemblyFormat = [{
+    `<`
+    $alignment `,`
+    `function_dependent` `=` $function_dependent
+    `>`
+  }];
+  let mnemonic = "function_pointer_alignment";
+}
+
 
 #endif  // MLIR_DIALECT_DLTI_DLTIATTRS_TD

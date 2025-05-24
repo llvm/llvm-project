@@ -285,8 +285,6 @@ class GlobalTypeMember final : TrailingObjects<GlobalTypeMember, MDNode *> {
   // module and its jumptable entry needs to be exported to thinlto backends.
   bool IsExported;
 
-  size_t numTrailingObjects(OverloadToken<MDNode *>) const { return NTypes; }
-
 public:
   static GlobalTypeMember *create(BumpPtrAllocator &Alloc, GlobalObject *GO,
                                   bool IsJumpTableCanonical, bool IsExported,
@@ -297,8 +295,7 @@ public:
     GTM->NTypes = Types.size();
     GTM->IsJumpTableCanonical = IsJumpTableCanonical;
     GTM->IsExported = IsExported;
-    std::uninitialized_copy(Types.begin(), Types.end(),
-                            GTM->getTrailingObjects<MDNode *>());
+    llvm::copy(Types, GTM->getTrailingObjects());
     return GTM;
   }
 
@@ -314,9 +311,7 @@ public:
     return IsExported;
   }
 
-  ArrayRef<MDNode *> types() const {
-    return ArrayRef(getTrailingObjects<MDNode *>(), NTypes);
-  }
+  ArrayRef<MDNode *> types() const { return getTrailingObjects(NTypes); }
 };
 
 struct ICallBranchFunnel final
@@ -330,14 +325,13 @@ struct ICallBranchFunnel final
     Call->CI = CI;
     Call->UniqueId = UniqueId;
     Call->NTargets = Targets.size();
-    std::uninitialized_copy(Targets.begin(), Targets.end(),
-                            Call->getTrailingObjects<GlobalTypeMember *>());
+    llvm::copy(Targets, Call->getTrailingObjects());
     return Call;
   }
 
   CallInst *CI;
   ArrayRef<GlobalTypeMember *> targets() const {
-    return ArrayRef(getTrailingObjects<GlobalTypeMember *>(), NTargets);
+    return getTrailingObjects(NTargets);
   }
 
   unsigned UniqueId;
@@ -1717,8 +1711,22 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
           F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
       FAlias->takeName(F);
-      if (FAlias->hasName())
+      if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
+        // For COFF we should also rename the comdat if this function also
+        // happens to be the key function. Even if the comdat name changes, this
+        // should still be fine since comdat and symbol resolution happens
+        // before LTO, so all symbols which would prevail have been selected.
+        if (F->hasComdat() && ObjectFormat == Triple::COFF &&
+            F->getComdat()->getName() == FAlias->getName()) {
+          Comdat *OldComdat = F->getComdat();
+          Comdat *NewComdat = M.getOrInsertComdat(F->getName());
+          for (GlobalObject &GO : M.global_objects()) {
+            if (GO.getComdat() == OldComdat)
+              GO.setComdat(NewComdat);
+          }
+        }
+      }
       replaceCfiUses(F, FAlias, IsJumpTableCanonical);
       if (!F->hasLocalLinkage())
         F->setVisibility(GlobalVariable::HiddenVisibility);

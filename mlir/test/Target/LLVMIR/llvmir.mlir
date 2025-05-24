@@ -2056,7 +2056,7 @@ module attributes {} {}
 // -----
 
 // CHECK-LABEL: @useInlineAsm
-llvm.func @useInlineAsm(%arg0: i32) {
+llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
   // Constraints string is checked at LLVM InlineAsm instruction construction time.
   // So we can't just use "bar" everywhere, number of in/out arguments has to match.
 
@@ -2081,6 +2081,34 @@ llvm.func @useInlineAsm(%arg0: i32) {
   // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
+  // CHECK-NEXT:  tail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %1)
+  %6 = llvm.inline_asm has_side_effects tail_call_kind = <tail> operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" %arg1 : (!llvm.ptr) -> !llvm.void
+
+  // CHECK-NEXT:  = call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
+  %7 = llvm.inline_asm tail_call_kind = <none> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+
+  // CHECK-NEXT:  notail call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
+  %8 = llvm.inline_asm tail_call_kind = <notail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+
+  llvm.return
+}
+
+// -----
+
+// CHECK: @useInlineAsm2(ptr %[[A0:.*]], i64 %[[A1:.*]], ptr %[[A2:.*]], i64 %[[A3:.*]]) {
+llvm.func @useInlineAsm2(%arg0: !llvm.ptr, %arg1: i64, %arg2: !llvm.ptr, %arg3: i64) {
+  // CHECK:  call { i64, ptr, ptr } asm sideeffect
+  // CHECK-SAME: "ldr x4, [$2], #8   \0A\09ldr x5, [$1]       \0A\09mul x6, x4, $4     \0A\09",
+  // CHECK-SAME: "=r,=r,=r,=*m,r,*m,0,1,2,*m,~{x4},~{x5},~{x6},~{x7},~{cc}"
+  // CHECK-SAME:(ptr elementtype([16 x i64]) %[[A0]], i64 %[[A1]], ptr elementtype([16 x i64]) %[[A2]],
+  // CHECK-SAME: i64 %[[A3]], ptr %[[A0]], ptr %[[A2]], ptr elementtype([16 x i64]) %[[A0]])
+  %0 = llvm.inline_asm has_side_effects operand_attrs = [
+    {elementtype = !llvm.array<16 x i64>}, {}, {elementtype = !llvm.array<16 x i64>},
+    {}, {}, {}, {elementtype = !llvm.array<16 x i64>}]
+    "ldr x4, [$2], #8   \0A\09ldr x5, [$1]       \0A\09mul x6, x4, $4     \0A\09",
+    "=r,=r,=r,=*m,r,*m,0,1,2,*m,~{x4},~{x5},~{x6},~{x7},~{cc}"
+    %arg0, %arg1, %arg2, %arg3, %arg0, %arg2, %arg0 :
+      (!llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.struct<(i64, ptr, ptr)>
   llvm.return
 }
 
@@ -2891,6 +2919,37 @@ llvm.func @to()
 
 // -----
 
+llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+                       #llvm.profile_summary<format = InstrProf, total_count = 263646, max_count = 86427,
+                         max_internal_count = 86427, max_function_count = 4691,
+                         num_counts = 3712, num_functions = 796,
+                         is_partial_profile = 0,
+                         partial_profile_ratio = 0.000000e+00 : f64,
+                         detailed_summary =
+                           <cut_off = 10000, min_count = 86427, num_counts = 1>,
+                           <cut_off = 100000, min_count = 86427, num_counts = 1>
+                  >>]
+
+// CHECK: !llvm.module.flags = !{![[#PSUM:]], {{.*}}}
+
+// CHECK: ![[#PSUM]] = !{i32 1, !"ProfileSummary", ![[#SUMLIST:]]}
+// CHECK: ![[#SUMLIST]] = !{![[#FMT:]], ![[#TC:]], ![[#MC:]], ![[#MIC:]], ![[#MFC:]], ![[#NC:]], ![[#NF:]], ![[#IPP:]], ![[#PPR:]], ![[#DS:]]}
+// CHECK: ![[#FMT]] = !{!"ProfileFormat", !"InstrProf"}
+// CHECK: ![[#TC]] = !{!"TotalCount", i64 263646}
+// CHECK: ![[#MC]] = !{!"MaxCount", i64 86427}
+// CHECK: ![[#MIC]] = !{!"MaxInternalCount", i64 86427}
+// CHECK: ![[#MFC]] = !{!"MaxFunctionCount", i64 4691}
+// CHECK: ![[#NC]] = !{!"NumCounts", i64 3712}
+// CHECK: ![[#NF]] = !{!"NumFunctions", i64 796}
+// CHECK: ![[#IPP]] = !{!"IsPartialProfile", i64 0}
+// CHECK: ![[#PPR]] = !{!"PartialProfileRatio", double 0.000000e+00}
+// CHECK: ![[#DS]] = !{!"DetailedSummary", ![[#DETAILED:]]}
+// CHECK: ![[#DETAILED]] = !{![[#DS0:]], ![[#DS1:]]}
+// CHECK: ![[#DS0:]] = !{i64 10000, i64 86427, i64 1}
+// CHECK: ![[#DS1:]] = !{i64 100000, i64 86427, i64 1}
+
+// -----
+
 module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
 
 // CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}
@@ -2968,4 +3027,30 @@ llvm.func internal @i(%arg0: i32) attributes {dso_local} {
   // CHECK: call void @testfn3(i32 alignstack(8) %0)
   llvm.call @testfn3(%arg0) : (i32 {llvm.alignstack = 8 : i64}) -> ()
   llvm.return
+}
+
+// -----
+
+// CHECK: @test_array_attr_2 = global [2 x { i32, float }] [{ i32, float } { i32 42, float 1.000000e+00 }, { i32, float } { i32 42, float 1.000000e+00 }]
+llvm.mlir.global @test_array_attr_2() : !llvm.array<2 x !llvm.struct<(i32, f32)>> {
+  %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32],[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2 x !llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<2 x !llvm.struct<(i32, f32)>>
+}
+
+// CHECK: @test_array_attr_3 = global [2 x [3 x { i32, float }]{{.*}}[3 x { i32, float }] [{ i32, float } { i32 1, float 1.000000e+00 }, { i32, float } { i32 2, float 1.000000e+00 }, { i32, float } { i32 3, float 1.000000e+00 }], [3 x { i32, float }] [{ i32, float } { i32 4, float 1.000000e+00 }, { i32, float } { i32 5, float 1.000000e+00 }, { i32, float } { i32 6, float 1.000000e+00 }
+llvm.mlir.global @test_array_attr_3() : !llvm.array<2 x !llvm.array<3 x !llvm.struct<(i32, f32)>>> {
+  %0 = llvm.mlir.constant([[[1 : i32, 1.000000e+00 : f32], [2 : i32, 1.000000e+00 : f32], [3 : i32, 1.000000e+00 : f32]], [[4 : i32, 1.000000e+00 : f32], [5 : i32, 1.000000e+00 : f32], [6 : i32, 1.000000e+00 : f32]]]) : !llvm.array<2 x !llvm.array<3 x !llvm.struct<(i32, f32)>>>
+  llvm.return %0 : !llvm.array<2 x !llvm.array<3 x !llvm.struct<(i32, f32)>>>
+}
+
+// CHECK: @test_array_attr_struct_with_ptr = internal constant [2 x { ptr }] [{ ptr } zeroinitializer, { ptr } undef]
+llvm.mlir.global internal constant @test_array_attr_struct_with_ptr() : !llvm.array<2 x struct<(ptr)>> {
+  %0 = llvm.mlir.constant([[#llvm.zero], [#llvm.undef]]) : !llvm.array<2 x struct<(ptr)>>
+  llvm.return %0 : !llvm.array<2 x struct<(ptr)>>
+}
+
+// CHECK: @test_array_attr_struct_with_struct = internal constant [3 x { i32, float }] [{ i32, float } zeroinitializer, { i32, float } { i32 2, float 1.000000e+00 }, { i32, float } undef]
+llvm.mlir.global internal constant @test_array_attr_struct_with_struct() : !llvm.array<3 x struct<(i32, f32)>> {
+  %0 = llvm.mlir.constant([#llvm.zero, [2 : i32, 1.0 : f32], #llvm.undef]) : !llvm.array<3 x struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<3 x struct<(i32, f32)>>
 }

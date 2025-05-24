@@ -277,9 +277,8 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
   }
 
   if (explicitlyLinked && !newFile->allowableClients.empty()) {
-    bool allowed = std::any_of(
-        newFile->allowableClients.begin(), newFile->allowableClients.end(),
-        [&](StringRef allowableClient) {
+    bool allowed =
+        llvm::any_of(newFile->allowableClients, [&](StringRef allowableClient) {
           // We only do a prefix match to match LD64's behaviour.
           return allowableClient.starts_with(config->clientName);
         });

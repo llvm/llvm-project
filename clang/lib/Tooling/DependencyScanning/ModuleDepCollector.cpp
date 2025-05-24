@@ -577,7 +577,6 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
                                         llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
-  SmallString<32> Scratch;
 
   // Hash the compiler version and serialization version to ensure the module
   // will be readable.

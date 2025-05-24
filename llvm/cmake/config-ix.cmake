@@ -86,15 +86,15 @@ endif()
 # Keep this at the top to make sure we don't add _GNU_SOURCE dependent checks
 # before adding it.
 check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
-if(LLVM_USING_GLIBC)
+if(LLVM_USING_GLIBC OR CYGWIN)
   add_compile_definitions(_GNU_SOURCE)
   list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
+endif()
 
-  # enable 64bit off_t on 32bit systems using glibc
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    add_compile_definitions(_FILE_OFFSET_BITS=64)
-    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
-  endif()
+# enable 64bit off_t on 32bit systems using glibc
+if(LLVM_USING_GLIBC AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+  add_compile_definitions(_FILE_OFFSET_BITS=64)
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
 endif()
 
 # include checks
@@ -292,6 +292,41 @@ if(LLVM_HAS_LOGF128)
   endif()
 
   set(LLVM_HAS_LOGF128 "${HAS_LOGF128}")
+endif()
+
+if (LLVM_ENABLE_ICU STREQUAL FORCE_ON AND LLVM_ENABLE_ICONV STREQUAL FORCE_ON)
+  message(FATAL_ERROR "LLVM_ENABLE_ICU and LLVM_ENABLE_ICONV should not both be FORCE_ON")
+endif()
+
+# Check for ICU. Only allow an optional, dynamic link for ICU so we don't impact LLVM's licensing.
+if(LLVM_ENABLE_ICU AND NOT(LLVM_ENABLE_ICONV STREQUAL FORCE_ON))
+  set(LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  if (LLVM_ENABLE_ICU STREQUAL FORCE_ON)
+    find_package(ICU REQUIRED COMPONENTS uc i18n)
+    if (NOT ICU_FOUND)
+      message(FATAL_ERROR "Failed to configure ICU, but LLVM_ENABLE_ICU is FORCE_ON")
+    endif()
+  else()
+    find_package(ICU COMPONENTS uc i18n)
+  endif()
+  set(HAVE_ICU ${ICU_FOUND})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${LIBRARY_SUFFIXES})
+endif()
+
+# Check only for builtin iconv to avoid licensing issues.
+if(LLVM_ENABLE_ICONV AND NOT HAVE_ICU)
+  if (LLVM_ENABLE_ICONV STREQUAL FORCE_ON)
+    find_package(Iconv REQUIRED)
+    if (NOT Iconv_FOUND OR NOT Iconv_IS_BUILT_IN)
+      message(FATAL_ERROR "Failed to configure iconv, but LLVM_ENABLE_ICONV is FORCE_ON")
+    endif()
+  else()
+    find_package(Iconv)
+  endif()
+  if(Iconv_FOUND AND Iconv_IS_BUILT_IN)
+    set(HAVE_ICONV 1)
+  endif()
 endif()
 
 # function checks

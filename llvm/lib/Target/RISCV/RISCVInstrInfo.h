@@ -43,6 +43,18 @@ enum CondCode {
   COND_GEU,
   COND_CV_BEQIMM,
   COND_CV_BNEIMM,
+  COND_QC_BEQI,
+  COND_QC_BNEI,
+  COND_QC_BLTI,
+  COND_QC_BGEI,
+  COND_QC_BLTUI,
+  COND_QC_BGEUI,
+  COND_QC_E_BEQI,
+  COND_QC_E_BNEI,
+  COND_QC_E_BLTI,
+  COND_QC_E_BGEI,
+  COND_QC_E_BLTUI,
+  COND_QC_E_BGEUI,
   COND_INVALID
 };
 
@@ -241,6 +253,8 @@ public:
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
+
+  bool simplifyInstruction(MachineInstr &MI) const override;
 
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
                                       LiveIntervals *LIS) const override;

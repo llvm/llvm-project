@@ -56,19 +56,15 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::Legalized);
+    return MachineFunctionProperties().setLegalized();
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties()
-        .set(MachineFunctionProperties::Property::NoPHIs)
-        .set(MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoPHIs().setNoVRegs();
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;

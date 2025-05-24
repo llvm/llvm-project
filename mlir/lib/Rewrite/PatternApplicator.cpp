@@ -103,7 +103,7 @@ void PatternApplicator::applyCostModel(CostModel model) {
 
     // Sort patterns with highest benefit first, and remove those that are
     // impossible to match.
-    std::stable_sort(list.begin(), list.end(), cmp);
+    llvm::stable_sort(list, cmp);
     while (!list.empty() && benefits[list.back()].isImpossibleToMatch()) {
       LLVM_DEBUG(logImpossibleToMatch(*list.back()));
       list.pop_back();

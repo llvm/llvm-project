@@ -87,7 +87,6 @@ IRBuilder<> *EscapeEnumerator::Next() {
 
   // Transform the 'call' instructions into 'invoke's branching to the
   // cleanup block. Go in reverse order to make prettier BB names.
-  SmallVector<Value *, 16> Args;
   for (unsigned I = Calls.size(); I != 0;) {
     CallInst *CI = cast<CallInst>(Calls[--I]);
     changeToInvokeAndSplitBasicBlock(CI, CleanupBB, DTU);

@@ -630,7 +630,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   if (C.getDriver().isUsingLTO())
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
                   C.getDriver().getLTOMode() == LTOK_Thin);
 
   // Forward the PTX features if the nvlink-wrapper needs it.

@@ -1556,7 +1556,6 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
     if (DD->isNoReturn())
       data().IsAnyDestructorNoReturn = true;
   }
-
   if (!MD->isImplicit() && !MD->isUserProvided()) {
     // This method is user-declared but not user-provided. We can't work
     // out whether it's trivial yet (not until we get to the end of the
@@ -2142,6 +2141,12 @@ CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
       return DD;
   }
   return nullptr;
+}
+
+bool CXXRecordDecl::hasDeletedDestructor() const {
+  if (const CXXDestructorDecl *D = getDestructor())
+    return D->isDeleted();
+  return false;
 }
 
 static bool isDeclContextInNamespace(const DeclContext *DC) {
@@ -3444,9 +3449,8 @@ UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
   size_t Extra = additionalSizeToAlloc<NamedDecl *>(NumExpansions);
   auto *Result = new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, {});
   Result->NumExpansions = NumExpansions;
-  auto *Trail = Result->getTrailingObjects<NamedDecl *>();
-  for (unsigned I = 0; I != NumExpansions; ++I)
-    new (Trail + I) NamedDecl*(nullptr);
+  auto *Trail = Result->getTrailingObjects();
+  std::uninitialized_fill_n(Trail, NumExpansions, nullptr);
   return Result;
 }
 
@@ -3605,9 +3609,8 @@ DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
                         QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
-  auto *Trail = Result->getTrailingObjects<BindingDecl *>();
-  for (unsigned I = 0; I != NumBindings; ++I)
-    new (Trail + I) BindingDecl*(nullptr);
+  auto *Trail = Result->getTrailingObjects();
+  std::uninitialized_fill_n(Trail, NumBindings, nullptr);
   return Result;
 }
 

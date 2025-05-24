@@ -302,6 +302,8 @@ module AtomicRMWBinOp = struct
   | UDec_Wrap
   | USub_Cond
   | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 module ValueKind = struct

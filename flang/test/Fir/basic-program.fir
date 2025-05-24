@@ -37,18 +37,22 @@ func.func @_QQmain() {
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT: 'fir.global' Pipeline
 // PASSES-NEXT:    SimplifyHLFIRIntrinsics
+// PASSES-NEXT:    PropagateFortranVariableAttributes
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:    SimplifyHLFIRIntrinsics
+// PASSES-NEXT:    PropagateFortranVariableAttributes
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'omp.declare_reduction' Pipeline
 // PASSES-NEXT:    SimplifyHLFIRIntrinsics
+// PASSES-NEXT:    PropagateFortranVariableAttributes
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'omp.private' Pipeline
 // PASSES-NEXT:    SimplifyHLFIRIntrinsics
+// PASSES-NEXT:    PropagateFortranVariableAttributes
 // PASSES-NEXT:    OptimizedBufferization
 // PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT:   LowerHLFIROrderedAssignments

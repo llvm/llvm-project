@@ -63,9 +63,8 @@ public:
   void setIncrementalLinkerCompatible(bool Value) {
     IncrementalLinkerCompatible = Value;
   }
-  void executePostLayoutBinding(MCAssembler &Asm) override;
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
+  void executePostLayoutBinding() override;
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
   void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,

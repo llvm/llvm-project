@@ -214,8 +214,9 @@ static void doAtomicBinOpExpansion(const LoongArchInstrInfo *TII,
       .addReg(ScratchReg)
       .addReg(AddrReg)
       .addImm(0);
-  BuildMI(LoopMBB, DL, TII->get(LoongArch::BEQZ))
+  BuildMI(LoopMBB, DL, TII->get(LoongArch::BEQ))
       .addReg(ScratchReg)
+      .addReg(LoongArch::R0)
       .addMBB(LoopMBB);
 }
 
@@ -296,8 +297,9 @@ static void doMaskedAtomicBinOpExpansion(
       .addReg(ScratchReg)
       .addReg(AddrReg)
       .addImm(0);
-  BuildMI(LoopMBB, DL, TII->get(LoongArch::BEQZ))
+  BuildMI(LoopMBB, DL, TII->get(LoongArch::BEQ))
       .addReg(ScratchReg)
+      .addReg(LoongArch::R0)
       .addMBB(LoopMBB);
 }
 
@@ -454,8 +456,9 @@ bool LoongArchExpandAtomicPseudo::expandAtomicMinMaxOp(
       .addReg(Scratch1Reg)
       .addReg(AddrReg)
       .addImm(0);
-  BuildMI(LoopTailMBB, DL, TII->get(LoongArch::BEQZ))
+  BuildMI(LoopTailMBB, DL, TII->get(LoongArch::BEQ))
       .addReg(Scratch1Reg)
+      .addReg(LoongArch::R0)
       .addMBB(LoopHeadMBB);
 
   NextMBBI = MBB.end();
@@ -529,8 +532,9 @@ bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg(
         .addReg(ScratchReg)
         .addReg(AddrReg)
         .addImm(0);
-    BuildMI(LoopTailMBB, DL, TII->get(LoongArch::BEQZ))
+    BuildMI(LoopTailMBB, DL, TII->get(LoongArch::BEQ))
         .addReg(ScratchReg)
+        .addReg(LoongArch::R0)
         .addMBB(LoopHeadMBB);
     BuildMI(LoopTailMBB, DL, TII->get(LoongArch::B)).addMBB(DoneMBB);
   } else {
@@ -569,8 +573,9 @@ bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg(
         .addReg(ScratchReg)
         .addReg(AddrReg)
         .addImm(0);
-    BuildMI(LoopTailMBB, DL, TII->get(LoongArch::BEQZ))
+    BuildMI(LoopTailMBB, DL, TII->get(LoongArch::BEQ))
         .addReg(ScratchReg)
+        .addReg(LoongArch::R0)
         .addMBB(LoopHeadMBB);
     BuildMI(LoopTailMBB, DL, TII->get(LoongArch::B)).addMBB(DoneMBB);
   }
@@ -677,8 +682,9 @@ bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg128(
       .addReg(ScratchReg)
       .addReg(NewValHiReg)
       .addReg(AddrReg);
-  BuildMI(LoopTailMBB, DL, TII->get(LoongArch::BEQZ))
+  BuildMI(LoopTailMBB, DL, TII->get(LoongArch::BEQ))
       .addReg(ScratchReg)
+      .addReg(LoongArch::R0)
       .addMBB(LoopHeadMBB);
   BuildMI(LoopTailMBB, DL, TII->get(LoongArch::B)).addMBB(DoneMBB);
   int hint;

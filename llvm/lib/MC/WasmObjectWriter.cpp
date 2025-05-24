@@ -296,7 +296,7 @@ private:
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue) override;
 
-  void executePostLayoutBinding(MCAssembler &Asm) override;
+  void executePostLayoutBinding() override;
   void prepareImports(SmallVectorImpl<wasm::WasmImport> &Imports,
                       MCAssembler &Asm);
   uint64_t writeObject(MCAssembler &Asm) override;
@@ -449,22 +449,22 @@ void WasmObjectWriter::writeHeader(const MCAssembler &Asm) {
   W->write<uint32_t>(wasm::WasmVersion);
 }
 
-void WasmObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
+void WasmObjectWriter::executePostLayoutBinding() {
   // Some compilation units require the indirect function table to be present
   // but don't explicitly reference it.  This is the case for call_indirect
   // without the reference-types feature, and also function bitcasts in all
   // cases.  In those cases the __indirect_function_table has the
   // WASM_SYMBOL_NO_STRIP attribute.  Here we make sure this symbol makes it to
   // the assembler, if needed.
-  if (auto *Sym = Asm.getContext().lookupSymbol("__indirect_function_table")) {
+  if (auto *Sym = Asm->getContext().lookupSymbol("__indirect_function_table")) {
     const auto *WasmSym = static_cast<const MCSymbolWasm *>(Sym);
     if (WasmSym->isNoStrip())
-      Asm.registerSymbol(*Sym);
+      Asm->registerSymbol(*Sym);
   }
 
   // Build a map of sections to the function that defines them, for use
   // in recordRelocation.
-  for (const MCSymbol &S : Asm.symbols()) {
+  for (const MCSymbol &S : Asm->symbols()) {
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     if (WS.isDefined() && WS.isFunction() && !WS.isVariable()) {
       const auto &Sec = static_cast<const MCSectionWasm &>(S.getSection());

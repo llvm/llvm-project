@@ -829,7 +829,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
 
   // 'EmitImportsFiles' emits the list of modules from which to import from, and
   // the set of keys in `ModuleToSummariesForIndex` should be a superset of keys
-  // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportFiles`.
+  // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportsFiles`.
   GVSummaryPtrSet DecSummaries;
   ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
   llvm::gatherImportedSummariesForModule(

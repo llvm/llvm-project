@@ -903,9 +903,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
   SourceLocation ExprStartLoc = SourceMgr.getExpansionLoc(Tok.getLocation());
   if (EvaluateValue(ResVal, Tok, DT, true, *this)) {
     // Parse error, skip the rest of the macro line.
-    SourceRange ConditionRange = ExprStartLoc;
     if (Tok.isNot(tok::eod))
-      ConditionRange = DiscardUntilEndOfDirective(Tok);
+      DiscardUntilEndOfDirective(Tok);
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
@@ -916,7 +915,7 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     return {std::nullopt,
             false,
             DT.IncludedUndefinedIds,
-            {ExprStartLoc, ConditionRange.getEnd()}};
+            {ExprStartLoc, Tok.getLocation()}};
   }
 
   EvaluatedDefined = DT.State != DefinedTracker::Unknown;
@@ -948,8 +947,10 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-    SourceRange ValRange = ResVal.getRange();
-    return {std::nullopt, false, DT.IncludedUndefinedIds, ValRange};
+    return {std::nullopt,
+            false,
+            DT.IncludedUndefinedIds,
+            {ExprStartLoc, Tok.getLocation()}};
   }
 
   if (CheckForEoD) {

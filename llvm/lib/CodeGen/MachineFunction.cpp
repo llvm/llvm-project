@@ -187,8 +187,8 @@ void MachineFunction::handleChangeDesc(MachineInstr &MI,
 
 void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
-  Properties.set(MachineFunctionProperties::Property::IsSSA);
-  Properties.set(MachineFunctionProperties::Property::TracksLiveness);
+  Properties.setIsSSA();
+  Properties.setTracksLiveness();
   RegInfo = new (Allocator) MachineRegisterInfo(this);
 
   MFInfo = nullptr;

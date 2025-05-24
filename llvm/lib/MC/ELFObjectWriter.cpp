@@ -1187,7 +1187,7 @@ bool ELFObjectWriter::hasRelocationAddend() const {
   return TargetObjectWriter->hasRelocationAddend();
 }
 
-void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
+void ELFObjectWriter::executePostLayoutBinding() {
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
   for (const Symver &S : Symvers) {
@@ -1203,9 +1203,9 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
       Tail = Rest.substr(Symbol.isUndefined() ? 2 : 1);
 
     auto *Alias =
-        cast<MCSymbolELF>(Asm.getContext().getOrCreateSymbol(Prefix + Tail));
-    Asm.registerSymbol(*Alias);
-    const MCExpr *Value = MCSymbolRefExpr::create(&Symbol, Asm.getContext());
+        cast<MCSymbolELF>(Asm->getContext().getOrCreateSymbol(Prefix + Tail));
+    Asm->registerSymbol(*Alias);
+    const MCExpr *Value = MCSymbolRefExpr::create(&Symbol, Asm->getContext());
     Alias->setVariableValue(Value);
 
     // Aliases defined with .symvar copy the binding from the symbol they alias.
@@ -1219,15 +1219,15 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
 
     if (Symbol.isUndefined() && Rest.starts_with("@@") &&
         !Rest.starts_with("@@@")) {
-      Asm.getContext().reportError(S.Loc, "default version symbol " +
-                                              AliasName + " must be defined");
+      Asm->getContext().reportError(S.Loc, "default version symbol " +
+                                               AliasName + " must be defined");
       continue;
     }
 
     if (auto It = Renames.find(&Symbol);
         It != Renames.end() && It->second != Alias) {
-      Asm.getContext().reportError(S.Loc, Twine("multiple versions for ") +
-                                              Symbol.getName());
+      Asm->getContext().reportError(S.Loc, Twine("multiple versions for ") +
+                                               Symbol.getName());
       continue;
     }
 
@@ -1309,15 +1309,13 @@ bool ELFObjectWriter::useSectionSymbol(const MCAssembler &Asm,
 bool ELFObjectWriter::checkRelocation(MCContext &Ctx, SMLoc Loc,
                                       const MCSectionELF *From,
                                       const MCSectionELF *To) {
-  if (DwoOS) {
-    if (isDwoSection(*From)) {
-      Ctx.reportError(Loc, "A dwo section may not contain relocations");
-      return false;
-    }
-    if (To && isDwoSection(*To)) {
-      Ctx.reportError(Loc, "A relocation may not refer to a dwo section");
-      return false;
-    }
+  if (isDwoSection(*From)) {
+    Ctx.reportError(Loc, "A dwo section may not contain relocations");
+    return false;
+  }
+  if (To && isDwoSection(*To)) {
+    Ctx.reportError(Loc, "A relocation may not refer to a dwo section");
+    return false;
   }
   return true;
 }
@@ -1327,21 +1325,32 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
                                        const MCFixup &Fixup, MCValue Target,
                                        uint64_t &FixedValue) {
   MCAsmBackend &Backend = Asm.getBackend();
+  const MCSectionELF &FixupSection = cast<MCSectionELF>(*Fragment->getParent());
+  MCContext &Ctx = Asm.getContext();
+
+  const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
+  bool ViaWeakRef = false;
+  if (SymA && SymA->isVariable()) {
+    const MCExpr *Expr = SymA->getVariableValue();
+    if (const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr)) {
+      if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF) {
+        SymA = cast<MCSymbolELF>(&Inner->getSymbol());
+        ViaWeakRef = true;
+      }
+    }
+  }
+
+  const MCSectionELF *SecA = (SymA && SymA->isInSection())
+                                 ? cast<MCSectionELF>(&SymA->getSection())
+                                 : nullptr;
+  if (DwoOS && !checkRelocation(Ctx, Fixup.getLoc(), &FixupSection, SecA))
+    return;
+
   bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
                  MCFixupKindInfo::FKF_IsPCRel;
-  const MCSectionELF &FixupSection = cast<MCSectionELF>(*Fragment->getParent());
-  uint64_t C = Target.getConstant();
   uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
-  MCContext &Ctx = Asm.getContext();
-  const MCTargetOptions *TO = Ctx.getTargetOptions();
-
+  uint64_t Addend = Target.getConstant();
   if (auto *RefB = Target.getSubSym()) {
-    // When there is no relocation specifier, a linker relaxation target may
-    // emit ADD/SUB relocations for A-B+C.
-    if (Target.getAddSym() && Backend.handleAddSubRelocations(
-                                  Asm, *Fragment, Fixup, Target, FixedValue))
-      return;
-
     const auto &SymB = cast<MCSymbolELF>(*RefB);
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
@@ -1360,30 +1369,9 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
 
     assert(!IsPCRel && "should have been folded");
     IsPCRel = true;
-    C += FixupOffset - Asm.getSymbolOffset(SymB);
+    Addend += FixupOffset - Asm.getSymbolOffset(SymB);
   }
 
-  // We either rejected the fixup or folded B into C at this point.
-  const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
-
-  bool ViaWeakRef = false;
-  if (SymA && SymA->isVariable()) {
-    const MCExpr *Expr = SymA->getVariableValue();
-    if (const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr)) {
-      if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF) {
-        SymA = cast<MCSymbolELF>(&Inner->getSymbol());
-        ViaWeakRef = true;
-      }
-    }
-  }
-
-  const MCSectionELF *SecA = (SymA && SymA->isInSection())
-                                 ? cast<MCSectionELF>(&SymA->getSection())
-                                 : nullptr;
-  if (!checkRelocation(Ctx, Fixup.getLoc(), &FixupSection, SecA))
-    return;
-
-  auto EMachine = TargetObjectWriter->getEMachine();
   unsigned Type;
   if (mc::isRelocRelocation(Fixup.getKind()))
     Type = Fixup.getKind() - FirstLiteralRelocationKind;
@@ -1393,23 +1381,20 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   bool UseSectionSym =
       SymA && SymA->getBinding() == ELF::STB_LOCAL && !SymA->isUndefined();
   if (UseSectionSym) {
-    UseSectionSym = useSectionSymbol(Asm, Target, SymA, C, Type);
+    UseSectionSym = useSectionSymbol(Asm, Target, SymA, Addend, Type);
 
     // Disable STT_SECTION adjustment for .reloc directives.
     UseSectionSym &= !mc::isRelocRelocation(Fixup.getKind());
+
+    if (UseSectionSym)
+      Addend += Asm.getSymbolOffset(*SymA);
   }
 
-  uint64_t Addend = UseSectionSym ? C + Asm.getSymbolOffset(*SymA) : C;
-  FixedValue = usesRela(TO, FixupSection) ? 0 : Addend;
+  FixedValue = usesRela(Ctx.getTargetOptions(), FixupSection) ? 0 : Addend;
   if (UseSectionSym) {
     SymA = cast<MCSymbolELF>(SecA->getBeginSymbol());
     SymA->setUsedInReloc();
   } else {
-    // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
-    // reference the null symbol.
-    if (Type == ELF::R_PPC64_TOC && EMachine == ELF::EM_PPC64)
-      SymA = nullptr;
-
     if (SymA) {
       if (const MCSymbolELF *R = Renames.lookup(SymA))
         SymA = R;
@@ -1431,8 +1416,7 @@ bool ELFObjectWriter::usesRela(const MCTargetOptions *TO,
 }
 
 bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &SA, const MCFragment &FB,
-    bool InSet, bool IsPCRel) const {
+    const MCSymbol &SA, const MCFragment &FB, bool InSet, bool IsPCRel) const {
   const auto &SymA = cast<MCSymbolELF>(SA);
   if (IsPCRel) {
     assert(!InSet);

@@ -219,7 +219,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
                                                    bool is_result,
                                                    bool is_lvalue) {
   assert(m_parser_vars.get());
-  auto ast = parser_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ast = parser_type.GetTypeSystem<TypeSystemClang>();
   if (ast == nullptr)
     return false;
 
@@ -1486,8 +1486,8 @@ bool ClangExpressionDeclMap::GetVariableValue(VariableSP &var,
     return false;
   }
 
-  auto ts = var_type->GetForwardCompilerType().GetTypeSystem();
-  auto clang_ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto clang_ast =
+      var_type->GetForwardCompilerType().GetTypeSystem<TypeSystemClang>();
 
   if (!clang_ast) {
     LLDB_LOG(log, "Skipped a definition because it has no Clang AST");
@@ -1606,8 +1606,7 @@ void ClangExpressionDeclMap::AddOneVariable(
 
   TypeFromUser user_type = valobj->GetCompilerType();
 
-  auto clang_ast =
-      user_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto clang_ast = user_type.GetTypeSystem<TypeSystemClang>();
 
   if (!clang_ast) {
     LLDB_LOG(log, "Skipped a definition because it has no Clang AST");

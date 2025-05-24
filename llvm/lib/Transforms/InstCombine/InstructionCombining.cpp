@@ -1396,6 +1396,26 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
                        "canFreelyInvertAllUsersOf() ?");
     }
   }
+
+  // Update pre-existing debug value uses.
+  SmallVector<DbgValueInst *, 4> DbgValues;
+  SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
+  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
+
+  auto InvertDbgValueUse = [&](auto *DbgVal) {
+    SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_not};
+    for (unsigned Idx = 0, End = DbgVal->getNumVariableLocationOps();
+         Idx != End; ++Idx)
+      if (DbgVal->getVariableLocationOp(Idx) == I)
+        DbgVal->setExpression(
+            DIExpression::appendOpsToArg(DbgVal->getExpression(), Ops, Idx));
+  };
+
+  for (DbgValueInst *DVI : DbgValues)
+    InvertDbgValueUse(DVI);
+
+  for (DbgVariableRecord *DVR : DbgVariableRecords)
+    InvertDbgValueUse(DVR);
 }
 
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
@@ -1831,7 +1851,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     // Handle some cases that can't be fully simplified, but where we know that
     // the two instructions will fold into one.
     auto WillFold = [&]() {
-      if (!InVal->hasOneUser())
+      if (!InVal->hasUseList() || !InVal->hasOneUser())
         return false;
 
       // icmp of ucmp/scmp with constant will fold to icmp.
@@ -2234,39 +2254,39 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
         }
         NewVecC[ShMask[I]] = CElt;
       }
-      // If this is a widening shuffle, we must be able to extend with poison
-      // elements. If the original binop does not produce a poison in the high
-      // lanes, then this transform is not safe.
-      // Similarly for poison lanes due to the shuffle mask, we can only
-      // transform binops that preserve poison.
-      // TODO: We could shuffle those non-poison constant values into the
-      //       result by using a constant vector (rather than an poison vector)
-      //       as operand 1 of the new binop, but that might be too aggressive
-      //       for target-independent shuffle creation.
-      if (I >= SrcVecNumElts || ShMask[I] < 0) {
-        Constant *MaybePoison =
-            ConstOp1
-                ? ConstantFoldBinaryOpOperands(Opcode, PoisonScalar, CElt, DL)
-                : ConstantFoldBinaryOpOperands(Opcode, CElt, PoisonScalar, DL);
-        if (!MaybePoison || !isa<PoisonValue>(MaybePoison)) {
-          MayChange = false;
-          break;
-        }
-      }
     }
     if (MayChange) {
       Constant *NewC = ConstantVector::get(NewVecC);
-      // It may not be safe to execute a binop on a vector with poison elements
-      // because the entire instruction can be folded to undef or create poison
-      // that did not exist in the original code.
-      // TODO: The shift case should not be necessary.
-      if (Inst.isIntDivRem() || (Inst.isShift() && ConstOp1))
+      // Lanes of NewC not used by the shuffle will be poison which will cause
+      // UB for div/rem. Mask them with a safe constant.
+      if (Inst.isIntDivRem())
         NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
       // Op(C, shuffle(V1, Mask)) -> shuffle(Op(NewC, V1), Mask)
       Value *NewLHS = ConstOp1 ? V1 : NewC;
       Value *NewRHS = ConstOp1 ? NewC : V1;
+      return createBinOpShuffle(NewLHS, NewRHS, Mask);
+    }
+  }
+
+  // Similar to the combine above, but handles the case for scalable vectors
+  // where both shuffle(V1, 0) and C are splats.
+  //
+  // Op(shuffle(V1, 0), (splat C)) -> shuffle(Op(V1, (splat C)), 0)
+  if (isa<ScalableVectorType>(Inst.getType()) &&
+      match(&Inst, m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Poison(),
+                                                m_ZeroMask())),
+                             m_ImmConstant(C)))) {
+    if (Constant *Splat = C->getSplatValue()) {
+      bool ConstOp1 = isa<Constant>(RHS);
+      VectorType *V1Ty = cast<VectorType>(V1->getType());
+      Constant *NewC = ConstantVector::getSplat(V1Ty->getElementCount(), Splat);
+
+      Value *NewLHS = ConstOp1 ? V1 : NewC;
+      Value *NewRHS = ConstOp1 ? NewC : V1;
+      VectorType *VTy = cast<VectorType>(Inst.getType());
+      SmallVector<int> Mask(VTy->getElementCount().getKnownMinValue(), 0);
       return createBinOpShuffle(NewLHS, NewRHS, Mask);
     }
   }
@@ -5622,15 +5642,14 @@ static bool combineInstructionsOverFunction(
   // Iterate while there is work to do.
   unsigned Iteration = 0;
   while (true) {
-    ++Iteration;
-
-    if (Iteration > Opts.MaxIterations && !VerifyFixpoint) {
+    if (Iteration >= Opts.MaxIterations && !VerifyFixpoint) {
       LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
       break;
     }
 
+    ++Iteration;
     ++NumWorklistIterations;
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
@@ -5645,13 +5664,12 @@ static bool combineInstructionsOverFunction(
 
     MadeIRChange = true;
     if (Iteration > Opts.MaxIterations) {
-      report_fatal_error(
+      reportFatalUsageError(
           "Instruction Combining on " + Twine(F.getName()) +
-              " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
-              " iterations. " +
-              "Use 'instcombine<no-verify-fixpoint>' or function attribute "
-              "'instcombine-no-verify-fixpoint' to suppress this error.",
-          /*GenCrashDiag=*/false);
+          " did not reach a fixpoint after " + Twine(Opts.MaxIterations) +
+          " iterations. " +
+          "Use 'instcombine<no-verify-fixpoint>' or function attribute "
+          "'instcombine-no-verify-fixpoint' to suppress this error.");
     }
   }
 

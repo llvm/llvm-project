@@ -1102,3 +1102,15 @@ def skipUnlessFeature(feature):
                 return "%s is not supported on this system." % feature
 
     return skipTestIfFn(is_feature_enabled)
+
+
+def skipIfBuildType(types: list[str]):
+    """Skip tests if built in a specific CMAKE_BUILD_TYPE.
+
+    Supported types include 'Release', 'RelWithDebInfo', 'Debug', 'MinSizeRel'.
+    """
+    types = [name.lower() for name in types]
+    return unittest.skipIf(
+        configuration.cmake_build_type.lower() in types,
+        "skip on {} build type(s)".format(", ".join(types)),
+    )

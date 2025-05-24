@@ -11,10 +11,10 @@ Header:
   PartOffsets:     [ 60 ]
 Parts:
   - Name:            RTS0
-    Size:            80
+    Size:            96
     RootSignature:
       Version: 2
-      NumRootParameters: 2
+      NumRootParameters: 3
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 60
@@ -31,14 +31,20 @@ Parts:
           Num32BitValues: 21
           ShaderRegister: 22
           RegisterSpace: 23     
+      - ParameterType: 2 # SRV
+        ShaderVisibility: 3 # Domain
+        Descriptor:
+          ShaderRegister: 31
+          RegisterSpace: 32
+          DATA_STATIC_WHILE_SET_AT_EXECUTE: true
       AllowInputAssemblerInputLayout: true
       DenyGeometryShaderRootAccess: true
 
 # CHECK:  - Name:            RTS0
-# CHECK-NEXT:    Size:            80
+# CHECK-NEXT:    Size:            96
 # CHECK-NEXT:    RootSignature:
 # CHECK-NEXT:      Version:         2
-# CHECK-NEXT:      NumRootParameters: 2
+# CHECK-NEXT:      NumRootParameters: 3
 # CHECK-NEXT:      RootParametersOffset: 24
 # CHECK-NEXT:      NumStaticSamplers: 0
 # CHECK-NEXT:      StaticSamplersOffset: 60
@@ -55,5 +61,11 @@ Parts:
 # CHECK-NEXT:            Num32BitValues:  21
 # CHECK-NEXT:            RegisterSpace:   23
 # CHECK-NEXT:            ShaderRegister:  22
+# CHECK-NEXT:        - ParameterType:   2
+# CHECK-NEXT:          ShaderVisibility: 3
+# CHECK-NEXT:          Descriptor:
+# CHECK-NEXT:            RegisterSpace:   32
+# CHECK-NEXT:            ShaderRegister:  31
+# CHECK-NEXT:            DATA_STATIC_WHILE_SET_AT_EXECUTE: true
 # CHECK-NEXT:      AllowInputAssemblerInputLayout: true
 # CHECK-NEXT:      DenyGeometryShaderRootAccess: true

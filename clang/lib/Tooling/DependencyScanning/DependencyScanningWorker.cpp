@@ -411,7 +411,7 @@ public:
     Scanned = true;
 
     // Create a compiler instance to handle the actual work.
-    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheMutexes());
+    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
     ScanInstanceStorage.emplace(std::move(Invocation),
                                 std::move(PCHContainerOps), ModCache.get());
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
@@ -427,6 +427,10 @@ public:
 
     ScanInstance.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
         true;
+
+    if (ScanInstance.getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
+      ScanInstance.getHeaderSearchOpts().BuildSessionTimestamp =
+          Service.getBuildSessionTimestamp();
 
     ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
@@ -526,6 +530,7 @@ public:
     ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
         true;
+    ScanInstance.getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
 
     // Avoid some checks and module map parsing when loading PCM files.
     ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;
@@ -637,7 +642,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   auto DiagOpts = createDiagOptions(CommandLine);
-  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts.release());
+  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, *DiagOpts);
 
   if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
                           DiagPrinter, TUBuffer))
@@ -655,7 +660,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   auto DiagOpts = createDiagOptions(CommandLine);
-  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts.release());
+  TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, *DiagOpts);
 
   if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
                           DiagPrinter, ModuleName))
@@ -739,7 +744,7 @@ bool DependencyScanningWorker::scanDependencies(
   sanitizeDiagOpts(*DiagOpts);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(FileMgr->getVirtualFileSystem(),
-                                          DiagOpts.release(), &DC,
+                                          *DiagOpts, &DC,
                                           /*ShouldOwnClient=*/false);
 
   // Although `Diagnostics` are used only for command-line parsing, the

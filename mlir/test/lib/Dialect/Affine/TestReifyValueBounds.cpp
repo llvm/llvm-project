@@ -25,7 +25,6 @@
 
 using namespace mlir;
 using namespace mlir::affine;
-using mlir::presburger::BoundType;
 
 namespace {
 

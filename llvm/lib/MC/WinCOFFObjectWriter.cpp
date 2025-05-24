@@ -1173,8 +1173,8 @@ void WinCOFFObjectWriter::reset() {
 }
 
 bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
-    bool InSet, bool IsPCRel) const {
+    const MCSymbol &SymA, const MCFragment &FB, bool InSet,
+    bool IsPCRel) const {
   // Don't drop relocations between functions, even if they are in the same text
   // section. Multiple Visual C++ linker features depend on having the
   // relocations present. The /INCREMENTAL flag will cause these relocations to
@@ -1187,10 +1187,10 @@ bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   return &SymA.getSection() == FB.getParent();
 }
 
-void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
-  ObjWriter->executePostLayoutBinding(Asm);
+void WinCOFFObjectWriter::executePostLayoutBinding() {
+  ObjWriter->executePostLayoutBinding(*Asm);
   if (DwoWriter)
-    DwoWriter->executePostLayoutBinding(Asm);
+    DwoWriter->executePostLayoutBinding(*Asm);
 }
 
 void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,

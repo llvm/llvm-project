@@ -58,7 +58,7 @@ void PressureTracker::getResourceUsers(uint64_t ResourceMask,
 }
 
 void PressureTracker::onInstructionDispatched(unsigned IID) {
-  IPI.insert(std::make_pair(IID, InstructionPressureInfo()));
+  IPI.try_emplace(IID);
 }
 
 void PressureTracker::onInstructionExecuted(unsigned IID) { IPI.erase(IID); }

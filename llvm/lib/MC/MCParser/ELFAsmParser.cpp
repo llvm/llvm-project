@@ -23,7 +23,6 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <cstdint>

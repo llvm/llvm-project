@@ -3589,7 +3589,6 @@ ObjCMethodDecl *SemaObjC::LookupMethodInGlobalPool(Selector Sel, SourceRange R,
 
   // Gather the non-hidden methods.
   ObjCMethodList &MethList = instance ? Pos->second.first : Pos->second.second;
-  SmallVector<ObjCMethodDecl *, 4> Methods;
   for (ObjCMethodList *M = &MethList; M; M = M->getNext()) {
     if (M->getMethod() && M->getMethod()->isUnconditionallyVisible())
       return M->getMethod();

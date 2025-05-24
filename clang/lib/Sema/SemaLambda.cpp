@@ -1574,14 +1574,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Enter a new evaluation context to insulate the lambda from any
   // cleanups from the enclosing full-expression.
-  PushExpressionEvaluationContext(
-      LSI->CallOperator->isConsteval()
-          ? ExpressionEvaluationContext::ImmediateFunctionContext
-          : ExpressionEvaluationContext::PotentiallyEvaluated);
-  ExprEvalContexts.back().InImmediateFunctionContext =
-      LSI->CallOperator->isConsteval();
-  ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
-      getLangOpts().CPlusPlus20 && LSI->CallOperator->isImmediateEscalating();
+  PushExpressionEvaluationContextForFunction(
+      ExpressionEvaluationContext::PotentiallyEvaluated, LSI->CallOperator);
 }
 
 void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
@@ -1633,8 +1627,8 @@ static void repeatForLambdaConversionFunctionCallingConvs(
         CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
         DefaultFree, DefaultMember, CallOpCC};
     llvm::sort(Convs);
-    llvm::iterator_range<CallingConv *> Range(
-        std::begin(Convs), std::unique(std::begin(Convs), std::end(Convs)));
+    llvm::iterator_range<CallingConv *> Range(std::begin(Convs),
+                                              llvm::unique(Convs));
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
 
     for (CallingConv C : Range) {

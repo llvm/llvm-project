@@ -953,7 +953,7 @@ INTERCEPTOR(double, frexp, double x, int *exp) {
 #define INIT_FREXP
 #endif  // SANITIZER_INTERCEPT_FREXP
 
-#if SANITIZER_INTERCEPT_FREXPF_FREXPL
+#if SANITIZER_INTERCEPT_FREXPF
 INTERCEPTOR(float, frexpf, float x, int *exp) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, frexpf, x, exp);
@@ -963,6 +963,12 @@ INTERCEPTOR(float, frexpf, float x, int *exp) {
   return res;
 }
 
+#  define INIT_FREXPF COMMON_INTERCEPT_FUNCTION(frexpf);
+#else
+#  define INIT_FREXPF
+#endif
+
+#if SANITIZER_INTERCEPT_FREXPL
 INTERCEPTOR(long double, frexpl, long double x, int *exp) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, frexpl, x, exp);
@@ -972,12 +978,10 @@ INTERCEPTOR(long double, frexpl, long double x, int *exp) {
   return res;
 }
 
-#define INIT_FREXPF_FREXPL           \
-  COMMON_INTERCEPT_FUNCTION(frexpf); \
-  COMMON_INTERCEPT_FUNCTION_LDBL(frexpl)
+#  define INIT_FREXPL COMMON_INTERCEPT_FUNCTION_LDBL(frexpl)
 #else
-#define INIT_FREXPF_FREXPL
-#endif  // SANITIZER_INTERCEPT_FREXPF_FREXPL
+#  define INIT_FREXPL
+#endif
 
 #if SI_POSIX
 static void write_iovec(void *ctx, struct __sanitizer_iovec *iovec,
@@ -3917,7 +3921,7 @@ INTERCEPTOR(SIZE_T, wcrtomb, char *dest, wchar_t src, void *ps) {
   if (res != ((SIZE_T)-1)) {
     CHECK_LE(res, sizeof(local_dest));
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res);
-    REAL(memcpy)(dest, local_dest, res);
+    internal_memcpy(dest, local_dest, res);
   }
   return res;
 }
@@ -3939,7 +3943,7 @@ INTERCEPTOR(int, wctomb, char *dest, wchar_t src) {
   if (res != -1) {
     CHECK_LE(res, sizeof(local_dest));
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, res);
-    REAL(memcpy)(dest, local_dest, res);
+    internal_memcpy(dest, local_dest, res);
   }
   return res;
 }
@@ -10411,7 +10415,8 @@ static void InitializeCommonInterceptors() {
   INIT_ISOC99_PRINTF;
   INIT_SETPROCTITLE;
   INIT_FREXP;
-  INIT_FREXPF_FREXPL;
+  INIT_FREXPF;
+  INIT_FREXPL;
   INIT_GETPWNAM_AND_FRIENDS;
   INIT_GETPWNAM_R_AND_FRIENDS;
   INIT_GETPWENT;

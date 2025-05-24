@@ -1454,10 +1454,10 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // character that is not a valid type encoding character (and, being
     // non-printable, never will be!)
     if (CGM.getTriple().isOSBinFormatELF())
-      std::replace(MangledTypes.begin(), MangledTypes.end(), '@', '\1');
+      llvm::replace(MangledTypes, '@', '\1');
     // = in dll exported names causes lld to fail when linking on Windows.
     if (CGM.getTriple().isOSWindows())
-      std::replace(MangledTypes.begin(), MangledTypes.end(), '=', '\2');
+      llvm::replace(MangledTypes, '=', '\2');
     return MangledTypes;
   }
   llvm::Constant  *GetTypeString(llvm::StringRef TypeEncoding) {
@@ -3827,8 +3827,6 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   } else {
     SuperClass = llvm::ConstantPointerNull::get(PtrToInt8Ty);
   }
-  // Empty vector used to construct empty method lists
-  SmallVector<llvm::Constant*, 1>  empty;
   // Generate the method and instance variable lists
   llvm::Constant *MethodList = GenerateMethodList(ClassName, "",
       InstanceMethods, false);

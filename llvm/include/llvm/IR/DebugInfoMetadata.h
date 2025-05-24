@@ -2237,7 +2237,7 @@ class DILocation : public MDNode {
   friend class MDNode;
 #ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
   uint64_t AtomGroup : 61;
-  uint8_t AtomRank : 3;
+  uint64_t AtomRank : 3;
 #endif
 
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
@@ -2282,6 +2282,13 @@ public:
 #else
     return 0;
 #endif
+  }
+
+  const DILocation *getWithoutAtom() const {
+    if (!getAtomGroup() && !getAtomRank())
+      return this;
+    return get(getContext(), getLine(), getColumn(), getScope(), getInlinedAt(),
+               isImplicitCode());
   }
 
   // Disallow replacing operands.

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "JSONUtils.h"
-#include "BreakpointBase.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
@@ -98,19 +97,6 @@ std::optional<bool> GetBoolean(const llvm::json::Object *obj,
   if (obj != nullptr)
     return GetBoolean(*obj, key);
   return std::nullopt;
-}
-
-std::optional<int64_t> GetSigned(const llvm::json::Object &obj,
-                                 llvm::StringRef key) {
-  return obj.getInteger(key);
-}
-
-std::optional<int64_t> GetSigned(const llvm::json::Object *obj,
-                                 llvm::StringRef key) {
-  if (obj == nullptr)
-    return std::nullopt;
-
-  return GetSigned(*obj, key);
 }
 
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
@@ -264,7 +250,7 @@ void FillResponse(const llvm::json::Object &request,
   response.try_emplace("seq", (int64_t)0);
   EmplaceSafeString(response, "command",
                     GetString(request, "command").value_or(""));
-  const int64_t seq = GetSigned(request, "seq").value_or(0);
+  const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
 }
@@ -354,70 +340,6 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
   return llvm::json::Value(std::move(object));
 }
 
-// "Breakpoint": {
-//   "type": "object",
-//   "description": "Information about a Breakpoint created in setBreakpoints
-//                   or setFunctionBreakpoints.",
-//   "properties": {
-//     "id": {
-//       "type": "integer",
-//       "description": "An optional unique identifier for the breakpoint."
-//     },
-//     "verified": {
-//       "type": "boolean",
-//       "description": "If true breakpoint could be set (but not necessarily
-//                       at the desired location)."
-//     },
-//     "message": {
-//       "type": "string",
-//       "description": "An optional message about the state of the breakpoint.
-//                       This is shown to the user and can be used to explain
-//                       why a breakpoint could not be verified."
-//     },
-//     "source": {
-//       "$ref": "#/definitions/Source",
-//       "description": "The source where the breakpoint is located."
-//     },
-//     "line": {
-//       "type": "integer",
-//       "description": "The start line of the actual range covered by the
-//                       breakpoint."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "An optional start column of the actual range covered
-//                       by the breakpoint."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "An optional end line of the actual range covered by
-//                       the breakpoint."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "An optional end column of the actual range covered by
-//                       the breakpoint. If no end line is given, then the end
-//                       column is assumed to be in the start line."
-//     }
-//   },
-//   "required": [ "verified" ]
-// }
-llvm::json::Value CreateBreakpoint(BreakpointBase *bp,
-                                   std::optional<llvm::StringRef> request_path,
-                                   std::optional<uint32_t> request_line,
-                                   std::optional<uint32_t> request_column) {
-  llvm::json::Object object;
-  if (request_path)
-    object.try_emplace("source", CreateSource(*request_path));
-  bp->CreateJsonObject(object);
-  // We try to add request_line as a fallback
-  if (request_line)
-    object.try_emplace("line", *request_line);
-  if (request_column)
-    object.try_emplace("column", *request_column);
-  return llvm::json::Value(std::move(object));
-}
-
 static uint64_t GetDebugInfoSizeInSection(lldb::SBSection section) {
   uint64_t debug_info_size = 0;
   llvm::StringRef section_name(section.GetName());
@@ -460,13 +382,18 @@ static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
   return oss.str();
 }
 
-llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module) {
+llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
+                               bool id_only) {
   llvm::json::Object object;
   if (!target.IsValid() || !module.IsValid())
     return llvm::json::Value(std::move(object));
 
   const char *uuid = module.GetUUIDString();
   object.try_emplace("id", uuid ? std::string(uuid) : std::string(""));
+
+  if (id_only)
+    return llvm::json::Value(std::move(object));
+
   object.try_emplace("name", std::string(module.GetFileSpec().GetFilename()));
   char module_path_arr[PATH_MAX];
   module.GetFileSpec().GetPath(module_path_arr, sizeof(module_path_arr));
@@ -489,9 +416,11 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module) {
   } else {
     object.try_emplace("symbolStatus", "Symbols not found.");
   }
-  std::string loaded_addr = std::to_string(
-      module.GetObjectFileHeaderAddress().GetLoadAddress(target));
-  object.try_emplace("addressRange", loaded_addr);
+  std::string load_address =
+      llvm::formatv("{0:x}",
+                    module.GetObjectFileHeaderAddress().GetLoadAddress(target))
+          .str();
+  object.try_emplace("addressRange", load_address);
   std::string version_str;
   uint32_t version_nums[3];
   uint32_t num_versions =
@@ -504,12 +433,6 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module) {
   if (!version_str.empty())
     object.try_emplace("version", version_str);
   return llvm::json::Value(std::move(object));
-}
-
-void AppendBreakpoint(BreakpointBase *bp, llvm::json::Array &breakpoints,
-                      std::optional<llvm::StringRef> request_path,
-                      std::optional<uint32_t> request_line) {
-  breakpoints.emplace_back(CreateBreakpoint(bp, request_path, request_line));
 }
 
 // "Event": {
@@ -567,96 +490,72 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   return filter;
 }
 
-// "Source": {
-//   "type": "object",
-//   "description": "A Source is a descriptor for source code. It is returned
-//                   from the debug adapter as part of a StackFrame and it is
-//                   used by clients when specifying breakpoints.",
-//   "properties": {
-//     "name": {
-//       "type": "string",
-//       "description": "The short name of the source. Every source returned
-//                       from the debug adapter has a name. When sending a
-//                       source to the debug adapter this name is optional."
-//     },
-//     "path": {
-//       "type": "string",
-//       "description": "The path of the source to be shown in the UI. It is
-//                       only used to locate and load the content of the
-//                       source if no sourceReference is specified (or its
-//                       value is 0)."
-//     },
-//     "sourceReference": {
-//       "type": "number",
-//       "description": "If sourceReference > 0 the contents of the source must
-//                       be retrieved through the SourceRequest (even if a path
-//                       is specified). A sourceReference is only valid for a
-//                       session, so it must not be used to persist a source."
-//     },
-//     "presentationHint": {
-//       "type": "string",
-//       "description": "An optional hint for how to present the source in the
-//                       UI. A value of 'deemphasize' can be used to indicate
-//                       that the source is not available or that it is
-//                       skipped on stepping.",
-//       "enum": [ "normal", "emphasize", "deemphasize" ]
-//     },
-//     "origin": {
-//       "type": "string",
-//       "description": "The (optional) origin of this source: possible values
-//                       'internal module', 'inlined content from source map',
-//                       etc."
-//     },
-//     "sources": {
-//       "type": "array",
-//       "items": {
-//         "$ref": "#/definitions/Source"
-//       },
-//       "description": "An optional list of sources that are related to this
-//                       source. These may be the source that generated this
-//                       source."
-//     },
-//     "adapterData": {
-//       "type":["array","boolean","integer","null","number","object","string"],
-//       "description": "Optional data that a debug adapter might want to loop
-//                       through the client. The client should leave the data
-//                       intact and persist it across sessions. The client
-//                       should not interpret the data."
-//     },
-//     "checksums": {
-//       "type": "array",
-//       "items": {
-//         "$ref": "#/definitions/Checksum"
-//       },
-//       "description": "The checksums associated with this file."
-//     }
-//   }
-// }
-llvm::json::Value CreateSource(const lldb::SBFileSpec &file) {
-  llvm::json::Object object;
+static std::string GetLoadAddressString(const lldb::addr_t addr) {
+  std::string result;
+  llvm::raw_string_ostream os(result);
+  os << llvm::format_hex(addr, 18);
+  return result;
+}
+
+protocol::Source CreateSource(const lldb::SBFileSpec &file) {
+  protocol::Source source;
   if (file.IsValid()) {
     const char *name = file.GetFilename();
     if (name)
-      EmplaceSafeString(object, "name", name);
+      source.name = name;
     char path[PATH_MAX] = "";
     if (file.GetPath(path, sizeof(path)) &&
-        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
-      EmplaceSafeString(object, "path", std::string(path));
-    }
+        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX))
+      source.path = path;
   }
-  return llvm::json::Value(std::move(object));
+  return source;
 }
 
-llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry) {
+protocol::Source CreateSource(const lldb::SBLineEntry &line_entry) {
   return CreateSource(line_entry.GetFileSpec());
 }
 
-llvm::json::Value CreateSource(llvm::StringRef source_path) {
-  llvm::json::Object source;
+protocol::Source CreateSource(llvm::StringRef source_path) {
+  protocol::Source source;
   llvm::StringRef name = llvm::sys::path::filename(source_path);
-  EmplaceSafeString(source, "name", name);
-  EmplaceSafeString(source, "path", source_path);
-  return llvm::json::Value(std::move(source));
+  source.name = name;
+  source.path = source_path;
+  return source;
+}
+
+protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
+                                      lldb::SBAddress &address) {
+  protocol::Source source;
+
+  auto symbol = address.GetSymbol();
+  std::string name;
+  if (symbol.IsValid()) {
+    source.sourceReference = symbol.GetStartAddress().GetLoadAddress(target);
+    name = symbol.GetName();
+  } else {
+    const auto load_addr = address.GetLoadAddress(target);
+    source.sourceReference = load_addr;
+    name = GetLoadAddressString(load_addr);
+  }
+
+  lldb::SBModule module = address.GetModule();
+  if (module.IsValid()) {
+    lldb::SBFileSpec file_spec = module.GetFileSpec();
+    if (file_spec.IsValid()) {
+      std::string path = GetSBFileSpecPath(file_spec);
+      if (!path.empty())
+        source.path = path + '`' + name;
+    }
+  }
+
+  source.name = std::move(name);
+
+  // Mark the source as deemphasized since users will only be able to view
+  // assembly for these frames.
+  source.presentationHint =
+      protocol::Source::PresentationHint::eSourcePresentationHintDeemphasize;
+
+  return source;
 }
 
 bool ShouldDisplayAssemblySource(
@@ -765,8 +664,7 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
   if (frame_name.empty()) {
     // If the function name is unavailable, display the pc address as a 16-digit
     // hex string, e.g. "0x0000000000012345"
-    llvm::raw_string_ostream os(frame_name);
-    os << llvm::format_hex(frame.GetPC(), 18);
+    frame_name = GetLoadAddressString(frame.GetPC());
   }
 
   // We only include `[opt]` if a custom frame format is not specified.
@@ -784,17 +682,10 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
   } else if (frame.GetSymbol().IsValid()) {
     // If no source is associated with the frame, use the DAPFrameID to track
     // the 'source' and generate assembly.
-    llvm::json::Object source;
-    EmplaceSafeString(source, "name", frame_name);
-    char buf[PATH_MAX] = {0};
-    size_t size = frame.GetModule().GetFileSpec().GetPath(buf, PATH_MAX);
-    EmplaceSafeString(source, "path",
-                      std::string(buf, size) + '`' + frame_name);
-    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
-    // Mark the source as deemphasized since users will only be able to view
-    // assembly for these frames.
-    EmplaceSafeString(source, "presentationHint", "deemphasize");
-    object.try_emplace("source", std::move(source));
+    auto frame_address = frame.GetPCAddress();
+    object.try_emplace("source", CreateAssemblySource(
+                                     frame.GetThread().GetProcess().GetTarget(),
+                                     frame_address));
 
     // Calculate the line of the current PC from the start of the current
     // symbol.
@@ -808,12 +699,10 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
     object.try_emplace("column", 1);
   } else {
     // No valid line entry or symbol.
-    llvm::json::Object source;
-    EmplaceSafeString(source, "name", frame_name);
-    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
-    EmplaceSafeString(source, "presentationHint", "deemphasize");
-    object.try_emplace("source", std::move(source));
-
+    auto frame_address = frame.GetPCAddress();
+    object.try_emplace("source", CreateAssemblySource(
+                                     frame.GetThread().GetProcess().GetTarget(),
+                                     frame_address));
     object.try_emplace("line", 1);
     object.try_emplace("column", 1);
   }
@@ -1048,7 +937,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   if (!ObjectContainsKey(body, "description")) {
     char description[1024];
     if (thread.GetStopDescription(description, sizeof(description))) {
-      EmplaceSafeString(body, "description", std::string(description));
+      EmplaceSafeString(body, "description", description);
     }
   }
   // "threadCausedFocus" is used in tests to validate breaking behavior.
@@ -1446,7 +1335,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
-    const llvm::StringMap<std::string> env, llvm::StringRef cwd,
+    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening
@@ -1463,7 +1352,7 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   req_args.push_back("--launch-target");
   req_args.push_back(program.str());
   req_args.insert(req_args.end(), args.begin(), args.end());
-  run_in_terminal_args.try_emplace("args", args);
+  run_in_terminal_args.try_emplace("args", req_args);
 
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);

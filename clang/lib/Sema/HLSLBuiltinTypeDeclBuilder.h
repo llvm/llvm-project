@@ -76,9 +76,10 @@ public:
                   AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addArraySubscriptOperators();
 
-  // Builtin types methods
+  // Builtin types constructors
   BuiltinTypeDeclBuilder &addDefaultHandleConstructor();
   BuiltinTypeDeclBuilder &addHandleConstructorFromBinding();
+  BuiltinTypeDeclBuilder &addHandleConstructorFromImplicitBinding();
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();

@@ -116,11 +116,17 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
       // C937
       if (auto it{FindCoarrayUltimateComponent(*derived)}) {
         context
-            .Say("Type-spec in ALLOCATE must not specify a type with a coarray"
-                 " ultimate component"_err_en_US)
+            .Say(
+                "Type-spec in ALLOCATE must not specify a type with a coarray ultimate component"_err_en_US)
             .Attach(it->name(),
                 "Type '%s' has coarray ultimate component '%s' declared here"_en_US,
                 info.typeSpec->AsFortran(), it.BuildResultDesignatorName());
+      }
+    }
+    if (auto dyType{evaluate::DynamicType::From(*info.typeSpec)}) {
+      if (dyType->HasDeferredTypeParameter()) {
+        context.Say(
+            "Type-spec in ALLOCATE must not have a deferred type parameter"_err_en_US);
       }
     }
   }

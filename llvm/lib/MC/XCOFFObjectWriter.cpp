@@ -348,7 +348,7 @@ class XCOFFWriter final : public XCOFFObjectWriter {
 
   void reset() override;
 
-  void executePostLayoutBinding(MCAssembler &) override;
+  void executePostLayoutBinding() override;
 
   void recordRelocation(MCAssembler &, const MCFragment *, const MCFixup &,
                         MCValue, uint64_t &) override;
@@ -555,8 +555,8 @@ static MCSectionXCOFF *getContainingCsect(const MCSymbolXCOFF *XSym) {
   return XSym->getRepresentedCsect();
 }
 
-void XCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
-  for (const auto &S : Asm) {
+void XCOFFWriter::executePostLayoutBinding() {
+  for (const auto &S : *Asm) {
     const auto *MCSec = cast<const MCSectionXCOFF>(&S);
     assert(!SectionMap.contains(MCSec) && "Cannot add a section twice.");
 
@@ -587,7 +587,7 @@ void XCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
       llvm_unreachable("unsupport section type!");
   }
 
-  for (const MCSymbol &S : Asm.symbols()) {
+  for (const MCSymbol &S : Asm->symbols()) {
     // Nothing to do for temporary symbols.
     if (S.isTemporary())
       continue;
@@ -653,7 +653,7 @@ void XCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
     Strings.add(Vers);
 
   Strings.finalize();
-  assignAddressesAndIndices(Asm);
+  assignAddressesAndIndices(*Asm);
 }
 
 void XCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,

@@ -70,16 +70,16 @@ static bool runFrontend(StringRef ProgName, Twine Label, bool Verbose,
 
 static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   // Setup Diagnostics engine.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   const llvm::opt::OptTable &ClangOpts = clang::driver::getDriverOptTable();
   unsigned MissingArgIndex, MissingArgCount;
   llvm::opt::InputArgList ParsedArgs = ClangOpts.ParseArgs(
       ArrayRef(Args).slice(1), MissingArgIndex, MissingArgCount);
-  ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
+  ParseDiagnosticArgs(DiagOpts, ParsedArgs);
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diag = new clang::DiagnosticsEngine(
-      new clang::DiagnosticIDs(), DiagOpts.get(),
-      new clang::TextDiagnosticPrinter(llvm::errs(), DiagOpts.get()));
+      new clang::DiagnosticIDs(), DiagOpts,
+      new clang::TextDiagnosticPrinter(llvm::errs(), DiagOpts));
 
   // Create file manager for all file operations and holding in-memory generated
   // inputs.
@@ -170,9 +170,9 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
       [&IF](
           const auto &Attrs,
           std::function<void(InterfaceFile *, StringRef, const Target &)> Add) {
-        for (const auto &Lib : Attrs)
-          for (const auto &T : IF.targets(Lib.getValue()))
-            Add(&IF, Lib.getKey(), T);
+        for (const auto &[Attr, ArchSet] : Attrs.get())
+          for (const auto &T : IF.targets(ArchSet))
+            Add(&IF, Attr, T);
       };
 
   assignLibAttrs(Opts.LinkerOpts.AllowableClients,

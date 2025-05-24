@@ -32,6 +32,7 @@ class MCValue;
 /// should be emitted as part of writeObject().
 class MCObjectWriter {
 protected:
+  MCAssembler *Asm = nullptr;
   /// List of declared file names
   SmallVector<std::pair<std::string, size_t>, 0> FileNames;
   // XCOFF specific: Optional compiler version.
@@ -54,6 +55,8 @@ public:
   MCObjectWriter &operator=(const MCObjectWriter &) = delete;
   virtual ~MCObjectWriter();
 
+  void setAssembler(MCAssembler *A) { Asm = A; }
+
   /// lifetime management
   virtual void reset();
 
@@ -65,7 +68,7 @@ public:
   ///
   /// This routine is called by the assembler after layout and relaxation is
   /// complete.
-  virtual void executePostLayoutBinding(MCAssembler &Asm) {}
+  virtual void executePostLayoutBinding() {}
 
   /// Record a relocation entry.
   ///
@@ -82,12 +85,10 @@ public:
   ///
   /// Clients are not required to answer precisely and may conservatively return
   /// false, even when a difference is fully resolved.
-  bool isSymbolRefDifferenceFullyResolved(const MCAssembler &Asm,
-                                          const MCSymbol &A, const MCSymbol &B,
+  bool isSymbolRefDifferenceFullyResolved(const MCSymbol &A, const MCSymbol &B,
                                           bool InSet) const;
 
-  virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                                      const MCSymbol &SymA,
+  virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                                       const MCFragment &FB,
                                                       bool InSet,
                                                       bool IsPCRel) const;

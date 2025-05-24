@@ -404,6 +404,11 @@ def TestTypeOpAsmTypeInterface : Test_Type<"TestTypeOpAsmTypeInterface",
   let mnemonic = "op_asm_type_interface";
 }
 
+def TestTypeOpAsmTypeInterfaceTablegenDefault : Test_Type<"TestTypeOpAsmTypeInterfaceTablegenDefault"> {
+  let mnemonic = "op_asm_type_interface_tablegen_default";
+  let genMnemonicAlias = 1;
+}
+
 def TestTensorType : Test_Type<"TestTensor",
     [Bufferization_TensorLikeTypeInterface, ShapedTypeInterface]> {
   let mnemonic = "test_tensor";

@@ -467,7 +467,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   // In some cases, virtual registers have been introduced, e.g. by uses of
   // emitThumbRegPlusImmInReg.
-  MF.getProperties().reset(MachineFunctionProperties::Property::NoVRegs);
+  MF.getProperties().resetNoVRegs();
 }
 
 void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
