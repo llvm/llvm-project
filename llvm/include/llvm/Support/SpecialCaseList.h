@@ -125,7 +125,17 @@ protected:
     // Returns zero if no match is found.
     LLVM_ABI unsigned match(StringRef Query) const;
 
-    StringMap<std::pair<GlobPattern, unsigned>> Globs;
+    struct Glob {
+      std::string Name;
+      unsigned LineNo;
+      GlobPattern Pattern;
+      // neither copyable nor movable because GlobPattern contains
+      // Glob::StringRef that points to Glob::Name.
+      Glob(Glob &&) = delete;
+      Glob() = default;
+    };
+
+    std::vector<std::unique_ptr<Matcher::Glob>> Globs;
     std::vector<std::pair<std::unique_ptr<Regex>, unsigned>> RegExes;
   };
 

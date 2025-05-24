@@ -553,7 +553,12 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
     // Each section has a matcher with that section's name, attached to that
     // line.
     const auto &DiagSectionMatcher = Entry.SectionMatcher;
-    unsigned DiagLine = DiagSectionMatcher->Globs.at(DiagName).second;
+    unsigned DiagLine = 0;
+    for (const auto &Glob : DiagSectionMatcher->Globs)
+      if (Glob->Name == DiagName) {
+        DiagLine = Glob->LineNo;
+        break;
+      }
     LineAndSectionEntry.emplace_back(DiagLine, &Entry);
   }
   llvm::sort(LineAndSectionEntry);
@@ -625,12 +630,12 @@ bool WarningsSpecialCaseList::globsMatches(
     StringRef Category = Entry.getKey();
     const llvm::SpecialCaseList::Matcher &Matcher = Entry.getValue();
     bool IsPositive = Category != "emit";
-    for (const auto &[Pattern, Glob] : Matcher.Globs) {
-      if (Pattern.size() < LongestMatch.size())
+    for (const auto &Glob : Matcher.Globs) {
+      if (Glob->Name.size() < LongestMatch.size())
         continue;
-      if (!Glob.first.match(FilePath))
+      if (!Glob->Pattern.match(FilePath))
         continue;
-      LongestMatch = Pattern;
+      LongestMatch = Glob->Name;
       LongestIsPositive = IsPositive;
     }
   }
