@@ -658,7 +658,7 @@ define <vscale x 4 x i8> @widening_shuffle_add_1_scalable(<vscale x 2 x i8> %x) 
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 4 x i8> [[R]]
 ;
-  %widex = shufflevector <vscale x 2 x i8> %x, <vscale x 2 x i8> undef, <vscale x 4 x i32> zeroinitializer
+  %widex = shufflevector <vscale x 2 x i8> %x, <vscale x 2 x i8> poison, <vscale x 4 x i32> zeroinitializer
   %r = add <vscale x 4 x i8> %widex, splat (i8 42)
   ret <vscale x 4 x i8> %r
 }
@@ -955,7 +955,7 @@ define <vscale x 2 x i32> @shl_splat_constant0_scalable(<vscale x 2 x i32> %x) {
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
 ;
-  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   %r = shl <vscale x 2 x i32> splat (i32 5), %splat
   ret <vscale x 2 x i32> %r
 }
@@ -966,7 +966,7 @@ define <vscale x 2 x i32> @shl_splat_constant1_scalable(<vscale x 2 x i32> %x) {
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
 ;
-  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   %r = shl <vscale x 2 x i32> %splat, splat (i32 5)
   ret <vscale x 2 x i32> %r
 }
@@ -1087,7 +1087,7 @@ define <vscale x 2 x i32> @udiv_splat_constant0_scalable(<vscale x 2 x i32> %x) 
 ; CHECK-NEXT:    [[R:%.*]] = udiv <vscale x 2 x i32> splat (i32 42), [[SPLAT]]
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
 ;
-  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   %r = udiv <vscale x 2 x i32> splat (i32 42), %splat
   ret <vscale x 2 x i32> %r
 }
@@ -1098,7 +1098,7 @@ define <vscale x 2 x i32> @udiv_splat_constant1_scalable(<vscale x 2 x i32> %x) 
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
 ;
-  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   %r = udiv <vscale x 2 x i32> %splat, splat (i32 42)
   ret <vscale x 2 x i32> %r
 }
