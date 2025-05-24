@@ -432,12 +432,11 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
-                                   const MCFixup &Fixup, const MCValue &Target,
-                                   uint64_t &FixedValue, bool IsResolved) {
+bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+                                   const MCValue &Target, uint64_t &FixedValue,
+                                   bool IsResolved) {
   auto Fallback = [&]() {
-    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
-                                  IsResolved);
+    return MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
@@ -490,8 +489,8 @@ bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
     MCValue B = MCValue::get(Target.getSubSym());
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
     auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
-    Asm.getWriter().recordRelocation(Asm, &F, FA, A, FixedValueA);
-    Asm.getWriter().recordRelocation(Asm, &F, FB, B, FixedValueB);
+    Asm->getWriter().recordRelocation(*Asm, &F, FA, A, FixedValueA);
+    Asm->getWriter().recordRelocation(*Asm, &F, FB, B, FixedValueB);
     FixedValue = FixedValueA - FixedValueB;
     return false;
   }
@@ -501,8 +500,8 @@ bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
   // append a RELAX relocation.
   if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_LARCH_RELAX);
-    Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
-                                     FixedValueA);
+    Asm->getWriter().recordRelocation(*Asm, &F, FA, MCValue::get(nullptr),
+                                      FixedValueA);
   }
 
   return true;

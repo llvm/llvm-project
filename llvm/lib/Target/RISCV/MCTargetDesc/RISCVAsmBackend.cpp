@@ -618,9 +618,9 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
          isPCRelFixupResolved(Asm, AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
-bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
-                               const MCFixup &Fixup, const MCValue &Target,
-                               uint64_t &FixedValue, bool IsResolved) {
+bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &Target, uint64_t &FixedValue,
+                               bool IsResolved) {
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
     assert(Target.getSpecifier() == 0 &&
@@ -654,8 +654,8 @@ bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
     MCValue B = MCValue::get(Target.getSubSym());
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, TA);
     auto FB = MCFixup::create(Fixup.getOffset(), nullptr, TB);
-    Asm.getWriter().recordRelocation(Asm, &F, FA, A, FixedValueA);
-    Asm.getWriter().recordRelocation(Asm, &F, FB, B, FixedValueB);
+    Asm->getWriter().recordRelocation(*Asm, &F, FA, A, FixedValueA);
+    Asm->getWriter().recordRelocation(*Asm, &F, FB, B, FixedValueB);
     FixedValue = FixedValueA - FixedValueB;
     return false;
   }
@@ -666,14 +666,13 @@ bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
     IsResolved = false;
   if (IsResolved &&
       (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
-    IsResolved = isPCRelFixupResolved(Asm, Target.getAddSym(), F);
-  IsResolved =
-      MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved);
+    IsResolved = isPCRelFixupResolved(*Asm, Target.getAddSym(), F);
+  IsResolved = MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
 
   if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
-    Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
-                                     FixedValueA);
+    Asm->getWriter().recordRelocation(*Asm, &F, FA, MCValue::get(nullptr),
+                                      FixedValueA);
   }
 
   return false;
