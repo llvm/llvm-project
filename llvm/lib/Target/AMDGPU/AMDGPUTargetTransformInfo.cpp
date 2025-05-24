@@ -1043,6 +1043,8 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_is_private:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_make_buffer_rsrc:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1110,6 +1112,25 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
         M, II->getIntrinsicID(), {DestTy, SrcTy, DestTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
+  case Intrinsic::amdgcn_load_to_lds: {
+    Type *SrcTy = NewV->getType();
+    Module *M = II->getModule();
+    Function *NewDecl =
+        Intrinsic::getOrInsertDeclaration(M, II->getIntrinsicID(), {SrcTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
+  case Intrinsic::amdgcn_make_buffer_rsrc: {
+    Type *SrcTy = NewV->getType();
+    Type *DstTy = II->getType();
+    Module *M = II->getModule();
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        M, II->getIntrinsicID(), {DstTy, SrcTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;

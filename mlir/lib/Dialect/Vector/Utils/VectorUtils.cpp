@@ -291,8 +291,7 @@ vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
   // cannot be unrolled).
   auto shapeToUnroll = vType.getShape().drop_back(targetRank);
   auto scalableDimsToUnroll = vType.getScalableDims().drop_back(targetRank);
-  auto it =
-      std::find(scalableDimsToUnroll.begin(), scalableDimsToUnroll.end(), true);
+  auto it = llvm::find(scalableDimsToUnroll, true);
   auto firstScalableDim = it - scalableDimsToUnroll.begin();
   if (firstScalableDim == 0)
     return {};

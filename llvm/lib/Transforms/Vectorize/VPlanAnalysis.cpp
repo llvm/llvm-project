@@ -20,6 +20,26 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vplan"
 
+VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
+    : Ctx(Plan.getScalarHeader()->getIRBasicBlock()->getContext()) {
+  if (auto LoopRegion = Plan.getVectorLoopRegion()) {
+    if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
+            &LoopRegion->getEntryBasicBlock()->front())) {
+      CanonicalIVTy = CanIV->getScalarType();
+      return;
+    }
+  }
+
+  // If there's no canonical IV, retrieve the type from the trip count
+  // expression.
+  auto *TC = Plan.getTripCount();
+  if (TC->isLiveIn()) {
+    CanonicalIVTy = TC->getLiveInIRValue()->getType();
+    return;
+  }
+  CanonicalIVTy = cast<VPExpandSCEVRecipe>(TC)->getSCEV()->getType();
+}
+
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
   Type *ResTy = inferScalarType(R->getIncomingValue(0));
   for (unsigned I = 1, E = R->getNumIncomingValues(); I != E; ++I) {
@@ -273,6 +293,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
+          .Case<VPExtendedReductionRecipe, VPMulAccumulateReductionRecipe>(
+              [](const auto *R) { return R->getResultType(); })
           .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })

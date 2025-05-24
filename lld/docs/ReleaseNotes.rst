@@ -64,6 +64,12 @@ Breaking changes
   in the same segment by default. Pass ``--xosegment`` to lld in order to get
   the old behavior back.
 
+* When using ``--no-pie`` without a ``SECTIONS`` command, the linker uses the
+  target's default image base. If ``-Ttext=`` or ``--section-start`` specifies
+  an output section address below this base, there will now be an error.
+  ``--image-base`` can be set at a lower address to fix the error.
+  (`#140187 <https://github.com/llvm/llvm-project/pull/140187>`_)
+
 COFF Improvements
 -----------------
 

@@ -345,8 +345,7 @@ SelectionDAGISelLegacy::SelectionDAGISelLegacy(
 
 bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
   // If we already selected that function, we do not need to run SDISel.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return false;
 
   // Do some sanity-checking on the command-line options.
@@ -421,8 +420,7 @@ PreservedAnalyses
 SelectionDAGISelPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
   // If we already selected that function, we do not need to run SDISel.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return PreservedAnalyses::all();
 
   // Do some sanity-checking on the command-line options.
@@ -3265,6 +3263,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::AssertSext:
   case ISD::AssertZext:
+  case ISD::AssertNoFPClass:
   case ISD::AssertAlign:
     ReplaceUses(SDValue(NodeToMatch, 0), NodeToMatch->getOperand(0));
     CurDAG->RemoveDeadNode(NodeToMatch);
