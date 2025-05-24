@@ -42,15 +42,15 @@ struct text_encoding {
 private:
   struct __encoding_data {
     using __id_rep _LIBCPP_NODEBUG = int_least32_t;
-    __id_rep __mib_rep;
-    const char* __name;
+    __id_rep __mib_rep_;
+    const char* __name_;
 
     friend constexpr bool operator==(const __encoding_data& __e, const __encoding_data& __other) noexcept {
-      return __e.__mib_rep == __other.__mib_rep || __comp_name(__e.__name, __other.__name);
+      return __e.__mib_rep_ == __other.__mib_rep_ || __comp_name(__e.__name_, __other.__name_);
     }
 
     friend constexpr bool operator<(const __encoding_data& __e, const __id_rep __i) noexcept {
-      return __e.__mib_rep < __i;
+      return __e.__mib_rep_ < __i;
     }
   };
 
@@ -324,11 +324,11 @@ public:
     __enc.copy(__name_, max_name_length, 0);
   }
   _LIBCPP_HIDE_FROM_ABI constexpr text_encoding(id __i) noexcept : __encoding_rep_(__find_encoding_data_by_id(__i)) {
-    if (__encoding_rep_->__name[0] != '\0')
-      std::copy_n(__encoding_rep_->__name, std::char_traits<char>::length(__encoding_rep_->__name), __name_);
+    if (__encoding_rep_->__name_[0] != '\0')
+      std::copy_n(__encoding_rep_->__name_, std::char_traits<char>::length(__encoding_rep_->__name_), __name_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr id mib() const noexcept { return id(__encoding_rep_->__mib_rep); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr id mib() const noexcept { return id(__encoding_rep_->__mib_rep_); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const char* name() const noexcept { return __name_; }
 
   // [text.encoding.aliases], class text_encoding::aliases_view
@@ -345,7 +345,7 @@ public:
 
       _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const {
         _LIBCPP_ASSERT(__can_dereference(), "Dereferencing invalid aliases_view iterator!");
-        return __data_->__name;
+        return __data_->__name_;
       }
 
       _LIBCPP_HIDE_FROM_ABI constexpr value_type operator[](difference_type __n) const {
@@ -405,12 +405,12 @@ public:
       _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n) {
         if (__data_) {
           if (__n > 0) {
-            if ((__data_ + __n) < std::end(__text_encoding_data) && __data_[__n - 1].__mib_rep == __mib_rep_)
+            if ((__data_ + __n) < std::end(__text_encoding_data) && __data_[__n - 1].__mib_rep_ == __mib_rep_)
               __data_ += __n;
             else
               *this = __iterator{};
           } else if (__n < 0) {
-            if ((__data_ + __n) > __text_encoding_data && __data_[__n].__mib_rep == __mib_rep_)
+            if ((__data_ + __n) > __text_encoding_data && __data_[__n].__mib_rep_ == __mib_rep_)
               __data_ += __n;
             else
               *this = __iterator{};
@@ -433,9 +433,9 @@ public:
       friend struct text_encoding;
 
       _LIBCPP_HIDE_FROM_ABI constexpr __iterator(const __encoding_data* __enc_d) noexcept
-          : __data_(__enc_d), __mib_rep_(__enc_d ? __enc_d->__mib_rep : 0) {}
+          : __data_(__enc_d), __mib_rep_(__enc_d ? __enc_d->__mib_rep_ : 0) {}
 
-      _LIBCPP_HIDE_FROM_ABI bool __can_dereference() const { return __data_ && __data_->__mib_rep == __mib_rep_; }
+      _LIBCPP_HIDE_FROM_ABI bool __can_dereference() const { return __data_ && __data_->__mib_rep_ == __mib_rep_; }
 
       // default iterator is a sentinel
       const __encoding_data* __data_       = nullptr;
@@ -451,8 +451,8 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr aliases_view aliases() const noexcept {
     auto __rep = __encoding_rep_ - 1;
-    if (__encoding_rep_->__name[0]) {
-      while (__rep > std::begin(__text_encoding_data) && (__rep--)->__mib_rep == __encoding_rep_->__mib_rep)
+    if (__encoding_rep_->__name_[0]) {
+      while (__rep > std::begin(__text_encoding_data) && (__rep--)->__mib_rep_ == __encoding_rep_->__mib_rep_)
         ;
     } else {
       __rep = nullptr;
@@ -532,9 +532,9 @@ private:
     auto __data_ptr = __text_encoding_data + 2, __data_last = std::end(__text_encoding_data) - 1;
 
     for (; __data_ptr != __data_last; __data_ptr++) {
-      if (__comp_name(__a, __data_ptr->__name)) {
-        const auto __found_id = __data_ptr->__mib_rep;
-        while (__data_ptr[-1].__mib_rep == __found_id)
+      if (__comp_name(__a, __data_ptr->__name_)) {
+        const auto __found_id = __data_ptr->__mib_rep_;
+        while (__data_ptr[-1].__mib_rep_ == __found_id)
           __data_ptr--;
         return __data_ptr;
       }
