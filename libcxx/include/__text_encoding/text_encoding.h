@@ -476,7 +476,6 @@ public:
     return __encoding.mib() == __i;
   }
 
-#    if __CHAR_BIT__ == 8
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() noexcept {
 #      ifdef __GNUC_EXECUTION_CHARSET_NAME
     return text_encoding(__GNUC_EXECUTION_CHARSET_NAME);
@@ -495,13 +494,6 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
     return environment() == __i;
   }
-
-#    else
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() = delete;
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static text_encoding environment()       = delete;
-  template <id __i>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is() = delete;
-#    endif
 
 private:
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __comp_name(string_view __a, string_view __b) {

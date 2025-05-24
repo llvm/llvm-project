@@ -23,7 +23,6 @@
 #if _LIBCPP_STD_VER >= 26
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-#  if __CHAR_BIT__ == 8
 
 text_encoding text_encoding::environment() {
   auto __make_locale = [](const char* __name) {
@@ -41,8 +40,6 @@ text_encoding text_encoding::environment() {
 
   return __make_locale("");
 }
-
-#  endif // __CHAR_BIT__ == 8
 
 _LIBCPP_END_NAMESPACE_STD
 

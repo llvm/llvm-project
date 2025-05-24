@@ -558,7 +558,7 @@ locale::locale(const locale& other, const locale& one, category c)
 
 string locale::name() const { return __locale_->name(); }
 
-#if _LIBCPP_STD_VER >= 26 && __CHAR_BIT__ == 8
+#if _LIBCPP_STD_VER >= 26
 text_encoding locale::encoding() const {
   std::string __name = this->name();
   if (__name.size() == 1) {
