@@ -2257,9 +2257,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     }
     if (MayChange) {
       Constant *NewC = ConstantVector::get(NewVecC);
-      // It may not be safe to execute a binop on a vector with poison elements
-      // because the entire instruction can be folded to undef or create poison
-      // that did not exist in the original code.
+      // Lanes of NewC not used by the shuffle will be poison which will cause
+      // UB for div/rem. Mask them with a safe constant.
       if (Inst.isIntDivRem())
         NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
