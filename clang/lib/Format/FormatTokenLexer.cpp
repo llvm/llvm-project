@@ -698,29 +698,16 @@ void FormatTokenLexer::tryParseJavaTextBlock() {
   if (FormatTok->TokenText != "\"\"")
     return;
 
-  const auto *Str = Lex->getBufferLocation();
+  const auto *S = Lex->getBufferLocation();
   const auto *End = Lex->getBuffer().end();
 
-  if (Str == End || *Str != '\"')
+  if (S == End || *S != '\"')
     return;
 
-  // Skip the `"""` that begins a text block.
-  const auto *S = Str + 1;
-
-  // From docs.oracle.com/en/java/javase/15/text-blocks/#text-block-syntax:
-  // A text block begins with three double-quote characters followed by a line
-  // terminator.
-  while (S < End && *S != '\n') {
-    if (!isblank(*S))
-      return;
-    ++S;
-  }
+  ++S; // Skip the `"""` that begins a text block.
 
   // Find the `"""` that ends the text block.
-  for (int Count = 0; Count < 3; ++S) {
-    if (S == End)
-      return;
-
+  for (int Count = 0; Count < 3 && S < End; ++S) {
     switch (*S) {
     case '\\':
       Count = -1;
@@ -733,7 +720,7 @@ void FormatTokenLexer::tryParseJavaTextBlock() {
     }
   }
 
-  // Skip the text block.
+  // Ignore the possibly invalid text block.
   resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(S)));
 }
 

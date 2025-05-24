@@ -836,11 +836,16 @@ TEST_F(FormatTestJava, TextBlock) {
       "  }\n"
       "}");
 
-  verifyNoChange("String name = \"\"\"\n"
+  verifyNoChange("String name = \"\"\"\r\n"
                  "        red\n"
                  "        green\n"
                  "        blue\\\n"
                  "    \"\"\";");
+
+  verifyFormat("String name = \"\"\"Pat Q. Smith\"\"\";");
+
+  verifyNoChange("String name = \"\"\"\n"
+                 "              Pat Q. Smith");
 }
 
 } // namespace
