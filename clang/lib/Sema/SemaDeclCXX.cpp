@@ -17694,6 +17694,8 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
           << DiagSide[0].ValueString << Op->getOpcodeStr()
           << DiagSide[1].ValueString << Op->getSourceRange();
     }
+  } else {
+    DiagnoseTypeTraitDetails(E);
   }
 }
 

@@ -5910,6 +5910,11 @@ public:
   /// with expression \E
   void DiagnoseStaticAssertDetails(const Expr *E);
 
+  /// If E represents a built-in type trait, or a known standard type trait,
+  /// try to print more information about why the type type-trait failed.
+  /// This assumes we already evaluated the expression to a false boolean value.
+  void DiagnoseTypeTraitDetails(const Expr *E);
+
   /// Handle a friend type declaration.  This works in tandem with
   /// ActOnTag.
   ///
