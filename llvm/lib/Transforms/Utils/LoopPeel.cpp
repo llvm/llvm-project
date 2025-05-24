@@ -327,26 +327,27 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
 }
 
 bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
-  const SCEV *BTC = SE.getBackedgeTakenCount(&L);
   Value *Inc;
   CmpPredicate Pred;
   BasicBlock *Succ1;
   BasicBlock *Succ2;
-  // The loop must execute at least 2 iterations to guarantee that peeled
-  // iteration executes.
+  BasicBlock *Latch = L.getLoopLatch();
+  // The loop must exit via the latch and additional exits are fine.
+  if (!Latch || !L.isLoopExiting(Latch))
+    return false;
+
+  // The loop's exit count via the latch must be least 1 to guarantee that
+  // peeled iteration executes.
   // TODO: Add checks during codegen.
-  if (isa<SCEVCouldNotCompute>(BTC) ||
-      !SE.isKnownPredicate(CmpInst::ICMP_UGT, BTC, SE.getZero(BTC->getType())))
+  const SCEV *EC = SE.getExitCount(&L, Latch);
+  if (isa<SCEVCouldNotCompute>(EC) ||
+      !SE.isKnownPredicate(CmpInst::ICMP_NE, EC, SE.getZero(EC->getType())))
     return false;
 
   // Check if the exit condition of the loop can be adjusted by the peeling
-  // codegen. For now, it must
-  // * exit via the latch,
-  // * the exit condition must be a NE/EQ compare of an induction with step
-  // of 1 and must only be used by the exiting branch.
-  BasicBlock *Latch = L.getLoopLatch();
-  return Latch && Latch == L.getExitingBlock() &&
-         match(Latch->getTerminator(),
+  // codegen. For now the exit condition of the latch must be a NE/EQ compare of
+  // an induction with step of 1 and must only be used by the exiting branch.
+  return match(Latch->getTerminator(),
                m_Br(m_OneUse(m_ICmp(Pred, m_Value(Inc), m_Value())),
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
@@ -365,10 +366,10 @@ static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
   if (!canPeelLastIteration(L, SE))
     return false;
 
-  const SCEV *BTC = SE.getBackedgeTakenCount(&L);
-  const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(BTC, SE);
+  const SCEV *EC = SE.getExitCount(&L, L.getLoopLatch());
+  const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(EC, SE);
   const SCEV *ValAtSecondToLastIter = LeftAR->evaluateAtIteration(
-      SE.getMinusSCEV(BTC, SE.getOne(BTC->getType())), SE);
+      SE.getMinusSCEV(EC, SE.getOne(EC->getType())), SE);
 
   return SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), ValAtLastIter,
                              RightSCEV) &&
@@ -944,6 +945,8 @@ static void cloneLoopBlocks(
   // a value coming into the header.
   for (auto Edge : ExitEdges)
     for (PHINode &PHI : Edge.second->phis()) {
+      if (PeelLast && Edge.first == Latch)
+        continue;
       Value *LatchVal = PHI.getIncomingValueForBlock(Edge.first);
       Instruction *LatchInst = dyn_cast<Instruction>(LatchVal);
       if (LatchInst && L->contains(LatchInst))
@@ -1020,7 +1023,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   BasicBlock *PreHeader = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitEdges;
-  L->getExitEdges(ExitEdges);
 
   // Remember dominators of blocks we might reach through exits to change them
   // later. Immediate dominator of such block might change, because we add more
@@ -1076,12 +1078,16 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     // InsertBot:
     // Exit:
     // ...
-    BasicBlock *Exit = L->getExitBlock();
+    auto *LatchBr = cast<BranchInst>(Latch->getTerminator());
+    BasicBlock *Exit = L->contains(LatchBr->getSuccessor(0))
+                           ? LatchBr->getSuccessor(1)
+                           : LatchBr->getSuccessor(0);
     for (PHINode &P : Exit->phis())
       ExitValues[&P] = P.getIncomingValueForBlock(Latch);
 
     InsertTop = SplitEdge(Latch, Exit, &DT, LI);
     InsertBot = SplitBlock(InsertTop, InsertTop->getTerminator(), &DT, LI);
+    L->getExitEdges(ExitEdges);
 
     InsertTop->setName(Exit->getName() + ".peel.begin");
     InsertBot->setName(Exit->getName() + ".peel.next");
@@ -1138,6 +1144,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
     InsertTop->setName(Header->getName() + ".peel.begin");
     InsertBot->setName(Header->getName() + ".peel.next");
     NewPreHeader->setName(PreHeader->getName() + ".peel.newph");
+    L->getExitEdges(ExitEdges);
   }
 
   Instruction *LatchTerm =
@@ -1211,10 +1218,15 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   }
 
   if (PeelLast) {
-    // Now adjust users of the original exit values by replacing them with the
-    // exit value from the peeled iteration.
-    for (const auto &[P, E] : ExitValues)
-      P->replaceAllUsesWith(isa<Constant>(E) ? E : &*VMap.lookup(E));
+    if (ExitEdges.size() == 1) {
+      // If we have a single existing edge, adjust users of the original exit
+      // values by replacing them with the exit value from the peeled iteration.
+      // If there are multiple exiting edges, all users outside the loop are
+      // served by a common exit block with LCSSA phis that will get updated to
+      // use the value from the peeled iteration separately.
+      for (const auto &[P, E] : ExitValues)
+        P->replaceAllUsesWith(isa<Constant>(E) ? E : &*VMap.lookup(E));
+    }
     formLCSSA(*L, DT, LI, SE);
   } else {
     // Now adjust the phi nodes in the loop header to get their initial values

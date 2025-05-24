@@ -288,18 +288,40 @@ define i64 @peel_multi_exit_loop_iv_step_1() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT1:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    call void @foo(i32 20)
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C1]], label %[[EXITSPLIT_LOOPEXIT:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
+; CHECK-NEXT:    [[EC1:%.*]] = icmp ne i64 [[IV_NEXT1]], 63
+; CHECK-NEXT:    br i1 [[EC1]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN:.*]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT1]], %[[LATCH]] ]
+; CHECK-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[IV1]], %[[LATCH]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
+; CHECK:       [[LOOP_PEEL]]:
 ; CHECK-NEXT:    [[CMP18_NOT:%.*]] = icmp eq i64 [[IV]], 63
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP18_NOT]], i32 10, i32 20
 ; CHECK-NEXT:    call void @foo(i32 [[COND]])
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LATCH]]
-; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[C]], label %[[EXITSPLIT:.*]], label %[[LATCH_PEEL:.*]]
+; CHECK:       [[LATCH_PEEL]]:
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], 64
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_PEEL_NEXT:.*]], label %[[EXIT_PEEL_NEXT]]
+; CHECK:       [[EXIT_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXITSPLIT_LOOPEXIT]]:
+; CHECK-NEXT:    [[IV_LCSSA_PH_PH:%.*]] = phi i64 [ [[IV1]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[EXITSPLIT]]
+; CHECK:       [[EXITSPLIT]]:
+; CHECK-NEXT:    [[IV_LCSSA_PH:%.*]] = phi i64 [ [[IV]], %[[LOOP_PEEL]] ], [ [[IV_LCSSA_PH_PH]], %[[EXITSPLIT_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV]], %[[LATCH]] ], [ [[IV]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[SPLIT]], %[[LOOP_PEEL_NEXT]] ], [ [[IV_LCSSA_PH]], %[[EXITSPLIT]] ]
 ; CHECK-NEXT:    ret i64 [[IV_LCSSA]]
 ;
 entry:
@@ -362,7 +384,7 @@ define i64 @peel_single_block_loop_iv_step_1_btc_1() {
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    call void @foo(i32 20)
 ; CHECK-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], 1
-; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_PEEL_BEGIN:.*]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_PEEL_BEGIN:.*]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[EXIT_PEEL_BEGIN]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV1]], %[[LOOP]] ]
@@ -481,7 +503,7 @@ define i32 @peel_loop_with_branch_and_phi_uses(ptr %x, i1 %c) {
 ; CHECK-NEXT:    [[ADD1]] = add nsw i32 [[L1]], [[RED1]]
 ; CHECK-NEXT:    [[IV_NEXT1]] = add nuw nsw i32 [[IV1]], 1
 ; CHECK-NEXT:    [[EC1:%.*]] = icmp ne i32 [[IV_NEXT1]], 99
-; CHECK-NEXT:    br i1 [[EC1]], label %[[LOOP_HEADER]], label %[[LOOPEXIT_PEEL_BEGIN:.*]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC1]], label %[[LOOP_HEADER]], label %[[LOOPEXIT_PEEL_BEGIN:.*]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[LOOPEXIT_PEEL_BEGIN]]:
 ; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[ADD1]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT1]], %[[LOOP_LATCH]] ]
@@ -646,4 +668,5 @@ declare i1 @cond()
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
 ;.
