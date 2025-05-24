@@ -64,6 +64,7 @@ private:
   std::unique_ptr<MCObjectWriter> Writer;
 
   bool HasLayout = false;
+  bool HasFinalLayout = false;
   bool RelaxAll = false;
 
   SectionListType Sections;
@@ -197,6 +198,7 @@ public:
   void layout();
 
   bool hasLayout() const { return HasLayout; }
+  bool hasFinalLayout() const { return HasFinalLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
 
