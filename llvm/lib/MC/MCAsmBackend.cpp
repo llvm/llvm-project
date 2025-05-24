@@ -145,3 +145,24 @@ bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
   // Reserving an empty slot for it seems silly.
   return name == "___gxx_personality_v0" || name == "___objc_personality_v0";
 }
+
+const MCSubtargetInfo *MCAsmBackend::getSubtargetInfo(const MCFragment &F) {
+  const MCSubtargetInfo *STI = nullptr;
+  switch (F.getKind()) {
+  case MCFragment::FT_Data: {
+    auto &DF = cast<MCDataFragment>(F);
+    STI = DF.getSubtargetInfo();
+    assert(!DF.hasInstructions() || STI != nullptr);
+    break;
+  }
+  case MCFragment::FT_Relaxable: {
+    auto &RF = cast<MCRelaxableFragment>(F);
+    STI = RF.getSubtargetInfo();
+    assert(!RF.hasInstructions() || STI != nullptr);
+    break;
+  }
+  default:
+    break;
+  }
+  return STI;
+}

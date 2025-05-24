@@ -242,11 +242,10 @@ static unsigned calculateMMLEIndex(unsigned i) {
 /// ApplyFixup - Apply the \p Value for given \p Fixup into the provided
 /// data fragment, at the offset specified by the fixup and following the
 /// fixup kind as appropriate.
-void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void MipsAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                 const MCValue &Target,
                                 MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsResolved,
-                                const MCSubtargetInfo *STI) const {
+                                bool IsResolved) {
   MCFixupKind Kind = Fixup.getKind();
   MCContext &Ctx = getContext();
   Value = adjustFixupValue(Fixup, Value, Ctx);

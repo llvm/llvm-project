@@ -129,12 +129,9 @@ public:
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
   /// reported via \p Ctx.
-  /// The  \p STI is present only for fragments of type MCRelaxableFragment and
-  /// MCDataFragment with hasInstructions() == true.
-  virtual void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+  virtual void applyFixup(const MCFragment &, const MCFixup &,
                           const MCValue &Target, MutableArrayRef<char> Data,
-                          uint64_t Value, bool IsResolved,
-                          const MCSubtargetInfo *STI) const = 0;
+                          uint64_t Value, bool IsResolved) = 0;
 
   /// @}
 
@@ -221,6 +218,10 @@ public:
   }
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
+
+  // Return STI for fragments of type MCRelaxableFragment and MCDataFragment
+  // with hasInstructions() == true.
+  static const MCSubtargetInfo *getSubtargetInfo(const MCFragment &F);
 
 private:
   const bool LinkerRelaxation;

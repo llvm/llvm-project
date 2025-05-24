@@ -36,10 +36,9 @@ public:
       : MCAsmBackend(llvm::endianness::little), OSABI(OSABI) {}
   ~MSP430AsmBackend() override = default;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -104,11 +103,10 @@ uint64_t MSP430AsmBackend::adjustFixupValue(const MCFixup &Fixup,
   }
 }
 
-void MSP430AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void MSP430AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                   const MCValue &Target,
-                                  MutableArrayRef<char> Data,
-                                  uint64_t Value, bool IsResolved,
-                                  const MCSubtargetInfo *STI) const {
+                                  MutableArrayRef<char> Data, uint64_t Value,
+                                  bool IsResolved) {
   Value = adjustFixupValue(Fixup, Value, getContext());
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   if (!Value)

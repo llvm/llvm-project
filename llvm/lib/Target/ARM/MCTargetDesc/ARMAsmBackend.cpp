@@ -1127,16 +1127,16 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   }
 }
 
-void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo* STI) const {
+                               bool IsResolved) {
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
   MCContext &Ctx = getContext();
-  Value = adjustFixupValue(Asm, Fixup, Target, Value, IsResolved, Ctx, STI);
+  Value = adjustFixupValue(*Asm, Fixup, Target, Value, IsResolved, Ctx,
+                           getSubtargetInfo(F));
   if (!Value)
     return; // Doesn't change encoding.
   const unsigned NumBytes = getFixupKindNumBytes(Kind);

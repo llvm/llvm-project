@@ -176,10 +176,9 @@ public:
   ELFVEAsmBackend(const Target &T, Triple::OSType OSType)
       : VEAsmBackend(T), OSType(OSType) {}
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+  void applyFixup(const MCFragment &, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
+                  uint64_t Value, bool IsResolved) override {
     Value = adjustFixupValue(Fixup.getKind(), Value);
     if (!Value)
       return; // Doesn't change encoding.

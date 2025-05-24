@@ -139,9 +139,9 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   return true;
 }
 
-bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
-                                MCValue &Target, const MCSubtargetInfo *STI,
-                                uint64_t &Value, bool RecordReloc,
+bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
+                                MCValue &Target, uint64_t &Value,
+                                bool RecordReloc,
                                 MutableArrayRef<char> Contents) const {
   ++stats::evaluateFixup;
 
@@ -203,8 +203,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     IsResolved = false;
   IsResolved = getBackend().addReloc(const_cast<MCAssembler &>(*this), *DF,
                                      Fixup, Target, Value, IsResolved);
-  getBackend().applyFixup(*this, Fixup, Target, Contents, Value, IsResolved,
-                          STI);
+  getBackend().applyFixup(*DF, Fixup, Target, Contents, Value, IsResolved);
   return true;
 }
 
@@ -909,7 +908,6 @@ void MCAssembler::layout() {
     for (MCFragment &Frag : Sec) {
       MutableArrayRef<MCFixup> Fixups;
       MutableArrayRef<char> Contents;
-      const MCSubtargetInfo *STI = nullptr;
 
       // Process MCAlignFragment and MCEncodedFragmentWithFixups here.
       switch (Frag.getKind()) {
@@ -927,16 +925,12 @@ void MCAssembler::layout() {
         MCDataFragment &DF = cast<MCDataFragment>(Frag);
         Fixups = DF.getFixups();
         Contents = DF.getContents();
-        STI = DF.getSubtargetInfo();
-        assert(!DF.hasInstructions() || STI != nullptr);
         break;
       }
       case MCFragment::FT_Relaxable: {
         MCRelaxableFragment &RF = cast<MCRelaxableFragment>(Frag);
         Fixups = RF.getFixups();
         Contents = RF.getContents();
-        STI = RF.getSubtargetInfo();
-        assert(!RF.hasInstructions() || STI != nullptr);
         break;
       }
       case MCFragment::FT_CVDefRange: {
@@ -973,7 +967,7 @@ void MCAssembler::layout() {
       for (const MCFixup &Fixup : Fixups) {
         uint64_t FixedValue;
         MCValue Target;
-        evaluateFixup(Fixup, &Frag, Target, STI, FixedValue,
+        evaluateFixup(&Frag, Fixup, Target, FixedValue,
                       /*RecordReloc=*/true, Contents);
       }
     }
@@ -994,9 +988,8 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   assert(getBackendPtr() && "Expected assembler backend");
   MCValue Target;
   uint64_t Value;
-  bool Resolved =
-      evaluateFixup(const_cast<MCFixup &>(Fixup), DF, Target,
-                    DF->getSubtargetInfo(), Value, /*RecordReloc=*/false, {});
+  bool Resolved = evaluateFixup(DF, const_cast<MCFixup &>(Fixup), Target, Value,
+                                /*RecordReloc=*/false, {});
   return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Target, Value,
                                                    Resolved);
 }

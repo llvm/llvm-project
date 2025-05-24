@@ -172,10 +172,9 @@ public:
   bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
                              const MCValue &) override;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
@@ -697,10 +696,9 @@ bool X86AsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
   return Target.getSpecifier();
 }
 
-void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void X86AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                const MCValue &, MutableArrayRef<char> Data,
-                               uint64_t Value, bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
+                               uint64_t Value, bool IsResolved) {
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;

@@ -38,10 +38,9 @@ public:
                             bool IsResolved, MCContext &Ctx,
                             const MCSubtargetInfo *STI) const;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   unsigned getRelaxedOpcode(unsigned Op, const MCSubtargetInfo &STI) const;
 

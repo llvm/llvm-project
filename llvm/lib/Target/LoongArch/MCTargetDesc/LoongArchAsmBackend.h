@@ -39,10 +39,9 @@ public:
                 const MCValue &Target, uint64_t &FixedValue,
                 bool IsResolved) override;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   // Return Size with extra Nop Bytes for alignment directive in code section.
   bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
