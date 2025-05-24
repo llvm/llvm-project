@@ -159,6 +159,11 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
     if (!Replacement.has_value())
       continue;
 
+    if (Angled && Spelling.front() == '\"') {
+      Spelling.front() = '<';
+      Spelling.back() = '>';
+    }
+
     Diag &D = Result.emplace_back();
     D.Message =
         llvm::formatv("No header providing \"{0}\" is directly included",

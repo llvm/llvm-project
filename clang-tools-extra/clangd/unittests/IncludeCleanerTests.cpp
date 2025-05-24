@@ -315,12 +315,12 @@ $insert_f[[]]$insert_vector[[]]
                 withFix({Fix(MainFile.range("insert_b"), "#include \"b.h\"\n",
                              "#include \"b.h\""),
                          FixMessage("add all missing includes")})),
-          AllOf(Diag(MainFile.range("b_angled"),
-                     "No header providing \"b_angled\" is directly included"),
-                withFix(
-                    {Fix(MainFile.range("insert_b_angled"),
-                         "#include <b_angled.h>\n", "#include \"b_angled.h\""),
-                     FixMessage("add all missing includes")})),
+          AllOf(
+              Diag(MainFile.range("b_angled"),
+                   "No header providing \"b_angled\" is directly included"),
+              withFix({Fix(MainFile.range("insert_b_angled"),
+                           "#include <b_angled.h>\n", "#include <b_angled.h>"),
+                       FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("bar"),
                      "No header providing \"ns::Bar\" is directly included"),
                 withFix({Fix(MainFile.range("insert_d"),
