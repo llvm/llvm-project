@@ -295,7 +295,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
   const MCSymbol &SA = *A, &SB = *B;
   if (SA.isUndefined() || SB.isUndefined())
     return;
-  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, SA, SB, InSet))
+  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(SA, SB, InSet))
     return;
 
   auto FinalizeFolding = [&]() {
