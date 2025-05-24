@@ -1991,8 +1991,7 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
                                                   const CXXRecordDecl *D) {
   for (const CXXBaseSpecifier &B : D->bases()) {
     const auto *BaseDecl = B.getType()->getAsCXXRecordDecl();
-    if (!BaseDecl)
-      continue;
+    assert(BaseDecl && "invalid base?");
     if (B.isVirtual())
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
           << diag::TraitNotSatisfiedReason::VBase << B.getType()
@@ -2003,9 +2002,8 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
           << B.getSourceRange();
   }
   for (const FieldDecl *Field : D->fields()) {
-    if (Field->getType()->isReferenceType())
-      continue;
-    if (!SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
+    if (!Field->getType()->isReferenceType() &&
+        !SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
           << diag::TraitNotSatisfiedReason::NRField << Field << Field->getType()
           << Field->getSourceRange();
@@ -2077,7 +2075,7 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
         << diag::TraitNotSatisfiedReason::HasArcLifetime;
 
   const CXXRecordDecl *D = T->getAsCXXRecordDecl();
-  if (!D)
+  if (!D || D->isInvalidDecl())
     return;
 
   if (D->hasDefinition())
