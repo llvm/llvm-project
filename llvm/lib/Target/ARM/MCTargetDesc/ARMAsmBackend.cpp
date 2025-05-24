@@ -971,8 +971,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
 
 bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCFixup &Fixup,
-                                          const MCValue &Target,
-                                          const MCSubtargetInfo *STI) {
+                                          const MCValue &Target) {
   const MCSymbol *Sym = Target.getAddSym();
   const unsigned FixupKind = Fixup.getKind();
   if (FixupKind == ARM::fixup_arm_thumb_bl) {
