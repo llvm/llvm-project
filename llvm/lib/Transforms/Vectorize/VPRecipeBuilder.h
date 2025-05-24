@@ -12,9 +12,7 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
 
