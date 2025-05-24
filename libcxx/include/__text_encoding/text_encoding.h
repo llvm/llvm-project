@@ -1434,7 +1434,7 @@ private:
       {2259, "csTIS620"},
       {2260, "CP50220"},
       {2260, "csCP50220"},
-      {0, nullptr} // sentinel
+      {9999, nullptr} // sentinel
   };
 
   const __encoding_data* __encoding_rep_ = __text_encoding_data + 1;
