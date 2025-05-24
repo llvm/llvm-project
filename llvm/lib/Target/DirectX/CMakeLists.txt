@@ -39,12 +39,12 @@ add_llvm_target(DirectXCodeGen
   DXILLegalizePass.cpp
   
   LINK_COMPONENTS
+  DXILBitWriter
   DirectXDesc
   DirectXInfo
   DirectXPointerTypeAnalysis
-  DXILBitWriter
-  ${TARGET_LIBRARIES}
   FrontendHLSL
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   DirectX
