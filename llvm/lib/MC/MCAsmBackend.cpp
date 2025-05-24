@@ -111,8 +111,7 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Builtins[Kind - FK_NONE];
 }
 
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                                const MCFixup &Fixup,
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                 const MCValue &, uint64_t Value,
                                                 bool Resolved) const {
   if (!Resolved)
