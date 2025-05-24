@@ -17,13 +17,16 @@ namespace std {
                                 // both-note {{placement new would change type of storage from 'int' to 'float'}} \
                                 // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}} \
                                 // both-note {{construction of temporary is not allowed}} \
-                                // both-note {{construction of heap allocated object that has been deleted}}
+                                // both-note {{construction of heap allocated object that has been deleted}} \
+                                // both-note {{construction of subobject of object outside its lifetime is not allowed in a constant expression}}
   }
 }
 
 void *operator new(std::size_t, void *p) { return p; }
 void* operator new[] (std::size_t, void* p) {return p;}
 
+constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // both-error {{constant expression}} \
+                                                                            // both-note {{assignment to object outside its lifetime}}
 
 consteval auto ok1() {
   bool b;
@@ -408,4 +411,15 @@ namespace PlacementNewAfterDelete {
   }
   static_assert(construct_after_lifetime()); // both-error {{}} \
                                              // both-note {{in call}}
+}
+
+namespace SubObj {
+  constexpr bool construct_after_lifetime_2() {
+    struct A { struct B {} b; };
+    A a;
+    a.~A();
+    std::construct_at<A::B>(&a.b); // both-note {{in call}}
+    return true;
+  }
+  static_assert(construct_after_lifetime_2()); // both-error {{}} both-note {{in call}}
 }
