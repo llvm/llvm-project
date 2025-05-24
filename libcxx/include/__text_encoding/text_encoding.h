@@ -407,7 +407,7 @@ public:
       // Check if going past the encoding data list array and if the new index has the same id, if not then
       // replace it with a sentinel "out-of-bounds" iterator.
       _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n) {
-        if (__data_) [[__likely__]] {
+        if (__data_) {
           if (__n > 0) {
             if ((__data_ + __n) < std::end(__text_encoding_data) && __data_[__n - 1].__mib_rep == __mib_rep_)
               __data_ += __n;
