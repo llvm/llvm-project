@@ -1667,8 +1667,12 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         // Don't warn about omitted unavailable EnumConstantDecls.
         switch (EI->second->getAvailability()) {
         case AR_Deprecated:
-          // Omitting a deprecated constant is ok; it should never materialize.
+          // Deprecated enumerators need to be handled: they may be deprecated,
+          // but can still occur.
+          break;
+
         case AR_Unavailable:
+          // Omitting an unavailable enumerator is ok; it should never occur.
           continue;
 
         case AR_NotYetIntroduced:
