@@ -80,9 +80,52 @@ void UnarySymExpr::dumpToStream(raw_ostream &os) const {
     os << ')';
 }
 
+const Stmt *SymbolConjured::getStmt() const {
+  // Sometimes the CFG element is invalid, avoid dereferencing it.
+  if (Elem.getParent() == nullptr ||
+      Elem.getIndexInBlock() >= Elem.getParent()->size())
+    return nullptr;
+  switch (Elem->getKind()) {
+  case CFGElement::Initializer:
+    if (const auto *Init = Elem->castAs<CFGInitializer>().getInitializer()) {
+      return Init->getInit();
+    }
+    return nullptr;
+  case CFGElement::ScopeBegin:
+    return Elem->castAs<CFGScopeBegin>().getTriggerStmt();
+  case CFGElement::ScopeEnd:
+    return Elem->castAs<CFGScopeEnd>().getTriggerStmt();
+  case CFGElement::NewAllocator:
+    return Elem->castAs<CFGNewAllocator>().getAllocatorExpr();
+  case CFGElement::LifetimeEnds:
+    return Elem->castAs<CFGLifetimeEnds>().getTriggerStmt();
+  case CFGElement::LoopExit:
+    return Elem->castAs<CFGLoopExit>().getLoopStmt();
+  case CFGElement::Statement:
+    return Elem->castAs<CFGStmt>().getStmt();
+  case CFGElement::Constructor:
+    return Elem->castAs<CFGConstructor>().getStmt();
+  case CFGElement::CXXRecordTypedCall:
+    return Elem->castAs<CFGCXXRecordTypedCall>().getStmt();
+  case CFGElement::AutomaticObjectDtor:
+    return Elem->castAs<CFGAutomaticObjDtor>().getTriggerStmt();
+  case CFGElement::DeleteDtor:
+    return Elem->castAs<CFGDeleteDtor>().getDeleteExpr();
+  case CFGElement::BaseDtor:
+    return nullptr;
+  case CFGElement::MemberDtor:
+    return nullptr;
+  case CFGElement::TemporaryDtor:
+    return Elem->castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
+  case CFGElement::CleanupFunction:
+    return nullptr;
+  }
+  return nullptr;
+}
+
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
   os << getKindStr() << getSymbolID() << '{' << T << ", LC" << LCtx->getID();
-  if (S)
+  if (auto *S = getStmt())
     os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
   else
     os << ", no stmt";

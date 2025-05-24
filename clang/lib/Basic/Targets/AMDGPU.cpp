@@ -33,10 +33,9 @@ static const char *const DataLayoutStringR600 =
 
 static const char *const DataLayoutStringAMDGCN =
     "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-    "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:"
-    "32-v48:64-v96:128"
-    "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"
-    "-ni:7:8:9";
+    "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-"
+    "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-"
+    "v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
@@ -310,7 +309,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   // e.g. gfx10-1-generic -> gfx10_1_generic
   if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
       GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
-    std::replace(CanonName.begin(), CanonName.end(), '-', '_');
+    llvm::replace(CanonName, '-', '_');
   }
 
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
@@ -329,7 +328,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
       auto Loc = OffloadArchFeatures.find(F);
       if (Loc != OffloadArchFeatures.end()) {
         std::string NewF = F.str();
-        std::replace(NewF.begin(), NewF.end(), '-', '_');
+        llvm::replace(NewF, '-', '_');
         Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
                                 Twine("__"),
                             Loc->second ? "1" : "0");

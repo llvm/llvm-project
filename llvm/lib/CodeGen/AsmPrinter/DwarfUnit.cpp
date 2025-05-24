@@ -1013,6 +1013,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     constructEnumTypeDIE(Buffer, CTy);
     break;
   case dwarf::DW_TAG_variant_part:
+  case dwarf::DW_TAG_variant:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_class_type:
@@ -1066,7 +1067,17 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
             addDiscriminant(Variant, CI,
                             DD->isUnsignedDIType(Discriminator->getBaseType()));
           }
-          constructMemberDIE(Variant, DDTy);
+          // If the variant holds a composite type with tag
+          // DW_TAG_variant, inline those members into the variant
+          // DIE.
+          if (auto *Composite =
+                  dyn_cast_or_null<DICompositeType>(DDTy->getBaseType());
+              Composite != nullptr &&
+              Composite->getTag() == dwarf::DW_TAG_variant) {
+            constructTypeDIE(Variant, Composite);
+          } else {
+            constructMemberDIE(Variant, DDTy);
+          }
         } else {
           constructMemberDIE(Buffer, DDTy);
         }
