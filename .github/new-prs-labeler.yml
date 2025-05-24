@@ -709,6 +709,9 @@ tools:llvm-exegesis:
   - llvm/test/tools/llvm-exegesis/**
   - llvm/unittests/tools/llvm-exegesis/**
 
+tools:llvm-reduce:
+  - llvm/tools/llvm-reduce/**
+
 platform:windows:
   - lld/COFF/**
   - clang/lib/Driver/MSVC.cpp
