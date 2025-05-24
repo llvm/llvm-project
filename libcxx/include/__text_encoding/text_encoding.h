@@ -46,11 +46,11 @@ private:
     __id_rep __mib_rep;
     const char* __name;
 
-    friend constexpr bool operator==(const __encoding_data& __e, const __encoding_data& __other) _NOEXCEPT {
+    friend constexpr bool operator==(const __encoding_data& __e, const __encoding_data& __other) noexcept {
       return __e.__mib_rep == __other.__mib_rep || __comp_name(__e.__name, __other.__name);
     }
 
-    friend constexpr bool operator<(const __encoding_data& __e, const __id_rep __i) _NOEXCEPT {
+    friend constexpr bool operator<(const __encoding_data& __e, const __id_rep __i) noexcept {
       return __e.__mib_rep < __i;
     }
   };
@@ -323,17 +323,17 @@ public:
   using enum id;
 
   _LIBCPP_HIDE_FROM_ABI constexpr text_encoding() = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit text_encoding(string_view __enc) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit text_encoding(string_view __enc) noexcept
       : __encoding_rep_(__find_encoding_data(__enc)) {
     __enc.copy(__name_, max_name_length, 0);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr text_encoding(id __i) _NOEXCEPT : __encoding_rep_(__find_encoding_data_by_id(__i)) {
+  _LIBCPP_HIDE_FROM_ABI constexpr text_encoding(id __i) noexcept : __encoding_rep_(__find_encoding_data_by_id(__i)) {
     if (__encoding_rep_->__name[0] != '\0')
       std::copy_n(__encoding_rep_->__name, std::char_traits<char>::length(__encoding_rep_->__name), __name_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr id mib() const _NOEXCEPT { return id(__encoding_rep_->__mib_rep); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const char* name() const _NOEXCEPT { return __name_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr id mib() const noexcept { return id(__encoding_rep_->__mib_rep); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const char* name() const noexcept { return __name_; }
 
   // [text.encoding.aliases], class text_encoding::aliases_view
   struct aliases_view : ranges::view_interface<aliases_view> {
@@ -453,7 +453,7 @@ public:
     const __encoding_data* __view_data_ = nullptr;
   };
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr aliases_view aliases() const _NOEXCEPT {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr aliases_view aliases() const noexcept {
     auto __rep = __encoding_rep_ - 1;
     if (__encoding_rep_->__name[0]) {
       while (__rep > std::begin(__text_encoding_data) && (__rep--)->__mib_rep == __encoding_rep_->__mib_rep)
@@ -465,19 +465,19 @@ public:
     return aliases_view(__rep);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __a, const text_encoding& __b) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __a, const text_encoding& __b) noexcept {
     if (__a.mib() == id::other && __b.mib() == id::other)
       return __comp_name(__a.__name_, __b.__name_);
 
     return __a.mib() == __b.mib();
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __encoding, id __i) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __encoding, id __i) noexcept {
     return __encoding.mib() == __i;
   }
 
 #    if __CHAR_BIT__ == 8
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() _NOEXCEPT {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() noexcept {
 #      ifdef __GNUC_EXECUTION_CHARSET_NAME
     return text_encoding(__GNUC_EXECUTION_CHARSET_NAME);
 #      elif defined(__clang_literal_encoding__)
