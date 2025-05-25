@@ -34,12 +34,12 @@ int main(int argc, char **argv) {
 #endif
 
   // Returns the registry, except in testing mode when the URI contains
-  // "_disable_lsp_registration".
+  // "-disable-lsp-registration". Testing for/example of registering dialects
+  // based on URI.
   auto registryFn = [&registry,
                      &empty](const lsp::URIForFile &uri) -> DialectRegistry & {
     (void)empty;
 #ifdef MLIR_INCLUDE_TESTS
-    llvm::errs() << "uri: " << uri.uri() << "\n";
     if (uri.uri().contains("-disable-lsp-registration"))
       return empty;
 #endif
