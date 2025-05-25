@@ -753,3 +753,32 @@ entry:
   store i16 %or, ptr %p
   ret i16 %and1
 }
+
+define i32 @test1_known_not_zero(i32 %a) {
+; CHECK-LABEL: test1_known_not_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #12288 // =0x3000
+; CHECK-NEXT:    and w9, w0, #0xfffffffe
+; CHECK-NEXT:    movk w8, #7, lsl #16
+; CHECK-NEXT:    and w9, w9, #0xfff00fff
+; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    ret
+  %and1 = and i32 %a, -1044482
+  %or = or disjoint i32 %and1, 471040
+  ret i32 %or
+}
+
+define i32 @test1_known_not_zero_mul(i32 %a) {
+; CHECK-LABEL: test1_known_not_zero_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul w9, w0, w0
+; CHECK-NEXT:    mov w8, #12288 // =0x3000
+; CHECK-NEXT:    movk w8, #7, lsl #16
+; CHECK-NEXT:    and w9, w9, #0xfff03fff
+; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    ret
+  %mul = mul i32 %a, %a ; We set the second bit to 0.
+  %and = and i32 %mul, -1044483
+  %or = or disjoint i32 %and, 471040
+  ret i32 %or
+}
