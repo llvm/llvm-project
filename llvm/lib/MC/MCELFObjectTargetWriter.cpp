@@ -23,7 +23,5 @@ bool MCELFObjectTargetWriter::needsRelocateWithSymbol(const MCValue &,
   return false;
 }
 
-void
-MCELFObjectTargetWriter::sortRelocs(const MCAssembler &Asm,
-                                    std::vector<ELFRelocationEntry> &Relocs) {
-}
+void MCELFObjectTargetWriter::sortRelocs(
+    std::vector<ELFRelocationEntry> &Relocs) {}

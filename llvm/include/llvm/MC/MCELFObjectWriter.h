@@ -91,8 +91,7 @@ public:
   virtual bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                        unsigned Type) const;
 
-  virtual void sortRelocs(const MCAssembler &Asm,
-                          std::vector<ELFRelocationEntry> &Relocs);
+  virtual void sortRelocs(std::vector<ELFRelocationEntry> &Relocs);
 
   /// \name Accessors
   /// @{
