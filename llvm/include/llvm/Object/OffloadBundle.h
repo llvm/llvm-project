@@ -136,6 +136,7 @@ public:
       return createMemoryURI(Str);
       break;
     }
+    llvm_unreachable("Unknown UriTypeT enum");
   }
 
   static Expected<std::unique_ptr<OffloadBundleURI>>
