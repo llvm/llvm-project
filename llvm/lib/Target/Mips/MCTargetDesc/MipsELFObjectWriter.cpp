@@ -52,8 +52,7 @@ public:
                         const MCFixup &Fixup, bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
-  void sortRelocs(const MCAssembler &Asm,
-                  std::vector<ELFRelocationEntry> &Relocs) override;
+  void sortRelocs(std::vector<ELFRelocationEntry> &Relocs) override;
 };
 
 /// The possible results of the Predicate function used by find_best.
@@ -381,8 +380,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
 /// It should also be noted that this function is not affected by whether
 /// the symbol was kept or rewritten into a section-relative equivalent. We
 /// always match using the expressions from the source.
-void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
-                                     std::vector<ELFRelocationEntry> &Relocs) {
+void MipsELFObjectWriter::sortRelocs(std::vector<ELFRelocationEntry> &Relocs) {
   // We do not need to sort the relocation table for RELA relocations which
   // N32/N64 uses as the relocation addend contains the value we require,
   // rather than it being split across a pair of relocations.
