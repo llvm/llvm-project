@@ -2344,6 +2344,20 @@ static bool neverReturns(const CFGBlock *B) {
   return false;
 }
 
+static bool attrArgsForImpl(llvm::iterator_range<clang::Expr **> Args) {
+  // An attribute with no arguments implicitly refers to 'this'.
+  if (Args.empty())
+    return true;
+
+  return llvm::all_of(Args, [](const Expr *E) {
+    if (isa<CXXThisExpr>(E))
+      return true;
+    if (const auto* DRE = dyn_cast<DeclRefExpr>(E))
+      return isa<ParmVarDecl>(DRE->getDecl());
+    return false;
+  });
+}
+
 /// Check a function's CFG for thread-safety violations.
 ///
 /// We traverse the blocks in the CFG, compute the set of mutexes that are held
@@ -2421,13 +2435,13 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       } else if (const auto *A = dyn_cast<ReleaseCapabilityAttr>(Attr)) {
         // UNLOCK_FUNCTION() is used to hide the underlying lock implementation.
         // We must ignore such methods.
-        if (A->args_size() == 0)
+        if (attrArgsForImpl(A->args()))
           return;
         getMutexIDs(A->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, A,
                     nullptr, D);
         getMutexIDs(LocksReleased, A, nullptr, D);
       } else if (const auto *A = dyn_cast<AcquireCapabilityAttr>(Attr)) {
-        if (A->args_size() == 0)
+        if (attrArgsForImpl(A->args()))
           return;
         getMutexIDs(A->isShared() ? SharedLocksAcquired
                                   : ExclusiveLocksAcquired,
