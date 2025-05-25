@@ -73,7 +73,9 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
 
   # Setting OS name for GPU architectures.
   list(GET triple_comps -1 gpu_target_sys)
-  if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda")
+  list(GET triple_comps 1 vendor)
+  if(gpu_target_sys MATCHES "^amdhsa" OR gpu_target_sys MATCHES "^cuda" OR
+     (vendor STREQUAL "intel" AND gpu_target_sys STREQUAL "unknown"))
     set(target_sys "gpu")
   endif()
 

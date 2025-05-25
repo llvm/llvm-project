@@ -17,7 +17,12 @@
 #define LIBC_TARGET_ARCH_IS_NVPTX
 #endif
 
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX) || defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+#if defined(__SPIRV__)
+#define LIBC_TARGET_ARCH_IS_SPIRV
+#endif
+
+#if defined(LIBC_TARGET_ARCH_IS_NVPTX) ||                                      \
+    defined(LIBC_TARGET_ARCH_IS_AMDGPU) || defined(LIBC_TARGET_ARCH_IS_SPIRV)
 #define LIBC_TARGET_ARCH_IS_GPU
 #endif
 

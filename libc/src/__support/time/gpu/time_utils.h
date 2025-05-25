@@ -34,6 +34,9 @@ extern gpu::Constant<uint64_t> __llvm_libc_clock_freq;
 #elif defined(LIBC_TARGET_ARCH_IS_NVPTX)
 // NPVTX uses a single 1 GHz fixed frequency clock for all target architectures.
 #define GPU_CLOCKS_PER_SEC static_cast<clock_t>(1000000000UL)
+#elif defined(LIBC_TARGET_ARCH_IS_SPIRV)
+// NPVTX uses a single 1 GHz fixed frequency clock for all target architectures.
+#define GPU_CLOCKS_PER_SEC static_cast<clock_t>(1000000000UL)
 #else
 #error "Unsupported target"
 #endif

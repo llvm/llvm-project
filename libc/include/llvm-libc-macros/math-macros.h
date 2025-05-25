@@ -42,7 +42,8 @@
 #define FP_LLOGBNAN LONG_MAX
 #endif
 
-#if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__FAST_MATH__)
+#if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__) ||         \
+    defined(__FAST_MATH__)
 #define math_errhandling 0
 #elif defined(__NO_MATH_ERRNO__)
 #define math_errhandling (MATH_ERREXCEPT)
