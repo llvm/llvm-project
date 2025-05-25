@@ -27,17 +27,16 @@ public:
       : MCELFObjectTargetWriter(false, OSABI, ELF::EM_CSKY, true){};
   ~CSKYELFObjectWriter() {}
 
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
 };
 
 } // namespace
 
-unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned CSKYELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                            const MCValue &Target,
-                                           const MCFixup &Fixup,
                                            bool IsPCRel) const {
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
