@@ -12530,14 +12530,14 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
     return false;
 
   const SCEV *LStart, *RStart, *Step;
-  if (!match(LHS, m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step))) ||
-      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step))))
+  const Loop *L;
+  if (!match(LHS,
+             m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step), m_Loop(L))) ||
+      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step),
+                                      m_SpecificLoop(L))))
     return false;
   const SCEVAddRecExpr *LAR = cast<SCEVAddRecExpr>(LHS);
   const SCEVAddRecExpr *RAR = cast<SCEVAddRecExpr>(RHS);
-  if (LAR->getLoop() != RAR->getLoop())
-    return false;
-
   SCEV::NoWrapFlags NW = ICmpInst::isSigned(Pred) ?
                          SCEV::FlagNSW : SCEV::FlagNUW;
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))

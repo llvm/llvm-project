@@ -55,7 +55,7 @@ public:
   MCObjectWriter &operator=(const MCObjectWriter &) = delete;
   virtual ~MCObjectWriter();
 
-  void setAssembler(MCAssembler *A) { Asm = A; }
+  virtual void setAssembler(MCAssembler *A) { Asm = A; }
 
   MCContext &getContext() const;
 
@@ -125,7 +125,7 @@ public:
   /// This routine is called by the assembler after layout and relaxation is
   /// complete, fixups have been evaluated and applied, and relocations
   /// generated.
-  virtual uint64_t writeObject(MCAssembler &Asm) = 0;
+  virtual uint64_t writeObject() = 0;
 
   /// @}
 };
@@ -135,7 +135,14 @@ public:
 class MCObjectTargetWriter {
 public:
   virtual ~MCObjectTargetWriter() = default;
+  void setAssembler(MCAssembler *A) { Asm = A; }
   virtual Triple::ObjectFormatType getFormat() const = 0;
+
+protected:
+  MCContext &getContext() const;
+  void reportError(SMLoc L, const Twine &Msg) const;
+
+  MCAssembler *Asm = nullptr;
 };
 
 } // end namespace llvm
