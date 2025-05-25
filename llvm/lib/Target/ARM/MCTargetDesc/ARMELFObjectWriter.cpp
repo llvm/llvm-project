@@ -10,6 +10,7 @@
 #include "MCTargetDesc/ARMMCExpr.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
@@ -47,9 +48,16 @@ ARMELFObjectWriter::ARMELFObjectWriter(uint8_t OSABI)
                             ELF::EM_ARM,
                             /*HasRelocationAddend*/ false) {}
 
-bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
-                                                 const MCSymbol &,
+bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
+                                                 const MCSymbol &Sym,
                                                  unsigned Type) const {
+  // If the symbol is a thumb function the final relocation must set the lowest
+  // bit. With a symbol that is done by just having the symbol have that bit
+  // set, so we would lose the bit if we relocated with the section.
+  // We could use the section but add the bit to the relocation value.
+  if (Asm->isThumbFunc(Val.getAddSym()))
+    return true;
+
   // FIXME: This is extremely conservative. This really needs to use an
   // explicit list with a clear explanation for why each realocation needs to
   // point to the symbol, not to the section.
