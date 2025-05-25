@@ -583,20 +583,20 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     cir::ComplexType complexType =
         mlir::dyn_cast<cir::ComplexType>(desiredType);
 
-    mlir::Type compelxElemTy = complexType.getElementType();
-    if (isa<cir::IntType>(compelxElemTy)) {
+    mlir::Type complexElemTy = complexType.getElementType();
+    if (isa<cir::IntType>(complexElemTy)) {
       llvm::APSInt real = value.getComplexIntReal();
       llvm::APSInt imag = value.getComplexIntImag();
       return builder.getAttr<cir::ConstComplexAttr>(
-          complexType, builder.getAttr<cir::IntAttr>(compelxElemTy, real),
-          builder.getAttr<cir::IntAttr>(compelxElemTy, imag));
+          complexType, builder.getAttr<cir::IntAttr>(complexElemTy, real),
+          builder.getAttr<cir::IntAttr>(complexElemTy, imag));
     }
 
     llvm::APFloat real = value.getComplexFloatReal();
     llvm::APFloat imag = value.getComplexFloatImag();
     return builder.getAttr<cir::ConstComplexAttr>(
-        complexType, builder.getAttr<cir::FPAttr>(compelxElemTy, real),
-        builder.getAttr<cir::FPAttr>(compelxElemTy, imag));
+        complexType, builder.getAttr<cir::FPAttr>(complexElemTy, real),
+        builder.getAttr<cir::FPAttr>(complexElemTy, imag));
   }
   case APValue::FixedPoint:
   case APValue::AddrLabelDiff:
