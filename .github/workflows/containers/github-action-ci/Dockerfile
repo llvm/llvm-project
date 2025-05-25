@@ -94,3 +94,14 @@ RUN mkdir actions-runner && \
     tar xzf ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
     rm ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz
 
+# Pre-cache llvm-project in these images; this works with the premerge action
+# to speed up runs; cloning LLVM fresh takes >1min otherwise.
+#
+# A local experiment showed an explicit `git gc --aggressive` reduced this
+# layer's size by ~800MB (4.1GB -> 3.3GB). Disable GC'ing
+# afterward, so we don't waste time trying to do that in CI.
+RUN \
+  git clone https://github.com/llvm/llvm-project --tags && \
+  cd llvm-project && \
+  git gc --aggressive && \
+  git config gc.auto 0
