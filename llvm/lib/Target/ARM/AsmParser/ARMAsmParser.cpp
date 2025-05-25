@@ -31,7 +31,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
@@ -5523,7 +5523,7 @@ ParseStatus ARMAsmParser::parseRotImm(OperandVector &Operands) {
 
 ParseStatus ARMAsmParser::parseModImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   int64_t Imm1, Imm2;
 
   SMLoc S = Parser.getTok().getLoc();
