@@ -13,7 +13,7 @@
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-#include <asm/ioctls.h>  // Safe to include without the risk of name pollution.
+#include <asm/ioctls.h> // Safe to include without the risk of name pollution.
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
@@ -21,10 +21,11 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, tcgetsid, (int fd)) {
   pid_t sid;
-  int ret = LIBC_NAMESPACE::ioctl(fd, TIOCGSID, &sid);
-  if (ret < 0) 
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ioctl, fd, TIOCGSID, &sid);
+  if (ret < 0) {
+    libc_errno = -ret;
     return -1;
-    
+  }
   return sid;
 }
 

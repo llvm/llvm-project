@@ -23,10 +23,12 @@ LLVM_LIBC_FUNCTION(int, isatty, (int fd)) {
   int line_d_val = INIT_VAL;
   // This gets the line dicipline of the terminal. When called on something that
   // isn't a terminal it doesn't change line_d_val and returns -1.
-  int result = LIBC_NAMESPACE::ioctl(fd, TIOCGETD, &line_d_val);
+  int result =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_ioctl, fd, TIOCGETD, &line_d_val);
   if (result == 0)
     return 1;
 
+  libc_errno = -result;
   return 0;
 }
 
