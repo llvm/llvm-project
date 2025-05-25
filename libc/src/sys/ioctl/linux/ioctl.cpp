@@ -24,17 +24,14 @@ LLVM_LIBC_FUNCTION(int, ioctl, (int fd, unsigned long request, ...)) {
       LIBC_NAMESPACE::syscall_impl<int>(SYS_ioctl, fd, request, data_pointer);
   va_end(vargs);
 
-  // From `man ioctl`:
-  // "Usually, on success zero is returned.  A few ioctl() operations
-  // use the return value as an output parameter and return a
-  // nonnegative value on success.  On error, -1 is returned, and errno
-  // is set to indicate the error."
-  if (ret < 0) {
-    libc_errno = -ret;
-    return -1;
+  // Some ioctls can be expected to return positive values
+  if (ret >= 0) {
+    return ret;
   }
 
-  return ret;
+  // If there is an error, errno is set and -1 is returned.
+  libc_errno = -ret;
+  return -1;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
