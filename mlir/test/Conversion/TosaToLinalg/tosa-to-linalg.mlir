@@ -1205,7 +1205,7 @@ func.func @rescale_i8_unsigned_output_implicit(%arg0 : tensor<2xi8>) -> () {
   // CHECK-DAG: [[LOWER:%.+]] = arith.maxsi [[CMIN]], [[SCALED_ZEROED]]
   // CHECK: [[BOUNDED:%.+]] = arith.minsi [[CMAX]], [[LOWER]]
   // CHECK: [[TRUNC:%.+]] = arith.trunci [[BOUNDED]]
-  // CHECK-NOT: builtin.unrealized_conversion_cast [[TRUNC]] : i8 to i8
+  // CHECK-NOT: builtin.unrealized_conversion_cast [[TRUNC]]
   // CHECK: linalg.yield [[TRUNC]]
   %multiplier = "tosa.const"() {values = dense<19689> : tensor<1xi16> } : () -> tensor<1xi16>
   %shift = "tosa.const"() {values = dense<15> : tensor<1xi8> } : () -> tensor<1xi8>
@@ -1228,7 +1228,7 @@ func.func @rescale_i48_unsigned_output_implicit(%arg0 : tensor<2xi48>) -> () {
   // CHECK: [[INIT:%.+]] = tensor.empty()
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%[[ARG0]] : tensor<2xi48>) outs([[INIT]] : tensor<2xi8>)
   // CHECK: ^bb0([[IN:%.+]]: i48, [[UNUSED:%.+]]: i8):
-  // CHECK-NOT: builtin.unrealized_conversion_cast [[IN]] : i48 to i48
+  // CHECK-NOT: builtin.unrealized_conversion_cast [[IN]]
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
   // CHECK-DAG: [[C234:%.+]] = arith.constant 234
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN]], [[C0]]
@@ -1341,7 +1341,7 @@ func.func @rescale_i8_unsigned_input_implicit(%arg0 : tensor<2xi8>) -> () {
   // CHECK: [[INIT:%.+]] = tensor.empty()
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%[[ARG0]] : tensor<2xi8>) outs([[INIT]] : tensor<2xi8>)
   // CHECK: ^bb0([[IN:%.+]]: i8, [[UNUSED:%.+]]: i8):
-  // CHECK-NOT: builtin.unrealized_conversion_cast [[IN]] : i8 to i8
+  // CHECK-NOT: builtin.unrealized_conversion_cast [[IN]]
   // CHECK-DAG: [[C128:%.+]] = arith.constant 128
   // CHECK-DAG: [[C22:%.+]] = arith.constant 22
   // CHECK-DAG: [[IN32:%.+]] = arith.extui [[IN]]
