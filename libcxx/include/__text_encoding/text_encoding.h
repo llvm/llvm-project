@@ -45,7 +45,8 @@ private:
     uint_least32_t __name_size_;
 
     friend constexpr bool operator==(const __encoding_data& __e, const __encoding_data& __other) noexcept {
-      return __e.__mib_rep_ == __other.__mib_rep_ || __comp_name(__e.__name_, __other.__name_);
+      return __e.__mib_rep_ == __other.__mib_rep_ ||
+             __comp_name(string_view(__e.__name_, __e.__name_size_), string_view(__other.__name_, __e.__name_size_));
     }
 
     friend constexpr bool operator<(const __encoding_data& __e, const __id_rep __i) noexcept {
@@ -532,7 +533,7 @@ private:
     auto __data_ptr = __text_encoding_data + 2, __data_last = std::end(__text_encoding_data) - 1;
 
     for (; __data_ptr != __data_last; __data_ptr++) {
-      if (__comp_name(__a, __data_ptr->__name_)) {
+      if (__comp_name(__a, string_view(__data_ptr->__name_, __data_ptr->__name_size_))) {
         const auto __found_id = __data_ptr->__mib_rep_;
         while (__data_ptr[-1].__mib_rep_ == __found_id)
           __data_ptr--;
