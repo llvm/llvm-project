@@ -97,7 +97,7 @@ public:
   MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
     return FileNames;
   }
-  void addFileName(MCAssembler &Asm, StringRef FileName);
+  void addFileName(StringRef FileName);
   void setCompilerVersion(StringRef CompilerVers) {
     CompilerVersion = CompilerVers;
   }
