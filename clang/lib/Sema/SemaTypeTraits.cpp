@@ -836,7 +836,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     // GCC[1] and the Embarcadero C++ compiler[2], and Clang implements those
     // specifications.
     //
-    //   1: http://gcc.gnu/.org/onlinedocs/gcc/Type-Traits.html
+    //   1: http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html
     //   2:
     //   http://docwiki.embarcadero.com/RADStudio/XE/en/Type_Trait_Functions_(C%2B%2B0x)_Index
     //
