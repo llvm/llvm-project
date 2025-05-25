@@ -79,10 +79,11 @@ void ConvertMemberFunctionsToStatic::registerMatchers(MatchFinder *Finder) {
       cxxMethodDecl(
           isDefinition(), isUserProvided(),
           unless(anyOf(
-              isExplicitObjectMemberFunction(), isExpansionInSystemHeader(),
-              isVirtual(), isStatic(), hasTrivialBody(), isOverloadedOperator(),
-              cxxConstructorDecl(), cxxDestructorDecl(), cxxConversionDecl(),
-              isTemplate(), isDependentContext(),
+              isExpansionInSystemHeader(), isVirtual(), isStatic(),
+              hasTrivialBody(), isOverloadedOperator(), cxxConstructorDecl(),
+              cxxDestructorDecl(), cxxConversionDecl(),
+              isExplicitObjectMemberFunction(), isTemplate(),
+              isDependentContext(),
               ofClass(anyOf(
                   isLambda(),
                   hasAnyDependentBases()) // Method might become virtual
