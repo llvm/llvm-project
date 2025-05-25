@@ -331,10 +331,10 @@ int main(int argc, char **argv) {
 #ifdef MLIR_INCLUDE_TESTS
   ::test::registerIrdlTestDialect(registry);
   ::test::registerTestDialect(registry);
+  ::test::registerTestDynDialect(registry);
+  ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
   ::test::registerTestTransformDialectExtension(registry);
   ::test::registerTestTransformsTransformDialectExtension(registry);
-  ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
-  ::test::registerTestDynDialect(registry);
 #endif
   return mlir::asMainReturnCode(mlir::MlirOptMain(
       argc, argv, "MLIR modular optimizer driver\n", registry));
