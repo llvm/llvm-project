@@ -38,8 +38,8 @@ struct text_encoding {
   static constexpr size_t max_name_length = 63;
 
 private:
+  using __id_rep _LIBCPP_NODEBUG = int_least32_t;
   struct __encoding_data {
-    using __id_rep _LIBCPP_NODEBUG = int_least32_t;
     __id_rep __mib_rep_;
     const char* __name_;
 
@@ -53,7 +53,7 @@ private:
   };
 
 public:
-  enum class id : __encoding_data::__id_rep {
+  enum class id : __id_rep {
     other                   = 1,
     unknown                 = 2,
     ASCII                   = 3,
@@ -437,7 +437,7 @@ public:
 
       // default iterator is a sentinel
       const __encoding_data* __data_       = nullptr;
-      __encoding_data::__id_rep __mib_rep_ = 0;
+      __id_rep __mib_rep_ = 0;
     };
 
     constexpr __iterator begin() const { return __iterator{__view_data_}; }
@@ -545,8 +545,10 @@ private:
   _LIBCPP_HIDE_FROM_ABI static constexpr const __encoding_data* __find_encoding_data_by_id(id __i) {
     _LIBCPP_ASSERT(__i >= id::other && __i <= id::CP50220, "Passing invalid id to text_encoding constructor!");
     auto __found = std::lower_bound(
-        std::begin(__text_encoding_data), std::end(__text_encoding_data) - 1, __encoding_data::__id_rep(__i));
-    return __found != std::end(__text_encoding_data) - 1 ? __found : __text_encoding_data + 1; // unknown
+        std::begin(__text_encoding_data), std::end(__text_encoding_data), __id_rep(__i));
+    return __found != std::end(__text_encoding_data)
+             ? __found
+             : __text_encoding_data + 1; // only possible way to get unknown is if 33, 34 are passed
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr __encoding_data __text_encoding_data[] = {
