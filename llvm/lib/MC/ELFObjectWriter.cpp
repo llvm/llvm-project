@@ -1298,13 +1298,6 @@ bool ELFObjectWriter::useSectionSymbol(const MCValue &Val,
       return false;
   }
 
-  // If the symbol is a thumb function the final relocation must set the lowest
-  // bit. With a symbol that is done by just having the symbol have that bit
-  // set, so we would lose the bit if we relocated with the section.
-  // FIXME: We could use the section but add the bit to the relocation value.
-  if (EMachine == ELF::EM_ARM && Asm->isThumbFunc(Sym))
-    return false;
-
   return !TargetObjectWriter->needsRelocateWithSymbol(Val, *Sym, Type);
 }
 
