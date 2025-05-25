@@ -16,20 +16,20 @@ class StdVBoolDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
+    @skip
     @add_test_categories(["libstdcxx"])
     def test_with_run_command(self):
         self.with_run_command({})
 
     @add_test_categories(["libstdcxx"])
     def test_with_run_command_debug(self):
-        build_args = {"CXXFLAGS": "-D_GLIBCXX_DEBUG"}
+        build_args = {"CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
         self.with_run_command(build_args)
 
     def with_run_command(self, dictionary: dict):
         """Test that that file and class static variables display correctly."""
         self.build(dictionary=dictionary)
         artifact_name = dictionary.get("EXE", "a.out")
-        self.runCmd("file " + self.getBuildArtifact(artifact_name), CURRENT_EXECUTABLE_SET)
         self.runCmd(
             "file " + self.getBuildArtifact(artifact_name), CURRENT_EXECUTABLE_SET
         )

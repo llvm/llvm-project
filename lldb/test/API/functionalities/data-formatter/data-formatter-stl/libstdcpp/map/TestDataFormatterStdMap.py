@@ -19,13 +19,12 @@ class StdMapDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
     def test_with_run_command(self):
-        build_args = {"EXE": "a.out"}
-        self.with_run_command("", build_args)
+        self.with_run_command("", {})
 
     @add_test_categories(["libstdcxx"])
     @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
     def test_with_run_command_debug(self):
-        build_args = {"CXXFLAGS": "-D_GLIBCXX_DEBUG", "EXE": "debug_a.out"}
+        build_args = {"CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
         self.with_run_command("__debug::", build_args)
 
     def with_run_command(self, namespace: str, dictionary: dict):
@@ -64,7 +63,6 @@ class StdMapDataFormatterTestCase(TestBase):
 
         match = f"std::{namespace}map<"
         self.runCmd(
-            'type summary add -x "std::map<" --summary-string "map has ${svar%#} items" -e'
             f'type summary add -x "{match}" --summary-string "map has ${{svar%#}} items" -e'
         )
 
