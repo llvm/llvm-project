@@ -42,7 +42,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   SINGLE-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
@@ -89,7 +89,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   SINGLE-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:

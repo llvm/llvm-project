@@ -46,7 +46,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
+; CHECK-NEXT:   SINGLE-SCALAR vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
@@ -93,7 +93,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
+; CHECK-NEXT:   SINGLE-SCALAR vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:

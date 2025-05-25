@@ -48,7 +48,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT: Successor(s): ir-bb<e2>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   SINGLE-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
@@ -135,7 +135,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   SINGLE-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
@@ -215,7 +215,7 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   SINGLE-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT: ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:

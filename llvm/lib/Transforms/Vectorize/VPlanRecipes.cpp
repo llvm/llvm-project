@@ -965,7 +965,7 @@ void VPInstruction::dump() const {
 
 void VPInstruction::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
+  O << Indent << (isSingleScalar() ? "SINGLE-SCALAR " : "EMIT ");
 
   if (hasResult()) {
     printAsOperand(O, SlotTracker);
