@@ -62,16 +62,6 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
       return false; // Stop traversal.
     }
 
-    bool VisitDeclRefExpr(const DeclRefExpr *E) {
-      if (const auto *PVD = dyn_cast_if_present<ParmVarDecl>(E->getDecl());
-          PVD && PVD->isExplicitObjectParameter()) {
-        Used = true;
-        return false; // Stop traversal.
-      }
-
-      return true;
-    }
-
     // If we enter a class declaration, don't traverse into it as any usages of
     // `this` will correspond to the nested class.
     bool TraverseCXXRecordDecl(CXXRecordDecl *RD) { return true; }
@@ -89,10 +79,10 @@ void ConvertMemberFunctionsToStatic::registerMatchers(MatchFinder *Finder) {
       cxxMethodDecl(
           isDefinition(), isUserProvided(),
           unless(anyOf(
-              isExpansionInSystemHeader(), isVirtual(), isStatic(),
-              hasTrivialBody(), isOverloadedOperator(), cxxConstructorDecl(),
-              cxxDestructorDecl(), cxxConversionDecl(), isTemplate(),
-              isDependentContext(),
+              isExplicitObjectMemberFunction(), isExpansionInSystemHeader(),
+              isVirtual(), isStatic(), hasTrivialBody(), isOverloadedOperator(),
+              cxxConstructorDecl(), cxxDestructorDecl(), cxxConversionDecl(),
+              isTemplate(), isDependentContext(),
               ofClass(anyOf(
                   isLambda(),
                   hasAnyDependentBases()) // Method might become virtual
