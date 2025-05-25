@@ -59,23 +59,23 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   if (IsPCRel) {
     switch (Fixup.getTargetKind()) {
     default:
-      Ctx.reportError(Fixup.getLoc(), "Unsupported pc-relative fixup kind");
+      reportError(Fixup.getLoc(), "Unsupported pc-relative fixup kind");
       return ELF::R_VE_NONE;
     case FK_Data_1:
     case FK_PCRel_1:
-      Ctx.reportError(Fixup.getLoc(),
-                      "1-byte pc-relative data relocation is not supported");
+      reportError(Fixup.getLoc(),
+                  "1-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
     case FK_Data_2:
-      Ctx.reportError(Fixup.getLoc(),
-                      "2-byte pc-relative data relocation is not supported");
+      reportError(Fixup.getLoc(),
+                  "2-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
     case FK_Data_4:
       return ELF::R_VE_SREL32;
     case FK_Data_8:
     case FK_PCRel_8:
-      Ctx.reportError(Fixup.getLoc(),
-                      "8-byte pc-relative data relocation is not supported");
+      reportError(Fixup.getLoc(),
+                  "8-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
     case VE::fixup_ve_reflong:
     case VE::fixup_ve_srel32:
@@ -89,13 +89,13 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
 
   switch (Fixup.getTargetKind()) {
   default:
-    Ctx.reportError(Fixup.getLoc(), "Unknown ELF relocation type");
+    reportError(Fixup.getLoc(), "Unknown ELF relocation type");
     return ELF::R_VE_NONE;
   case FK_Data_1:
-    Ctx.reportError(Fixup.getLoc(), "1-byte data relocation is not supported");
+    reportError(Fixup.getLoc(), "1-byte data relocation is not supported");
     return ELF::R_VE_NONE;
   case FK_Data_2:
-    Ctx.reportError(Fixup.getLoc(), "2-byte data relocation is not supported");
+    reportError(Fixup.getLoc(), "2-byte data relocation is not supported");
     return ELF::R_VE_NONE;
   case FK_Data_4:
     return ELF::R_VE_REFLONG;
@@ -104,20 +104,20 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case VE::fixup_ve_reflong:
     return ELF::R_VE_REFLONG;
   case VE::fixup_ve_srel32:
-    Ctx.reportError(Fixup.getLoc(),
-                    "A non pc-relative srel32 relocation is not supported");
+    reportError(Fixup.getLoc(),
+                "A non pc-relative srel32 relocation is not supported");
     return ELF::R_VE_NONE;
   case VE::fixup_ve_hi32:
     return ELF::R_VE_HI32;
   case VE::fixup_ve_lo32:
     return ELF::R_VE_LO32;
   case VE::fixup_ve_pc_hi32:
-    Ctx.reportError(Fixup.getLoc(),
-                    "A non pc-relative pc_hi32 relocation is not supported");
+    reportError(Fixup.getLoc(),
+                "A non pc-relative pc_hi32 relocation is not supported");
     return ELF::R_VE_NONE;
   case VE::fixup_ve_pc_lo32:
-    Ctx.reportError(Fixup.getLoc(),
-                    "A non pc-relative pc_lo32 relocation is not supported");
+    reportError(Fixup.getLoc(),
+                "A non pc-relative pc_lo32 relocation is not supported");
     return ELF::R_VE_NONE;
   case VE::fixup_ve_got_hi32:
     return ELF::R_VE_GOT_HI32;
