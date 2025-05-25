@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++23 %s readability-convert-member-functions-to-static %t
+// RUN: %check_clang_tidy -std=c++23-or-later %s readability-convert-member-functions-to-static %t
 
 namespace std{
   class string {};
