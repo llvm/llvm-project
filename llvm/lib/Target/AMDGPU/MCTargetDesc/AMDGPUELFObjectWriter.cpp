@@ -84,8 +84,8 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
     assert(SymA);
 
     if (SymA->isUndefined()) {
-      Ctx.reportError(Fixup.getLoc(),
-                      Twine("undefined label '") + SymA->getName() + "'");
+      reportError(Fixup.getLoc(),
+                  Twine("undefined label '") + SymA->getName() + "'");
       return ELF::R_AMDGPU_NONE;
     }
     return ELF::R_AMDGPU_REL16;
