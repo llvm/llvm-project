@@ -799,6 +799,20 @@ def skipUnlessArch(arch):
     return skipTestIfFn(arch_doesnt_match)
 
 
+def skipIfArch(arch):
+    """Decorate the item to skip tests if running on the specified architecture."""
+
+    def arch_matches():
+        target_arch = lldbplatformutil.getArchitecture()
+        if arch == target_arch:
+            return (
+                "Test does not run on " + arch + ", but target arch is " + target_arch
+            )
+        return None
+
+    return skipTestIfFn(arch_matches)
+
+
 def skipIfTargetAndroid(bugnumber=None, api_levels=None, archs=None):
     """Decorator to skip tests when the target is Android.
 
