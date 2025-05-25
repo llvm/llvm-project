@@ -152,16 +152,15 @@ void X86MachObjectWriter::RecordX86_64Relocation(
 
     // Neither symbol can be modified.
     if (Target.getSpecifier()) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "unsupported relocation of modified symbol");
+      reportError(Fixup.getLoc(), "unsupported relocation of modified symbol");
       return;
     }
 
     // We don't support PCrel relocations of differences. Darwin 'as' doesn't
     // implement most of these correctly.
     if (IsPCRel) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "unsupported pc-relative relocation of difference");
+      reportError(Fixup.getLoc(),
+                  "unsupported pc-relative relocation of difference");
       return;
     }
 
@@ -176,8 +175,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     // single SIGNED relocation); reject it for now.  Except the case where both
     // symbols don't have a base, equal but both NULL.
     if (A_Base == B_Base && A_Base) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "unsupported relocation with identical base");
+      reportError(Fixup.getLoc(), "unsupported relocation with identical base");
       return;
     }
 
@@ -185,9 +183,10 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     // non-relocatable expression.
     if (A->isUndefined() || B->isUndefined()) {
       StringRef Name = A->isUndefined() ? A->getName() : B->getName();
-      Asm.getContext().reportError(Fixup.getLoc(),
-        "unsupported relocation with subtraction expression, symbol '" +
-        Name + "' can not be undefined in a subtraction expression");
+      reportError(
+          Fixup.getLoc(),
+          "unsupported relocation with subtraction expression, symbol '" +
+              Name + "' can not be undefined in a subtraction expression");
       return;
     }
 
@@ -249,9 +248,9 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       FixedValue = Writer->getSymbolAddress(*Symbol);
       return;
     } else {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "unsupported relocation of undefined symbol '" +
-                              Symbol->getName() + "'");
+      reportError(Fixup.getLoc(),
+                  "unsupported relocation of undefined symbol '" +
+                      Symbol->getName() + "'");
       return;
     }
 
@@ -269,8 +268,8 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         } else if (Specifier == X86MCExpr::VK_TLVP) {
           Type = MachO::X86_64_RELOC_TLV;
         } else if (Specifier) {
-          Asm.getContext().reportError(
-              Fixup.getLoc(), "unsupported symbol modifier in relocation");
+          reportError(Fixup.getLoc(),
+                      "unsupported symbol modifier in relocation");
           return;
         } else {
           Type = MachO::X86_64_RELOC_SIGNED;
@@ -297,9 +296,8 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         }
       } else {
         if (Specifier) {
-          Asm.getContext().reportError(
-              Fixup.getLoc(),
-              "unsupported symbol modifier in branch relocation");
+          reportError(Fixup.getLoc(),
+                      "unsupported symbol modifier in branch relocation");
           return;
         }
 
@@ -316,17 +314,17 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         Type = MachO::X86_64_RELOC_GOT;
         IsPCRel = 1;
       } else if (Specifier == X86MCExpr::VK_TLVP) {
-        Asm.getContext().reportError(
-            Fixup.getLoc(), "TLVP symbol modifier should have been rip-rel");
+        reportError(Fixup.getLoc(),
+                    "TLVP symbol modifier should have been rip-rel");
         return;
       } else if (Specifier) {
-        Asm.getContext().reportError(
-            Fixup.getLoc(), "unsupported symbol modifier in relocation");
+        reportError(Fixup.getLoc(),
+                    "unsupported symbol modifier in relocation");
         return;
       } else {
         Type = MachO::X86_64_RELOC_UNSIGNED;
         if (Fixup.getTargetKind() == X86::reloc_signed_4byte) {
-          Asm.getContext().reportError(
+          reportError(
               Fixup.getLoc(),
               "32-bit absolute addressing is not supported in 64-bit mode");
           return;
@@ -362,10 +360,9 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
   const MCSymbol *A = Target.getAddSym();
 
   if (!A->getFragment()) {
-    Asm.getContext().reportError(
-        Fixup.getLoc(),
-        "symbol '" + A->getName() +
-            "' can not be undefined in a subtraction expression");
+    reportError(Fixup.getLoc(),
+                "symbol '" + A->getName() +
+                    "' can not be undefined in a subtraction expression");
     return false;
   }
 
@@ -376,10 +373,9 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
 
   if (const MCSymbol *SB = Target.getSubSym()) {
     if (!SB->getFragment()) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(),
-          "symbol '" + SB->getName() +
-              "' can not be undefined in a subtraction expression");
+      reportError(Fixup.getLoc(),
+                  "symbol '" + SB->getName() +
+                      "' can not be undefined in a subtraction expression");
       return false;
     }
 
@@ -402,11 +398,11 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
     if (FixupOffset > 0xffffff) {
       char Buffer[32];
       format("0x%x", FixupOffset).print(Buffer, sizeof(Buffer));
-      Asm.getContext().reportError(Fixup.getLoc(),
-                         Twine("Section too large, can't encode "
-                                "r_address (") + Buffer +
-                         ") into 24 bits of scattered "
-                         "relocation entry.");
+      reportError(Fixup.getLoc(), Twine("Section too large, can't encode "
+                                        "r_address (") +
+                                      Buffer +
+                                      ") into 24 bits of scattered "
+                                      "relocation entry.");
       return false;
     }
 
