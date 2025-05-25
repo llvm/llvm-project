@@ -1377,7 +1377,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   if (mc::isRelocRelocation(Fixup.getKind()))
     Type = Fixup.getKind() - FirstLiteralRelocationKind;
   else
-    Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
+    Type = TargetObjectWriter->getRelocType(Fixup, Target, IsPCRel);
 
   bool UseSectionSym =
       SymA && SymA->getBinding() == ELF::STB_LOCAL && !SymA->isUndefined();

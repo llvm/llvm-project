@@ -32,17 +32,16 @@ namespace {
     ~SparcELFObjectWriter() override = default;
 
   protected:
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
+    unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                          bool IsPCRel) const override;
 
     bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                  unsigned Type) const override;
   };
 }
 
-unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
-                                            const MCFixup &Fixup,
                                             bool IsPCRel) const {
   switch (Target.getSpecifier()) {
   case ELF::R_SPARC_TLS_GD_HI22:
