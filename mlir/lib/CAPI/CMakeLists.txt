@@ -26,6 +26,7 @@ if(MLIR_BUILD_MLIR_C_DYLIB)
   get_property(_capi_libraries GLOBAL PROPERTY MLIR_CAPI_LIBS)
   add_mlir_aggregate(MLIR-C
     SHARED
+    KEEP_CAPI
     EMBED_LIBS
       ${_capi_libraries}
   )

@@ -475,12 +475,14 @@ endfunction(get_mlir_filtered_link_libraries)
 #   EMBED_LIBS: list of dependent libraries that should be embedded directly
 #     into this library. Each of these must be an add_mlir_library() library
 #     without DISABLE_AGGREGATE.
+#   KEEP_CAPI: If enabled and `MLIR_BUILD_MLIR_C_DYLIB` and
+#   `MLIR_LINK_MLIR_DYLIB`, CAPI aggregates are not removed from the library.
 #
 # Note: This is a work in progress and is presently only sufficient for certain
 # non nested cases involving the C-API.
 function(add_mlir_aggregate name)
   cmake_parse_arguments(ARG
-    "SHARED;STATIC"
+    "SHARED;STATIC;KEEP_CAPI"
     ""
     "PUBLIC_LIBS;EMBED_LIBS"
     ${ARGN})
@@ -492,6 +494,19 @@ function(add_mlir_aggregate name)
     list(APPEND _libtype SHARED)
   endif()
   set(_debugmsg)
+
+  # If `MLIR_LINK_MLIR_DYLIB == 1` remove all the libraries in `libMLIR.so` from
+  # `EMBED_LIBS`.
+  get_property(mlir_libs GLOBAL PROPERTY MLIR_STATIC_LIBS)
+  if (MLIR_LINK_MLIR_DYLIB)
+    # If `libMLIR-C.so` is available and not `KEEP_CAPI`, remove MLIR CAPI
+    # libraries from `EMBED_LIBS`.
+    if (MLIR_BUILD_MLIR_C_DYLIB AND NOT ARG_KEEP_CAPI)
+      get_property(mlir_c_libs GLOBAL PROPERTY MLIR_CAPI_LIBS)
+      list(APPEND mlir_libs ${mlir_c_libs})
+    endif()
+    list(REMOVE_ITEM ARG_EMBED_LIBS ${mlir_libs})
+  endif()
 
   set(_embed_libs)
   set(_objects)
@@ -565,6 +580,26 @@ function(add_mlir_aggregate name)
       "    OBJECTS = ${_local_objects}\n"
       "    DEPS = ${_local_deps}\n\n")
   endforeach()
+  
+  if (MLIR_LINK_MLIR_DYLIB)
+    # This builds a regex with all the libraries contained in `libMLIR.so`.
+    # These libraries will be filtered out from the dependencies added by the
+    # EMBED_LIBS.
+    list(GET mlir_libs 0 _libs_regex)
+    list(REMOVE_AT mlir_libs 0)
+    set(_libs_regex "(${_libs_regex}")
+    foreach (lib ${mlir_libs})
+      string(APPEND _libs_regex "|${lib}")
+    endforeach()
+    foreach (lib ${ARG_EMBED_LIBS})
+      string(APPEND _libs_regex "|${lib}")
+    endforeach()
+    string(APPEND _libs_regex ")")
+    list(APPEND _deps "MLIR")
+    # TODO: On CMake >= 3.27 the `$<LIST:REMOVE_ITEM,list,value,...>` expression
+    # is available, migrate to it once LLVM bumps the CMake version.
+    set(_deps $<REMOVE_DUPLICATES:$<FILTER:${_deps},EXCLUDE,${_libs_regex}>>)
+  endif()
 
   add_mlir_library(${name}
     ${_libtype}
@@ -741,6 +776,26 @@ function(mlir_target_link_libraries target type)
 
   if (MLIR_LINK_MLIR_DYLIB)
     target_link_libraries(${target} ${type} MLIR)
+  else()
+    target_link_libraries(${target} ${type} ${ARGN})
+  endif()
+endfunction()
+
+# Link target against a list of MLIR CAPI libraries. If MLIR_BUILD_MLIR_C_DYLIB
+# is enabled, this will link against the MLIR CAPI dylib instead of the static
+# libraries.
+#
+# This function should be used instead of target_link_libraries() when linking
+# MLIR libraries that are part of the MLIR CAPI dylib. For libraries that are
+# not part of the dylib (like test libraries), target_link_libraries() should be
+# used.
+function(mlir_c_target_link_libraries target type)
+  if (TARGET obj.${target})
+    target_link_libraries(obj.${target} ${ARGN})
+  endif()
+
+  if (MLIR_BUILD_MLIR_C_DYLIB)
+    target_link_libraries(${target} ${type} MLIR-C)
   else()
     target_link_libraries(${target} ${type} ${ARGN})
   endif()

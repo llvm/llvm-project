@@ -494,11 +494,17 @@ function(add_mlir_python_common_capi_library name)
   endforeach()
   list(REMOVE_DUPLICATES _embed_libs)
 
+  # If `libMLIR-C.so` is present link against it.
+  if (MLIR_BUILD_MLIR_C_DYLIB)
+    list(APPEND _dylibs "MLIR-C")
+  endif()
+
   # Generate the aggregate .so that everything depends on.
   add_mlir_aggregate(${name}
     SHARED
     DISABLE_INSTALL
     EMBED_LIBS ${_embed_libs}
+    PUBLIC_LIBS ${_dylibs}
   )
 
   # Process any headers associated with the library

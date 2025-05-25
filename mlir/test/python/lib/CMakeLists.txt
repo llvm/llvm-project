@@ -26,8 +26,11 @@ add_mlir_public_c_api_library(MLIRCAPIPythonTestDialect
   MLIRPythonTestIncGen
 
   LINK_LIBS PUBLIC
-  MLIRCAPIInterfaces
-  MLIRCAPIIR
   MLIRPythonTestDialect
 )
 
+mlir_c_target_link_libraries(MLIRCAPIPythonTestDialect
+  PUBLIC
+  MLIRCAPIInterfaces
+  MLIRCAPIIR
+)
