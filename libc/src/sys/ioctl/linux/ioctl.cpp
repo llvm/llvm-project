@@ -25,9 +25,8 @@ LLVM_LIBC_FUNCTION(int, ioctl, (int fd, unsigned long request, ...)) {
   va_end(vargs);
 
   // Some ioctls can be expected to return positive values
-  if (ret >= 0) {
+  if (ret >= 0)
     return ret;
-  }
 
   // If there is an error, errno is set and -1 is returned.
   libc_errno = -ret;
