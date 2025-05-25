@@ -8,7 +8,6 @@
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -296,7 +295,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
   const MCSymbol &SA = *A, &SB = *B;
   if (SA.isUndefined() || SB.isUndefined())
     return;
-  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, SA, SB, InSet))
+  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(SA, SB, InSet))
     return;
 
   auto FinalizeFolding = [&]() {
@@ -390,6 +389,12 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       unsigned Count;
       if (DF) {
         Displacement += DF->getContents().size();
+      } else if (auto *RF = dyn_cast<MCRelaxableFragment>(FI);
+                 RF && Asm->hasFinalLayout()) {
+        // Before finishLayout, a relaxable fragment's size is indeterminate.
+        // After layout, during relocation generation, it can be treated as a
+        // data fragment.
+        Displacement += RF->getContents().size();
       } else if (auto *AF = dyn_cast<MCAlignFragment>(FI);
                  AF && Layout && AF->hasEmitNops() &&
                  !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(

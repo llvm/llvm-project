@@ -450,8 +450,10 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   auto Fixups = MutableArrayRef(DF->getFixups()).slice(FixupStartIndex);
   for (auto &Fixup : Fixups) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    if (Fixup.needsRelax())
+    if (Fixup.isLinkerRelaxable()) {
       DF->setLinkerRelaxable();
+      getCurrentSectionOnly()->setLinkerRelaxable();
+    }
   }
 
   DF->setHasInstructions(STI);

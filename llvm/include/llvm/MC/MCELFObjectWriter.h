@@ -169,21 +169,18 @@ public:
                   bool IsLittleEndian);
 
   void reset() override;
-  void executePostLayoutBinding(MCAssembler &Asm) override;
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
+  void executePostLayoutBinding() override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 
   bool hasRelocationAddend() const;
   bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
 
-  bool useSectionSymbol(const MCAssembler &Asm, const MCValue &Val,
-                        const MCSymbolELF *Sym, uint64_t C,
+  bool useSectionSymbol(const MCValue &Val, const MCSymbolELF *Sym, uint64_t C,
                         unsigned Type) const;
 
   bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,

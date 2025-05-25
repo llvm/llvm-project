@@ -159,13 +159,14 @@ public:
 
   void reset();
   void executePostLayoutBinding(MCAssembler &Asm);
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+  void recordRelocation(MCAssembler &Asm, const MCFragment &F,
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue);
   uint64_t writeObject(MCAssembler &Asm);
   int getSectionNumber(const MCSection &Section) const;
 
 private:
+  MCContext &getContext() const { return OWriter.getContext(); }
   COFFSymbol *createSymbol(StringRef Name);
   COFFSymbol *GetOrCreateCOFFSymbol(const MCSymbol *Symbol);
   COFFSection *createSection(StringRef Name);
@@ -833,27 +834,25 @@ void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
   assignSectionNumbers();
 }
 
-void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
-                                     const MCFragment *Fragment,
+void WinCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment &F,
                                      const MCFixup &Fixup, MCValue Target,
                                      uint64_t &FixedValue) {
   assert(Target.getAddSym() && "Relocation must reference a symbol!");
 
   const MCSymbol &A = *Target.getAddSym();
   if (!A.isRegistered()) {
-    Asm.getContext().reportError(Fixup.getLoc(), Twine("symbol '") +
-                                                     A.getName() +
-                                                     "' can not be undefined");
+    getContext().reportError(Fixup.getLoc(), Twine("symbol '") + A.getName() +
+                                                 "' can not be undefined");
     return;
   }
   if (A.isTemporary() && A.isUndefined()) {
-    Asm.getContext().reportError(Fixup.getLoc(), Twine("assembler label '") +
-                                                     A.getName() +
-                                                     "' can not be undefined");
+    getContext().reportError(Fixup.getLoc(), Twine("assembler label '") +
+                                                 A.getName() +
+                                                 "' can not be undefined");
     return;
   }
 
-  MCSection *MCSec = Fragment->getParent();
+  MCSection *MCSec = F.getParent();
 
   // Mark this symbol as requiring an entry in the symbol table.
   assert(SectionMap.contains(MCSec) &&
@@ -862,7 +861,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
   COFFSection *Sec = SectionMap[MCSec];
   if (const MCSymbol *B = Target.getSubSym()) {
     if (!B->getFragment()) {
-      Asm.getContext().reportError(
+      getContext().reportError(
           Fixup.getLoc(),
           Twine("symbol '") + B->getName() +
               "' can not be undefined in a subtraction expression");
@@ -873,8 +872,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
     int64_t OffsetOfB = Asm.getSymbolOffset(*B);
 
     // Offset of the relocation in the section
-    int64_t OffsetOfRelocation =
-        Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
+    int64_t OffsetOfRelocation = Asm.getFragmentOffset(F) + Fixup.getOffset();
 
     FixedValue = (OffsetOfRelocation - OffsetOfB) + Target.getConstant();
   } else {
@@ -884,7 +882,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
   COFFRelocation Reloc;
 
   Reloc.Data.SymbolTableIndex = 0;
-  Reloc.Data.VirtualAddress = Asm.getFragmentOffset(*Fragment);
+  Reloc.Data.VirtualAddress = Asm.getFragmentOffset(F);
 
   // Turn relocations for temporary symbols into section relocations.
   if (A.isTemporary() && !SymbolMap[&A]) {
@@ -920,7 +918,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
 
   Reloc.Data.VirtualAddress += Fixup.getOffset();
   Reloc.Data.Type = OWriter.TargetObjectWriter->getRelocType(
-      Asm.getContext(), Target, Fixup, Target.getSubSym(), Asm.getBackend());
+      getContext(), Target, Fixup, Target.getSubSym(), Asm.getBackend());
 
   // The *_REL32 relocations are relative to the end of the relocation,
   // not to the start.
@@ -1053,7 +1051,7 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
     // It's an error to try to associate with an undefined symbol or a symbol
     // without a section.
     if (!AssocMCSym->isInSection()) {
-      Asm.getContext().reportError(
+      getContext().reportError(
           SMLoc(), Twine("cannot make section ") + MCSec.getName() +
                        Twine(" associative with sectionless symbol ") +
                        AssocMCSym->getName());
@@ -1073,8 +1071,8 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 
   // Create the contents of the .llvm_addrsig section.
   if (Mode != DwoOnly && OWriter.getEmitAddrsigSection()) {
-    auto *Sec = Asm.getContext().getCOFFSection(
-        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE);
+    auto *Sec = getContext().getCOFFSection(".llvm_addrsig",
+                                            COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
@@ -1095,8 +1093,8 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 
   // Create the contents of the .llvm.call-graph-profile section.
   if (Mode != DwoOnly && !OWriter.getCGProfile().empty()) {
-    auto *Sec = Asm.getContext().getCOFFSection(
-        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE);
+    auto *Sec = getContext().getCOFFSection(".llvm.call-graph-profile",
+                                            COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
     raw_svector_ostream OS(Frag->getContents());
     for (const auto &CGPE : OWriter.getCGProfile()) {
@@ -1173,8 +1171,8 @@ void WinCOFFObjectWriter::reset() {
 }
 
 bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
-    const MCAssembler &Asm, const MCSymbol &SymA, const MCFragment &FB,
-    bool InSet, bool IsPCRel) const {
+    const MCSymbol &SymA, const MCFragment &FB, bool InSet,
+    bool IsPCRel) const {
   // Don't drop relocations between functions, even if they are in the same text
   // section. Multiple Visual C++ linker features depend on having the
   // relocations present. The /INCREMENTAL flag will cause these relocations to
@@ -1187,30 +1185,28 @@ bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   return &SymA.getSection() == FB.getParent();
 }
 
-void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
-  ObjWriter->executePostLayoutBinding(Asm);
+void WinCOFFObjectWriter::executePostLayoutBinding() {
+  ObjWriter->executePostLayoutBinding(*Asm);
   if (DwoWriter)
-    DwoWriter->executePostLayoutBinding(Asm);
+    DwoWriter->executePostLayoutBinding(*Asm);
 }
 
-void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
-                                           const MCFragment *Fragment,
+void WinCOFFObjectWriter::recordRelocation(const MCFragment &F,
                                            const MCFixup &Fixup, MCValue Target,
                                            uint64_t &FixedValue) {
-  assert(!isDwoSection(*Fragment->getParent()) &&
-         "No relocation in Dwo sections");
-  ObjWriter->recordRelocation(Asm, Fragment, Fixup, Target, FixedValue);
+  assert(!isDwoSection(*F.getParent()) && "No relocation in Dwo sections");
+  ObjWriter->recordRelocation(*Asm, F, Fixup, Target, FixedValue);
 }
 
-uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t WinCOFFObjectWriter::writeObject() {
   // If the assember had an error, then layout will not have completed, so we
   // cannot write an object file.
-  if (Asm.getContext().hadError())
+  if (getContext().hadError())
     return 0;
 
-  uint64_t TotalSize = ObjWriter->writeObject(Asm);
+  uint64_t TotalSize = ObjWriter->writeObject(*Asm);
   if (DwoWriter)
-    TotalSize += DwoWriter->writeObject(Asm);
+    TotalSize += DwoWriter->writeObject(*Asm);
   return TotalSize;
 }
 
