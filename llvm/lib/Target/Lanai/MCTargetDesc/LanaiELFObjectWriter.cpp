@@ -26,8 +26,7 @@ public:
 protected:
   unsigned getRelocType(const MCFixup &, const MCValue &,
                         bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override;
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
 };
 
 } // end anonymous namespace
@@ -71,7 +70,6 @@ unsigned LanaiELFObjectWriter::getRelocType(const MCFixup &Fixup,
 }
 
 bool LanaiELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
-                                                   const MCSymbol &,
                                                    unsigned Type) const {
   switch (Type) {
   case ELF::R_LANAI_21:
