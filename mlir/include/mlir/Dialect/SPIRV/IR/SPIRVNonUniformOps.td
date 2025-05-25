@@ -1435,7 +1435,9 @@ def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
 
 // -----
 
-def SPIRV_GroupNonUniformAllOp : SPIRV_Op<"GroupNonUniformAll", []> {
+def SPIRV_GroupNonUniformAllOp : SPIRV_Op<"GroupNonUniformAll", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">
+]> {
   let summary = [{
     Evaluates a predicate for all tangled invocations within the Execution
     scope, resulting in true if predicate evaluates to true for all tangled
@@ -1480,6 +1482,8 @@ def SPIRV_GroupNonUniformAllOp : SPIRV_Op<"GroupNonUniformAll", []> {
     SPIRV_Bool:$result
   );
 
+  let hasVerifier = 0;
+
   let assemblyFormat = [{
     $execution_scope $predicate attr-dict `:` type($result)
   }];
@@ -1487,7 +1491,9 @@ def SPIRV_GroupNonUniformAllOp : SPIRV_Op<"GroupNonUniformAll", []> {
 
 // -----
 
-def SPIRV_GroupNonUniformAnyOp : SPIRV_Op<"GroupNonUniformAny", []> {
+def SPIRV_GroupNonUniformAnyOp : SPIRV_Op<"GroupNonUniformAny", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">
+]> {
   let summary = [{
     Evaluates a predicate for all tangled invocations within the Execution
     scope, resulting in true if predicate evaluates to true for any tangled
@@ -1532,6 +1538,8 @@ def SPIRV_GroupNonUniformAnyOp : SPIRV_Op<"GroupNonUniformAny", []> {
     SPIRV_Bool:$result
   );
 
+  let hasVerifier = 0;
+
   let assemblyFormat = [{
     $execution_scope $predicate attr-dict `:` type($result)
   }];
@@ -1539,7 +1547,9 @@ def SPIRV_GroupNonUniformAnyOp : SPIRV_Op<"GroupNonUniformAny", []> {
 
 // -----
 
-def SPIRV_GroupNonUniformAllEqualOp : SPIRV_Op<"GroupNonUniformAllEqual", []> {
+def SPIRV_GroupNonUniformAllEqualOp : SPIRV_Op<"GroupNonUniformAllEqual", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">
+]> {
   let summary = [{
     Evaluates a value for all tangled invocations within the Execution
     scope. The result is true if Value is equal for all tangled invocations
@@ -1587,6 +1597,9 @@ def SPIRV_GroupNonUniformAllEqualOp : SPIRV_Op<"GroupNonUniformAllEqual", []> {
   let results = (outs
     SPIRV_Bool:$result
   );
+
+
+  let hasVerifier = 0;
 
   let assemblyFormat = [{
     $execution_scope $value attr-dict `:` type($value) `,` type($result)
