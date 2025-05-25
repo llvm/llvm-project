@@ -205,7 +205,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
-  ``constexpr`` and ``static``` values on member initialization and by detecting
+  arithmetic operations, ``constexpr`` and ``static`` values, and detecting
   explicit casting of built-in types within member list initialization.
 
 - Improved :doc:`modernize-use-designated-initializers
