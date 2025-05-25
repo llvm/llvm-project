@@ -20,3 +20,4 @@
 }}}
 // CHECK: "method": "textDocument/publishDiagnostics",
 // CHECK: "message": "Dialect `func' not found for custom op 'func.func'
+

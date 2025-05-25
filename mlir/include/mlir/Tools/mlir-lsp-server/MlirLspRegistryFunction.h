@@ -14,7 +14,8 @@
 #define MLIR_TOOLS_MLIR_LSP_SERVER_MLIRLSPREGISTRYFUNCTION_H
 
 namespace llvm {
-template <typename Fn> class function_ref;
+template <typename Fn>
+class function_ref;
 } // namespace llvm
 
 namespace mlir {
