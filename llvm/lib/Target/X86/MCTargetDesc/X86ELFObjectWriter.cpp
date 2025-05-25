@@ -370,7 +370,7 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case RT64_NONE:
     break;
   case RT64_64:
-    Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+    reportError(Fixup.getLoc(), "unsupported relocation type");
     return ELF::R_386_NONE;
   case RT64_32:
   case RT64_32S:
