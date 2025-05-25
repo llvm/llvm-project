@@ -76,13 +76,13 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
     return Kind;
   switch (Kind) {
   default:
-    Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+    reportError(Fixup.getLoc(), "Unsupported relocation type");
     return ELF::R_LARCH_NONE;
   case FK_Data_1:
-    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "1-byte data relocations not supported");
     return ELF::R_LARCH_NONE;
   case FK_Data_2:
-    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "2-byte data relocations not supported");
     return ELF::R_LARCH_NONE;
   case FK_Data_4:
     return IsPCRel ? ELF::R_LARCH_32_PCREL : ELF::R_LARCH_32;

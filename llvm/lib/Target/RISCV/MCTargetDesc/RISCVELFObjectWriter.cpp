@@ -65,9 +65,8 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   case ELF::R_RISCV_GOT32_PCREL:
     if (Kind == FK_Data_4)
       break;
-    Ctx.reportError(Fixup.getLoc(),
-                    "%" + RISCVMCExpr::getSpecifierName(Spec) +
-                        " can only be used in a .word directive");
+    reportError(Fixup.getLoc(), "%" + RISCVMCExpr::getSpecifierName(Spec) +
+                                    " can only be used in a .word directive");
     return ELF::R_RISCV_NONE;
   default:
     break;
@@ -81,7 +80,7 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   if (IsPCRel) {
     switch (Kind) {
     default:
-      Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+      reportError(Fixup.getLoc(), "unsupported relocation type");
       return ELF::R_RISCV_NONE;
     case FK_Data_4:
       return ELF::R_RISCV_32_PCREL;
@@ -112,14 +111,14 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
 
   switch (Kind) {
   default:
-    Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+    reportError(Fixup.getLoc(), "unsupported relocation type");
     return ELF::R_RISCV_NONE;
 
   case FK_Data_1:
-    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "1-byte data relocations not supported");
     return ELF::R_RISCV_NONE;
   case FK_Data_2:
-    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "2-byte data relocations not supported");
     return ELF::R_RISCV_NONE;
   case FK_Data_4:
     if (Expr->getKind() == MCExpr::Target) {
