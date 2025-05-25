@@ -5,8 +5,7 @@
 define i32 @bfoz_from_and_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_and_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 20
-; CHECK-NEXT:    srli a0, a0, 20
+; CHECK-NEXT:    nds.bfoz a0, a0, 11, 0
 ; CHECK-NEXT:    ret
   %a = and i32 %x, 4095
   ret i32 %a
@@ -16,8 +15,7 @@ define i64 @bfoz_from_and_i64(i64 %x) {
 ; CHECK-LABEL: bfoz_from_and_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $x11 killed $x10
-; CHECK-NEXT:    slli a0, a0, 20
-; CHECK-NEXT:    srli a0, a0, 20
+; CHECK-NEXT:    nds.bfoz a0, a0, 11, 0
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ret
   %a = and i64 %x, 4095
@@ -27,8 +25,7 @@ define i64 @bfoz_from_and_i64(i64 %x) {
 define i32 @bfoz_from_and_lshr_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_and_lshr_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 6
-; CHECK-NEXT:    srli a0, a0, 29
+; CHECK-NEXT:    nds.bfoz a0, a0, 25, 23
 ; CHECK-NEXT:    ret
   %shifted = lshr i32 %x, 23
   %masked = and i32 %shifted, 7
@@ -39,8 +36,7 @@ define i64 @bfoz_from_and_lshr_i64(i64 %x) {
 ; CHECK-LABEL: bfoz_from_and_lshr_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $x12 killed $x11
-; CHECK-NEXT:    slli a0, a1, 6
-; CHECK-NEXT:    srli a0, a0, 20
+; CHECK-NEXT:    nds.bfoz a0, a1, 25, 14
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ret
   %shifted = lshr i64 %x, 46
@@ -51,8 +47,7 @@ define i64 @bfoz_from_and_lshr_i64(i64 %x) {
 define i32 @bfoz_from_lshr_and_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_lshr_and_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 8
-; CHECK-NEXT:    srli a0, a0, 20
+; CHECK-NEXT:    nds.bfoz a0, a0, 23, 12
 ; CHECK-NEXT:    ret
   %masked = and i32 %x, 16773120
   %shifted = lshr i32 %masked, 12
