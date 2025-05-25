@@ -255,14 +255,13 @@ protocol::Source CreateSource(const lldb::SBFileSpec &file);
 /// \param[in] address
 ///     The address to use when populating out the "Source" object.
 ///
-/// \param[in] debugger
-///     The debugger, used to get relevant settings.
+/// \param[in] target
+///     The target that has the address.
 ///
 /// \return
 ///     A "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-protocol::Source CreateSource(lldb::SBAddress address,
-                              lldb::SBDebugger &debugger);
+protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target);
 
 /// Create a "Source" object for a given source path.
 ///
@@ -292,15 +291,11 @@ protocol::Source CreateSource(llvm::StringRef source_path);
 ///     The LLDB format to use when populating out the "StackFrame"
 ///     object.
 ///
-/// \param[in] debugger
-///     The LLDB debugger to use when populating out the "StackFrame"
-///     object.
-///
 /// \return
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
-                                   lldb::SBDebugger &debugger);
+llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
+                                   lldb::SBFormat &format);
 
 /// Create a "StackFrame" label object for a LLDB thread.
 ///

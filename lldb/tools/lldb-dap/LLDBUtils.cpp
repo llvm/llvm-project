@@ -252,4 +252,11 @@ std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec) {
   return path;
 }
 
+lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
+                                         lldb::SBAddress &address) {
+  lldb::SBSymbolContext sc =
+      address.GetSymbolContext(target, lldb::eSymbolContextLineEntry);
+  return sc.GetLineEntry();
+}
+
 } // namespace lldb_dap

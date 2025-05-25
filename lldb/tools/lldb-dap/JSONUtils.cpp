@@ -12,6 +12,7 @@
 #include "LLDBUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
@@ -571,14 +572,16 @@ protocol::Source CreateSource(const lldb::SBFileSpec &file) {
   return source;
 }
 
-protocol::Source CreateSource(lldb::SBAddress address,
-                              lldb::SBDebugger &debugger) {
+protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target) {
+  lldb::SBDebugger debugger = target.GetDebugger();
   lldb::StopDisassemblyType stop_disassembly_display =
       GetStopDisassemblyDisplay(debugger);
-  if (!ShouldDisplayAssemblySource(address, stop_disassembly_display))
-    return CreateSource(address.GetLineEntry().GetFileSpec());
+  if (!ShouldDisplayAssemblySource(address, stop_disassembly_display)) {
+    lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, address);
+    return CreateSource(line_entry.GetFileSpec());
+  }
 
-  return CreateAssemblySource(debugger.GetSelectedTarget(), address);
+  return CreateAssemblySource(target, address);
 }
 
 protocol::Source CreateSource(llvm::StringRef source_path) {
@@ -650,8 +653,8 @@ protocol::Source CreateSource(llvm::StringRef source_path) {
 //   },
 //   "required": [ "id", "name", "line", "column" ]
 // }
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
-                                   lldb::SBDebugger &debugger) {
+llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
+                                   lldb::SBFormat &format) {
   llvm::json::Object object;
   int64_t frame_id = MakeDAPFrameID(frame);
   object.try_emplace("id", frame_id);
@@ -679,9 +682,10 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto source = CreateSource(frame.GetPCAddress(), debugger);
+  auto target = frame.GetThread().GetProcess().GetTarget();
+  auto source = CreateSource(frame.GetPCAddress(), target);
   if (!source.IsAssemblySource()) {
-    // This is a normal source with valid line entry.
+    // This is a normal source with a valid line entry.
     auto line_entry = frame.GetLineEntry();
     object.try_emplace("line", line_entry.GetLine());
     auto column = line_entry.GetColumn();

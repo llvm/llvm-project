@@ -213,9 +213,18 @@ SBSymbolContext SBAddress::GetSymbolContext(uint32_t resolve_scope) {
   LLDB_INSTRUMENT_VA(this, resolve_scope);
 
   SBSymbolContext sb_sc;
-  SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
-  if (m_opaque_up->IsValid())
-    m_opaque_up->CalculateSymbolContext(&sb_sc.ref(), scope);
+  CalculateSymbolContext(sb_sc.ref(), resolve_scope);
+  return sb_sc;
+}
+
+SBSymbolContext SBAddress::GetSymbolContext(const SBTarget &target,
+                                            uint32_t resolve_scope) {
+  LLDB_INSTRUMENT_VA(this, target, resolve_scope);
+
+  SBSymbolContext sb_sc;
+  lldb_private::SymbolContext &sc = sb_sc.ref();
+  sc.target_sp = target.GetSP();
+  CalculateSymbolContext(sc, resolve_scope);
   return sb_sc;
 }
 
@@ -265,4 +274,11 @@ SBLineEntry SBAddress::GetLineEntry() {
       sb_line_entry.SetLineEntry(line_entry);
   }
   return sb_line_entry;
+}
+
+void SBAddress::CalculateSymbolContext(lldb_private::SymbolContext &sc,
+                                       uint32_t resolve_scope) {
+  SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
+  if (m_opaque_up->IsValid())
+    m_opaque_up->CalculateSymbolContext(&sc, scope);
 }

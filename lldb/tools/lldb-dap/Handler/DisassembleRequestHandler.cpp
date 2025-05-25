@@ -9,11 +9,11 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBAddress.h"
-#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/lldb-types.h"
@@ -82,15 +82,12 @@ static lldb::SBAddress GetDisassembleStartAddress(lldb::SBTarget target,
       .GetAddress();
 }
 
-static DisassembledInstruction
-ConvertSBInstructionToDisassembledInstruction(lldb::SBDebugger &debugger,
-                                              lldb::SBInstruction &inst,
-                                              bool resolve_symbols) {
+static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
+    lldb::SBTarget &target, lldb::SBInstruction &inst, bool resolve_symbols) {
   if (!inst.IsValid())
     return GetInvalidInstruction();
 
-  lldb::SBTarget target = debugger.GetSelectedTarget();
-  lldb::SBAddress addr = inst.GetAddress();
+  auto addr = inst.GetAddress();
   const auto inst_addr = addr.GetLoadAddress(target);
 
   // FIXME: This is a workaround - this address might come from
@@ -143,9 +140,11 @@ ConvertSBInstructionToDisassembledInstruction(lldb::SBDebugger &debugger,
 
   disassembled_inst.instruction = std::move(instruction);
 
-  auto source = CreateSource(addr, debugger);
-  auto line_entry = addr.GetLineEntry();
+  auto source = CreateSource(addr, target);
+  auto line_entry = GetLineEntryForAddress(target, addr);
 
+  // If the line number is 0 then the entry represents a compiler generated
+  // location.
   if (!source.IsAssemblySource() && line_entry.IsValid() &&
       line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
       line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0) {
@@ -159,7 +158,8 @@ ConvertSBInstructionToDisassembledInstruction(lldb::SBDebugger &debugger,
     if (column != 0 && column != LLDB_INVALID_COLUMN_NUMBER)
       disassembled_inst.column = column;
 
-    auto end_line_entry = line_entry.GetEndAddress().GetLineEntry();
+    lldb::SBAddress end_addr = line_entry.GetEndAddress();
+    auto end_line_entry = GetLineEntryForAddress(target, end_addr);
     if (end_line_entry.IsValid() &&
         end_line_entry.GetFileSpec() == line_entry.GetFileSpec()) {
       const auto end_line = end_line_entry.GetLine();
@@ -223,7 +223,7 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
       original_address_index = i;
 
     instructions.push_back(ConvertSBInstructionToDisassembledInstruction(
-        dap.debugger, inst, resolve_symbols));
+        dap.target, inst, resolve_symbols));
   }
 
   // Check if we miss instructions at the beginning.
