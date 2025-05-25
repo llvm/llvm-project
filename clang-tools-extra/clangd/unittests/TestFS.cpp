@@ -21,8 +21,8 @@ namespace {
 
 // Tries to strip \p Prefix from beginning of \p Path. Returns true on success.
 // If \p Prefix doesn't match, leaves \p Path untouched and returns false.
-bool pathConsumeFront(PathRef &Path, PathRef Prefix) {
-  if (!pathStartsWith(Prefix, Path))
+bool pathConsumeFront(llvm::StringRef &Path, PathRef Prefix) {
+  if (!Prefix.startsWith(Path))
     return false;
   Path = Path.drop_front(Prefix.size());
   return true;
@@ -61,14 +61,14 @@ MockCompilationDatabase::getCompileCommand(PathRef File) const {
   if (ExtraClangFlags.empty())
     return std::nullopt;
 
-  auto FileName = llvm::sys::path::filename(File);
+  auto FileName = File.filename();
 
   // Build the compile command.
   auto CommandLine = ExtraClangFlags;
   CommandLine.insert(CommandLine.begin(), "clang");
   if (RelPathPrefix.empty()) {
     // Use the absolute path in the compile command.
-    CommandLine.push_back(std::string(File));
+    CommandLine.push_back(File.owned().raw());
   } else {
     // Build a relative path using RelPathPrefix.
     llvm::SmallString<32> RelativeFilePath(RelPathPrefix);
@@ -76,10 +76,9 @@ MockCompilationDatabase::getCompileCommand(PathRef File) const {
     CommandLine.push_back(std::string(RelativeFilePath.str()));
   }
 
-  return {tooling::CompileCommand(Directory != llvm::StringRef()
-                                      ? Directory
-                                      : llvm::sys::path::parent_path(File),
-                                  FileName, std::move(CommandLine), "")};
+  return {tooling::CompileCommand(
+      Directory != llvm::StringRef() ? Directory : File.parentPath().raw(),
+      FileName, std::move(CommandLine), "")};
 }
 
 const char *testRoot() {
@@ -91,9 +90,9 @@ const char *testRoot() {
 }
 
 std::string testPath(PathRef File, llvm::sys::path::Style Style) {
-  assert(llvm::sys::path::is_relative(File) && "FileName should be relative");
+  assert(File.isRelative() && "FileName should be relative");
 
-  llvm::SmallString<32> NativeFile = File;
+  llvm::SmallString<32> NativeFile = File.raw();
   llvm::sys::path::native(NativeFile, Style);
   llvm::SmallString<32> Path;
   llvm::sys::path::append(Path, Style, testRoot(), NativeFile);
@@ -110,7 +109,7 @@ public:
   llvm::Expected<std::string>
   getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
                   llvm::StringRef HintPath) const override {
-    if (!HintPath.empty() && !pathStartsWith(testRoot(), HintPath))
+    if (!HintPath.empty() && !PathRef(testRoot()).startsWith(HintPath))
       return error("Hint path is not empty and doesn't start with {0}: {1}",
                    testRoot(), HintPath);
     if (!Body.consume_front("/"))

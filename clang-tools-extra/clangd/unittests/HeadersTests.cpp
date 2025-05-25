@@ -111,7 +111,7 @@ protected:
                              QuotedHeaders, AngledHeaders);
     for (const auto &Inc : Inclusions)
       Inserter.addExisting(Inc);
-    auto Inserted = ToHeaderFile(Preferred);
+    auto Inserted = ToHeaderFile(Preferred.raw());
     if (!Inserter.shouldInsertInclude(Original, Inserted))
       return "";
     auto Path = Inserter.calculateIncludePath(Inserted, MainFile);

@@ -622,7 +622,7 @@ TEST(ClangdAST, HasReservedName) {
 TEST(ClangdAST, PreferredIncludeDirective) {
   auto ComputePreferredDirective = [](TestTU &TU) {
     auto AST = TU.build();
-    return preferredIncludeDirective(AST.tuPath(), AST.getLangOpts(),
+    return preferredIncludeDirective(AST.tuPath().raw(), AST.getLangOpts(),
                                      AST.getIncludeStructure().MainFileIncludes,
                                      AST.getLocalTopLevelDecls());
   };
