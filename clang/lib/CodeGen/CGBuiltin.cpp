@@ -2749,12 +2749,12 @@ private:
       if (Field->isBitField()) {
         llvm::dbgs() << "clear_padding found bit field. Adding Interval ["
                      << StartBitOffset + FieldOffset << " , "
-                     << FieldOffset + Field->getBitWidthValue(CGF.getContext())
+                     << FieldOffset + Field->getBitWidthValue()
                      << ")\n";
         OccuppiedIntervals.push_back(
             BitInterval{StartBitOffset + FieldOffset,
                         StartBitOffset + FieldOffset +
-                            Field->getBitWidthValue(CGF.getContext())});
+                            Field->getBitWidthValue()});
       } else {
         Queue.push_back(
             Data{StartBitOffset + FieldOffset, Field->getType(), true});
