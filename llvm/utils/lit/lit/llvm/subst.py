@@ -1,5 +1,6 @@
 import os
 import re
+import shlex
 
 import lit.util
 
@@ -118,6 +119,8 @@ class ToolSubst(object):
             command_str = str(self.command)
 
         if command_str:
+            # A command path with spaces will fail to be parsed by ShParser if they are not quoted.
+            command_str = shlex.quote(command_str)
             if self.extra_args:
                 command_str = " ".join([command_str] + self.extra_args)
         else:
