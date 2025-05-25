@@ -27,7 +27,7 @@ class LLVM_LIBRARY_VISIBILITY ARCMCInstLower {
   using MachineOperandType = MachineOperand::MachineOperandType;
   MCContext *Ctx;
   AsmPrinter &Printer;
-
+ 
 public:
   ARCMCInstLower(MCContext *C, AsmPrinter &asmprinter);
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
