@@ -106,7 +106,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
     return Assembler;
   }
 
-  MCAsmLexer &getLexer() const { return Parser.getLexer(); }
+  AsmLexer &getLexer() const { return Parser.getLexer(); }
 
   bool equalIsAsmAssignment() override { return false; }
   bool isLabel(AsmToken &Token) override;
@@ -607,7 +607,7 @@ bool HexagonAsmParser::matchOneInstruction(MCInst &MCI, SMLoc IDLoc,
 
 void HexagonAsmParser::eatToEndOfPacket() {
   assert(InBrackets);
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   while (!Lexer.is(AsmToken::RCurly))
     Lexer.Lex();
   Lexer.Lex();
@@ -926,7 +926,7 @@ bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
   MCRegister Register;
   SMLoc Begin;
   SMLoc End;
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   if (!parseRegister(Register, Begin, End)) {
     if (!ErrorMissingParenthesis)
       switch (Register.id()) {
@@ -981,7 +981,7 @@ bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
 }
 
 bool HexagonAsmParser::isLabel(AsmToken &Token) {
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   AsmToken const &Second = Lexer.getTok();
   AsmToken Third = Lexer.peekTok();
   StringRef String = Token.getString();
@@ -1030,7 +1030,7 @@ bool HexagonAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
 
 ParseStatus HexagonAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                                SMLoc &EndLoc) {
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   StartLoc = getLexer().getLoc();
   SmallVector<AsmToken, 5> Lookahead;
   StringRef RawString(Lexer.getTok().getString().data(), 0);
@@ -1111,7 +1111,7 @@ bool HexagonAsmParser::implicitExpressionLocation(OperandVector &Operands) {
 
 bool HexagonAsmParser::parseExpression(MCExpr const *&Expr) {
   SmallVector<AsmToken, 4> Tokens;
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   bool Done = false;
   static char const *Comma = ",";
   do {
@@ -1161,7 +1161,7 @@ bool HexagonAsmParser::parseExpressionOrOperand(OperandVector &Operands) {
 /// Parse an instruction.
 bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   while (true) {
     AsmToken const &Token = Parser.getTok();
     switch (Token.getKind()) {

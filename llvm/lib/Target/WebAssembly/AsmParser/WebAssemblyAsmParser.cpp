@@ -226,7 +226,7 @@ static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
 
 class WebAssemblyAsmParser final : public MCTargetAsmParser {
   MCAsmParser &Parser;
-  MCAsmLexer &Lexer;
+  AsmLexer &Lexer;
 
   // Order of labels, directives and instructions in a .s file have no
   // syntactical enforcement. This class is a callback from the actual parser,
