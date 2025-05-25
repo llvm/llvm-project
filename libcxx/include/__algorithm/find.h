@@ -52,12 +52,12 @@ __find(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
 }
 
 // trivially equality comparable implementations
-template <class _Tp,
-          class _Up,
-          class _Proj,
-          __enable_if_t<__is_identity<_Proj>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value &&
-                            sizeof(_Tp) == 1,
-                        int> = 0>
+template <
+    class _Tp,
+    class _Up,
+    class _Proj,
+    __enable_if_t<__is_identity<_Proj>::value && __is_trivially_equality_comparable_v<_Tp, _Up> && sizeof(_Tp) == 1,
+                  int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
   if (auto __ret = std::__constexpr_memchr(__first, __value, __last - __first))
     return __ret;
@@ -68,7 +68,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _T
 template <class _Tp,
           class _Up,
           class _Proj,
-          __enable_if_t<__is_identity<_Proj>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value &&
+          __enable_if_t<__is_identity<_Proj>::value && __is_trivially_equality_comparable_v<_Tp, _Up> &&
                             sizeof(_Tp) == sizeof(wchar_t) && _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t),
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
@@ -83,7 +83,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _T
 template <class _Tp,
           class _Up,
           class _Proj,
-          __enable_if_t<__is_identity<_Proj>::value && !__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value &&
+          __enable_if_t<__is_identity<_Proj>::value && !__is_trivially_equality_comparable_v<_Tp, _Up> &&
                             is_integral<_Tp>::value && is_integral<_Up>::value &&
                             is_signed<_Tp>::value == is_signed<_Up>::value,
                         int> = 0>
