@@ -274,14 +274,14 @@ void AArch64MachObjectWriter::recordRelocation(
       return;
     }
 
-    Value += (!A->getFragment() ? 0 : Writer->getSymbolAddress(*A, Asm)) -
-             (!A_Base || !A_Base->getFragment()
-                  ? 0
-                  : Writer->getSymbolAddress(*A_Base, Asm));
-    Value -= (!B->getFragment() ? 0 : Writer->getSymbolAddress(*B, Asm)) -
-             (!B_Base || !B_Base->getFragment()
-                  ? 0
-                  : Writer->getSymbolAddress(*B_Base, Asm));
+    Value +=
+        (!A->getFragment() ? 0 : Writer->getSymbolAddress(*A)) -
+        (!A_Base || !A_Base->getFragment() ? 0
+                                           : Writer->getSymbolAddress(*A_Base));
+    Value -=
+        (!B->getFragment() ? 0 : Writer->getSymbolAddress(*B)) -
+        (!B_Base || !B_Base->getFragment() ? 0
+                                           : Writer->getSymbolAddress(*B_Base));
 
     Type = MachO::ARM64_RELOC_UNSIGNED;
 
@@ -350,7 +350,7 @@ void AArch64MachObjectWriter::recordRelocation(
       // The index is the section ordinal (1-based).
       const MCSection &Sec = Symbol->getSection();
       Index = Sec.getOrdinal() + 1;
-      Value += Writer->getSymbolAddress(*Symbol, Asm);
+      Value += Writer->getSymbolAddress(*Symbol);
 
       if (IsPCRel)
         Value -= Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset() +

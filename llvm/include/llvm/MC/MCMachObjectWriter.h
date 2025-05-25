@@ -208,7 +208,7 @@ public:
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);
   }
-  uint64_t getSymbolAddress(const MCSymbol &S, const MCAssembler &Asm) const;
+  uint64_t getSymbolAddress(const MCSymbol &S) const;
 
   uint64_t getFragmentAddress(const MCAssembler &Asm,
                               const MCFragment *Fragment) const;

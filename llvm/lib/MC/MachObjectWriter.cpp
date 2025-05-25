@@ -94,8 +94,7 @@ MachObjectWriter::getFragmentAddress(const MCAssembler &Asm,
          Asm.getFragmentOffset(*Fragment);
 }
 
-uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
-                                            const MCAssembler &Asm) const {
+uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S) const {
   // If this is a variable, then recursively evaluate now.
   if (S.isVariable()) {
     if (const MCConstantExpr *C =
@@ -103,7 +102,7 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
       return C->getValue();
 
     MCValue Target;
-    if (!S.getVariableValue()->evaluateAsRelocatable(Target, &Asm))
+    if (!S.getVariableValue()->evaluateAsRelocatable(Target, Asm))
       report_fatal_error("unable to evaluate offset for variable '" +
                          S.getName() + "'");
 
@@ -117,14 +116,14 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
 
     uint64_t Address = Target.getConstant();
     if (Target.getAddSym())
-      Address += getSymbolAddress(*Target.getAddSym(), Asm);
+      Address += getSymbolAddress(*Target.getAddSym());
     if (Target.getSubSym())
-      Address -= getSymbolAddress(*Target.getSubSym(), Asm);
+      Address -= getSymbolAddress(*Target.getSubSym());
     return Address;
   }
 
   return getSectionAddress(S.getFragment()->getParent()) +
-         Asm.getSymbolOffset(S);
+         Asm->getSymbolOffset(S);
 }
 
 uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
@@ -432,7 +431,7 @@ void MachObjectWriter::writeNlist(MachSymbolData &MSD, const MCAssembler &Asm) {
   if (IsAlias && Symbol->isUndefined())
     Address = AliaseeInfo->StringIndex;
   else if (Symbol->isDefined())
-    Address = getSymbolAddress(OrigSymbol, Asm);
+    Address = getSymbolAddress(OrigSymbol);
   else if (Symbol->isCommon()) {
     // Common symbols are encoded with the size in the address
     // field, and their alignment in the flags.
@@ -1052,10 +1051,10 @@ uint64_t MachObjectWriter::writeObject() {
 
   // Write out the data-in-code region payload, if there is one.
   for (DataRegionData Data : DataRegions) {
-    uint64_t Start = getSymbolAddress(*Data.Start, Asm);
+    uint64_t Start = getSymbolAddress(*Data.Start);
     uint64_t End;
     if (Data.End)
-      End = getSymbolAddress(*Data.End, Asm);
+      End = getSymbolAddress(*Data.End);
     else
       report_fatal_error("Data region not terminated");
 
