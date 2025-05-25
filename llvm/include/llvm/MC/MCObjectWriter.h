@@ -55,7 +55,7 @@ public:
   MCObjectWriter &operator=(const MCObjectWriter &) = delete;
   virtual ~MCObjectWriter();
 
-  void setAssembler(MCAssembler *A) { Asm = A; }
+  virtual void setAssembler(MCAssembler *A) { Asm = A; }
 
   MCContext &getContext() const;
 
@@ -135,7 +135,14 @@ public:
 class MCObjectTargetWriter {
 public:
   virtual ~MCObjectTargetWriter() = default;
+  void setAssembler(MCAssembler *A) { Asm = A; }
   virtual Triple::ObjectFormatType getFormat() const = 0;
+
+protected:
+  MCContext &getContext() const;
+  void reportError(SMLoc L, const Twine &Msg) const;
+
+  MCAssembler *Asm = nullptr;
 };
 
 } // end namespace llvm
