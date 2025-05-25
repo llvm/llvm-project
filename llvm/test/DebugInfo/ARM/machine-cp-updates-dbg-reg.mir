@@ -27,10 +27,10 @@
 
   declare dso_local i32 @get_mm_counter(ptr, i32) local_unnamed_addr #0
 
-  define dso_local i32 @dup_mm() local_unnamed_addr !dbg !16 {
+  define dso_local i32 @dup_mm(i1 %arg) local_unnamed_addr !dbg !16 {
   entry:
     %call = tail call i32 @kmem_cache_alloc(i32 0)
-    br i1 undef, label %cleanup, label %if.end
+    br i1 %arg, label %cleanup, label %if.end
 
   if.end:                                           ; preds = %entry
     %tobool1.not = icmp eq i32 undef, 0

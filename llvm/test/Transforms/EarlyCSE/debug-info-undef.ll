@@ -10,7 +10,7 @@ entry:
   %0 = load i8, ptr @a, align 1, !dbg !19, !tbaa !20
   %conv = sext i8 %0 to i16, !dbg !19
 
-; CHECK: call void @llvm.dbg.value(metadata i8 %0, metadata !17, metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_stack_value)), !dbg !18
+; CHECK: #dbg_value(i8 %0, !17, !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 16, DW_ATE_signed, DW_OP_stack_value), !18
 ; CHECK-NEXT:  call i32 (...) @optimize_me_not()
 
   call void @llvm.dbg.value(metadata i16 %conv, metadata !17, metadata !DIExpression()), !dbg !18

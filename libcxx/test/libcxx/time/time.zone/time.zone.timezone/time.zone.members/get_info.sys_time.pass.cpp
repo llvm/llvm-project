@@ -157,7 +157,6 @@ static void test_abbrev(std::string_view input, std::string_view expected) {
   TEST_LIBCPP_REQUIRE(result == expected, TEST_WRITE_CONCATENATED("\nExpected ", expected, "\nActual ", result, '\n'));
 }
 
-// This format is valid, however is not used in the tzdata.zi.
 static void percentage_z_format() {
   test_abbrev(
       R"(
@@ -188,6 +187,12 @@ Z Format 0:45 F %z)",
 R F 1999 max - Jan 5 0 -1 foo
 Z Format 0:45 F %z)",
       "-0015");
+
+  test_abbrev(
+      R"(
+Z Format -1:2:20 - LMT 1912 Ja 1 1u
+-1 - %z)",
+      "-01");
 }
 
 int main(int, const char**) {

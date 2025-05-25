@@ -15,7 +15,10 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
+#include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/DJB.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 
@@ -186,6 +189,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::Overload:
     ID = PREDEF_TYPE_OVERLOAD_ID;
     break;
+  case BuiltinType::UnresolvedTemplate:
+    ID = PREDEF_TYPE_UNRESOLVED_TEMPLATE;
+    break;
   case BuiltinType::BoundMember:
     ID = PREDEF_TYPE_BOUND_MEMBER;
     break;
@@ -255,6 +261,16 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     ID = PREDEF_TYPE_##Id##_ID;                                                \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  case BuiltinType::Id:                                                        \
+    ID = PREDEF_TYPE_##Id##_ID;                                                \
+    break;
+#include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    ID = PREDEF_TYPE_##Id##_ID;                                                \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   case BuiltinType::BuiltinFn:
     ID = PREDEF_TYPE_BUILTIN_FN;
     break;
@@ -275,7 +291,7 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     break;
   }
 
-  return TypeIdx(ID);
+  return TypeIdx(0, ID);
 }
 
 unsigned serialization::ComputeHash(Selector Sel) {
@@ -322,6 +338,7 @@ serialization::getDefinitiveDeclContext(const DeclContext *DC) {
   case Decl::CXXConversion:
   case Decl::ObjCMethod:
   case Decl::Block:
+  case Decl::OutlinedFunction:
   case Decl::Captured:
     // Objective C categories, category implementations, and class
     // implementations can only be defined in one place.
@@ -338,7 +355,7 @@ serialization::getDefinitiveDeclContext(const DeclContext *DC) {
 
   // FIXME: These are defined in one place, but properties in class extensions
   // end up being back-patched into the main interface. See
-  // Sema::HandlePropertyInClassExtension for the offending code.
+  // SemaObjC::HandlePropertyInClassExtension for the offending code.
   case Decl::ObjCInterface:
     return nullptr;
 
@@ -423,6 +440,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::FriendTemplate:
   case Decl::StaticAssert:
   case Decl::Block:
+  case Decl::OutlinedFunction:
   case Decl::Captured:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
@@ -440,6 +458,9 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
   case Decl::HLSLBuffer:
+  case Decl::HLSLRootSignature:
+  case Decl::OpenACCDeclare:
+  case Decl::OpenACCRoutine:
     return false;
 
   // These indirectly derive from Redeclarable<T> but are not actually

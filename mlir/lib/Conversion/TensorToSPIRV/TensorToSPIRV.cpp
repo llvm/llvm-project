@@ -18,7 +18,6 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tensor-to-spirv-pattern"
@@ -36,7 +35,7 @@ namespace {
 class TensorExtractPattern final
     : public OpConversionPattern<tensor::ExtractOp> {
 public:
-  TensorExtractPattern(TypeConverter &typeConverter, MLIRContext *context,
+  TensorExtractPattern(const TypeConverter &typeConverter, MLIRContext *context,
                        int64_t threshold, PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
         byteCountThreshold(threshold) {}
@@ -46,6 +45,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto tensorType = cast<RankedTensorType>(extractOp.getTensor().getType());
 
+    if (!isa<spirv::ScalarType>(tensorType.getElementType()))
+      return rewriter.notifyMatchFailure(extractOp, "unsupported type");
     if (!tensorType.hasStaticShape())
       return rewriter.notifyMatchFailure(extractOp, "non-static tensor");
 
@@ -102,9 +103,9 @@ private:
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                         int64_t byteCountThreshold,
-                                         RewritePatternSet &patterns) {
+void mlir::populateTensorToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, int64_t byteCountThreshold,
+    RewritePatternSet &patterns) {
   patterns.add<TensorExtractPattern>(typeConverter, patterns.getContext(),
                                      byteCountThreshold);
 }

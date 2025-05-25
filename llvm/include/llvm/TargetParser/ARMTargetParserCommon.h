@@ -46,7 +46,7 @@ struct ParsedBranchProtection {
 };
 
 bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
-                           StringRef &Err);
+                           StringRef &Err, bool EnablePAuthLR = false);
 
 } // namespace ARM
 } // namespace llvm

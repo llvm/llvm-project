@@ -642,10 +642,7 @@ TEST_F(TargetDeclTest, RewrittenBinaryOperator) {
     bool x = (Foo(1) [[!=]] Foo(2));
   )cpp";
   EXPECT_DECLS("CXXRewrittenBinaryOperator",
-               {"std::strong_ordering operator<=>(const Foo &) const = default",
-                Rel::TemplatePattern},
-               {"bool operator==(const Foo &) const noexcept = default",
-                Rel::TemplateInstantiation});
+               {"bool operator==(const Foo &) const noexcept = default"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
@@ -839,10 +836,14 @@ TEST_F(TargetDeclTest, OverloadExpr) {
       [[delete]] x;
     }
   )cpp";
-  EXPECT_DECLS("CXXDeleteExpr", "void operator delete(void *) noexcept");
+  // Sized deallocation is enabled by default in C++14 onwards.
+  EXPECT_DECLS("CXXDeleteExpr",
+               "void operator delete(void *, unsigned long) noexcept");
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {
+  Flags.push_back("--std=c++20");
+
   // Heuristic resolution of method of dependent field
   Code = R"cpp(
         struct A { void foo() {} };
@@ -963,6 +964,21 @@ TEST_F(TargetDeclTest, DependentExprs) {
         };
   )cpp";
   EXPECT_DECLS("MemberExpr", "void find()");
+
+  // Base expression is the type of a non-type template parameter
+  // which is deduced using CTAD.
+  Code = R"cpp(
+        template <int N>
+        struct Waldo {
+          const int found = N;
+        };
+
+        template <Waldo W>
+        int test() {
+          return W.[[found]];
+        }
+  )cpp";
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "const int found = N");
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {
@@ -1473,7 +1489,7 @@ TEST_F(FindExplicitReferencesTest, AllRefsInFoo) {
         "4: targets = {a}\n"
         "5: targets = {a::b}, qualifier = 'a::'\n"
         "6: targets = {a::b::S}\n"
-        "7: targets = {a::b::S::type}, qualifier = 'struct S::'\n"
+        "7: targets = {a::b::S::type}, qualifier = 'S::'\n"
         "8: targets = {y}, decl\n"},
        {R"cpp(
          void foo() {

@@ -14,7 +14,7 @@
 
 #include "flang/Optimizer/Dialect/FortranVariableInterface.cpp.inc"
 
-mlir::LogicalResult
+llvm::LogicalResult
 fir::FortranVariableOpInterface::verifyDeclareLikeOpImpl(mlir::Value memref) {
   const unsigned numExplicitTypeParams = getExplicitTypeParams().size();
   mlir::Type memType = memref.getType();

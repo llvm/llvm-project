@@ -15,6 +15,7 @@
 #include <llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/AsmParser/Parser.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <llvm/IR/PassInstrumentation.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
@@ -296,8 +297,6 @@ template <> std::string getName(const Any &WrappedIR) {
   if (const auto *const *F = llvm::any_cast<const Function *>(&WrappedIR))
     return (*F)->getName().str();
   if (const auto *const *L = llvm::any_cast<const Loop *>(&WrappedIR))
-    return (*L)->getName().str();
-  if (const auto *const *L = llvm::any_cast<const LoopNest *>(&WrappedIR))
     return (*L)->getName().str();
   if (const auto *const *C =
           llvm::any_cast<const LazyCallGraph::SCC *>(&WrappedIR))

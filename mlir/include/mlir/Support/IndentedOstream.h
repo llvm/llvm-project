@@ -166,8 +166,7 @@ inline void mlir::raw_indented_ostream::write_impl(const char *ptr,
       break;
     }
 
-    auto split =
-        std::make_pair(str.slice(0, idx), str.slice(idx + 1, StringRef::npos));
+    auto split = std::make_pair(str.substr(0, idx), str.substr(idx + 1));
     // Print empty new line without spaces if line only has spaces and no extra
     // prefix is requested.
     if (!split.first.ltrim().empty() || !currentExtraPrefix.empty())

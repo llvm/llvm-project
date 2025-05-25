@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=bpf -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -march=bpf -mattr=+alu32 -verify-machineinstrs | FileCheck --check-prefix=CHECK-32 %s
+; RUN: llc < %s -mtriple=bpf -mcpu=v1 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=bpf -mcpu=v1 -mattr=+alu32 -verify-machineinstrs | FileCheck --check-prefix=CHECK-32 %s
 ;
 ; void cal1(unsigned short *a, unsigned long *b, unsigned int k)
 ; {

@@ -31,8 +31,8 @@ public:
 
   static bool isIgnored(unsigned DiagID) {
     // FIXME: This feels like a hack.
-    static clang::DiagnosticsEngine Diags(new DiagnosticIDs,
-                                          new DiagnosticOptions);
+    static DiagnosticOptions DiagOpts;
+    static clang::DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts);
     return Diags.isIgnored(DiagID, SourceLocation());
   }
 
@@ -144,7 +144,7 @@ int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
   bool Internal = false;
   if (argc > 0) {
     StringRef FirstArg(*argv);
-    if (FirstArg.equals("--internal")) {
+    if (FirstArg == "--internal") {
       Internal = true;
       --argc;
       ++argv;

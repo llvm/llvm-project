@@ -49,6 +49,8 @@ subroutine test
   type :: dt4
     real, allocatable :: ra0
   end type dt4
+  type, extends(dt4) :: dt5
+  end type dt5
   integer :: j
   type(dt0) :: dt0x
   type(dt1) :: dt1x
@@ -64,6 +66,8 @@ subroutine test
   integer, parameter :: eight = ip0r + ip1r + ip2r + 5
   real(kind=eight) :: r8check
   logical, pointer :: lp
+  type(dt4), pointer :: dt4p
+  type(dt5), pointer :: dt5p
   ip0 => null() ! ok
   ip0 => null(null()) ! ok
   ip0 => null(null(null())) ! ok
@@ -108,13 +112,25 @@ subroutine test
   dt4x = dt4(null(dt2x%pps0))
   call canbenull(null(), null()) ! fine
   call canbenull(null(mold=ip0), null(mold=rp0)) ! fine
-  call optionalAllocatable(null(mold=ip0)) ! fine
+  !ERROR: ALLOCATABLE dummy argument 'x=' must be associated with an ALLOCATABLE actual argument
+  call optionalAllocatable(null(mold=ip0))
+  call optionalAllocatable(null(mold=ia0)) ! fine
+  call optionalAllocatable(null()) ! fine
   !ERROR: Null pointer argument requires an explicit interface
   call implicit(null())
   !ERROR: Null pointer argument requires an explicit interface
   call implicit(null(mold=ip0))
   !ERROR: A NULL() pointer is not allowed for 'x=' intrinsic argument
   print *, sin(null(rp0))
+  !ERROR: A NULL() pointer is not allowed for 'x=' intrinsic argument
+  print *, kind(null())
+  print *, kind(null(rp0)) ! ok
+  !ERROR: A NULL() pointer is not allowed for 'a=' intrinsic argument
+  print *, extends_type_of(null(), null())
+  print *, extends_type_of(null(dt5p), null(dt4p)) ! ok
+  !ERROR: A NULL() pointer is not allowed for 'a=' intrinsic argument
+  print *, same_type_as(null(), null())
+  print *, same_type_as(null(dt5p), null(dt4p)) ! ok
   !ERROR: A NULL() pointer is not allowed for 'source=' intrinsic argument
   print *, transfer(null(rp0),ip0)
   !WARNING: Source of TRANSFER contains allocatable or pointer component %ra0
@@ -138,10 +154,16 @@ module m
   subroutine s2(x)
     type(pdt(*)), pointer, intent(in) :: x
   end
-  subroutine test
+  subroutine s3(ar)
+    real, pointer :: ar(..)
+  end
+  subroutine test(ar)
+    real, pointer :: ar(..)
     !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a character length
     call s1(null())
     !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a value for the assumed type parameter 'n'
     call s2(null())
+    !ERROR: MOLD= argument to NULL() must not be assumed-rank
+    call s3(null(ar))
   end
 end

@@ -10,12 +10,11 @@
 #ifndef LLDB_HOST_PIPEBASE_H
 #define LLDB_HOST_PIPEBASE_H
 
-#include <chrono>
-#include <string>
-
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/Timeout.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 class PipeBase {
@@ -32,10 +31,9 @@ public:
   virtual Status OpenAsReader(llvm::StringRef name,
                               bool child_process_inherit) = 0;
 
-  Status OpenAsWriter(llvm::StringRef name, bool child_process_inherit);
-  virtual Status
-  OpenAsWriterWithTimeout(llvm::StringRef name, bool child_process_inherit,
-                          const std::chrono::microseconds &timeout) = 0;
+  virtual llvm::Error OpenAsWriter(llvm::StringRef name,
+                                   bool child_process_inherit,
+                                   const Timeout<std::micro> &timeout) = 0;
 
   virtual bool CanRead() const = 0;
   virtual bool CanWrite() const = 0;
@@ -56,11 +54,13 @@ public:
   // Delete named pipe.
   virtual Status Delete(llvm::StringRef name) = 0;
 
-  virtual Status Write(const void *buf, size_t size, size_t &bytes_written) = 0;
-  virtual Status ReadWithTimeout(void *buf, size_t size,
-                                 const std::chrono::microseconds &timeout,
-                                 size_t &bytes_read) = 0;
-  Status Read(void *buf, size_t size, size_t &bytes_read);
+  virtual llvm::Expected<size_t>
+  Write(const void *buf, size_t size,
+        const Timeout<std::micro> &timeout = std::nullopt) = 0;
+
+  virtual llvm::Expected<size_t>
+  Read(void *buf, size_t size,
+       const Timeout<std::micro> &timeout = std::nullopt) = 0;
 };
 }
 

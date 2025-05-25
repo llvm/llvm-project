@@ -46,6 +46,31 @@ define void @fmuladd_2f64() #0 {
   ret void
 }
 
+define void @fmuladd_2f64_freeze() #0 {
+; CHECK-LABEL: @fmuladd_2f64_freeze(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @srcA64, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr @srcB64, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr @srcC64, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <2 x double> [[TMP4]]
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr @dst64, align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, ptr @srcA64, align 8
+  %a1 = load double, ptr getelementptr inbounds ([8 x double], ptr @srcA64, i32 0, i64 1), align 8
+  %b0 = load double, ptr @srcB64, align 8
+  %b1 = load double, ptr getelementptr inbounds ([8 x double], ptr @srcB64, i32 0, i64 1), align 8
+  %c0 = load double, ptr @srcC64, align 8
+  %c1 = load double, ptr getelementptr inbounds ([8 x double], ptr @srcC64, i32 0, i64 1), align 8
+  %fmuladd0 = call double @llvm.fmuladd.f64(double %a0, double %b0, double %c0)
+  %fmuladd1 = call double @llvm.fmuladd.f64(double %a1, double %b1, double %c1)
+  %freeze0 = freeze double %fmuladd0
+  %freeze1 = freeze double %fmuladd1
+  store double %freeze0, ptr @dst64, align 8
+  store double %freeze1, ptr getelementptr inbounds ([8 x double], ptr @dst64, i32 0, i64 1), align 8
+  ret void
+}
+
 define void @fmuladd_4f64() #0 {
 ; SSE-LABEL: @fmuladd_4f64(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @srcA64, align 8

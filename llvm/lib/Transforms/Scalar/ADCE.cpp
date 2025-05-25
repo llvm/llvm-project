@@ -350,7 +350,7 @@ bool AggressiveDeadCodeElimination::isInstrumentsConstant(Instruction &I) {
   // TODO -- move this test into llvm::isInstructionTriviallyDead
   if (CallInst *CI = dyn_cast<CallInst>(&I))
     if (Function *Callee = CI->getCalledFunction())
-      if (Callee->getName().equals(getInstrProfValueProfFuncName()))
+      if (Callee->getName() == getInstrProfValueProfFuncName())
         if (isa<Constant>(CI->getArgOperand(0)))
           return true;
   return false;
@@ -485,10 +485,8 @@ void AggressiveDeadCodeElimination::markLiveBranchesFromControlDependences() {
   // which currently have dead terminators that are control
   // dependence sources of a block which is in NewLiveBlocks.
 
-  const SmallPtrSet<BasicBlock *, 16> BWDT{
-      BlocksWithDeadTerminators.begin(),
-      BlocksWithDeadTerminators.end()
-  };
+  const SmallPtrSet<BasicBlock *, 16> BWDT(llvm::from_range,
+                                           BlocksWithDeadTerminators);
   SmallVector<BasicBlock *, 32> IDFBlocks;
   ReverseIDFCalculator IDFs(PDT);
   IDFs.setDefiningBlocks(NewLiveBlocks);

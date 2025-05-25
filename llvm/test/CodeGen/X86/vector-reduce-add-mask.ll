@@ -878,7 +878,7 @@ define i16 @test_v4i16_v4i8(<4 x i16> %a0) {
 ;
 ; AVX1-SLOW-LABEL: test_v4i16_v4i8:
 ; AVX1-SLOW:       # %bb.0:
-; AVX1-SLOW-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-SLOW-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [u,32768,16384,8192,u,u,u,u]
 ; AVX1-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX1-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX1-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
@@ -890,7 +890,7 @@ define i16 @test_v4i16_v4i8(<4 x i16> %a0) {
 ;
 ; AVX1-FAST-LABEL: test_v4i16_v4i8:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-FAST-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [u,32768,16384,8192,u,u,u,u]
 ; AVX1-FAST-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
@@ -901,7 +901,7 @@ define i16 @test_v4i16_v4i8(<4 x i16> %a0) {
 ;
 ; AVX2-LABEL: test_v4i16_v4i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [u,32768,16384,8192,u,u,u,u]
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0

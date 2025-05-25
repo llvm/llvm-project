@@ -643,11 +643,11 @@ define amdgpu_kernel void @phi_v15i8_random_constant_init(<15 x i8> %in, ptr %ou
 ; OPT-NEXT:    br label [[FINALLY]]
 ; OPT:       finally:
 ; OPT-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ <i8 poison, i8 1, i8 2, i8 3>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE1]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = phi <4 x i8> [ <i8 4, i8 undef, i8 6, i8 7>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP1:%.*]] = phi <4 x i8> [ <i8 4, i8 poison, i8 6, i8 7>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE3]], [[ELSE]] ]
 ; OPT-NEXT:    [[TMP2:%.*]] = phi <4 x i8> [ <i8 9, i8 10, i8 11, i8 12>, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE5]], [[ELSE]] ]
 ; OPT-NEXT:    [[TMP3:%.*]] = phi i8 [ 13, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE7]], [[ELSE]] ]
 ; OPT-NEXT:    [[TMP4:%.*]] = phi i8 [ 14, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE9]], [[ELSE]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = phi i8 [ undef, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE11]], [[ELSE]] ]
+; OPT-NEXT:    [[TMP5:%.*]] = phi i8 [ poison, [[THEN]] ], [ [[LARGEPHI_EXTRACTSLICE11]], [[ELSE]] ]
 ; OPT-NEXT:    [[LARGEPHI_INSERTSLICE0:%.*]] = call <15 x i8> @llvm.vector.insert.v15i8.v4i8(<15 x i8> poison, <4 x i8> [[TMP0]], i64 0)
 ; OPT-NEXT:    [[LARGEPHI_INSERTSLICE1:%.*]] = call <15 x i8> @llvm.vector.insert.v15i8.v4i8(<15 x i8> [[LARGEPHI_INSERTSLICE0]], <4 x i8> [[TMP1]], i64 4)
 ; OPT-NEXT:    [[LARGEPHI_INSERTSLICE2:%.*]] = call <15 x i8> @llvm.vector.insert.v15i8.v4i8(<15 x i8> [[LARGEPHI_INSERTSLICE1]], <4 x i8> [[TMP2]], i64 8)
@@ -666,7 +666,7 @@ define amdgpu_kernel void @phi_v15i8_random_constant_init(<15 x i8> %in, ptr %ou
 ; NOOPT-NEXT:    [[Y:%.*]] = insertelement <15 x i8> [[IN:%.*]], i8 64, i32 6
 ; NOOPT-NEXT:    br label [[FINALLY]]
 ; NOOPT:       finally:
-; NOOPT-NEXT:    [[VAL:%.*]] = phi <15 x i8> [ <i8 poison, i8 1, i8 2, i8 3, i8 4, i8 undef, i8 6, i8 7, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 undef>, [[THEN]] ], [ [[Y]], [[ELSE]] ]
+; NOOPT-NEXT:    [[VAL:%.*]] = phi <15 x i8> [ <i8 poison, i8 1, i8 2, i8 3, i8 4, i8 poison, i8 6, i8 7, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 poison>, [[THEN]] ], [ [[Y]], [[ELSE]] ]
 ; NOOPT-NEXT:    store <15 x i8> [[VAL]], ptr [[OUT:%.*]], align 1
 ; NOOPT-NEXT:    ret void
 ;
@@ -678,7 +678,7 @@ else:
   %y = insertelement <15 x i8> %in, i8 64, i32 6
   br label %finally
 finally:
-  %val = phi <15 x i8> [<i8 poison, i8 1, i8 2, i8 3, i8 4, i8 undef, i8 6, i8 7, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 undef>, %then], [%y, %else]
+  %val = phi <15 x i8> [<i8 poison, i8 1, i8 2, i8 3, i8 4, i8 poison, i8 6, i8 7, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 poison>, %then], [%y, %else]
   store <15 x i8> %val, ptr %out, align 1
   ret void
 }
@@ -987,8 +987,8 @@ define amdgpu_kernel void @phi_v7i16_switch(<7 x i16> %in, ptr %out, i8 %cond) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[X:%.*]] = insertelement <7 x i16> [[IN:%.*]], i16 3, i32 3
 ; OPT-NEXT:    switch i8 [[COND:%.*]], label [[ELSE:%.*]] [
-; OPT-NEXT:    i8 0, label [[THEN_1:%.*]]
-; OPT-NEXT:    i8 3, label [[THEN_2:%.*]]
+; OPT-NEXT:      i8 0, label [[THEN_1:%.*]]
+; OPT-NEXT:      i8 3, label [[THEN_2:%.*]]
 ; OPT-NEXT:    ]
 ; OPT:       then.1:
 ; OPT-NEXT:    [[LARGEPHI_EXTRACTSLICE0:%.*]] = shufflevector <7 x i16> [[X]], <7 x i16> poison, <2 x i32> <i32 0, i32 1>
@@ -1025,8 +1025,8 @@ define amdgpu_kernel void @phi_v7i16_switch(<7 x i16> %in, ptr %out, i8 %cond) {
 ; NOOPT-NEXT:  entry:
 ; NOOPT-NEXT:    [[X:%.*]] = insertelement <7 x i16> [[IN:%.*]], i16 3, i32 3
 ; NOOPT-NEXT:    switch i8 [[COND:%.*]], label [[ELSE:%.*]] [
-; NOOPT-NEXT:    i8 0, label [[THEN_1:%.*]]
-; NOOPT-NEXT:    i8 3, label [[THEN_2:%.*]]
+; NOOPT-NEXT:      i8 0, label [[THEN_1:%.*]]
+; NOOPT-NEXT:      i8 3, label [[THEN_2:%.*]]
 ; NOOPT-NEXT:    ]
 ; NOOPT:       then.1:
 ; NOOPT-NEXT:    br label [[FINALLY:%.*]]

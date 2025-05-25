@@ -43,6 +43,8 @@ class Module;
 TinyPtrVector<DbgDeclareInst *> findDbgDeclares(Value *V);
 /// As above, for DVRDeclares.
 TinyPtrVector<DbgVariableRecord *> findDVRDeclares(Value *V);
+/// As above, for DVRValues.
+TinyPtrVector<DbgVariableRecord *> findDVRValues(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
 void findDbgValues(
@@ -108,7 +110,7 @@ public:
   void processInstruction(const Module &M, const Instruction &I);
 
   /// Process a DILocalVariable.
-  void processVariable(const Module &M, const DILocalVariable *DVI);
+  void processVariable(DILocalVariable *DVI);
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
   /// Process a DbgRecord (e.g, treat a DbgVariableRecord like a
@@ -125,6 +127,7 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
+  void processImportedEntity(DIImportedEntity *Import);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   bool addScope(DIScope *Scope);
@@ -267,6 +270,10 @@ bool calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
     uint64_t SliceSizeInBits, const DbgVariableRecord *DVRAssign,
     std::optional<DIExpression::FragmentInfo> &Result);
+
+/// Replace DIAssignID uses and attachments with IDs from \p Map.
+/// If an ID is unmapped a new ID is generated and added to \p Map.
+void remapAssignID(DenseMap<DIAssignID *, DIAssignID *> &Map, Instruction &I);
 
 /// Helper struct for trackAssignments, below. We don't use the similar
 /// DebugVariable class because trackAssignments doesn't (yet?) understand

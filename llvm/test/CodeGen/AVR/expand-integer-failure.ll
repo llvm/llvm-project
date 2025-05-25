@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 ; Causes an assertion error
 ; Assertion failed: (Lo.getValueType() == TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType()) &&

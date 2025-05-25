@@ -20,6 +20,8 @@
 
 namespace llvm {
 
+class InstructionSelector;
+class GISelValueTracking;
 class BlockFrequencyInfo;
 class ProfileSummaryInfo;
 
@@ -39,26 +41,33 @@ public:
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties()
-        .set(MachineFunctionProperties::Property::IsSSA)
-        .set(MachineFunctionProperties::Property::Legalized)
-        .set(MachineFunctionProperties::Property::RegBankSelected);
+        .setIsSSA()
+        .setLegalized()
+        .setRegBankSelected();
   }
 
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::Selected);
+    return MachineFunctionProperties().setSelected();
   }
 
-  InstructionSelect(CodeGenOptLevel OL);
-  InstructionSelect();
+  InstructionSelect(CodeGenOptLevel OL = CodeGenOptLevel::Default,
+                    char &PassID = ID);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+  bool selectMachineFunction(MachineFunction &MF);
+  void setInstructionSelector(InstructionSelector *NewISel) { ISel = NewISel; }
 
 protected:
+  class MIIteratorMaintainer;
+
+  InstructionSelector *ISel = nullptr;
+  GISelValueTracking *VT = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
 
   CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
+
+  bool selectInstr(MachineInstr &MI);
 };
 } // End namespace llvm.
 

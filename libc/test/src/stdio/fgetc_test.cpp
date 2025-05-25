@@ -16,8 +16,8 @@
 #include "src/stdio/getc.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/stdio_macros.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 class LlvmLibcGetcTest : public LIBC_NAMESPACE::testing::Test {
 public:

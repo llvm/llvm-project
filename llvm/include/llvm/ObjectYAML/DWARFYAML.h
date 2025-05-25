@@ -115,6 +115,9 @@ struct Unit {
   llvm::dwarf::UnitType Type; // Added in DWARF 5
   std::optional<uint64_t> AbbrevTableID;
   std::optional<yaml::Hex64> AbbrOffset;
+  yaml::Hex64 TypeSignatureOrDwoID; // For type or split units
+  yaml::Hex64 TypeOffset;           // For type units
+
   std::vector<Entry> Entries;
 };
 
@@ -245,7 +248,7 @@ struct Data {
   std::optional<PubSection> GNUPubNames;
   std::optional<PubSection> GNUPubTypes;
 
-  std::vector<Unit> CompileUnits;
+  std::vector<Unit> Units;
 
   std::vector<LineTable> DebugLines;
   std::optional<std::vector<ListTable<RnglistEntry>>> DebugRnglists;
@@ -522,7 +525,7 @@ template <> struct ScalarEnumerationTraits<dwarf::LoclistEntries> {
   }
 };
 
-#define HANDLE_DW_OP(id, name, version, vendor)                                \
+#define HANDLE_DW_OP(id, name, operands, arity, version, vendor)               \
   io.enumCase(value, "DW_OP_" #name, dwarf::DW_OP_##name);
 
 template <> struct ScalarEnumerationTraits<dwarf::LocationAtom> {

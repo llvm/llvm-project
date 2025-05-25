@@ -735,7 +735,8 @@ public:
     auto *Declaration =
         cast<syntax::SimpleDeclaration>(handleFreeStandingTagDecl(C));
     foldExplicitTemplateInstantiation(
-        Builder.getTemplateRange(C), Builder.findToken(C->getExternLoc()),
+        Builder.getTemplateRange(C),
+        Builder.findToken(C->getExternKeywordLoc()),
         Builder.findToken(C->getTemplateKeywordLoc()), Declaration, C);
     return true;
   }
@@ -958,8 +959,6 @@ public:
     case NestedNameSpecifier::NamespaceAlias:
     case NestedNameSpecifier::Identifier:
       return syntax::NodeKind::IdentifierNameSpecifier;
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      return syntax::NodeKind::SimpleTemplateNameSpecifier;
     case NestedNameSpecifier::TypeSpec: {
       const auto *NNSType = NNS.getAsType();
       assert(NNSType);

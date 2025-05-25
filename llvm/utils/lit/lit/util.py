@@ -182,7 +182,7 @@ def mkdir_p(path):
     mkdir(path)
 
 
-def listdir_files(dirname, suffixes=None, exclude_filenames=None):
+def listdir_files(dirname, suffixes=None, exclude_filenames=None, prefixes=None):
     """Yields files in a directory.
 
     Filenames that are not excluded by rules below are yielded one at a time, as
@@ -214,12 +214,15 @@ def listdir_files(dirname, suffixes=None, exclude_filenames=None):
         exclude_filenames = set()
     if suffixes is None:
         suffixes = {""}
+    if prefixes is None:
+        prefixes = {""}
     for filename in os.listdir(dirname):
         if (
             os.path.isdir(os.path.join(dirname, filename))
             or filename.startswith(".")
             or filename in exclude_filenames
             or not any(filename.endswith(sfx) for sfx in suffixes)
+            or not any(filename.startswith(pfx) for pfx in prefixes)
         ):
             continue
         yield filename
@@ -408,7 +411,7 @@ def executeCommand(
         out, err = p.communicate(input=input)
         exitCode = p.wait()
     finally:
-        if timerObject != None:
+        if timerObject is not None:
             timerObject.cancel()
 
     # Ensure the resulting output is always of string type.
@@ -502,7 +505,7 @@ def killProcessAndChildrenIsSupported():
         otherwise is contains a string describing why the function is
         not supported.
     """
-    if platform.system() == "AIX":
+    if platform.system() == "AIX" or platform.system() == "OS/390":
         return (True, "")
     try:
         import psutil  # noqa: F401
@@ -528,6 +531,9 @@ def killProcessAndChildren(pid):
     """
     if platform.system() == "AIX":
         subprocess.call("kill -kill $(ps -o pid= -L{})".format(pid), shell=True)
+    elif platform.system() == "OS/390":
+        # FIXME: Only the process is killed.
+        subprocess.call("kill -KILL $(ps -s {} -o pid=)".format(pid), shell=True)
     else:
         import psutil
 

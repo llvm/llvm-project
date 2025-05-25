@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
-
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace mlir::vector {
@@ -62,6 +61,11 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
   int64_t pos = scalableCstr.insert(value, dim, /*isSymbol=*/false);
   scalableCstr.processWorklist();
 
+  // Check the resulting constraints set is valid.
+  if (scalableCstr.cstr.isEmpty()) {
+    return failure();
+  }
+
   // Project out all columns apart from vscale and the starting point
   // (value/dim). This should result in constraints in terms of vscale only.
   auto projectOutFn = [&](ValueDim p) {
@@ -71,6 +75,12 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
     return p.first != scalableCstr.getVscaleValue() && !isStartingPoint;
   };
   scalableCstr.projectOut(projectOutFn);
+  scalableCstr.projectOutAnonymous(/*except=*/pos);
+  // Also project out local variables (these are not tracked by the
+  // ValueBoundsConstraintSet).
+  for (unsigned i = 0, e = scalableCstr.cstr.getNumLocalVars(); i < e; ++i) {
+    scalableCstr.cstr.projectOut(scalableCstr.cstr.getNumDimAndSymbolVars());
+  }
 
   assert(scalableCstr.cstr.getNumDimAndSymbolVars() ==
              scalableCstr.positionToValueDim.size() &&
@@ -97,7 +107,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
 
   AffineMap bound = [&] {
     if (boundType == BoundType::EQ && !invalidBound(lowerBound) &&
-        lowerBound[0] == lowerBound[0]) {
+        lowerBound[0] == upperBound[0]) {
       return lowerBound[0];
     } else if (boundType == BoundType::LB && !invalidBound(lowerBound)) {
       return lowerBound[0];

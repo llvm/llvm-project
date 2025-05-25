@@ -13,8 +13,8 @@
 #include "src/stdio/setvbuf.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/stdio_macros.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 TEST(LlvmLibcSetvbufTest, SetNBFBuffer) {
   // The idea in this test is that we open a file for writing and reading, and

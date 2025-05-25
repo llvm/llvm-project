@@ -27,7 +27,7 @@
 # hard-code it in the immediate field.
 
 # The external function ext will return to the caller directly.
-# jitlink-check: decode_operand(test_arm_jump, 0) = stub_addr(out.o, ext) - (test_arm_jump + 8)
+# jitlink-check: decode_operand(test_arm_jump, 0) = stub_addr(out.o, ext) - next_pc(test_arm_jump)
 	.globl	test_arm_jump
 	.type	test_arm_jump,%function
 	.p2align	2
@@ -38,7 +38,7 @@ test_arm_jump:
 # The branch-with-link sets the LR register so that the external function ext
 # returns to us. We have to save the register (push) and return to main manually
 # (pop). This adds the +4 offset for the bl instruction we decode:
-# jitlink-check: decode_operand(test_arm_call + 4, 0) = stub_addr(out.o, ext) - (test_arm_call + 8) - 4
+# jitlink-check: decode_operand(test_arm_call + 4, 0) = stub_addr(out.o, ext) - next_pc(test_arm_call) - 4
 	.globl  test_arm_call
 	.type	test_arm_call,%function
 	.p2align	2

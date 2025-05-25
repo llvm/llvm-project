@@ -14,7 +14,6 @@
 
 #include "ObjdumpOptID.h"
 #include "llvm-objdump.h"
-#include "llvm-c/Disassembler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -41,11 +40,8 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -2148,7 +2144,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
       else
         consumeError(NameOrErr.takeError());
 
-      if (SectName.equals("__text")) {
+      if (SectName == "__text") {
         DataRefImpl Ref = Section.getRawDataRefImpl();
         StringRef SegName = MachOOF->getSectionFinalSegmentName(Ref);
         DisassembleMachO(FileName, MachOOF, SegName, SectName);
@@ -2394,8 +2390,16 @@ static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
       outs() << "    cpusubtype " << (cpusubtype & ~MachO::CPU_SUBTYPE_MASK)
              << "\n";
     }
-    if (verbose &&
-        (cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64)
+    if (verbose && cputype == MachO::CPU_TYPE_ARM64 &&
+        MachO::CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpusubtype)) {
+      outs() << "    capabilities CPU_SUBTYPE_ARM64E_";
+      if (MachO::CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpusubtype))
+        outs() << "KERNEL_";
+      outs() << format("PTRAUTH_VERSION %d",
+                       MachO::CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpusubtype))
+             << "\n";
+    } else if (verbose && (cpusubtype & MachO::CPU_SUBTYPE_MASK) ==
+                              MachO::CPU_SUBTYPE_LIB64)
       outs() << "    capabilities CPU_SUBTYPE_LIB64\n";
     else
       outs() << "    capabilities "
@@ -7179,7 +7183,7 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
     DSYMBuf = std::move(BufOrErr.get());
 
     Expected<std::unique_ptr<Binary>> BinaryOrErr =
-        createBinary(DSYMBuf.get()->getMemBufferRef());
+        createBinary(DSYMBuf->getMemBufferRef());
     if (!BinaryOrErr) {
       reportError(BinaryOrErr.takeError(), DSYMPath);
       return nullptr;
@@ -7321,6 +7325,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   // (32-bit and 64-bit) comments printed with different spacing before the
   // comment causing different diffs with the 'C' disassembler library API.
   // IP->setCommentStream(CommentStream);
+
+  for (StringRef Opt : DisassemblerOptions)
+    if (!IP->applyTargetSpecificCLOption(Opt))
+      reportError(Filename, "unrecognized disassembler option: " + Opt);
 
   // Set up separate thumb disassembler if needed.
   std::unique_ptr<const MCRegisterInfo> ThumbMRI;
@@ -7634,7 +7642,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
           // Print debug info.
           if (diContext) {
-            DILineInfo dli = diContext->getLineInfoForAddress({PC, SectIdx});
+            DILineInfo dli = diContext->getLineInfoForAddress({PC, SectIdx})
+                                 .value_or(DILineInfo());
             // Print valid line info if it changed.
             if (dli != lastLine && dli.Line != 0)
               outs() << "\t## " << dli.FileName << ':' << dli.Line << ':'
@@ -8368,7 +8377,17 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
       outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
       break;
     }
-    if ((cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64) {
+
+    if (cputype == MachO::CPU_TYPE_ARM64 &&
+        MachO::CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpusubtype)) {
+      const char *Format =
+          MachO::CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpusubtype)
+              ? " PAK%02d"
+              : " PAC%02d";
+      outs() << format(Format,
+                       MachO::CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpusubtype));
+    } else if ((cpusubtype & MachO::CPU_SUBTYPE_MASK) ==
+               MachO::CPU_SUBTYPE_LIB64) {
       outs() << " LIB64";
     } else {
       outs() << format("  0x%02" PRIx32,

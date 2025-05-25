@@ -70,7 +70,7 @@ bool OmpRewriteMutator::Pre(parser::OpenMPAtomicConstruct &x) {
       x.u)};
 
   // Get the `atomic_default_mem_order` clause from the top-level parent.
-  std::optional<common::OmpAtomicDefaultMemOrderType> defaultMemOrder;
+  std::optional<common::OmpMemoryOrderType> defaultMemOrder;
   common::visit(
       [&](auto &details) {
         if constexpr (std::is_convertible_v<decltype(&details),
@@ -88,11 +88,9 @@ bool OmpRewriteMutator::Pre(parser::OpenMPAtomicConstruct &x) {
 
   auto findMemOrderClause =
       [](const std::list<parser::OmpAtomicClause> &clauses) {
-        return std::find_if(
-                   clauses.begin(), clauses.end(), [](const auto &clause) {
-                     return std::get_if<parser::OmpMemoryOrderClause>(
-                         &clause.u);
-                   }) != clauses.end();
+        return llvm::any_of(clauses, [](const auto &clause) {
+          return std::get_if<parser::OmpMemoryOrderClause>(&clause.u);
+        });
       };
 
   // Get the clause list to which the new memory order clause must be added,
@@ -121,7 +119,7 @@ bool OmpRewriteMutator::Pre(parser::OpenMPAtomicConstruct &x) {
   if (clauseList) {
     atomicDirectiveDefaultOrderFound_ = true;
     switch (*defaultMemOrder) {
-    case common::OmpAtomicDefaultMemOrderType::AcqRel:
+    case common::OmpMemoryOrderType::Acq_Rel:
       clauseList->emplace_back<parser::OmpMemoryOrderClause>(common::visit(
           common::visitors{[](parser::OmpAtomicRead &) -> parser::OmpClause {
                              return parser::OmpClause::Acquire{};
@@ -135,13 +133,17 @@ bool OmpRewriteMutator::Pre(parser::OpenMPAtomicConstruct &x) {
               }},
           x.u));
       break;
-    case common::OmpAtomicDefaultMemOrderType::Relaxed:
+    case common::OmpMemoryOrderType::Relaxed:
       clauseList->emplace_back<parser::OmpMemoryOrderClause>(
           parser::OmpClause{parser::OmpClause::Relaxed{}});
       break;
-    case common::OmpAtomicDefaultMemOrderType::SeqCst:
+    case common::OmpMemoryOrderType::Seq_Cst:
       clauseList->emplace_back<parser::OmpMemoryOrderClause>(
           parser::OmpClause{parser::OmpClause::SeqCst{}});
+      break;
+    default:
+      // FIXME: Don't process other values at the moment since their validity
+      // depends on the OpenMP version (which is unavailable here).
       break;
     }
   }

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -config="{CheckOptions: {cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions: true, cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true}}" --
+// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -config="{CheckOptions: {cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions: true, cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true, cppcoreguidelines-special-member-functions.AllowImplicitlyDeletedCopyOrMove: true}}" --
 
 // Don't warn on destructors without definitions, they might be defaulted in another TU.
 class DeclaresDestructor {
@@ -34,12 +34,13 @@ class DefinesCopyAssignment {
 class DefinesMoveConstructor {
   DefinesMoveConstructor(DefinesMoveConstructor &&);
 };
-// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesMoveConstructor' defines a move constructor but does not define a destructor, a copy constructor, a copy assignment operator or a move assignment operator [cppcoreguidelines-special-member-functions]
+// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesMoveConstructor' defines a move constructor but does not define a destructor or a move assignment operator [cppcoreguidelines-special-member-functions]
 
 class DefinesMoveAssignment {
   DefinesMoveAssignment &operator=(DefinesMoveAssignment &&);
 };
-// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesMoveAssignment' defines a move assignment operator but does not define a destructor, a copy constructor, a copy assignment operator or a move constructor [cppcoreguidelines-special-member-functions]
+// CHECK-MESSAGES: [[@LINE-3]]:7: warning: class 'DefinesMoveAssignment' defines a move assignment operator but does not define a destructor or a move constructor [cppcoreguidelines-special-member-functions]
+
 class DefinesNothing {
 };
 
@@ -81,3 +82,22 @@ struct TemplateClass {
 // This should not cause problems.
 TemplateClass<int> InstantiationWithInt;
 TemplateClass<double> InstantiationWithDouble;
+
+struct NoCopy
+{
+  NoCopy() = default;
+  ~NoCopy() = default;
+
+  NoCopy(const NoCopy&) = delete;
+  NoCopy(NoCopy&&) = delete;
+
+  NoCopy& operator=(const NoCopy&) = delete;
+  NoCopy& operator=(NoCopy&&) = delete;
+};
+
+// CHECK-MESSAGES: [[@LINE+1]]:8: warning: class 'NonCopyable' defines a copy constructor but does not define a destructor or a copy assignment operator [cppcoreguidelines-special-member-functions]
+struct NonCopyable : NoCopy
+{
+  NonCopyable() = default;
+  NonCopyable(const NonCopyable&) = delete;
+};

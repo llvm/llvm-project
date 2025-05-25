@@ -1,19 +1,19 @@
 # REQUIRES: asserts
 # RUN: llvm-mc -triple=powerpc64le-unknown-linux-gnu -filetype=obj -o %t %s
-# RUN: llvm-jitlink -noexec -phony-externals -debug-only=jitlink %t 2>&1 | \
-# RUN:   FileCheck %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec -phony-externals \
+# RUN:              %t 2>&1 \
+# RUN:              | FileCheck %s
 # RUN: llvm-mc -triple=powerpc64-unknown-linux-gnu -filetype=obj -o %t %s
-# RUN: llvm-jitlink -noexec -phony-externals -debug-only=jitlink %t 2>&1 | \
-# RUN:   FileCheck %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec -phony-externals \
+# RUN:              %t 2>&1 \
+# RUN:              | FileCheck %s
 #
 # Check that splitting of eh-frame sections works.
 #
 # CHECK: DWARFRecordSectionSplitter: Processing .eh_frame...
 # CHECK:   Processing block at
 # CHECK:     Processing CFI record at
-# CHECK:       Extracted {{.*}} section = .eh_frame
 # CHECK:     Processing CFI record at
-# CHECK:       Extracted {{.*}} section = .eh_frame
 # CHECK: EHFrameEdgeFixer: Processing .eh_frame in "{{.*}}"...
 # CHECK:   Processing block at
 # CHECK:     Record is CIE

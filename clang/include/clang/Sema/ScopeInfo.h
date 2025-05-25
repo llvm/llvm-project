@@ -103,7 +103,7 @@ enum class FirstCoroutineStmtKind { CoReturn, CoAwait, CoYield };
 /// currently being parsed.
 class FunctionScopeInfo {
 protected:
-  enum ScopeKind {
+  enum ScopeKind : uint8_t {
     SK_Function,
     SK_Block,
     SK_Lambda,
@@ -724,9 +724,15 @@ public:
   /// is deduced (e.g. a lambda or block with omitted return type).
   bool HasImplicitReturnType = false;
 
+  /// Whether this contains an unexpanded parameter pack.
+  bool ContainsUnexpandedParameterPack = false;
+
   /// ReturnType - The target type of return statements in this context,
   /// or null if unknown.
   QualType ReturnType;
+
+  /// Packs introduced by this, if any.
+  SmallVector<NamedDecl *, 4> LocalPacks;
 
   void addCapture(ValueDecl *Var, bool isBlock, bool isByref, bool isNested,
                   SourceLocation Loc, SourceLocation EllipsisLoc,
@@ -895,12 +901,6 @@ public:
   /// Whether any of the capture expressions requires cleanups.
   CleanupInfo Cleanup;
 
-  /// Whether the lambda contains an unexpanded parameter pack.
-  bool ContainsUnexpandedParameterPack = false;
-
-  /// Packs introduced by this lambda, if any.
-  SmallVector<NamedDecl*, 4> LocalPacks;
-
   /// Source range covering the explicit template parameter list (if it exists).
   SourceRange ExplicitTemplateParamsRange;
 
@@ -948,6 +948,9 @@ public:
   llvm::SmallVector<ShadowedOuterDecl, 4> ShadowingDecls;
 
   SourceLocation PotentialThisCaptureLocation;
+
+  /// Variables that are potentially ODR-used in CUDA/HIP.
+  llvm::SmallPtrSet<VarDecl *, 4> CUDAPotentialODRUsedVars;
 
   LambdaScopeInfo(DiagnosticsEngine &Diag)
       : CapturingScopeInfo(Diag, ImpCap_None) {

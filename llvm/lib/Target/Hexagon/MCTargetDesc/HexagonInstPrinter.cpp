@@ -26,7 +26,7 @@ using namespace llvm;
 #define GET_INSTRUCTION_NAME
 #include "HexagonGenAsmWriter.inc"
 
-void HexagonInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+void HexagonInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
   O << getRegisterName(Reg);
 }
 
@@ -72,7 +72,7 @@ void HexagonInstPrinter::printOperand(MCInst const *MI, unsigned OpNo,
     if (MO.getExpr()->evaluateAsAbsolute(Value))
       O << formatImm(Value);
     else
-      O << *MO.getExpr();
+      MO.getExpr()->print(O, &MAI);
   } else {
     llvm_unreachable("Unknown operand");
   }
@@ -90,6 +90,6 @@ void HexagonInstPrinter::printBrtarget(MCInst const *MI, unsigned OpNo,
     if (HasExtender || HexagonMCInstrInfo::isConstExtended(MII, *MI))
       if (HexagonMCInstrInfo::getExtendableOp(MII, *MI) == OpNo)
         O << "##";
-    O << Expr;
+    Expr.print(O, &MAI);
   }
 }

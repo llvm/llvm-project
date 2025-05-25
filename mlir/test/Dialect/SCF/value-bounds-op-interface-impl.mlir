@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds="reify-to-func-args" \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds{reify-to-func-args}))' \
 // RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @scf_for(
@@ -102,6 +102,42 @@ func.func @scf_for_swapping_yield(%t1: tensor<?xf32>, %t2: tensor<?xf32>, %a: in
   // expected-error @below{{could not reify bound}}
   %reify1 = "test.reify_bound"(%r1) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
   "test.some_use"(%reify1) : (index) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_forall(
+//  CHECK-SAME:     %[[a:.*]]: index, %[[b:.*]]: index, %[[c:.*]]: index
+//       CHECK:   "test.some_use"(%[[a]], %[[b]])
+func.func @scf_forall(%a: index, %b: index, %c: index) {
+  scf.forall (%iv) = (%a) to (%b) step (%c) {
+    %0 = "test.reify_bound"(%iv) {type = "LB"} : (index) -> (index)
+    %1 = "test.reify_bound"(%iv) {type = "UB"} : (index) -> (index)
+    "test.some_use"(%0, %1) : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_forall_tensor_result(
+//  CHECK-SAME:     %[[size:.*]]: index, %[[a:.*]]: index, %[[b:.*]]: index, %[[c:.*]]: index
+//       CHECK:   "test.some_use"(%[[size]])
+//       CHECK:   "test.some_use"(%[[size]])
+func.func @scf_forall_tensor_result(%size: index, %a: index, %b: index, %c: index) {
+  %cst = arith.constant 5.0 : f32
+  %empty = tensor.empty(%size) : tensor<?xf32>
+  %0 = scf.forall (%iv) = (%a) to (%b) step (%c) shared_outs(%arg = %empty) -> tensor<?xf32> {
+    %filled = linalg.fill ins(%cst : f32) outs(%arg : tensor<?xf32>) -> tensor<?xf32>
+    %1 = "test.reify_bound"(%arg) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
+    "test.some_use"(%1) : (index) -> ()
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %filled into %arg[0][%size][1] : tensor<?xf32> into tensor<?xf32>
+    }
+  }
+  %2 = "test.reify_bound"(%0) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
+  "test.some_use"(%2) : (index) -> ()
   return
 }
 
@@ -229,5 +265,117 @@ func.func @compare_scf_for(%a: index, %b: index, %c: index) {
     // expected-remark @below{{true}}
     "test.compare"(%iv, %b) {cmp = "LT"} : (index, index) -> ()
   }
+  return
+}
+
+// -----
+
+func.func @scf_for_induction_var_upper_bound() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c8 = arith.constant 8 : index
+  %c10 = arith.constant 10 : index
+  scf.for %iv = %c0 to %c10 step %c4 {
+    // expected-remark @below{{true}}
+    "test.compare"(%iv, %c8) {cmp = "LE"} : (index, index) -> ()
+  }
+  scf.for %iv = %c2 to %c8 step %c3 {
+    // expected-remark @below{{true}}
+    "test.compare"(%iv, %c5) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+#map_ceildiv_dynamic_divisor = affine_map<(i)[s] -> (i ceildiv s)>
+func.func @scf_for_induction_var_computed_upper_bound(%upperBound: index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %tripCount = affine.apply #map_ceildiv_dynamic_divisor (%upperBound)[%step]
+  %tripCountMinusOne = arith.subi %tripCount, %c1 : index
+  %computedUpperBound = arith.muli %tripCountMinusOne, %step : index
+  scf.for %iv = %c0 to %upperBound step %step {
+    // TODO: Value bounds analysis will fail to compute upper bound
+    // because multiplication/division of unknown block arguments is
+    // not supported.
+    // expected-error @below{{unknown}}
+    "test.compare"(%iv, %computedUpperBound) {cmp = "LE"} : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @scf_for_result_infer() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%arg = %c0) -> index {
+    %2 = "test.some_use"() : () -> (i1)
+    %3 = scf.if %2 -> (index) {
+        %5 = arith.addi %arg, %c1 : index
+        scf.yield %5 : index
+    } else {
+        scf.yield %arg : index
+    }
+    scf.yield %3 : index
+  }
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c10) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @scf_for_result_infer_dynamic_init(%i : index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%arg = %i) -> index {
+    %2 = "test.some_use"() : () -> (i1)
+    %3 = scf.if %2 -> (index) {
+        %5 = arith.addi %arg, %c1 : index
+        scf.yield %5 : index
+    } else {
+        scf.yield %arg : index
+    }
+    scf.yield %3 : index
+  }
+  %6 = arith.addi %i, %c10 : index
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %6) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @scf_for_result_infer_dynamic_init_big_step(%i : index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %0 = scf.for %iv = %c0 to %c10 step %c2 iter_args(%arg = %i) -> index {
+    %2 = "test.some_use"() : () -> (i1)
+    %3 = scf.if %2 -> (index) {
+        %5 = arith.addi %arg, %c1 : index
+        scf.yield %5 : index
+    } else {
+        scf.yield %arg : index
+    }
+    scf.yield %3 : index
+  }
+  %6 = arith.addi %i, %c5 : index
+  %7 = arith.addi %i, %c4 : index
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %6) {cmp = "LE"} : (index, index) -> ()
+  // expected-error @below{{unknown}}
+  "test.compare"(%0, %7) {cmp = "LE"} : (index, index) -> ()
   return
 }

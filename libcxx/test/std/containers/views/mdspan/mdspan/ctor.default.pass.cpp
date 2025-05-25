@@ -22,9 +22,10 @@
 // Effects: Value-initializes ptr_, map_, and acc_.
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -42,7 +43,7 @@ constexpr void test_mdspan_types(const H&, const M&, const A&) {
 
   if constexpr (MDS::rank_dynamic() > 0 && hc && mc && ac) {
     MDS m;
-    static_assert(noexcept(MDS()) == (noexcept(H())&& noexcept(M())&& noexcept(A())));
+    static_assert(noexcept(MDS()) == (noexcept(H()) && noexcept(M()) && noexcept(A())));
     assert(m.extents() == typename MDS::extents_type());
     if constexpr (std::equality_comparable<H>)
       assert(m.data_handle() == H());

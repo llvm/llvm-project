@@ -96,6 +96,18 @@ bool isPotentiallyReachableFromMany(
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
     const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
 
+/// Determine whether there is a potentially a path from at least one block in
+/// 'Worklist' to at least one block in 'StopSet' within a single function
+/// without passing through any of the blocks in 'ExclusionSet'. Returns false
+/// only if we can prove that once any block in 'Worklist' has been reached then
+/// no blocks in 'StopSet' can be executed without passing through any blocks in
+/// 'ExclusionSet'. Conservatively returns true.
+bool isManyPotentiallyReachableFromMany(
+    SmallVectorImpl<BasicBlock *> &Worklist,
+    const SmallPtrSetImpl<const BasicBlock *> &StopSet,
+    const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
+    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
+
 /// Return true if the control flow in \p RPOTraversal is irreducible.
 ///
 /// This is a generic implementation to detect CFG irreducibility based on loop
@@ -162,6 +174,29 @@ bool containsIrreducibleCFG(RPOTraversalT &RPOTraversal, const LoopInfoT &LI) {
 
   return false;
 }
-} // End llvm namespace
+
+// Returns true if these basic blocks belong to a presplit coroutine and the
+// edge corresponds to the 'default' case in the switch statement in the
+// pattern:
+//
+// %0 = call i8 @llvm.coro.suspend(token none, i1 false)
+// switch i8 %0, label %suspend [i8 0, label %resume
+//                               i8 1, label %cleanup]
+//
+// i.e. the edge to the `%suspend` BB. This edge is special in that it will
+// be elided by coroutine lowering (coro-split), and the `%suspend` BB needs
+// to be kept as-is. It's not a real CFG edge - post-lowering, it will end
+// up being a `ret`, and it must be thus lowerable to support symmetric
+// transfer. For example:
+//  - this edge is not a loop exit edge if encountered in a loop (and should
+//    be ignored)
+//  - must not be split for PGO instrumentation, for example.
+bool isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                   const BasicBlock &Dest);
+
+/// Return true if there is at least a path through which F can return, false if
+/// there is no such path.
+bool canReturn(const Function &F);
+} // namespace llvm
 
 #endif

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++17 -S -emit-llvm -disable-llvm-passes -o - %s -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -emit-llvm -disable-llvm-passes -o - %s -triple x86_64-linux-gnu | FileCheck %s
 
 struct A {
   int x;

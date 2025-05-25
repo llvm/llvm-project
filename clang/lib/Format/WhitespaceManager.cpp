@@ -107,7 +107,8 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   llvm::sort(Changes, Change::IsBeforeInFile(SourceMgr));
   calculateLineBreakInformation();
   alignConsecutiveMacros();
-  alignConsecutiveShortCaseStatements();
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/true);
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/false);
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
@@ -468,7 +469,9 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     // except if the token is equal, then a space is needed.
     if ((Style.PointerAlignment == FormatStyle::PAS_Right ||
          Style.ReferenceAlignment == FormatStyle::RAS_Right) &&
-        CurrentChange.Spaces != 0 && CurrentChange.Tok->isNot(tok::equal)) {
+        CurrentChange.Spaces != 0 &&
+        !CurrentChange.Tok->isOneOf(tok::equal, tok::r_paren,
+                                    TT_TemplateCloser)) {
       const bool ReferenceNotRightAligned =
           Style.ReferenceAlignment != FormatStyle::RAS_Right &&
           Style.ReferenceAlignment != FormatStyle::RAS_Pointer;
@@ -878,22 +881,27 @@ void WhitespaceManager::alignConsecutiveColons(
       Changes, /*StartAt=*/0, AlignStyle);
 }
 
-void WhitespaceManager::alignConsecutiveShortCaseStatements() {
+void WhitespaceManager::alignConsecutiveShortCaseStatements(bool IsExpr) {
   if (!Style.AlignConsecutiveShortCaseStatements.Enabled ||
-      !Style.AllowShortCaseLabelsOnASingleLine) {
+      !(IsExpr ? Style.AllowShortCaseExpressionOnASingleLine
+               : Style.AllowShortCaseLabelsOnASingleLine)) {
     return;
   }
 
+  const auto Type = IsExpr ? TT_CaseLabelArrow : TT_CaseLabelColon;
+  const auto &Option = Style.AlignConsecutiveShortCaseStatements;
+  const bool AlignArrowOrColon =
+      IsExpr ? Option.AlignCaseArrows : Option.AlignCaseColons;
+
   auto Matches = [&](const Change &C) {
-    if (Style.AlignConsecutiveShortCaseStatements.AlignCaseColons)
-      return C.Tok->is(TT_CaseLabelColon);
+    if (AlignArrowOrColon)
+      return C.Tok->is(Type);
 
     // Ignore 'IsInsideToken' to allow matching trailing comments which
     // need to be reflowed as that causes the token to appear in two
     // different changes, which will cause incorrect alignment as we'll
     // reflow early due to detecting multiple aligning tokens per line.
-    return !C.IsInsideToken && C.Tok->Previous &&
-           C.Tok->Previous->is(TT_CaseLabelColon);
+    return !C.IsInsideToken && C.Tok->Previous && C.Tok->Previous->is(Type);
   };
 
   unsigned MinColumn = 0;
@@ -944,7 +952,7 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
     if (Changes[I].Tok->isNot(tok::comment))
       LineIsComment = false;
 
-    if (Changes[I].Tok->is(TT_CaseLabelColon)) {
+    if (Changes[I].Tok->is(Type)) {
       LineIsEmptyCase =
           !Changes[I].Tok->Next || Changes[I].Tok->Next->isTrailingComment();
 
@@ -1004,15 +1012,10 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   AlignTokens(
       Style,
       [&](Change const &C) {
-        if (Style.AlignConsecutiveDeclarations.AlignFunctionPointers) {
-          for (const auto *Prev = C.Tok->Previous; Prev; Prev = Prev->Previous)
-            if (Prev->is(tok::equal))
-              return false;
-          if (C.Tok->is(TT_FunctionTypeLParen))
-            return true;
-        }
+        if (C.Tok->is(TT_FunctionTypeLParen))
+          return Style.AlignConsecutiveDeclarations.AlignFunctionPointers;
         if (C.Tok->is(TT_FunctionDeclarationName))
-          return true;
+          return Style.AlignConsecutiveDeclarations.AlignFunctionDeclarations;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
         if (C.Tok->Previous &&
@@ -1110,7 +1113,7 @@ void WhitespaceManager::alignTrailingComments() {
       // leave the comments.
       if (RestoredLineLength >= Style.ColumnLimit && Style.ColumnLimit > 0)
         break;
-      C.Spaces = OriginalSpaces;
+      C.Spaces = C.NewlinesBefore > 0 ? C.Tok->OriginalColumn : OriginalSpaces;
       continue;
     }
 
@@ -1239,22 +1242,29 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
 }
 
 void WhitespaceManager::alignEscapedNewlines() {
-  if (Style.AlignEscapedNewlines == FormatStyle::ENAS_DontAlign)
+  const auto Align = Style.AlignEscapedNewlines;
+  if (Align == FormatStyle::ENAS_DontAlign)
     return;
 
-  bool AlignLeft = Style.AlignEscapedNewlines == FormatStyle::ENAS_Left;
-  unsigned MaxEndOfLine = AlignLeft ? 0 : Style.ColumnLimit;
+  const bool WithLastLine = Align == FormatStyle::ENAS_LeftWithLastLine;
+  const bool AlignLeft = Align == FormatStyle::ENAS_Left || WithLastLine;
+  const auto MaxColumn = Style.ColumnLimit;
+  unsigned MaxEndOfLine = AlignLeft ? 0 : MaxColumn;
   unsigned StartOfMacro = 0;
   for (unsigned i = 1, e = Changes.size(); i < e; ++i) {
     Change &C = Changes[i];
-    if (C.NewlinesBefore > 0) {
-      if (C.ContinuesPPDirective) {
-        MaxEndOfLine = std::max(C.PreviousEndOfTokenColumn + 2, MaxEndOfLine);
-      } else {
-        alignEscapedNewlines(StartOfMacro + 1, i, MaxEndOfLine);
-        MaxEndOfLine = AlignLeft ? 0 : Style.ColumnLimit;
-        StartOfMacro = i;
-      }
+    if (C.NewlinesBefore == 0 && (!WithLastLine || C.Tok->isNot(tok::eof)))
+      continue;
+    const bool InPPDirective = C.ContinuesPPDirective;
+    const auto BackslashColumn = C.PreviousEndOfTokenColumn + 2;
+    if (InPPDirective ||
+        (WithLastLine && (MaxColumn == 0 || BackslashColumn <= MaxColumn))) {
+      MaxEndOfLine = std::max(BackslashColumn, MaxEndOfLine);
+    }
+    if (!InPPDirective) {
+      alignEscapedNewlines(StartOfMacro + 1, i, MaxEndOfLine);
+      MaxEndOfLine = AlignLeft ? 0 : MaxColumn;
+      StartOfMacro = i;
     }
   }
   alignEscapedNewlines(StartOfMacro + 1, Changes.size(), MaxEndOfLine);
@@ -1659,7 +1669,7 @@ void WhitespaceManager::generateChanges() {
                                  C.PreviousEndOfTokenColumn,
                                  C.EscapedNewlineColumn);
       } else {
-        appendNewlineText(ReplacementText, C.NewlinesBefore);
+        appendNewlineText(ReplacementText, C);
       }
       // FIXME: This assert should hold if we computed the column correctly.
       // assert((int)C.StartOfTokenColumn >= C.Spaces);
@@ -1691,15 +1701,18 @@ void WhitespaceManager::storeReplacement(SourceRange Range, StringRef Text) {
   }
 }
 
-void WhitespaceManager::appendNewlineText(std::string &Text,
-                                          unsigned Newlines) {
-  if (UseCRLF) {
-    Text.reserve(Text.size() + 2 * Newlines);
-    for (unsigned i = 0; i < Newlines; ++i)
-      Text.append("\r\n");
-  } else {
-    Text.append(Newlines, '\n');
-  }
+void WhitespaceManager::appendNewlineText(std::string &Text, const Change &C) {
+  if (C.NewlinesBefore <= 0)
+    return;
+
+  StringRef Newline = UseCRLF ? "\r\n" : "\n";
+  Text.append(Newline);
+
+  if (C.Tok->HasFormFeedBefore)
+    Text.append("\f");
+
+  for (unsigned I = 1; I < C.NewlinesBefore; ++I)
+    Text.append(Newline);
 }
 
 void WhitespaceManager::appendEscapedNewlineText(

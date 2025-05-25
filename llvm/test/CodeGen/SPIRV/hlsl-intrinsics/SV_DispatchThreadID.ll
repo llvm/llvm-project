@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; This file generated from the following command:
@@ -16,7 +16,6 @@
 
 ; CHECK-DAG:        OpEntryPoint GLCompute {{.*}} %[[#GlobalInvocationId]]
 ; CHECK-DAG:        OpName %[[#GlobalInvocationId]] "__spirv_BuiltInGlobalInvocationId"
-; CHECK-DAG:        OpDecorate %[[#GlobalInvocationId]] LinkageAttributes "__spirv_BuiltInGlobalInvocationId" Import
 ; CHECK-DAG:        OpDecorate %[[#GlobalInvocationId]] BuiltIn GlobalInvocationId
 
 ; ModuleID = '-'

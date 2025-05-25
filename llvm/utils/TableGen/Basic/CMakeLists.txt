@@ -8,11 +8,17 @@ set(LLVM_LINK_COMPONENTS
   TableGen
   )
 
-add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL
+add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLVM_DYLIB
+  ARMTargetDefEmitter.cpp
+  Attributes.cpp
   CodeGenIntrinsics.cpp
+  DirectiveEmitter.cpp
+  IntrinsicEmitter.cpp
+  RISCVTargetDefEmitter.cpp
   SDNodeProperties.cpp
+  TableGen.cpp
+  VTEmitter.cpp
 )
-set_target_properties(LLVMTableGenBasic PROPERTIES FOLDER "Tablegenning")
 
 # Users may include its headers as "Basic/*.h"
 target_include_directories(LLVMTableGenBasic

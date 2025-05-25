@@ -19,11 +19,12 @@
 #include <__config>
 #include <__thread/support.h>
 
-#if _LIBCPP_ABI_VERSION == 1 || !defined(_LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION)
+#if _LIBCPP_ABI_VERSION == 1 || !_LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION
 #  define NEEDS_MUTEX_DESTRUCTOR
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifdef NEEDS_MUTEX_DESTRUCTOR
 class _LIBCPP_EXPORTED_FROM_ABI mutex {
@@ -39,4 +40,5 @@ public:
 mutex::~mutex() noexcept { __libcpp_mutex_destroy(&__m_); }
 #endif // !NEEDS_MUTEX_DESTRUCTOR
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

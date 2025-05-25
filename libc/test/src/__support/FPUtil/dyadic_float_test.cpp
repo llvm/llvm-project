@@ -8,6 +8,7 @@
 
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/big_int.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
@@ -15,6 +16,7 @@
 using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 using Float192 = LIBC_NAMESPACE::fputil::DyadicFloat<192>;
 using Float256 = LIBC_NAMESPACE::fputil::DyadicFloat<256>;
+using LIBC_NAMESPACE::Sign;
 
 TEST(LlvmLibcDyadicFloatTest, BasicConversions) {
   Float128 x(Sign::POS, /*exponent*/ 0,
@@ -89,3 +91,6 @@ TEST(LlvmLibcDyadicFloatTest, QuickMul) {
 TEST_EDGE_RANGES(Float, float);
 TEST_EDGE_RANGES(Double, double);
 TEST_EDGE_RANGES(LongDouble, long double);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+TEST_EDGE_RANGES(Float16, float16);
+#endif

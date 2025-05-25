@@ -958,11 +958,23 @@ foreach name = ["async_work_group_strided_copy"] in {
   def : Builtin<name, [Event, PointerType<AGenTypeN, LocalAS>, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size, Size, Event]>;
   def : Builtin<name, [Event, PointerType<AGenTypeN, GlobalAS>, PointerType<ConstType<AGenTypeN>, LocalAS>, Size, Size, Event]>;
 }
-foreach name = ["wait_group_events"] in {
-  def : Builtin<name, [Void, Int, PointerType<Event, GenericAS>]>;
-}
 foreach name = ["prefetch"] in {
   def : Builtin<name, [Void, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size]>;
+}
+
+// The wait_group_events is declared with an argument of type event_t*.
+// The address-space of the pointer parameter is different if the generic address space is available.
+multiclass BuiltinWithDefaultPointerArg<AddressSpace AS> {
+  foreach name = ["wait_group_events"] in {
+    def : Builtin<name, [Void, Int, PointerType<Event, AS>]>;
+  }
+}
+
+let Extension = FuncExtOpenCLCNamedAddressSpaceBuiltins in {
+  defm : BuiltinWithDefaultPointerArg<PrivateAS>;
+}
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
+  defm : BuiltinWithDefaultPointerArg<GenericAS>;
 }
 
 //--------------------------------------------------------------------
@@ -1850,6 +1862,20 @@ let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit_p
 let Extension = FunctionExtension<"cl_khr_subgroup_rotate"> in {
   def : Builtin<"sub_group_rotate", [AGenType1, AGenType1, Int], Attr.Convergent>;
   def : Builtin<"sub_group_clustered_rotate", [AGenType1, AGenType1, Int, UInt], Attr.Convergent>;
+}
+
+// cl_khr_kernel_clock
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_device"> in {
+  def : Builtin<"clock_read_device", [ULong]>;
+  def : Builtin<"clock_read_hilo_device", [VectorType<UInt, 2>]>;
+}
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_work_group"> in {
+  def : Builtin<"clock_read_work_group", [ULong]>;
+  def : Builtin<"clock_read_hilo_work_group", [VectorType<UInt, 2>]>;
+}
+let Extension = FunctionExtension<"cl_khr_kernel_clock __opencl_c_kernel_clock_scope_sub_group"> in {
+  def : Builtin<"clock_read_sub_group", [ULong]>;
+  def : Builtin<"clock_read_hilo_sub_group", [VectorType<UInt, 2>]>;
 }
 
 //--------------------------------------------------------------------

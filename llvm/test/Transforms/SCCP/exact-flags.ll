@@ -2,7 +2,7 @@
 ; RUN: opt -passes=sccp < %s -S | FileCheck %s
 
 define i8 @ashr_to_lshr(i8 %x, i8 %y) {
-; CHECK-LABEL: define i8 @ashr_to_lshr(
+; CHECK-LABEL: define range(i8 0, -128) i8 @ashr_to_lshr(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[P:%.*]] = and i8 [[X]], 127
 ; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 [[P]], [[Y]]
@@ -14,7 +14,7 @@ define i8 @ashr_to_lshr(i8 %x, i8 %y) {
 }
 
 define i8 @sdiv_to_udiv(i8 %x, i8 %y) {
-; CHECK-LABEL: define i8 @sdiv_to_udiv(
+; CHECK-LABEL: define range(i8 0, -128) i8 @sdiv_to_udiv(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X1:%.*]] = and i8 [[X]], 127
 ; CHECK-NEXT:    [[Y1:%.*]] = and i8 [[Y]], 127

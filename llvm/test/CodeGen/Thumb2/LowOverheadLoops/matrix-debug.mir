@@ -202,76 +202,86 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: test_debug
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.5(0x30000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4, $r5, $r6, $lr, $r8, $r9, $r10
-  ; CHECK:   DBG_VALUE $r0, $noreg, !23, !DIExpression(), debug-location !32
-  ; CHECK:   DBG_VALUE $r1, $noreg, !24, !DIExpression(), debug-location !32
-  ; CHECK:   DBG_VALUE $r2, $noreg, !25, !DIExpression(), debug-location !32
-  ; CHECK:   DBG_VALUE $r3, $noreg, !26, !DIExpression(), debug-location !32
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r6, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 20
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r6, -12
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r5, -16
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -20
-  ; CHECK:   $r7 = frame-setup tADDrSPi $sp, 3, 14 /* CC::al */, $noreg
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa $r7, 8
-  ; CHECK:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r8, killed $r9, killed $r10
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r10, -24
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r9, -28
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r8, -32
-  ; CHECK:   $r5 = tMOVr killed $r2, 14 /* CC::al */, $noreg
-  ; CHECK:   DBG_VALUE $r5, $noreg, !25, !DIExpression(), debug-location !32
-  ; CHECK:   $r2, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg, debug-location !33
-  ; CHECK:   $r8 = tMOVr killed $r3, 14 /* CC::al */, $noreg
-  ; CHECK:   DBG_VALUE $r8, $noreg, !26, !DIExpression(), debug-location !32
-  ; CHECK:   $r9 = tMOVr $r1, 14 /* CC::al */, $noreg
-  ; CHECK:   DBG_VALUE $r9, $noreg, !24, !DIExpression(), debug-location !32
-  ; CHECK:   $r10 = tMOVr $r0, 14 /* CC::al */, $noreg
-  ; CHECK:   DBG_VALUE 0, $noreg, !29, !DIExpression(), debug-location !32
-  ; CHECK:   DBG_VALUE $r10, $noreg, !23, !DIExpression(), debug-location !32
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, @get_input, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit-def $sp, implicit-def dead $r0, debug-location !33
-  ; CHECK:   DBG_VALUE 0, $noreg, !30, !DIExpression(), debug-location !32
-  ; CHECK:   DBG_VALUE $noreg, $noreg, !28, !DIExpression(), debug-location !32
-  ; CHECK:   t2CMPri renamable $r10, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr, debug-location !37
-  ; CHECK:   tBcc %bb.5, 11 /* CC::lt */, killed $cpsr, debug-location !37
-  ; CHECK: bb.1.for.cond1.preheader.us.preheader:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $r5, $r8, $r9, $r10
-  ; CHECK:   renamable $r12 = t2LSLri renamable $r10, 1, 14 /* CC::al */, $noreg, $noreg, debug-location !37
-  ; CHECK:   renamable $r1, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
-  ; CHECK: bb.2.for.cond1.preheader.us:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   liveins: $r1, $r5, $r8, $r9, $r10, $r12
-  ; CHECK:   DBG_VALUE $r1, $noreg, !30, !DIExpression(), debug-location !32
-  ; CHECK:   DBG_VALUE 0, $noreg, !31, !DIExpression(), debug-location !32
-  ; CHECK:   renamable $r2 = t2LDRs renamable $r9, renamable $r1, 2, 14 /* CC::al */, $noreg, debug-location !41 :: (load (s32) from %ir.arrayidx7.us)
-  ; CHECK:   $r3 = tMOVr $r5, 14 /* CC::al */, $noreg, debug-location !32
-  ; CHECK:   $r0 = tMOVr $r8, 14 /* CC::al */, $noreg, debug-location !32
-  ; CHECK:   dead $lr = tMOVr $r10, 14 /* CC::al */, $noreg, debug-location !32
-  ; CHECK:   $lr = t2DLS renamable $r10, debug-location !42
-  ; CHECK: bb.3.for.body3.us:
-  ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r5, $r8, $r9, $r10, $r12
-  ; CHECK:   DBG_VALUE $noreg, $noreg, !31, !DIExpression(), debug-location !32
-  ; CHECK:   renamable $r6, renamable $r3 = t2LDRSH_POST killed renamable $r3, 2, 14 /* CC::al */, $noreg, debug-location !43 :: (load (s16) from %ir.lsr.iv5)
-  ; CHECK:   renamable $r4, renamable $r0 = t2LDRSH_POST killed renamable $r0, 2, 14 /* CC::al */, $noreg, debug-location !44 :: (load (s16) from %ir.lsr.iv1)
-  ; CHECK:   renamable $r2 = nsw t2SMLABB killed renamable $r4, killed renamable $r6, killed renamable $r2, 14 /* CC::al */, $noreg, debug-location !41
-  ; CHECK:   DBG_VALUE $noreg, $noreg, !31, !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value), debug-location !32
-  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.3, debug-location !42
-  ; CHECK: bb.4.for.cond1.for.inc9_crit_edge.us:
-  ; CHECK:   successors: %bb.5(0x04000000), %bb.2(0x7c000000)
-  ; CHECK:   liveins: $r1, $r2, $r5, $r8, $r9, $r10, $r12
-  ; CHECK:   t2STRs killed renamable $r2, renamable $r9, renamable $r1, 2, 14 /* CC::al */, $noreg, debug-location !41 :: (store (s32) into %ir.8)
-  ; CHECK:   renamable $r1, dead $cpsr = nuw nsw tADDi8 killed renamable $r1, 1, 14 /* CC::al */, $noreg, debug-location !49
-  ; CHECK:   DBG_VALUE $r1, $noreg, !30, !DIExpression(), debug-location !32
-  ; CHECK:   renamable $r5 = tADDhirr killed renamable $r5, renamable $r12, 14 /* CC::al */, $noreg, debug-location !37
-  ; CHECK:   tCMPhir renamable $r1, renamable $r10, 14 /* CC::al */, $noreg, implicit-def $cpsr, debug-location !37
-  ; CHECK:   tBcc %bb.2, 1 /* CC::ne */, killed $cpsr, debug-location !37
-  ; CHECK: bb.5.for.end11:
-  ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r8, def $r9, def $r10, debug-location !52
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $r7, def $pc, debug-location !52
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.5(0x30000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r3, $r4, $r5, $r6, $lr, $r8, $r9, $r10
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   DBG_VALUE $r0, $noreg, !23, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   DBG_VALUE $r1, $noreg, !24, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   DBG_VALUE $r2, $noreg, !25, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   DBG_VALUE $r3, $noreg, !26, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r6, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 20
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r6, -12
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r5, -16
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r4, -20
+  ; CHECK-NEXT:   $r7 = frame-setup tADDrSPi $sp, 3, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa $r7, 8
+  ; CHECK-NEXT:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r8, killed $r9, killed $r10
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r10, -24
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r9, -28
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r8, -32
+  ; CHECK-NEXT:   $r5 = tMOVr killed $r2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   DBG_VALUE $r5, $noreg, !25, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   $r2, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg, debug-location !33
+  ; CHECK-NEXT:   $r8 = tMOVr killed $r3, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   DBG_VALUE $r8, $noreg, !26, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   $r9 = tMOVr $r1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   DBG_VALUE $r9, $noreg, !24, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   $r10 = tMOVr $r0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   DBG_VALUE 0, $noreg, !29, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   DBG_VALUE $r10, $noreg, !23, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   tBL 14 /* CC::al */, $noreg, @get_input, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit-def $sp, implicit-def dead $r0, debug-location !33
+  ; CHECK-NEXT:   DBG_VALUE 0, $noreg, !30, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !28, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   t2CMPri renamable $r10, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr, debug-location !37
+  ; CHECK-NEXT:   tBcc %bb.5, 11 /* CC::lt */, killed $cpsr, debug-location !37
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.for.cond1.preheader.us.preheader:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $r5, $r8, $r9, $r10
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r12 = t2LSLri renamable $r10, 1, 14 /* CC::al */, $noreg, $noreg, debug-location !37
+  ; CHECK-NEXT:   renamable $r1, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.for.cond1.preheader.us:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $r1, $r5, $r8, $r9, $r10, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   DBG_VALUE $r1, $noreg, !30, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   DBG_VALUE 0, $noreg, !31, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   renamable $r2 = t2LDRs renamable $r9, renamable $r1, 2, 14 /* CC::al */, $noreg, debug-location !41 :: (load (s32) from %ir.arrayidx7.us)
+  ; CHECK-NEXT:   $r3 = tMOVr $r5, 14 /* CC::al */, $noreg, debug-location !32
+  ; CHECK-NEXT:   $r0 = tMOVr $r8, 14 /* CC::al */, $noreg, debug-location !32
+  ; CHECK-NEXT:   dead $lr = tMOVr $r10, 14 /* CC::al */, $noreg, debug-location !32
+  ; CHECK-NEXT:   $lr = t2DLS renamable $r10, debug-location !42
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.for.body3.us:
+  ; CHECK-NEXT:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3, $r5, $r8, $r9, $r10, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !31, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   renamable $r6, renamable $r3 = t2LDRSH_POST killed renamable $r3, 2, 14 /* CC::al */, $noreg, debug-location !43 :: (load (s16) from %ir.lsr.iv5)
+  ; CHECK-NEXT:   renamable $r4, renamable $r0 = t2LDRSH_POST killed renamable $r0, 2, 14 /* CC::al */, $noreg, debug-location !44 :: (load (s16) from %ir.lsr.iv1)
+  ; CHECK-NEXT:   renamable $r2 = nsw t2SMLABB killed renamable $r4, killed renamable $r6, killed renamable $r2, 14 /* CC::al */, $noreg, debug-location !41
+  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !31, !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value), debug-location !32
+  ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.3, debug-location !42
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4.for.cond1.for.inc9_crit_edge.us:
+  ; CHECK-NEXT:   successors: %bb.5(0x04000000), %bb.2(0x7c000000)
+  ; CHECK-NEXT:   liveins: $r1, $r2, $r5, $r8, $r9, $r10, $r12
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   t2STRs killed renamable $r2, renamable $r9, renamable $r1, 2, 14 /* CC::al */, $noreg, debug-location !41 :: (store (s32) into %ir.8)
+  ; CHECK-NEXT:   renamable $r1, dead $cpsr = nuw nsw tADDi8 killed renamable $r1, 1, 14 /* CC::al */, $noreg, debug-location !49
+  ; CHECK-NEXT:   DBG_VALUE $r1, $noreg, !30, !DIExpression(), debug-location !32
+  ; CHECK-NEXT:   renamable $r5 = tADDhirr killed renamable $r5, renamable $r12, 14 /* CC::al */, $noreg, debug-location !37
+  ; CHECK-NEXT:   tCMPhir renamable $r1, renamable $r10, 14 /* CC::al */, $noreg, implicit-def $cpsr, debug-location !37
+  ; CHECK-NEXT:   tBcc %bb.2, 1 /* CC::ne */, killed $cpsr, debug-location !37
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5.for.end11:
+  ; CHECK-NEXT:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r8, def $r9, def $r10, debug-location !52
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $r7, def $pc, debug-location !52
   bb.0.entry:
     successors: %bb.1(0x50000000), %bb.5(0x30000000)
     liveins: $r0, $r1, $r2, $r3, $r4, $r5, $r6, $lr, $r8, $r9, $r10

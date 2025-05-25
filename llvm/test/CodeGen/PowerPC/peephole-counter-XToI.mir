@@ -3,16 +3,16 @@
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
 # RUN:   -run-pass ppc-mi-peepholes %s -o - | FileCheck %s --check-prefix=ALL
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-xtoi-peephole-skip=0,ppc-xtoi-peephole-count=8 \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-xtoi-peephole=0-7 \
 # RUN:   | FileCheck %s --check-prefix=ALL
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-xtoi-peephole-skip=3,ppc-xtoi-peephole-count=2 \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-xtoi-peephole=3-4 \
 # RUN:   | FileCheck %s --check-prefix=ONE-FIRSTSTORE
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-xtoi-peephole-skip=5,ppc-xtoi-peephole-count=2 \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-xtoi-peephole=5-6 \
 # RUN:   | FileCheck %s --check-prefix=ONE-SECONDSTORE
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-xtoi-peephole-skip=3,ppc-xtoi-peephole-count=4 \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -debug-counter=ppc-xtoi-peephole=3-6 \
 # RUN:   | FileCheck %s --check-prefix=TWO
 
 ---

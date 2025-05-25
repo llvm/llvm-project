@@ -50,20 +50,20 @@ program test
   external module_before_1
   !WARNING: The global entity 'block_data_before_1' corresponding to the local procedure 'block_data_before_1' is not a callable subprogram
   external block_data_before_1
-  !ERROR: The global subprogram 'explicit_before_1' may not be referenced via the implicit interface 'explicit_before_1'
+  !WARNING: The global subprogram 'explicit_before_1' should not be referenced via the implicit interface 'explicit_before_1'
   external explicit_before_1
   external implicit_before_1
-  !ERROR: The global subprogram 'explicit_func_before_1' may not be referenced via the implicit interface 'explicit_func_before_1'
+  !WARNING: The global subprogram 'explicit_func_before_1' should not be referenced via the implicit interface 'explicit_func_before_1'
   external explicit_func_before_1
   external implicit_func_before_1
   !WARNING: The global entity 'module_after_1' corresponding to the local procedure 'module_after_1' is not a callable subprogram
   external module_after_1
   !WARNING: The global entity 'block_data_after_1' corresponding to the local procedure 'block_data_after_1' is not a callable subprogram
   external block_data_after_1
-  !ERROR: The global subprogram 'explicit_after_1' may not be referenced via the implicit interface 'explicit_after_1'
+  !WARNING: The global subprogram 'explicit_after_1' should not be referenced via the implicit interface 'explicit_after_1'
   external explicit_after_1
   external implicit_after_1
-  !ERROR: The global subprogram 'explicit_func_after_1' may not be referenced via the implicit interface 'explicit_func_after_1'
+  !WARNING: The global subprogram 'explicit_func_after_1' should not be referenced via the implicit interface 'explicit_func_after_1'
   external explicit_func_after_1
   external implicit_func_after_1
   call module_before_1

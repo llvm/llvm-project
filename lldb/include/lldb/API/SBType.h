@@ -150,6 +150,8 @@ public:
 
   uint64_t GetByteSize();
 
+  uint64_t GetByteAlign();
+
   bool IsPointerType();
 
   bool IsReferenceType();
@@ -218,6 +220,13 @@ public:
   uint32_t GetNumberOfTemplateArguments();
 
   lldb::SBType GetTemplateArgumentType(uint32_t idx);
+
+  /// Returns the value of the non-type template parameter at index \c idx.
+  /// If \c idx is out-of-bounds or the template parameter doesn't have
+  /// a value, returns an empty SBValue.
+  ///
+  /// This function will expand parameter packs.
+  lldb::SBValue GetTemplateArgumentValue(lldb::SBTarget target, uint32_t idx);
 
   /// Return the TemplateArgumentKind of the template argument at index idx.
   /// Variadic argument packs are automatically expanded.

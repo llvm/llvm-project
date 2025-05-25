@@ -13,9 +13,11 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBStructuredData.h"
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
+class SystemInitializerFull;
 namespace python {
 class SWIGBridge;
 }
@@ -42,12 +44,16 @@ public:
 
 class LLDB_API SBDebugger {
 public:
-  FLAGS_ANONYMOUS_ENUM(){
-      eBroadcastBitProgress = lldb::DebuggerBroadcastBit::eBroadcastBitProgress,
-      eBroadcastBitWarning = lldb::DebuggerBroadcastBit::eBroadcastBitWarning,
-      eBroadcastBitError = lldb::DebuggerBroadcastBit::eBroadcastBitError,
-      eBroadcastBitProgressCategory =
-          lldb::DebuggerBroadcastBit::eBroadcastBitProgressCategory,
+  FLAGS_ANONYMOUS_ENUM() {
+    eBroadcastBitProgress = lldb::DebuggerBroadcastBit::eBroadcastBitProgress,
+    eBroadcastBitWarning = lldb::DebuggerBroadcastBit::eBroadcastBitWarning,
+    eBroadcastBitError = lldb::DebuggerBroadcastBit::eBroadcastBitError,
+    eBroadcastBitProgressCategory =
+        lldb::DebuggerBroadcastBit::eBroadcastBitProgressCategory,
+    eBroadcastBitExternalProgress =
+        lldb::DebuggerBroadcastBit::eBroadcastBitExternalProgress,
+    eBroadcastBitExternalProgressCategory =
+        lldb::DebuggerBroadcastBit::eBroadcastBitExternalProgressCategory,
   };
   SBDebugger();
 
@@ -56,6 +62,8 @@ public:
   ~SBDebugger();
 
   static const char *GetBroadcasterClass();
+
+  static bool SupportsLanguage(lldb::LanguageType language);
 
   lldb::SBBroadcaster GetBroadcaster();
 
@@ -201,7 +209,7 @@ public:
   lldb::SBCommandInterpreter GetCommandInterpreter();
 
   void HandleCommand(const char *command);
-  
+
   void RequestInterrupt();
   void CancelInterruptRequest();
   bool InterruptRequested();
@@ -242,6 +250,13 @@ public:
   lldb::SBTarget CreateTarget(const char *filename);
 
   lldb::SBTarget GetDummyTarget();
+
+#ifndef SWIG
+  // Dispatch telemery from client to server if client-telemetry is enabled
+  // (by vendor), otherwise the data is ignored.
+  // Invoking this from python client (with SWIG) is not supported.
+  void DispatchClientTelemetry(const lldb::SBStructuredData &data);
+#endif
 
   // Return true if target is deleted from the target list of the debugger.
   bool DeleteTarget(lldb::SBTarget &target);
@@ -302,6 +317,8 @@ public:
 
   bool GetUseColor() const;
 
+  bool SetShowInlineDiagnostics(bool);
+
   bool SetUseSourceCache(bool use_source_cache);
 
   bool GetUseSourceCache() const;
@@ -328,8 +345,21 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
+  /// Clear all previously added callbacks and only add the given one.
+  LLDB_DEPRECATED_FIXME("Use AddDestroyCallback and RemoveDestroyCallback",
+                        "AddDestroyCallback")
   void SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
                           void *baton);
+
+  /// Add a callback for when the debugger is destroyed. Return a token, which
+  /// can be used to remove said callback. Multiple callbacks can be added by
+  /// calling this function multiple times, and will be invoked in FIFO order.
+  lldb::callback_token_t
+  AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
+                     void *baton);
+
+  /// Remove the specified callback. Return true if successful.
+  bool RemoveDestroyCallback(lldb::callback_token_t token);
 
 #ifndef SWIG
   LLDB_DEPRECATED_FIXME("Use DispatchInput(const void *, size_t)",
@@ -364,6 +394,10 @@ public:
   uint32_t GetTerminalWidth() const;
 
   void SetTerminalWidth(uint32_t term_width);
+
+  uint32_t GetTerminalHeight() const;
+
+  void SetTerminalHeight(uint32_t term_height);
 
   lldb::user_id_t GetID();
 
@@ -408,6 +442,11 @@ public:
   SBTypeFilter GetFilterForType(SBTypeNameSpecifier);
 
   SBTypeSynthetic GetSyntheticForType(SBTypeNameSpecifier);
+
+  /// Clear collected statistics for targets belonging to this debugger. This
+  /// includes clearing symbol table and debug info parsing/index time for all
+  /// modules, breakpoint resolve time and target statistics.
+  void ResetStatistics();
 
 #ifndef SWIG
   /// Run the command interpreter.
@@ -478,6 +517,7 @@ public:
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::SystemInitializerFull;
 
   SBDebugger(const lldb::DebuggerSP &debugger_sp);
 
@@ -491,6 +531,7 @@ private:
   friend class SBPlatform;
   friend class SBTarget;
   friend class SBTrace;
+  friend class SBProgress;
 
   lldb::SBTarget FindTargetWithLLDBProcess(const lldb::ProcessSP &processSP);
 

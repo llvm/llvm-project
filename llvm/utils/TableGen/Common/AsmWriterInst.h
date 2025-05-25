@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_ASMWRITERINST_H
-#define LLVM_UTILS_TABLEGEN_ASMWRITERINST_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
+#define LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
 
 #include <string>
 #include <vector>
@@ -38,7 +38,7 @@ struct AsmWriterOperand {
   unsigned MIOpNo = 0;
 
   /// Str - For isLiteralTextOperand, this IS the literal text.  For
-  /// isMachineInstrOperand, this is the PrinterMethodName for the operand..
+  /// isMachineInstrOperand, this is the PrinterMethodName for the operand.
   /// For isLiteralStatementOperand, this is the code to insert verbatim
   /// into the asm writer.
   std::string Str;
@@ -104,4 +104,4 @@ private:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H

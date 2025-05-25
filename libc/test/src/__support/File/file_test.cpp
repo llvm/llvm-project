@@ -12,8 +12,7 @@
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "hdr/types/size_t.h"
 
 using ModeFlags = LIBC_NAMESPACE::File::ModeFlags;
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
@@ -31,8 +30,8 @@ class StringFile : public File {
   static FileIOResult str_read(LIBC_NAMESPACE::File *f, void *data, size_t len);
   static FileIOResult str_write(LIBC_NAMESPACE::File *f, const void *data,
                                 size_t len);
-  static ErrorOr<long> str_seek(LIBC_NAMESPACE::File *f, long offset,
-                                int whence);
+  static ErrorOr<off_t> str_seek(LIBC_NAMESPACE::File *f, off_t offset,
+                                 int whence);
   static int str_close(LIBC_NAMESPACE::File *f) {
     delete reinterpret_cast<StringFile *>(f);
     return 0;
@@ -93,8 +92,8 @@ FileIOResult StringFile::str_write(LIBC_NAMESPACE::File *f, const void *data,
   return i;
 }
 
-ErrorOr<long> StringFile::str_seek(LIBC_NAMESPACE::File *f, long offset,
-                                   int whence) {
+ErrorOr<off_t> StringFile::str_seek(LIBC_NAMESPACE::File *f, off_t offset,
+                                    int whence) {
   StringFile *sf = static_cast<StringFile *>(f);
   if (whence == SEEK_SET)
     sf->pos = offset;

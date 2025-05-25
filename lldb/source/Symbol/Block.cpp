@@ -21,9 +21,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Block::Block(lldb::user_id_t uid)
-    : UserID(uid), m_parent_scope(nullptr), m_children(), m_ranges(),
-      m_inlineInfoSP(), m_variable_list_sp(), m_parsed_block_info(false),
+Block::Block(Function &function, user_id_t function_uid)
+    : Block(function_uid, function) {}
+
+Block::Block(lldb::user_id_t uid, SymbolContextScope &parent_scope)
+    : UserID(uid), m_parent_scope(parent_scope), m_parsed_block_info(false),
       m_parsed_block_variables(false), m_parsed_child_blocks(false) {}
 
 Block::~Block() = default;
@@ -37,10 +39,9 @@ void Block::GetDescription(Stream *s, Function *function,
 
     addr_t base_addr = LLDB_INVALID_ADDRESS;
     if (target)
-      base_addr =
-          function->GetAddressRange().GetBaseAddress().GetLoadAddress(target);
+      base_addr = function->GetAddress().GetLoadAddress(target);
     if (base_addr == LLDB_INVALID_ADDRESS)
-      base_addr = function->GetAddressRange().GetBaseAddress().GetFileAddress();
+      base_addr = function->GetAddress().GetFileAddress();
 
     s->Printf(", range%s = ", num_ranges > 1 ? "s" : "");
     for (size_t i = 0; i < num_ranges; ++i) {
@@ -134,35 +135,34 @@ Block *Block::FindInnermostBlockByOffset(const lldb::addr_t offset) {
 }
 
 void Block::CalculateSymbolContext(SymbolContext *sc) {
-  if (m_parent_scope)
-    m_parent_scope->CalculateSymbolContext(sc);
+  m_parent_scope.CalculateSymbolContext(sc);
   sc->block = this;
 }
 
 lldb::ModuleSP Block::CalculateSymbolContextModule() {
-  if (m_parent_scope)
-    return m_parent_scope->CalculateSymbolContextModule();
-  return lldb::ModuleSP();
+  return m_parent_scope.CalculateSymbolContextModule();
 }
 
 CompileUnit *Block::CalculateSymbolContextCompileUnit() {
-  if (m_parent_scope)
-    return m_parent_scope->CalculateSymbolContextCompileUnit();
-  return nullptr;
+  return m_parent_scope.CalculateSymbolContextCompileUnit();
 }
 
 Function *Block::CalculateSymbolContextFunction() {
-  if (m_parent_scope)
-    return m_parent_scope->CalculateSymbolContextFunction();
-  return nullptr;
+  return m_parent_scope.CalculateSymbolContextFunction();
 }
 
 Block *Block::CalculateSymbolContextBlock() { return this; }
 
-void Block::DumpSymbolContext(Stream *s) {
+Function &Block::GetFunction() {
+  // Blocks always have an enclosing function because their parent is either a
+  // function or a block (which has a parent, inductively).
   Function *function = CalculateSymbolContextFunction();
-  if (function)
-    function->DumpSymbolContext(s);
+  assert(function);
+  return *function;
+}
+
+void Block::DumpSymbolContext(Stream *s) {
+  GetFunction().DumpSymbolContext(s);
   s->Printf(", Block{0x%8.8" PRIx64 "}", GetID());
 }
 
@@ -200,9 +200,7 @@ bool Block::Contains(const Range &range) const {
 }
 
 Block *Block::GetParent() const {
-  if (m_parent_scope)
-    return m_parent_scope->CalculateSymbolContextBlock();
-  return nullptr;
+  return m_parent_scope.CalculateSymbolContextBlock();
 }
 
 Block *Block::GetContainingInlinedBlock() {
@@ -230,7 +228,7 @@ Block *Block::GetContainingInlinedBlockWithCallSite(
     const auto *function_info = inlined_block->GetInlinedFunctionInfo();
 
     if (function_info &&
-        function_info->GetCallSite().FileAndLineEqual(find_call_site))
+        function_info->GetCallSite().FileAndLineEqual(find_call_site, true))
       return inlined_block;
     inlined_block = inlined_block->GetInlinedParent();
   }
@@ -249,27 +247,17 @@ bool Block::GetRangeContainingOffset(const addr_t offset, Range &range) {
 
 bool Block::GetRangeContainingAddress(const Address &addr,
                                       AddressRange &range) {
-  Function *function = CalculateSymbolContextFunction();
-  if (function) {
-    const AddressRange &func_range = function->GetAddressRange();
-    if (addr.GetSection() == func_range.GetBaseAddress().GetSection()) {
-      const addr_t addr_offset = addr.GetOffset();
-      const addr_t func_offset = func_range.GetBaseAddress().GetOffset();
-      if (addr_offset >= func_offset &&
-          addr_offset < func_offset + func_range.GetByteSize()) {
-        addr_t offset = addr_offset - func_offset;
+  Function &function = GetFunction();
+  if (uint32_t idx = GetRangeIndexContainingAddress(addr); idx != UINT32_MAX) {
+    const Range *range_ptr = m_ranges.GetEntryAtIndex(idx);
+    assert(range_ptr);
 
-        const Range *range_ptr = m_ranges.FindEntryThatContains(offset);
-
-        if (range_ptr) {
-          range.GetBaseAddress() = func_range.GetBaseAddress();
-          range.GetBaseAddress().SetOffset(func_offset +
-                                           range_ptr->GetRangeBase());
-          range.SetByteSize(range_ptr->GetByteSize());
-          return true;
-        }
-      }
-    }
+    Address func_addr = function.GetAddress();
+    range.GetBaseAddress() =
+        Address(func_addr.GetFileAddress() + range_ptr->GetRangeBase(),
+                func_addr.GetModule()->GetSectionList());
+    range.SetByteSize(range_ptr->GetByteSize());
+    return true;
   }
   range.Clear();
   return false;
@@ -284,47 +272,55 @@ bool Block::GetRangeContainingLoadAddress(lldb::addr_t load_addr,
 }
 
 uint32_t Block::GetRangeIndexContainingAddress(const Address &addr) {
-  Function *function = CalculateSymbolContextFunction();
-  if (function) {
-    const AddressRange &func_range = function->GetAddressRange();
-    if (addr.GetSection() == func_range.GetBaseAddress().GetSection()) {
-      const addr_t addr_offset = addr.GetOffset();
-      const addr_t func_offset = func_range.GetBaseAddress().GetOffset();
-      if (addr_offset >= func_offset &&
-          addr_offset < func_offset + func_range.GetByteSize()) {
-        addr_t offset = addr_offset - func_offset;
-        return m_ranges.FindEntryIndexThatContains(offset);
-      }
-    }
-  }
-  return UINT32_MAX;
+  Function &function = GetFunction();
+
+  const Address &func_addr = function.GetAddress();
+  if (addr.GetModule() != func_addr.GetModule())
+    return UINT32_MAX;
+
+  const addr_t file_addr = addr.GetFileAddress();
+  const addr_t func_file_addr = func_addr.GetFileAddress();
+  return m_ranges.FindEntryIndexThatContains(file_addr - func_file_addr);
+}
+
+static AddressRange ToAddressRange(const Address &func_addr,
+                                   const Block::Range &block_range) {
+  assert(func_addr.GetModule());
+  return AddressRange(func_addr.GetFileAddress() + block_range.base,
+                      block_range.size,
+                      func_addr.GetModule()->GetSectionList());
 }
 
 bool Block::GetRangeAtIndex(uint32_t range_idx, AddressRange &range) {
-  if (range_idx < m_ranges.GetSize()) {
-    Function *function = CalculateSymbolContextFunction();
-    if (function) {
-      const Range &vm_range = m_ranges.GetEntryRef(range_idx);
-      range.GetBaseAddress() = function->GetAddressRange().GetBaseAddress();
-      range.GetBaseAddress().Slide(vm_range.GetRangeBase());
-      range.SetByteSize(vm_range.GetByteSize());
-      return true;
-    }
-  }
-  return false;
+  if (range_idx >= m_ranges.GetSize())
+    return false;
+
+  Address addr = GetFunction().GetAddress();
+  if (!addr.GetModule())
+    return false;
+
+  range = ToAddressRange(addr, m_ranges.GetEntryRef(range_idx));
+  return true;
+}
+
+AddressRanges Block::GetRanges() {
+  Address addr = GetFunction().GetAddress();
+  if (!addr.GetModule())
+    return {};
+
+  AddressRanges ranges;
+  for (size_t i = 0, e = m_ranges.GetSize(); i < e; ++i)
+    ranges.push_back(ToAddressRange(addr, m_ranges.GetEntryRef(i)));
+  return ranges;
 }
 
 bool Block::GetStartAddress(Address &addr) {
-  if (m_ranges.IsEmpty())
+  Address func_addr = GetFunction().GetAddress();
+  if (!func_addr.GetModule() || m_ranges.IsEmpty())
     return false;
 
-  Function *function = CalculateSymbolContextFunction();
-  if (function) {
-    addr = function->GetAddressRange().GetBaseAddress();
-    addr.Slide(m_ranges.GetEntryRef(0).GetRangeBase());
-    return true;
-  }
-  return false;
+  addr = ToAddressRange(func_addr, m_ranges.GetEntryRef(0)).GetBaseAddress();
+  return true;
 }
 
 void Block::FinalizeRanges() {
@@ -337,13 +333,12 @@ void Block::AddRange(const Range &range) {
   if (parent_block && !parent_block->Contains(range)) {
     Log *log = GetLog(LLDBLog::Symbols);
     if (log) {
-      ModuleSP module_sp(m_parent_scope->CalculateSymbolContextModule());
-      Function *function = m_parent_scope->CalculateSymbolContextFunction();
-      const addr_t function_file_addr =
-          function->GetAddressRange().GetBaseAddress().GetFileAddress();
+      ModuleSP module_sp(m_parent_scope.CalculateSymbolContextModule());
+      Function &function = GetFunction();
+      const addr_t function_file_addr = function.GetAddress().GetFileAddress();
       const addr_t block_start_addr = function_file_addr + range.GetRangeBase();
       const addr_t block_end_addr = function_file_addr + range.GetRangeEnd();
-      Type *func_type = function->GetType();
+      Type *func_type = function.GetType();
 
       const Declaration &func_decl = func_type->GetDeclaration();
       if (func_decl.GetLine()) {
@@ -354,7 +349,7 @@ void Block::AddRange(const Range &range) {
                   "} in function {0x%8.8" PRIx64 "} from %s",
                   func_decl.GetFile().GetPath().c_str(), func_decl.GetLine(),
                   GetID(), (uint32_t)m_ranges.GetSize(), block_start_addr,
-                  block_end_addr, parent_block->GetID(), function->GetID(),
+                  block_end_addr, parent_block->GetID(), function.GetID(),
                   module_sp->GetFileSpec().GetPath().c_str());
       } else {
         LLDB_LOGF(log,
@@ -363,7 +358,7 @@ void Block::AddRange(const Range &range) {
                   ") which is not contained in parent block {0x%8.8" PRIx64
                   "} in function {0x%8.8" PRIx64 "} from %s",
                   GetID(), (uint32_t)m_ranges.GetSize(), block_start_addr,
-                  block_end_addr, parent_block->GetID(), function->GetID(),
+                  block_end_addr, parent_block->GetID(), function.GetID(),
                   module_sp->GetFileSpec().GetPath().c_str());
       }
     }
@@ -382,11 +377,9 @@ size_t Block::MemorySize() const {
   return mem_size;
 }
 
-void Block::AddChild(const BlockSP &child_block_sp) {
-  if (child_block_sp) {
-    child_block_sp->SetParentScope(this);
-    m_children.push_back(child_block_sp);
-  }
+BlockSP Block::CreateChild(user_id_t uid) {
+  m_children.push_back(std::shared_ptr<Block>(new Block(uid, *this)));
+  return m_children.back();
 }
 
 void Block::SetInlinedFunctionInfo(const char *name, const char *mangled,
@@ -503,13 +496,11 @@ void Block::SetDidParseVariables(bool b, bool set_children) {
 }
 
 Block *Block::GetSibling() const {
-  if (m_parent_scope) {
-    Block *parent_block = GetParent();
-    if (parent_block)
-      return parent_block->GetSiblingForChild(this);
-  }
+  if (Block *parent_block = GetParent())
+    return parent_block->GetSiblingForChild(this);
   return nullptr;
 }
+
 // A parent of child blocks can be asked to find a sibling block given
 // one of its child blocks
 Block *Block::GetSiblingForChild(const Block *child_block) const {

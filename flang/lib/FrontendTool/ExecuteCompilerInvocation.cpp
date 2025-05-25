@@ -59,6 +59,8 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<DebugUnparseNoSemaAction>();
   case DebugUnparseWithSymbols:
     return std::make_unique<DebugUnparseWithSymbolsAction>();
+  case DebugUnparseWithModules:
+    return std::make_unique<DebugUnparseWithModulesAction>();
   case DebugDumpSymbols:
     return std::make_unique<DebugDumpSymbolsAction>();
   case DebugDumpParseTree:
@@ -152,8 +154,7 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
   if (flang->getFrontendOpts().showHelp) {
     clang::driver::getDriverOptTable().printHelp(
-        llvm::outs(), "flang-new -fc1 [options] file...",
-        "LLVM 'Flang' Compiler",
+        llvm::outs(), "flang -fc1 [options] file...", "LLVM 'Flang' Compiler",
         /*ShowHidden=*/false, /*ShowAllAliases=*/false,
         llvm::opt::Visibility(clang::driver::options::FC1Option));
     return true;

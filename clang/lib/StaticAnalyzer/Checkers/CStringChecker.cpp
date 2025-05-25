@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterCheckerAPI.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -22,10 +24,13 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <optional>
@@ -189,8 +194,8 @@ public:
   };
 
   // These require a bit of special handling.
-  CallDescription StdCopy{{"std", "copy"}, 3},
-      StdCopyBackward{{"std", "copy_backward"}, 3};
+  CallDescription StdCopy{CDM::SimpleFunc, {"std", "copy"}, 3},
+      StdCopyBackward{CDM::SimpleFunc, {"std", "copy_backward"}, 3};
 
   FnCheck identifyCall(const CallEvent &Call, CheckerContext &C) const;
   void evalMemcpy(CheckerContext &C, const CallEvent &Call, CharKind CK) const;
@@ -268,28 +273,29 @@ public:
   /// Invalidate the destination buffer determined by characters copied.
   static ProgramStateRef
   invalidateDestinationBufferBySize(CheckerContext &C, ProgramStateRef S,
-                                    const Expr *BufE, SVal BufV, SVal SizeV,
-                                    QualType SizeTy);
+                                    const Expr *BufE, ConstCFGElementRef Elem,
+                                    SVal BufV, SVal SizeV, QualType SizeTy);
 
   /// Operation never overflows, do not invalidate the super region.
   static ProgramStateRef invalidateDestinationBufferNeverOverflows(
-      CheckerContext &C, ProgramStateRef S, const Expr *BufE, SVal BufV);
+      CheckerContext &C, ProgramStateRef S, ConstCFGElementRef Elem, SVal BufV);
 
   /// We do not know whether the operation can overflow (e.g. size is unknown),
   /// invalidate the super region and escape related pointers.
   static ProgramStateRef invalidateDestinationBufferAlwaysEscapeSuperRegion(
-      CheckerContext &C, ProgramStateRef S, const Expr *BufE, SVal BufV);
+      CheckerContext &C, ProgramStateRef S, ConstCFGElementRef Elem, SVal BufV);
 
   /// Invalidate the source buffer for escaping pointers.
   static ProgramStateRef invalidateSourceBuffer(CheckerContext &C,
                                                 ProgramStateRef S,
-                                                const Expr *BufE, SVal BufV);
+                                                ConstCFGElementRef Elem,
+                                                SVal BufV);
 
   /// @param InvalidationTraitOperations Determine how to invlidate the
   /// MemRegion by setting the invalidation traits. Return true to cause pointer
   /// escape, or false otherwise.
   static ProgramStateRef invalidateBufferAux(
-      CheckerContext &C, ProgramStateRef State, const Expr *Ex, SVal V,
+      CheckerContext &C, ProgramStateRef State, ConstCFGElementRef Elem, SVal V,
       llvm::function_ref<bool(RegionAndSymbolInvalidationTraits &,
                               const MemRegion *)>
           InvalidationTraitOperations);
@@ -297,13 +303,17 @@ public:
   static bool SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
                               const MemRegion *MR);
 
-  static bool memsetAux(const Expr *DstBuffer, SVal CharE,
-                        const Expr *Size, CheckerContext &C,
+  static bool memsetAux(const Expr *DstBuffer, ConstCFGElementRef Elem,
+                        SVal CharE, const Expr *Size, CheckerContext &C,
                         ProgramStateRef &State);
 
   // Re-usable checks
   ProgramStateRef checkNonNull(CheckerContext &C, ProgramStateRef State,
                                AnyArgExpr Arg, SVal l) const;
+  // Check whether the origin region behind \p Element (like the actual array
+  // region \p Element is from) is initialized.
+  ProgramStateRef checkInit(CheckerContext &C, ProgramStateRef state,
+                            AnyArgExpr Buffer, SVal Element, SVal Size) const;
   ProgramStateRef CheckLocation(CheckerContext &C, ProgramStateRef state,
                                 AnyArgExpr Buffer, SVal Element,
                                 AccessKind Access,
@@ -329,7 +339,8 @@ public:
                          const Stmt *S, StringRef WarningMsg) const;
   void emitAdditionOverflowBug(CheckerContext &C, ProgramStateRef State) const;
   void emitUninitializedReadBug(CheckerContext &C, ProgramStateRef State,
-                             const Expr *E) const;
+                                const Expr *E, const MemRegion *R,
+                                StringRef Msg) const;
   ProgramStateRef checkAdditionOverflow(CheckerContext &C,
                                             ProgramStateRef state,
                                             NonLoc left,
@@ -351,16 +362,16 @@ REGISTER_MAP_WITH_PROGRAMSTATE(CStringLength, const MemRegion *, SVal)
 // Individual checks and utility methods.
 //===----------------------------------------------------------------------===//
 
-std::pair<ProgramStateRef , ProgramStateRef >
-CStringChecker::assumeZero(CheckerContext &C, ProgramStateRef state, SVal V,
+std::pair<ProgramStateRef, ProgramStateRef>
+CStringChecker::assumeZero(CheckerContext &C, ProgramStateRef State, SVal V,
                            QualType Ty) {
   std::optional<DefinedSVal> val = V.getAs<DefinedSVal>();
   if (!val)
-    return std::pair<ProgramStateRef , ProgramStateRef >(state, state);
+    return std::pair<ProgramStateRef, ProgramStateRef>(State, State);
 
   SValBuilder &svalBuilder = C.getSValBuilder();
   DefinedOrUnknownSVal zero = svalBuilder.makeZeroVal(Ty);
-  return state->assume(svalBuilder.evalEQ(state, *val, zero));
+  return State->assume(svalBuilder.evalEQ(State, *val, zero));
 }
 
 ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
@@ -393,7 +404,154 @@ ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
   return stateNonNull;
 }
 
-// FIXME: This was originally copied from ArrayBoundChecker.cpp. Refactor?
+static std::optional<NonLoc> getIndex(ProgramStateRef State,
+                                      const ElementRegion *ER, CharKind CK) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  ASTContext &Ctx = SVB.getContext();
+
+  if (CK == CharKind::Regular) {
+    if (ER->getValueType() != Ctx.CharTy)
+      return {};
+    return ER->getIndex();
+  }
+
+  if (ER->getValueType() != Ctx.WideCharTy)
+    return {};
+
+  QualType SizeTy = Ctx.getSizeType();
+  NonLoc WideSize =
+      SVB.makeIntVal(Ctx.getTypeSizeInChars(Ctx.WideCharTy).getQuantity(),
+                     SizeTy)
+          .castAs<NonLoc>();
+  SVal Offset =
+      SVB.evalBinOpNN(State, BO_Mul, ER->getIndex(), WideSize, SizeTy);
+  if (Offset.isUnknown())
+    return {};
+  return Offset.castAs<NonLoc>();
+}
+
+// Basically 1 -> 1st, 12 -> 12th, etc.
+static void printIdxWithOrdinalSuffix(llvm::raw_ostream &Os, unsigned Idx) {
+  Os << Idx << llvm::getOrdinalSuffix(Idx);
+}
+
+ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
+                                          ProgramStateRef State,
+                                          AnyArgExpr Buffer, SVal Element,
+                                          SVal Size) const {
+
+  // If a previous check has failed, propagate the failure.
+  if (!State)
+    return nullptr;
+
+  const MemRegion *R = Element.getAsRegion();
+  const auto *ER = dyn_cast_or_null<ElementRegion>(R);
+  if (!ER)
+    return State;
+
+  const auto *SuperR = ER->getSuperRegion()->getAs<TypedValueRegion>();
+  if (!SuperR)
+    return State;
+
+  // FIXME: We ought to able to check objects as well. Maybe
+  // UninitializedObjectChecker could help?
+  if (!SuperR->getValueType()->isArrayType())
+    return State;
+
+  SValBuilder &SVB = C.getSValBuilder();
+  ASTContext &Ctx = SVB.getContext();
+
+  const QualType ElemTy = Ctx.getBaseElementType(SuperR->getValueType());
+  const NonLoc Zero = SVB.makeZeroArrayIndex();
+
+  std::optional<Loc> FirstElementVal =
+      State->getLValue(ElemTy, Zero, loc::MemRegionVal(SuperR)).getAs<Loc>();
+  if (!FirstElementVal)
+    return State;
+
+  // Ensure that we wouldn't read uninitialized value.
+  if (Filter.CheckCStringUninitializedRead &&
+      State->getSVal(*FirstElementVal).isUndef()) {
+    llvm::SmallString<258> Buf;
+    llvm::raw_svector_ostream OS(Buf);
+    OS << "The first element of the ";
+    printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
+    OS << " argument is undefined";
+    emitUninitializedReadBug(C, State, Buffer.Expression,
+                             FirstElementVal->getAsRegion(), OS.str());
+    return nullptr;
+  }
+
+  // We won't check whether the entire region is fully initialized -- lets just
+  // check that the first and the last element is. So, onto checking the last
+  // element:
+  const QualType IdxTy = SVB.getArrayIndexType();
+
+  NonLoc ElemSize =
+      SVB.makeIntVal(Ctx.getTypeSizeInChars(ElemTy).getQuantity(), IdxTy)
+          .castAs<NonLoc>();
+
+  // FIXME: Check that the size arg to the cstring function is divisible by
+  // size of the actual element type?
+
+  // The type of the argument to the cstring function is either char or wchar,
+  // but thats not the type of the original array (or memory region).
+  // Suppose the following:
+  //   int t[5];
+  //   memcpy(dst, t, sizeof(t) / sizeof(t[0]));
+  // When checking whether t is fully initialized, we see it as char array of
+  // size sizeof(int)*5. If we check the last element as a character, we read
+  // the last byte of an integer, which will be undefined. But just because
+  // that value is undefined, it doesn't mean that the element is uninitialized!
+  // For this reason, we need to retrieve the actual last element with the
+  // correct type.
+
+  // Divide the size argument to the cstring function by the actual element
+  // type. This value will be size of the array, or the index to the
+  // past-the-end element.
+  std::optional<NonLoc> Offset =
+      SVB.evalBinOpNN(State, clang::BO_Div, Size.castAs<NonLoc>(), ElemSize,
+                      IdxTy)
+          .getAs<NonLoc>();
+
+  // Retrieve the index of the last element.
+  const NonLoc One = SVB.makeIntVal(1, IdxTy).castAs<NonLoc>();
+  SVal LastIdx = SVB.evalBinOpNN(State, BO_Sub, *Offset, One, IdxTy);
+
+  if (!Offset)
+    return State;
+
+  SVal LastElementVal =
+      State->getLValue(ElemTy, LastIdx, loc::MemRegionVal(SuperR));
+  if (!isa<Loc>(LastElementVal))
+    return State;
+
+  if (Filter.CheckCStringUninitializedRead &&
+      State->getSVal(LastElementVal.castAs<Loc>()).isUndef()) {
+    const llvm::APSInt *IdxInt = LastIdx.getAsInteger();
+    // If we can't get emit a sensible last element index, just bail out --
+    // prefer to emit nothing in favour of emitting garbage quality reports.
+    if (!IdxInt) {
+      C.addSink();
+      return nullptr;
+    }
+    llvm::SmallString<258> Buf;
+    llvm::raw_svector_ostream OS(Buf);
+    OS << "The last accessed element (at index ";
+    OS << IdxInt->getExtValue();
+    OS << ") in the ";
+    printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
+    OS << " argument is undefined";
+    emitUninitializedReadBug(C, State, Buffer.Expression,
+                             LastElementVal.getAsRegion(), OS.str());
+    return nullptr;
+  }
+  return State;
+}
+// FIXME: The root of this logic was copied from the old checker
+// alpha.security.ArrayBound (which is removed within this commit).
+// It should be refactored to use the different, more sophisticated bounds
+// checking logic used by the new checker ``security.ArrayBound``.
 ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
                                               ProgramStateRef state,
                                               AnyArgExpr Buffer, SVal Element,
@@ -413,38 +571,17 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
   if (!ER)
     return state;
 
-  SValBuilder &svalBuilder = C.getSValBuilder();
-  ASTContext &Ctx = svalBuilder.getContext();
-
   // Get the index of the accessed element.
-  NonLoc Idx = ER->getIndex();
-
-  if (CK == CharKind::Regular) {
-    if (ER->getValueType() != Ctx.CharTy)
-      return state;
-  } else {
-    if (ER->getValueType() != Ctx.WideCharTy)
-      return state;
-
-    QualType SizeTy = Ctx.getSizeType();
-    NonLoc WideSize =
-        svalBuilder
-            .makeIntVal(Ctx.getTypeSizeInChars(Ctx.WideCharTy).getQuantity(),
-                        SizeTy)
-            .castAs<NonLoc>();
-    SVal Offset = svalBuilder.evalBinOpNN(state, BO_Mul, Idx, WideSize, SizeTy);
-    if (Offset.isUnknown())
-      return state;
-    Idx = Offset.castAs<NonLoc>();
-  }
+  std::optional<NonLoc> Idx = getIndex(state, ER, CK);
+  if (!Idx)
+    return state;
 
   // Get the size of the array.
   const auto *superReg = cast<SubRegion>(ER->getSuperRegion());
   DefinedOrUnknownSVal Size =
       getDynamicExtent(state, superReg, C.getSValBuilder());
 
-  ProgramStateRef StInBound, StOutBound;
-  std::tie(StInBound, StOutBound) = state->assumeInBoundDual(Idx, Size);
+  auto [StInBound, StOutBound] = state->assumeInBoundDual(*Idx, Size);
   if (StOutBound && !StInBound) {
     // These checks are either enabled by the CString out-of-bounds checker
     // explicitly or implicitly by the Malloc checker.
@@ -457,15 +594,6 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
         createOutOfBoundErrorMsg(CurrentFunctionDescription, Access);
     emitOutOfBoundsBug(C, StOutBound, Buffer.Expression, Message);
     return nullptr;
-  }
-
-  // Ensure that we wouldn't read uninitialized value.
-  if (Access == AccessKind::read) {
-    if (Filter.CheckCStringUninitializedRead &&
-        StInBound->getSVal(ER).isUndef()) {
-      emitUninitializedReadBug(C, StInBound, Buffer.Expression);
-      return nullptr;
-    }
   }
 
   // Array bound check succeeded.  From this point forward the array bound
@@ -502,6 +630,7 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
 
   // Check if the first byte of the buffer is accessible.
   State = CheckLocation(C, State, Buffer, BufStart, Access, CK);
+
   if (!State)
     return nullptr;
 
@@ -526,6 +655,8 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
     SVal BufEnd =
         svalBuilder.evalBinOpLN(State, BO_Add, *BufLoc, LastOffset, PtrTy);
     State = CheckLocation(C, State, Buffer, BufEnd, Access, CK);
+    if (Access == AccessKind::read)
+      State = checkInit(C, State, Buffer, BufEnd, *Length);
 
     // If the buffer isn't large enough, abort.
     if (!State)
@@ -694,18 +825,20 @@ void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
 
 void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                                               ProgramStateRef State,
-                                              const Expr *E) const {
+                                              const Expr *E, const MemRegion *R,
+                                              StringRef Msg) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
-    const char *Msg =
-        "Bytes string function accesses uninitialized/garbage values";
     if (!BT_UninitRead)
       BT_UninitRead.reset(new BugType(Filter.CheckNameCStringUninitializedRead,
                                       "Accessing unitialized/garbage values"));
 
     auto Report =
         std::make_unique<PathSensitiveBugReport>(*BT_UninitRead, Msg, N);
+    Report->addNote("Other elements might also be undefined",
+                    Report->getLocation());
     Report->addRange(E->getSourceRange());
     bugreporter::trackExpressionValue(N, E, *Report);
+    Report->addVisitor<NoStoreFuncVisitor>(R->castAs<SubRegion>());
     C.emitReport(std::move(Report));
   }
 }
@@ -895,8 +1028,8 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
       BasicValueFactory &BVF = svalBuilder.getBasicValueFactory();
       const llvm::APSInt &maxValInt = BVF.getMaxValue(sizeTy);
       llvm::APSInt fourInt = APSIntType(maxValInt).getValue(4);
-      const llvm::APSInt *maxLengthInt = BVF.evalAPSInt(BO_Div, maxValInt,
-                                                        fourInt);
+      std::optional<APSIntPtr> maxLengthInt =
+          BVF.evalAPSInt(BO_Div, maxValInt, fourInt);
       NonLoc maxLength = svalBuilder.makeIntVal(*maxLengthInt);
       SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn, maxLength,
                                                 svalBuilder.getConditionType());
@@ -1079,8 +1212,8 @@ bool CStringChecker::isFirstBufInBound(CheckerContext &C, ProgramStateRef State,
 }
 
 ProgramStateRef CStringChecker::invalidateDestinationBufferBySize(
-    CheckerContext &C, ProgramStateRef S, const Expr *BufE, SVal BufV,
-    SVal SizeV, QualType SizeTy) {
+    CheckerContext &C, ProgramStateRef S, const Expr *BufE,
+    ConstCFGElementRef Elem, SVal BufV, SVal SizeV, QualType SizeTy) {
   auto InvalidationTraitOperations =
       [&C, S, BufTy = BufE->getType(), BufV, SizeV,
        SizeTy](RegionAndSymbolInvalidationTraits &ITraits, const MemRegion *R) {
@@ -1095,22 +1228,22 @@ ProgramStateRef CStringChecker::invalidateDestinationBufferBySize(
         return false;
       };
 
-  return invalidateBufferAux(C, S, BufE, BufV, InvalidationTraitOperations);
+  return invalidateBufferAux(C, S, Elem, BufV, InvalidationTraitOperations);
 }
 
 ProgramStateRef
 CStringChecker::invalidateDestinationBufferAlwaysEscapeSuperRegion(
-    CheckerContext &C, ProgramStateRef S, const Expr *BufE, SVal BufV) {
+    CheckerContext &C, ProgramStateRef S, ConstCFGElementRef Elem, SVal BufV) {
   auto InvalidationTraitOperations = [](RegionAndSymbolInvalidationTraits &,
                                         const MemRegion *R) {
     return isa<FieldRegion>(R);
   };
 
-  return invalidateBufferAux(C, S, BufE, BufV, InvalidationTraitOperations);
+  return invalidateBufferAux(C, S, Elem, BufV, InvalidationTraitOperations);
 }
 
 ProgramStateRef CStringChecker::invalidateDestinationBufferNeverOverflows(
-    CheckerContext &C, ProgramStateRef S, const Expr *BufE, SVal BufV) {
+    CheckerContext &C, ProgramStateRef S, ConstCFGElementRef Elem, SVal BufV) {
   auto InvalidationTraitOperations =
       [](RegionAndSymbolInvalidationTraits &ITraits, const MemRegion *R) {
         if (MemRegion::FieldRegionKind == R->getKind())
@@ -1120,12 +1253,12 @@ ProgramStateRef CStringChecker::invalidateDestinationBufferNeverOverflows(
         return false;
       };
 
-  return invalidateBufferAux(C, S, BufE, BufV, InvalidationTraitOperations);
+  return invalidateBufferAux(C, S, Elem, BufV, InvalidationTraitOperations);
 }
 
 ProgramStateRef CStringChecker::invalidateSourceBuffer(CheckerContext &C,
                                                        ProgramStateRef S,
-                                                       const Expr *BufE,
+                                                       ConstCFGElementRef Elem,
                                                        SVal BufV) {
   auto InvalidationTraitOperations =
       [](RegionAndSymbolInvalidationTraits &ITraits, const MemRegion *R) {
@@ -1137,11 +1270,11 @@ ProgramStateRef CStringChecker::invalidateSourceBuffer(CheckerContext &C,
         return true;
       };
 
-  return invalidateBufferAux(C, S, BufE, BufV, InvalidationTraitOperations);
+  return invalidateBufferAux(C, S, Elem, BufV, InvalidationTraitOperations);
 }
 
 ProgramStateRef CStringChecker::invalidateBufferAux(
-    CheckerContext &C, ProgramStateRef State, const Expr *E, SVal V,
+    CheckerContext &C, ProgramStateRef State, ConstCFGElementRef Elem, SVal V,
     llvm::function_ref<bool(RegionAndSymbolInvalidationTraits &,
                             const MemRegion *)>
         InvalidationTraitOperations) {
@@ -1167,7 +1300,7 @@ ProgramStateRef CStringChecker::invalidateBufferAux(
     RegionAndSymbolInvalidationTraits ITraits;
     bool CausesPointerEscape = InvalidationTraitOperations(ITraits, R);
 
-    return State->invalidateRegions(R, E, C.blockCount(), LCtx,
+    return State->invalidateRegions(R, Elem, C.blockCount(), LCtx,
                                     CausesPointerEscape, nullptr, nullptr,
                                     &ITraits);
   }
@@ -1217,9 +1350,9 @@ bool CStringChecker::SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
   }
 }
 
-bool CStringChecker::memsetAux(const Expr *DstBuffer, SVal CharVal,
-                               const Expr *Size, CheckerContext &C,
-                               ProgramStateRef &State) {
+bool CStringChecker::memsetAux(const Expr *DstBuffer, ConstCFGElementRef Elem,
+                               SVal CharVal, const Expr *Size,
+                               CheckerContext &C, ProgramStateRef &State) {
   SVal MemVal = C.getSVal(DstBuffer);
   SVal SizeVal = C.getSVal(Size);
   const MemRegion *MR = MemVal.getAsRegion();
@@ -1272,8 +1405,8 @@ bool CStringChecker::memsetAux(const Expr *DstBuffer, SVal CharVal,
     } else {
       // If the destination buffer's extent is not equal to the value of
       // third argument, just invalidate buffer.
-      State = invalidateDestinationBufferBySize(C, State, DstBuffer, MemVal,
-                                                SizeVal, Size->getType());
+      State = invalidateDestinationBufferBySize(
+          C, State, DstBuffer, Elem, MemVal, SizeVal, Size->getType());
     }
 
     if (StateNullChar && !StateNonNullChar) {
@@ -1298,7 +1431,7 @@ bool CStringChecker::memsetAux(const Expr *DstBuffer, SVal CharVal,
   } else {
     // If the offset is not zero and char value is not concrete, we can do
     // nothing but invalidate the buffer.
-    State = invalidateDestinationBufferBySize(C, State, DstBuffer, MemVal,
+    State = invalidateDestinationBufferBySize(C, State, DstBuffer, Elem, MemVal,
                                               SizeVal, Size->getType());
   }
   return true;
@@ -1382,8 +1515,7 @@ void CStringChecker::evalCopyCommon(CheckerContext &C, const CallEvent &Call,
       // If we don't know how much we copied, we can at least
       // conjure a return value for later.
       if (lastElement.isUnknown())
-        lastElement = C.getSValBuilder().conjureSymbolVal(
-            nullptr, Call.getOriginExpr(), LCtx, C.blockCount());
+        lastElement = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
 
       // The byte after the last byte copied is the return value.
       state = state->BindExpr(Call.getOriginExpr(), LCtx, lastElement);
@@ -1400,12 +1532,12 @@ void CStringChecker::evalCopyCommon(CheckerContext &C, const CallEvent &Call,
     // This would probably remove any existing bindings past the end of the
     // copied region, but that's still an improvement over blank invalidation.
     state = invalidateDestinationBufferBySize(
-        C, state, Dest.Expression, C.getSVal(Dest.Expression), sizeVal,
-        Size.Expression->getType());
+        C, state, Dest.Expression, Call.getCFGElementRef(),
+        C.getSVal(Dest.Expression), sizeVal, Size.Expression->getType());
 
     // Invalidate the source (const-invalidation without const-pointer-escaping
     // the address of the top-level region).
-    state = invalidateSourceBuffer(C, state, Source.Expression,
+    state = invalidateSourceBuffer(C, state, Call.getCFGElementRef(),
                                    C.getSVal(Source.Expression));
 
     C.addTransition(state);
@@ -1533,8 +1665,7 @@ void CStringChecker::evalMemcmp(CheckerContext &C, const CallEvent &Call,
     State = CheckBufferAccess(C, State, Left, Size, AccessKind::read, CK);
     if (State) {
       // The return value is the comparison result, which we don't know.
-      SVal CmpV = Builder.conjureSymbolVal(nullptr, Call.getOriginExpr(), LCtx,
-                                           C.blockCount());
+      SVal CmpV = Builder.conjureSymbolVal(Call, C.blockCount());
       State = State->BindExpr(Call.getOriginExpr(), LCtx, CmpV);
       C.addTransition(State);
     }
@@ -1637,8 +1768,7 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C,
       // no guarantee the full string length will actually be returned.
       // All we know is the return value is the min of the string length
       // and the limit. This is better than nothing.
-      result = C.getSValBuilder().conjureSymbolVal(
-          nullptr, Call.getOriginExpr(), LCtx, C.blockCount());
+      result = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
       NonLoc resultNL = result.castAs<NonLoc>();
 
       if (strLengthNL) {
@@ -1661,8 +1791,7 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C,
     // If we don't know the length of the string, conjure a return
     // value, so it can be used in constraints, at least.
     if (result.isUnknown()) {
-      result = C.getSValBuilder().conjureSymbolVal(
-          nullptr, Call.getOriginExpr(), LCtx, C.blockCount());
+      result = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
     }
   }
 
@@ -2103,13 +2232,13 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
     // can use LazyCompoundVals to copy the source values into the destination.
     // This would probably remove any existing bindings past the end of the
     // string, but that's still an improvement over blank invalidation.
-    state = invalidateDestinationBufferBySize(C, state, Dst.Expression,
-                                              *dstRegVal, amountCopied,
-                                              C.getASTContext().getSizeType());
+    state = invalidateDestinationBufferBySize(
+        C, state, Dst.Expression, Call.getCFGElementRef(), *dstRegVal,
+        amountCopied, C.getASTContext().getSizeType());
 
     // Invalidate the source (const-invalidation without const-pointer-escaping
     // the address of the top-level region).
-    state = invalidateSourceBuffer(C, state, srcExpr.Expression, srcVal);
+    state = invalidateSourceBuffer(C, state, Call.getCFGElementRef(), srcVal);
 
     // Set the C string length of the destination, if we know it.
     if (IsBounded && (appendK == ConcatFnKind::none)) {
@@ -2129,8 +2258,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
     // If this is a stpcpy-style copy, but we were unable to check for a buffer
     // overflow, we still need a result. Conjure a return value.
     if (ReturnEnd && Result.isUnknown()) {
-      Result = svalBuilder.conjureSymbolVal(nullptr, Call.getOriginExpr(), LCtx,
-                                            C.blockCount());
+      Result = svalBuilder.conjureSymbolVal(Call, C.blockCount());
     }
   }
   // Set the return value.
@@ -2229,8 +2357,7 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallEvent &Call,
   const StringLiteral *RightStrLiteral =
       getCStringLiteral(C, state, Right.Expression, RightVal);
   bool canComputeResult = false;
-  SVal resultVal = svalBuilder.conjureSymbolVal(nullptr, Call.getOriginExpr(),
-                                                LCtx, C.blockCount());
+  SVal resultVal = svalBuilder.conjureSymbolVal(Call, C.blockCount());
 
   if (LeftStrLiteral && RightStrLiteral) {
     StringRef LeftStrRef = LeftStrLiteral->getString();
@@ -2331,20 +2458,17 @@ void CStringChecker::evalStrsep(CheckerContext &C,
     // character to NUL.
     // As the replacement never overflows, do not invalidate its super region.
     State = invalidateDestinationBufferNeverOverflows(
-        C, State, SearchStrPtr.Expression, Result);
+        C, State, Call.getCFGElementRef(), Result);
 
     // Overwrite the search string pointer. The new value is either an address
     // further along in the same string, or NULL if there are no more tokens.
-    State =
-        State->bindLoc(*SearchStrLoc,
-                       SVB.conjureSymbolVal(getTag(), Call.getOriginExpr(),
-                                            LCtx, CharPtrTy, C.blockCount()),
-                       LCtx);
+    State = State->bindLoc(*SearchStrLoc,
+                           SVB.conjureSymbolVal(Call, C.blockCount(), getTag()),
+                           LCtx);
   } else {
     assert(SearchStrVal.isUnknown());
     // Conjure a symbolic value. It's the best we can do.
-    Result = SVB.conjureSymbolVal(nullptr, Call.getOriginExpr(), LCtx,
-                                  C.blockCount());
+    Result = SVB.conjureSymbolVal(Call, C.blockCount());
   }
 
   // Set the return value, and finish.
@@ -2382,13 +2506,12 @@ void CStringChecker::evalStdCopyCommon(CheckerContext &C,
   SVal DstVal = State->getSVal(Dst, LCtx);
   // FIXME: As we do not know how many items are copied, we also invalidate the
   // super region containing the target location.
-  State =
-      invalidateDestinationBufferAlwaysEscapeSuperRegion(C, State, Dst, DstVal);
+  State = invalidateDestinationBufferAlwaysEscapeSuperRegion(
+      C, State, Call.getCFGElementRef(), DstVal);
 
   SValBuilder &SVB = C.getSValBuilder();
 
-  SVal ResultVal =
-      SVB.conjureSymbolVal(nullptr, Call.getOriginExpr(), LCtx, C.blockCount());
+  SVal ResultVal = SVB.conjureSymbolVal(Call, C.blockCount());
   State = State->BindExpr(Call.getOriginExpr(), LCtx, ResultVal);
 
   C.addTransition(State);
@@ -2437,8 +2560,8 @@ void CStringChecker::evalMemset(CheckerContext &C,
   // According to the values of the arguments, bind the value of the second
   // argument to the destination buffer and set string length, or just
   // invalidate the destination buffer.
-  if (!memsetAux(Buffer.Expression, C.getSVal(CharE.Expression),
-                 Size.Expression, C, State))
+  if (!memsetAux(Buffer.Expression, Call.getCFGElementRef(),
+                 C.getSVal(CharE.Expression), Size.Expression, C, State))
     return;
 
   State = State->BindExpr(Call.getOriginExpr(), LCtx, BufferPtrVal);
@@ -2482,7 +2605,8 @@ void CStringChecker::evalBzero(CheckerContext &C, const CallEvent &Call) const {
   if (!State)
     return;
 
-  if (!memsetAux(Buffer.Expression, Zero, Size.Expression, C, State))
+  if (!memsetAux(Buffer.Expression, Call.getCFGElementRef(), Zero,
+                 Size.Expression, C, State))
     return;
 
   C.addTransition(State);

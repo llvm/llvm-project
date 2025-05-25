@@ -44,9 +44,10 @@ namespace dwarf {
 enum LLVMConstants : uint32_t {
   /// LLVM mock tags (see also llvm/BinaryFormat/Dwarf.def).
   /// \{
-  DW_TAG_invalid = ~0U,        ///< Tag for invalid results.
-  DW_VIRTUALITY_invalid = ~0U, ///< Virtuality for invalid results.
-  DW_MACINFO_invalid = ~0U,    ///< Macinfo type for invalid results.
+  DW_TAG_invalid = ~0U,             ///< Tag for invalid results.
+  DW_VIRTUALITY_invalid = ~0U,      ///< Virtuality for invalid results.
+  DW_MACINFO_invalid = ~0U,         ///< Macinfo type for invalid results.
+  DW_APPLE_ENUM_KIND_invalid = ~0U, ///< Enum kind for invalid results.
   /// \}
 
   /// Special values for an initial length field.
@@ -134,16 +135,19 @@ enum Form : uint16_t {
 };
 
 enum LocationAtom {
-#define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR) DW_OP_##NAME = ID,
+#define HANDLE_DW_OP(ID, NAME, OPERANDS, ARITY, VERSION, VENDOR)               \
+  DW_OP_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_OP_lo_user = 0xe0,
   DW_OP_hi_user = 0xff,
-  DW_OP_LLVM_fragment = 0x1000,         ///< Only used in LLVM metadata.
-  DW_OP_LLVM_convert = 0x1001,          ///< Only used in LLVM metadata.
-  DW_OP_LLVM_tag_offset = 0x1002,       ///< Only used in LLVM metadata.
-  DW_OP_LLVM_entry_value = 0x1003,      ///< Only used in LLVM metadata.
-  DW_OP_LLVM_implicit_pointer = 0x1004, ///< Only used in LLVM metadata.
-  DW_OP_LLVM_arg = 0x1005,              ///< Only used in LLVM metadata.
+  DW_OP_LLVM_fragment = 0x1000,          ///< Only used in LLVM metadata.
+  DW_OP_LLVM_convert = 0x1001,           ///< Only used in LLVM metadata.
+  DW_OP_LLVM_tag_offset = 0x1002,        ///< Only used in LLVM metadata.
+  DW_OP_LLVM_entry_value = 0x1003,       ///< Only used in LLVM metadata.
+  DW_OP_LLVM_implicit_pointer = 0x1004,  ///< Only used in LLVM metadata.
+  DW_OP_LLVM_arg = 0x1005,               ///< Only used in LLVM metadata.
+  DW_OP_LLVM_extract_bits_sext = 0x1006, ///< Only used in LLVM metadata.
+  DW_OP_LLVM_extract_bits_zext = 0x1007, ///< Only used in LLVM metadata.
 };
 
 enum LlvmUserLocationAtom {
@@ -193,6 +197,12 @@ enum VirtualityAttribute {
 #define HANDLE_DW_VIRTUALITY(ID, NAME) DW_VIRTUALITY_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_VIRTUALITY_max = 0x02
+};
+
+enum EnumKindAttribute {
+#define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME) DW_APPLE_ENUM_KIND_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  DW_APPLE_ENUM_KIND_max = 0x01
 };
 
 enum DefaultedMemberAttribute {
@@ -350,6 +360,8 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
     return DW_LANG_Move;
   case DW_LNAME_Hylo:
     return DW_LANG_Hylo;
+  case DW_LNAME_Metal:
+    return DW_LANG_Metal;
   }
   return {};
 }
@@ -476,6 +488,8 @@ toDW_LNAME(SourceLanguage language) {
     return {{DW_LNAME_Move, 0}};
   case DW_LANG_Hylo:
     return {{DW_LNAME_Hylo, 0}};
+  case DW_LANG_Metal:
+    return {{DW_LNAME_Metal, 0}};
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_CPP_for_OpenCL:
   case DW_LANG_lo_user:
@@ -559,6 +573,7 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_Ruby:
   case DW_LANG_Move:
   case DW_LANG_Hylo:
+  case DW_LANG_Metal:
     result = false;
     break;
   }
@@ -638,6 +653,7 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_Ruby:
   case DW_LANG_Move:
   case DW_LANG_Hylo:
+  case DW_LANG_Metal:
     result = false;
     break;
   }
@@ -715,6 +731,7 @@ inline bool isC(SourceLanguage S) {
   case DW_LANG_Ruby:
   case DW_LANG_Move:
   case DW_LANG_Hylo:
+  case DW_LANG_Metal:
     return false;
   }
   llvm_unreachable("Unknown language kind.");
@@ -971,6 +988,7 @@ StringRef AccessibilityString(unsigned Access);
 StringRef DefaultedMemberString(unsigned DefaultedEncodings);
 StringRef VisibilityString(unsigned Visibility);
 StringRef VirtualityString(unsigned Virtuality);
+StringRef EnumKindString(unsigned EnumKind);
 StringRef LanguageString(unsigned Language);
 StringRef CaseString(unsigned Case);
 StringRef ConventionString(unsigned Convention);
@@ -1010,6 +1028,7 @@ unsigned getOperationEncoding(StringRef OperationEncodingString);
 unsigned getSubOperationEncoding(unsigned OpEncoding,
                                  StringRef SubOperationEncodingString);
 unsigned getVirtuality(StringRef VirtualityString);
+unsigned getEnumKind(StringRef EnumKindString);
 unsigned getLanguage(StringRef LanguageString);
 unsigned getCallingConvention(StringRef LanguageString);
 unsigned getAttributeEncoding(StringRef EncodingString);
@@ -1046,6 +1065,14 @@ unsigned OperationVendor(LocationAtom O);
 unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
+
+/// The number of operands for the given LocationAtom.
+std::optional<unsigned> OperationOperands(LocationAtom O);
+
+/// The arity of the given LocationAtom. This is the number of elements on the
+/// stack this operation operates on. Returns -1 if the arity is variable (e.g.
+/// depending on the argument) or unknown.
+std::optional<unsigned> OperationArity(LocationAtom O);
 
 std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 

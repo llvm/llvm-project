@@ -19,9 +19,8 @@ namespace {
 
 StringRef removeFirstSuffix(StringRef Str, ArrayRef<const char *> Suffixes) {
   for (StringRef Suffix : Suffixes) {
-    if (Str.ends_with(Suffix)) {
-      return Str.substr(0, Str.size() - Suffix.size());
-    }
+    if (Str.consume_back(Suffix))
+      return Str;
   }
   return Str;
 }
@@ -88,8 +87,7 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
     if (FileCopy.consume_front(Parts.first) &&
         FileCopy.consume_back(Parts.second)) {
       // Determine the kind of this inclusion.
-      if (FileCopy.equals("/internal/") ||
-          FileCopy.equals("/proto/")) {
+      if (FileCopy == "/internal/" || FileCopy == "/proto/") {
         return IncludeSorter::IK_MainTUInclude;
       }
     }

@@ -3,13 +3,14 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   FrontendOpenMP
+  TargetParser
   support
   )
 
 # Needed by LLVM's CMake checks because this file defines multiple targets.
 set(LLVM_OPTIONAL_SOURCES ClangTidyMain.cpp ClangTidyToolMain.cpp)
 
-add_clang_library(clangTidyMain
+add_clang_library(clangTidyMain STATIC
   ClangTidyMain.cpp
 
   LINK_LIBS

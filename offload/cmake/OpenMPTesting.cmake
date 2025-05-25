@@ -72,6 +72,8 @@ else()
   endif()
   set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
 endif()
+set(OFFLOAD_DEVICE_INFO_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-offload-device-info)
+set(OFFLOAD_TBLGEN_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/offload-tblgen)
 
 # Macro to extract information about compiler from file. (no own scope)
 macro(extract_test_compiler_information lang file)
@@ -124,7 +126,7 @@ if (${OPENMP_STANDALONE_BUILD})
   # project is built which is too late for detecting the compiler...
   file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/DetectTestCompiler)
   execute_process(
-    COMMAND ${CMAKE_COMMAND} -G${CMAKE_GENERATOR} ${CMAKE_CURRENT_LIST_DIR}/DetectTestCompiler
+    COMMAND ${CMAKE_COMMAND} -G${CMAKE_GENERATOR} ${CMAKE_CURRENT_SOURCE_DIR}/../openmp/cmake/DetectTestCompiler
       -DCMAKE_C_COMPILER=${OPENMP_TEST_C_COMPILER}
       -DCMAKE_CXX_COMPILER=${OPENMP_TEST_CXX_COMPILER}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/DetectTestCompiler

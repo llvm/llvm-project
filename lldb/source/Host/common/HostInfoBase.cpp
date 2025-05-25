@@ -76,9 +76,11 @@ static HostInfoBase::SharedLibraryDirectoryHelper *g_shlib_dir_helper = nullptr;
 void HostInfoBase::Initialize(SharedLibraryDirectoryHelper *helper) {
   g_shlib_dir_helper = helper;
   g_fields = new HostInfoBaseFields();
+  LogChannelSystem::Initialize();
 }
 
 void HostInfoBase::Terminate() {
+  LogChannelSystem::Terminate();
   g_shlib_dir_helper = nullptr;
   delete g_fields;
   g_fields = nullptr;

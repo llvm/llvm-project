@@ -76,10 +76,16 @@ bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
   // new op. Since the new op does not have any tensor results, it does not
   // return anything.
   assert(op->getNumRegions() == 1 && "expected that op has 1 region");
-  auto newOp = cast<DestinationStyleOpInterface>(cloneWithoutRegions(
-      rewriter, op, /*newResultTypes=*/TypeRange{}, newOperands));
-  rewriter.inlineRegionBefore(op->getRegion(0), newOp->getRegion(0),
-                              newOp->getRegion(0).begin());
+  OperationState state(op->getLoc(), op->getName(), newOperands, TypeRange{},
+                       op->getAttrs());
+  state.addRegion();
+  Operation *newOp = Operation::create(state);
+  newOp->getRegion(0).getBlocks().splice(newOp->getRegion(0).begin(),
+                                         op->getRegion(0).getBlocks());
+
+  // We don't want the rewriter tracks an incomplete operation, so insert new
+  // operation after op was fully constructed.
+  rewriter.insert(newOp);
 
   // Replace the results of the old op with the new output buffers.
   replaceOpWithBufferizedValues(rewriter, op, newOutputBuffers);
@@ -142,7 +148,8 @@ struct LinalgOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     return bufferizeDestinationStyleOpInterface(
         rewriter, cast<DestinationStyleOpInterface>(op), options);
   }
@@ -156,6 +163,36 @@ struct LinalgOpInterfaceHelper {
     (Ops::template attachInterface<LinalgOpInterface<Ops>>(*ctx), ...);
   }
 };
+
+struct SoftmaxOpInterface
+    : public DstBufferizableOpInterfaceExternalModel<SoftmaxOpInterface,
+                                                     linalg::SoftmaxOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    // Output operand is not read.
+    auto softmaxOp = cast<linalg::SoftmaxOp>(op);
+    return &opOperand == &softmaxOp.getInputMutable();
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
+    auto softmaxOp = cast<linalg::SoftmaxOp>(op);
+    FailureOr<Value> inputBuffer =
+        getBuffer(rewriter, softmaxOp.getInput(), options);
+    if (failed(inputBuffer))
+      return failure();
+    FailureOr<Value> outputBuffer =
+        getBuffer(rewriter, softmaxOp.getOutput(), options);
+    if (failed(outputBuffer))
+      return failure();
+    rewriter.create<linalg::SoftmaxOp>(softmaxOp.getLoc(),
+                                       /*result=*/TypeRange(), *inputBuffer,
+                                       *outputBuffer, softmaxOp.getDimension());
+    replaceOpWithBufferizedValues(rewriter, op, *outputBuffer);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
@@ -167,6 +204,9 @@ void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
     LinalgOpInterfaceHelper<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+
         >::registerOpInterface(ctx);
+
+    SoftmaxOp::attachInterface<SoftmaxOpInterface>(*ctx);
   });
 }

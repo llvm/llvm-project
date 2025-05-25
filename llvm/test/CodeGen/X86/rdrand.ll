@@ -89,7 +89,7 @@ define void @loop(ptr %p, i32 %n) nounwind {
 ; X86-NEXT:  # %bb.1: # %while.body.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB3_2: # %while.body
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    rdrandl %esi
@@ -108,7 +108,7 @@ define void @loop(ptr %p, i32 %n) nounwind {
 ; X64-NEXT:  # %bb.1: # %while.body.preheader
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_2: # %while.body
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    rdrandl %edx

@@ -58,7 +58,6 @@ template<typename T>
   T tfoo(T t) {
      return t;
   }
-  // expected-warning@+1 {{alias declarations are a C++11 extension}}
  using GSF = groupshared float;
  GSF gs;
  // expected-error@+1 {{no matching function for call to 'tfoo'}}
@@ -72,9 +71,9 @@ groupshared void (*fp)();
 // expected-error@+1 {{parameter may not be qualified with an address space}}
 void (*fp2)(groupshared float);
 // NOTE: HLSL not support trailing return types.
-// expected-warning@+2 {{'auto' type specifier is a C++11 extension}}
-// expected-error@+1 {{expected function body after function declarator}}
-auto func() -> groupshared void;
+// expected-warning@#func{{'auto' type specifier is a HLSL 202y extension}}
+// expected-error@#func{{return type cannot be qualified with address space}}
+auto func() -> groupshared void; // #func
 // expected-warning@+2 {{'groupshared' attribute only applies to variables}}
 // expected-error@+1 {{return type cannot be qualified with address space}}
 void groupshared f();

@@ -541,9 +541,9 @@ void ento::createPlistDiagnosticConsumer(
   if (OutputFile.empty())
     return;
 
-  C.push_back(new PlistDiagnostics(DiagOpts, OutputFile, PP, CTU,
-                                   MacroExpansions,
-                                   /*supportsMultipleFiles=*/false));
+  C.push_back(std::make_unique<PlistDiagnostics>(
+      DiagOpts, OutputFile, PP, CTU, MacroExpansions,
+      /*supportsMultipleFiles=*/false));
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, OutputFile,
                                           PP, CTU, MacroExpansions);
 }
@@ -558,9 +558,9 @@ void ento::createPlistMultiFileDiagnosticConsumer(
   if (OutputFile.empty())
     return;
 
-  C.push_back(new PlistDiagnostics(DiagOpts, OutputFile, PP, CTU,
-                                   MacroExpansions,
-                                   /*supportsMultipleFiles=*/true));
+  C.push_back(std::make_unique<PlistDiagnostics>(
+      DiagOpts, OutputFile, PP, CTU, MacroExpansions,
+      /*supportsMultipleFiles=*/true));
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, OutputFile,
                                           PP, CTU, MacroExpansions);
 }
@@ -574,8 +574,8 @@ void PlistDiagnostics::printBugPath(llvm::raw_ostream &o, const FIDMap &FM,
                              }) &&
          "PathDiagnostic is not partitioned so that notes precede the rest");
 
-  PathPieces::const_iterator FirstNonNote = std::partition_point(
-      Path.begin(), Path.end(), [](const PathDiagnosticPieceRef &E) {
+  PathPieces::const_iterator FirstNonNote =
+      llvm::partition_point(Path, [](const PathDiagnosticPieceRef &E) {
         return E->getKind() == PathDiagnosticPiece::Note;
       });
 
@@ -812,7 +812,6 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     std::string stats;
     llvm::raw_string_ostream os(stats);
     llvm::PrintStatisticsJSON(os);
-    os.flush();
     EmitString(o, html::EscapeText(stats)) << '\n';
   }
 

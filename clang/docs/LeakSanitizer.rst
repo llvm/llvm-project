@@ -43,14 +43,22 @@ To use LeakSanitizer in stand-alone mode, link your program with
 link step, so that it would link in proper LeakSanitizer run-time library
 into the final executable.
 
+Security Considerations
+=======================
+
+LeakSanitizer is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+LeakSanitizer's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
+
 Supported Platforms
 ===================
 
-* Android aarch64/i386/x86_64
-* Fuchsia aarch64/x86_64
-* Linux arm/aarch64/mips64/ppc64/ppc64le/riscv64/s390x/i386/x86\_64
-* macOS aarch64/i386/x86\_64
-* NetBSD i386/x86_64
+* Android
+* Fuchsia
+* Linux
+* macOS
+* NetBSD
 
 More Information
 ================

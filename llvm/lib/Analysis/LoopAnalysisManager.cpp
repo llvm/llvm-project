@@ -133,7 +133,7 @@ LoopAnalysisManagerFunctionProxy::run(Function &F,
                                       FunctionAnalysisManager &AM) {
   return Result(*InnerAM, AM.getResult<LoopAnalysis>(F));
 }
-}
+} // namespace llvm
 
 PreservedAnalyses llvm::getLoopPassPreservedAnalyses() {
   PreservedAnalyses PA;

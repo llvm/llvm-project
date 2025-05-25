@@ -28,8 +28,7 @@ void test0(S s, U val, S expected, std::size_t expected_erased_count) {
 }
 
 template <class S>
-void test()
-{
+void test() {
   test0(S(), 1, S(), 0);
 
   test0(S({1}), 1, S(), 1);
@@ -63,14 +62,13 @@ void test()
   test0(S({1, 2, 1}), opt(3), S({1, 2, 1}), 0);
 }
 
-int main(int, char**)
-{
-    test<std::forward_list<int>>();
-    test<std::forward_list<int, min_allocator<int>>> ();
-    test<std::forward_list<int, test_allocator<int>>> ();
+int main(int, char**) {
+  test<std::forward_list<int>>();
+  test<std::forward_list<int, min_allocator<int>>>();
+  test<std::forward_list<int, test_allocator<int>>>();
 
-    test<std::forward_list<long>>();
-    test<std::forward_list<double>>();
+  test<std::forward_list<long>>();
+  test<std::forward_list<double>>();
 
   return 0;
 }

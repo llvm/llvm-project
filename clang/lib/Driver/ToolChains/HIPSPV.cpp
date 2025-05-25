@@ -193,7 +193,7 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
   StringRef hipPath = DriverArgs.getLastArgValue(options::OPT_hip_path_EQ);
   if (hipPath.empty()) {
-    getDriver().Diag(diag::err_drv_hipspv_no_hip_path) << 1 << "'-nogpuinc'";
+    getDriver().Diag(diag::err_drv_hipspv_no_hip_path);
     return;
   }
   SmallString<128> P(hipPath);
@@ -204,7 +204,8 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return {};
 
   ArgStringList LibraryPaths;

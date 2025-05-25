@@ -22,7 +22,7 @@ class RISCVELFTargetObjectFile : public TargetLoweringObjectFileELF {
   MCSection *SmallROData16Section;
   MCSection *SmallROData32Section;
   MCSection *SmallBSSSection;
-  unsigned SSThreshold = 8;
+  unsigned SSThreshold = 0;
 
 public:
   unsigned getTextSectionAlignment() const override;
@@ -47,6 +47,9 @@ public:
   void getModuleMetadata(Module &M) override;
 
   bool isInSmallSection(uint64_t Size) const;
+
+  const MCExpr *createTargetMCExpr(const MCExpr *Expr,
+                                   uint8_t Specifier) const override;
 
   const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
                                           const MCSymbol *Sym,

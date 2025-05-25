@@ -400,6 +400,14 @@ void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 void AVRToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {
+  // Reject C/C++ compilation for avr1 devices since they have no SRAM.
+  const Driver &D = getDriver();
+  std::string CPU = getCPUName(D, DriverArgs, getTriple());
+  std::optional<StringRef> FamilyName = GetMCUFamilyName(CPU);
+  if (CPU == "avr1" || (FamilyName && *FamilyName == "avr1"))
+    D.Diag(diag::err_drv_opt_unsupported_input_type)
+        << "-mmcu=" + CPU << "c/c++";
+
   // By default, use `.ctors` (not `.init_array`), as required by libgcc, which
   // runs constructors/destructors on AVR.
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
@@ -416,9 +424,10 @@ Tool *AVRToolChain::buildLinker() const {
   return new tools::AVR::Linker(getTriple(), *this);
 }
 
-std::string
-AVRToolChain::getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                            FileType Type = ToolChain::FT_Static) const {
+std::string AVRToolChain::getCompilerRT(const llvm::opt::ArgList &Args,
+                                        StringRef Component,
+                                        FileType Type = ToolChain::FT_Static,
+                                        bool IsFortran) const {
   assert(Type == ToolChain::FT_Static && "AVR only supports static libraries");
   // Since AVR can never be a host environment, its compiler-rt library files
   // should always have ".a" suffix, even on windows.
@@ -511,19 +520,9 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(TC, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   // If the family name is known, we can link with the device-specific libgcc.
   // Without it, libgcc will simply not be linked. This matches avr-gcc

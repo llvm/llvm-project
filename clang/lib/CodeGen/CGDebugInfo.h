@@ -20,8 +20,8 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -29,7 +29,9 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
+#include <map>
 #include <optional>
+#include <string>
 
 namespace llvm {
 class MDNode;
@@ -38,6 +40,7 @@ class MDNode;
 namespace clang {
 class ClassTemplateSpecializationDecl;
 class GlobalDecl;
+class Module;
 class ModuleMap;
 class ObjCInterfaceDecl;
 class UsingDecl;
@@ -55,6 +58,8 @@ class CGBlockInfo;
 class CGDebugInfo {
   friend class ApplyDebugLocation;
   friend class SaveAndRestoreLocation;
+  friend class ApplyAtomGroup;
+
   CodeGenModule &CGM;
   const llvm::codegenoptions::DebugInfoKind DebugKind;
   bool DebugTypeExtRefs;
@@ -82,6 +87,12 @@ class CGDebugInfo {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
@@ -170,6 +181,16 @@ class CGDebugInfo {
   /// The key is coroutine real parameters, value is DIVariable in LLVM IR.
   Param2DILocTy ParamDbgMappings;
 
+  /// Key Instructions bookkeeping.
+  /// Source atoms are identified by a {AtomGroup, InlinedAt} pair, meaning
+  /// AtomGroup numbers can be repeated across different functions.
+  struct {
+    uint64_t NextAtom = 1;
+    uint64_t HighestEmittedAtom = 0;
+    uint64_t CurrentAtom = 0;
+  } KeyInstructionsInfo;
+
+private:
   /// Helper functions for getOrCreateType.
   /// @{
   /// Currently the checksum of an interface includes the number of
@@ -187,6 +208,8 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const PointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const BlockPointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
+                           llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 
@@ -337,14 +360,19 @@ class CGDebugInfo {
                                           llvm::DIScope *RecordTy,
                                           const RecordDecl *RD);
 
-  /// Create type for binding declarations.
-  llvm::DIType *CreateBindingDeclType(const BindingDecl *BD);
-
   /// Create an anonnymous zero-size separator for bit-field-decl if needed on
   /// the target.
   llvm::DIDerivedType *createBitFieldSeparatorIfNeeded(
       const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
+
+  /// A cache that maps names of artificial inlined functions to subprograms.
+  llvm::StringMap<llvm::DISubprogram *> InlinedSubprogramMap;
+
+  /// A function that returns the subprogram corresponding to the artificial
+  /// inlined function for traps.
+  llvm::DISubprogram *createInlinedSubprogram(StringRef FuncName,
+                                              llvm::DIFile *FileScope);
 
   /// Helpers for collecting fields of a record.
   /// @{
@@ -529,6 +557,12 @@ public:
   /// Emit information about an external variable.
   void EmitExternalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
 
+  /// Emit a pseudo variable and debug info for an intermediate value if it does
+  /// not correspond to a variable in the source code, so that a profiler can
+  /// track more accurate usage of certain instructions of interest.
+  void EmitPseudoVariable(CGBuilderTy &Builder, llvm::Instruction *Value,
+                          QualType Ty);
+
   /// Emit information about global variable alias.
   void EmitGlobalAlias(const llvm::GlobalValue *GV, const GlobalDecl Decl);
 
@@ -602,7 +636,46 @@ public:
     return CoroutineParameterMappings;
   }
 
+  /// Create a debug location from `TrapLocation` that adds an artificial inline
+  /// frame where the frame name is
+  ///
+  /// * `<Prefix>:<Category>:<FailureMsg>`
+  ///
+  /// `<Prefix>` is "__clang_trap_msg".
+  ///
+  /// This is used to store failure reasons for traps.
+  llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
+                                                StringRef Category,
+                                                StringRef FailureMsg);
+  /// Create a debug location from `Location` that adds an artificial inline
+  /// frame where the frame name is FuncName
+  ///
+  /// This is used to indiciate instructions that come from compiler
+  /// instrumentation.
+  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
+                                            StringRef FuncName);
+
+  /// Reset internal state.
+  void completeFunction();
+
+  /// Add \p KeyInstruction and an optional \p Backup instruction to the
+  /// current atom group, created using ApplyAtomGroup.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup);
+
+  /// Add \p KeyInstruction and an optional \p Backup instruction to the atom
+  /// group \p Atom.
+  void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                   llvm::Value *Backup, uint64_t Atom);
+
 private:
+  /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
+  /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
+  /// has no DebugLoc, and chooses the atom group in which the instruction
+  /// has the highest precedence if it's already in one.
+  void addInstSourceAtomMetadata(llvm::Instruction *I, uint64_t Group,
+                                 uint8_t Rank);
+
   /// Emit call to llvm.dbg.declare for a variable declaration.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.

@@ -234,7 +234,7 @@ entry:
   ret <16 x i16> %shuffle
 }
 
-;;;; Cases with undef indicies mixed in the mask
+;;;; Cases with undef indices mixed in the mask
 
 define <8 x float> @shuffle_v8f32_uu67u9ub(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
 ; ALL-LABEL: shuffle_v8f32_uu67u9ub:

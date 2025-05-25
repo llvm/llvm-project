@@ -4,7 +4,7 @@
 # Check the same for DBG_VALUE $noreg.
 #
 # CHECK: ![[VAR:[0-9]+]] = !DILocalVariable(name: "c"
-# 
+#
 # CHECK-LABEL: bb.0.entry:
 # CHECK:       DBG_VALUE_LIST ![[VAR]], !DIExpression(DW_OP_LLVM_arg, 0,
 # CHECK-SAME:                        DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rsi
@@ -31,20 +31,20 @@
   source_filename = "test.cpp"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   ; Function Attrs: norecurse nounwind readnone uwtable
   define dso_local i32 @_Z3fooii(i32 %a, i32 %b) local_unnamed_addr !dbg !7 {
   entry:
     ret i32 0, !dbg !17
   }
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "test.cpp", directory: "/")
   !2 = !{}
@@ -75,7 +75,7 @@ fixedStack:
 body:             |
   bb.0.entry:
     liveins: $rdi, $rsi
-  
+
     DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $rdi, $rsi, debug-location !15
     $rbx = COPY killed $rdi
     $rdi = MOV64ri 0

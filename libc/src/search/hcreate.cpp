@@ -9,10 +9,11 @@
 #include "src/search/hcreate.h"
 #include "src/__support/HashTable/randomness.h"
 #include "src/__support/HashTable/table.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/search/hsearch/global.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, hcreate, (size_t capacity)) {
   // We follow FreeBSD's implementation here. If the global_hash_table is
   // already initialized, this function will do nothing and return 1.
@@ -31,4 +32,4 @@ LLVM_LIBC_FUNCTION(int, hcreate, (size_t capacity)) {
   return 1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // If -emit-llvm and/or -S is used in device only compilation,
 // the output should not be bundled, except --gpu-bundle-output
 // is specified.

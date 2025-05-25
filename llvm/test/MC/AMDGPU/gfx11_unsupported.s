@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 buffer_atomic_add_f64 v[2:3], off, s[12:15], s4 offset:4095
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -32,6 +32,9 @@ buffer_invl2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 buffer_store_lds_dword s[4:7], -1 offset:4095 lds
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+buffer_wbinvl1
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 buffer_wbinvl1_vol
@@ -317,6 +320,9 @@ image_sample_cd_o v252, v[1:4], s[8:15], s[12:15] dmask:0x1
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 image_sample_cd_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_alloc_vgpr s0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_atomic_add flat_scratch_hi, s[2:3], s0
@@ -2011,9 +2017,6 @@ s_cmp_neq_f16 s1, s2
 s_cmp_nlt_f16 s1, s2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-s_singleuse_vdst 0x1234
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
 buffer_atomic_sub_clamp_u32 v5, off, s[8:11], s3 offset:0 glc
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
@@ -2063,4 +2066,10 @@ ds_subrev_u64 v1, v[2:3]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_subrev_rtn_u64 v[5:6], v1, v[2:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_dot2c_f32_bf16 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+ds_bpermute_fi_b32 v5, v1, v2
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

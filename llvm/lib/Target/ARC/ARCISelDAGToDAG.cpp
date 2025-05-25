@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARC.h"
+#include "ARCSelectionDAGInfo.h"
 #include "ARCTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -41,12 +42,10 @@ namespace {
 
 class ARCDAGToDAGISel : public SelectionDAGISel {
 public:
-  static char ID;
-
   ARCDAGToDAGISel() = delete;
 
   ARCDAGToDAGISel(ARCTargetMachine &TM, CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, TM, OptLevel) {}
+      : SelectionDAGISel(TM, OptLevel) {}
 
   void Select(SDNode *N) override;
 
@@ -60,17 +59,25 @@ public:
 #include "ARCGenDAGISel.inc"
 };
 
-char ARCDAGToDAGISel::ID;
+class ARCDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit ARCDAGToDAGISelLegacy(ARCTargetMachine &TM, CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<ARCDAGToDAGISel>(TM, OptLevel)) {}
+};
+
+char ARCDAGToDAGISelLegacy::ID;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(ARCDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(ARCDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// This pass converts a legalized DAG into a ARC-specific DAG, ready for
 /// instruction scheduling.
 FunctionPass *llvm::createARCISelDag(ARCTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
-  return new ARCDAGToDAGISel(TM, OptLevel);
+  return new ARCDAGToDAGISelLegacy(TM, OptLevel);
 }
 
 bool ARCDAGToDAGISel::SelectAddrModeImm(SDValue Addr, SDValue &Base,

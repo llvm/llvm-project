@@ -36,6 +36,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 
 using namespace llvm;
 
@@ -89,22 +90,15 @@ enum HardClauseType {
   HARDCLAUSE_ILLEGAL,
 };
 
-class SIInsertHardClauses : public MachineFunctionPass {
+class SIInsertHardClauses {
 public:
-  static char ID;
   const GCNSubtarget *ST = nullptr;
-
-  SIInsertHardClauses() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
       if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
-        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+            SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
             const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
             if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
@@ -128,7 +122,8 @@ public:
                                               : HARDCLAUSE_MIMG_LOAD
                               : HARDCLAUSE_MIMG_STORE;
         }
-        if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+            SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           return MI.mayLoad() ? MI.mayStore() ? HARDCLAUSE_VMEM_ATOMIC
                                               : HARDCLAUSE_VMEM_LOAD
                               : HARDCLAUSE_VMEM_STORE;
@@ -189,9 +184,7 @@ public:
     return true;
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
+  bool run(MachineFunction &MF) {
 
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasHardClauses())
@@ -208,7 +201,7 @@ public:
 
         int64_t Dummy1;
         bool Dummy2;
-        LocationSize Dummy3 = 0;
+        LocationSize Dummy3 = LocationSize::precise(0);
         SmallVector<const MachineOperand *, 4> BaseOps;
         if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           if (!SII->getMemOperandsWithOffsetWidth(MI, BaseOps, Dummy1, Dummy2,
@@ -265,11 +258,40 @@ public:
   }
 };
 
+class SIInsertHardClausesLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  SIInsertHardClausesLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+
+    return SIInsertHardClauses().run(MF);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
 } // namespace
 
-char SIInsertHardClauses::ID = 0;
+PreservedAnalyses
+llvm::SIInsertHardClausesPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  if (!SIInsertHardClauses().run(MF))
+    return PreservedAnalyses::all();
 
-char &llvm::SIInsertHardClausesID = SIInsertHardClauses::ID;
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
 
-INITIALIZE_PASS(SIInsertHardClauses, DEBUG_TYPE, "SI Insert Hard Clauses",
+char SIInsertHardClausesLegacy::ID = 0;
+
+char &llvm::SIInsertHardClausesID = SIInsertHardClausesLegacy::ID;
+
+INITIALIZE_PASS(SIInsertHardClausesLegacy, DEBUG_TYPE, "SI Insert Hard Clauses",
                 false, false)

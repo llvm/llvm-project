@@ -29,7 +29,8 @@ void OptionValueLanguage::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
-llvm::json::Value OptionValueLanguage::ToJSON(const ExecutionContext *exe_ctx) {
+llvm::json::Value
+OptionValueLanguage::ToJSON(const ExecutionContext *exe_ctx) const {
   return Language::GetNameForLanguageType(m_current_value);
 }
 
@@ -57,7 +58,7 @@ Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
         error_strm.Printf("    %s\n",
                           Language::GetNameForLanguageType(language));
       }
-      error.SetErrorString(error_strm.GetString());
+      error = Status(error_strm.GetString().str());
     }
   } break;
 

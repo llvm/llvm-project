@@ -32,6 +32,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSPIRVObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -44,11 +45,13 @@ using namespace llvm;
 namespace {
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
+  SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
 
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), ST(nullptr), TII(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), ST(nullptr), TII(nullptr) {}
+  static char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
   const SPIRVInstrInfo *TII;
@@ -68,14 +71,20 @@ public:
   void outputOpMemoryModel();
   void outputOpFunctionEnd();
   void outputExtFuncDecls();
-  void outputExecutionModeFromMDNode(Register Reg, MDNode *Node,
-                                     SPIRV::ExecutionMode::ExecutionMode EM);
+  void outputExecutionModeFromMDNode(MCRegister Reg, MDNode *Node,
+                                     SPIRV::ExecutionMode::ExecutionMode EM,
+                                     unsigned ExpectMDOps, int64_t DefVal);
   void outputExecutionModeFromNumthreadsAttribute(
-      const Register &Reg, const Attribute &Attr,
+      const MCRegister &Reg, const Attribute &Attr,
       SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
+  bool isHidden() {
+    return MF->getFunction()
+        .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+        .isValid();
+  }
 
   void emitInstruction(const MachineInstr *MI) override;
   void emitFunctionEntryLabel() override {}
@@ -91,6 +100,9 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   SPIRV::ModuleAnalysisInfo *MAI;
+
+protected:
+  void cleanUp(Module &M);
 };
 } // namespace
 
@@ -114,12 +126,22 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
   // Bound is an approximation that accounts for the maximum used register
   // number and number of generated OpLabels
   unsigned Bound = 2 * (ST->getBound() + 1) + NLabels;
-  bool FlagToRestore = OutStreamer->getUseAssemblerInfoForParsing();
-  OutStreamer->setUseAssemblerInfoForParsing(true);
   if (MCAssembler *Asm = OutStreamer->getAssemblerPtr())
-    Asm->setBuildVersion(static_cast<MachO::PlatformType>(0), Major, Minor,
-                         Bound, VersionTuple(Major, Minor, 0, Bound));
-  OutStreamer->setUseAssemblerInfoForParsing(FlagToRestore);
+    static_cast<SPIRVObjectWriter &>(Asm->getWriter())
+        .setBuildVersion(Major, Minor, Bound);
+
+  cleanUp(M);
+}
+
+// Any cleanup actions with the Module after we don't care about its content
+// anymore.
+void SPIRVAsmPrinter::cleanUp(Module &M) {
+  // Verifier disallows uses of intrinsic global variables.
+  for (StringRef GVName : {"llvm.global_ctors", "llvm.global_dtors",
+                           "llvm.used", "llvm.compiler.used"}) {
+    if (GlobalVariable *GV = M.getNamedGlobal(GVName))
+      GV->setName("");
+  }
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {
@@ -132,7 +154,7 @@ void SPIRVAsmPrinter::emitFunctionHeader() {
   TII = ST->getInstrInfo();
   const Function &F = MF->getFunction();
 
-  if (isVerbose()) {
+  if (isVerbose() && !isHidden()) {
     OutStreamer->getCommentOS()
         << "-- Begin function "
         << GlobalValue::dropLLVMManglingEscape(F.getName()) << '\n';
@@ -148,22 +170,28 @@ void SPIRVAsmPrinter::outputOpFunctionEnd() {
   outputMCInst(FunctionEndInst);
 }
 
-// Emit OpFunctionEnd at the end of MF and clear BBNumToRegMap.
 void SPIRVAsmPrinter::emitFunctionBodyEnd() {
-  outputOpFunctionEnd();
-  MAI->BBNumToRegMap.clear();
+  if (!isHidden())
+    outputOpFunctionEnd();
 }
 
 void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
+  // Do not emit anything if it's an internal service function.
+  if (isHidden())
+    return;
+
   MCInst LabelInst;
   LabelInst.setOpcode(SPIRV::OpLabel);
   LabelInst.addOperand(MCOperand::createReg(MAI->getOrCreateMBBRegister(MBB)));
   outputMCInst(LabelInst);
   ++NLabels;
+  LabeledMBB.insert(&MBB);
 }
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
-  assert(!MBB.empty() && "MBB is empty!");
+  // Do not emit anything if it's an internal service function.
+  if (MBB.empty())
+    return;
 
   // If it's the first MBB in MF, it has OpFunction and OpFunctionParameter, so
   // OpLabel should be output after them.
@@ -254,7 +282,7 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   // Output OpLabel after OpFunction and OpFunctionParameter in the first MBB.
   const MachineInstr *NextMI = MI->getNextNode();
-  if (!MAI->hasMBBRegister(*MI->getParent()) && isFuncOrHeaderInstr(MI, TII) &&
+  if (!LabeledMBB.contains(MI->getParent()) && isFuncOrHeaderInstr(MI, TII) &&
       (!NextMI || !isFuncOrHeaderInstr(NextMI, TII))) {
     assert(MI->getParent()->getNumber() == MF->front().getNumber() &&
            "OpFunction is not in the front MBB of MF");
@@ -263,7 +291,7 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void SPIRVAsmPrinter::outputModuleSection(SPIRV::ModuleSectionType MSType) {
-  for (MachineInstr *MI : MAI->getMSInstrs(MSType))
+  for (const MachineInstr *MI : MAI->getMSInstrs(MSType))
     outputInstruction(MI);
 }
 
@@ -275,6 +303,8 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
     addStringImm(Str.first(), Inst);
     outputMCInst(Inst);
   }
+  // Output OpString.
+  outputModuleSection(SPIRV::MB_DebugStrings);
   // Output OpSource.
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpSource);
@@ -287,7 +317,7 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
 void SPIRVAsmPrinter::outputOpExtInstImports(const Module &M) {
   for (auto &CU : MAI->ExtInstSetMap) {
     unsigned Set = CU.first;
-    Register Reg = CU.second;
+    MCRegister Reg = CU.second;
     MCInst Inst;
     Inst.setOpcode(SPIRV::OpExtInstImport);
     Inst.addOperand(MCOperand::createReg(Reg));
@@ -312,8 +342,8 @@ void SPIRVAsmPrinter::outputOpMemoryModel() {
 // the interface of this entry point.
 void SPIRVAsmPrinter::outputEntryPoints() {
   // Find all OpVariable IDs with required StorageClass.
-  DenseSet<Register> InterfaceIDs;
-  for (MachineInstr *MI : MAI->GlobalVarList) {
+  DenseSet<MCRegister> InterfaceIDs;
+  for (const MachineInstr *MI : MAI->GlobalVarList) {
     assert(MI->getOpcode() == SPIRV::OpVariable);
     auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
         MI->getOperand(2).getImm());
@@ -323,18 +353,18 @@ void SPIRVAsmPrinter::outputEntryPoints() {
     // declaring all global variables referenced by the entry point call tree.
     if (ST->isAtLeastSPIRVVer(VersionTuple(1, 4)) ||
         SC == SPIRV::StorageClass::Input || SC == SPIRV::StorageClass::Output) {
-      MachineFunction *MF = MI->getMF();
-      Register Reg = MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
+      const MachineFunction *MF = MI->getMF();
+      MCRegister Reg = MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
       InterfaceIDs.insert(Reg);
     }
   }
 
   // Output OpEntryPoints adding interface args to all of them.
-  for (MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_EntryPoints)) {
+  for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_EntryPoints)) {
     SPIRVMCInstLower MCInstLowering;
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst, MAI);
-    for (Register Reg : InterfaceIDs) {
+    for (MCRegister Reg : InterfaceIDs) {
       assert(Reg.isValid());
       TmpInst.addOperand(MCOperand::createReg(Reg));
     }
@@ -368,9 +398,8 @@ void SPIRVAsmPrinter::outputGlobalRequirements() {
 
 void SPIRVAsmPrinter::outputExtFuncDecls() {
   // Insert OpFunctionEnd after each declaration.
-  SmallVectorImpl<MachineInstr *>::iterator
-      I = MAI->getMSInstrs(SPIRV::MB_ExtFuncDecls).begin(),
-      E = MAI->getMSInstrs(SPIRV::MB_ExtFuncDecls).end();
+  auto I = MAI->getMSInstrs(SPIRV::MB_ExtFuncDecls).begin(),
+       E = MAI->getMSInstrs(SPIRV::MB_ExtFuncDecls).end();
   for (; I != E; ++I) {
     outputInstruction(*I);
     if ((I + 1) == E || (*(I + 1))->getOpcode() == SPIRV::OpFunction)
@@ -416,7 +445,7 @@ static void addOpsFromMDNode(MDNode *MDN, MCInst &Inst,
       if (ConstantInt *Const = dyn_cast<ConstantInt>(C)) {
         Inst.addOperand(MCOperand::createImm(Const->getZExtValue()));
       } else if (auto *CE = dyn_cast<Function>(C)) {
-        Register FuncReg = MAI->getFuncReg(CE);
+        MCRegister FuncReg = MAI->getFuncReg(CE);
         assert(FuncReg.isValid());
         Inst.addOperand(MCOperand::createReg(FuncReg));
       }
@@ -425,17 +454,24 @@ static void addOpsFromMDNode(MDNode *MDN, MCInst &Inst,
 }
 
 void SPIRVAsmPrinter::outputExecutionModeFromMDNode(
-    Register Reg, MDNode *Node, SPIRV::ExecutionMode::ExecutionMode EM) {
+    MCRegister Reg, MDNode *Node, SPIRV::ExecutionMode::ExecutionMode EM,
+    unsigned ExpectMDOps, int64_t DefVal) {
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpExecutionMode);
   Inst.addOperand(MCOperand::createReg(Reg));
   Inst.addOperand(MCOperand::createImm(static_cast<unsigned>(EM)));
   addOpsFromMDNode(Node, Inst, MAI);
+  // reqd_work_group_size and work_group_size_hint require 3 operands,
+  // if metadata contains less operands, just add a default value
+  unsigned NodeSz = Node->getNumOperands();
+  if (ExpectMDOps > 0 && NodeSz < ExpectMDOps)
+    for (unsigned i = NodeSz; i < ExpectMDOps; ++i)
+      Inst.addOperand(MCOperand::createImm(DefVal));
   outputMCInst(Inst);
 }
 
 void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
-    const Register &Reg, const Attribute &Attr,
+    const MCRegister &Reg, const Attribute &Attr,
     SPIRV::ExecutionMode::ExecutionMode EM) {
   assert(Attr.isValid() && "Function called with an invalid attribute.");
 
@@ -473,20 +509,20 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     // <Entry Point> operands of OpExecutionMode
     if (F.isDeclaration() || !isEntryPoint(F))
       continue;
-    Register FReg = MAI->getFuncReg(&F);
+    MCRegister FReg = MAI->getFuncReg(&F);
     assert(FReg.isValid());
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
-      outputExecutionModeFromMDNode(FReg, Node,
-                                    SPIRV::ExecutionMode::LocalSize);
+      outputExecutionModeFromMDNode(FReg, Node, SPIRV::ExecutionMode::LocalSize,
+                                    3, 1);
     if (Attribute Attr = F.getFnAttribute("hlsl.numthreads"); Attr.isValid())
       outputExecutionModeFromNumthreadsAttribute(
           FReg, Attr, SPIRV::ExecutionMode::LocalSize);
     if (MDNode *Node = F.getMetadata("work_group_size_hint"))
       outputExecutionModeFromMDNode(FReg, Node,
-                                    SPIRV::ExecutionMode::LocalSizeHint);
+                                    SPIRV::ExecutionMode::LocalSizeHint, 3, 1);
     if (MDNode *Node = F.getMetadata("intel_reqd_sub_group_size"))
       outputExecutionModeFromMDNode(FReg, Node,
-                                    SPIRV::ExecutionMode::SubgroupSize);
+                                    SPIRV::ExecutionMode::SubgroupSize, 0, 0);
     if (MDNode *Node = F.getMetadata("vec_type_hint")) {
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
@@ -525,7 +561,7 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
       if (!isa<Function>(AnnotatedVar))
         report_fatal_error("Unsupported value in llvm.global.annotations");
       Function *Func = cast<Function>(AnnotatedVar);
-      Register Reg = MAI->getFuncReg(Func);
+      MCRegister Reg = MAI->getFuncReg(Func);
       if (!Reg.isValid()) {
         std::string DiagMsg;
         raw_string_ostream OS(DiagMsg);
@@ -576,6 +612,9 @@ void SPIRVAsmPrinter::outputModuleSections() {
   outputModuleSection(SPIRV::MB_DebugNames);
   // 7c. Debug: all OpModuleProcessed instructions.
   outputModuleSection(SPIRV::MB_DebugModuleProcessed);
+  // xxx. SPV_INTEL_memory_access_aliasing instructions go before 8.
+  // "All annotation instructions"
+  outputModuleSection(SPIRV::MB_AliasingInsts);
   // 8. All annotation instructions (all decorations).
   outputAnnotations(*M);
   // 9. All type declarations (OpTypeXXX instructions), all constant
@@ -583,9 +622,11 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // the first section to allow use of: OpLine and OpNoLine debug information;
   // non-semantic instructions with OpExtInst.
   outputModuleSection(SPIRV::MB_TypeConstVars);
-  // 10. All function declarations (functions without a body).
+  // 10. All global NonSemantic.Shader.DebugInfo.100 instructions.
+  outputModuleSection(SPIRV::MB_NonSemanticGlobalDI);
+  // 11. All function declarations (functions without a body).
   outputExtFuncDecls();
-  // 11. All function definitions (functions with a body).
+  // 12. All function definitions (functions with a body).
   // This is done in regular function output.
 }
 
@@ -594,6 +635,11 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);
 }
+
+char SPIRVAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(SPIRVAsmPrinter, "spirv-asm-printer", "SPIRV Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVAsmPrinter() {

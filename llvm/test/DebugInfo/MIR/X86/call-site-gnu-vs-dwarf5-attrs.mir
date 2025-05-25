@@ -30,6 +30,21 @@
 # RUN:     -debug-entry-values -mtriple=x86_64-unknown-unknown \
 # RUN:     -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
 
+## === DWARF3, tune for gdb ===
+# RUN: llc -emit-call-site-info -dwarf-version 3 -debugger-tune=gdb -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_call
+
+## === DWARF3, tune for lldb ===
+# RUN: llc -dwarf-version 3 -debugger-tune=lldb -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_GNU_call
+
+## === DWARF3, tune for sce ===
+# RUN: llc -emit-call-site-info -dwarf-version 3 -filetype=obj -debugger-tune=sce \
+# RUN:     -debug-entry-values -mtriple=x86_64-unknown-unknown \
+# RUN:     -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_call
+
 ## This is based on the following reproducer:
 ##
 ## extern void fn();

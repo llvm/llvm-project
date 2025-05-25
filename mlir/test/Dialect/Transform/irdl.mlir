@@ -1,4 +1,4 @@
-// RUN: mlir-opt --transform-interpreter --split-input-file --verify-diagnostics
+// RUN: mlir-opt --transform-interpreter --split-input-file --verify-diagnostics %s
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
@@ -9,7 +9,7 @@ module attributes {transform.with_named_sequence} {
           %0 = irdl.is i32
           %1 = irdl.is i64
           %2 = irdl.any_of(%0, %1)
-          irdl.results(%2)
+          irdl.results(foo: %2)
         }
       }
     }

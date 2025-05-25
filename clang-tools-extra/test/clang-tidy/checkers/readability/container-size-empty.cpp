@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s readability-container-size-empty %t -- \
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++14-or-later %s readability-container-size-empty %t -- \
 // RUN: -config="{CheckOptions: {readability-container-size-empty.ExcludedComparisonTypes: '::std::array;::IgnoredDummyType'}}" \
 // RUN: -- -fno-delayed-template-parsing -isystem %clang_tidy_headers
 #include <string>
@@ -860,4 +860,38 @@ namespace PR72619 {
     if (s.size() <= 0) {}
     if (0 >= s.size()) {}
   }
+}
+
+namespace PR88203 {
+  struct SS {
+    bool empty() const;
+    int size() const;
+    int length(int) const;
+  };
+
+  struct SU {
+    bool empty() const;
+    int size(int) const;
+    int length() const;
+  };
+
+  void f(const SS& s) {
+    if (0 == s.length(1)) {}
+    if (0 == s.size()) {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+    // CHECK-FIXES: {{^    }}if (s.empty()) {}{{$}}
+  }
+
+  void f(const SU& s) {
+    if (0 == s.size(1)) {}
+    if (0 == s.length()) {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: the 'empty' method should be used to check for emptiness instead of 'length' [readability-container-size-empty]
+    // CHECK-FIXES: {{^    }}if (s.empty()) {}{{$}}
+  }
+}
+
+namespace PR94454 {
+  template <char...>
+  int operator""_ci() { return 0; }
+  auto eq = 0_ci == 0;
 }

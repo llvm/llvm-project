@@ -18,10 +18,9 @@ using namespace clang;
 using namespace markup;
 
 LogDiagnosticPrinter::LogDiagnosticPrinter(
-    raw_ostream &os, DiagnosticOptions *diags,
+    raw_ostream &os, DiagnosticOptions &,
     std::unique_ptr<raw_ostream> StreamOwner)
-    : OS(os), StreamOwner(std::move(StreamOwner)), LangOpts(nullptr),
-      DiagOpts(diags) {}
+    : OS(os), StreamOwner(std::move(StreamOwner)), LangOpts(nullptr) {}
 
 static StringRef getLevelName(DiagnosticsEngine::Level Level) {
   switch (Level) {
@@ -129,7 +128,8 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   DE.DiagnosticLevel = Level;
 
   DE.WarningOption =
-      std::string(DiagnosticIDs::getWarningOptionForDiag(DE.DiagnosticID));
+      std::string(Info.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
+          DE.DiagnosticID));
 
   // Format the message.
   SmallString<100> MessageStr;
@@ -160,4 +160,3 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   // Record the diagnostic entry.
   Entries.push_back(DE);
 }
-

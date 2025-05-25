@@ -19,12 +19,12 @@ subroutine red_and_delayed_private
 end subroutine
 
 ! CHECK-LABEL: omp.private {type = private}
-! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : !fir.ref<i32> alloc {
+! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : i32
 
 ! CHECK-LABEL: omp.declare_reduction
-! CHECK-SAME: @[[REDUCTION_SYM:.*]] : !fir.ref<i32> init
+! CHECK-SAME: @[[REDUCTION_SYM:.*]] : !fir.ref<i32> alloc
 
 ! CHECK-LABEL: _QPred_and_delayed_private
 ! CHECK: omp.parallel
-! CHECK-SAME: reduction(@[[REDUCTION_SYM]] %{{.*}} -> %arg0 : !fir.ref<i32>)
-! CHECK-SAME: private(@[[PRIVATIZER_SYM]] %{{.*}} -> %arg1 : !fir.ref<i32>) {
+! CHECK-SAME: private(@[[PRIVATIZER_SYM]] %{{.*}} -> %arg0 : !fir.ref<i32>)
+! CHECK-SAME: reduction(byref @[[REDUCTION_SYM]] %{{.*}} -> %arg1 : !fir.ref<i32>) {

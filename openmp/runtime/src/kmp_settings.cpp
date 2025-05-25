@@ -3767,7 +3767,7 @@ static void __kmp_stg_parse_allocator(char const *name, char const *value,
       if (__kmp_match_str("omp_high_bw_mem_alloc", scan, &next)) {
         SKIP_WS(next);
         if (is_memalloc) {
-          if (__kmp_memkind_available) {
+          if (__kmp_hwloc_available || __kmp_memkind_available) {
             __kmp_def_allocator = omp_high_bw_mem_alloc;
             return;
           } else {
@@ -3780,7 +3780,7 @@ static void __kmp_stg_parse_allocator(char const *name, char const *value,
       } else if (__kmp_match_str("omp_large_cap_mem_alloc", scan, &next)) {
         SKIP_WS(next);
         if (is_memalloc) {
-          if (__kmp_memkind_available) {
+          if (__kmp_hwloc_available || __kmp_memkind_available) {
             __kmp_def_allocator = omp_large_cap_mem_alloc;
             return;
           } else {
@@ -6420,6 +6420,8 @@ void __kmp_env_initialize(char const *string) {
         }
         if ((__kmp_nested_proc_bind.bind_types[0] != proc_bind_intel) &&
             (__kmp_nested_proc_bind.bind_types[0] != proc_bind_default)) {
+          if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_false)
+            __kmp_affinity.type = affinity_none;
           if (__kmp_affinity.type == affinity_default) {
             __kmp_affinity.type = affinity_compact;
             __kmp_affinity.flags.dups = FALSE;

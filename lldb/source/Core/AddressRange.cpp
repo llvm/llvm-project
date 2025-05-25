@@ -14,6 +14,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 
 #include "llvm/Support/Compiler.h"
 
@@ -145,6 +146,10 @@ void AddressRange::Clear() {
   m_byte_size = 0;
 }
 
+bool AddressRange::IsValid() const {
+  return m_base_addr.IsValid() && (m_byte_size > 0);
+}
+
 bool AddressRange::Dump(Stream *s, Target *target, Address::DumpStyle style,
                         Address::DumpStyle fallback_style) const {
   addr_t vmaddr = LLDB_INVALID_ADDRESS;
@@ -202,4 +207,42 @@ void AddressRange::DumpDebug(Stream *s) const {
             static_cast<const void *>(this),
             static_cast<void *>(m_base_addr.GetSection().get()),
             m_base_addr.GetOffset(), GetByteSize());
+}
+
+bool AddressRange::GetDescription(Stream *s, Target *target) const {
+  addr_t start_addr = m_base_addr.GetLoadAddress(target);
+  if (start_addr != LLDB_INVALID_ADDRESS) {
+    // We have a valid target and the address was resolved, or we have a base
+    // address with no section. Just print out a raw address range: [<addr>,
+    // <addr>)
+    s->Printf("[0x%" PRIx64 "-0x%" PRIx64 ")", start_addr,
+              start_addr + GetByteSize());
+    return true;
+  }
+
+  // Either no target or the address wasn't resolved, print as
+  // <module>[<file-addr>-<file-addr>)
+  const char *file_name = "";
+  const auto section_sp = m_base_addr.GetSection();
+  if (section_sp) {
+    if (const auto object_file = section_sp->GetObjectFile())
+      file_name = object_file->GetFileSpec().GetFilename().AsCString();
+  }
+  start_addr = m_base_addr.GetFileAddress();
+  const addr_t end_addr = (start_addr == LLDB_INVALID_ADDRESS)
+                              ? LLDB_INVALID_ADDRESS
+                              : start_addr + GetByteSize();
+  s->Printf("%s[0x%" PRIx64 "-0x%" PRIx64 ")", file_name, start_addr, end_addr);
+  return true;
+}
+
+bool AddressRange::operator==(const AddressRange &rhs) {
+  if (!IsValid() || !rhs.IsValid())
+    return false;
+  return m_base_addr == rhs.GetBaseAddress() &&
+         m_byte_size == rhs.GetByteSize();
+}
+
+bool AddressRange::operator!=(const AddressRange &rhs) {
+  return !(*this == rhs);
 }

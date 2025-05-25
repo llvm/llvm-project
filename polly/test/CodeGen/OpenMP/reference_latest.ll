@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm -polly-simplify -polly-parallel -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-delicm,polly-simplify,polly-codegen' -polly-parallel -S < %s | FileCheck %s
 ;
 ; Test that parallel codegen handles scalars mapped to other arrays.
 ; After mapping "store double %add10" references the array "MemRef2".

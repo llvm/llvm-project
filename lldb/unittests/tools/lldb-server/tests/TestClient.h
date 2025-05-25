@@ -20,6 +20,10 @@
 #include <optional>
 #include <string>
 
+#ifdef SendMessage
+#undef SendMessage
+#endif
+
 #if LLDB_SERVER_IS_DEBUGSERVER
 #define LLGS_TEST(x) DISABLED_ ## x
 #define DS_TEST(x) x

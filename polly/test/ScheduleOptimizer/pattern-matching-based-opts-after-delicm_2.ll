@@ -1,11 +1,11 @@
-; RUN: opt %loadPolly -polly-delicm -polly-simplify -polly-opt-isl \
+; RUN: opt %loadNPMPolly '-passes=polly-delicm,polly-simplify,polly-opt-isl' \
 ; RUN: -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-tc-opt=true -debug -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ;
 ; Check that the pattern matching detects the tensor contraction pattern
 ; after a full run of -polly-delicm. This test case generates the following
-; schedule, which contans two band nodes. Without DeLICM two statement are
+; schedule, which contains two band nodes. Without DeLICM two statement are
 ; generated.
 ;
 ; domain: "{ Stmt5[i0, i1, i2, i3, i4, i5] : 0 <= i0 <= 31 and 0 <= i1 <= 31 and

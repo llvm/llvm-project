@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DebugInfo.h"
+#include "../lib/IR/LLVMContextImpl.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DIBuilder.h"
@@ -20,6 +21,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Local.h"
+
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -132,7 +134,7 @@ TEST(StripTest, LoopMetadata) {
   // we update the terminator's metadata correctly, we should be able to
   // observe the change in emission kind for the CU.
   auto getEmissionKind = [&]() {
-    Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+    Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
     MDNode *LoopMD = I.getMetadata(LLVMContext::MD_loop);
     return cast<DILocation>(LoopMD->getOperand(1))
         ->getScope()
@@ -181,7 +183,7 @@ TEST(MetadataTest, DeleteInstUsedByDbgRecord) {
 )");
 
   // Find %b = add ...
-  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   // Find the dbg.value using %b.
   SmallVector<DbgValueInst *, 1> DVIs;
@@ -266,7 +268,7 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
 
-  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   // Find the DbgVariableRecords using %b.
   SmallVector<DbgValueInst *, 2> DVIs;
@@ -317,7 +319,7 @@ TEST(MetadataTest, OrderingOfDbgVariableRecords) {
     !12 = !DILocalVariable(name: "bar", scope: !6, file: !1, line: 1, type: !10)
 )");
 
-  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   SmallVector<DbgValueInst *, 2> DVIs;
   SmallVector<DbgVariableRecord *, 2> DVRs;
@@ -350,7 +352,7 @@ TEST(MetadataTest, OrderingOfDbgVariableRecords) {
   UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
-TEST(DIBuiler, CreateFile) {
+TEST(DIBuilder, CreateFile) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
   DIBuilder DIB(*M);
@@ -409,6 +411,24 @@ TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
 
   // Avoid memory leak.
   DIVariable::deleteTemporary(DataLocation);
+}
+
+TEST(DIBuilder, CreateArrayWithBitStride) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Constant *Ci = ConstantInt::get(Int32Ty, 7);
+  Metadata *CM = ConstantAsMetadata::get(Ci);
+
+  StringRef ArrayNameExp = "AnArray";
+  DICompositeType *NamedArray =
+      DIB.createArrayType(nullptr, ArrayNameExp, nullptr, 0, 8, 8, nullptr, {},
+                          nullptr, nullptr, nullptr, nullptr, CM);
+  EXPECT_EQ(NamedArray->getTag(), dwarf::DW_TAG_array_type);
+  EXPECT_EQ(NamedArray->getRawBitStride(), CM);
+  EXPECT_EQ(NamedArray->getBitStrideConst(), Ci);
 }
 
 TEST(DIBuilder, CreateSetType) {
@@ -479,6 +499,40 @@ TEST(DIBuilder, DIEnumerator) {
 
   auto *E2 = DIEnumerator::getIfExists(Ctx, I2, I1.isSigned(), "name");
   EXPECT_FALSE(E2);
+}
+
+TEST(DIBuilder, FixedPointType) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+
+  DIFixedPointType *Ty = DIB.createBinaryFixedPointType(
+      {}, 32, 0, dwarf::DW_ATE_signed_fixed, DINode::FlagZero, -4);
+  EXPECT_TRUE(Ty);
+  EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointBinary);
+  EXPECT_TRUE(Ty->getFactor() == -4);
+  EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_signed_fixed);
+  EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
+
+  Ty = DIB.createDecimalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+                                       DINode::FlagZero, -7);
+  EXPECT_TRUE(Ty);
+  EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointDecimal);
+  EXPECT_TRUE(Ty->getFactor() == -7);
+  EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_unsigned_fixed);
+  EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
+
+  APSInt Num(APInt(32, 1));
+  APSInt Denom(APInt(33, 72));
+  Ty = DIB.createRationalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+                                        DINode::FlagZero, Num, Denom);
+  EXPECT_TRUE(Ty);
+  EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointRational);
+  EXPECT_TRUE(Ty->getFactorRaw() == 0);
+  EXPECT_TRUE(Ty->getNumerator() == Num);
+  EXPECT_TRUE(Ty->getDenominator() == Denom);
+  EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_unsigned_fixed);
+  EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
 }
 
 TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
@@ -691,7 +745,8 @@ TEST(IRBuilder, GetSetInsertionPointWithEmptyBasicBlock) {
   std::unique_ptr<BasicBlock> BB(BasicBlock::Create(C, "start"));
   Module *M = new Module("module", C);
   IRBuilder<> Builder(BB.get());
-  Function *DbgDeclare = Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
+  Function *DbgDeclare =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_declare);
   Value *DIV = MetadataAsValue::get(C, (Metadata *)nullptr);
   SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
   Builder.CreateCall(DbgDeclare, Args);
@@ -899,7 +954,7 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
 )");
 
   // Find the first dbg.value,
-  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
   const DILocalVariable *Var = nullptr;
   const DIExpression *Expr = nullptr;
   const DILocation *Loc = nullptr;
@@ -1191,6 +1246,94 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(DVI2->getExpression(), Expr2);
 
   UseNewDbgInfoFormat = OldDbgValueMode;
+}
+
+// Test that the hashing function for DISubprograms representing methods produce
+// the same result after replacing their scope (the type containing the
+// subprogram) from a temporary DIType with the permanent one.
+TEST(DIBuilder, HashingDISubprogram) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+
+  llvm::TempDIType ForwardDeclaredType =
+      llvm::TempDIType(DIB.createReplaceableCompositeType(
+          llvm::dwarf::DW_TAG_structure_type, "MyType", CU, F, 0, 0, 8, 8, {},
+          "UniqueIdentifier"));
+
+  // The hashing function is different for declarations and definitions, so
+  // create one of each.
+  DISubprogram *Declaration =
+      DIB.createMethod(ForwardDeclaredType.get(), "MethodName", "LinkageName",
+                       F, 0, DIB.createSubroutineType({}));
+
+  DISubprogram *Definition = DIB.createFunction(
+      ForwardDeclaredType.get(), "MethodName", "LinkageName", F, 0,
+      DIB.createSubroutineType({}), 0, DINode::FlagZero,
+      llvm::DISubprogram::SPFlagDefinition, nullptr, Declaration);
+
+  // Produce the hash with the temporary scope.
+  unsigned HashDeclaration =
+      MDNodeKeyImpl<DISubprogram>(Declaration).getHashValue();
+  unsigned HashDefinition =
+      MDNodeKeyImpl<DISubprogram>(Definition).getHashValue();
+
+  // Instantiate the real scope and replace the temporary one with it.
+  DICompositeType *Type = DIB.createStructType(CU, "MyType", F, 0, 8, 8, {}, {},
+                                               {}, 0, {}, "UniqueIdentifier");
+  DIB.replaceTemporary(std::move(ForwardDeclaredType), Type);
+
+  // Now make sure the hashing is consistent.
+  unsigned HashDeclarationAfter =
+      MDNodeKeyImpl<DISubprogram>(Declaration).getHashValue();
+  unsigned HashDefinitionAfter =
+      MDNodeKeyImpl<DISubprogram>(Definition).getHashValue();
+
+  EXPECT_EQ(HashDeclaration, HashDeclarationAfter);
+  EXPECT_EQ(HashDefinition, HashDefinitionAfter);
+}
+
+TEST(DIBuilder, CompositeTypes) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+
+  DICompositeType *Class =
+      DIB.createClassType(CU, "MyClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0,
+                          nullptr, nullptr, "ClassUniqueIdentifier");
+  EXPECT_EQ(Class->getTag(), dwarf::DW_TAG_class_type);
+
+  DICompositeType *Struct = DIB.createStructType(
+      CU, "MyStruct", F, 0, 8, 8, {}, {}, {}, 0, {}, "StructUniqueIdentifier");
+  EXPECT_EQ(Struct->getTag(), dwarf::DW_TAG_structure_type);
+
+  DICompositeType *Union = DIB.createUnionType(CU, "MyUnion", F, 0, 8, 8, {},
+                                               {}, 0, "UnionUniqueIdentifier");
+  EXPECT_EQ(Union->getTag(), dwarf::DW_TAG_union_type);
+
+  DICompositeType *Array = DIB.createArrayType(8, 8, nullptr, {});
+  EXPECT_EQ(Array->getTag(), dwarf::DW_TAG_array_type);
+
+  StringRef ArrayNameExp = "AnArray";
+  DICompositeType *NamedArray =
+      DIB.createArrayType(nullptr, ArrayNameExp, nullptr, 0, 8, 8, nullptr, {});
+  EXPECT_EQ(NamedArray->getTag(), dwarf::DW_TAG_array_type);
+  EXPECT_EQ(NamedArray->getName(), ArrayNameExp);
+
+  DICompositeType *Vector = DIB.createVectorType(8, 8, nullptr, {});
+  EXPECT_EQ(Vector->getTag(), dwarf::DW_TAG_array_type);
+
+  DICompositeType *Enum = DIB.createEnumerationType(
+      CU, "MyEnum", F, 0, 8, 8, {}, nullptr, 0, "EnumUniqueIdentifier");
+  EXPECT_EQ(Enum->getTag(), dwarf::DW_TAG_enumeration_type);
 }
 
 } // end namespace

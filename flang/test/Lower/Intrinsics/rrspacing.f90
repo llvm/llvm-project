@@ -1,3 +1,4 @@
+! REQUIRES: flang-supports-f128-math
 ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 

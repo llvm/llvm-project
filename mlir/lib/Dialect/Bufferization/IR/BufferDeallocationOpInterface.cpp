@@ -177,8 +177,7 @@ void DeallocationState::getMemrefsToRetain(
   // liveOut has non-deterministic order because it was constructed by iterating
   // over a hash-set.
   SmallVector<Value> retainedByLiveness(liveOut.begin(), liveOut.end());
-  std::sort(retainedByLiveness.begin(), retainedByLiveness.end(),
-            ValueComparator());
+  llvm::sort(retainedByLiveness, ValueComparator());
   toRetain.append(retainedByLiveness);
 }
 
@@ -197,8 +196,10 @@ LogicalResult DeallocationState::getMemrefsAndConditionsToDeallocate(
     // that we can call extract_strided_metadata on it.
     if (auto unrankedMemRefTy = dyn_cast<UnrankedMemRefType>(memref.getType()))
       memref = builder.create<memref::ReinterpretCastOp>(
-          loc, MemRefType::get({}, unrankedMemRefTy.getElementType()), memref,
-          0, SmallVector<int64_t>{}, SmallVector<int64_t>{});
+          loc, memref,
+          /*offset=*/builder.getIndexAttr(0),
+          /*sizes=*/ArrayRef<OpFoldResult>{},
+          /*strides=*/ArrayRef<OpFoldResult>{});
 
     // Use the `memref.extract_strided_metadata` operation to get the base
     // memref. This is needed because the same MemRef that was produced by the

@@ -16,7 +16,7 @@ define i32 @test0(i32 %a0) {
 
 define <4 x i32> @test0_vec(<4 x i32> %a0) {
 ; CHECK-LABEL: @test0_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[A0:%.*]], <i32 -1431655766, i32 -1431655766, i32 -1431655766, i32 -1431655766>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[A0:%.*]], splat (i32 -1431655766)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = and <4 x i32> %a0, <i32 1431655765, i32 1431655765, i32 1431655765, i32 1431655765>
@@ -44,8 +44,8 @@ define i32 @test1(i32 %a0) {
 
 define <4 x i32> @test1_vec(<4 x i32> %a0) {
 ; CHECK-LABEL: @test1_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[A0:%.*]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], <i32 1431655765, i32 1431655765, i32 1431655765, i32 1431655765>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[A0:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], splat (i32 1431655765)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <4 x i32> [[A0]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;

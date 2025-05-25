@@ -8,9 +8,10 @@ results. Therefore, it may be more resource intensive (RAM, CPU) than the
 average clang-tidy check.
 
 This check identifies unsafe accesses to values contained in
-``std::optional<T>``, ``absl::optional<T>``, ``base::Optional<T>``, or
-``folly::Optional<T>`` objects. Below we will refer to all these types
-collectively as ``optional<T>``.
+``std::optional<T>``, ``absl::optional<T>``, ``base::Optional<T>``,
+``folly::Optional<T>``, ``bsl::optional``, or
+``BloombergLP::bdlb::NullableValue`` objects. Below we will refer to all these
+types collectively as ``optional<T>``.
 
 An access to the value of an ``optional<T>`` occurs when one of its ``value``,
 ``operator*``, or ``operator->`` member functions is invoked.  To align with
@@ -70,10 +71,21 @@ For example:
 .. code-block:: c++
 
    void f(Foo foo) {
-     if (foo.opt().has_value()) {
-       use(*foo.opt()); // unsafe: it is unclear whether `foo.opt()` has a value.
+     if (foo.take().has_value()) {
+       use(*foo.take()); // unsafe: it is unclear whether `foo.take()` has a value.
      }
    }
+
+Exception: accessor methods
+```````````````````````````
+
+The check assumes *accessor* methods of a class are stable, with a heuristic to
+determine which methods are accessors. Specifically, parameter-free ``const``
+methods and smart pointer-like APIs (non ``const`` overloads of ``*`` when
+there is a parallel ``const`` overload) are treated as accessors. Note that
+this is not guaranteed to be safe -- but, it is widely used (safely) in
+practice. Calls to non ``const`` methods are assumed to modify the state of
+the object and affect the stability of earlier accessor calls.
 
 Rely on invariants of uncommon APIs
 -----------------------------------
@@ -180,14 +192,15 @@ paths that lead to an access. For example:
 Stabilize function results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Since function results are not assumed to be stable across calls, it is best to
-store the result of the function call in a local variable and use that variable
-to access the value. For example:
+Function results are not assumed to be stable across calls, except for
+const accessor methods. For more complex accessors (non-const, or depend on
+multiple params) it is best to store the result of the function call in a
+local variable and use that variable to access the value. For example:
 
 .. code-block:: c++
 
    void f(Foo foo) {
-     if (const auto& foo_opt = foo.opt(); foo_opt.has_value()) {
+     if (const auto& foo_opt = foo.take(); foo_opt.has_value()) {
        use(*foo_opt);
      }
    }

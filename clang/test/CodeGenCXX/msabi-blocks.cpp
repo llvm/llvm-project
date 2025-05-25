@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -std=c++11 -fblocks -S -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-X86
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -std=c++11 -fblocks -S -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-X64
+// RUN: %clang_cc1 -triple i686-unknown-windows-msvc -std=c++11 -fblocks -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-X86
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -std=c++11 -fblocks -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-X64
 
 extern int e(void);
 

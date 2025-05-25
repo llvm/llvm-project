@@ -163,7 +163,7 @@ public:
   void readTypeLoc(TypeLoc TL, LocSeq *Seq = nullptr);
 
   /// Map a local type ID within a given AST file to a global type ID.
-  serialization::TypeID getGlobalTypeID(unsigned LocalID) const {
+  serialization::TypeID getGlobalTypeID(serialization::TypeID LocalID) const {
     return Reader->getGlobalTypeID(*F, LocalID);
   }
 
@@ -272,11 +272,17 @@ public:
   /// Read a list of Exprs used for a var-list.
   llvm::SmallVector<Expr *> readOpenACCVarList();
 
+  /// Read a list of Exprs used for a int-expr-list.
+  llvm::SmallVector<Expr *> readOpenACCIntExprList();
+
   /// Read an OpenACC clause, advancing Idx.
   OpenACCClause *readOpenACCClause();
 
-  /// Read a list of OpenACC clauses into the passed SmallVector.
+  /// Read a list of OpenACC clauses into the passed SmallVector, during
+  /// statement reading.
   void readOpenACCClauseList(MutableArrayRef<const OpenACCClause *> Clauses);
+
+  void readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A);
 
   /// Read a source location, advancing Idx.
   SourceLocation readSourceLocation(LocSeq *Seq = nullptr) {
@@ -311,6 +317,10 @@ public:
   /// Read a 64-bit unsigned value; required to satisfy BasicReader.
   uint64_t readUInt64() {
     return readInt();
+  }
+
+  UnsignedOrNone readUnsignedOrNone() {
+    return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
   }
 
   /// Read a string, advancing Idx.

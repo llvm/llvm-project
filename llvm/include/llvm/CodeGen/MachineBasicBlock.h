@@ -13,10 +13,12 @@
 #ifndef LLVM_CODEGEN_MACHINEBASICBLOCK_H
 #define LLVM_CODEGEN_MACHINEBASICBLOCK_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugLoc.h"
@@ -31,7 +33,9 @@
 namespace llvm {
 
 class BasicBlock;
+class MachineDomTreeUpdater;
 class MachineFunction;
+class MachineLoopInfo;
 class MCSymbol;
 class ModuleSlotTracker;
 class Pass;
@@ -40,6 +44,7 @@ class SlotIndexes;
 class StringRef;
 class raw_ostream;
 class LiveIntervals;
+class LiveVariables;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 
@@ -74,6 +79,25 @@ private:
   MBBSectionID(SectionType T) : Type(T), Number(0) {}
 };
 
+template <> struct DenseMapInfo<MBBSectionID> {
+  using TypeInfo = DenseMapInfo<MBBSectionID::SectionType>;
+  using NumberInfo = DenseMapInfo<unsigned>;
+
+  static inline MBBSectionID getEmptyKey() {
+    return MBBSectionID(NumberInfo::getEmptyKey());
+  }
+  static inline MBBSectionID getTombstoneKey() {
+    return MBBSectionID(NumberInfo::getTombstoneKey());
+  }
+  static unsigned getHashValue(const MBBSectionID &SecID) {
+    return detail::combineHashValue(TypeInfo::getHashValue(SecID.Type),
+                                    NumberInfo::getHashValue(SecID.Number));
+  }
+  static bool isEqual(const MBBSectionID &LHS, const MBBSectionID &RHS) {
+    return LHS == RHS;
+  }
+};
+
 // This structure represents the information for a basic block pertaining to
 // the basic block sections profile.
 struct UniqueBBID {
@@ -106,7 +130,7 @@ public:
   /// clearly as they both have an integer type.
   struct RegisterMaskPair {
   public:
-    MCPhysReg PhysReg;
+    MCRegister PhysReg;
     LaneBitmask LaneMask;
 
     RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
@@ -135,8 +159,8 @@ private:
   Instructions Insts;
 
   /// Keep track of the predecessor / successor basic blocks.
-  std::vector<MachineBasicBlock *> Predecessors;
-  std::vector<MachineBasicBlock *> Successors;
+  SmallVector<MachineBasicBlock *, 4> Predecessors;
+  SmallVector<MachineBasicBlock *, 2> Successors;
 
   /// Keep track of the probabilities to the successors. This vector has the
   /// same order as Successors, or it is empty if we don't use it (disable
@@ -180,8 +204,8 @@ private:
   /// LLVM IR.
   bool IsEHScopeEntry = false;
 
-  /// Indicates if this is a target block of a catchret.
-  bool IsEHCatchretTarget = false;
+  /// Indicates if this is a target of Windows EH Continuation Guard.
+  bool IsEHContTarget = false;
 
   /// Indicate that this basic block is the entry block of an EH funclet.
   bool IsEHFuncletEntry = false;
@@ -209,8 +233,8 @@ private:
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
 
-  /// Cached MCSymbol for this block (used if IsEHCatchRetTarget).
-  mutable MCSymbol *CachedEHCatchretMCSymbol = nullptr;
+  /// Cached MCSymbol for this block (used if IsEHContTarget).
+  mutable MCSymbol *CachedEHContMCSymbol = nullptr;
 
   /// Marks the end of the basic block. Used during basic block sections to
   /// calculate the size of the basic block, or the BB section ending with it.
@@ -237,6 +261,9 @@ public:
   void clearBasicBlock() {
     BB = nullptr;
   }
+
+  /// Check if there is a name of corresponding LLVM basic block.
+  bool hasName() const;
 
   /// Return the name of the corresponding LLVM basic block, or an empty string.
   StringRef getName() const;
@@ -284,6 +311,15 @@ public:
   /// Return the MachineFunction containing this basic block.
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
+
+  /// Returns true if the original IR terminator is an `indirectbr`. This
+  /// typically corresponds to a `goto` in C, rather than jump tables.
+  bool terminatorIsComputedGoto() const {
+    return back().isIndirectBranch() &&
+           llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
+             return Succ->isIRBlockAddressTaken();
+           });
+  }
 
   using instr_iterator = Instructions::iterator;
   using const_instr_iterator = Instructions::const_iterator;
@@ -362,18 +398,20 @@ public:
   }
 
   // Machine-CFG iterators
-  using pred_iterator = std::vector<MachineBasicBlock *>::iterator;
-  using const_pred_iterator = std::vector<MachineBasicBlock *>::const_iterator;
-  using succ_iterator = std::vector<MachineBasicBlock *>::iterator;
-  using const_succ_iterator = std::vector<MachineBasicBlock *>::const_iterator;
+  using pred_iterator = SmallVectorImpl<MachineBasicBlock *>::iterator;
+  using const_pred_iterator =
+      SmallVectorImpl<MachineBasicBlock *>::const_iterator;
+  using succ_iterator = SmallVectorImpl<MachineBasicBlock *>::iterator;
+  using const_succ_iterator =
+      SmallVectorImpl<MachineBasicBlock *>::const_iterator;
   using pred_reverse_iterator =
-      std::vector<MachineBasicBlock *>::reverse_iterator;
+      SmallVectorImpl<MachineBasicBlock *>::reverse_iterator;
   using const_pred_reverse_iterator =
-      std::vector<MachineBasicBlock *>::const_reverse_iterator;
+      SmallVectorImpl<MachineBasicBlock *>::const_reverse_iterator;
   using succ_reverse_iterator =
-      std::vector<MachineBasicBlock *>::reverse_iterator;
+      SmallVectorImpl<MachineBasicBlock *>::reverse_iterator;
   using const_succ_reverse_iterator =
-      std::vector<MachineBasicBlock *>::const_reverse_iterator;
+      SmallVectorImpl<MachineBasicBlock *>::const_reverse_iterator;
   pred_iterator        pred_begin()       { return Predecessors.begin(); }
   const_pred_iterator  pred_begin() const { return Predecessors.begin(); }
   pred_iterator        pred_end()         { return Predecessors.end();   }
@@ -451,11 +489,11 @@ public:
   Register addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
 
   /// Remove the specified register from the live in set.
-  void removeLiveIn(MCPhysReg Reg,
+  void removeLiveIn(MCRegister Reg,
                     LaneBitmask LaneMask = LaneBitmask::getAll());
 
   /// Return true if the specified register is in the live in set.
-  bool isLiveIn(MCPhysReg Reg,
+  bool isLiveIn(MCRegister Reg,
                 LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
   // Iteration support for live in sets.  These sets are kept in sorted
@@ -622,11 +660,11 @@ public:
   /// that used to have a catchpad or cleanuppad instruction in the LLVM IR.
   void setIsEHScopeEntry(bool V = true) { IsEHScopeEntry = V; }
 
-  /// Returns true if this is a target block of a catchret.
-  bool isEHCatchretTarget() const { return IsEHCatchretTarget; }
+  /// Returns true if this is a target of Windows EH Continuation Guard.
+  bool isEHContTarget() const { return IsEHContTarget; }
 
-  /// Indicates if this is a target block of a catchret.
-  void setIsEHCatchretTarget(bool V = true) { IsEHCatchretTarget = V; }
+  /// Indicates if this is a target of Windows EH Continuation Guard.
+  void setIsEHContTarget(bool V = true) { IsEHContTarget = V; }
 
   /// Returns true if this is the entry block of an EH funclet.
   bool isEHFuncletEntry() const { return IsEHFuncletEntry; }
@@ -654,12 +692,6 @@ public:
 
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }
-
-  /// Returns the unique section ID number of this basic block.
-  unsigned getSectionIDNum() const {
-    return ((unsigned)MBBSectionID::SectionType::Cold) -
-           ((unsigned)SectionID.Type) + SectionID.Number;
-  }
 
   /// Sets the fixed BBID of this basic block.
   void setBBID(const UniqueBBID &V) {
@@ -949,9 +981,36 @@ public:
   ///
   /// This function updates LiveVariables, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
+  struct SplitCriticalEdgeAnalyses {
+    LiveIntervals *LIS;
+    SlotIndexes *SI;
+    LiveVariables *LV;
+    MachineLoopInfo *MLI;
+  };
+
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr);
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr) {
+    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets, MDTU);
+  }
+
+  MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ,
+                    MachineFunctionAnalysisManager &MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr) {
+    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets, MDTU);
+  }
+
+  // Helper method for new pass manager migration.
+  MachineBasicBlock *SplitCriticalEdge(
+      MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
+      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+
+  MachineBasicBlock *SplitCriticalEdge(
+      MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
+      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to
@@ -1187,8 +1246,8 @@ public:
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;
 
-  /// Return the EHCatchret Symbol for this basic block.
-  MCSymbol *getEHCatchretSymbol() const;
+  /// Return the Windows EH Continuation Symbol for this basic block.
+  MCSymbol *getEHContSymbol() const;
 
   std::optional<uint64_t> getIrrLoopHeaderWeight() const {
     return IrrLoopHeaderWeight;
@@ -1203,6 +1262,9 @@ public:
   /// MachineBranchProbabilityInfo class.
   BranchProbability getSuccProbability(const_succ_iterator Succ) const;
 
+  // Helper function for MIRPrinter.
+  bool canPredictBranchProbabilities() const;
+
 private:
   /// Return probability iterator corresponding to the I successor iterator.
   probability_iterator getProbabilityIterator(succ_iterator I);
@@ -1210,7 +1272,6 @@ private:
   getProbabilityIterator(const_succ_iterator I) const;
 
   friend class MachineBranchProbabilityInfo;
-  friend class MIPrinter;
 
   // Methods used to maintain doubly linked list of blocks...
   friend struct ilist_callback_traits<MachineBasicBlock>;
@@ -1261,7 +1322,15 @@ template <> struct GraphTraits<MachineBasicBlock *> {
   static NodeRef getEntryNode(MachineBasicBlock *BB) { return BB; }
   static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+
+  static unsigned getNumber(MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<MachineBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<const MachineBasicBlock *> {
   using NodeRef = const MachineBasicBlock *;
@@ -1270,7 +1339,15 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
   static NodeRef getEntryNode(const MachineBasicBlock *BB) { return BB; }
   static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+
+  static unsigned getNumber(const MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<const MachineBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 // Provide specializations of GraphTraits to be able to treat a
 // MachineFunction as a graph of MachineBasicBlocks and to walk it
@@ -1288,7 +1365,15 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
 
   static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+
+  static unsigned getNumber(MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<MachineBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
   using NodeRef = const MachineBasicBlock *;
@@ -1300,13 +1385,27 @@ template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
 
   static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
   static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+
+  static unsigned getNumber(const MachineBasicBlock *BB) {
+    assert(BB->getNumber() >= 0 && "negative block number");
+    return BB->getNumber();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<const MachineBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 // These accessors are handy for sharing templated code between IR and MIR.
 inline auto successors(const MachineBasicBlock *BB) { return BB->successors(); }
 inline auto predecessors(const MachineBasicBlock *BB) {
   return BB->predecessors();
 }
+inline auto succ_size(const MachineBasicBlock *BB) { return BB->succ_size(); }
+inline auto pred_size(const MachineBasicBlock *BB) { return BB->pred_size(); }
+inline auto succ_begin(const MachineBasicBlock *BB) { return BB->succ_begin(); }
+inline auto pred_begin(const MachineBasicBlock *BB) { return BB->pred_begin(); }
+inline auto succ_end(const MachineBasicBlock *BB) { return BB->succ_end(); }
+inline auto pred_end(const MachineBasicBlock *BB) { return BB->pred_end(); }
 
 /// MachineInstrSpan provides an interface to get an iteration range
 /// containing the instruction it was initialized with, along with all

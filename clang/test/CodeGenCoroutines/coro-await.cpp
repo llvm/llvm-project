@@ -370,8 +370,8 @@ extern "C" void TestTailcall() {
   // ---------------------------
   // Call coro.await.suspend
   // ---------------------------
-  // CHECK-NEXT: %[[RESUMED:.+]] = call ptr @llvm.coro.await.suspend.handle(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @TestTailcall.__await_suspend_wrapper__await)
-  // CHECK-NEXT: call void @llvm.coro.resume(ptr %[[RESUMED]])
+  // Note: The call must not be nounwind since the resumed function could throw.
+  // CHECK-NEXT: call void @llvm.coro.await.suspend.handle(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @TestTailcall.__await_suspend_wrapper__await){{$}}
   // CHECK-NEXT: %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1 false)
   // CHECK-NEXT: switch i8 %[[OUTCOME]], label %[[RET_BB:.+]] [
   // CHECK-NEXT:   i8 0, label %[[READY_BB]]
@@ -388,7 +388,7 @@ extern "C" void TestTailcall() {
   //   ... many lines of code to coerce coroutine_handle into an ptr scalar
   // CHECK: %[[CH:.+]] = load ptr, ptr %{{.+}}
   // CHECK-NEXT: %[[RESULT:.+]] = call ptr @_ZN13TailCallAwait13await_suspendESt16coroutine_handleIvE(ptr {{[^,]*}} %[[AWAITABLE]], ptr %[[CH]]) 
-  // CHECK-NEXT: %[[COERCE:.+]] = getelementptr inbounds %"struct.std::coroutine_handle", ptr %[[TMP:.+]], i32 0, i32 0
+  // CHECK-NEXT: %[[COERCE:.+]] = getelementptr inbounds nuw %"struct.std::coroutine_handle", ptr %[[TMP:.+]], i32 0, i32 0
   // CHECK-NEXT: store ptr %[[RESULT]], ptr %[[COERCE]]
   // CHECK-NEXT: %[[ADDR:.+]] = call ptr @_ZNSt16coroutine_handleIvE7addressEv(ptr {{[^,]*}} %[[TMP]])
   // CHECK-NEXT: ret ptr %[[ADDR]]

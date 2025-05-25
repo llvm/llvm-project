@@ -40,5 +40,5 @@
 // RUN: %clang -target x86_64-sie-ps5 -fcs-profile-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS5-PROFILE %s
 // RUN: %clang -target x86_64-sie-ps5 -fcs-profile-generate -fno-profile-generate %s -### 2>&1 | FileCheck --check-prefix=CHECK-PS5-NO-PROFILE %s
 //
-// CHECK-PS5-PROFILE: "--dependent-lib=libclang_rt.profile-x86_64_nosubmission.a"
-// CHECK-PS5-NO-PROFILE-NOT: "--dependent-lib=libclang_rt.profile-x86_64_nosubmission.a"
+// CHECK-PS5-PROFILE: "--dependent-lib=libclang_rt.profile_nosubmission.a"
+// CHECK-PS5-NO-PROFILE-NOT: "--dependent-lib=libclang_rt.profile_nosubmission.a"

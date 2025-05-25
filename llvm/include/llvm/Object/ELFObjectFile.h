@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -106,7 +108,7 @@ public:
 
   virtual uint8_t getEIdentABIVersion() const = 0;
 
-  std::vector<ELFPltEntry> getPltEntries() const;
+  std::vector<ELFPltEntry> getPltEntries(const MCSubtargetInfo &STI) const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
   /// Returns an empty vector if version sections do not exist.
@@ -122,6 +124,8 @@ public:
   Expected<std::vector<BBAddrMap>>
   readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt,
                 std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
+
+  StringRef getCrelDecodeProblem(SectionRef Sec) const;
 };
 
 class ELFSectionRef : public SectionRef {
@@ -292,6 +296,10 @@ protected:
   const Elf_Shdr *DotSymtabSec = nullptr; // Symbol table section.
   const Elf_Shdr *DotSymtabShndxSec = nullptr; // SHT_SYMTAB_SHNDX section.
 
+  // Hold CREL relocations for SectionRef::relocations().
+  mutable SmallVector<SmallVector<Elf_Crel, 0>, 0> Crels;
+  mutable SmallVector<std::string, 0> CrelDecodeProblems;
+
   Error initContent() override;
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
@@ -403,6 +411,9 @@ protected:
     case ELF::EM_ARM:
       Type = ELF::SHT_ARM_ATTRIBUTES;
       break;
+    case ELF::EM_AARCH64:
+      Type = ELF::SHT_AARCH64_ATTRIBUTES;
+      break;
     case ELF::EM_RISCV:
       Type = ELF::SHT_RISCV_ATTRIBUTES;
       break;
@@ -446,6 +457,7 @@ public:
 
   const Elf_Rel *getRel(DataRefImpl Rel) const;
   const Elf_Rela *getRela(DataRefImpl Rela) const;
+  Elf_Crel getCrel(DataRefImpl Crel) const;
 
   Expected<const Elf_Sym *> getSymbol(DataRefImpl Sym) const {
     return EF.template getEntry<Elf_Sym>(Sym.d.a, Sym.d.b);
@@ -499,6 +511,8 @@ public:
   bool isRelocatableObject() const override;
 
   void createFakeSections() { EF.createFakeSections(); }
+
+  StringRef getCrelDecodeProblem(DataRefImpl Sec) const;
 };
 
 using ELF32LEObjectFile = ELFObjectFile<ELF32LE>;
@@ -939,16 +953,15 @@ bool ELFObjectFile<ELFT>::isSectionText(DataRefImpl Sec) const {
 template <class ELFT>
 bool ELFObjectFile<ELFT>::isSectionData(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
-  return EShdr->sh_type == ELF::SHT_PROGBITS &&
-         EShdr->sh_flags & ELF::SHF_ALLOC &&
-         !(EShdr->sh_flags & ELF::SHF_EXECINSTR);
+  return (EShdr->sh_flags & ELF::SHF_ALLOC) &&
+         !(EShdr->sh_flags & ELF::SHF_EXECINSTR) &&
+         EShdr->sh_type != ELF::SHT_NOBITS;
 }
 
 template <class ELFT>
 bool ELFObjectFile<ELFT>::isSectionBSS(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
-  return EShdr->sh_flags & (ELF::SHF_ALLOC | ELF::SHF_WRITE) &&
-         EShdr->sh_type == ELF::SHT_NOBITS;
+  return EShdr->sh_flags & ELF::SHF_ALLOC && EShdr->sh_type == ELF::SHT_NOBITS;
 }
 
 template <class ELFT>
@@ -1022,6 +1035,24 @@ ELFObjectFile<ELFT>::section_rel_begin(DataRefImpl Sec) const {
   uintptr_t SHT = reinterpret_cast<uintptr_t>((*SectionsOrErr).begin());
   RelData.d.a = (Sec.p - SHT) / EF.getHeader().e_shentsize;
   RelData.d.b = 0;
+  if (reinterpret_cast<const Elf_Shdr *>(Sec.p)->sh_type == ELF::SHT_CREL) {
+    if (RelData.d.a + 1 > Crels.size())
+      Crels.resize(RelData.d.a + 1);
+    auto &Crel = Crels[RelData.d.a];
+    if (Crel.empty()) {
+      ArrayRef<uint8_t> Content = cantFail(getSectionContents(Sec));
+      size_t I = 0;
+      Error Err = decodeCrel<ELFT::Is64Bits>(
+          Content, [&](uint64_t Count, bool) { Crel.resize(Count); },
+          [&](Elf_Crel Crel) { Crels[RelData.d.a][I++] = Crel; });
+      if (Err) {
+        Crel.assign(1, Elf_Crel{0, 0, 0, 0});
+        if (RelData.d.a + 1 > CrelDecodeProblems.size())
+          CrelDecodeProblems.resize(RelData.d.a + 1);
+        CrelDecodeProblems[RelData.d.a] = toString(std::move(Err));
+      }
+    }
+  }
   return relocation_iterator(RelocationRef(RelData, this));
 }
 
@@ -1030,9 +1061,13 @@ relocation_iterator
 ELFObjectFile<ELFT>::section_rel_end(DataRefImpl Sec) const {
   const Elf_Shdr *S = reinterpret_cast<const Elf_Shdr *>(Sec.p);
   relocation_iterator Begin = section_rel_begin(Sec);
+  DataRefImpl RelData = Begin->getRawDataRefImpl();
+  if (S->sh_type == ELF::SHT_CREL) {
+    RelData.d.b = Crels[RelData.d.a].size();
+    return relocation_iterator(RelocationRef(RelData, this));
+  }
   if (S->sh_type != ELF::SHT_RELA && S->sh_type != ELF::SHT_REL)
     return Begin;
-  DataRefImpl RelData = Begin->getRawDataRefImpl();
   const Elf_Shdr *RelSec = getRelSection(RelData);
 
   // Error check sh_link here so that getRelocationSymbol can just use it.
@@ -1050,7 +1085,7 @@ Expected<section_iterator>
 ELFObjectFile<ELFT>::getRelocatedSection(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
   uintX_t Type = EShdr->sh_type;
-  if (Type != ELF::SHT_REL && Type != ELF::SHT_RELA)
+  if (Type != ELF::SHT_REL && Type != ELF::SHT_RELA && Type != ELF::SHT_CREL)
     return section_end();
 
   Expected<const Elf_Shdr *> SecOrErr = EF.getSection(EShdr->sh_info);
@@ -1070,7 +1105,9 @@ symbol_iterator
 ELFObjectFile<ELFT>::getRelocationSymbol(DataRefImpl Rel) const {
   uint32_t symbolIdx;
   const Elf_Shdr *sec = getRelSection(Rel);
-  if (sec->sh_type == ELF::SHT_REL)
+  if (sec->sh_type == ELF::SHT_CREL)
+    symbolIdx = getCrel(Rel).r_symidx;
+  else if (sec->sh_type == ELF::SHT_REL)
     symbolIdx = getRel(Rel)->getSymbol(EF.isMips64EL());
   else
     symbolIdx = getRela(Rel)->getSymbol(EF.isMips64EL());
@@ -1087,6 +1124,8 @@ ELFObjectFile<ELFT>::getRelocationSymbol(DataRefImpl Rel) const {
 template <class ELFT>
 uint64_t ELFObjectFile<ELFT>::getRelocationOffset(DataRefImpl Rel) const {
   const Elf_Shdr *sec = getRelSection(Rel);
+  if (sec->sh_type == ELF::SHT_CREL)
+    return getCrel(Rel).r_offset;
   if (sec->sh_type == ELF::SHT_REL)
     return getRel(Rel)->r_offset;
 
@@ -1096,6 +1135,8 @@ uint64_t ELFObjectFile<ELFT>::getRelocationOffset(DataRefImpl Rel) const {
 template <class ELFT>
 uint64_t ELFObjectFile<ELFT>::getRelocationType(DataRefImpl Rel) const {
   const Elf_Shdr *sec = getRelSection(Rel);
+  if (sec->sh_type == ELF::SHT_CREL)
+    return getCrel(Rel).r_type;
   if (sec->sh_type == ELF::SHT_REL)
     return getRel(Rel)->getType(EF.isMips64EL());
   else
@@ -1117,9 +1158,11 @@ void ELFObjectFile<ELFT>::getRelocationTypeName(
 template <class ELFT>
 Expected<int64_t>
 ELFObjectFile<ELFT>::getRelocationAddend(DataRefImpl Rel) const {
-  if (getRelSection(Rel)->sh_type != ELF::SHT_RELA)
-    return createError("Section is not SHT_RELA");
-  return (int64_t)getRela(Rel)->r_addend;
+  if (getRelSection(Rel)->sh_type == ELF::SHT_RELA)
+    return (int64_t)getRela(Rel)->r_addend;
+  if (getRelSection(Rel)->sh_type == ELF::SHT_CREL)
+    return (int64_t)getCrel(Rel).r_addend;
+  return createError("Relocation section does not have addends");
 }
 
 template <class ELFT>
@@ -1140,6 +1183,14 @@ ELFObjectFile<ELFT>::getRela(DataRefImpl Rela) const {
   if (!Ret)
     report_fatal_error(Twine(errorToErrorCode(Ret.takeError()).message()));
   return *Ret;
+}
+
+template <class ELFT>
+typename ELFObjectFile<ELFT>::Elf_Crel
+ELFObjectFile<ELFT>::getCrel(DataRefImpl Crel) const {
+  assert(getRelSection(Crel)->sh_type == ELF::SHT_CREL);
+  assert(Crel.d.a < Crels.size());
+  return Crels[Crel.d.a][Crel.d.b];
 }
 
 template <class ELFT>
@@ -1451,6 +1502,15 @@ ELFObjectFile<ELFT>::getDynamicSymbolIterators() const {
 
 template <class ELFT> bool ELFObjectFile<ELFT>::isRelocatableObject() const {
   return EF.getHeader().e_type == ELF::ET_REL;
+}
+
+template <class ELFT>
+StringRef ELFObjectFile<ELFT>::getCrelDecodeProblem(DataRefImpl Sec) const {
+  uintptr_t SHT = reinterpret_cast<uintptr_t>(cantFail(EF.sections()).begin());
+  auto I = (Sec.p - SHT) / EF.getHeader().e_shentsize;
+  if (I < CrelDecodeProblems.size())
+    return CrelDecodeProblems[I];
+  return "";
 }
 
 } // end namespace object

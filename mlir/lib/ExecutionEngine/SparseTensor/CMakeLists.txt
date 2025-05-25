@@ -11,8 +11,8 @@ add_mlir_library(MLIRSparseTensorRuntime
   Storage.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRSparseTensorRuntime PUBLIC
   MLIRSparseTensorEnums
   mlir_float16_utils
   )

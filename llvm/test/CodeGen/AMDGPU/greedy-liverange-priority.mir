@@ -74,7 +74,7 @@ body: |
     %3:vgpr_32 = V_ADD_U32_e32 %30, %6, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %36.sub1, %8, implicit $exec
     %15:vgpr_32 = V_OR_B32_e32 %4, %3, implicit $exec
-    %21:sreg_32 = V_READFIRSTLANE_B32 %19, implicit $exec
+    %21:sreg_32_xm0 = V_READFIRSTLANE_B32 %19, implicit $exec
     %17:sreg_32 = V_CMP_EQ_U32_e64 0, %15, implicit $exec
     S_CMP_LG_U32 %21, 0, implicit-def $scc
     %31:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit killed $scc

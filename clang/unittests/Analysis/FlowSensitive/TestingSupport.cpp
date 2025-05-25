@@ -176,13 +176,18 @@ llvm::Error test::checkDataflowWithNoopAnalysis(
     DataflowAnalysisOptions Options, LangStandard::Kind Std,
     std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback) {
   llvm::SmallVector<std::string, 3> ASTBuildArgs = {
+      "-fsyntax-only",
       // -fnodelayed-template-parsing is the default everywhere but on Windows.
       // Set it explicitly so that tests behave the same on Windows as on other
       // platforms.
+      "-fno-delayed-template-parsing",
       // Set -Wno-unused-value because it's often desirable in tests to write
       // expressions with unused value, and we don't want the output to be
       // cluttered with warnings about them.
-      "-fsyntax-only", "-fno-delayed-template-parsing", "-Wno-unused-value",
+      "-Wno-unused-value",
+      // Some build environments don't have RTTI enabled by default.
+      // Enable it explicitly to make sure tests work in all environments.
+      "-frtti",
       "-std=" +
           std::string(LangStandard::getLangStandardForKind(Std).getName())};
   AnalysisInputs<NoopAnalysis> AI(

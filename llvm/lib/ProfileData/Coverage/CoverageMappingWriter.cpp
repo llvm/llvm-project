@@ -19,7 +19,6 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -256,7 +255,6 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
         // They are written as internal values plus 1.
         const auto &BranchParams = I->getBranchParams();
         ParamsShouldBeNull = false;
-        assert(BranchParams.ID >= 0);
         unsigned ID1 = BranchParams.ID + 1;
         unsigned TID1 = BranchParams.Conds[true] + 1;
         unsigned FID1 = BranchParams.Conds[false] + 1;

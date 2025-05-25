@@ -29,7 +29,6 @@ function(lldb_tablegen)
 
   if(LTG_TARGET)
     add_public_tablegen_target(${LTG_TARGET})
-    set_target_properties( ${LTG_TARGET} PROPERTIES FOLDER "LLDB tablegenning")
     set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
   endif()
 endfunction(lldb_tablegen)
@@ -94,36 +93,25 @@ function(add_lldb_library name)
     set(libkind STATIC)
   endif()
 
-  #PIC not needed on Win
-  # FIXME: Setting CMAKE_CXX_FLAGS here is a no-op, use target_compile_options
-  # or omit this logic instead.
-  if (NOT WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  if(PARAM_ENTITLEMENTS)
+    set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
   endif()
 
-  if (PARAM_OBJECT)
-    add_library(${name} ${libkind} ${srcs})
+  if(LLDB_NO_INSTALL_DEFAULT_RPATH)
+    set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
+  endif()
+
+  llvm_add_library(${name} ${libkind} ${srcs}
+    LINK_LIBS ${PARAM_LINK_LIBS}
+    DEPENDS ${PARAM_DEPENDS}
+    ${pass_ENTITLEMENTS}
+    ${pass_NO_INSTALL_RPATH}
+  )
+
+  if(CLANG_LINK_CLANG_DYLIB)
+    target_link_libraries(${name} PRIVATE clang-cpp)
   else()
-    if(PARAM_ENTITLEMENTS)
-      set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
-    endif()
-
-    if(LLDB_NO_INSTALL_DEFAULT_RPATH)
-      set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
-    endif()
-
-    llvm_add_library(${name} ${libkind} ${srcs}
-      LINK_LIBS ${PARAM_LINK_LIBS}
-      DEPENDS ${PARAM_DEPENDS}
-      ${pass_ENTITLEMENTS}
-      ${pass_NO_INSTALL_RPATH}
-    )
-
-    if(CLANG_LINK_CLANG_DYLIB)
-      target_link_libraries(${name} PRIVATE clang-cpp)
-    else()
-      target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
-    endif()
+    target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
   endif()
 
   # A target cannot be changed to a FRAMEWORK after calling install() because
@@ -165,10 +153,10 @@ function(add_lldb_library name)
     get_property(parent_dir DIRECTORY PROPERTY PARENT_DIRECTORY)
     if(EXISTS ${parent_dir})
       get_filename_component(category ${parent_dir} NAME)
-      set_target_properties(${name} PROPERTIES FOLDER "lldb plugins/${category}")
+      set_target_properties(${name} PROPERTIES FOLDER "LLDB/Plugins/${category}")
     endif()
   else()
-    set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
+    set_target_properties(${name} PROPERTIES FOLDER "LLDB/Libraries")
   endif()
 
   # If we want to export all lldb symbols (i.e LLDB_EXPORT_ALL_SYMBOLS=ON), we
@@ -208,7 +196,6 @@ function(add_lldb_executable name)
   else()
     target_link_libraries(${name} PRIVATE ${ARG_CLANG_LIBS})
   endif()
-  set_target_properties(${name} PROPERTIES FOLDER "lldb executables")
 
   if (ARG_BUILD_RPATH)
     set_target_properties(${name} PROPERTIES BUILD_RPATH "${ARG_BUILD_RPATH}")
@@ -260,6 +247,7 @@ function(add_lldb_tool name)
   endif()
 
   add_lldb_executable(${name} GENERATE_INSTALL ${ARG_UNPARSED_ARGUMENTS})
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
 # The test suite relies on finding LLDB.framework binary resources in the

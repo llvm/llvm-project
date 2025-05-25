@@ -96,8 +96,8 @@ void default_mapper() {
   // CK34-DAG: [[SZ]] = sub i64 [[C_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
   // CK34-DAG: [[S_INTPTR]] = ptrtoint ptr [[S_ADDR]] to i64
   // CK34-DAG: [[C_BEGIN_INTPTR]] = ptrtoint ptr [[C_ADDR:%.+]] to i64
-  // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 2
-  // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 1
+  // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 2
+  // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
   // pass MEMBER_OF_1 | TO {&s, &s.c+1, ((void*)(&s)+31+1-(void*)(&s.c+1))} to copy the data of s.b.
 
@@ -131,8 +131,8 @@ void default_mapper() {
   // CK34-DAG: store ptr [[C_ADDR:%.+]], ptr [[P3]],
   // CK34-DAG: store ptr [[C_DEFAULT_MAPPER:@.+]], ptr [[MF3]],
 
-  // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 2
-  // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 1
+  // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 2
+  // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
   #pragma omp target map(to: s)
   s.foo();
@@ -186,8 +186,8 @@ void default_mapper() {
   // CK34-DAG: [[SZ]] = sub i64 [[C_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
   // CK34-DAG: [[S_INTPTR]] = ptrtoint ptr [[S_ADDR]] to i64
   // CK34-DAG: [[C_BEGIN_INTPTR]] = ptrtoint ptr [[C_ADDR:%.+]] to i64
-  // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 2
-  // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 1
+  // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 2
+  // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
   // pass MEMBER_OF_1 | FROM {&s, &s.c+1, ((void*)(&s)+31+1-(void*)(&s.c+1))} to copy the data of s.b.
 
@@ -221,8 +221,8 @@ void default_mapper() {
   // CK34-DAG: store ptr [[C_ADDR:%.+]], ptr [[P3]],
   // CK34-DAG: store ptr [[C_DEFAULT_MAPPER]], ptr [[MF3]],
 
-  // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 2
-  // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds %class.S, ptr [[S_ADDR]], i32 0, i32 1
+  // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 2
+  // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
   #pragma omp target map(from: s)
   s.foo();

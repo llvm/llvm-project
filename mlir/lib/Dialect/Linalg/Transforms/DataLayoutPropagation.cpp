@@ -17,6 +17,8 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -59,7 +61,7 @@ template <typename OpTy>
 static FailureOr<PackInfo>
 getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
                           OpTy packOrUnPackOp) {
-  static_assert(llvm::is_one_of<OpTy, tensor::PackOp, tensor::UnPackOp>::value,
+  static_assert(llvm::is_one_of<OpTy, linalg::PackOp, linalg::UnPackOp>::value,
                 "applies to only pack or unpack operations");
   LLVM_DEBUG(
       { llvm::dbgs() << "--- Construct PackInfo From an operand ---\n"; });
@@ -208,7 +210,7 @@ static SmallVector<int64_t> computeOuterDims(ArrayRef<int64_t> perm,
 ///      %4 = arith.addf %arg3, %arg4 : f32
 ///      linalg.yield %4 : f32
 ///  } -> tensor<?x?xf32>
-///  %1 = tensor.pack %0
+///  %1 = linalg.pack %0
 ///    inner_dims_pos = [0, 1]
 ///    inner_tiles = [8, 2]
 ///    into %dest : tensor<?x?xf32> -> tensor<?x?x8x2xf32>
@@ -217,7 +219,7 @@ static SmallVector<int64_t> computeOuterDims(ArrayRef<int64_t> perm,
 ///  8. Thus, the below operation and `affine_map<(d0, d1, d2, d3)> ->
 ///  affine_map<(d1, d3)>` will be returned.
 ///
-///  %pack = tensor.pack %arg0
+///  %pack = linalg.pack %arg0
 ///    inner_dims_pos = [0]
 ///    inner_tiles = [8]
 ///    into %init : tensor<?xf32> -> tensor<?x8xf32>
@@ -288,26 +290,57 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   if (innerDimsPos.empty() && outerDimsPerm.empty())
     return std::make_tuple(opOperand->get(), indexingMap);
 
-  auto empty = tensor::PackOp::createDestinationTensor(
+  auto empty = linalg::PackOp::createDestinationTensor(
       b, loc, opOperand->get(), innerTileSizes, innerDimsPos, outerDimsPerm);
-  auto packedOperand = b.create<tensor::PackOp>(
+  auto packedOperand = b.create<linalg::PackOp>(
       loc, opOperand->get(), empty, innerDimsPos, innerTileSizes,
       /*padding=*/std::nullopt, outerDimsPerm);
   return std::make_tuple(packedOperand, indexingMap);
 }
 
-/// Pack a genericOp and return it.
+/// This function is a helper subroutine to pack a genericOp and return it. It
+/// will create a new generic op with the packed operand and the packed output
+/// according to packInfo when we attempt to push down unpack or bubble up pack
+/// around it. Implicitly this will only work when a packInfo can be obtained.
+/// This make sure that we are only using this function on parallel permuted
+/// dimensions.
 static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
                                Value dest, AffineMap packedOutIndexingMap,
-                               const PackInfo &packInfo) {
+                               const PackInfo &packInfo,
+                               bool isFoldableUnpackPack) {
   Location loc = genericOp.getLoc();
   SmallVector<Value> inputOperands;
+  SmallVector<Value> inputOperandsFromUnpackedSource;
   SmallVector<AffineMap> indexingMaps;
+  auto hasEquivalentTiles = [](PackOp packOp, UnPackOp unPackOp) {
+    return packOp.getOuterDimsPerm() == unPackOp.getOuterDimsPerm() &&
+           packOp.getInnerDimsPos() == unPackOp.getInnerDimsPos() &&
+           llvm::equal(packOp.getMixedTiles(), unPackOp.getMixedTiles());
+  };
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
         rewriter, loc, packInfo, genericOp, inputOperand);
+    auto unpackOp = inputOperand->get().getDefiningOp<linalg::UnPackOp>();
+    auto packOp = packedOperand.getDefiningOp<linalg::PackOp>();
+    if (packOp && unpackOp && hasEquivalentTiles(packOp, unpackOp)) {
+      inputOperandsFromUnpackedSource.push_back(unpackOp.getSource());
+    } else {
+      inputOperandsFromUnpackedSource.push_back(packedOperand);
+    }
     inputOperands.push_back(packedOperand);
     indexingMaps.push_back(packedIndexingMap);
+  }
+
+  // If the unpack->pack sequences can be folded, replace use the sources of
+  // the unpack ops in any unpack->pack chains on the generic op operands.
+  if (isFoldableUnpackPack) {
+    inputOperands = inputOperandsFromUnpackedSource;
+    if (auto destPack = dest.getDefiningOp<linalg::PackOp>()) {
+      auto destUnPack = destPack.getSource().getDefiningOp<linalg::UnPackOp>();
+      if (destUnPack && hasEquivalentTiles(destPack, destUnPack)) {
+        dest = destUnPack.getSource();
+      }
+    }
   }
 
   int64_t numInnerLoops = packInfo.getNumTiledLoops();
@@ -325,7 +358,7 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   return newGenericOp;
 }
 
-/// Bubbles up tensor.pack op through a producer generic op. This
+/// Bubbles up linalg.pack op through a producer generic op. This
 /// swap pack(generic) to generic(pack). The new generic op works on packed
 /// domain; pack ops are created for input and output operands. E.g.,
 ///
@@ -341,7 +374,7 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 ///         %4 = arith.addf %arg3, %arg3 : f32
 ///         linalg.yield %4 : f32
 ///     } -> tensor<?x?xf32>
-///     %4 = tensor.pack %3
+///     %4 = linalg.pack %3
 ///       inner_dims_pos = [0, 1]
 ///       inner_tiles = [8, 2]
 ///       into %dest : tensor<?x?xf32> -> tensor<?x?x8x2xf32>
@@ -356,7 +389,7 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 ///     %0 = affine.apply #map()[%dim]
 ///     %1 = affine.apply #map1()[%dim_0]
 ///     %2 = tensor.empty(%0, %1) : tensor<?x?x8x2xf32>
-///     %pack = tensor.pack %arg0
+///     %pack = linalg.pack %arg0
 ///       inner_dims_pos = [0, 1]
 ///       inner_tiles = [8, 2]
 ///       into %2 : tensor<?x?xf32> -> tensor<?x?x8x2xf32>
@@ -369,14 +402,14 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 ///       linalg.yield %4 : f32
 ///     } -> tensor<?x?x8x2xf32>
 static FailureOr<GenericOp>
-bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
+bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
                                const ControlPropagationFn &controlFn) {
   auto genericOp = packOp.getSource().getDefiningOp<GenericOp>();
   if (!genericOp)
     return failure();
 
   // User controlled propagation function.
-  if (!controlFn(genericOp))
+  if (!controlFn(&packOp.getSourceMutable()))
     return failure();
 
   // TODO: Enable propagation in the presence of linalg.index and
@@ -397,16 +430,28 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
   if (!genericOp->getResult(0).hasOneUse())
     return failure();
 
+  // TODO: Add an option for allowing padding values. It could introduce
+  // undefined behavior if we unconditionally propagate pack op through all
+  // the ops. E.g., if the padding value is zero and there are division ops in
+  // a generic op. Some values of padding area could be NaN (0/0).
+  if (packOp.getPaddingValue())
+    return failure();
+
+  OpOperand *opOperand = genericOp.getDpsInitOperand(0);
+  auto packInfo = getPackingInfoFromOperand(opOperand, genericOp, packOp);
+  if (failed(packInfo))
+    return failure();
+
   // We want to move the pack not the generic.
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(genericOp);
 
   // We need to handle two cases:
-  // 1) The tensor.pack destination is a tensor.empty. If this is the case, we
+  // 1) The linalg.pack destination is a tensor.empty. If this is the case, we
   // create a new tensor.empty to avoid breaking dominance, as we are moving the
-  // tensor.pack above the linalg.generic.
+  // linalg.pack above the linalg.generic.
   // 2) The destination is not a tensor.empty. In this case we can replace only
-  // if the destination of the tensor.pack dominates the linalg.generic.
+  // if the destination of the linalg.pack dominates the linalg.generic.
   Value packOpDest = packOp.getDest();
   if (!packOpDest.hasOneUse())
     return failure();
@@ -419,18 +464,6 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
     if (!dom.properlyDominates(packOpDest, genericOp))
       return failure();
   }
-
-  // TODO: Add an option for allowing padding values. It could introduce
-  // undefined behavior if we unconditionally propagate pack op through all
-  // the ops. E.g., if the padding value is zero and there are division ops in
-  // a generic op. Some values of padding area could be NaN (0/0).
-  if (packOp.getPaddingValue())
-    return failure();
-
-  OpOperand *opOperand = genericOp.getDpsInitOperand(0);
-  auto packInfo = getPackingInfoFromOperand(opOperand, genericOp, packOp);
-  if (failed(packInfo))
-    return failure();
 
   // Rebuild the indexing map for the corresponding init operand.
   auto [packedOutOperand, packedOutIndexingMap] =
@@ -445,19 +478,21 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
                             .getDefiningOp<tensor::EmptyOp>()) {
     dest = packOpDest;
   }
+  // pack(unpack) isn't naively foldable because the unpack op can be from
+  // an arbitrary domain so we need to keep both.
   return packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap,
-                       *packInfo);
+                       *packInfo, /*isFoldableUnpackPack=*/false);
 }
 
 /// Wrapper pattern that applies bubbleUpPackOpThroughGenericOp method.
 struct BubbleUpPackOpThroughGenericOpPattern
-    : public OpRewritePattern<tensor::PackOp> {
+    : public OpRewritePattern<linalg::PackOp> {
 public:
   BubbleUpPackOpThroughGenericOpPattern(MLIRContext *context,
                                         ControlPropagationFn fun)
-      : OpRewritePattern<tensor::PackOp>(context), controlFn(std::move(fun)) {}
+      : OpRewritePattern<linalg::PackOp>(context), controlFn(std::move(fun)) {}
 
-  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+  LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
     auto genericOp =
         bubbleUpPackOpThroughGenericOp(rewriter, packOp, controlFn);
@@ -471,25 +506,22 @@ private:
   ControlPropagationFn controlFn;
 };
 
-/// Propagate a tensor.pack operation up through a tensor.pad. The idea is to
+/// Propagate a linalg.pack operation up through a tensor.pad. The idea is to
 /// add as many zero padding dimensions in `high` and `low` based on the number
 /// of point loops.
-class BubbleUpPackThroughPadOp final : public OpRewritePattern<tensor::PackOp> {
+class BubbleUpPackThroughPadOp final : public OpRewritePattern<linalg::PackOp> {
 public:
   BubbleUpPackThroughPadOp(MLIRContext *context, ControlPropagationFn fun)
-      : OpRewritePattern<tensor::PackOp>(context), controlFn(std::move(fun)) {}
+      : OpRewritePattern<linalg::PackOp>(context), controlFn(std::move(fun)) {}
 
-  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+  LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
     auto padOp = packOp.getSource().getDefiningOp<tensor::PadOp>();
     if (!padOp)
       return failure();
 
     // User controlled propagation function.
-    if (!controlFn(padOp))
-      return failure();
-
-    if (!padOp.getResult().hasOneUse())
+    if (!controlFn(&packOp.getSourceMutable()))
       return failure();
 
     // TODO: Enable padding when the padding values are the same.
@@ -508,7 +540,6 @@ public:
       return failure();
 
     ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
-    ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
 
     // Bail out if one of the padded dimension is a tiled one.
     llvm::SmallBitVector paddedDims = padOp.getPaddedDims();
@@ -522,11 +553,13 @@ public:
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(padOp);
 
-    auto empty = tensor::PackOp::createDestinationTensor(
-        rewriter, loc, padOp.getSource(), packOp.getMixedTiles(), innerDimsPos,
+    ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+    SmallVector<OpFoldResult> mixedTiles = packOp.getMixedTiles();
+    auto empty = linalg::PackOp::createDestinationTensor(
+        rewriter, loc, padOp.getSource(), mixedTiles, innerDimsPos,
         outerDimsPerm);
-    Value packedSource = rewriter.create<tensor::PackOp>(
-        loc, padOp.getSource(), empty, innerDimsPos, packOp.getMixedTiles(),
+    auto sourcePack = rewriter.create<linalg::PackOp>(
+        loc, padOp.getSource(), empty, innerDimsPos, mixedTiles,
         /*padding=*/std::nullopt, outerDimsPerm);
 
     // If we have `outer_dims_perms` we need to adjust the padded dimensions.
@@ -543,9 +576,22 @@ public:
     highPad.append(pointLoopsSize, rewriter.getIndexAttr(0));
 
     auto newPadOp = rewriter.create<tensor::PadOp>(
-        loc, /*result=*/Type(), packedSource, lowPad, highPad, paddingVal,
+        loc, /*result=*/Type(), sourcePack, lowPad, highPad, paddingVal,
         padOp.getNofold());
+
+    // If the pad has more than one user, create an unpack on the new pad to
+    // replace the other uses.
+    if (!padOp->hasOneUse()) {
+      auto unpackEmpty = linalg::UnPackOp::createDestinationTensor(
+          rewriter, loc, newPadOp, mixedTiles, innerDimsPos, outerDimsPerm);
+      Value unpackedPad = rewriter.create<linalg::UnPackOp>(
+          loc, newPadOp, unpackEmpty, innerDimsPos, mixedTiles, outerDimsPerm);
+      rewriter.replaceAllUsesExcept(padOp, unpackedPad, sourcePack);
+    }
+
+    // Replace the pack with the new pad.
     rewriter.replaceOp(packOp, newPadOp.getResult());
+
     return success();
   }
 
@@ -603,7 +649,8 @@ static bool isDimsDivisibleByTileSizes(ArrayRef<int64_t> dimsPos,
 static int64_t applyPermutationAndReindexReassoc(
     SmallVector<ReassociationIndices> &reassocIndices,
     ArrayRef<int64_t> permutation) {
-  applyPermutationToVector<ReassociationIndices>(reassocIndices, permutation);
+  if (!permutation.empty())
+    applyPermutationToVector<ReassociationIndices>(reassocIndices, permutation);
   int64_t nextPos = 0;
   for (ReassociationIndices &indices : reassocIndices) {
     for (auto &index : indices) {
@@ -622,20 +669,20 @@ static int64_t applyPermutationAndReindexReassoc(
 ///
 /// %collapsed = tensor.collapse_shape %in [[0, 1], 2]
 ///     : tensor<?x16x4xf32> into tensor<?x4xf32>
-/// %pack = tensor.pack %collapsed outer_dims_perm = [0, 1]
+/// %pack = linalg.pack %collapsed outer_dims_perm = [0, 1]
 ///     inner_dims_pos = [0, 1] inner_tiles = [8, 1] into %empty
 ///     : tensor<?x4xf32> -> tensor<?x4x8x1xf32>
 ///
 /// can be transformed into:
 ///
-/// %pack = tensor.pack %in outer_dims_perm = [1, 2]
+/// %pack = linalg.pack %in outer_dims_perm = [1, 2]
 ///     inner_dims_pos = [1, 2] inner_tiles = [8, 1] into %empty
 ///     : tensor<?x16x4xf32> -> tensor<?x2x4x8x1xf32>
 /// %collapsed = tensor.collapse_shape %pack [[0, 1], 2, 3, 4]
 ///     : tensor<?x2x4x8x1xf32> into tensor<?x4x8x1>
 static LogicalResult
 bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
-                                   tensor::PackOp packOp,
+                                   linalg::PackOp packOp,
                                    PatternRewriter &rewriter) {
   SmallVector<int64_t> innerTileSizes = packOp.getStaticTiles();
   ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
@@ -662,16 +709,13 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   // new permutation after bubbling. This is because moving a collapsed dim is
   // equivalent to moving the associated source dims together.
   SmallVector<int64_t> newOuterDimsPerm;
-  for (auto outerPos : outerDimsPerm) {
-    newOuterDimsPerm.insert(newOuterDimsPerm.end(),
-                            reassocIndices[outerPos].begin(),
-                            reassocIndices[outerPos].end());
-  }
+  for (auto outerPos : outerDimsPerm)
+    llvm::append_range(newOuterDimsPerm, reassocIndices[outerPos]);
 
-  auto emptyOp = tensor::PackOp::createDestinationTensor(
+  auto emptyOp = linalg::PackOp::createDestinationTensor(
       rewriter, packOp.getLoc(), collapseOp.getSrc(), packOp.getMixedTiles(),
       projectedInnerDimsPos, newOuterDimsPerm);
-  auto newPackOp = rewriter.create<tensor::PackOp>(
+  auto newPackOp = rewriter.create<linalg::PackOp>(
       packOp.getLoc(), collapseOp.getSrc(), emptyOp, projectedInnerDimsPos,
       packOp.getMixedTiles(), packOp.getPaddingValue(), newOuterDimsPerm);
 
@@ -694,13 +738,136 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   return success();
 }
 
+/// Project dimsPos to their collapsed positions in the reassocIndices.
+///
+/// For example, given dimsPos [0, 1, 2, 4], and matching reassocIndices
+/// [[0], [1, 2], [3], [4]], it returns [0, 1, 1, 3]. Because for pos 0,
+/// the reassoc dim [0] is 0. For pos 1 and 2, the reassoc dim in pos
+/// [1, 2] is 1. And for pos 4, the reassoc dim [4] is 3.
+static SmallVector<int64_t>
+projectDimsPosIntoReassocPos(ArrayRef<int64_t> dimsPos,
+                             ArrayRef<ReassociationIndices> reassocIndices) {
+  SmallVector<int64_t> projectedPos;
+
+  // Map each dimension to the position of corresponding reassociation index.
+  for (auto pos : dimsPos) {
+    for (auto [idx, indices] : llvm::enumerate(reassocIndices)) {
+      // If the dimension is present in the current indices group, the group
+      // position within the reassociation map is the desired projected
+      // dimension position.
+      if (llvm::is_contained(indices, pos)) {
+        projectedPos.push_back(idx);
+        break;
+      }
+    }
+  }
+  assert(projectedPos.size() == dimsPos.size() && "Invalid dim pos projection");
+
+  return projectedPos;
+}
+
+/// Bubble up pack op through expand shape op.
+///
+/// For example:
+///
+/// %expand = tensor.expand_shape %in [[0], [1, 2]]
+///     : tensor<?x64xf32> into tensor<?x4x16xf32>
+/// %pack = linalg.pack %expand outer_dims_perm = [0, 1]
+///     inner_dims_pos = [2] inner_tiles = [8] into %empty
+///     : tensor<?x4x16xf32> -> tensor<?x4x2x8xf32>
+///
+/// can be transformed into:
+///
+/// %pack = linalg.pack %in outer_dims_perm = [1, 2]
+///     inner_dims_pos = [1] inner_tiles = [8] into %empty
+///     : tensor<?x64xf32> -> tensor<?x8x8xf32>
+/// %expand = tensor.expand_shape %pack [[0], [1, 2], [3]]
+///     : tensor<?x8x8xf32> into tensor<?x4x2x8xf32>
+static LogicalResult
+bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
+                                 linalg::PackOp packOp,
+                                 PatternRewriter &rewriter) {
+  // Outer dimensions permutation is not supported currently.
+  // TODO: Handle outer_dims_perm variants.
+  ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+  if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
+    return rewriter.notifyMatchFailure(packOp,
+                                       "non-identity outer dims perm NYI");
+  }
+
+  // Validate dimensions' relations between shape expansion and packing.
+  SmallVector<ReassociationIndices, 4> reassoc =
+      expandOp.getReassociationIndices();
+  ArrayRef<int64_t> packInnerDims = packOp.getInnerDimsPos();
+  llvm::SetVector<int64_t> packDimsPos(llvm::from_range, packInnerDims);
+
+  for (auto [idx, indices] : llvm::enumerate(reassoc)) {
+    // For each expand_shape reassociation, figure out which dimensions get
+    // packed if any.
+    llvm::SetVector<int64_t> expandDimPos(llvm::from_range, indices);
+    llvm::SetVector<int64_t> packedDims =
+        llvm::set_intersection(packDimsPos, expandDimPos);
+
+    // The expanded dimension is not packed so, it does not affect moving pack
+    // before shape expansion - simply continue.
+    if (packedDims.empty())
+      continue;
+    // Shape expansion cannot be propagated when multiple expanded dimension are
+    // packed - in this case operation reordering would affect final element
+    // positions and/or shapes can no longer be projected.
+    if (packedDims.size() != 1)
+      return rewriter.notifyMatchFailure(
+          packOp, "only one of the expanded dimensions can be packed");
+    // Only the inner-most expanded dimension should be packed. Otherwise,
+    // elements order will be affected after operation reordering.
+    if (packedDims.front() != indices.back())
+      return rewriter.notifyMatchFailure(
+          packOp, "can only pack the inner-most expanded dimension");
+  }
+
+  // Project pack.inner_dims_pos to positions before shape expansion.
+  SmallVector<int64_t> projectedInnerDimsPos =
+      projectDimsPosIntoReassocPos(packInnerDims, reassoc);
+
+  // Project the shape expansion to new packed shape.
+  // The pack.outer_dims_perm is restricted to identity so, the permutation can
+  // be omitted for simplicity.
+  // TODO: Account for outer dimensions permutation.
+  //
+  // If reassociation is not possible, then reordering cannot happen.
+  // This can be caused by pack padding affecting previously expanded
+  // dimensions or packing extending dimensions.
+  RankedTensorType newPackType = linalg::PackOp::inferPackedType(
+      expandOp.getSrcType(), packOp.getStaticInnerTiles(),
+      projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
+  auto reassocExpand =
+      getReassociationIndicesForReshape(newPackType, packOp.getDestType());
+  if (!reassocExpand)
+    return rewriter.notifyMatchFailure(
+        packOp, "could not reassociate dims after bubbling up");
+
+  Value destTensor = linalg::PackOp::createDestinationTensor(
+      rewriter, packOp.getLoc(), expandOp.getSrc(), packOp.getMixedTiles(),
+      projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
+  Value packedVal = rewriter.create<linalg::PackOp>(
+      packOp.getLoc(), expandOp.getSrc(), destTensor, projectedInnerDimsPos,
+      packOp.getMixedTiles(), packOp.getPaddingValue(),
+      /*outerDimsPerm=*/SmallVector<int64_t>{});
+
+  Value newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
+      packOp.getLoc(), packOp.getDestType(), packedVal, *reassocExpand);
+  rewriter.replaceOp(packOp, newExpandOp);
+
+  return success();
+}
+
 class BubbleUpPackOpThroughReshapeOp final
-    : public OpRewritePattern<tensor::PackOp> {
+    : public OpRewritePattern<linalg::PackOp> {
 public:
   BubbleUpPackOpThroughReshapeOp(MLIRContext *context, ControlPropagationFn fun)
-      : OpRewritePattern<tensor::PackOp>(context), controlFn(std::move(fun)) {}
+      : OpRewritePattern<linalg::PackOp>(context), controlFn(std::move(fun)) {}
 
-  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+  LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
     Operation *srcOp = packOp.getSource().getDefiningOp();
     // Currently only support when the pack op is the only user.
@@ -716,12 +883,15 @@ public:
     }
 
     // User controlled propagation function.
-    if (!controlFn(srcOp))
+    if (!controlFn(&packOp.getSourceMutable()))
       return failure();
 
     return TypeSwitch<Operation *, LogicalResult>(srcOp)
         .Case([&](tensor::CollapseShapeOp op) {
           return bubbleUpPackOpThroughCollapseShape(op, packOp, rewriter);
+        })
+        .Case([&](tensor::ExpandShapeOp op) {
+          return bubbleUpPackOpThroughExpandShape(op, packOp, rewriter);
         })
         .Default([](Operation *) { return failure(); });
   }
@@ -736,7 +906,7 @@ private:
 ///
 /// For example:
 ///
-/// %unpack = tensor.unpack %in outer_dims_perm = [0, 1]
+/// %unpack = linalg.unpack %in outer_dims_perm = [0, 1]
 ///     inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %empty
 ///     : tensor<?x32x8x8xf32> -> tensor<?x256xf32>
 /// %expanded = tensor.expand_shape %unpack [[0, 1], [2]]
@@ -746,13 +916,16 @@ private:
 ///
 /// %expanded = tensor.expand_shape %ain [[0, 1], [2], [3], [4]]
 ///     : tensor<?x32x8x8xf32> into tensor<?x32x32x8x8xf32>
-/// %unpack = tensor.unpack %expanded outer_dims_perm = [0, 1, 2]
+/// %unpack = linalg.unpack %expanded outer_dims_perm = [0, 1, 2]
 ///     inner_dims_pos = [1, 2] inner_tiles = [8, 8] into %empty
 ///     : tensor<?x32x32x8x8xf32> -> tensor<?x256x256xf32>
-static LogicalResult
-pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
-                                   tensor::ExpandShapeOp expandOp,
-                                   PatternRewriter &rewriter) {
+static LogicalResult pushDownUnPackOpThroughExpandShape(
+    linalg::UnPackOp unPackOp, tensor::ExpandShapeOp expandOp,
+    PatternRewriter &rewriter, ControlPropagationFn controlFn) {
+  // User controlled propagation function.
+  if (!controlFn(&expandOp.getSrcMutable()))
+    return failure();
+
   SmallVector<int64_t> innerTileSizes = unPackOp.getStaticTiles();
   ArrayRef<int64_t> innerDimsPos = unPackOp.getInnerDimsPos();
   ArrayRef<int64_t> outerDimsPerm = unPackOp.getOuterDimsPerm();
@@ -781,11 +954,8 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
   // new permutation after pushing. This is because moving a source dim is
   // equivalent to moving the associated expanded dims together.
   SmallVector<int64_t> newOuterDimsPerm;
-  for (auto outerPos : outerDimsPerm) {
-    newOuterDimsPerm.insert(newOuterDimsPerm.end(),
-                            reassocIndices[outerPos].begin(),
-                            reassocIndices[outerPos].end());
-  }
+  for (auto outerPos : outerDimsPerm)
+    llvm::append_range(newOuterDimsPerm, reassocIndices[outerPos]);
 
   SmallVector<ReassociationIndices> newReassocIndices = reassocIndices;
   // First apply the permutation on the reassociations of the outer dims.
@@ -799,16 +969,16 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
     nextPos += 1;
   }
 
-  RankedTensorType newExpandType = tensor::PackOp::inferPackedType(
+  RankedTensorType newExpandType = linalg::PackOp::inferPackedType(
       expandTy, innerTileSizes, projectedInnerDimsPos, newOuterDimsPerm);
   auto newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
       expandOp.getLoc(), newExpandType, unPackOp.getSource(),
       newReassocIndices);
 
-  auto emptyOp = tensor::UnPackOp::createDestinationTensor(
+  auto emptyOp = linalg::UnPackOp::createDestinationTensor(
       rewriter, unPackOp.getLoc(), newExpandOp, unPackOp.getMixedTiles(),
       projectedInnerDimsPos, newOuterDimsPerm);
-  auto newUnPackOp = rewriter.create<tensor::UnPackOp>(
+  auto newUnPackOp = rewriter.create<linalg::UnPackOp>(
       unPackOp.getLoc(), newExpandOp.getResult(), emptyOp,
       projectedInnerDimsPos, unPackOp.getMixedTiles(), newOuterDimsPerm);
   rewriter.replaceOp(expandOp, newUnPackOp);
@@ -817,14 +987,14 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
 }
 
 class PushDownUnPackOpThroughReshapeOp final
-    : public OpRewritePattern<tensor::UnPackOp> {
+    : public OpRewritePattern<linalg::UnPackOp> {
 public:
   PushDownUnPackOpThroughReshapeOp(MLIRContext *context,
                                    ControlPropagationFn fun)
-      : OpRewritePattern<tensor::UnPackOp>(context), controlFn(std::move(fun)) {
+      : OpRewritePattern<linalg::UnPackOp>(context), controlFn(std::move(fun)) {
   }
 
-  LogicalResult matchAndRewrite(tensor::UnPackOp unPackOp,
+  LogicalResult matchAndRewrite(linalg::UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
     Value result = unPackOp.getResult();
     // Currently only support unpack op with the single user.
@@ -839,13 +1009,10 @@ public:
     }
 
     Operation *consumerOp = *result.user_begin();
-    // User controlled propagation function.
-    if (!controlFn(consumerOp))
-      return failure();
-
     return TypeSwitch<Operation *, LogicalResult>(consumerOp)
         .Case([&](tensor::ExpandShapeOp op) {
-          return pushDownUnPackOpThroughExpandShape(unPackOp, op, rewriter);
+          return pushDownUnPackOpThroughExpandShape(unPackOp, op, rewriter,
+                                                    controlFn);
         })
         .Default([](Operation *) { return failure(); });
   }
@@ -860,7 +1027,7 @@ private:
 static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
   OpOperand *unPackedOperand = nullptr;
   for (OpOperand &operand : genericOp->getOpOperands()) {
-    auto unPackOp = operand.get().getDefiningOp<tensor::UnPackOp>();
+    auto unPackOp = operand.get().getDefiningOp<linalg::UnPackOp>();
     if (!unPackOp)
       continue;
     if (unPackedOperand)
@@ -872,9 +1039,9 @@ static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
   return unPackedOperand;
 }
 
-/// Push down a tensor.unpack op through a generic op.
+/// Push down a linalg.unpack op through a generic op.
 /// The new generic op works on packed domain; pack ops are created for input
-/// and output operands. A tensor.unpack op is inserted right after the packed
+/// and output operands. A linalg.unpack op is inserted right after the packed
 /// generic. E.g.
 ///
 /// #map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
@@ -882,7 +1049,7 @@ static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
 /// %arg0 = tensor<12x2x56x56x32xf32> // packed arg.
 ///
 /// %0 = tensor.empty() : tensor<12x56x56x64xf32>
-/// %1 = tensor.unpack %arg0 outer_dims_perm = [0, 3, 1, 2]
+/// %1 = linalg.unpack %arg0 outer_dims_perm = [0, 3, 1, 2]
 ///                          inner_dims_pos = [3] inner_tiles = [32] into %0
 /// %2 = linalg.generic {indexing_maps = [#map],
 ///      iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
@@ -903,11 +1070,12 @@ static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
 ///      ^bb0(%out : f32):
 ///         linalg.yield %out : f32
 ///      } -> tensor<12x2x56x56x32xf32>
-/// %2 = tensor.unpack %1 outer_dims_perm = [0, 3, 1, 2]
+/// %2 = linalg.unpack %1 outer_dims_perm = [0, 3, 1, 2]
 ///                       inner_dims_pos = [3] inner_tiles = [32] into %0
 ///
 static FailureOr<std::tuple<GenericOp, Value>>
-pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
+pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
+                                 ControlPropagationFn controlFn) {
   if (genericOp.getNumResults() != 1)
     return failure();
 
@@ -921,9 +1089,13 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
   OpOperand *unPackedOperand = *(maybeUnPackedOperand);
 
   // Extract packing information.
-  tensor::UnPackOp producerUnPackOp =
-      unPackedOperand->get().getDefiningOp<tensor::UnPackOp>();
+  linalg::UnPackOp producerUnPackOp =
+      unPackedOperand->get().getDefiningOp<linalg::UnPackOp>();
   assert(producerUnPackOp && "expect a valid UnPackOp");
+
+  if (!controlFn(unPackedOperand))
+    return failure();
+
   auto packInfo =
       getPackingInfoFromOperand(unPackedOperand, genericOp, producerUnPackOp);
   if (failed(packInfo))
@@ -933,7 +1105,7 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
   auto [packedOutOperand, packedOutIndexingMap] =
       getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), *packInfo,
                                      genericOp, genericOp.getDpsInitOperand(0));
-  auto destPack = packedOutOperand.getDefiningOp<tensor::PackOp>();
+  auto destPack = packedOutOperand.getDefiningOp<linalg::PackOp>();
 
   // If the dps init operand of the generic is a tensor.empty, do not pack it
   // and forward the new tensor.empty as a destination.
@@ -946,8 +1118,12 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
   }
 
   // Pack the genericOp.
+  // pack(unpack) is foldable in this case. This is because in pushing down the
+  // unpack, by default we will populate an additional pack op after the unpack.
+  // This guarantees them to be foldable.
   GenericOp newGenericOp =
-      packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo);
+      packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo,
+                    /*isFoldableUnpackPack=*/true);
   Value newResult =
       newGenericOp.getTiedOpResult(newGenericOp.getDpsInitOperand(0));
 
@@ -959,23 +1135,11 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
   auto innerDimsPos = destPack.getInnerDimsPos();
   auto outerDimsPerm = destPack.getOuterDimsPerm();
 
-  // If the output type for the generic differs from the source
-  // unpack op, we need to create a new destination tensor. In the
-  // dynamic case we always need a new destination.
-  auto loc = genericOp.getLoc();
-  Value unPackDest = producerUnPackOp.getDest();
-  auto genericOutType =
-      cast<RankedTensorType>(genericOp.getDpsInitOperand(0)->get().getType());
-  if (producerUnPackOp.getDestType() != genericOutType ||
-      !genericOutType.hasStaticShape()) {
-    unPackDest = tensor::UnPackOp::createDestinationTensor(
-        rewriter, loc, newResult, mixedTiles, innerDimsPos, outerDimsPerm);
-  }
-
   // Insert an unPackOp right after the packed generic.
   Value unPackOpRes =
       rewriter
-          .create<tensor::UnPackOp>(loc, newResult, unPackDest, innerDimsPos,
+          .create<linalg::UnPackOp>(genericOp.getLoc(), newResult,
+                                    destPack.getSource(), innerDimsPos,
                                     mixedTiles, outerDimsPerm)
           .getResult();
 
@@ -991,10 +1155,8 @@ public:
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!controlFn(genericOp))
-      return failure();
-
-    auto genericAndRepl = pushDownUnPackOpThroughGenericOp(rewriter, genericOp);
+    auto genericAndRepl =
+        pushDownUnPackOpThroughGenericOp(rewriter, genericOp, controlFn);
     if (failed(genericAndRepl))
       return failure();
     rewriter.replaceOp(genericOp, std::get<1>(*genericAndRepl));
@@ -1005,7 +1167,7 @@ private:
   ControlPropagationFn controlFn;
 };
 
-/// Propagate a tensor.unpack operation through a tensor.pad. The idea is to
+/// Propagate a linalg.unpack operation through a tensor.pad. The idea is to
 /// add as many zero padding dimensions in `high` and `low` based on the number
 /// of point loops.
 struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
@@ -1014,12 +1176,12 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
 
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
-    tensor::UnPackOp unpackOp =
-        padOp.getSource().getDefiningOp<tensor::UnPackOp>();
+    linalg::UnPackOp unpackOp =
+        padOp.getSource().getDefiningOp<linalg::UnPackOp>();
     if (!unpackOp)
       return failure();
 
-    if (!controlFn(padOp))
+    if (!controlFn(&padOp.getSourceMutable()))
       return failure();
 
     Location loc = padOp.getLoc();
@@ -1053,12 +1215,12 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
         loc, /*result=*/Type(), unpackOp.getSource(), lowPad, highPad,
         paddingVal, padOp.getNofold());
 
-    // Inject the tensor.unpack right after the packed padOp.
+    // Inject the linalg.unpack right after the packed padOp.
     Value outputUnPack = rewriter.create<tensor::EmptyOp>(
         loc, padOp.getResultType().getShape(),
         padOp.getResultType().getElementType());
 
-    Value replacement = rewriter.create<tensor::UnPackOp>(
+    Value replacement = rewriter.create<linalg::UnPackOp>(
         loc, newPadOp.getResult(), outputUnPack, innerDimsPos,
         unpackOp.getMixedTiles(), outerDimsPerm);
     rewriter.replaceOp(padOp, replacement);

@@ -17,6 +17,7 @@ class Universal64TestCase(TestBase):
         # actually launch them here.
 
     # The Makefile manually invokes clang.
+    @skipIfLLVMTargetMissing("X86")
     @skipIfAsan
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
@@ -26,6 +27,7 @@ class Universal64TestCase(TestBase):
         self.do_test()
 
     # The Makefile manually invokes clang.
+    @skipIfLLVMTargetMissing("X86")
     @skipIfAsan
     @skipUnlessDarwin
     @skipIfDarwinEmbedded

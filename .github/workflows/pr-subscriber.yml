@@ -10,11 +10,11 @@ permissions:
 
 jobs:
   auto-subscribe:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Checkout Automation Script
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           sparse-checkout: llvm/utils/git/
           ref: main
@@ -22,7 +22,7 @@ jobs:
       - name: Setup Automation Script
         working-directory: ./llvm/utils/git/
         run: |
-          pip install -r requirements.txt
+          pip install --require-hashes -r requirements.txt
 
       - name: Update watchers
         working-directory: ./llvm/utils/git/

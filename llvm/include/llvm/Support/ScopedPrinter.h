@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/JSON.h"
@@ -80,13 +81,13 @@ struct FlagEntry {
   uint64_t Value;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
 
 template <class T> std::string to_string(const T &Value) {
   std::string number;
   raw_string_ostream stream(number);
   stream << Value;
-  return stream.str();
+  return number;
 }
 
 template <typename T, typename TEnum>
@@ -97,7 +98,7 @@ std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   return utohexstr(Value, true);
 }
 
-class ScopedPrinter {
+class LLVM_ABI ScopedPrinter {
 public:
   enum class ScopedPrinterKind {
     Base,
@@ -161,7 +162,7 @@ public:
   void printFlags(StringRef Label, T Value, ArrayRef<EnumEntry<TFlag>> Flags,
                   TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
                   TFlag EnumMask3 = {}, ArrayRef<FlagEntry> ExtraFlags = {}) {
-    SmallVector<FlagEntry, 10> SetFlags(ExtraFlags.begin(), ExtraFlags.end());
+    SmallVector<FlagEntry, 10> SetFlags(ExtraFlags);
 
     for (const auto &Flag : Flags) {
       if (Flag.Value == 0)
@@ -539,7 +540,13 @@ ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
   startLine() << Label << ": " << hex(Value) << "\n";
 }
 
-struct DelimitedScope;
+struct DelimitedScope {
+  DelimitedScope(ScopedPrinter &W) : W(&W) {}
+  DelimitedScope() : W(nullptr) {}
+  virtual ~DelimitedScope() = default;
+  virtual void setPrinter(ScopedPrinter &W) = 0;
+  ScopedPrinter *W;
+};
 
 class JSONScopedPrinter : public ScopedPrinter {
 private:
@@ -566,9 +573,9 @@ private:
   std::unique_ptr<DelimitedScope> OuterScope;
 
 public:
-  JSONScopedPrinter(raw_ostream &OS, bool PrettyPrint = false,
-                    std::unique_ptr<DelimitedScope> &&OuterScope =
-                        std::unique_ptr<DelimitedScope>{});
+  LLVM_ABI JSONScopedPrinter(raw_ostream &OS, bool PrettyPrint = false,
+                             std::unique_ptr<DelimitedScope> &&OuterScope =
+                                 std::unique_ptr<DelimitedScope>{});
 
   static bool classof(const ScopedPrinter *SP) {
     return SP->getKind() == ScopedPrinter::ScopedPrinterKind::JSON;
@@ -836,14 +843,6 @@ private:
       JOS.objectEnd();
     ScopeHistory.pop_back();
   }
-};
-
-struct DelimitedScope {
-  DelimitedScope(ScopedPrinter &W) : W(&W) {}
-  DelimitedScope() : W(nullptr) {}
-  virtual ~DelimitedScope() = default;
-  virtual void setPrinter(ScopedPrinter &W) = 0;
-  ScopedPrinter *W;
 };
 
 struct DictScope : DelimitedScope {

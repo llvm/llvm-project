@@ -135,18 +135,18 @@ define void @f3(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[CST3:%.*]] = bitcast <64 x i16> [[A2:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST3]], <32 x i32> undef, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST4:%.*]] = bitcast <32 x i32> [[CUP]] to <128 x i8>
-; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> zeroinitializer, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> zeroinitializer, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST6:%.*]] = bitcast <32 x i32> [[CUP5]] to <128 x i8>
 ; CHECK-NEXT:    [[CST7:%.*]] = bitcast <64 x i16> [[A3:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CST8:%.*]] = bitcast <64 x i16> [[A2]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP9:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST7]], <32 x i32> [[CST8]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST10:%.*]] = bitcast <32 x i32> [[CUP9]] to <128 x i8>
-; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP11]] to <128 x i8>
 ; CHECK-NEXT:    [[CST13:%.*]] = bitcast <64 x i16> [[A3]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP14:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> undef, <32 x i32> [[CST13]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST15:%.*]] = bitcast <32 x i32> [[CUP14]] to <128 x i8>
-; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST17:%.*]] = bitcast <32 x i32> [[CUP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TRN:%.*]] = trunc <128 x i8> [[CST6]] to <128 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr [[ITP]], i32 128, <128 x i1> [[TRN]]), !tbaa [[TBAA5:![0-9]+]]
@@ -188,18 +188,18 @@ define void @f4(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[CST3:%.*]] = bitcast <64 x i16> [[A2:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST3]], <32 x i32> undef, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST4:%.*]] = bitcast <32 x i32> [[CUP]] to <128 x i8>
-; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> zeroinitializer, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> zeroinitializer, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST6:%.*]] = bitcast <32 x i32> [[CUP5]] to <128 x i8>
 ; CHECK-NEXT:    [[CST7:%.*]] = bitcast <64 x i16> [[A3:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CST8:%.*]] = bitcast <64 x i16> [[A2]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP9:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST7]], <32 x i32> [[CST8]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST10:%.*]] = bitcast <32 x i32> [[CUP9]] to <128 x i8>
-; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP11]] to <128 x i8>
 ; CHECK-NEXT:    [[CST13:%.*]] = bitcast <64 x i16> [[A3]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP14:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> undef, <32 x i32> [[CST13]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST15:%.*]] = bitcast <32 x i32> [[CUP14]] to <128 x i8>
-; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST17:%.*]] = bitcast <32 x i32> [[CUP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TRN:%.*]] = trunc <128 x i8> [[CST6]] to <128 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr [[ITP]], i32 128, <128 x i1> [[TRN]])
@@ -241,18 +241,18 @@ define void @f5(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[CST3:%.*]] = bitcast <64 x i16> [[A2:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST3]], <32 x i32> undef, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST4:%.*]] = bitcast <32 x i32> [[CUP]] to <128 x i8>
-; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> zeroinitializer, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> zeroinitializer, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST6:%.*]] = bitcast <32 x i32> [[CUP5]] to <128 x i8>
 ; CHECK-NEXT:    [[CST7:%.*]] = bitcast <64 x i16> [[A3:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CST8:%.*]] = bitcast <64 x i16> [[A2]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP9:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST7]], <32 x i32> [[CST8]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST10:%.*]] = bitcast <32 x i32> [[CUP9]] to <128 x i8>
-; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP11]] to <128 x i8>
 ; CHECK-NEXT:    [[CST13:%.*]] = bitcast <64 x i16> [[A3]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP14:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> undef, <32 x i32> [[CST13]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST15:%.*]] = bitcast <32 x i32> [[CUP14]] to <128 x i8>
-; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST17:%.*]] = bitcast <32 x i32> [[CUP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TRN:%.*]] = trunc <128 x i8> [[CST6]] to <128 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr [[ITP]], i32 128, <128 x i1> [[TRN]]), !tbaa [[TBAA5]]

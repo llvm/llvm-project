@@ -11,7 +11,7 @@
 // template <class F1, class F2>
 // constexpr unspecified __compose(F1&&, F2&&);
 
-#include <functional>
+#include <__functional/compose.h>
 #include <cassert>
 #include <tuple>
 #include <utility>

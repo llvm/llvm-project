@@ -804,6 +804,17 @@ Example matches X
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('exportDecl0')"><a name="exportDecl0Anchor">exportDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExportDecl.html">ExportDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="exportDecl0"><pre>Matches any export declaration.
+
+Example matches following declarations.
+  export void foo();
+  export { void foo(); }
+  export namespace { void foo(); }
+  export int v;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('fieldDecl0')"><a name="fieldDecl0Anchor">fieldDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FieldDecl.html">FieldDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="fieldDecl0"><pre>Matches field declarations.
 
@@ -1857,6 +1868,14 @@ defaultStmt()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('dependentScopeDeclRefExpr0')"><a name="dependentScopeDeclRefExpr0Anchor">dependentScopeDeclRefExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentScopeDeclRefExpr.html">DependentScopeDeclRefExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="dependentScopeDeclRefExpr0"><pre>Matches expressions that refer to dependent scope declarations.
+
+example matches T::v;
+ template &lt;class T&gt; class X : T { void f() { T::v; } };
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('designatedInitExpr0')"><a name="designatedInitExpr0Anchor">designatedInitExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DesignatedInitExpr.html">DesignatedInitExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="designatedInitExpr0"><pre>Matches C99 designated initializer expressions [C99 6.7.8].
 
@@ -1914,7 +1933,24 @@ Example matches std::string()
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('fixedPointLiteral0')"><a name="fixedPointLiteral0Anchor">fixedPointLiteral</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FixedPointLiteral.html">FixedPointLiteral</a>&gt;...</td></tr>
-<tr><td colspan="4" class="doc" id="fixedPointLiteral0"><pre>Matches fixed point literals
+<tr><td colspan="4" class="doc" id="fixedPointLiteral0"><pre>Matches fixed-point literals eg.
+0.5r, 0.5hr, 0.5lr, 0.5uhr, 0.5ur, 0.5ulr
+1.0k, 1.0hk, 1.0lk, 1.0uhk, 1.0uk, 1.0ulk
+Exponents 1.0e10k
+Hexadecimal numbers 0x0.2p2r
+
+Does not match implicit conversions such as first two lines:
+   short _Accum sa = 2;
+   _Accum a = 12.5;
+   _Accum b = 1.25hk;
+   _Fract c = 0.25hr;
+   _Fract v = 0.35uhr;
+   _Accum g = 1.45uhk;
+   _Accum decexp1 = 1.575e1k;
+
+The matcher matches
+but does not
+match and from the code block.
 </pre></td></tr>
 
 
@@ -2534,6 +2570,16 @@ of the variable c.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('dependentNameType0')"><a name="dependentNameType0Anchor">dependentNameType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentNameType.html">DependentNameType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="dependentNameType0"><pre>Matches a dependent name type
+
+Example matches T::type
+ template &lt;typename T&gt; struct declToImport {
+   typedef typename T::type dependent_name;
+ };
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('dependentSizedArrayType0')"><a name="dependentSizedArrayType0Anchor">dependentSizedArrayType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentSizedArrayType.html">DependentSizedArrayType</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="dependentSizedArrayType0"><pre>Matches C++ arrays whose size is a value-dependent expression.
 
@@ -2558,6 +2604,17 @@ Given
   };
 dependentSizedExtVectorType()
   matches "T __attribute__((ext_vector_type(Size)))"
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('dependentTemplateSpecializationType0')"><a name="dependentTemplateSpecializationType0Anchor">dependentTemplateSpecializationType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentTemplateSpecializationType.html">DependentTemplateSpecializationType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="dependentTemplateSpecializationType0"><pre>Matches a dependent template specialization type
+
+Example matches A&lt;T&gt;::template B&lt;T&gt;
+  template&lt;typename T&gt; struct A;
+  template&lt;typename T&gt; struct declToImport {
+    typename A&lt;T&gt;::template B&lt;T&gt; a;
+  };
 </pre></td></tr>
 
 
@@ -3546,21 +3603,6 @@ cxxMethodDecl(isConst()) matches A::foo() but not A::bar()
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isExplicitObjectMemberFunction0')"><a name="isExplicitObjectMemberFunction0Anchor">isExplicitObjectMemberFunction</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isExplicitObjectMemberFunction0"><pre>Matches if the given method declaration declares a member function with an explicit object parameter.
-
-Given
-struct A {
-  int operator-(this A, int);
-  void fun(this A &&self);
-  static int operator()(int);
-  int operator+(int);
-};
-
-cxxMethodDecl(isExplicitObjectMemberFunction()) matches the first two methods but not the last two.
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isCopyAssignmentOperator0')"><a name="isCopyAssignmentOperator0Anchor">isCopyAssignmentOperator</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isCopyAssignmentOperator0"><pre>Matches if the given method declaration declares a copy assignment
 operator.
@@ -3573,6 +3615,23 @@ struct A {
 
 cxxMethodDecl(isCopyAssignmentOperator()) matches the first method but not
 the second one.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isExplicitObjectMemberFunction0')"><a name="isExplicitObjectMemberFunction0Anchor">isExplicitObjectMemberFunction</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isExplicitObjectMemberFunction0"><pre>Matches if the given method declaration declares a member function with an
+explicit object parameter.
+
+Given
+struct A {
+ int operator-(this A, int);
+ void fun(this A &amp;&amp;self);
+ static int operator()(int);
+ int operator+(int);
+};
+
+cxxMethodDecl(isExplicitObjectMemberFunction()) matches the first two
+methods but not the last two.
 </pre></td></tr>
 
 
@@ -4049,8 +4108,14 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Char
 Given
   template&lt;typename T&gt; struct C {};
   C&lt;int&gt; c;
+  template&lt;typename T&gt; void f() {}
+  void func() { f&lt;int&gt;(); };
+
 classTemplateSpecializationDecl(templateArgumentCountIs(1))
   matches C&lt;int&gt;.
+
+functionDecl(templateArgumentCountIs(1))
+  matches f&lt;int&gt;();
 </pre></td></tr>
 
 
@@ -4303,6 +4368,38 @@ Examples:
   class Base {};
   class Derived1 : public Base {}; // matches 'Base'
   struct Derived2 : Base {}; // matches 'Base'
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentNameType.html">DependentNameType</a>&gt;</td><td class="name" onclick="toggle('hasDependentName1')"><a name="hasDependentName1Anchor">hasDependentName</a></td><td>std::string N</td></tr>
+<tr><td colspan="4" class="doc" id="hasDependentName1"><pre>Matches the dependent name of a DependentScopeDeclRefExpr or
+DependentNameType
+
+Given:
+ template &lt;class T&gt; class X : T { void f() { T::v; } };
+dependentScopeDeclRefExpr(hasDependentName("v")) matches `T::v`
+
+Given:
+ template &lt;typename T&gt; struct declToImport {
+   typedef typename T::type dependent_name;
+ };
+dependentNameType(hasDependentName("type")) matches `T::type`
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentScopeDeclRefExpr.html">DependentScopeDeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('hasDependentName0')"><a name="hasDependentName0Anchor">hasDependentName</a></td><td>std::string N</td></tr>
+<tr><td colspan="4" class="doc" id="hasDependentName0"><pre>Matches the dependent name of a DependentScopeDeclRefExpr or
+DependentNameType
+
+Given:
+ template &lt;class T&gt; class X : T { void f() { T::v; } };
+dependentScopeDeclRefExpr(hasDependentName("v")) matches `T::v`
+
+Given:
+ template &lt;typename T&gt; struct declToImport {
+   typedef typename T::type dependent_name;
+ };
+dependentNameType(hasDependentName("type")) matches `T::type`
 </pre></td></tr>
 
 
@@ -4739,6 +4836,23 @@ functionProtoType(parameterCountIs(2))
   matches g and h
 functionProtoType(parameterCountIs(3))
   matches k
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('templateArgumentCountIs2')"><a name="templateArgumentCountIs2Anchor">templateArgumentCountIs</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="templateArgumentCountIs2"><pre>Matches if the number of template arguments equals N.
+
+Given
+  template&lt;typename T&gt; struct C {};
+  C&lt;int&gt; c;
+  template&lt;typename T&gt; void f() {}
+  void func() { f&lt;int&gt;(); };
+
+classTemplateSpecializationDecl(templateArgumentCountIs(1))
+  matches C&lt;int&gt;.
+
+functionDecl(templateArgumentCountIs(1))
+  matches f&lt;int&gt;();
 </pre></td></tr>
 
 
@@ -5692,14 +5806,20 @@ classTemplateSpecializationDecl(
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('templateArgumentCountIs1')"><a name="templateArgumentCountIs1Anchor">templateArgumentCountIs</a></td><td>unsigned N</td></tr>
-<tr><td colspan="4" class="doc" id="templateArgumentCountIs1"><pre>Matches if the number of template arguments equals N.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('templateArgumentCountIs3')"><a name="templateArgumentCountIs3Anchor">templateArgumentCountIs</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="templateArgumentCountIs3"><pre>Matches if the number of template arguments equals N.
 
 Given
   template&lt;typename T&gt; struct C {};
   C&lt;int&gt; c;
+  template&lt;typename T&gt; void f() {}
+  void func() { f&lt;int&gt;(); };
+
 classTemplateSpecializationDecl(templateArgumentCountIs(1))
   matches C&lt;int&gt;.
+
+functionDecl(templateArgumentCountIs(1))
+  matches f&lt;int&gt;();
 </pre></td></tr>
 
 
@@ -6126,6 +6246,23 @@ cxxRecordDecl(hasName("::X"), isTemplateInstantiation())
   does not match, as X&lt;A&gt; is an explicit template specialization.
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarTemplateSpecializationDecl.html">VarTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('templateArgumentCountIs1')"><a name="templateArgumentCountIs1Anchor">templateArgumentCountIs</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="templateArgumentCountIs1"><pre>Matches if the number of template arguments equals N.
+
+Given
+  template&lt;typename T&gt; struct C {};
+  C&lt;int&gt; c;
+  template&lt;typename T&gt; void f() {}
+  void func() { f&lt;int&gt;(); };
+
+classTemplateSpecializationDecl(templateArgumentCountIs(1))
+  matches C&lt;int&gt;.
+
+functionDecl(templateArgumentCountIs(1))
+  matches f&lt;int&gt;();
 </pre></td></tr>
 
 <!--END_NARROWING_MATCHERS -->
@@ -6713,7 +6850,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -6732,7 +6869,8 @@ pointerType(pointee(isConstQualified(), isInteger()))
   matches "int const *b"
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BlockPointerType.html">BlockPointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MemberPointerType.html">MemberPointerType</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCObjectPointerType.html">ObjCObjectPointerType</a>&gt;
 </pre></td></tr>
 
 
@@ -6757,7 +6895,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -6985,7 +7123,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -7219,7 +7357,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -7237,9 +7375,9 @@ Given
   void z(Y y, X x) { y.m(); x.m(); x.g(); (g()).m(); }
 cxxMemberCallExpr(onImplicitObjectArgument(hasType(
     cxxRecordDecl(hasName("Y")))))
-  matches `y.m()`, `x.m()` and (g()).m(), but not `x.g()`.
+  matches `y.m()`, `x.m()` and (`g()).m()`, but not `x.g()`).
 cxxMemberCallExpr(on(callExpr()))
-  does not match `(g()).m()`, because the parens are not ignored.
+  only matches `(g()).m()` (the parens are ignored).
 
 FIXME: Overload to allow directly matching types?
 </pre></td></tr>
@@ -7416,7 +7554,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -7620,7 +7758,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -7677,7 +7815,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -7875,9 +8013,10 @@ int a = b ?: 1;
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument0')"><a name="forEachTemplateArgument0Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachTemplateArgument0"><pre>Matches classTemplateSpecialization, templateSpecializationType and
-functionDecl nodes where the template argument matches the inner matcher.
-This matcher may produce multiple matches.
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument0"><pre>Matches templateSpecializationType, class template specialization,
+variable template specialization, and function template specialization
+nodes where the template argument matches the inner matcher. This matcher
+may produce multiple matches.
 
 Given
   template &lt;typename T, unsigned N, unsigned M&gt;
@@ -7899,10 +8038,25 @@ functionDecl(forEachTemplateArgument(refersToType(builtinType())))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgumentLoc0')"><a name="hasAnyTemplateArgumentLoc0Anchor">hasAnyTemplateArgumentLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgumentLoc0"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+that have at least one `TemplateArgumentLoc` matching the given
+`InnerMatcher`.
+
+Given
+  template&lt;typename T&gt; class A {};
+  A&lt;int&gt; a;
+varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+  hasTypeLoc(loc(asString("int")))))))
+  matches `A&lt;int&gt; a`.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument0')"><a name="hasAnyTemplateArgument0Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument0"><pre>Matches classTemplateSpecializations, templateSpecializationType and
-functionDecl that have at least one TemplateArgument matching the given
-InnerMatcher.
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument0"><pre>Matches templateSpecializationTypes, class template specializations,
+variable template specializations, and function template specializations
+that have at least one TemplateArgument matching the given InnerMatcher.
 
 Given
   template&lt;typename T&gt; class A {};
@@ -7933,9 +8087,25 @@ classTemplateSpecializationDecl(hasSpecializedTemplate(classTemplateDecl()))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgumentLoc0')"><a name="hasTemplateArgumentLoc0Anchor">hasTemplateArgumentLoc</a></td><td>unsigned Index, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasTemplateArgumentLoc0"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+where the n'th `TemplateArgumentLoc` matches the given `InnerMatcher`.
+
+Given
+  template&lt;typename T, typename U&gt; class A {};
+  A&lt;double, int&gt; b;
+  A&lt;int, double&gt; c;
+varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(0,
+  hasTypeLoc(loc(asString("double")))))))
+  matches `A&lt;double, int&gt; b`, but not `A&lt;int, double&gt; c`.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgument0')"><a name="hasTemplateArgument0Anchor">hasTemplateArgument</a></td><td>unsigned N, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasTemplateArgument0"><pre>Matches classTemplateSpecializations, templateSpecializationType and
-functionDecl where the n'th TemplateArgument matches the given InnerMatcher.
+<tr><td colspan="4" class="doc" id="hasTemplateArgument0"><pre>Matches templateSpecializationType, class template specializations,
+variable template specializations, and function template specializations
+where the n'th TemplateArgument matches the given InnerMatcher.
 
 Given
   template&lt;typename T, typename U&gt; class A {};
@@ -7953,7 +8123,22 @@ functionDecl(hasTemplateArgument(0, refersToType(asString("int"))))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc7')"><a name="hasTypeLoc7Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ComplexType.html">ComplexType</a>&gt;</td><td class="name" onclick="toggle('hasElementType1')"><a name="hasElementType1Anchor">hasElementType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="hasElementType1"><pre>Matches arrays and C99 complex types that have a specific element
+type.
+
+Given
+  struct A {};
+  A a[7];
+  int b[7];
+arrayType(hasElementType(builtinType()))
+  matches "int b[7]"
+
+Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArrayType.html">ArrayType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ComplexType.html">ComplexType</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc7')"><a name="hasTypeLoc7Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
 <tr><td colspan="4" class="doc" id="hasTypeLoc7"><pre>Matches if the type location of a node matches the inner matcher.
 
 Examples:
@@ -7974,50 +8159,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ComplexType.html">ComplexType</a>&gt;</td><td class="name" onclick="toggle('hasElementType1')"><a name="hasElementType1Anchor">hasElementType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>
-<tr><td colspan="4" class="doc" id="hasElementType1"><pre>Matches arrays and C99 complex types that have a specific element
-type.
-
-Given
-  struct A {};
-  A a[7];
-  int b[7];
-arrayType(hasElementType(builtinType()))
-  matches "int b[7]"
-
-Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArrayType.html">ArrayType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ComplexType.html">ComplexType</a>&gt;
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc8')"><a name="hasTypeLoc8Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
-<tr><td colspan="4" class="doc" id="hasTypeLoc8"><pre>Matches if the type location of a node matches the inner matcher.
-
-Examples:
-  int x;
-declaratorDecl(hasTypeLoc(loc(asString("int"))))
-  matches int x
-
-auto x = int(3);
-cxxTemporaryObjectExpr(hasTypeLoc(loc(asString("int"))))
-  matches int(3)
-
-struct Foo { Foo(int, int); };
-auto x = Foo(1, 2);
-cxxFunctionalCastExpr(hasTypeLoc(loc(asString("struct Foo"))))
-  matches Foo(1, 2)
-
-Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BlockDecl.html">BlockDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -8066,6 +8208,21 @@ with compoundStmt()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgumentLoc3')"><a name="hasAnyTemplateArgumentLoc3Anchor">hasAnyTemplateArgumentLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgumentLoc3"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+that have at least one `TemplateArgumentLoc` matching the given
+`InnerMatcher`.
+
+Given
+  template&lt;typename T&gt; class A {};
+  A&lt;int&gt; a;
+varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+  hasTypeLoc(loc(asString("int")))))))
+  matches `A&lt;int&gt; a`.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration11')"><a name="hasDeclaration11Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasDeclaration11"><pre>Matches a node if the declaration associated with that node
 matches the given matcher.
@@ -8100,9 +8257,10 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Addr
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgumentLoc0')"><a name="hasTemplateArgumentLoc0Anchor">hasTemplateArgumentLoc</a></td><td>unsigned Index, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasTemplateArgumentLoc0"><pre>Matches template specialization `TypeLoc`s where the n'th
-`TemplateArgumentLoc` matches the given `InnerMatcher`.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgumentLoc3')"><a name="hasTemplateArgumentLoc3Anchor">hasTemplateArgumentLoc</a></td><td>unsigned Index, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasTemplateArgumentLoc3"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+where the n'th `TemplateArgumentLoc` matches the given `InnerMatcher`.
 
 Given
   template&lt;typename T, typename U&gt; class A {};
@@ -8176,8 +8334,8 @@ declStmt(hasSingleDecl(anything()))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc9')"><a name="hasTypeLoc9Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
-<tr><td colspan="4" class="doc" id="hasTypeLoc9"><pre>Matches if the type location of a node matches the inner matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc8')"><a name="hasTypeLoc8Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
+<tr><td colspan="4" class="doc" id="hasTypeLoc8"><pre>Matches if the type location of a node matches the inner matcher.
 
 Examples:
   int x;
@@ -8197,7 +8355,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -8393,8 +8551,8 @@ actual casts "explicit" casts.)
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc10')"><a name="hasTypeLoc10Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
-<tr><td colspan="4" class="doc" id="hasTypeLoc10"><pre>Matches if the type location of a node matches the inner matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc9')"><a name="hasTypeLoc9Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
+<tr><td colspan="4" class="doc" id="hasTypeLoc9"><pre>Matches if the type location of a node matches the inner matcher.
 
 Examples:
   int x;
@@ -8414,7 +8572,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -8707,9 +8865,10 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument2')"><a name="forEachTemplateArgument2Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachTemplateArgument2"><pre>Matches classTemplateSpecialization, templateSpecializationType and
-functionDecl nodes where the template argument matches the inner matcher.
-This matcher may produce multiple matches.
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument2"><pre>Matches templateSpecializationType, class template specialization,
+variable template specialization, and function template specialization
+nodes where the template argument matches the inner matcher. This matcher
+may produce multiple matches.
 
 Given
   template &lt;typename T, unsigned N, unsigned M&gt;
@@ -8778,10 +8937,25 @@ matching y.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgumentLoc2')"><a name="hasAnyTemplateArgumentLoc2Anchor">hasAnyTemplateArgumentLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgumentLoc2"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+that have at least one `TemplateArgumentLoc` matching the given
+`InnerMatcher`.
+
+Given
+  template&lt;typename T&gt; class A {};
+  A&lt;int&gt; a;
+varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+  hasTypeLoc(loc(asString("int")))))))
+  matches `A&lt;int&gt; a`.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument2')"><a name="hasAnyTemplateArgument2Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument2"><pre>Matches classTemplateSpecializations, templateSpecializationType and
-functionDecl that have at least one TemplateArgument matching the given
-InnerMatcher.
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument2"><pre>Matches templateSpecializationTypes, class template specializations,
+variable template specializations, and function template specializations
+that have at least one TemplateArgument matching the given InnerMatcher.
 
 Given
   template&lt;typename T&gt; class A {};
@@ -8878,9 +9052,25 @@ functionDecl(hasReturnTypeLoc(loc(asString("int"))))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgumentLoc2')"><a name="hasTemplateArgumentLoc2Anchor">hasTemplateArgumentLoc</a></td><td>unsigned Index, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasTemplateArgumentLoc2"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+where the n'th `TemplateArgumentLoc` matches the given `InnerMatcher`.
+
+Given
+  template&lt;typename T, typename U&gt; class A {};
+  A&lt;double, int&gt; b;
+  A&lt;int, double&gt; c;
+varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(0,
+  hasTypeLoc(loc(asString("double")))))))
+  matches `A&lt;double, int&gt; b`, but not `A&lt;int, double&gt; c`.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgument2')"><a name="hasTemplateArgument2Anchor">hasTemplateArgument</a></td><td>unsigned N, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasTemplateArgument2"><pre>Matches classTemplateSpecializations, templateSpecializationType and
-functionDecl where the n'th TemplateArgument matches the given InnerMatcher.
+<tr><td colspan="4" class="doc" id="hasTemplateArgument2"><pre>Matches templateSpecializationType, class template specializations,
+variable template specializations, and function template specializations
+where the n'th TemplateArgument matches the given InnerMatcher.
 
 Given
   template&lt;typename T, typename U&gt; class A {};
@@ -9181,7 +9371,8 @@ pointerType(pointee(isConstQualified(), isInteger()))
   matches "int const *b"
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BlockPointerType.html">BlockPointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MemberPointerType.html">MemberPointerType</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCObjectPointerType.html">ObjCObjectPointerType</a>&gt;
 </pre></td></tr>
 
 
@@ -9292,6 +9483,36 @@ Given
    {}
 
 ``ompExecutableDirective(hasStructuredBlock(nullStmt()))`` will match ``;``
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('hasType9')"><a name="hasType9Anchor">hasType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType9"><pre>Overloaded to match the declaration of the expression's or value
+declaration's type.
+
+In case of a value declaration (for example a variable declaration),
+this resolves one layer of indirection. For example, in the value
+declaration "X x;", cxxRecordDecl(hasName("X")) matches the declaration of
+X, while varDecl(hasType(cxxRecordDecl(hasName("X")))) matches the
+declaration of x.
+
+Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
+            and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
+            and friend class X (matcher = friendDecl(hasType("X"))
+            and public virtual X (matcher = cxxBaseSpecifier(hasType(
+                                              cxxRecordDecl(hasName("X"))))
+ class X {};
+ void y(X &amp;x) { x; X z; }
+ class Y { friend class X; };
+ class Z : public virtual X {};
+
+Example matches class Derived
+(matcher = cxxRecordDecl(hasAnyBase(hasType(cxxRecordDecl(hasName("Base"))))))
+class Base {};
+class Derived : Base {};
+
+Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FriendDecl.html">FriendDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt;,
+Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXBaseSpecifier.html">CXXBaseSpecifier</a>&gt;
 </pre></td></tr>
 
 
@@ -9473,8 +9694,25 @@ matching y.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc11')"><a name="hasTypeLoc11Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
-<tr><td colspan="4" class="doc" id="hasTypeLoc11"><pre>Matches if the type location of a node matches the inner matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCObjectPointerType.html">ObjCObjectPointerType</a>&gt;</td><td class="name" onclick="toggle('pointee4')"><a name="pointee4Anchor">pointee</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="pointee4"><pre>Narrows PointerType (and similar) matchers to those where the
+pointee matches a given matcher.
+
+Given
+  int *a;
+  int const *b;
+  float const *f;
+pointerType(pointee(isConstQualified(), isInteger()))
+  matches "int const *b"
+
+Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BlockPointerType.html">BlockPointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MemberPointerType.html">MemberPointerType</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCObjectPointerType.html">ObjCObjectPointerType</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc10')"><a name="hasTypeLoc10Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
+<tr><td colspan="4" class="doc" id="hasTypeLoc10"><pre>Matches if the type location of a node matches the inner matcher.
 
 Examples:
   int x;
@@ -9494,7 +9732,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -9570,7 +9808,8 @@ pointerType(pointee(isConstQualified(), isInteger()))
   matches "int const *b"
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BlockPointerType.html">BlockPointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MemberPointerType.html">MemberPointerType</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCObjectPointerType.html">ObjCObjectPointerType</a>&gt;
 </pre></td></tr>
 
 
@@ -9739,7 +9978,8 @@ pointerType(pointee(isConstQualified(), isInteger()))
   matches "int const *b"
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BlockPointerType.html">BlockPointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MemberPointerType.html">MemberPointerType</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCObjectPointerType.html">ObjCObjectPointerType</a>&gt;
 </pre></td></tr>
 
 
@@ -9919,8 +10159,8 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Addr
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc12')"><a name="hasTypeLoc12Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
-<tr><td colspan="4" class="doc" id="hasTypeLoc12"><pre>Matches if the type location of a node matches the inner matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc11')"><a name="hasTypeLoc11Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
+<tr><td colspan="4" class="doc" id="hasTypeLoc11"><pre>Matches if the type location of a node matches the inner matcher.
 
 Examples:
   int x;
@@ -9940,7 +10180,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -10014,9 +10254,11 @@ matches the specialization of struct A generated by A&lt;X&gt;.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationTypeLoc.html">TemplateSpecializationTypeLoc</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgumentLoc0')"><a name="hasAnyTemplateArgumentLoc0Anchor">hasAnyTemplateArgumentLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyTemplateArgumentLoc0"><pre>Matches template specialization `TypeLoc`s that have at least one
-`TemplateArgumentLoc` matching the given `InnerMatcher`.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationTypeLoc.html">TemplateSpecializationTypeLoc</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgumentLoc4')"><a name="hasAnyTemplateArgumentLoc4Anchor">hasAnyTemplateArgumentLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgumentLoc4"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+that have at least one `TemplateArgumentLoc` matching the given
+`InnerMatcher`.
 
 Given
   template&lt;typename T&gt; class A {};
@@ -10027,9 +10269,10 @@ varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationTypeLoc.html">TemplateSpecializationTypeLoc</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgumentLoc1')"><a name="hasTemplateArgumentLoc1Anchor">hasTemplateArgumentLoc</a></td><td>unsigned Index, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasTemplateArgumentLoc1"><pre>Matches template specialization `TypeLoc`s where the n'th
-`TemplateArgumentLoc` matches the given `InnerMatcher`.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationTypeLoc.html">TemplateSpecializationTypeLoc</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgumentLoc4')"><a name="hasTemplateArgumentLoc4Anchor">hasTemplateArgumentLoc</a></td><td>unsigned Index, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasTemplateArgumentLoc4"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+where the n'th `TemplateArgumentLoc` matches the given `InnerMatcher`.
 
 Given
   template&lt;typename T, typename U&gt; class A {};
@@ -10041,10 +10284,11 @@ varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(0,
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument1')"><a name="forEachTemplateArgument1Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachTemplateArgument1"><pre>Matches classTemplateSpecialization, templateSpecializationType and
-functionDecl nodes where the template argument matches the inner matcher.
-This matcher may produce multiple matches.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument3')"><a name="forEachTemplateArgument3Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument3"><pre>Matches templateSpecializationType, class template specialization,
+variable template specialization, and function template specialization
+nodes where the template argument matches the inner matcher. This matcher
+may produce multiple matches.
 
 Given
   template &lt;typename T, unsigned N, unsigned M&gt;
@@ -10066,10 +10310,10 @@ functionDecl(forEachTemplateArgument(refersToType(builtinType())))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument1')"><a name="hasAnyTemplateArgument1Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument1"><pre>Matches classTemplateSpecializations, templateSpecializationType and
-functionDecl that have at least one TemplateArgument matching the given
-InnerMatcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument3')"><a name="hasAnyTemplateArgument3Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument3"><pre>Matches templateSpecializationTypes, class template specializations,
+variable template specializations, and function template specializations
+that have at least one TemplateArgument matching the given InnerMatcher.
 
 Given
   template&lt;typename T&gt; class A {};
@@ -10122,9 +10366,10 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Addr
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgument1')"><a name="hasTemplateArgument1Anchor">hasTemplateArgument</a></td><td>unsigned N, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasTemplateArgument1"><pre>Matches classTemplateSpecializations, templateSpecializationType and
-functionDecl where the n'th TemplateArgument matches the given InnerMatcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgument3')"><a name="hasTemplateArgument3Anchor">hasTemplateArgument</a></td><td>unsigned N, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasTemplateArgument3"><pre>Matches templateSpecializationType, class template specializations,
+variable template specializations, and function template specializations
+where the n'th TemplateArgument matches the given InnerMatcher.
 
 Given
   template&lt;typename T, typename U&gt; class A {};
@@ -10182,8 +10427,8 @@ QualType-matcher matches.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc13')"><a name="hasTypeLoc13Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
-<tr><td colspan="4" class="doc" id="hasTypeLoc13"><pre>Matches if the type location of a node matches the inner matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;</td><td class="name" onclick="toggle('hasTypeLoc12')"><a name="hasTypeLoc12Anchor">hasTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt; Inner</td></tr>
+<tr><td colspan="4" class="doc" id="hasTypeLoc12"><pre>Matches if the type location of a node matches the inner matcher.
 
 Examples:
   int x;
@@ -10203,7 +10448,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXCtorInitializer.html">CXXCtorInitializer</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFunctionalCastExpr.html">CXXFunctionalCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXTemporaryObjectExpr.html">CXXTemporaryObjectExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;,
-  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
+  Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CompoundLiteralExpr.html">CompoundLiteralExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeclaratorDecl.html">DeclaratorDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ExplicitCastExpr.html">ExplicitCastExpr</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCPropertyDecl.html">ObjCPropertyDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;
@@ -10446,6 +10691,105 @@ that matches the given matcher.
 Example matches x (matcher = varDecl(hasInitializer(callExpr())))
   bool y() { return true; }
   bool x = y();
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarTemplateSpecializationDecl.html">VarTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument1')"><a name="forEachTemplateArgument1Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument1"><pre>Matches templateSpecializationType, class template specialization,
+variable template specialization, and function template specialization
+nodes where the template argument matches the inner matcher. This matcher
+may produce multiple matches.
+
+Given
+  template &lt;typename T, unsigned N, unsigned M&gt;
+  struct Matrix {};
+
+  constexpr unsigned R = 2;
+  Matrix&lt;int, R * 2, R * 4&gt; M;
+
+  template &lt;typename T, typename U&gt;
+  void f(T&amp;&amp; t, U&amp;&amp; u) {}
+
+  bool B = false;
+  f(R, B);
+templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
+  matches twice, with expr() matching 'R * 2' and 'R * 4'
+functionDecl(forEachTemplateArgument(refersToType(builtinType())))
+  matches the specialization f&lt;unsigned, bool&gt; twice, for 'unsigned'
+  and 'bool'
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarTemplateSpecializationDecl.html">VarTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgumentLoc1')"><a name="hasAnyTemplateArgumentLoc1Anchor">hasAnyTemplateArgumentLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgumentLoc1"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+that have at least one `TemplateArgumentLoc` matching the given
+`InnerMatcher`.
+
+Given
+  template&lt;typename T&gt; class A {};
+  A&lt;int&gt; a;
+varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+  hasTypeLoc(loc(asString("int")))))))
+  matches `A&lt;int&gt; a`.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarTemplateSpecializationDecl.html">VarTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument1')"><a name="hasAnyTemplateArgument1Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument1"><pre>Matches templateSpecializationTypes, class template specializations,
+variable template specializations, and function template specializations
+that have at least one TemplateArgument matching the given InnerMatcher.
+
+Given
+  template&lt;typename T&gt; class A {};
+  template&lt;&gt; class A&lt;double&gt; {};
+  A&lt;int&gt; a;
+
+  template&lt;typename T&gt; f() {};
+  void func() { f&lt;int&gt;(); };
+
+classTemplateSpecializationDecl(hasAnyTemplateArgument(
+    refersToType(asString("int"))))
+  matches the specialization A&lt;int&gt;
+
+functionDecl(hasAnyTemplateArgument(refersToType(asString("int"))))
+  matches the specialization f&lt;int&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarTemplateSpecializationDecl.html">VarTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgumentLoc1')"><a name="hasTemplateArgumentLoc1Anchor">hasTemplateArgumentLoc</a></td><td>unsigned Index, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasTemplateArgumentLoc1"><pre>Matches template specialization `TypeLoc`s, class template specializations,
+variable template specializations, and function template specializations
+where the n'th `TemplateArgumentLoc` matches the given `InnerMatcher`.
+
+Given
+  template&lt;typename T, typename U&gt; class A {};
+  A&lt;double, int&gt; b;
+  A&lt;int, double&gt; c;
+varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(0,
+  hasTypeLoc(loc(asString("double")))))))
+  matches `A&lt;double, int&gt; b`, but not `A&lt;int, double&gt; c`.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarTemplateSpecializationDecl.html">VarTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgument1')"><a name="hasTemplateArgument1Anchor">hasTemplateArgument</a></td><td>unsigned N, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasTemplateArgument1"><pre>Matches templateSpecializationType, class template specializations,
+variable template specializations, and function template specializations
+where the n'th TemplateArgument matches the given InnerMatcher.
+
+Given
+  template&lt;typename T, typename U&gt; class A {};
+  A&lt;bool, int&gt; b;
+  A&lt;int, bool&gt; c;
+
+  template&lt;typename T&gt; void f() {}
+  void func() { f&lt;int&gt;(); };
+classTemplateSpecializationDecl(hasTemplateArgument(
+    1, refersToType(asString("int"))))
+  matches the specialization A&lt;bool, int&gt;
+
+functionDecl(hasTemplateArgument(0, refersToType(asString("int"))))
+  matches the specialization f&lt;int&gt;
 </pre></td></tr>
 
 

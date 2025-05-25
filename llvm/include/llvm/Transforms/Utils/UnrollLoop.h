@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_UTILS_UNROLLLOOP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -73,6 +74,9 @@ struct UnrollLoopOptions {
   bool AllowExpensiveTripCount;
   bool UnrollRemainder;
   bool ForgetAllSCEV;
+  const Instruction *Heart = nullptr;
+  unsigned SCEVExpansionBudget;
+  bool RuntimeUnrollMultiExit = false;
 };
 
 LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
@@ -88,6 +92,7 @@ bool UnrollRuntimeLoopRemainder(
     bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
+    unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
     Loop **ResultLoop = nullptr);
 
 LoopUnrollResult UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
@@ -128,16 +133,17 @@ class UnrollCostEstimator {
 
 public:
   unsigned NumInlineCandidates;
-  bool Convergent;
+  ConvergenceKind Convergence;
+  bool ConvergenceAllowsRuntime;
 
   UnrollCostEstimator(const Loop *L, const TargetTransformInfo &TTI,
                       const SmallPtrSetImpl<const Value *> &EphValues,
                       unsigned BEInsns);
 
   /// Whether it is legal to unroll this loop.
-  bool canUnroll() const { return LoopSize.isValid() && !NotDuplicatable; }
+  bool canUnroll() const;
 
-  uint64_t getRolledLoopSize() const { return *LoopSize.getValue(); }
+  uint64_t getRolledLoopSize() const { return LoopSize.getValue(); }
 
   /// Returns loop size estimation for unrolled loop, given the unrolling
   /// configuration specified by UP.

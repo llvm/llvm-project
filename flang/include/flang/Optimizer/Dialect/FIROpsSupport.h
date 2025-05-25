@@ -15,13 +15,26 @@
 
 namespace fir {
 
-/// Return true iff the Operation is a non-volatile LoadOp or ArrayLoadOp.
-inline bool nonVolatileLoad(mlir::Operation *op) {
-  if (auto load = mlir::dyn_cast<fir::LoadOp>(op))
-    return !load->getAttr("volatile");
-  if (auto arrLoad = mlir::dyn_cast<fir::ArrayLoadOp>(op))
-    return !arrLoad->getAttr("volatile");
-  return false;
+/// The LLVM dialect represents volatile memory accesses as read and write
+/// effects to an unknown memory location, but this may be overly conservative.
+/// LLVM Language Reference only specifies that volatile memory accesses
+/// must not be reordered relative to other volatile memory accesses, so it
+/// is more precise to use a separate memory resource for volatile memory
+/// accesses.
+inline void addVolatileMemoryEffects(
+    mlir::TypeRange type,
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  for (mlir::Type t : type) {
+    if (fir::isa_volatile_type(t)) {
+      effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                           fir::VolatileMemoryResource::get());
+      effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                           fir::VolatileMemoryResource::get());
+      break;
+    }
+  }
 }
 
 /// Return true iff the Operation is a call.
@@ -75,17 +88,14 @@ constexpr llvm::StringRef getOptionalAttrName() { return "fir.optional"; }
 /// Attribute to mark Fortran entities with the TARGET attribute.
 static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
 
-/// Attribute to mark Fortran entities with the CUDA attribute.
-static constexpr llvm::StringRef getCUDAAttrName() { return "fir.cuda_attr"; }
-
-/// Attribute to carry CUDA launch_bounds values.
-static constexpr llvm::StringRef getCUDALaunchBoundsAttrName() {
-  return "fir.cuda_launch_bounds";
+/// Attribute to mark Fortran entities with the ASYNCHRONOUS attribute.
+static constexpr llvm::StringRef getAsynchronousAttrName() {
+  return "fir.asynchronous";
 }
 
-/// Attribute to carry CUDA cluster_dims values.
-static constexpr llvm::StringRef getCUDAClusterDimsAttrName() {
-  return "fir.cuda_cluster_dims";
+/// Attribute to mark Fortran entities with the VOLATILE attribute.
+static constexpr llvm::StringRef getVolatileAttrName() {
+  return "fir.volatile";
 }
 
 /// Attribute to mark that a function argument is a character dummy procedure.
@@ -113,6 +123,12 @@ static constexpr llvm::StringRef getHostSymbolAttrName() {
 /// ExternalNameConverision pass runs
 static constexpr llvm::StringRef getInternalFuncNameAttrName() {
   return "fir.internal_name";
+}
+
+/// Attribute to mark alloca that have been given a lifetime marker so that
+/// later pass do not try adding new ones.
+static constexpr llvm::StringRef getHasLifetimeMarkerAttrName() {
+  return "fir.has_lifetime";
 }
 
 /// Does the function, \p func, have a host-associations tuple argument?
@@ -161,6 +177,22 @@ static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
 }
 
+static constexpr llvm::StringRef getFuncPureAttrName() {
+  return "fir.func_pure";
+}
+
+static constexpr llvm::StringRef getFuncElementalAttrName() {
+  return "fir.func_elemental";
+}
+
+static constexpr llvm::StringRef getFuncRecursiveAttrName() {
+  return "fir.func_recursive";
+}
+
+static constexpr llvm::StringRef getFortranProcedureFlagsAttrName() {
+  return "fir.proc_attrs";
+}
+
 // Attribute for an alloca that is a trivial adaptor for converting a value to
 // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
 // eliminate these.
@@ -172,6 +204,41 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
                                 fir::getAdaptToByRefAttrName()),
           builder.getUnitAttr()};
 }
+
+bool isDummyArgument(mlir::Value v);
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
+  return flags && bitEnumContainsAny(flags.getValue(), Flag);
+}
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(mlir::Operation *op) {
+  if (auto firCallOp = mlir::dyn_cast<fir::CallOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  if (auto firCallOp = mlir::dyn_cast<fir::DispatchOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  return hasProcedureAttr<Flag>(
+      op->getAttrOfType<fir::FortranProcedureFlagsEnumAttr>(
+          getFortranProcedureFlagsAttrName()));
+}
+
+inline bool hasBindcAttr(mlir::Operation *op) {
+  return hasProcedureAttr<fir::FortranProcedureFlagsEnum::bind_c>(op);
+}
+
+/// Get the allocation size of a given alloca if it has compile time constant
+/// size.
+std::optional<int64_t> getAllocaByteSize(fir::AllocaOp alloca,
+                                         const mlir::DataLayout &dl,
+                                         const fir::KindMapping &kindMap);
+
+/// Return true, if \p rebox operation keeps the input array
+/// continuous if it is initially continuous.
+/// When \p checkWhole is false, then the checking is only done
+/// for continuity in the innermost dimension, otherwise,
+/// the checking is done for continuity of the whole result of rebox.
+bool reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole = true);
 
 } // namespace fir
 

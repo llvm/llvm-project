@@ -32,15 +32,14 @@ func.func @collapse_expand_rank0_cancel(%arg0 : memref<1x1xi8>) -> memref<1x1xi8
 // CHECK-LABEL: func @subview_of_size_memcast
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<4x6x16x32xi8>
 //       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][0, 1, 0, 0] [1, 1, 16, 32] [1, 1, 1, 1] : memref<4x6x16x32xi8> to memref<16x32xi8, strided{{.*}}>
-//       CHECK:   %[[M:.+]] = memref.cast %[[S]] : memref<16x32xi8, {{.*}}> to memref<16x32xi8, strided{{.*}}>
-//       CHECK:   return %[[M]] : memref<16x32xi8, strided{{.*}}>
+//       CHECK:   return %[[S]] : memref<16x32xi8, strided{{.*}}>
 func.func @subview_of_size_memcast(%arg : memref<4x6x16x32xi8>) ->
-  memref<16x32xi8, strided<[32, 1], offset: ?>>{
+  memref<16x32xi8, strided<[32, 1], offset: 512>>{
   %0 = memref.cast %arg : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
   %1 = memref.subview %0[0, 1, 0, 0] [1, 1, 16, 32] [1, 1, 1, 1] :
     memref<?x?x16x32xi8> to
-    memref<16x32xi8, strided<[32, 1], offset: ?>>
-  return %1 : memref<16x32xi8, strided<[32, 1], offset: ?>>
+    memref<16x32xi8, strided<[32, 1], offset: 512>>
+  return %1 : memref<16x32xi8, strided<[32, 1], offset: 512>>
 }
 
 // -----
@@ -67,6 +66,19 @@ func.func @subview_of_strides_memcast(%arg : memref<1x1x?xf32, strided<[35, 7, 1
 func.func @subview_of_static_full_size(%arg0 : memref<4x6x16x32xi8>) -> memref<4x6x16x32xi8> {
   %0 = memref.subview %arg0[0, 0, 0, 0] [4, 6, 16, 32] [1, 1, 1, 1] : memref<4x6x16x32xi8> to memref<4x6x16x32xi8>
   return %0 : memref<4x6x16x32xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_subview_of_static_full_size
+//  CHECK-SAME:   %[[ARG0:.+]]: memref<16x4xf32,  strided<[4, 1], offset: ?>>
+//  CHECK-SAME:   %[[IDX:.+]]: index
+//       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][%[[IDX]], 0] [16, 4] [1, 1]
+//  CHECK-SAME:                    to memref<16x4xf32,  strided<[4, 1], offset: ?>>
+//       CHECK:    return %[[S]] : memref<16x4xf32,  strided<[4, 1], offset: ?>>
+func.func @negative_subview_of_static_full_size(%arg0:  memref<16x4xf32,  strided<[4, 1], offset: ?>>, %idx: index) -> memref<16x4xf32,  strided<[4, 1], offset: ?>> {
+  %0 = memref.subview %arg0[%idx, 0][16, 4][1, 1] : memref<16x4xf32,  strided<[4, 1], offset: ?>> to memref<16x4xf32,  strided<[4, 1], offset: ?>>
+  return %0 : memref<16x4xf32,  strided<[4, 1], offset: ?>>
 }
 
 // -----
@@ -623,9 +635,9 @@ func.func @fold_no_op_subview(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, st
 
 // -----
 
-func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, strided<[42, 1], offset: 1>> {
-  %0 = memref.subview %arg0[0, 1] [20, 42] [1, 1] : memref<20x42xf32> to memref<20x42xf32, strided<[42, 1], offset: 1>>
-  return %0 : memref<20x42xf32, strided<[42, 1], offset: 1>>
+func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> memref<20x41xf32, strided<[42, 1], offset: 1>> {
+  %0 = memref.subview %arg0[0, 1] [20, 41] [1, 1] : memref<20x42xf32> to memref<20x41xf32, strided<[42, 1], offset: 1>>
+  return %0 : memref<20x41xf32, strided<[42, 1], offset: 1>>
 }
 // CHECK-LABEL: func @no_fold_subview_with_non_zero_offset(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
@@ -633,9 +645,9 @@ func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> me
 
 // -----
 
-func.func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, strided<[42, 2]>> {
-  %0 = memref.subview %arg0[0, 0] [20, 42] [1, 2] : memref<20x42xf32> to memref<20x42xf32, strided<[42, 2]>>
-  return %0 : memref<20x42xf32, strided<[42, 2]>>
+func.func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> memref<20x5xf32, strided<[42, 2]>> {
+  %0 = memref.subview %arg0[0, 0] [20, 5] [1, 2] : memref<20x42xf32> to memref<20x5xf32, strided<[42, 2]>>
+  return %0 : memref<20x5xf32, strided<[42, 2]>>
 }
 // CHECK-LABEL: func @no_fold_subview_with_non_unit_stride(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
@@ -643,13 +655,23 @@ func.func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> me
 
 // -----
 
-func.func @no_fold_dynamic_no_op_subview(%arg0 : memref<?x?xf32>) -> memref<?x?xf32, strided<[?, 1], offset: ?>> {
+// CHECK-LABEL: func @no_fold_invalid_dynamic_slice
+//       CHECK:   memref.subview %arg0[2] [%{{.*}}] [1] : memref<10xf32> to memref<?xf32, strided<[1], offset: 2>>
+func.func @no_fold_invalid_dynamic_slice(%arg0: memref<10xf32>) -> memref<?xf32, strided<[1], offset: 2>> {
+  %c11 = arith.constant 11 : index
+  %0 = memref.subview %arg0 [2][%c11][1] : memref<10xf32> to memref<?xf32, strided<[1], offset: 2>>
+  func.return %0 : memref<?xf32, strided<[1], offset: 2>>
+}
+
+// -----
+
+func.func @no_fold_dynamic_no_op_subview(%arg0 : memref<?x?xf32>) -> memref<?x?xf32, strided<[?, 1]>> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
   %1 = memref.dim %arg0, %c1 : memref<?x?xf32>
-  %2 = memref.subview %arg0[0, 0] [%0, %1] [1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
-  return %2 : memref<?x?xf32, strided<[?, 1], offset: ?>>
+  %2 = memref.subview %arg0[0, 0] [%0, %1] [1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
+  return %2 : memref<?x?xf32, strided<[?, 1]>>
 }
 // CHECK-LABEL: func @no_fold_dynamic_no_op_subview(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
@@ -689,6 +711,16 @@ func.func @self_copy(%m1: memref<?xf32>) {
 
 // CHECK-LABEL: func @self_copy
 //  CHECK-NEXT:   return
+
+// -----
+
+// CHECK-LABEL: func @empty_copy
+//  CHECK-NEXT:   return
+func.func @empty_copy(%m1: memref<0x10xf32>, %m2: memref<?x10xf32>) {
+  memref.copy %m1, %m2 : memref<0x10xf32> to memref<?x10xf32>
+  memref.copy %m2, %m1 : memref<?x10xf32> to memref<0x10xf32>
+  return
+}
 
 // -----
 
@@ -920,8 +952,7 @@ func.func @reinterpret_of_extract_strided_metadata_same_type(%arg0 : memref<?x?x
 //  CHECK-SAME: (%[[ARG:.*]]: memref<8x2xf32>)
 //   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
-//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[C0]]], sizes: [4, 2, 2], strides: [1, 1, %[[C1]]]
+//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [%[[C0]]], sizes: [4, 2, 2], strides: [1, 1, %[[C1]]]
 //       CHECK: return %[[RES]]
 func.func @reinterpret_of_extract_strided_metadata_w_different_stride(%arg0 : memref<8x2xf32>) -> memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> {
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
@@ -937,8 +968,7 @@ func.func @reinterpret_of_extract_strided_metadata_w_different_stride(%arg0 : me
 //   CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
 //   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
-//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [1], sizes: [%[[C8]], %[[C2]]], strides: [%[[C2]], %[[C1]]]
+//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [1], sizes: [%[[C8]], %[[C2]]], strides: [%[[C2]], %[[C1]]]
 //       CHECK: return %[[RES]]
 func.func @reinterpret_of_extract_strided_metadata_w_different_offset(%arg0 : memref<8x2xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
@@ -959,7 +989,7 @@ func.func @canonicalize_rank_reduced_subview(%arg0 : memref<8x?xf32>,
 // CHECK-SAME:     %[[ARG0:.+]]: memref<8x?xf32>
 // CHECK-SAME:     %[[ARG1:.+]]: index
 //      CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG0]][0, 0] [1, %[[ARG1]]] [1, 1]
-// CHECK-SAME:       memref<8x?xf32> to memref<?xf32, strided<[1], offset: ?>>
+// CHECK-SAME:       memref<8x?xf32> to memref<?xf32, strided<[1]>>
 
 // -----
 

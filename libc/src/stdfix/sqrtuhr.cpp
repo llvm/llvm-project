@@ -9,11 +9,12 @@
 #include "sqrtuhr.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/sqrt.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(unsigned short fract, sqrtuhr, (unsigned short fract x)) {
   return fixed_point::sqrt(x);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

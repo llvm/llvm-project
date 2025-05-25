@@ -30,7 +30,7 @@ call_weak:
 # ASM:           10 80 80 80 80 00      call  0
   drop
   call hidden_weak_func
-# ASM:           10 84 80 80 80 00      call  4
+# ASM:           10 83 80 80 80 00      call  3
   end_function
 # ASM-NEXT:      0b                     end
 
@@ -62,15 +62,12 @@ call_weak:
 # CHECK-NEXT:       - Name:            __wasm_call_ctors
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         Index:           1
-# CHECK-NEXT:       - Name:            __wasm_apply_data_relocs
-# CHECK-NEXT:         Kind:            FUNCTION
-# CHECK-NEXT:         Index:           2
 # CHECK-NEXT:       - Name:            weak_func
 # CHECK-NEXT:         Kind:            FUNCTION
-# CHECK-NEXT:         Index:           3
+# CHECK-NEXT:         Index:           2
 # CHECK-NEXT:       - Name:            call_weak
 # CHECK-NEXT:         Kind:            FUNCTION
-# CHECK-NEXT:         Index:           5
+# CHECK-NEXT:         Index:           4
 # CHECK-NEXT:   - Type:            CODE
 
 #      CHECK:   - Type:            CUSTOM
@@ -81,10 +78,8 @@ call_weak:
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Name:            __wasm_call_ctors
 # CHECK-NEXT:       - Index:           2
-# CHECK-NEXT:         Name:            __wasm_apply_data_relocs
-# CHECK-NEXT:       - Index:           3
 # CHECK-NEXT:         Name:            weak_func
-# CHECK-NEXT:       - Index:           4
+# CHECK-NEXT:       - Index:           3
 # CHECK-NEXT:         Name:            hidden_weak_func
-# CHECK-NEXT:       - Index:           5
+# CHECK-NEXT:       - Index:           4
 # CHECK-NEXT:         Name:            call_weak

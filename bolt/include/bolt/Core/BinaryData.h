@@ -169,6 +169,11 @@ public:
     return Parent && (Parent == BD || Parent->isAncestorOf(BD));
   }
 
+  void updateSize(uint64_t N) {
+    if (N > Size)
+      Size = N;
+  }
+
   void setIsMoveable(bool Flag) { IsMoveable = Flag; }
   void setSection(BinarySection &NewSection);
   void setOutputSection(BinarySection &NewSection) {
@@ -226,7 +231,6 @@ inline raw_ostream &operator<<(raw_ostream &OS,
     Sep = ",\n        ";
     TotalCount += AccessInfo.Count;
   }
-  SS.flush();
 
   OS << TotalCount << " total counts : " << TempString;
   return OS;

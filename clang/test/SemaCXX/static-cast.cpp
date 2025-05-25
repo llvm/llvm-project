@@ -199,6 +199,6 @@ namespace PR6072 {
     (void)static_cast<void (A::*)()>(&B::f);
     (void)static_cast<void (B::*)()>(&B::f);
     (void)static_cast<void (C::*)()>(&B::f);
-    (void)static_cast<void (D::*)()>(&B::f); // expected-error-re{{address of overloaded function 'f' cannot be static_cast to type 'void (PR6072::D::*)(){{( __attribute__\(\(thiscall\)\))?}}'}}
+    (void)static_cast<void (D::*)()>(&B::f); // expected-error-re{{address of overloaded function 'f' cannot be static_cast to type 'void (D::*)(){{( __attribute__\(\(thiscall\)\))?}}'}}
   }
 }

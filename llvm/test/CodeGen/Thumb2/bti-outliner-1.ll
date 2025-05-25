@@ -60,7 +60,7 @@ entry:
   ret i32 %add3
 }
 
-define hidden i32 @y(i32 %p) local_unnamed_addr #1 {
+define hidden i32 @y(i32 %p) local_unnamed_addr #0 {
 ; CHECK-LABEL: y:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r0, .LCPI1_0
@@ -90,7 +90,7 @@ entry:
   ret i32 %add3
 }
 
-define hidden i32 @z(i32 %p) local_unnamed_addr #2 {
+define hidden i32 @z(i32 %p) local_unnamed_addr #1 {
 ; CHECK-LABEL: z:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    bti
@@ -127,9 +127,8 @@ entry:
   ret i32 %add3
 }
 
-attributes #0 = { minsize nofree norecurse nounwind optsize  }
-attributes #1 = { minsize nofree norecurse nounwind optsize "branch-target-enforcement"="false" }
-attributes #2 = { minsize nofree norecurse nounwind optsize "branch-target-enforcement"="true"  }
+attributes #0 = { minsize nofree norecurse nounwind optsize }
+attributes #1 = { minsize nofree norecurse nounwind optsize "branch-target-enforcement" }
 
 !llvm.module.flags = !{!0}
 

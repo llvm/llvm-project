@@ -1,0 +1,133 @@
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+// XFAIL: !has-64-bit-atomics
+
+// integral-type operator++(int) const noexcept;
+// integral-type operator--(int) const noexcept;
+// integral-type operator++() const noexcept;
+// integral-type operator--() const noexcept;
+
+#include <atomic>
+#include <cassert>
+#include <concepts>
+#include <type_traits>
+#include <utility>
+
+#include "atomic_helpers.h"
+#include "test_macros.h"
+
+template <typename T>
+concept has_pre_increment_operator = requires { ++std::declval<T const>(); };
+
+template <typename T>
+concept has_post_increment_operator = requires { std::declval<T const>()++; };
+
+template <typename T>
+concept has_pre_decrement_operator = requires { --std::declval<T const>(); };
+
+template <typename T>
+concept has_post_decrement_operator = requires { std::declval<T const>()--; };
+
+template <typename T>
+constexpr bool does_not_have_increment_nor_decrement_operators() {
+  return !has_pre_increment_operator<T> && !has_pre_decrement_operator<T> && !has_post_increment_operator<T> &&
+         !has_post_decrement_operator<T>;
+}
+
+template <typename T>
+struct TestDoesNotHaveIncrementDecrement {
+  void operator()() const { static_assert(does_not_have_increment_nor_decrement_operators<std::atomic_ref<T>>()); }
+};
+
+template <typename T>
+struct TestIncrementDecrement {
+  void operator()() const {
+    if constexpr (std::is_integral_v<T>) {
+      T x(T(1));
+      std::atomic_ref<T> const a(x);
+
+      {
+        std::same_as<T> decltype(auto) y = ++a;
+        assert(y == T(2));
+        assert(x == T(2));
+        ASSERT_NOEXCEPT(++a);
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = --a;
+        assert(y == T(1));
+        assert(x == T(1));
+        ASSERT_NOEXCEPT(--a);
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = a++;
+        assert(y == T(1));
+        assert(x == T(2));
+        ASSERT_NOEXCEPT(a++);
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = a--;
+        assert(y == T(2));
+        assert(x == T(1));
+        ASSERT_NOEXCEPT(a--);
+      }
+    } else if constexpr (std::is_pointer_v<T>) {
+      using U = std::remove_pointer_t<T>;
+      U t[9]  = {};
+      T p{&t[1]};
+      std::atomic_ref<T> const a(p);
+
+      {
+        std::same_as<T> decltype(auto) y = ++a;
+        assert(y == &t[2]);
+        assert(p == &t[2]);
+        ASSERT_NOEXCEPT(++a);
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = --a;
+        assert(y == &t[1]);
+        assert(p == &t[1]);
+        ASSERT_NOEXCEPT(--a);
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = a++;
+        assert(y == &t[1]);
+        assert(p == &t[2]);
+        ASSERT_NOEXCEPT(a++);
+      }
+
+      {
+        std::same_as<T> decltype(auto) y = a--;
+        assert(y == &t[2]);
+        assert(p == &t[1]);
+        ASSERT_NOEXCEPT(a--);
+      }
+    } else {
+      static_assert(std::is_void_v<T>);
+    }
+  }
+};
+
+int main(int, char**) {
+  TestEachIntegralType<TestIncrementDecrement>()();
+
+  TestEachFloatingPointType<TestDoesNotHaveIncrementDecrement>()();
+
+  TestEachPointerType<TestIncrementDecrement>()();
+
+  TestDoesNotHaveIncrementDecrement<bool>()();
+  TestDoesNotHaveIncrementDecrement<UserAtomicType>()();
+  TestDoesNotHaveIncrementDecrement<LargeUserAtomicType>()();
+
+  return 0;
+}

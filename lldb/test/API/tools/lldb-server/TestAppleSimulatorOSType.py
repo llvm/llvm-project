@@ -39,7 +39,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
             for device in devices:
                 if "availability" in device and device["availability"] != "(available)":
                     continue
-                if "isAvailable" in device and device["isAvailable"] != True:
+                if "isAvailable" in device and not device["isAvailable"]:
                     continue
                 if deviceRuntime and runtime < deviceRuntime:
                     continue
@@ -61,9 +61,9 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # Older versions of watchOS (<7.0) only support i386
         if platform_name == "watchos":
-            from pkg_resources import packaging
+            from packaging import version
 
-            if packaging.version.parse(vers) < packaging.version.parse("7.0"):
+            if version.parse(vers) < version.parse("7.0"):
                 arch = "i386"
 
         triple = "-".join([arch, "apple", platform_name + vers, "simulator"])
@@ -71,12 +71,12 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build(
             dictionary={
                 "EXE": exe_name,
-                "CC": clang,
                 "SDKROOT": sdkroot.strip(),
                 "ARCH": arch,
                 "ARCH_CFLAGS": "-target {} {}".format(triple, version_min),
                 "USE_SYSTEM_STDLIB": 1,
-            }
+            },
+            compiler=clang,
         )
         exe_path = os.path.realpath(self.getBuildArtifact(exe_name))
         cmd = [

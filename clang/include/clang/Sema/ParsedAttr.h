@@ -68,12 +68,14 @@ struct AvailabilityData {
   AvailabilityChange Changes[NumAvailabilitySlots];
   SourceLocation StrictLoc;
   const Expr *Replacement;
+  const IdentifierLoc *EnvironmentLoc;
 
   AvailabilityData(const AvailabilityChange &Introduced,
                    const AvailabilityChange &Deprecated,
-                   const AvailabilityChange &Obsoleted,
-                   SourceLocation Strict, const Expr *ReplaceExpr)
-    : StrictLoc(Strict), Replacement(ReplaceExpr) {
+                   const AvailabilityChange &Obsoleted, SourceLocation Strict,
+                   const Expr *ReplaceExpr, const IdentifierLoc *EnvironmentLoc)
+      : StrictLoc(Strict), Replacement(ReplaceExpr),
+        EnvironmentLoc(EnvironmentLoc) {
     Changes[IntroducedSlot] = Introduced;
     Changes[DeprecatedSlot] = Deprecated;
     Changes[ObsoletedSlot] = Obsoleted;
@@ -95,15 +97,6 @@ struct PropertyData {
 };
 
 } // namespace detail
-
-/// Wraps an identifier and optional source location for the identifier.
-struct IdentifierLoc {
-  SourceLocation Loc;
-  IdentifierInfo *Ident;
-
-  static IdentifierLoc *create(ASTContext &Ctx, SourceLocation Loc,
-                               IdentifierInfo *Ident);
-};
 
 /// A union of the various pointer types that can be passed to an
 /// ParsedAttr as an argument.
@@ -234,7 +227,7 @@ private:
              const AvailabilityChange &deprecated,
              const AvailabilityChange &obsoleted, SourceLocation unavailable,
              const Expr *messageExpr, Form formUsed, SourceLocation strict,
-             const Expr *replacementExpr)
+             const Expr *replacementExpr, const IdentifierLoc *environmentLoc)
       : AttributeCommonInfo(attrName, scopeName, attrRange, scopeLoc, formUsed),
         NumArgs(1), Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
@@ -243,8 +236,9 @@ private:
         Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
-    new (getAvailabilityData()) detail::AvailabilityData(
-        introduced, deprecated, obsoleted, strict, replacementExpr);
+    new (getAvailabilityData())
+        detail::AvailabilityData(introduced, deprecated, obsoleted, strict,
+                                 replacementExpr, environmentLoc);
   }
 
   /// Constructor for objc_bridge_related attributes.
@@ -388,19 +382,17 @@ public:
   }
 
   bool isArgExpr(unsigned Arg) const {
-    return Arg < NumArgs && getArg(Arg).is<Expr*>();
+    return Arg < NumArgs && isa<Expr *>(getArg(Arg));
   }
 
-  Expr *getArgAsExpr(unsigned Arg) const {
-    return getArg(Arg).get<Expr*>();
-  }
+  Expr *getArgAsExpr(unsigned Arg) const { return cast<Expr *>(getArg(Arg)); }
 
   bool isArgIdent(unsigned Arg) const {
-    return Arg < NumArgs && getArg(Arg).is<IdentifierLoc*>();
+    return Arg < NumArgs && isa<IdentifierLoc *>(getArg(Arg));
   }
 
   IdentifierLoc *getArgAsIdent(unsigned Arg) const {
-    return getArg(Arg).get<IdentifierLoc*>();
+    return cast<IdentifierLoc *>(getArg(Arg));
   }
 
   const AvailabilityChange &getAvailabilityIntroduced() const {
@@ -443,6 +435,12 @@ public:
     assert(getParsedKind() == AT_Availability &&
            "Not an availability attribute");
     return getAvailabilityData()->Replacement;
+  }
+
+  const IdentifierLoc *getEnvironment() const {
+    assert(getParsedKind() == AT_Availability &&
+           "Not an availability attribute");
+    return getAvailabilityData()->EnvironmentLoc;
   }
 
   const ParsedType &getMatchingCType() const {
@@ -759,11 +757,13 @@ public:
                      const AvailabilityChange &obsoleted,
                      SourceLocation unavailable, const Expr *MessageExpr,
                      ParsedAttr::Form form, SourceLocation strict,
-                     const Expr *ReplacementExpr) {
+                     const Expr *ReplacementExpr,
+                     IdentifierLoc *EnvironmentLoc) {
     void *memory = allocate(AttributeFactory::AvailabilityAllocSize);
-    return add(new (memory) ParsedAttr(
-        attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
-        obsoleted, unavailable, MessageExpr, form, strict, ReplacementExpr));
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       Param, introduced, deprecated, obsoleted,
+                                       unavailable, MessageExpr, form, strict,
+                                       ReplacementExpr, EnvironmentLoc));
   }
 
   ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
@@ -960,6 +960,14 @@ public:
     pool.takeAllFrom(Other.pool);
   }
 
+  void takeAllAtEndFrom(ParsedAttributes &Other) {
+    assert(&Other != this &&
+           "ParsedAttributes can't take attributes from itself");
+    addAllAtEnd(Other.begin(), Other.end());
+    Other.clearListOnly();
+    pool.takeAllFrom(Other.pool);
+  }
+
   void takeOneFrom(ParsedAttributes &Other, ParsedAttr *PA) {
     assert(&Other != this &&
            "ParsedAttributes can't take attribute from itself");
@@ -994,10 +1002,12 @@ public:
                      const AvailabilityChange &obsoleted,
                      SourceLocation unavailable, const Expr *MessageExpr,
                      ParsedAttr::Form form, SourceLocation strict,
-                     const Expr *ReplacementExpr) {
-    ParsedAttr *attr = pool.create(
-        attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
-        obsoleted, unavailable, MessageExpr, form, strict, ReplacementExpr);
+                     const Expr *ReplacementExpr,
+                     IdentifierLoc *EnvironmentLoc) {
+    ParsedAttr *attr =
+        pool.create(attrName, attrRange, scopeName, scopeLoc, Param, introduced,
+                    deprecated, obsoleted, unavailable, MessageExpr, form,
+                    strict, ReplacementExpr, EnvironmentLoc);
     addAtEnd(attr);
     return attr;
   }
@@ -1055,10 +1065,11 @@ private:
   mutable AttributePool pool;
 };
 
-/// Consumes the attributes from `First` and `Second` and concatenates them into
-/// `Result`. Sets `Result.Range` to the combined range of `First` and `Second`.
-void takeAndConcatenateAttrs(ParsedAttributes &First, ParsedAttributes &Second,
-                             ParsedAttributes &Result);
+/// Consumes the attributes from `Second` and concatenates them
+/// at the end of `First`. Sets `First.Range`
+/// to the combined range of `First` and `Second`.
+void takeAndConcatenateAttrs(ParsedAttributes &First,
+                             ParsedAttributes &&Second);
 
 /// These constants match the enumerated choices of
 /// err_attribute_argument_n_type and err_attribute_argument_type.
@@ -1087,6 +1098,13 @@ enum AttributeDeclKind {
   ExpectedFunctionVariableOrClass,
   ExpectedKernelFunction,
   ExpectedFunctionWithProtoType,
+  ExpectedForLoopStatement,
+  ExpectedVirtualFunction,
+  ExpectedParameterOrImplicitObjectParameter,
+  ExpectedNonMemberFunction,
+  ExpectedFunctionOrClassOrEnum,
+  ExpectedClass,
+  ExpectedTypedef,
 };
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,

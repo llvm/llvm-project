@@ -62,35 +62,6 @@ public:
   bool operator!=(const Type &other) const { return !(*this == other); }
   explicit operator bool() const { return impl; }
 
-  /// Provide type casting support.
-  template <typename U>
-  [[deprecated("Use mlir::isa<U>() instead")]]
-  bool isa() const {
-    assert(impl && "isa<> used on a null type.");
-    return U::classof(*this);
-  }
-  template <typename U, typename V, typename... Others>
-  [[deprecated("Use mlir::isa<U>() instead")]]
-  bool isa() const {
-    return isa<U>() || isa<V, Others...>();
-  }
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
-  U dyn_cast() const {
-    return isa<U>() ? U(impl) : U(nullptr);
-  }
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
-  U dyn_cast_or_null() const {
-    return (impl && isa<U>()) ? U(impl) : U(nullptr);
-  }
-  template <typename U>
-  [[deprecated("Use mlir::cast<U>() instead")]]
-  U cast() const {
-    assert(isa<U>());
-    return U(impl);
-  }
-
   /// Return the internal storage instance of this type.
   Storage *getImpl() const { return impl; }
 
@@ -198,6 +169,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // TypeRangeType
+//===----------------------------------------------------------------------===//
 
 /// This class represents a PDLL type that corresponds to an mlir::TypeRange.
 class TypeRangeType : public RangeType {
@@ -213,6 +185,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // ValueRangeType
+//===----------------------------------------------------------------------===//
 
 /// This class represents a PDLL type that corresponds to an mlir::ValueRange.
 class ValueRangeType : public RangeType {

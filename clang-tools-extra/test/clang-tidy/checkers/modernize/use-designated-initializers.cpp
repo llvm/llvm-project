@@ -1,13 +1,13 @@
-// RUN: %check_clang_tidy -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-designated-initializers %t \
 // RUN:     -- \
 // RUN:     -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=,SINGLE-ELEMENT -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN: %check_clang_tidy -check-suffixes=,SINGLE-ELEMENT -std=c++20 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: {modernize-use-designated-initializers.IgnoreSingleElementAggregates: false}}" \
 // RUN:     -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=POD -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN: %check_clang_tidy -check-suffixes=POD -std=c++20 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: {modernize-use-designated-initializers.RestrictToPODTypes: true}}" \
 // RUN:     -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=,MACROS -std=c++17 %s modernize-use-designated-initializers %t \
+// RUN: %check_clang_tidy -check-suffixes=,MACROS -std=c++20 %s modernize-use-designated-initializers %t \
 // RUN:     -- -config="{CheckOptions: {modernize-use-designated-initializers.IgnoreMacros: false}}" \
 // RUN:     -- -fno-delayed-template-parsing
 
@@ -201,3 +201,26 @@ DECLARE_S93;
 // CHECK-MESSAGES-MACROS: :[[@LINE-1]]:1: warning: use designated initializer list to initialize 'S9' [modernize-use-designated-initializers]
 // CHECK-MESSAGES-MACROS: :[[@LINE-4]]:28: note: expanded from macro 'DECLARE_S93'
 // CHECK-MESSAGES-MACROS: :[[@LINE-71]]:1: note: aggregate type is defined here
+
+// Issue #113652.
+struct S14;
+
+struct S15{
+  S15(S14& d):d{d}{}
+  S14& d;
+};
+
+//Issue #133715
+namespace std {
+  template<typename T, unsigned int N>
+  struct array {
+    T __elems[N];
+  };
+    template<typename T, typename... U>
+    array(T, U...) -> array<T, 1 + sizeof...(U)>;
+}
+
+std::array a{1,2,3};
+std::array<int,2> b{10, 11};
+using array = std::array<int, 2>;
+array c{10, 11};

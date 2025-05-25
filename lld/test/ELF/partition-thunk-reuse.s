@@ -1,6 +1,9 @@
 // REQUIRES: arm
+/// Link against a DSO to ensure that sections are not discarded by --gc-sections.
+// RUN: llvm-mc -filetype=obj -triple=armv7-unknown-linux %S/Inputs/shared.s -o %ts.o
+// RUN: ld.lld -shared -soname=ts %ts.o -o %ts.so
 // RUN: llvm-mc %s -o %t.o -filetype=obj --triple=armv7-unknown-linux -arm-add-build-attributes
-// RUN: ld.lld %t.o -o %t --export-dynamic --gc-sections
+// RUN: ld.lld %t.o %ts.so -o %t --export-dynamic --gc-sections
 // RUN: llvm-nm %t | FileCheck %s
 
 // CHECK: __Thumbv7ABSLongThunk__start

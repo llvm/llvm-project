@@ -208,10 +208,10 @@ define i1 @switch_to_select_invalid_mask(i32 %i) {
 ; CHECK-LABEL: @switch_to_select_invalid_mask(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
-; CHECK-NEXT:    i32 1, label [[LOR_END:%.*]]
-; CHECK-NEXT:    i32 4, label [[LOR_END]]
-; CHECK-NEXT:    i32 10, label [[LOR_END]]
-; CHECK-NEXT:    i32 12, label [[LOR_END]]
+; CHECK-NEXT:      i32 1, label [[LOR_END:%.*]]
+; CHECK-NEXT:      i32 4, label [[LOR_END]]
+; CHECK-NEXT:      i32 10, label [[LOR_END]]
+; CHECK-NEXT:      i32 12, label [[LOR_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
@@ -239,9 +239,9 @@ define i1 @switch_to_select_nonpow2_cases(i32 %i) {
 ; CHECK-LABEL: @switch_to_select_nonpow2_cases(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[LOR_RHS:%.*]] [
-; CHECK-NEXT:    i32 0, label [[LOR_END:%.*]]
-; CHECK-NEXT:    i32 2, label [[LOR_END]]
-; CHECK-NEXT:    i32 4, label [[LOR_END]]
+; CHECK-NEXT:      i32 0, label [[LOR_END:%.*]]
+; CHECK-NEXT:      i32 2, label [[LOR_END]]
+; CHECK-NEXT:      i32 4, label [[LOR_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
@@ -269,19 +269,17 @@ define i8 @switch_to_select_two_case_results_no_default(i32 %i) {
 ; CHECK-LABEL: @switch_to_select_two_case_results_no_default(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[END:%.*]]
-; CHECK-NEXT:    i32 2, label [[END]]
-; CHECK-NEXT:    i32 4, label [[CASE3:%.*]]
-; CHECK-NEXT:    i32 6, label [[CASE4:%.*]]
+; CHECK-NEXT:      i32 0, label [[END:%.*]]
+; CHECK-NEXT:      i32 2, label [[END]]
+; CHECK-NEXT:      i32 4, label [[CASE3:%.*]]
+; CHECK-NEXT:      i32 6, label [[CASE3]]
 ; CHECK-NEXT:    ]
 ; CHECK:       case3:
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       case4:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       default:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       end:
-; CHECK-NEXT:    [[T0:%.*]] = phi i8 [ 44, [[CASE3]] ], [ 44, [[CASE4]] ], [ 42, [[ENTRY:%.*]] ], [ 42, [[ENTRY]] ]
+; CHECK-NEXT:    [[T0:%.*]] = phi i8 [ 44, [[CASE3]] ], [ 42, [[ENTRY:%.*]] ], [ 42, [[ENTRY]] ]
 ; CHECK-NEXT:    ret i8 [[T0]]
 ;
 entry:

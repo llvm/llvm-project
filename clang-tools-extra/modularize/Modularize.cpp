@@ -357,13 +357,9 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
     std::string InputFile = findInputFile(Args);
     DependentsVector &FileDependents = Dependencies[InputFile];
     CommandLineArguments NewArgs(Args);
-    if (int Count = FileDependents.size()) {
-      for (int Index = 0; Index < Count; ++Index) {
-        NewArgs.push_back("-include");
-        std::string File(std::string("\"") + FileDependents[Index] +
-                         std::string("\""));
-        NewArgs.push_back(FileDependents[Index]);
-      }
+    for (const std::string &Dep : FileDependents) {
+      NewArgs.push_back("-include");
+      NewArgs.push_back(Dep);
     }
     // Ignore warnings.  (Insert after "clang_tool" at beginning.)
     NewArgs.insert(NewArgs.begin() + 1, "-w");
@@ -381,11 +377,11 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
 // somewhere into Tooling/ in mainline
 struct Location {
   OptionalFileEntryRef File;
-  unsigned Line, Column;
+  unsigned Line = 0, Column = 0;
 
-  Location() : File(), Line(), Column() {}
+  Location() = default;
 
-  Location(SourceManager &SM, SourceLocation Loc) : File(), Line(), Column() {
+  Location(SourceManager &SM, SourceLocation Loc) {
     Loc = SM.getExpansionLoc(Loc);
     if (Loc.isInvalid())
       return;
@@ -410,11 +406,8 @@ struct Location {
   }
 
   friend bool operator<(const Location &X, const Location &Y) {
-    if (X.File != Y.File)
-      return X.File < Y.File;
-    if (X.Line != Y.Line)
-      return X.Line < Y.Line;
-    return X.Column < Y.Column;
+    return std::tie(X.File, X.Line, X.Column) <
+           std::tie(Y.File, Y.Line, Y.Column);
   }
   friend bool operator>(const Location &X, const Location &Y) { return Y < X; }
   friend bool operator<=(const Location &X, const Location &Y) {
@@ -508,13 +501,10 @@ public:
       // Sort contents.
       llvm::sort(H->second);
 
-      // Check whether we've seen this header before.
-      auto KnownH = AllHeaderContents.find(H->first);
-      if (KnownH == AllHeaderContents.end()) {
-        // We haven't seen this header before; record its contents.
-        AllHeaderContents.insert(*H);
+      // Record this header and its contents if we haven't seen it before.
+      auto [KnownH, Inserted] = AllHeaderContents.insert(*H);
+      if (Inserted)
         continue;
-      }
 
       // If the header contents are the same, we're done.
       if (H->second == KnownH->second)
@@ -624,7 +614,6 @@ public:
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     ND->printQualifiedName(OS);
-    OS.flush();
     if (Name.empty())
       return true;
 

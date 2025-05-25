@@ -13,13 +13,15 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcTanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcTanfTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::tanf(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -36,3 +38,30 @@ TEST_F(LlvmLibcTanfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcTanfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(max_denormal));
+}
+
+TEST_F(LlvmLibcTanfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(max_denormal));
+}
+
+TEST_F(LlvmLibcTanfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(max_denormal));
+}
+
+#endif

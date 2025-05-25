@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=x86_64-- -run-pass=regallocfast -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -passes=regallocfast -o - %s | FileCheck %s
 
 # Check that fastregalloc does not displace register assigned to tied def when
 # RegMask operand is present. STATEPOINT is an example of such instruction.

@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-detect < %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' < %s
 
-; This test case helps to determine wether SCEVRemoveMax::remove produces
+; This test case helps to determine whether SCEVRemoveMax::remove produces
 ; an infinite loop and a segmentation fault, if it processes, for example,
 ; '((-1 + (-1 * %b1)) umax {(-1 + (-1 * %yStart)),+,-1}<%.preheader>)'.
 ;
