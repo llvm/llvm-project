@@ -68,6 +68,7 @@ list(INSERT CMAKE_MODULE_PATH 0
   )
 
 include(AddMLIR)
+include(IRDLToCpp)
 
 # -BSymbolic is incompatible with TypeID
 if("${CMAKE_SHARED_LINKER_FLAGS}" MATCHES "-Bsymbolic[^-]")
@@ -211,6 +212,7 @@ include_directories(BEFORE
 # Adding tools/mlir-tblgen here as calling add_tablegen sets some variables like
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
 # from another directory like tools
+add_subdirectory(tools/mlir-irdl-to-cpp)
 add_subdirectory(tools/mlir-linalg-ods-gen)
 add_subdirectory(tools/mlir-pdll)
 add_subdirectory(tools/mlir-tblgen)
