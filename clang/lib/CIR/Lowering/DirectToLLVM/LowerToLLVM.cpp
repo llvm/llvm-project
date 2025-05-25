@@ -237,8 +237,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::FPAttr fltAttr) {
 /// ConstComplexAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstComplexAttr complexAttr) {
   auto complexType = mlir::cast<cir::ComplexType>(complexAttr.getType());
-  auto complexElemTy = complexType.getElementType();
-  auto complexElemLLVMTy = converter->convertType(complexElemTy);
+  mlir::Type complexElemTy = complexType.getElementType();
+  mlir::Type complexElemLLVMTy = converter->convertType(complexElemTy);
 
   mlir::Attribute components[2];
   if (const auto intType = mlir::dyn_cast<cir::IntType>(complexElemTy)) {
