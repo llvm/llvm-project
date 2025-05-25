@@ -2225,9 +2225,9 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // progress reports.
   {
     std::lock_guard<std::mutex> guard(m_progress_reports_mutex);
-    auto it = std::find_if(
-        m_progress_reports.begin(), m_progress_reports.end(),
-        [&](const auto &report) { return report.id == progress_report.id; });
+    auto it = llvm::find_if(m_progress_reports, [&](const auto &report) {
+      return report.id == progress_report.id;
+    });
     if (it != m_progress_reports.end()) {
       const bool complete = data->GetCompleted() == data->GetTotal();
       if (complete)
