@@ -95,7 +95,7 @@ static cl::opt<bool> ClInsertVersionCheck(
 // This flag may need to be replaced with -f[no-]memprof-reads.
 static cl::opt<bool> ClInstrumentReads("memprof-instrument-reads",
                                        cl::desc("instrument read instructions"),
-                                       cl::Hidden, cl::init(true));
+                                       cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClInstrumentWrites("memprof-instrument-writes",
@@ -177,10 +177,8 @@ static cl::opt<bool>
                         cl::desc("Salvage stale MemProf profile"),
                         cl::init(false), cl::Hidden);
 
-static cl::opt<bool> ClMemProfAttachCalleeGuids(
-    "memprof-attach-calleeguids",
-    cl::desc("Attach CalleeGuids value profile metadata to IR"), cl::Hidden,
-    cl::init(true));
+static cl::opt<bool> ClMemProfAttachCalleeGuids("memprof-attach-calleeguids",
+                                                cl::init(false));
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;

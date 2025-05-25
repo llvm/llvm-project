@@ -4,7 +4,7 @@
 
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge --memprof-version=4 %t/memprof_fdo_conflict.yaml -o %t/memprof_fdo_conflict.memprofdata
-; RUN: opt < %t/memprof_fdo_conflict.ll -passes='memprof-use<profile-filename=%t/memprof_fdo_conflict.memprofdata>' -S 2>&1 | FileCheck %s
+; RUN: opt < %t/memprof_fdo_conflict.ll -passes='memprof-use<profile-filename=%t/memprof_fdo_conflict.memprofdata>' -memprof-attach-calleeguids=true -S 2>&1 | FileCheck %s
 
 ;--- memprof_fdo_conflict.yaml
 ---

@@ -5,6 +5,7 @@
 ; RUN: llvm-profdata merge --memprof-version=4 %t/memprof_annotate_indirect_call_yaml.yaml -o %t/memprof_annotate_indirect_call_yaml.memprofdata
 ; RUN: opt < %t/memprof_annotate_indirect_call_yaml.ll -passes='memprof-use<profile-filename=%t/memprof_annotate_indirect_call_yaml.memprofdata>' -S 2>&1 | FileCheck %s
 ; RUN: opt < %t/memprof_annotate_indirect_call_yaml.ll -passes='memprof-use<profile-filename=%t/memprof_annotate_indirect_call_yaml.memprofdata>' -memprof-attach-calleeguids=false -S 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLE
+; RUN: opt < %t/memprof_annotate_indirect_call_yaml.ll -passes='memprof-use<profile-filename=%t/memprof_annotate_indirect_call_yaml.memprofdata>' -memprof-attach-calleeguids=true -S 2>&1 | FileCheck %s --check-prefix=CHECK-ENABLE
 
 ;--- memprof_annotate_indirect_call_yaml.yaml
 ---
@@ -22,12 +23,13 @@ entry:
   %fp = alloca ptr, align 8
   %0 = load ptr, ptr %fp, align 8
   call void %0(), !dbg !5
-; CHECK: call void %0(), {{.*}} !prof ![[PROF:[0-9]+]]
+; CHECK-NOT: !prof
+; CHECK-ENABLE: call void %0(), {{.*}} !prof ![[PROF:[0-9]+]]
 ; CHECK-DISABLE-NOT: !prof
   ret void
 }
 
-; CHECK: ![[PROF]] = !{!"VP", i32 0, i64 2, i64 1311768467463790320, i64 1, i64 2541551405711093505, i64 1}
+; CHECK-ENABLE: ![[PROF]] = !{!"VP", i32 0, i64 2, i64 1311768467463790320, i64 1, i64 2541551405711093505, i64 1}
 
 !llvm.module.flags = !{!2, !3}
 
