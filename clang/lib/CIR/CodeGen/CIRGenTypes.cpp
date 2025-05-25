@@ -388,7 +388,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   case Type::Complex: {
-    const ComplexType *ct = cast<ComplexType>(ty);
+    const auto *ct = mlir::cast<clang::ComplexType>(ty);
     mlir::Type elementTy = convertType(ct->getElementType());
     resultType = cir::ComplexType::get(elementTy);
     break;

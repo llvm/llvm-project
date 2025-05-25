@@ -280,7 +280,8 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
-def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex", [TypedAttrInterface]> {
+def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
+                                [TypedAttrInterface]> {
   let summary = "An attribute that contains a constant complex value";
   let description = [{
     The `#cir.const_complex` attribute contains a constant value of complex number
