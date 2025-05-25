@@ -908,6 +908,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_STRICT_FMA:
   case TargetOpcode::G_FMAD: {
+    Known.knownNot(fcSNan);
+
     if ((InterestedClasses & fcNegative) == fcNone)
       break;
 
@@ -973,19 +975,21 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownFPClass KnownSrc;
 
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
-                        Depth + 1);
+      Depth + 1);
+    
+    Known.knownNot(fcSNan);
     Known.knownNot(fcInf);
 
     if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
       Known.knownNot(fcNan);
     break;
   }
+  case TargetOpcode::G_FMAXNUM_IEEE:
+  case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXIMUM:
   case TargetOpcode::G_FMINIMUM:
-  case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FMINIMUMNUM: {
     Register LHS = MI.getOperand(1).getReg();
@@ -998,13 +1002,30 @@ void GISelValueTracking::computeKnownFPClass(Register R,
                         Depth + 1);
 
     bool NeverNaN = KnownLHS.isKnownNeverNaN() || KnownRHS.isKnownNeverNaN();
+    bool NeverSNaN = KnownLHS.isKnownNever(fcSNan) || KnownRHS.isKnownNever(fcSNan);
     Known = KnownLHS | KnownRHS;
+
+    if (Opcode == TargetOpcode::G_FMAXNUM_IEEE ||
+        Opcode == TargetOpcode::G_FMINNUM_IEEE)
+      Known.knownNot(fcSNan);
 
     // If either operand is not NaN, the result is not NaN.
     if (NeverNaN && (Opcode == TargetOpcode::G_FMINNUM ||
                      Opcode == TargetOpcode::G_FMAXNUM ||
                      Opcode == TargetOpcode::G_FMINIMUMNUM ||
                      Opcode == TargetOpcode::G_FMAXIMUMNUM))
+      Known.knownNot(fcNan);
+
+    if (NeverSNaN && (Opcode == TargetOpcode::G_FMINNUM ||
+                      Opcode == TargetOpcode::G_FMAXNUM ||
+                      Opcode == TargetOpcode::G_FMINIMUMNUM ||
+                      Opcode == TargetOpcode::G_FMAXIMUMNUM))
+      Known.knownNot(fcSNan);
+
+    if ((Opcode == TargetOpcode::G_FMAXNUM_IEEE ||
+         Opcode == TargetOpcode::G_FMINNUM_IEEE) &&
+        ((KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNever(fcSNan)) ||
+         (KnownLHS.isKnownNever(fcSNan) && KnownRHS.isKnownNeverNaN())))
       Known.knownNot(fcNan);
 
     if (Opcode == TargetOpcode::G_FMAXNUM ||
@@ -1094,9 +1115,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FCANONICALIZE: {
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
-    computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
-                        Depth + 1);
 
+    computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
+      Depth + 1);
+      
     // This is essentially a stronger form of
     // propagateCanonicalizingSrc. Other "canonicalizing" operations don't
     // actually have an IR canonicalization guarantee.
@@ -1305,6 +1327,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
     KnownFPClass KnownLHS, KnownRHS;
+
+    Known.knownNot(fcSNan);
+
     bool WantNegative =
         (Opcode == TargetOpcode::G_FADD ||
          Opcode == TargetOpcode::G_STRICT_FADD) &&
@@ -1369,6 +1394,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_STRICT_FMUL: {
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
+    
+    Known.knownNot(fcSNan);
+    
     // X * X is always non-negative or a NaN.
     if (LHS == RHS)
       Known.knownNot(fcNegative);
@@ -1415,6 +1443,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FREM: {
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
+    Known.knownNot(fcSNan);
 
     if (LHS == RHS) {
       // TODO: Could filter out snan if we inspect the operand
@@ -1499,6 +1528,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Register Src = MI.getOperand(1).getReg();
     // Infinity, nan and zero propagate from source.
     computeKnownFPClass(R, DemandedElts, InterestedClasses, Known, Depth + 1);
+    Known.knownNot(fcSNan);
 
     LLT DstTy = MRI.getType(Dst).getScalarType();
     const fltSemantics &DstSem = getFltSemanticForLLT(DstTy);
@@ -1521,7 +1551,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FPTRUNC: {
     computeKnownFPClassForFPTrunc(MI, DemandedElts, InterestedClasses, Known,
-                                  Depth);
+      Depth);
+    Known.knownNot(fcSNan);
     break;
   }
   case TargetOpcode::G_SITOFP:
@@ -1697,6 +1728,18 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::COPY: {
     Register Src = MI.getOperand(1).getReg();
     computeKnownFPClass(Src, DemandedElts, InterestedClasses, Known, Depth + 1);
+    break;
+  }
+  case TargetOpcode::G_FTAN:
+  case TargetOpcode::G_FACOS:
+  case TargetOpcode::G_FASIN:
+  case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FATAN2:
+  case TargetOpcode::G_FCOSH:
+  case TargetOpcode::G_FSINH:
+  case TargetOpcode::G_FTANH: {
+    Known.knownNot(fcSNan);
+    // TODO: ...
     break;
   }
   }
