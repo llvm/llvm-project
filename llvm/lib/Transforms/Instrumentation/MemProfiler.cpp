@@ -969,6 +969,46 @@ undriftMemProfRecord(const DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
     UndriftCallStack(CS.Frames);
 }
 
+// Helper function to process CalleeGuids and create value profile metadata
+static void addVPMetadata(Module &M, Instruction &I,
+                          ArrayRef<GlobalValue::GUID> CalleeGuids) {
+  if (!ClMemProfAttachCalleeGuids || CalleeGuids.empty())
+    return;
+
+  if (I.getMetadata(LLVMContext::MD_prof)) {
+    // Use the existing helper function to check for indirect call
+    // target value profiling metadata
+    uint64_t Unused;
+    auto ExistingVD =
+        getValueProfDataFromInst(I, IPVK_IndirectCallTarget, ~0U, Unused);
+    // We don't know how to merge value profile data yet.
+    if (!ExistingVD.empty()) {
+      return;
+    }
+  }
+
+  SmallVector<InstrProfValueData, 4> VDs;
+  uint64_t TotalCount = 0;
+
+  for (GlobalValue::GUID CalleeGUID : CalleeGuids) {
+    // For MemProf, we don't have actual call counts, so we assign
+    // a weight of 1 to each potential target. This provides the
+    // information needed for indirect call promotion without
+    // specific count data.
+    InstrProfValueData VD;
+    VD.Value = CalleeGUID;
+    VD.Count = 1; // Weight for ICP decision making
+    VDs.push_back(VD);
+    TotalCount += VD.Count;
+  }
+
+  if (!VDs.empty()) {
+    // Attach value profile metadata for indirect call targets
+    annotateValueSite(M, I, VDs, TotalCount, IPVK_IndirectCallTarget,
+                      VDs.size());
+  }
+}
+
 static void
 readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             const TargetLibraryInfo &TLI,
@@ -1036,15 +1076,28 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   // Build maps of the location hash to all profile data with that leaf location
   // (allocation info and the callsites).
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
-  // A hash function for std::unordered_set<ArrayRef<Frame>> to work.
-  struct CallStackHash {
-    size_t operator()(ArrayRef<Frame> CS) const {
-      return computeFullStackId(CS);
+
+  struct CallSiteEntry {
+    // Subset of frames for the corresponding CallSiteInfo.
+    ArrayRef<Frame> Frames;
+    // Potential targets for indirect calls.
+    ArrayRef<GlobalValue::GUID> CalleeGuids;
+
+    bool operator==(const CallSiteEntry &Other) const {
+      return Frames.data() == Other.Frames.data() &&
+             Frames.size() == Other.Frames.size();
     }
   };
+
+  struct CallSiteEntryHash {
+    size_t operator()(const CallSiteEntry &Entry) const {
+      return computeFullStackId(Entry.Frames);
+    }
+  };
+
   // For the callsites we need to record slices of the frame array (see comments
-  // below where the map entries are added).
-  std::map<uint64_t, std::unordered_set<ArrayRef<Frame>, CallStackHash>>
+  // below where the map entries are added) along with their CalleeGuids.
+  std::map<uint64_t, std::unordered_set<CallSiteEntry, CallSiteEntryHash>>
       LocHashToCallSites;
   for (auto &AI : MemProfRec->AllocSites) {
     NumOfMemProfAllocContextProfiles++;
@@ -1062,8 +1115,10 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     unsigned Idx = 0;
     for (auto &StackFrame : CS.Frames) {
       uint64_t StackId = computeStackId(StackFrame);
-      LocHashToCallSites[StackId].insert(
-          ArrayRef<Frame>(CS.Frames).drop_front(Idx++));
+      ArrayRef<Frame> FrameSlice = ArrayRef<Frame>(CS.Frames).drop_front(Idx++);
+      ArrayRef<GlobalValue::GUID> CalleeGuids(CS.CalleeGuids);
+      LocHashToCallSites[StackId].insert({FrameSlice, CalleeGuids});
+
       ProfileHasColumns |= StackFrame.Column;
       // Once we find this function, we can stop recording.
       if (StackFrame.Function == FuncGUID)
@@ -1207,63 +1262,17 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // Otherwise, add callsite metadata. If we reach here then we found the
       // instruction's leaf location in the callsites map and not the allocation
       // map.
-      for (auto CallStackIdx : CallSitesIter->second) {
+      for (const auto &CallSiteEntry : CallSitesIter->second) {
         // If we found and thus matched all frames on the call, create and
         // attach call stack metadata.
-        if (stackFrameIncludesInlinedCallStack(CallStackIdx,
+        if (stackFrameIncludesInlinedCallStack(CallSiteEntry.Frames,
                                                InlinedCallStack)) {
           NumOfMemProfMatchedCallSites++;
           addCallsiteMetadata(I, InlinedCallStack, Ctx);
 
-          // Check if this is an indirect call and we have GUID information
-          // from CallSiteInfo to attach value profile metadata
-          if (!CalledFunction && ClMemProfAttachCalleeGuids) {
-            // Check if the instruction already has value profile metadata from
-            // FDO. If it does, skip adding MemProf value profiles to avoid
-            // conflicts. FDO profiles typically have more accurate count data,
-            // so they take precedence over MemProf synthetic counts.
-            if (I.getMetadata(LLVMContext::MD_prof)) {
-              // Use the existing helper function to check for indirect call
-              // target value profiling metadata
-              uint64_t TotalCount;
-              auto ExistingVD = getValueProfDataFromInst(
-                  I, IPVK_IndirectCallTarget, ~0U, TotalCount);
-              if (!ExistingVD.empty()) {
-                // Instruction already has FDO value profile metadata for
-                // indirect call targets, skip adding MemProf value profiles
-                break;
-              }
-            }
-
-            // This is an indirect call, look for CallSites with matching stacks
-            // that have CalleeGuids information
-            for (auto &CS : MemProfRec->CallSites) {
-              if (!CS.CalleeGuids.empty() && stackFrameIncludesInlinedCallStack(
-                                                 CS.Frames, InlinedCallStack)) {
-                // Create value profile data from the CalleeGuids
-                SmallVector<InstrProfValueData, 4> VDs;
-                uint64_t TotalCount = 0;
-
-                for (GlobalValue::GUID CalleeGUID : CS.CalleeGuids) {
-                  // For MemProf, we don't have actual call counts, so we assign
-                  // a weight of 1 to each potential target. This provides the
-                  // information needed for indirect call promotion without
-                  // specific count data.
-                  InstrProfValueData VD;
-                  VD.Value = CalleeGUID;
-                  VD.Count = 1; // Weight for ICP decision making
-                  VDs.push_back(VD);
-                  TotalCount += VD.Count;
-                }
-
-                if (!VDs.empty()) {
-                  // Attach value profile metadata for indirect call targets
-                  annotateValueSite(M, I, VDs, TotalCount,
-                                    IPVK_IndirectCallTarget, VDs.size());
-                }
-                break;
-              }
-            }
+          // Try to attach indirect call metadata if possible.
+          if (!CalledFunction) {
+            addVPMetadata(M, I, CallSiteEntry.CalleeGuids);
           }
 
           // Only need to find one with a matching call stack and add a single
