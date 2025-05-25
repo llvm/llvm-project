@@ -3316,28 +3316,46 @@ static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
       !isOpcWithIntImmediate(And.getNode(), ISD::AND, MaskImm))
     return false;
 
-  // Compute the Known Zero for the AND as this allows us to catch more general
-  // cases than just looking for AND with imm.
-  KnownBits Known = CurDAG->computeKnownBits(And);
+  // In the event that computeKnownBits gives us more bits than we bargained
+  // for, and cause the the result to not be a shifted mask, we
+  // should just focus on the maskImm
 
-  // Non-zero in the sense that they're not provably zero, which is the key
-  // point if we want to use this value.
-  uint64_t NotKnownZero = (~Known.Zero).getZExtValue();
+  // We can optimize any chain of bitwise operations that results in a series of
+  // contiguous bits being set if we know the end result will have those bits
+  // set.
 
-  // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
-  if (!isShiftedMask(Known.Zero.getZExtValue(), VT))
-    return false;
+  KnownBits Known = CurDAG->computeKnownBits(And.getOperand(0));
+  uint64_t OldOne = Known.One.getZExtValue();
+  uint64_t OldZero = Known.Zero.getZExtValue();
 
-  // The bits being inserted must only set those bits that are known to be zero.
-  if ((OrImm & NotKnownZero) != 0) {
-    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
-    // currently handle this case.
-    return false;
+  Known &= KnownBits::makeConstant(APInt(BitWidth, MaskImm));
+  Known |= KnownBits::makeConstant(APInt(BitWidth, OrImm));
+
+  // Now we need to see if any KnownBits changed
+  uint64_t NewOneVal = Known.One.getZExtValue();
+  uint64_t NewZeroVal = Known.Zero.getZExtValue();
+
+  uint64_t ChangedBits = (NewOneVal ^ OldOne) | (NewZeroVal ^ OldZero);
+
+  // Find smallest bitfield insert that encompasses all changed bits and any
+  // known bits between them.
+  if (ChangedBits == 0) {
+    // No change? Then we can just replace the node with the 1st AND operand.
+    CurDAG->ReplaceAllUsesWith(SDValue(N, 0), And->getOperand(0));
+    return true;
   }
 
-  // BFI/BFXIL dst, src, #lsb, #width.
-  int LSB = llvm::countr_one(NotKnownZero);
-  int Width = BitWidth - APInt(BitWidth, NotKnownZero).popcount();
+  // Find the span:
+  APInt ChangedBitsAPInt = APInt(BitWidth, ChangedBits);
+  int LSB = ChangedBitsAPInt.countr_zero();
+  int MSB = BitWidth - ChangedBitsAPInt.countl_zero();
+  int Width = MSB - LSB;
+  uint64_t SpanMask = ((1ULL << Width) - 1) << LSB;
+
+  // Bail if *any* bit in that run is still unknown:
+  uint64_t Unknown = ~(NewOneVal | NewZeroVal);
+  if ((Unknown & SpanMask) != 0)
+    return false;
 
   // BFI/BFXIL is an alias of BFM, so translate to BFM operands.
   unsigned ImmR = (BitWidth - LSB) % BitWidth;
@@ -3348,7 +3366,7 @@ static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
   // ORR.  A BFXIL will use the same constant as the original ORR, so the code
   // should be no worse in this case.
   bool IsBFI = LSB != 0;
-  uint64_t BFIImm = OrImm >> LSB;
+  uint64_t BFIImm = (NewOneVal & SpanMask) >> LSB;
   if (IsBFI && !AArch64_AM::isLogicalImmediate(BFIImm, BitWidth)) {
     // We have a BFI instruction and we know the constant can't be materialized
     // with a ORR-immediate with the zero register.
