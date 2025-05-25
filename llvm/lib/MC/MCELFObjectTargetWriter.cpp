@@ -17,11 +17,5 @@ MCELFObjectTargetWriter::MCELFObjectTargetWriter(bool Is64Bit_, uint8_t OSABI_,
     : OSABI(OSABI_), ABIVersion(ABIVersion_), EMachine(EMachine_),
       HasRelocationAddend(HasRelocationAddend_), Is64Bit(Is64Bit_) {}
 
-bool MCELFObjectTargetWriter::needsRelocateWithSymbol(const MCValue &,
-                                                      const MCSymbol &,
-                                                      unsigned Type) const {
-  return false;
-}
-
 void MCELFObjectTargetWriter::sortRelocs(
     std::vector<ELFRelocationEntry> &Relocs) {}

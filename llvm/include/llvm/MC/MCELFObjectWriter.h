@@ -88,8 +88,9 @@ public:
   virtual unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
                                 bool IsPCRel) const = 0;
 
-  virtual bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                                       unsigned Type) const;
+  virtual bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const {
+    return false;
+  }
 
   virtual void sortRelocs(std::vector<ELFRelocationEntry> &Relocs);
 

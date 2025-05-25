@@ -26,8 +26,7 @@ public:
 
   ~LoongArchELFObjectWriter() override;
 
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override {
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override {
     return EnableRelax;
   }
 

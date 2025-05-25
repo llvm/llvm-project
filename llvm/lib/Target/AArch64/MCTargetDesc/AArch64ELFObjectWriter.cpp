@@ -38,8 +38,7 @@ public:
 protected:
   unsigned getRelocType(const MCFixup &, const MCValue &,
                         bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override;
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
   bool isNonILP32reloc(const MCFixup &Fixup,
                        AArch64MCExpr::Specifier RefKind) const;
 
@@ -490,7 +489,6 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
 }
 
 bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
-                                                     const MCSymbol &,
                                                      unsigned) const {
   // For memory-tagged symbols, ensure that the relocation uses the symbol. For
   // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special

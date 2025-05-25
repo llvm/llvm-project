@@ -1298,7 +1298,7 @@ bool ELFObjectWriter::useSectionSymbol(const MCValue &Val,
       return false;
   }
 
-  return !TargetObjectWriter->needsRelocateWithSymbol(Val, *Sym, Type);
+  return !TargetObjectWriter->needsRelocateWithSymbol(Val, Type);
 }
 
 bool ELFObjectWriter::checkRelocation(SMLoc Loc, const MCSectionELF *From,
