@@ -169,12 +169,6 @@ constexpr encoding_pair all_encoding_data[] = {
     {32, "NATS-SEFI-ADD"},
     {32, "csNATSSEFIADD"},
     {32, "iso-ir-8-2"},
-    {33, "NATS-DANO"},
-    {33, "csNATSDANO"},
-    {33, "iso-ir-9-1"},
-    {34, "NATS-DANO-ADD"},
-    {34, "csNATSDANOADD"},
-    {34, "iso-ir-9-2"},
     {35, "SEN_850200_B"},
     {35, "FI"},
     {35, "ISO646-FI"},
@@ -906,7 +900,6 @@ constexpr encoding_pair all_encoding_data[] = {
     {2259, "csTIS620"},
     {2260, "CP50220"},
     {2260, "csCP50220"},
-    {0, nullptr} // sentinel
 };
 
 constexpr encoding_pair unique_encoding_data[] = {
@@ -940,8 +933,6 @@ constexpr encoding_pair unique_encoding_data[] = {
     {30, "ISO_646.irv:1983"},
     {31, "NATS-SEFI"},
     {32, "NATS-SEFI-ADD"},
-    {33, "NATS-DANO"},
-    {34, "NATS-DANO-ADD"},
     {35, "SEN_850200_B"},
     {36, "KS_C_5601-1987"},
     {37, "ISO-2022-KR"},
