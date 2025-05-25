@@ -1608,6 +1608,7 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   case OperationType::Other:
     return true;
   }
+  llvm_unreachable("Unknown OperationType enum");
 }
 #endif
 
