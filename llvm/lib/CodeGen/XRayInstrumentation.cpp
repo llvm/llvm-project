@@ -298,7 +298,7 @@ bool XRayInstrumentation::run(MachineFunction &MF) {
       InstrumentationOptions op;
       // AArch64 and RISC-V support patching tail calls.
       op.HandleTailcall = MF.getTarget().getTargetTriple().isAArch64() ||
-                          MF.getTarget().getTargetTriple().isRISCV() ;
+                          MF.getTarget().getTargetTriple().isRISCV();
       op.HandleAllReturns = true;
       prependRetWithPatchableExit(MF, TII, op);
       break;
