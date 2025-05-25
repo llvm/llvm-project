@@ -319,12 +319,11 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
   // When layout is available, we can generally compute the difference using the
   // getSymbolOffset path, which also avoids the possible slow fragment walk.
   // However, linker relaxation may cause incorrect fold of A-B if A and B are
-  // separated by a linker-relaxable instruction. If the section contains
-  // instructions and InSet is false (not expressions in directive like
-  // .size/.fill), disable the fast path.
+  // separated by a linker-relaxable fragment. If the section contains
+  // linker-relaxable instruction and InSet is false (not expressions in
+  // directive like .size/.fill), disable the fast path.
   bool Layout = Asm->hasLayout();
-  if (Layout && (InSet || !SecA.hasInstructions() ||
-                 !Asm->getBackend().allowLinkerRelaxation())) {
+  if (Layout && (InSet || !SecA.isLinkerRelaxable())) {
     // If both symbols are in the same fragment, return the difference of their
     // offsets. canGetFragmentOffset(FA) may be false.
     if (FA == FB && !SA.isVariable() && !SB.isVariable()) {
