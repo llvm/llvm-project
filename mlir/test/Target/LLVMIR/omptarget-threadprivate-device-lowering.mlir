@@ -24,7 +24,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   }
 }
 
-// CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]]) {
+// CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]]) #{{[0-9]+}} {
 // CHECK:  %[[ALLOCA:.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK:  %[[ALLOCA_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[ALLOCA]] to ptr
 // CHECK:  store ptr %[[ARG1]], ptr %[[ALLOCA_ASCAST]], align 8

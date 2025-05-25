@@ -35,7 +35,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   llvm.func @_ExternalCall(!llvm.ptr, !llvm.ptr) -> !llvm.struct<()>
 }
 
-// CHECK:      define weak_odr protected amdgpu_kernel void @{{.*}}QQmain_l{{.*}}({{.*}}, {{.*}}) {
+// CHECK:      define weak_odr protected amdgpu_kernel void @{{.*}}QQmain_l{{.*}}({{.*}}, {{.*}}) #{{[0-9]+}} {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:  %[[MOVED_ALLOCA1:.*]] = alloca { ptr }, align 8
 // CHECK-NEXT:  %[[MOVED_ALLOCA2:.*]] = alloca i32, i64 1, align 4
