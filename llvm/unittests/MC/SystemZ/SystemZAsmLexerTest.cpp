@@ -100,7 +100,7 @@ protected:
   void lexAndCheckTokens(StringRef AsmStr,
                          SmallVector<AsmToken::TokenKind> ExpectedTokens) {
     // Get reference to AsmLexer.
-    MCAsmLexer &Lexer = Parser->getLexer();
+    AsmLexer &Lexer = Parser->getLexer();
     // Loop through all expected tokens checking one by one.
     for (size_t I = 0; I < ExpectedTokens.size(); ++I) {
       EXPECT_EQ(Lexer.getTok().getKind(), ExpectedTokens[I]);
@@ -111,7 +111,7 @@ protected:
   void lexAndCheckIntegerTokensAndValues(StringRef AsmStr,
                                          SmallVector<int64_t> ExpectedValues) {
     // Get reference to AsmLexer.
-    MCAsmLexer &Lexer = Parser->getLexer();
+    AsmLexer &Lexer = Parser->getLexer();
     // Loop through all expected tokens and expected values.
     for (size_t I = 0; I < ExpectedValues.size(); ++I) {
       // Skip any EndOfStatement tokens, we're not concerned with them.

@@ -5523,7 +5523,7 @@ ParseStatus ARMAsmParser::parseRotImm(OperandVector &Operands) {
 
 ParseStatus ARMAsmParser::parseModImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   int64_t Imm1, Imm2;
 
   SMLoc S = Parser.getTok().getLoc();

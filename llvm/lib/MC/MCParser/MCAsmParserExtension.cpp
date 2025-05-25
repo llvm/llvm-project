@@ -60,7 +60,7 @@ bool MCAsmParserExtension::parseDirectiveCGProfile(StringRef, SMLoc) {
 }
 
 bool MCAsmParserExtension::maybeParseUniqueID(int64_t &UniqueID) {
-  MCAsmLexer &L = getLexer();
+  AsmLexer &L = getLexer();
   if (L.isNot(AsmToken::Comma))
     return false;
   Lex();

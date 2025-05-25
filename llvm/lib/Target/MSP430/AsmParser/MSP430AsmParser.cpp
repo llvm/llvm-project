@@ -64,7 +64,7 @@ class MSP430AsmParser : public MCTargetAsmParser {
   bool ParseLiteralValues(unsigned Size, SMLoc L);
 
   MCAsmParser &getParser() const { return Parser; }
-  MCAsmLexer &getLexer() const { return Parser.getLexer(); }
+  AsmLexer &getLexer() const { return Parser.getLexer(); }
 
   /// @name Auto-generated Matcher Functions
   /// {
