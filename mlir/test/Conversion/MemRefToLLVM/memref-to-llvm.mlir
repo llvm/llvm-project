@@ -6,6 +6,9 @@
 // because the conversion target is set up differently.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=memref" --split-input-file %s | FileCheck --check-prefixes=ALL,CHECK-INTERFACE %s
 
+// TODO: In some (all?) cases, CHECK and CHECK-INTERFACE outputs are identical.
+// Use a common prefix instead (e.g. ALL).
+
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0F:.*]]: index, %[[ARG1F:.*]]: index, %[[ARG2F:.*]]: index
 // CHECK-INTERFACE-LABEL: func @view(
@@ -133,20 +136,20 @@ func.func @view_empty_memref(%offset: index, %mem: memref<0xi8>) {
 // -----
 
 // ALL-LABEL:   func.func @view_memref_as_rank0(
-// ALL-SAME:      %[[ARG0:.*]]: index,
-// ALL-SAME:      %[[ARG1:.*]]: memref<2xi8>) {
+// ALL-SAME:      %[[OFFSET:.*]]: index,
+// ALL-SAME:      %[[MEM:.*]]: memref<2xi8>) {
 func.func @view_memref_as_rank0(%offset: index, %mem: memref<2xi8>) {
 
-  // ALL: %[[VAL_0:.*]] = builtin.unrealized_conversion_cast %[[ARG0]] : index to i64
-  // ALL: %[[VAL_1:.*]] = builtin.unrealized_conversion_cast %[[ARG1]] : memref<2xi8> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  // ALL: %[[VAL_2:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
-  // ALL: %[[VAL_3:.*]] = llvm.extractvalue %[[VAL_1]][0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  // ALL: %[[VAL_4:.*]] = llvm.insertvalue %[[VAL_3]], %[[VAL_2]][0] : !llvm.struct<(ptr, ptr, i64)>
-  // ALL: %[[VAL_5:.*]] = llvm.extractvalue %[[VAL_1]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  // ALL: %[[VAL_6:.*]] = llvm.getelementptr %[[VAL_5]]{{\[}}%[[VAL_0]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-  // ALL: %[[VAL_7:.*]] = llvm.insertvalue %[[VAL_6]], %[[VAL_4]][1] : !llvm.struct<(ptr, ptr, i64)>
-  // ALL: %[[VAL_8:.*]] = llvm.mlir.constant(0 : index) : i64
-  // ALL: %[[VAL_9:.*]] = llvm.insertvalue %[[VAL_8]], %[[VAL_7]][2] : !llvm.struct<(ptr, ptr, i64)>
+  // ALL:  builtin.unrealized_conversion_cast %[[OFFSET]] : index to i64
+  // ALL:  builtin.unrealized_conversion_cast %[[MEM]] : memref<2xi8> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // ALL:  llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
+  // ALL:  llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // ALL:  llvm.insertvalue %{{.*}}, %{{.*}}[0] : !llvm.struct<(ptr, ptr, i64)>
+  // ALL:  llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // ALL:  llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  // ALL:  llvm.insertvalue %{{.*}}, %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64)>
+  // ALL:  llvm.mlir.constant(0 : index) : i64
+  // ALL:  llvm.insertvalue %{{.*}}, %{{.*}}[2] : !llvm.struct<(ptr, ptr, i64)>
   %memref_view_bf16 = memref.view %mem[%offset][] : memref<2xi8> to memref<bf16>
 
   return
