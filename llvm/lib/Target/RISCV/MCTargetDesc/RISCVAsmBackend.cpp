@@ -105,8 +105,7 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                                   const MCFixup &Fixup,
+bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                    const MCValue &,
                                                    uint64_t Value,
                                                    bool Resolved) const {

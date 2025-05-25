@@ -84,7 +84,6 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
       Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
       return ELF::R_RISCV_NONE;
     case FK_Data_4:
-    case FK_PCRel_4:
       return ELF::R_RISCV_32_PCREL;
     case RISCV::fixup_riscv_pcrel_hi20:
       return ELF::R_RISCV_PCREL_HI20;
