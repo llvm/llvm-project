@@ -86,7 +86,6 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyCERTModule
   clangTidyConcurrencyModule
   clangTidyCppCoreGuidelinesModule
-  clangTidyCustomModule
   clangTidyDarwinModule
   clangTidyFuchsiaModule
   clangTidyGoogleModule
@@ -103,6 +102,10 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyReadabilityModule
   clangTidyZirconModule
   )
+
+if(CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS)
+  list(APPEND ALL_CLANG_TIDY_CHECKS clangTidyCustomModule)
+endif()
 if(CLANG_TIDY_ENABLE_STATIC_ANALYZER)
   list(APPEND ALL_CLANG_TIDY_CHECKS clangTidyMPIModule)
 endif()
