@@ -32,6 +32,7 @@ class MCValue;
 /// should be emitted as part of writeObject().
 class MCObjectWriter {
 protected:
+  MCAssembler *Asm = nullptr;
   /// List of declared file names
   SmallVector<std::pair<std::string, size_t>, 0> FileNames;
   // XCOFF specific: Optional compiler version.
@@ -54,6 +55,10 @@ public:
   MCObjectWriter &operator=(const MCObjectWriter &) = delete;
   virtual ~MCObjectWriter();
 
+  void setAssembler(MCAssembler *A) { Asm = A; }
+
+  MCContext &getContext() const;
+
   /// lifetime management
   virtual void reset();
 
@@ -65,7 +70,7 @@ public:
   ///
   /// This routine is called by the assembler after layout and relaxation is
   /// complete.
-  virtual void executePostLayoutBinding(MCAssembler &Asm) {}
+  virtual void executePostLayoutBinding() {}
 
   /// Record a relocation entry.
   ///
@@ -73,21 +78,18 @@ public:
   /// post layout binding. The implementation is responsible for storing
   /// information about the relocation so that it can be emitted during
   /// writeObject().
-  virtual void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                                const MCFixup &Fixup, MCValue Target,
-                                uint64_t &FixedValue) = 0;
+  virtual void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                                MCValue Target, uint64_t &FixedValue);
 
   /// Check whether the difference (A - B) between two symbol references is
   /// fully resolved.
   ///
   /// Clients are not required to answer precisely and may conservatively return
   /// false, even when a difference is fully resolved.
-  bool isSymbolRefDifferenceFullyResolved(const MCAssembler &Asm,
-                                          const MCSymbol &A, const MCSymbol &B,
+  bool isSymbolRefDifferenceFullyResolved(const MCSymbol &A, const MCSymbol &B,
                                           bool InSet) const;
 
-  virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                                      const MCSymbol &SymA,
+  virtual bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                                       const MCFragment &FB,
                                                       bool InSet,
                                                       bool IsPCRel) const;
@@ -123,7 +125,7 @@ public:
   /// This routine is called by the assembler after layout and relaxation is
   /// complete, fixups have been evaluated and applied, and relocations
   /// generated.
-  virtual uint64_t writeObject(MCAssembler &Asm) = 0;
+  virtual uint64_t writeObject() = 0;
 
   /// @}
 };

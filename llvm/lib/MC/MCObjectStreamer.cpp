@@ -201,9 +201,8 @@ void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
     emitIntValue(AbsValue, Size);
     return;
   }
-  DF->getFixups().push_back(
-      MCFixup::create(DF->getContents().size(), Value,
-                      MCFixup::getKindForSize(Size, false), Loc));
+  DF->getFixups().push_back(MCFixup::create(
+      DF->getContents().size(), Value, MCFixup::getDataKindForSize(Size), Loc));
   DF->appendContents(Size, 0);
 }
 

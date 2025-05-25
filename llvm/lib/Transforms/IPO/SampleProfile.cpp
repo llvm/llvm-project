@@ -897,9 +897,7 @@ updateIDTMetaData(Instruction &Inst,
 
   llvm::sort(NewCallTargets,
              [](const InstrProfValueData &L, const InstrProfValueData &R) {
-               if (L.Count != R.Count)
-                 return L.Count > R.Count;
-               return L.Value > R.Value;
+               return std::tie(L.Count, L.Value) > std::tie(R.Count, R.Value);
              });
 
   uint32_t MaxMDCount =
