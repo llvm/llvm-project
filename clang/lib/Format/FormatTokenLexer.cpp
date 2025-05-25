@@ -636,6 +636,36 @@ bool FormatTokenLexer::canPrecedeRegexLiteral(FormatToken *Prev) {
   return true;
 }
 
+void FormatTokenLexer::tryParseJavaTextBlock() {
+  if (FormatTok->TokenText != "\"\"")
+    return;
+
+  const auto *S = Lex->getBufferLocation();
+  const auto *End = Lex->getBuffer().end();
+
+  if (S == End || *S != '\"')
+    return;
+
+  ++S; // Skip the `"""` that begins a text block.
+
+  // Find the `"""` that ends the text block.
+  for (int Count = 0; Count < 3 && S < End; ++S) {
+    switch (*S) {
+    case '\\':
+      Count = -1;
+      break;
+    case '\"':
+      ++Count;
+      break;
+    default:
+      Count = 0;
+    }
+  }
+
+  // Ignore the possibly invalid text block.
+  resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(S)));
+}
+
 // Tries to parse a JavaScript Regex literal starting at the current token,
 // if that begins with a slash and is in a location where JavaScript allows
 // regex literals. Changes the current token to a regex literal and updates
@@ -1326,6 +1356,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
     FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
     ++Column;
     StateStack.push(LexerState::TOKEN_STASHED);
+  } else if (Style.Language == FormatStyle::LK_Java &&
+             FormatTok->is(tok::string_literal)) {
+    tryParseJavaTextBlock();
   }
 
   if (Style.isVerilog() && Tokens.size() > 0 &&
