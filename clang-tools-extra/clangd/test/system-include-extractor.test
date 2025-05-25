@@ -32,6 +32,9 @@
 # RUN: echo 'printf "End of search list.\r\n" >&2' >> %t.dir/bin/my_driver.sh
 # RUN: chmod +x %t.dir/bin/my_driver.sh
 
+# Create fake clang-tidy config to ensure sandbox
+# RUN: echo 'InheritParentConfig: false' >> %t.dir/.clang-tidy
+
 # Create header files my/dir/a.h and my/dir2/b.h
 # RUN: mkdir -p %t.dir/my/dir
 # RUN: touch %t.dir/my/dir/a.h
