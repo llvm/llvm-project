@@ -85,8 +85,8 @@ public:
     }
   }
 
-  virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                                const MCFixup &Fixup, bool IsPCRel) const = 0;
+  virtual unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                                bool IsPCRel) const = 0;
 
   virtual bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                        unsigned Type) const;

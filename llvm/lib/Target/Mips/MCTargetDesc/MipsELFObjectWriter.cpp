@@ -48,8 +48,8 @@ public:
 
   ~MipsELFObjectWriter() override = default;
 
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
   void sortRelocs(std::vector<ELFRelocationEntry> &Relocs) override;
@@ -152,9 +152,8 @@ MipsELFObjectWriter::MipsELFObjectWriter(uint8_t OSABI,
                                          bool HasRelocationAddend, bool Is64)
     : MCELFObjectTargetWriter(Is64, OSABI, ELF::EM_MIPS, HasRelocationAddend) {}
 
-unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned MipsELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                            const MCValue &Target,
-                                           const MCFixup &Fixup,
                                            bool IsPCRel) const {
   // Determine the type of the relocation.
   unsigned Kind = Fixup.getTargetKind();

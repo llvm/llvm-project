@@ -36,8 +36,8 @@ public:
   ~AArch64ELFObjectWriter() override = default;
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
   bool isNonILP32reloc(const MCFixup &Fixup,
@@ -83,9 +83,8 @@ bool AArch64ELFObjectWriter::isNonILP32reloc(
   return false;
 }
 
-unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                               const MCValue &Target,
-                                              const MCFixup &Fixup,
                                               bool IsPCRel) const {
   unsigned Kind = Fixup.getTargetKind();
   AArch64MCExpr::Specifier RefKind =

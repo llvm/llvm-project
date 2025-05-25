@@ -32,8 +32,8 @@ public:
 
 protected:
   // Override MCELFObjectTargetWriter.
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
   unsigned getAbsoluteReloc(SMLoc Loc, unsigned Kind) const;
@@ -99,9 +99,8 @@ unsigned SystemZELFObjectWriter::getPCRelReloc(SMLoc Loc, unsigned Kind) const {
   return 0;
 }
 
-unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                               const MCValue &Target,
-                                              const MCFixup &Fixup,
                                               bool IsPCRel) const {
   SMLoc Loc = Fixup.getLoc();
   unsigned Kind = Fixup.getKind();

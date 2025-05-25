@@ -35,8 +35,8 @@ public:
   }
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 }
 
@@ -46,9 +46,8 @@ RISCVELFObjectWriter::RISCVELFObjectWriter(uint8_t OSABI, bool Is64Bit)
 
 RISCVELFObjectWriter::~RISCVELFObjectWriter() = default;
 
-unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
-                                            const MCFixup &Fixup,
                                             bool IsPCRel) const {
   const MCExpr *Expr = Fixup.getValue();
   unsigned Kind = Fixup.getTargetKind();

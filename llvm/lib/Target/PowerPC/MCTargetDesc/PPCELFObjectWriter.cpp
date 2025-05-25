@@ -25,8 +25,8 @@ namespace {
     PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI);
 
   protected:
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
+    unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                          bool IsPCRel) const override;
 
     bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                  unsigned Type) const override;
@@ -38,8 +38,8 @@ PPCELFObjectWriter::PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI)
                             Is64Bit ?  ELF::EM_PPC64 : ELF::EM_PPC,
                             /*HasRelocationAddend*/ true) {}
 
-unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned PPCELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
   SMLoc Loc = Fixup.getValue()->getLoc();
   auto Spec = static_cast<PPCMCExpr::Specifier>(Target.getSpecifier());

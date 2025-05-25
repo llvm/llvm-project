@@ -30,8 +30,8 @@ public:
   virtual ~XtensaObjectWriter();
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
 };
@@ -43,8 +43,8 @@ XtensaObjectWriter::XtensaObjectWriter(uint8_t OSABI)
 
 XtensaObjectWriter::~XtensaObjectWriter() {}
 
-unsigned XtensaObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned XtensaObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
 
   switch ((unsigned)Fixup.getKind()) {

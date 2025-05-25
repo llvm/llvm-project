@@ -32,8 +32,8 @@ public:
   }
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
   bool EnableRelax;
 };
 } // end namespace
@@ -46,9 +46,8 @@ LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit,
 
 LoongArchELFObjectWriter::~LoongArchELFObjectWriter() {}
 
-unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned LoongArchELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                                 const MCValue &Target,
-                                                const MCFixup &Fixup,
                                                 bool IsPCRel) const {
   switch (Target.getSpecifier()) {
   case ELF::R_LARCH_TLS_LE_HI20:
