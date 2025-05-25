@@ -184,12 +184,8 @@ public:
 
   const MCSymbol &findAliasedSymbol(const MCSymbol &Sym) const;
 
-  /// \name Lifetime management Methods
-  /// @{
-
   void reset() override;
-
-  /// @}
+  void setAssembler(MCAssembler *Asm) override;
 
   /// \name Utility Methods
   /// @{
@@ -208,7 +204,7 @@ public:
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);
   }
-  uint64_t getSymbolAddress(const MCSymbol &S, const MCAssembler &Asm) const;
+  uint64_t getSymbolAddress(const MCSymbol &S) const;
 
   uint64_t getFragmentAddress(const MCAssembler &Asm,
                               const MCFragment *Fragment) const;
