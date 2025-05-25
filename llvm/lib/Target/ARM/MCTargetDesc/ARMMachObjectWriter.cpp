@@ -158,7 +158,7 @@ void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
     return;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, Asm);
+  uint32_t Value = Writer->getSymbolAddress(*A);
   uint32_t Value2 = 0;
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
@@ -174,7 +174,7 @@ void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_HALF_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(*SB, Asm);
+    Value2 = Writer->getSymbolAddress(*SB);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -266,7 +266,7 @@ void ARMMachObjectWriter::recordARMScatteredRelocation(
     return;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, Asm);
+  uint32_t Value = Writer->getSymbolAddress(*A);
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
@@ -284,7 +284,7 @@ void ARMMachObjectWriter::recordARMScatteredRelocation(
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(*SB, Asm);
+    Value2 = Writer->getSymbolAddress(*SB);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -422,8 +422,8 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
       int64_t Res = Val.getConstant();
       bool isAbs = Val.isAbsolute();
       if (Relocatable && Val.getAddSym() && Val.getSubSym()) {
-        Res += Writer->getSymbolAddress(*Val.getAddSym(), Asm) -
-               Writer->getSymbolAddress(*Val.getSubSym(), Asm);
+        Res += Writer->getSymbolAddress(*Val.getAddSym()) -
+               Writer->getSymbolAddress(*Val.getSubSym());
         isAbs = true;
       }
       if (isAbs) {
