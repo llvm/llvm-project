@@ -10,6 +10,7 @@
 #include "MCTargetDesc/ARMMCExpr.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
@@ -25,23 +26,20 @@ using namespace llvm;
 
 namespace {
 
-  class ARMELFObjectWriter : public MCELFObjectTargetWriter {
-    enum { DefaultEABIVersion = 0x05000000U };
+class ARMELFObjectWriter : public MCELFObjectTargetWriter {
+  enum { DefaultEABIVersion = 0x05000000U };
 
-    unsigned GetRelocTypeInner(const MCValue &Target, const MCFixup &Fixup,
-                               bool IsPCRel, MCContext &Ctx) const;
+public:
+  ARMELFObjectWriter(uint8_t OSABI);
 
-  public:
-    ARMELFObjectWriter(uint8_t OSABI);
+  ~ARMELFObjectWriter() override = default;
 
-    ~ARMELFObjectWriter() override = default;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
-
-    bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                                 unsigned Type) const override;
-  };
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+                               unsigned Type) const override;
+};
 
 } // end anonymous namespace
 
@@ -50,9 +48,16 @@ ARMELFObjectWriter::ARMELFObjectWriter(uint8_t OSABI)
                             ELF::EM_ARM,
                             /*HasRelocationAddend*/ false) {}
 
-bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
-                                                 const MCSymbol &,
+bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
+                                                 const MCSymbol &Sym,
                                                  unsigned Type) const {
+  // If the symbol is a thumb function the final relocation must set the lowest
+  // bit. With a symbol that is done by just having the symbol have that bit
+  // set, so we would lose the bit if we relocated with the section.
+  // We could use the section but add the bit to the relocation value.
+  if (Asm->isThumbFunc(Val.getAddSym()))
+    return true;
+
   // FIXME: This is extremely conservative. This really needs to use an
   // explicit list with a clear explanation for why each realocation needs to
   // point to the symbol, not to the section.
@@ -69,16 +74,9 @@ bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
 // Need to examine the Fixup when determining whether to
 // emit the relocation as an explicit symbol or as a section relative
 // offset
-unsigned ARMELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned ARMELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
-  return GetRelocTypeInner(Target, Fixup, IsPCRel, Ctx);
-}
-
-unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
-                                               const MCFixup &Fixup,
-                                               bool IsPCRel,
-                                               MCContext &Ctx) const {
   unsigned Kind = Fixup.getTargetKind();
   uint8_t Specifier = Target.getSpecifier();
   auto CheckFDPIC = [&](uint32_t Type) {
