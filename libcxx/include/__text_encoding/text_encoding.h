@@ -545,7 +545,8 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr const __encoding_data* __find_encoding_data_by_id(id __i) {
-    _LIBCPP_ASSERT(__i >= id::other && __i <= id::CP50220, "Passing invalid id to text_encoding constructor!");
+    _LIBCPP_ASSERT(__i >= id::other && __i <= id::CP50220 && __id_rep(__i) != 33 && __id_rep(__i) != 34,
+                   "Passing invalid id to text_encoding constructor!");
     auto __found = std::lower_bound(std::begin(__text_encoding_data), std::end(__text_encoding_data), __id_rep(__i));
     return __found != std::end(__text_encoding_data)
              ? __found
