@@ -229,6 +229,8 @@ public:
   void writeFragmentPadding(raw_ostream &OS, const MCEncodedFragment &F,
                             uint64_t FSize) const;
 
+  void reportError(SMLoc L, const Twine &Msg) const;
+
   void dump() const;
 };
 

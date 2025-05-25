@@ -154,10 +154,9 @@ bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
   // On error claim to have completely evaluated the fixup, to prevent any
   // further processing from being done.
   const MCExpr *Expr = Fixup.getValue();
-  MCContext &Ctx = getContext();
   Value = 0;
   if (!Expr->evaluateAsRelocatable(Target, this)) {
-    Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
+    reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
   }
 
@@ -218,13 +217,12 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     auto &FF = cast<MCFillFragment>(F);
     int64_t NumValues = 0;
     if (!FF.getNumValues().evaluateKnownAbsolute(NumValues, *this)) {
-      getContext().reportError(FF.getLoc(),
-                               "expected assembly-time absolute expression");
+      reportError(FF.getLoc(), "expected assembly-time absolute expression");
       return 0;
     }
     int64_t Size = NumValues * FF.getValueSize();
     if (Size < 0) {
-      getContext().reportError(FF.getLoc(), "invalid number of bytes");
+      reportError(FF.getLoc(), "invalid number of bytes");
       return 0;
     }
     return Size;
@@ -268,9 +266,8 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     const MCOrgFragment &OF = cast<MCOrgFragment>(F);
     MCValue Value;
     if (!OF.getOffset().evaluateAsValue(Value, *this)) {
-      getContext().reportError(OF.getLoc(),
-                               "expected assembly-time absolute expression");
-        return 0;
+      reportError(OF.getLoc(), "expected assembly-time absolute expression");
+      return 0;
     }
 
     uint64_t FragmentOffset = getFragmentOffset(OF);
@@ -278,16 +275,16 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     if (const auto *SA = Value.getAddSym()) {
       uint64_t Val;
       if (!getSymbolOffset(*SA, Val)) {
-        getContext().reportError(OF.getLoc(), "expected absolute expression");
+        reportError(OF.getLoc(), "expected absolute expression");
         return 0;
       }
       TargetLocation += Val;
     }
     int64_t Size = TargetLocation - FragmentOffset;
     if (Size < 0 || Size >= 0x40000000) {
-      getContext().reportError(
-          OF.getLoc(), "invalid .org offset '" + Twine(TargetLocation) +
-                           "' (at offset '" + Twine(FragmentOffset) + "')");
+      reportError(OF.getLoc(), "invalid .org offset '" + Twine(TargetLocation) +
+                                   "' (at offset '" + Twine(FragmentOffset) +
+                                   "')");
       return 0;
     }
     return Size;
@@ -481,17 +478,15 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
   const MCExpr *Expr = Symbol.getVariableValue();
   MCValue Value;
   if (!Expr->evaluateAsValue(Value, *this)) {
-    getContext().reportError(Expr->getLoc(),
-                             "expression could not be evaluated");
+    reportError(Expr->getLoc(), "expression could not be evaluated");
     return nullptr;
   }
 
   const MCSymbol *SymB = Value.getSubSym();
   if (SymB) {
-    getContext().reportError(
-        Expr->getLoc(),
-        Twine("symbol '") + SymB->getName() +
-            "' could not be evaluated in a subtraction expression");
+    reportError(Expr->getLoc(),
+                Twine("symbol '") + SymB->getName() +
+                    "' could not be evaluated in a subtraction expression");
     return nullptr;
   }
 
@@ -501,9 +496,8 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
 
   const MCSymbol &ASym = *A;
   if (ASym.isCommon()) {
-    getContext().reportError(Expr->getLoc(),
-                             "Common symbol '" + ASym.getName() +
-                                 "' cannot be used in assignment expr");
+    reportError(Expr->getLoc(), "Common symbol '" + ASym.getName() +
+                                    "' cannot be used in assignment expr");
     return nullptr;
   }
 
@@ -690,8 +684,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     assert(ControlledNopLength >= 0 && "Expected non-negative NOP size");
 
     if (ControlledNopLength > MaximumNopLength) {
-      Asm.getContext().reportError(NF.getLoc(),
-                                   "illegal NOP size " +
+      Asm.reportError(NF.getLoc(), "illegal NOP size " +
                                        std::to_string(ControlledNopLength) +
                                        ". (expected within [0, " +
                                        std::to_string(MaximumNopLength) + "])");
@@ -800,15 +793,13 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
         // directives to fill the contents of virtual sections.
         const MCDataFragment &DF = cast<MCDataFragment>(F);
         if (DF.getFixups().size())
-          getContext().reportError(SMLoc(), Sec->getVirtualSectionKind() +
-                                                " section '" + Sec->getName() +
-                                                "' cannot have fixups");
+          reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
+                                   Sec->getName() + "' cannot have fixups");
         for (char C : DF.getContents())
           if (C) {
-            getContext().reportError(SMLoc(),
-                                     Sec->getVirtualSectionKind() +
-                                         " section '" + Sec->getName() +
-                                         "' cannot have non-zero initializers");
+            reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
+                                     Sec->getName() +
+                                     "' cannot have non-zero initializers");
             break;
           }
         break;
@@ -1050,9 +1041,9 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
     bool Relaxed, UseZeroPad;
     std::tie(Relaxed, UseZeroPad) = getBackend().relaxLEB128(LF, Value);
     if (!Relaxed) {
-      getContext().reportError(LF.getValue().getLoc(),
-                               Twine(LF.isSigned() ? ".s" : ".u") +
-                                   "leb128 expression is not absolute");
+      reportError(LF.getValue().getLoc(),
+                  Twine(LF.isSigned() ? ".s" : ".u") +
+                      "leb128 expression is not absolute");
       LF.setValue(MCConstantExpr::create(0, Context));
     }
     uint8_t Tmp[10]; // maximum size: ceil(64/7)
@@ -1165,8 +1156,8 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF) {
   int64_t Value;
   bool Abs = DF.getAddrDelta().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
-    getContext().reportError(DF.getAddrDelta().getLoc(),
-                             "invalid CFI advance_loc expression");
+    reportError(DF.getAddrDelta().getLoc(),
+                "invalid CFI advance_loc expression");
     DF.setAddrDelta(MCConstantExpr::create(0, Context));
     return false;
   }
@@ -1242,6 +1233,10 @@ bool MCAssembler::layoutOnce() {
       if (relaxFragment(Frag))
         Changed = true;
   return Changed;
+}
+
+void MCAssembler::reportError(SMLoc L, const Twine &Msg) const {
+  getContext().reportError(L, Msg);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
