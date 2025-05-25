@@ -252,6 +252,7 @@ void registerTestPasses() {
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
   mlir::test::registerTestInterfaces();
+  mlir::test::registerTestIrdlTestDialectConversionPass();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestLastModifiedPass();
   mlir::test::registerTestLinalgDecomposeOps();
@@ -304,7 +305,6 @@ void registerTestPasses() {
   mlir::test::registerTestVectorReductionToSPIRVDotProd();
   mlir::test::registerTestVulkanRunnerPipeline();
   mlir::test::registerTestWrittenToPass();
-  mlir::test::registerTestIrdlTestDialectConversionPass();
   mlir::test::registerTestXeGPULowerings();
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
   mlir::test::registerTestDialectConversionPasses();
@@ -329,12 +329,12 @@ int main(int argc, char **argv) {
   registerAllGPUToLLVMIRTranslations(registry);
 
 #ifdef MLIR_INCLUDE_TESTS
+  ::test::registerIrdlTestDialect(registry);
   ::test::registerTestDialect(registry);
   ::test::registerTestTransformDialectExtension(registry);
   ::test::registerTestTransformsTransformDialectExtension(registry);
   ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
   ::test::registerTestDynDialect(registry);
-  ::test::registerIrdlTestDialect(registry);
 #endif
   return mlir::asMainReturnCode(mlir::MlirOptMain(
       argc, argv, "MLIR modular optimizer driver\n", registry));
