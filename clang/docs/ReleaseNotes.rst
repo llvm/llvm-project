@@ -315,7 +315,7 @@ New Compiler Flags
 
 - New option ``-ftime-report-json`` added which outputs the same timing data as ``-ftime-report`` but formatted as JSON.
 
-- New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunites.
+- New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
 
 Deprecated Compiler Flags
 -------------------------
