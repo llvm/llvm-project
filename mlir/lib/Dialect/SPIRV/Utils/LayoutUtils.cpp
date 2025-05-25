@@ -91,6 +91,8 @@ Type VulkanLayoutUtils::decorateType(Type type, VulkanLayoutUtils::Size &size,
     return decorateType(arrayType, size, alignment);
   if (auto vectorType = dyn_cast<VectorType>(type))
     return decorateType(vectorType, size, alignment);
+  if (auto matrixType = dyn_cast<spirv::MatrixType>(type))
+    return decorateType(matrixType, size, alignment);
   if (auto arrayType = dyn_cast<spirv::RuntimeArrayType>(type)) {
     size = std::numeric_limits<Size>().max();
     return decorateType(arrayType, alignment);
@@ -136,6 +138,25 @@ Type VulkanLayoutUtils::decorateType(spirv::ArrayType arrayType,
   size = elementSize * numElements;
   alignment = elementAlignment;
   return spirv::ArrayType::get(memberType, numElements, elementSize);
+}
+
+Type VulkanLayoutUtils::decorateType(spirv::MatrixType matrixType,
+                                     VulkanLayoutUtils::Size &size,
+                                     VulkanLayoutUtils::Size &alignment) {
+  const unsigned numColumns = matrixType.getNumColumns();
+  Type columnType = matrixType.getColumnType();
+  unsigned numElements = matrixType.getNumElements();
+  Type elementType = matrixType.getElementType();
+  Size elementSize = 0;
+  Size elementAlignment = 1;
+
+  decorateType(elementType, elementSize, elementAlignment);
+  // According to the Vulkan spec:
+  // "A matrix type inherits scalar alignment from the equivalent array
+  // declaration."
+  size = elementSize * numElements;
+  alignment = elementAlignment;
+  return spirv::MatrixType::get(columnType, numColumns);
 }
 
 Type VulkanLayoutUtils::decorateType(spirv::RuntimeArrayType arrayType,
