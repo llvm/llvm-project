@@ -1182,6 +1182,11 @@ void ELFObjectWriter::reset() {
   MCObjectWriter::reset();
 }
 
+void ELFObjectWriter::setAssembler(MCAssembler *Asm) {
+  MCObjectWriter::setAssembler(Asm);
+  TargetObjectWriter->setAssembler(Asm);
+}
+
 bool ELFObjectWriter::hasRelocationAddend() const {
   return TargetObjectWriter->hasRelocationAddend();
 }
@@ -1303,15 +1308,15 @@ bool ELFObjectWriter::useSectionSymbol(const MCValue &Val,
   return !TargetObjectWriter->needsRelocateWithSymbol(Val, *Sym, Type);
 }
 
-bool ELFObjectWriter::checkRelocation(MCContext &Ctx, SMLoc Loc,
-                                      const MCSectionELF *From,
+bool ELFObjectWriter::checkRelocation(SMLoc Loc, const MCSectionELF *From,
                                       const MCSectionELF *To) {
   if (isDwoSection(*From)) {
-    Ctx.reportError(Loc, "A dwo section may not contain relocations");
+    getContext().reportError(Loc, "A dwo section may not contain relocations");
     return false;
   }
   if (To && isDwoSection(*To)) {
-    Ctx.reportError(Loc, "A relocation may not refer to a dwo section");
+    getContext().reportError(Loc,
+                             "A relocation may not refer to a dwo section");
     return false;
   }
   return true;
@@ -1339,7 +1344,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   const MCSectionELF *SecA = (SymA && SymA->isInSection())
                                  ? cast<MCSectionELF>(&SymA->getSection())
                                  : nullptr;
-  if (DwoOS && !checkRelocation(Ctx, Fixup.getLoc(), &FixupSection, SecA))
+  if (DwoOS && !checkRelocation(Fixup.getLoc(), &FixupSection, SecA))
     return;
 
   bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
