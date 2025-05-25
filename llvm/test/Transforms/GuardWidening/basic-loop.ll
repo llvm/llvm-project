@@ -16,7 +16,8 @@ define void @widen_within_loop(i1 %cond_0, i1 %cond_1, i1 %cond_2) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    store i32 0, ptr @G, align 4
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1_GW_FR]]
-; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[WIDE_CHK]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND_1_GW_FR]], [[COND_0]]
+; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[TMP0]], [[COND_2_GW_FR]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK1]]) [ "deopt"(i32 0) ]
 ; CHECK-NEXT:    store i32 1, ptr @G, align 4
 ; CHECK-NEXT:    store i32 2, ptr @G, align 4
@@ -44,7 +45,8 @@ define void @widen_into_preheader(i1 %cond_0, i1 %cond_1, i1 %cond_2) {
 ; CHECK-NEXT:    [[COND_1_GW_FR:%.*]] = freeze i1 [[COND_1:%.*]]
 ; CHECK-NEXT:    store i32 0, ptr @G, align 4
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1_GW_FR]]
-; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[WIDE_CHK]], [[COND_2_GW_FR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[COND_1_GW_FR]], [[COND_0]]
+; CHECK-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[TMP0]], [[COND_2_GW_FR]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK1]]) [ "deopt"(i32 0) ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
