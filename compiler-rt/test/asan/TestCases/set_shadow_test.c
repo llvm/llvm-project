@@ -32,7 +32,11 @@ void f(long arg) {
   size_t shadow_offset;
   size_t shadow_scale;
   __asan_get_shadow_mapping(&shadow_scale, &shadow_offset);
+#if !defined(__LP64__) || !defined(_AIX)
   size_t addr = (((size_t)a) >> shadow_scale) + shadow_offset;
+#else
+  size_t addr = (((size_t)a << 6) >> (6 + shadow_scale)) + shadow_offset;
+#endif
 
   switch (arg) {
   // X00-NOT: AddressSanitizer

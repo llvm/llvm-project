@@ -24,9 +24,9 @@ int main(int argc, char **argv) {
     // CHECK: stack-buffer-overflow
     // CHECK: {{WRITE of size .* at 0x.* thread T0}}
     // CHECK: {{in .*wait}}
-    // CHECK: {{in main .*wait.cpp:}}
+    // CHECK: {{in \.?main .*wait.cpp:}}
     // CHECK: is located in stack of thread T0 at offset
-    // CHECK: {{in main}}
+    // CHECK: {{in \.?main}}
     return res == -1 ? 1 : 0;
   }
   // child

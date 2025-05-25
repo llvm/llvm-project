@@ -15,6 +15,10 @@
 // https://reviews.llvm.org/D111703 made compiler incompatible with released NDK.
 // UNSUPPORTED: android && arm-target-arch
 
+// make_exception_ptr on AIX will call __cxa_throw, and __cxa_throw will call malloc
+// and memset, these function call will change shadow memory unexpectly.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include "defines.h"
 #include <assert.h>
 #include <exception>

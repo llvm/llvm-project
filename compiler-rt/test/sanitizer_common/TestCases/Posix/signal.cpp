@@ -1,5 +1,8 @@
 // RUN: %clangxx -std=c++11 -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 
+// line 73 signal(SIGRTMAX + 1, &signal_handler) will not fail on AIX, SIGRTMAX + 1 is a valid signal.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <assert.h>
 #include <climits>
 #include <errno.h>

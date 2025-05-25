@@ -6,6 +6,10 @@
 // interceptor seems to not work.
 // XFAIL: target={{.*-windows-gnu}}
 
+// clang will expand frexpl to a function(with mangle name) that calls frexp.
+// On AIX, frexp can not be intercepted.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
