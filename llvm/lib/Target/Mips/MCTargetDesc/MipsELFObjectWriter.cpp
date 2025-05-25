@@ -178,8 +178,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   case FK_NONE:
     return ELF::R_MIPS_NONE;
   case FK_Data_1:
-    Ctx.reportError(Fixup.getLoc(),
-                    "MIPS does not support one byte relocations");
+    reportError(Fixup.getLoc(), "MIPS does not support one byte relocations");
     return ELF::R_MIPS_NONE;
   case Mips::fixup_Mips_16:
   case FK_Data_2:
@@ -341,7 +340,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MICROMIPS_JALR;
   }
 
-  Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+  reportError(Fixup.getLoc(), "unsupported relocation type");
   return ELF::R_MIPS_NONE;
 }
 
