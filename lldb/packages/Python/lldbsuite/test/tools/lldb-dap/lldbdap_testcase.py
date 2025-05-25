@@ -105,7 +105,7 @@ class DAPTestCaseBase(TestBase):
         return False
 
     def verify_breakpoint_hit(
-            self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, reason: Optional[str] = None
+        self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, reason: Optional[str] = None
     ):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
@@ -119,9 +119,9 @@ class DAPTestCaseBase(TestBase):
                 if "reason" not in body:
                     continue
                 if body["reason"] not in (
-                        "breakpoint",
-                        "instruction breakpoint",
-                        "data breakpoint",
+                    "breakpoint",
+                    "instruction breakpoint",
+                    "data breakpoint",
                 ):
                     continue
                 if "description" not in body:
@@ -334,12 +334,12 @@ class DAPTestCaseBase(TestBase):
         return self.dap_server.wait_for_stopped(timeout)
 
     def continue_to_breakpoint(
-            self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT, reason: Optional[str] = None
+        self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT, reason: Optional[str] = None
     ):
         self.continue_to_breakpoints([breakpoint_id], timeout, reason)
 
     def continue_to_breakpoints(
-            self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, reason: Optional[str] = None
+        self, breakpoint_ids, timeout=DEFAULT_TIMEOUT, reason: Optional[str] = None
     ):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids, timeout, reason)

@@ -1044,10 +1044,10 @@ class DebugCommunication(object):
     def request_dataBreakpointInfo(
         self,
         name: str,
-            variablesReference: Optional[int] | None = None,
-            frameIndex: Optional[int] = 0,
-            bytes_: Optional[int] = None,
-            asAddress: Optional[bool] = None,
+        variablesReference: Optional[int] | None = None,
+        frameIndex: Optional[int] = 0,
+        bytes_: Optional[int] = None,
+        asAddress: Optional[bool] = None,
     ):
         args_dict = {}
         if asAddress is not None:
