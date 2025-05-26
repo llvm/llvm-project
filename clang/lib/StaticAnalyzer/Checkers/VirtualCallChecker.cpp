@@ -55,7 +55,7 @@ public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
   /// Identifies this checker family for debugging purposes.
-  StringRef getTagDescription() const override { return "VirtualCallChecker"; }
+  StringRef getDebugTag() const override { return "VirtualCallChecker"; }
 
 private:
   void registerCtorDtorCallInState(bool IsBeginFunction,
