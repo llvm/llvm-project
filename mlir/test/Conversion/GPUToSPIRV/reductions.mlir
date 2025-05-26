@@ -798,10 +798,10 @@ module attributes {
 } {
 
 gpu.module @kernels {
-  // CHECK-LABEL:  spirv.func @test
+  // CHECK-LABEL:  spirv.func @test_subgroup_reduce_clustered
   //  CHECK-SAME: (%[[ARG:.*]]: f32)
   //  CHECK: %[[CLUSTER_SIZE:.*]] = spirv.Constant 8 : i32
-  gpu.func @test22(%arg : f32) kernel
+  gpu.func @test_subgroup_reduce_clustered(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Subgroup> <ClusteredReduce> %[[ARG]] cluster_size(%[[CLUSTER_SIZE]]) : f32, i32 -> f32
     %reduced = gpu.subgroup_reduce add %arg cluster(size = 8) : (f32) -> (f32)
@@ -821,7 +821,7 @@ module attributes {
 } {
 
 gpu.module @kernels {
-  gpu.func @test22(%arg : f32) kernel
+  gpu.func @test_invalid_subgroup_reduce_clustered_stride(%arg : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // expected-error @+1 {{failed to legalize operation 'gpu.subgroup_reduce'}}
     %reduced = gpu.subgroup_reduce add %arg cluster(size = 8, stride = 2) : (f32) -> (f32)
