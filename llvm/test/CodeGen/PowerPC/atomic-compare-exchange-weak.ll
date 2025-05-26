@@ -1,4 +1,4 @@
-; Test the generate asm of function 
+; Test the generation of asm for the function:
 ; int foo(_Atomic int *cp, int *old, int c) {
 ;  return atomic_compare_exchange_weak_explicit(cp, old, c, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 ; }  
