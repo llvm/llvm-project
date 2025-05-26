@@ -126,10 +126,9 @@ exit:
 ;; only the inner cycle is reported as diverged.
 ;;
 ;; CHECK-LABEL: UniformityInfo for function 'headers_b_t':
-;; NOCHECK: CYCLES ASSSUMED DIVERGENT:
-;; NOCHECK:   depth=2: entries(T P) S Q R
-;; NOCHECK: CYCLES WITH DIVERGENT EXIT:
-;; NOCHECK:   depth=1: entries(B A) D T S Q P R C
+;; CHECK: CYCLES ASSSUMED DIVERGENT:
+;; CHECK:   depth=2: entries(T P) S Q R
+;; CHECK-NOT: CYCLES WITH DIVERGENT EXIT:
 
 define amdgpu_kernel void @headers_b_t(i32 %a, i32 %b, i32 %c) {
 entry:
