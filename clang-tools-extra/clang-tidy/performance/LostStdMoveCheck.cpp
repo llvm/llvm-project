@@ -70,7 +70,18 @@ void LostStdMoveCheck::registerMatchers(MatchFinder* Finder) {
           hasDeclaration(
               varDecl(hasAncestor(functionDecl().bind("func"))).bind("decl")),
 
-          hasParent(expr(hasParent(cxxConstructExpr())).bind("use_parent")))
+          anyOf(
+
+              // f(x)
+              hasParent(expr(hasParent(cxxConstructExpr())).bind("use_parent")),
+
+              // f((x))
+              hasParent(parenExpr(hasParent(
+                  expr(hasParent(cxxConstructExpr())).bind("use_parent"))))
+
+                  )
+
+              )
           .bind("use"),
       this);
 }
@@ -112,14 +123,14 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
     return;
   }
 
-
-  const SourceManager &Source = Result.Context->getSourceManager();
-  const auto Range = CharSourceRange::getTokenRange(LastUsage->getSourceRange());
-  const StringRef NeedleExprCode = Lexer::getSourceText(
-      Range, Source,
-      Result.Context->getLangOpts());
+  const SourceManager& Source = Result.Context->getSourceManager();
+  const auto Range =
+      CharSourceRange::getTokenRange(LastUsage->getSourceRange());
+  const StringRef NeedleExprCode =
+      Lexer::getSourceText(Range, Source, Result.Context->getLangOpts());
   diag(LastUsage->getBeginLoc(), "could be std::move()")
-	  << FixItHint::CreateReplacement(Range, ("std::move(" + NeedleExprCode + ")").str());
+      << FixItHint::CreateReplacement(
+             Range, ("std::move(" + NeedleExprCode + ")").str());
 }
 
 }  // namespace clang::tidy::performance
