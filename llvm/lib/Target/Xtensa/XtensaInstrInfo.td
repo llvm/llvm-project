@@ -235,13 +235,10 @@ def S16I : Store_II8<0x05, "s16i", truncstorei16, addr_ish2, mem16>;
 def S32I : Store_II8<0x06, "s32i", store, addr_ish4, mem32>;
 
 def L32R : RI16_Inst<0x01, (outs AR:$t), (ins L32Rtarget:$label),
-                    "l32r\t$t, $label", []> {
+                    "l32r\t$t, $label", [(set AR:$t, (load (Xtensa_pcrel_wrapper tconstpool:$label)))]> {
   bits<16> label;
   let imm16 = label;
 }
-
-// pcrel addr loading using L32R
-def : Pat<(Xtensa_pcrel_wrapper tconstpool : $in), (L32R tconstpool : $in)>;
 
 // FrameIndexes are legalized when they are operands from load/store
 // instructions. The same not happens for stack address copies, so an
@@ -1320,6 +1317,9 @@ def WFR : RRR_Inst<0x00, 0x0A, 0x0f, (outs FPR:$r), (ins AR:$s),
                   [(set FPR:$r, (bitconvert AR:$s))]>, Requires<[HasSingleFloat]>  {
   let t = 0x05;
 }
+
+def : Pat<(f32 (load (Xtensa_pcrel_wrapper tconstpool:$in))),
+          (WFR (L32R tconstpool:$in))>;
 
 //===----------------------------------------------------------------------===//
 // Region Protection feature instructions

@@ -75,7 +75,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::Constant, MVT::i32, Custom);
   setOperationAction(ISD::Constant, MVT::i64, Expand);
-  setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
+  setOperationAction(ISD::ConstantFP, MVT::f32, Expand);
   setOperationAction(ISD::ConstantFP, MVT::f64, Expand);
 
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -687,15 +687,19 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if ((!name.empty()) && isLongCall(name.c_str())) {
     // Create a constant pool entry for the callee address
     XtensaCP::XtensaCPModifier Modifier = XtensaCP::no_modifier;
+    XtensaMachineFunctionInfo *XtensaFI =
+        MF.getInfo<XtensaMachineFunctionInfo>();
+    unsigned LabelId = XtensaFI->createCPLabelId();
 
     XtensaConstantPoolValue *CPV = XtensaConstantPoolSymbol::Create(
-        *DAG.getContext(), name.c_str(), 0 /* XtensaCLabelIndex */, false,
-        Modifier);
+        *DAG.getContext(), name.c_str(), LabelId, false, Modifier);
 
     // Get the address of the callee into a register
     SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4), 0, TF);
     SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
-    Callee = CPWrap;
+    Callee = DAG.getLoad(
+        PtrVT, DL, DAG.getEntryNode(), CPWrap,
+        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
   }
 
   // The first call operand is the chain and the second is the target address.
@@ -893,22 +897,9 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
     Constant *CV = ConstantInt::get(Ty, Value);
     SDValue CP = DAG.getConstantPool(CV, MVT::i32);
-    return CP;
-  }
-  return Op;
-}
-
-SDValue XtensaTargetLowering::LowerImmediateFP(SDValue Op,
-                                               SelectionDAG &DAG) const {
-  const ConstantFPSDNode *CN = cast<ConstantFPSDNode>(Op);
-  SDLoc DL(CN);
-  APFloat apval = CN->getValueAPF();
-  int64_t value = llvm::bit_cast<uint32_t>(CN->getValueAPF().convertToFloat());
-  if (Op.getValueType() == MVT::f32) {
-    Type *Ty = Type::getInt32Ty(*DAG.getContext());
-    Constant *CV = ConstantInt::get(Ty, value);
-    SDValue CP = DAG.getConstantPool(CV, MVT::i32);
-    return DAG.getNode(ISD::BITCAST, DL, MVT::f32, CP);
+    SDValue Res =
+        DAG.getLoad(MVT::i32, DL, DAG.getEntryNode(), CP, MachinePointerInfo());
+    return Res;
   }
   return Op;
 }
@@ -922,22 +913,30 @@ SDValue XtensaTargetLowering::LowerGlobalAddress(SDValue Op,
 
   SDValue CPAddr = DAG.getTargetConstantPool(GV, PtrVT, Align(4));
   SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
-
-  return CPWrap;
+  SDValue Res = DAG.getLoad(
+      PtrVT, DL, DAG.getEntryNode(), CPWrap,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+  return Res;
 }
 
 SDValue XtensaTargetLowering::LowerBlockAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
   BlockAddressSDNode *Node = cast<BlockAddressSDNode>(Op);
+  SDLoc DL(Op);
   const BlockAddress *BA = Node->getBlockAddress();
   EVT PtrVT = Op.getValueType();
+  MachineFunction &MF = DAG.getMachineFunction();
+  XtensaMachineFunctionInfo *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
+  unsigned LabelId = XtensaFI->createCPLabelId();
 
   XtensaConstantPoolValue *CPV =
-      XtensaConstantPoolConstant::Create(BA, 0, XtensaCP::CPBlockAddress);
+      XtensaConstantPoolConstant::Create(BA, LabelId, XtensaCP::CPBlockAddress);
   SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
   SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
-
-  return CPWrap;
+  SDValue Res = DAG.getLoad(
+      PtrVT, DL, DAG.getEntryNode(), CPWrap,
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+  return Res;
 }
 
 SDValue XtensaTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
@@ -972,15 +971,19 @@ SDValue XtensaTargetLowering::LowerJumpTable(SDValue Op,
                                              SelectionDAG &DAG) const {
   JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
   EVT PtrVT = Op.getValueType();
+  SDLoc DL(Op);
 
-  // Create a constant pool entry for the callee address
+  // Create a constant pool entry for the jumptable address
   XtensaConstantPoolValue *CPV =
       XtensaConstantPoolJumpTable::Create(*DAG.getContext(), JT->getIndex());
 
-  // Get the address of the callee into a register
+  // Get the address of the jumptable into a register
   SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
 
-  return getAddrPCRel(CPAddr, DAG);
+  SDValue Res = DAG.getLoad(
+      PtrVT, DL, DAG.getEntryNode(), getAddrPCRel(CPAddr, DAG),
+      MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+  return Res;
 }
 
 SDValue XtensaTargetLowering::getAddrPCRel(SDValue Op,
@@ -1346,8 +1349,6 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerBR_JT(Op, DAG);
   case ISD::Constant:
     return LowerImmediate(Op, DAG);
-  case ISD::ConstantFP:
-    return LowerImmediateFP(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
   case ISD::GlobalAddress:

@@ -62,22 +62,25 @@ void XtensaAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 void XtensaAsmPrinter::emitMachineConstantPoolValue(
     MachineConstantPoolValue *MCPV) {
-  XtensaConstantPoolValue *ACPV = static_cast<XtensaConstantPoolValue *>(MCPV);
+  XtensaConstantPoolValue *XtensaCPV =
+      static_cast<XtensaConstantPoolValue *>(MCPV);
   MCSymbol *MCSym;
 
-  if (ACPV->isBlockAddress()) {
+  if (XtensaCPV->isBlockAddress()) {
     const BlockAddress *BA =
-        cast<XtensaConstantPoolConstant>(ACPV)->getBlockAddress();
+        cast<XtensaConstantPoolConstant>(XtensaCPV)->getBlockAddress();
     MCSym = GetBlockAddressSymbol(BA);
-  } else if (ACPV->isMachineBasicBlock()) {
-    const MachineBasicBlock *MBB = cast<XtensaConstantPoolMBB>(ACPV)->getMBB();
+  } else if (XtensaCPV->isMachineBasicBlock()) {
+    const MachineBasicBlock *MBB =
+        cast<XtensaConstantPoolMBB>(XtensaCPV)->getMBB();
     MCSym = MBB->getSymbol();
-  } else if (ACPV->isJumpTable()) {
-    unsigned Idx = cast<XtensaConstantPoolJumpTable>(ACPV)->getIndex();
+  } else if (XtensaCPV->isJumpTable()) {
+    unsigned Idx = cast<XtensaConstantPoolJumpTable>(XtensaCPV)->getIndex();
     MCSym = this->GetJTISymbol(Idx, false);
   } else {
-    assert(ACPV->isExtSymbol() && "unrecognized constant pool value");
-    XtensaConstantPoolSymbol *XtensaSym = cast<XtensaConstantPoolSymbol>(ACPV);
+    assert(XtensaCPV->isExtSymbol() && "unrecognized constant pool value");
+    XtensaConstantPoolSymbol *XtensaSym =
+        cast<XtensaConstantPoolSymbol>(XtensaCPV);
     const char *SymName = XtensaSym->getSymbol();
 
     if (XtensaSym->isPrivateLinkage()) {
@@ -89,14 +92,14 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
     }
   }
 
-  MCSymbol *LblSym = GetCPISymbol(ACPV->getLabelId());
+  MCSymbol *LblSym = GetCPISymbol(XtensaCPV->getLabelId());
   auto *TS =
       static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
-  auto Spec = getModifierSpecifier(ACPV->getModifier());
+  auto Spec = getModifierSpecifier(XtensaCPV->getModifier());
 
-  if (ACPV->getModifier() != XtensaCP::no_modifier) {
+  if (XtensaCPV->getModifier() != XtensaCP::no_modifier) {
     std::string SymName(MCSym->getName());
-    StringRef Modifier = ACPV->getModifierText();
+    StringRef Modifier = XtensaCPV->getModifierText();
     SymName += Modifier;
     MCSym = OutContext.getOrCreateSymbol(SymName);
   }
@@ -108,9 +111,9 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
 void XtensaAsmPrinter::emitMachineConstantPoolEntry(
     const MachineConstantPoolEntry &CPE, int i) {
   if (CPE.isMachineConstantPoolEntry()) {
-    XtensaConstantPoolValue *ACPV =
+    XtensaConstantPoolValue *XtensaCPV =
         static_cast<XtensaConstantPoolValue *>(CPE.Val.MachineCPVal);
-    ACPV->setLabelId(i);
+    XtensaCPV->setLabelId(i);
     emitMachineConstantPoolValue(CPE.Val.MachineCPVal);
   } else {
     MCSymbol *LblSym = GetCPISymbol(i);
