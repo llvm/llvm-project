@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/DataLayoutAnalysis.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -142,6 +143,27 @@ static Type getElementType(Operation *op) {
   return {};
 }
 
+static bool isAdjacentAffineMapIndices(Value idx1, Value idx2) {
+  auto applyOp1 = idx1.getDefiningOp<affine::AffineApplyOp>();
+  if (!applyOp1)
+    return false;
+
+  auto applyOp2 = idx2.getDefiningOp<affine::AffineApplyOp>();
+  if (!applyOp2)
+    return false;
+
+  if (applyOp1.getOperands() != applyOp2.getOperands())
+    return false;
+
+  AffineExpr expr1 = applyOp1.getAffineMap().getResult(0);
+  AffineExpr expr2 = applyOp2.getAffineMap().getResult(0);
+  auto diff =
+      simplifyAffineExpr(expr2 - expr1, 0, applyOp1.getOperands().size());
+
+  auto diffConst = dyn_cast<AffineConstantExpr>(diff);
+  return diffConst && diffConst.getValue() == 1;
+}
+
 /// Check if two indices are consecutive, i.e index1 + 1 == index2.
 static bool isAdjacentIndices(Value idx1, Value idx2) {
   if (auto c1 = getConstantIntValue(idx1)) {
@@ -160,7 +182,9 @@ static bool isAdjacentIndices(Value idx1, Value idx2) {
     }
   }
 
-  // TODO: Handle affine.apply, etc
+  if (isAdjacentAffineMapIndices(idx1, idx2))
+    return true;
+
   return false;
 }
 
