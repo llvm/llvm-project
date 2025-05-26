@@ -1746,7 +1746,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
   if (!ET)
     return;
 
-  if (SrcType->isIntegerType() ||
+  if (!SrcType->isIntegerType() ||
       Context.hasSameUnqualifiedType(SrcType, DstType))
     return;
 
