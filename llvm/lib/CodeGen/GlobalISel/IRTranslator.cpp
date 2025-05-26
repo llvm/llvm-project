@@ -2818,8 +2818,9 @@ bool IRTranslator::translateTargetIntrinsic(
     else if (TgtMemIntrinsicInfo->fallbackAddressSpace)
       MPI = MachinePointerInfo(*TgtMemIntrinsicInfo->fallbackAddressSpace);
     MIB.addMemOperand(MF->getMachineMemOperand(
-        MPI, TgtMemIntrinsicInfo->flags, MemTy, Alignment, CI.getAAMetadata(),
-        /*Ranges=*/nullptr, TgtMemIntrinsicInfo->ssid, TgtMemIntrinsicInfo->order, TgtMemIntrinsicInfo->failureOrder));
+        MPI, TgtMemIntrinsicInfo->flags, MemTy, Alignment, CB.getAAMetadata(),
+        /*Ranges=*/nullptr, TgtMemIntrinsicInfo->ssid,
+        TgtMemIntrinsicInfo->order, TgtMemIntrinsicInfo->failureOrder));
   }
 
   if (CB.isConvergent()) {
