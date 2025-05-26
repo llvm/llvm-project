@@ -972,7 +972,10 @@ public:
 
   VPInstruction *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
-    return new VPInstruction(Opcode, Operands, *this, getDebugLoc(), Name);
+    auto *New = new VPInstruction(Opcode, Operands, *this, getDebugLoc(), Name);
+    if (getUnderlyingValue())
+      New->setUnderlyingValue(getUnderlyingInstr());
+    return New;
   }
 
   unsigned getOpcode() const { return Opcode; }
@@ -2090,7 +2093,11 @@ public:
   }
 
   VPWidenPHIRecipe *clone() override {
-    llvm_unreachable("cloning not implemented yet");
+    auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
+                                   getOperand(0), getDebugLoc(), Name);
+    for (VPValue *Op : make_range(std::next(op_begin()), op_end()))
+      C->addOperand(Op);
+    return C;
   }
 
   ~VPWidenPHIRecipe() override = default;
