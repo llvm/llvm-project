@@ -970,10 +970,12 @@ public:
     return NumUserSGPRs;
   }
 
+  // Get the number of preloaded SGPRs for compute kernels.
   unsigned getNumPreloadedSGPRs() const {
     return NumUserSGPRs + NumSystemSGPRs;
   }
 
+  // Get the number of preloaded VGPRs for compute kernels.
   unsigned getNumPreloadedVGPRs() const {
     if (hasWorkItemIDZ())
       return ArgInfo.WorkItemIDZ.getRegister() - AMDGPU::VGPR0 + 1;
