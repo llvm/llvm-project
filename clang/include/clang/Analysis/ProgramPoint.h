@@ -40,8 +40,8 @@ public:
   ProgramPointTag(void *tagKind = nullptr) : TagKind(tagKind) {}
   virtual ~ProgramPointTag();
 
-  /// The description of this program point which will be displayed when the
-  /// ExplodedGraph is dumped in DOT format for debugging.
+  /// The description of this program point which will be dumped for debugging
+  /// purposes. Do not use in user-facing output!
   virtual StringRef getTagDescription() const = 0;
 
   /// Used to implement 'isKind' in subclasses.
