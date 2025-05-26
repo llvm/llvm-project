@@ -524,8 +524,10 @@ void XtensaInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     JumpToMBB = &RestoreBB;
   }
 
+  unsigned LabelId = XtensaFI->createCPLabelId();
+
   XtensaConstantPoolValue *C = XtensaConstantPoolMBB::Create(
-      MF->getFunction().getContext(), JumpToMBB, 0);
+      MF->getFunction().getContext(), JumpToMBB, LabelId);
   unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align(4));
   L32R.addOperand(MachineOperand::CreateCPI(Idx, 0));
 

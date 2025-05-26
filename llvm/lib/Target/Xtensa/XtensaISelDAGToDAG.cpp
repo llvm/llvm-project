@@ -50,6 +50,12 @@ public:
                         int Scale) {
     EVT ValTy = Addr.getValueType();
 
+    if (Addr.getOpcode() == XtensaISD::PCREL_WRAPPER) {
+      Base = Addr.getOperand(0);
+      if (Base.getOpcode() == ISD::TargetConstantPool)
+        return false; // We want to select L32R instead.
+    }
+
     // if Address is FI, get the TargetFrameIndex.
     if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
       Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
