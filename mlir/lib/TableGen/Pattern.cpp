@@ -51,6 +51,11 @@ bool DagLeaf::isAttrMatcher() const {
   return isSubClassOf("AttrConstraint");
 }
 
+bool DagLeaf::isPropMatcher() const {
+  // Property matchers specify a property constraint.
+  return isSubClassOf("PropConstraint");
+}
+
 bool DagLeaf::isNativeCodeCall() const {
   return isSubClassOf("NativeCodeCall");
 }

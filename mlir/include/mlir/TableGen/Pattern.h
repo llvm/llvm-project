@@ -73,11 +73,18 @@ public:
   // specifies an attribute constraint.
   bool isAttrMatcher() const;
 
+  // Returns true if this DAG leaf is matching a property. That is, it
+  // specifies a property constraint.
+  bool isPropMatcher() const;
+
   // Returns true if this DAG leaf is wrapping native code call.
   bool isNativeCodeCall() const;
 
   // Returns true if this DAG leaf is specifying a constant attribute.
   bool isConstantAttr() const;
+
+  // Returns true if this DAG leaf is specifying a constant property.
+  bool isConstantProp() const;
 
   // Returns true if this DAG leaf is specifying an enum case.
   bool isEnumCase() const;
@@ -88,8 +95,14 @@ public:
   // Returns this DAG leaf as a constraint. Asserts if fails.
   Constraint getAsConstraint() const;
 
+  // Returns this DAG leaf as a property constraint. Asserts if fails.
+  PropConstraint getAsPropConstraint() const;
+
   // Returns this DAG leaf as an constant attribute. Asserts if fails.
   ConstantAttr getAsConstantAttr() const;
+
+  // Returns this DAG leaf as an constant property. Asserts if fails.
+  ConstantProp getAsConstantProp() const;
 
   // Returns this DAG leaf as an enum case.
   // Precondition: isEnumCase()

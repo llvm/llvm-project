@@ -205,8 +205,8 @@ static ::llvm::LogicalResult {0}(
 
 /// Code for a pattern type or attribute constraint.
 ///
-/// {3}: "Type type" or "Attribute attr".
-static const char *const patternAttrOrTypeConstraintCode = R"(
+/// {3}: "::mlir::Type type" or "::mlirAttribute attr" or "propType prop".
+static const char *const patternConstraintCode = R"(
 static ::llvm::LogicalResult {0}(
     ::mlir::PatternRewriter &rewriter, ::mlir::Operation *op, ::mlir::{3},
     ::llvm::StringRef failureStr) {
@@ -265,15 +265,16 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
   FmtContext ctx;
   ctx.addSubst("_op", "*op").withBuilder("rewriter").withSelf("type");
   for (auto &it : typeConstraints) {
-    os << formatv(patternAttrOrTypeConstraintCode, it.second,
+    os << formatv(patternConstraintCode, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  escapeString(it.first.getSummary()), "Type type");
+                  escapeString(it.first.getSummary()), "::mlir::Type type");
   }
   ctx.withSelf("attr");
   for (auto &it : attrConstraints) {
-    os << formatv(patternAttrOrTypeConstraintCode, it.second,
+    os << formatv(patternConstraintCode, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  escapeString(it.first.getSummary()), "Attribute attr");
+                  escapeString(it.first.getSummary()),
+                  "::mlir::Attribute attr");
   }
 }
 

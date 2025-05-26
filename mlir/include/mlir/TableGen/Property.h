@@ -143,6 +143,10 @@ public:
   // property constraints, this function is added for future-proofing)
   Property getBaseProperty() const;
 
+  // Returns true if this property is backed by a TableGen definition and that
+  // definition is a subclass of `className`.
+  bool isSubClassOf(StringRef className) const;
+
 private:
   // Elements describing a Property, in general fetched from the record.
   StringRef summary;
@@ -169,6 +173,20 @@ struct NamedProperty {
   Property prop;
 };
 
+// Wrapper class providing helper methods for processing constant property
+// values defined using the `ConstantProp` subclass of `Property`
+// in TableGen.
+class ConstantProp : public Property {
+  explicit ConstantProp(llvm::DefInit *def) : Property(def) {
+    assert(isSubClassOf("ConstantProp"));
+  }
+
+  static bool classof(Property *p) { return p->isSubClassOf("ConstantProp"); }
+
+  // Return the constant value of the property as an expression
+  // that produces an interface-type constant.
+  StringRef getValue() const;
+};
 } // namespace tblgen
 } // namespace mlir
 
