@@ -26,14 +26,13 @@ public:
 
   ~LoongArchELFObjectWriter() override;
 
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override {
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override {
     return EnableRelax;
   }
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
   bool EnableRelax;
 };
 } // end namespace
@@ -46,9 +45,8 @@ LoongArchELFObjectWriter::LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit,
 
 LoongArchELFObjectWriter::~LoongArchELFObjectWriter() {}
 
-unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned LoongArchELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                                 const MCValue &Target,
-                                                const MCFixup &Fixup,
                                                 bool IsPCRel) const {
   switch (Target.getSpecifier()) {
   case ELF::R_LARCH_TLS_LE_HI20:
@@ -76,13 +74,13 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
     return Kind;
   switch (Kind) {
   default:
-    Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+    reportError(Fixup.getLoc(), "Unsupported relocation type");
     return ELF::R_LARCH_NONE;
   case FK_Data_1:
-    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "1-byte data relocations not supported");
     return ELF::R_LARCH_NONE;
   case FK_Data_2:
-    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "2-byte data relocations not supported");
     return ELF::R_LARCH_NONE;
   case FK_Data_4:
     return IsPCRel ? ELF::R_LARCH_32_PCREL : ELF::R_LARCH_32;

@@ -17,7 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -517,9 +517,7 @@ public:
     int64_t Imm;
     LoongArchMCExpr::Specifier VK = LoongArchMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    bool IsValidKind =
-        VK == LoongArchMCExpr::VK_None || VK == LoongArchMCExpr::VK_CALL ||
-        VK == LoongArchMCExpr::VK_CALL_PLT || VK == ELF::R_LARCH_B26;
+    bool IsValidKind = VK == LoongArchMCExpr::VK_None || VK == ELF::R_LARCH_B26;
     return IsConstantImm
                ? isShiftedInt<26, 2>(Imm) && IsValidKind
                : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
@@ -793,7 +791,6 @@ ParseStatus LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
   Res = MCSymbolRefExpr::create(Sym, getContext());
-  Res = LoongArchMCExpr::create(Res, LoongArchMCExpr::VK_CALL, getContext());
   Operands.push_back(LoongArchOperand::createImm(Res, S, E));
   return ParseStatus::Success;
 }
@@ -1635,6 +1632,9 @@ LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     Op.setReg(convertFPR32ToFPR64(Reg));
     return Match_Success;
   }
+
+  if (Kind == MCK_GPRNoR0R1 && (Reg == LoongArch::R0 || Reg == LoongArch::R1))
+    return Match_RequiresOpnd2NotR0R1;
 
   return Match_InvalidOperand;
 }

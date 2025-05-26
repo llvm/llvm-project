@@ -55,6 +55,7 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
+#include <__type_traits/is_replaceable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/type_identity.h>
@@ -120,6 +121,10 @@ public:
       __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
       vector,
       void>;
+  using __replaceable _LIBCPP_NODEBUG =
+      __conditional_t<__is_replaceable_v<pointer> && __container_allocator_is_replaceable<__alloc_traits>::value,
+                      vector,
+                      void>;
 
   static_assert(__check_valid_allocator<allocator_type>::value, "");
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,
@@ -716,47 +721,32 @@ private:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
-    (void)__current_size;
-#if _LIBCPP_HAS_ASAN
     __annotate_contiguous_container(data() + capacity(), data() + __current_size);
-#endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
-#if _LIBCPP_HAS_ASAN
     __annotate_contiguous_container(data() + size(), data() + capacity());
-#endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_increase(size_type __n) const _NOEXCEPT {
-    (void)__n;
-#if _LIBCPP_HAS_ASAN
     __annotate_contiguous_container(data() + size(), data() + size() + __n);
-#endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
-    (void)__old_size;
-#if _LIBCPP_HAS_ASAN
     __annotate_contiguous_container(data() + __old_size, data() + size());
-#endif
   }
 
   struct _ConstructTransaction {
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit _ConstructTransaction(vector& __v, size_type __n)
         : __v_(__v), __pos_(__v.__end_), __new_end_(__v.__end_ + __n) {
-#if _LIBCPP_HAS_ASAN
       __v_.__annotate_increase(__n);
-#endif
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
       __v_.__end_ = __pos_;
-#if _LIBCPP_HAS_ASAN
       if (__pos_ != __new_end_) {
         __v_.__annotate_shrink(__new_end_ - __v_.__begin_);
       }
-#endif
     }
 
     vector& __v_;
@@ -1269,8 +1259,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x) {
   pointer __p = this->__begin_ + (__position - begin());
   if (__n > 0) {
-    // We can't compare unrelated pointers inside constant expressions
-    if (!__libcpp_is_constant_evaluated() && __n <= static_cast<size_type>(this->__cap_ - this->__end_)) {
+    if (__n <= static_cast<size_type>(this->__cap_ - this->__end_)) {
       size_type __old_n  = __n;
       pointer __old_last = this->__end_;
       if (__n > static_cast<size_type>(this->__end_ - __p)) {
@@ -1281,7 +1270,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_
       if (__n > 0) {
         __move_range(__p, __old_last, __p + __old_n);
         const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
-        if (__p <= __xr && __xr < this->__end_)
+        if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end_), std::addressof(__x)))
           __xr += __old_n;
         std::fill_n(__p, __n, *__xr);
       }
