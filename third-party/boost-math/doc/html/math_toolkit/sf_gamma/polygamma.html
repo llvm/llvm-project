@@ -1,0 +1,419 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Polygamma</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../sf_gamma.html" title="Gamma Functions">
+<link rel="prev" href="trigamma.html" title="Trigamma">
+<link rel="next" href="gamma_ratios.html" title="Ratios of Gamma Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="trigamma.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../sf_gamma.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="gamma_ratios.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.sf_gamma.polygamma"></a><a class="link" href="polygamma.html" title="Polygamma">Polygamma</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.sf_gamma.polygamma.h0"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.polygamma.synopsis"></a></span><a class="link" href="polygamma.html#math_toolkit.sf_gamma.polygamma.synopsis">Synopsis</a>
+      </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">polygamma</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">polygamma</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">polygamma</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<h5>
+<a name="math_toolkit.sf_gamma.polygamma.h1"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.polygamma.description"></a></span><a class="link" href="polygamma.html#math_toolkit.sf_gamma.polygamma.description">Description</a>
+      </h5>
+<p>
+        Returns the polygamma function of <span class="emphasis"><em>x</em></span>. Polygamma is defined
+        as the n'th derivative of the digamma function:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/polygamma1.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        The following graphs illustrate the behaviour of the function for odd and
+        even order:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/polygamma2.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/polygamma3.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<p>
+        The final <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+        be used to control the behaviour of the function: how it handles errors,
+        what level of precision to use etc. Refer to the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy
+        documentation for more details</a>.
+      </p>
+<p>
+        The return type of this function is computed using the <a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>result
+        type calculation rules</em></span></a>: the result is of type <code class="computeroutput"><span class="keyword">double</span></code> when T is an integer type, and type
+        T otherwise.
+      </p>
+<h5>
+<a name="math_toolkit.sf_gamma.polygamma.h2"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.polygamma.accuracy"></a></span><a class="link" href="polygamma.html#math_toolkit.sf_gamma.polygamma.accuracy">Accuracy</a>
+      </h5>
+<p>
+        The following table shows the peak errors (in units of epsilon) found on
+        various platforms with various floating point types. Unless otherwise specified
+        any floating point type that is narrower than the one shown will have <a class="link" href="../relative_error.html#math_toolkit.relative_error.zero_error">effectively zero error</a>.
+      </p>
+<div class="table">
+<a name="math_toolkit.sf_gamma.polygamma.table_polygamma"></a><p class="title"><b>Table 8.6. Error rates for polygamma</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for polygamma">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> double
+                </p>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Microsoft Visual C++ version 14.1<br> Win32<br> double
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Mathematica Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.824ε (Mean = 0.0574ε)</span><br>
+                  <br> (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 62.9ε (Mean = 12.8ε))<br>
+                  (<span class="emphasis"><em>Rmath 3.2.3:</em></span> Max = 108ε (Mean = 15.2ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 7.38ε (Mean = 1.84ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 34.3ε (Mean = 7.65ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 9.32ε (Mean = 1.95ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Mathematica Data - large arguments
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.998ε (Mean = 0.0592ε)</span><br>
+                  <br> (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 244ε (Mean = 32.8ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_polygamma_GSL_2_1_Mathematica_Data_large_arguments">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  <span class="red">Max = 1.71e+56ε (Mean = 1.01e+55ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_polygamma_Rmath_3_2_3_Mathematica_Data_large_arguments">And
+                  other failures.</a>)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 2.23ε (Mean = 0.323ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 11.1ε (Mean = 0.848ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 150ε (Mean = 13.9ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Mathematica Data - negative arguments
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.516ε (Mean = 0.022ε)</span><br> <br>
+                  (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 36.6ε (Mean = 3.04ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_polygamma_GSL_2_1_Mathematica_Data_negative_arguments">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 0ε (Mean = 0ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_polygamma_Rmath_3_2_3_Mathematica_Data_negative_arguments">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 269ε (Mean = 87.7ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 269ε (Mean = 88.4ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 497ε (Mean = 129ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Mathematica Data - large negative arguments
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 1.79ε (Mean = 0.197ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_polygamma_GSL_2_1_Mathematica_Data_large_negative_arguments">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 0ε (Mean = 0ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_polygamma_Rmath_3_2_3_Mathematica_Data_large_negative_arguments">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 155ε (Mean = 96.4ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 155ε (Mean = 96.4ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 162ε (Mean = 101ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Mathematica Data - small arguments
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 15.2ε (Mean = 5.03ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 106ε (Mean = 20ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.33ε (Mean = 0.75ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.33ε (Mean = 0.75ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3ε (Mean = 0.496ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Mathematica Data - Large orders and other bug cases
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 151ε (Mean = 39.3ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_polygamma_GSL_2_1_Mathematica_Data_Large_orders_and_other_bug_cases">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  <span class="red">Max = +INFε (Mean = +INFε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_polygamma_Rmath_3_2_3_Mathematica_Data_Large_orders_and_other_bug_cases">And
+                  other failures.</a>)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 54.5ε (Mean = 13.3ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 145ε (Mean = 55.9ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 200ε (Mean = 57.2ε)</span>
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+        As shown above, error rates are generally very acceptable for moderately
+        sized arguments. Error rates should stay low for exact inputs, however, please
+        note that the function becomes exceptionally sensitive to small changes in
+        input for large n and negative x, indeed for cases where <span class="emphasis"><em>n!</em></span>
+        would overflow, the function changes directly from -∞ to +∞ somewhere between
+        each negative integer - <span class="emphasis"><em>these cases are not handled correctly</em></span>.
+      </p>
+<p>
+        <span class="bold"><strong>For these reasons results should be treated with extreme
+        caution when <span class="emphasis"><em>n</em></span> is large and x negative</strong></span>.
+      </p>
+<h5>
+<a name="math_toolkit.sf_gamma.polygamma.h3"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.polygamma.testing"></a></span><a class="link" href="polygamma.html#math_toolkit.sf_gamma.polygamma.testing">Testing</a>
+      </h5>
+<p>
+        Testing is against Mathematica generated spot values to 35 digit precision.
+      </p>
+<h5>
+<a name="math_toolkit.sf_gamma.polygamma.h4"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.polygamma.implementation"></a></span><a class="link" href="polygamma.html#math_toolkit.sf_gamma.polygamma.implementation">Implementation</a>
+      </h5>
+<p>
+        For x &lt; 0 the following reflection formula is used:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/polygamma2.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        The n'th derivative of <span class="emphasis"><em>cot(x)</em></span> is tabulated for small
+        <span class="emphasis"><em>n</em></span>, and for larger n has the general form:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/polygamma3.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        The coefficients of the cosine terms can be calculated iteratively starting
+        from <span class="emphasis"><em>C<sub>1,0</sub> = -1</em></span> and then using
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/polygamma7.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        to generate coefficients for n+1.
+      </p>
+<p>
+        Note that every other coefficient is zero, and therefore what we have are
+        even or odd polynomials depending on whether n is even or odd.
+      </p>
+<p>
+        Once x is positive then we have two methods available to us, for small x
+        we use the series expansion:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/polygamma4.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Note that the evaluation of zeta functions at integer values is essentially
+        a table lookup as <a class="link" href="../zetas/zeta.html" title="Riemann Zeta Function">zeta</a> is
+        optimized for those cases.
+      </p>
+<p>
+        For large x we use the asymptotic expansion:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/polygamma5.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        For x in-between the two extremes we use the relation:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/polygamma6.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        to make x large enough for the asymptotic expansion to be used.
+      </p>
+<p>
+        There are also two special cases:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/polygamma8.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/polygamma9.svg"></span>
+
+        </p></blockquote></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="trigamma.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../sf_gamma.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="gamma_ratios.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

@@ -1,0 +1,177 @@
+[section:cf Continued Fraction Evaluation]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/tools/fraction.hpp>
+``
+
+   namespace boost{ namespace math{ namespace tools{
+   
+   template <class Gen, class U>
+   typename detail::fraction_traits<Gen>::result_type 
+      continued_fraction_b(Gen& g, const U& tolerance, std::uintmax_t& max_terms)
+
+   template <class Gen, class U>
+   typename detail::fraction_traits<Gen>::result_type 
+      continued_fraction_b(Gen& g, const U& tolerance)
+
+   template <class Gen, class U>
+   typename detail::fraction_traits<Gen>::result_type 
+      continued_fraction_a(Gen& g, const U& tolerance, std::uintmax_t& max_terms)
+
+   template <class Gen, class U>
+   typename detail::fraction_traits<Gen>::result_type 
+      continued_fraction_a(Gen& g, const U& tolerance)
+
+   //
+   // These interfaces are present for legacy reasons, and are now deprecated:
+   //
+   template <class Gen>
+   typename detail::fraction_traits<Gen>::result_type 
+      continued_fraction_b(Gen& g, int bits);
+
+   template <class Gen>
+   typename detail::fraction_traits<Gen>::result_type 
+      continued_fraction_b(Gen& g, int bits, std::uintmax_t& max_terms);
+
+   template <class Gen>
+   typename detail::fraction_traits<Gen>::result_type 
+      continued_fraction_a(Gen& g, int bits);
+      
+   template <class Gen>
+   typename detail::fraction_traits<Gen>::result_type 
+      continued_fraction_a(Gen& g, int bits, std::uintmax_t& max_terms);
+      
+   }}} // namespaces
+
+[h4 Description]
+
+[@http://en.wikipedia.org/wiki/Continued_fraction Continued fractions are a common method of approximation. ]
+These functions all evaluate the continued fraction described by the /generator/
+type argument.  The functions with an "_a" suffix evaluate the fraction:
+
+[equation fraction2]
+
+and those with a "_b" suffix evaluate the fraction:
+
+[equation fraction1]
+
+This latter form is somewhat more natural in that it corresponds with the usual
+definition of a continued fraction, but note that the first /a/ value returned by
+the generator is discarded.  Further, often the first /a/ and /b/ values in a 
+continued fraction have different defining equations to the remaining terms, which
+may make the "_a" suffixed form more appropriate.
+
+The generator type should be a function object which supports the following
+operations:
+
+[table
+[[Expression] [Description]]
+[[Gen::result_type] [The type that is the result of invoking operator().
+  This can be either an arithmetic or complex type, or a std::pair<> of arithmetic or complex types.]]
+[[g()] [Returns an object of type Gen::result_type.
+
+Each time this operator is called then the next pair of /a/ and /b/
+    values is returned.  Or, if result_type is an arithmetic type,
+    then the next /b/ value is returned and all the /a/ values
+    are assumed to 1.]]
+]
+
+In all the continued fraction evaluation functions the /tolerance/ parameter is the
+precision desired in the result, evaluation of the fraction will
+continue until the last term evaluated leaves the relative error in the result
+less than /tolerance/.  The deprecated interfaces take a number of digits precision
+here, internally they just convert this to a tolerance and forward call.
+
+If the optional /max_terms/ parameter is specified then no more than /max_terms/ 
+calls to the generator will be made, and on output, 
+/max_terms/ will be set to actual number of
+calls made.  This facility is particularly useful when profiling a continued
+fraction for convergence.
+
+[h4 Implementation]
+
+Internally these algorithms all use the modified Lentz algorithm: refer to
+Numeric Recipes in C++, W. H. Press et all, chapter 5,
+(especially 5.2 Evaluation of continued fractions, p 175 - 179)
+for more information, also
+Lentz, W.J. 1976, Applied Optics, vol. 15, pp. 668-671.
+
+[h4 Examples]
+
+[import ../../example/continued_fractions.cpp]
+
+All of these examples are in [@../../example/continued_fractions.cpp continued_fractions.cpp].
+
+The [@http://en.wikipedia.org/wiki/Golden_ratio golden ratio phi = 1.618033989...]
+can be computed from the simplest continued fraction of all:
+
+[equation fraction3]
+
+We begin by defining a generator function:
+
+[golden_ratio_1]
+
+The golden ratio can then be computed to double precision using:
+
+[cf_gr]
+
+It's more usual though to have to define both the /a/'s and the /b/'s
+when evaluating special functions by continued fractions, for example
+the tan function is defined by:
+
+[equation fraction4]
+
+So its generator object would look like:
+
+[cf_tan_fraction]
+
+Notice that if the continuant is subtracted from the /b/ terms,
+as is the case here, then all the /a/ terms returned by the generator
+will be negative.  The tangent function can now be evaluated using:
+
+[cf_tan]
+
+Notice that this time we're using the "_b" suffixed version to evaluate
+the fraction: we're removing the leading /a/ term during fraction evaluation
+as it's different from all the others.
+
+Now we'll look at a couple of complex number examples, starting with the exponential
+integral which can be calculated via:
+
+[equation expint_n_3]
+
+So our functor looks like this:
+
+[cf_expint_fraction]
+
+We can finish the example by wrapping everything up in a function:
+
+[cf_expint]
+
+Notice how the termination condition is still expressed as a complex number, albeit one with zero imaginary part.
+
+Our final example will use [^continued_fraction_a], in fact there is only one special function in our code
+which uses that variant, and it's the upper incomplete gamma function (Q), which can be calculated via:
+
+[equation igamma9]
+
+In this case the first couple of terms are different from the rest, so our fraction will start with the first
+"regular" a term:
+
+[cf_upper_gamma_fraction]
+
+So now we can implement Q, this time using [^continued_fraction_a]:
+
+[cf_gamma_Q]
+
+[endsect] [/section:cf Continued Fraction Evaluation]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

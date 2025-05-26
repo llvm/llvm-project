@@ -1,0 +1,169 @@
+[section:igamma_inv Incomplete Gamma Function Inverses]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/gamma.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q_inv(T1 a, T2 q);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q_inv(T1 a, T2 q, const ``__Policy``&);
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p_inv(T1 a, T2 p);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p_inv(T1 a, T2 p, const ``__Policy``&);
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q_inva(T1 x, T2 q);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q_inva(T1 x, T2 q, const ``__Policy``&);
+   
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p_inva(T1 x, T2 p);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p_inva(T1 x, T2 p, const ``__Policy``&);
+   
+   }} // namespaces
+   
+[h4 Description]
+
+There are four [@http://mathworld.wolfram.com/IncompleteGammaFunction.html incomplete gamma function]
+inverses which either compute
+/x/ given /a/ and /p/ or /q/,
+or else compute /a/ given /x/ and either /p/ or /q/.
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types, otherwise the return type is simply T1.
+
+[optional_policy]
+
+[tip When people normally talk about the inverse of the incomplete
+gamma function, they are talking about inverting on parameter /x/.
+These are implemented here as `gamma_p_inv` and `gamma_q_inv`, and are by
+far the most efficient of the inverses presented here.
+
+The inverse on the /a/ parameter finds use in some statistical
+applications but has to be computed by rather brute force numerical
+techniques and is consequently several times slower.
+These are implemented here as `gamma_p_inva` and `gamma_q_inva`.]
+
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q_inv(T1 a, T2 q);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q_inv(T1 a, T2 q, const ``__Policy``&);
+
+Returns a value x such that: `q = gamma_q(a, x);`
+
+Requires: /a > 0/ and /1 >= p,q >= 0/.
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p_inv(T1 a, T2 p);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p_inv(T1 a, T2 p, const ``__Policy``&);
+   
+Returns a value x such that: `p = gamma_p(a, x);`
+
+Requires: /a > 0/ and /1 >= p,q >= 0/.
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q_inva(T1 x, T2 q);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_q_inva(T1 x, T2 q, const ``__Policy``&);
+
+Returns a value a such that: `q = gamma_q(a, x);`
+
+Requires: /x > 0/ and /1 >= p,q >= 0/.
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p_inva(T1 x, T2 p);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` gamma_p_inva(T1 x, T2 p, const ``__Policy``&);
+   
+Returns a value a such that: `p = gamma_p(a, x);`
+
+Requires: /x > 0/ and /1 >= p,q >= 0/.
+
+[h4 Accuracy]
+
+The accuracy of these functions doesn't vary much by platform or by
+the type T.  Given that these functions are computed by iterative methods,
+they are deliberately "detuned" so as not to be too accurate: it is in
+any case impossible for these function to be more accurate than the
+regular forward incomplete gamma functions.  In practice, the accuracy
+of these functions is very similar to that of __gamma_p and __gamma_q
+functions:
+
+[table_gamma_p_inv]
+
+[table_gamma_q_inv]
+
+[table_gamma_p_inva]
+
+[table_gamma_q_inva]
+
+[h4 Testing]
+
+There are two sets of tests: 
+
+* Basic sanity checks attempt to "round-trip" from
+/a/ and /x/ to /p/ or /q/ and back again.  These tests have quite
+generous tolerances: in general both the incomplete gamma, and its
+inverses, change so rapidly that round tripping to more than a couple
+of significant digits isn't possible.  This is especially true when
+/p/ or /q/ is very near one: in this case there isn't enough 
+"information content" in the input to the inverse function to get
+back where you started.
+* Accuracy checks using high precision test values.  These measure
+the accuracy of the result, given exact input values.
+
+[h4 Implementation]
+
+The functions `gamma_p_inv` and [@http://functions.wolfram.com/GammaBetaErf/InverseGammaRegularized/ `gamma_q_inv`]
+share a common implementation.
+
+First an initial approximation is computed using the methodology described
+in:
+
+[@http://portal.acm.org/citation.cfm?id=23109&coll=portal&dl=ACM 
+A. R. Didonato and A. H. Morris, Computation of the Incomplete Gamma 
+Function Ratios and their Inverse, ACM Trans. Math. Software 12 (1986), 377-393.]
+
+Finally, the last few bits are cleaned up using Halley iteration, the iteration
+limit is set to 2/3 of the number of bits in T, which by experiment is
+sufficient to ensure that the inverses are at least as accurate as the normal
+incomplete gamma functions.  In testing, no more than 3 iterations are required
+to produce a result as accurate as the forward incomplete gamma function, and
+in many cases only one iteration is required.
+
+The functions `gamma_p_inva` and `gamma_q_inva` also share a common implementation
+but are handled separately from `gamma_p_inv` and `gamma_q_inv`.
+
+An initial approximation for /a/ is computed very crudely so that
+/gamma_p(a, x) ~ 0.5/, this value is then used as a starting point
+for a generic derivative-free root finding algorithm.  As a consequence,
+these two functions are rather more expensive to compute than the 
+`gamma_p_inv` or `gamma_q_inv` functions.  Even so, the root is usually found
+in fewer than 10 iterations.
+
+[endsect] [/section The Incomplete Gamma Function Inverses]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

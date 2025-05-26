@@ -1,0 +1,37 @@
+[/i:/modular-boost/libs/math/doc/roots/roots_table_75_msvc_AVX.qbk
+Copyright 2015 Paul A. Bristow.
+Copyright 2015 John Maddock.
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt).
+]
+
+
+[h6 Program I:\modular-boost\libs\math\example\root_n_finding_algorithms.cpp,
+ Microsoft Visual C++ version 12.0, Dinkumware standard library version 610, Win32
+Compiled in optimise mode., _AVX]
+Fraction of full accuracy 0.75
+[table:root_5 5th root(28) for float, double, long double and cpp_bin_float_50 types, using _AVX
+[[][float][][][] [][double][][][] [][long d][][][] [][cpp50][][]]
+[[Algo     ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ]]
+[[TOMS748  ][  7][  750][[role green 1.0000]1.00][  0][ ][ 11][ 1031][1.10031.10][  1][ ][ 11][ 1046][1.09761.10][  1][ ][ 11][126781][[role red 5.5348]5.53][  0][ ]]
+[[Newton   ][  3][  890][1.18671.19][  0][ ][  5][  937][[role green 1.0000]1.00][ -1][ ][  5][  953][[role green 1.0000]1.00][ -1][ ][  6][22906][[role green 1.0000]1.00][  0][ ]]
+[[Halley   ][  2][  937][1.24931.25][  0][ ][  3][  968][1.03311.03][  0][ ][  3][  953][[role green 1.0000]1.00][  0][ ][  4][40265][1.75781.76][  0][ ]]
+[[Schr'''&#xf6;'''der][  6][ 1000][1.33331.33][  0][ ][  7][ 1031][1.10031.10][ -1][ ][  7][ 1031][1.08181.08][ -1][ ][  8][72296][3.15623.16][  0][ ]]
+] [/end of table root]
+[table:root_7 7th root(28) for float, double, long double and cpp_bin_float_50 types, using _AVX
+[[][float][][][] [][double][][][] [][long d][][][] [][cpp50][][]]
+[[Algo     ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ]]
+[[TOMS748  ][ 12][  984][1.03251.03][  1][ ][ 15][ 1218][1.21801.22][  2][ ][ 15][ 1250][1.29131.29][  2][ ][ 14][191500][[role red 5.5965]5.60][  0][ ]]
+[[Newton   ][  5][  953][[role green 1.0000]1.00][  0][ ][  7][ 1062][1.06201.06][  0][ ][  7][  968][[role green 1.0000]1.00][  0][ ][  8][34218][[role green 1.0000]1.00][  0][ ]]
+[[Halley   ][  5][ 1000][1.04931.05][  0][ ][  6][ 1109][1.10901.11][  0][ ][  6][ 1078][1.11361.11][  0][ ][  6][66765][1.95121.95][  0][ ]]
+[[Schr'''&#xf6;'''der][  5][  984][1.03251.03][  0][ ][  6][ 1000][[role green 1.0000]1.00][  0][ ][  6][ 1000][1.03311.03][  0][ ][  7][65703][1.92011.92][  0][ ]]
+] [/end of table root]
+[table:root_11 11th root(28) for float, double, long double and cpp_bin_float_50 types, using _AVX
+[[][float][][][] [][double][][][] [][long d][][][] [][cpp50][][]]
+[[Algo     ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ]]
+[[TOMS748  ][ 11][ 1062][1.09711.10][  0][ ][ 14][ 1281][1.26211.26][  2][ ][ 14][ 1328][1.32801.33][  2][ ][ 17][297875][[role red 7.2323]7.23][  2][ ]]
+[[Newton   ][  6][  968][[role green 1.0000]1.00][  0][ ][  7][ 1031][[role green 1.0158]1.02][  0][ ][  7][ 1000][[role green 1.0000]1.00][  0][ ][  9][41187][[role green 1.0000]1.00][  0][ ]]
+[[Halley   ][  5][ 1015][1.04861.05][  0][ ][  6][ 1171][1.15371.15][  0][ ][  6][ 1093][1.09301.09][  0][ ][  7][77984][1.89341.89][  0][ ]]
+[[Schr'''&#xf6;'''der][  6][ 1000][1.03311.03][  0][ ][  7][ 1015][[role green 1.0000]1.00][  0][ ][  7][ 1046][1.04601.05][  0][ ][  8][77781][1.88851.89][  0][ ]]
+] [/end of table root]

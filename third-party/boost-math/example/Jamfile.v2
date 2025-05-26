@@ -1,0 +1,164 @@
+# \libs\math\example\jamfile.v2
+# Runs statistics and floating-point examples.
+# Copyright 2007 John Maddock
+# Copyright Paul A. Bristow 2007, 2010, 2011.
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+# bring in the rules for testing
+import testing ;
+import-search /boost/config/checks ;
+import config : requires ;
+
+project
+    : requirements
+      <library>/boost/math//boost_math
+      <library>/boost/multiprecision//boost_multiprecision
+      <toolset>gcc:<cxxflags>-Wno-missing-braces
+      <toolset>darwin:<cxxflags>-Wno-missing-braces
+      <toolset>acc:<cxxflags>+W2068,2461,2236,4070
+      <toolset>intel:<cxxflags>-Qwd264,239
+      <toolset>msvc:<warnings>all
+      <toolset>msvc:<asynch-exceptions>on
+    <toolset>msvc:<define>_CRT_SECURE_NO_DEPRECATE
+    <toolset>msvc:<define>_SCL_SECURE_NO_DEPRECATE
+    <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
+    <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
+      <toolset>msvc:<cxxflags>/wd4996
+      <toolset>msvc:<cxxflags>/wd4512
+      <toolset>msvc:<cxxflags>/wd4610
+      <toolset>msvc:<cxxflags>/wd4510
+      <toolset>msvc:<cxxflags>/wd4127
+      <toolset>msvc:<cxxflags>/wd4701
+      <toolset>msvc:<cxxflags>/wd4127
+      <toolset>msvc:<cxxflags>/wd4305
+      <toolset>msvc:<cxxflags>/wd4459
+      <toolset>msvc:<cxxflags>/wd4456 # declaration of hides previous local declaration.
+      #-<toolset>msvc:<cxxflags>/Za # nonfinite Serialization examples fail link if disable MS extensions,
+      #  because serialization library is built with MS extensions enabled (default).
+      <toolset>clang:<cxxflags>-Wno-unknown-pragmas
+      <toolset>clang:<cxxflags>-Wno-language-extension-token
+
+      <include>../include_private
+      <exception-handling>off:<source>../test//no_eh
+      [ requires cxx11_noexcept cxx11_rvalue_references sfinae_expr cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_tuple cxx11_hdr_initializer_list cxx11_hdr_chrono cxx11_thread_local cxx11_constexpr cxx11_nullptr cxx11_numeric_limits cxx11_decltype cxx11_hdr_array cxx11_hdr_atomic cxx11_hdr_type_traits cxx11_allocator cxx11_explicit_conversion_operators ]
+    ;
+
+test-suite examples :
+   [ run bessel_zeros_example_1.cpp : : : [ check-target-builds ../config//is_ci_standalone_run "Standalone CI run" : <build>no ] <exception-handling>off:<build>no ]
+   [ run bessel_zeros_interator_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run neumann_zeros_example_1.cpp : : : [ check-target-builds ../config//is_ci_standalone_run "Standalone CI run" : <build>no ] <exception-handling>off:<build>no  ]
+
+   [ run test_cpp_float_close_fraction.cpp ../../test/build//boost_unit_test_framework/<link>static : : : <exception-handling>off:<build>no  ]
+   [ run binomial_coinflip_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run binomial_confidence_limits.cpp  ]
+   [ run binomial_example_nag.cpp  ]
+   [ run binomial_quiz_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run binomial_sample_sizes.cpp  ]
+   [ run brent_minimise_example.cpp /boost/test//included : : : [ requires cxx11_hdr_tuple ] ]
+
+   [ run c_error_policy_example.cpp  ]
+   [ run chi_square_std_dev_test.cpp : : : <exception-handling>off:<build>no  ]
+   [ run distribution_construction.cpp : : : <exception-handling>off:<build>no  ]
+   [ run error_handling_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run error_policies_example.cpp  ]
+   [ run error_policy_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run f_test.cpp  ]
+   # [ run fft_sines_table.cpp  : : : [ requires cxx11_numeric_limits ] ]
+   # No need to re-run this routinely as it only creates a table of sines for a documentation example.
+
+   [ run find_location_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run find_mean_and_sd_normal.cpp : : : <exception-handling>off:<build>no  ]
+   [ run find_root_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run find_scale_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run geometric_examples.cpp : : : <exception-handling>off:<build>no  ]
+   [ run hyperexponential_snips.cpp  ]
+   [ run hyperexponential_more_snips.cpp  ]
+   [ run inverse_chi_squared_example.cpp  ]
+   [ run legendre_stieltjes_example.cpp : : : [ requires cxx11_auto_declarations cxx11_defaulted_functions cxx11_lambdas ]  ]
+   [ run airy_ulps_plot.cpp : : : [ requires cxx17_std_apply cxx17_if_constexpr ]  ]
+   [ run agm_example.cpp  : : : [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>-lquadmath ] [ requires cxx17_std_apply cxx17_if_constexpr ] ]
+   #[ # run inverse_chi_squared_find_df_example.cpp  ]
+   #[ run lambert_w_basic_example.cpp ]
+   [ run lambert_w_basic_example.cpp  : : : [ requires cxx11_numeric_limits ] ]
+   [ run lambert_w_simple_examples.cpp  : : : [ requires cxx11_numeric_limits ] [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>-lquadmath ] ]
+   [ run lambert_w_precision_example.cpp  : : : [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>-lquadmath ] [ requires cxx11_numeric_limits cxx11_explicit_conversion_operators ] ]
+
+   [ run inverse_gamma_example.cpp  ]
+   [ run inverse_gamma_distribution_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run laplace_example.cpp : : : <exception-handling>off:<build>no  ]
+   [ run nc_chi_sq_example.cpp  ]
+   [ run neg_binom_confidence_limits.cpp  ]
+   [ run neg_binomial_sample_sizes.cpp  ]
+   [ run negative_binomial_example1.cpp : : : <exception-handling>off:<build>no  ]
+   [ run negative_binomial_example2.cpp  ]
+
+   [ run nonfinite_num_facet.cpp  ]
+   [ run nonfinite_facet_simple.cpp  ]
+   #[ run nonfinite_num_facet_serialization.cpp /boost/serialization//boost_serialization : : : <exception-handling>off:<build>no <toolset>gcc-mingw:<link>static  ]
+   #[ # run lexical_cast_native.cpp  ] # Expected to fail on some (but not all) platforms.
+   [ run lexical_cast_nonfinite_facets.cpp  ]
+   [ run nonfinite_loopback_ok.cpp  ]
+   #[ run nonfinite_serialization_archives.cpp /boost/serialization//boost_serialization  : : : <exception-handling>off:<build>no <toolset>gcc-mingw:<link>static  ]
+   [ run nonfinite_facet_sstream.cpp  ]
+
+   [ run constants_eg1.cpp  ]
+
+   [ run normal_misc_examples.cpp : : : <exception-handling>off:<build>no  ]
+   [ run owens_t_example.cpp  ]
+   [ run policy_eg_1.cpp  ]
+   [ run policy_eg_10.cpp : : : <target-os>vxworks:<build>no ] # VxWorks' complex.h has conflicting declaration of real
+   [ run policy_eg_2.cpp  ]
+   [ run policy_eg_3.cpp  ]
+   [ run policy_eg_4.cpp  ]
+   [ run policy_eg_5.cpp  ]
+   [ run policy_eg_6.cpp  ]
+   [ run policy_eg_7.cpp  ]
+   [ run policy_eg_8.cpp  ]
+   [ run policy_eg_9.cpp /boost/format//boost_format ]
+   [ run policy_ref_snip1.cpp : : : <exception-handling>off:<build>no  ]
+   [ run policy_ref_snip10.cpp  ]
+   [ run policy_ref_snip11.cpp  ]
+   [ run policy_ref_snip12.cpp  ]
+   [ run policy_ref_snip13.cpp : : : <exception-handling>off:<build>no  ]  # Fails clang-win - thrown exception from no Cauchy mean.
+   [ run policy_ref_snip2.cpp  ]
+   [ run policy_ref_snip3.cpp : : : <exception-handling>off:<build>no  ]
+   [ run policy_ref_snip4.cpp  ]
+   [ run policy_ref_snip5.cpp  : : : <target-os>vxworks:<build>no ]
+   [ run policy_ref_snip6.cpp  ]
+   [ run policy_ref_snip7.cpp  ]
+   [ run policy_ref_snip8.cpp  ]
+   [ run policy_ref_snip9.cpp  ]
+   [ run skew_normal_example.cpp  ]
+   [ run students_t_example1.cpp  ]
+   [ run students_t_example2.cpp  ]
+   [ run students_t_example3.cpp  ]
+   [ run students_t_single_sample.cpp  ]
+   [ run students_t_two_samples.cpp  ]
+   [ run HSO3SO4.cpp  ]
+   [ run series.cpp  ]
+   [ run continued_fractions.cpp  ]
+
+   [ run barycentric_interpolation_example.cpp : : : [ requires cxx11_smart_ptr cxx11_function_template_default_args cxx11_unified_initialization_syntax cxx11_defaulted_functions cxx11_allocator cxx11_auto_declarations cxx11_lambdas ]  ]
+   [ run barycentric_interpolation_example_2.cpp : : : [ requires cxx11_smart_ptr cxx11_function_template_default_args cxx11_unified_initialization_syntax cxx11_defaulted_functions cxx11_allocator cxx11_auto_declarations cxx11_lambdas ]  ]
+   [ run cardinal_cubic_b_spline_example.cpp : : : [ requires cxx11_smart_ptr cxx11_hdr_random cxx11_defaulted_functions ]  ]
+   [ compile naive_monte_carlo_example.cpp : [ requires cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_thread cxx11_hdr_atomic cxx11_decltype cxx11_hdr_future cxx11_hdr_chrono cxx11_hdr_random cxx11_allocator ] ]  # requires user input, can't run it, take a long time too!
+   [ run catmull_rom_example.cpp : : : [ requires cxx17_if_constexpr cxx11_auto_declarations cxx17_std_apply ] ] # Actually the C++17 features used is std::size, not if constexpr; looks like there isn't yet a test for it.
+   [ run autodiff_black_scholes_brief.cpp : : : [ requires cxx11_inline_namespaces ] ]
+   [ run autodiff_black_scholes.cpp : : : [ requires cxx11_inline_namespaces ] ]
+   [ run autodiff_fourth_power.cpp : : : [ requires cxx11_inline_namespaces ] ]
+   [ run autodiff_mixed_partials.cpp : : : [ check-target-builds ../config//is_ci_standalone_run "Standalone CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ run autodiff_multiprecision.cpp : : : [ check-target-builds ../config//is_ci_standalone_run "Standalone CI run" : <build>no ] [ requires cxx11_inline_namespaces ] ]
+   [ run ooura_fourier_integrals_example.cpp : : : [ requires cxx11_hdr_mutex cxx11_lambdas cxx11_inline_namespaces cxx11_auto_declarations ] ]
+   [ run ooura_fourier_integrals_cosine_example.cpp : : : [ requires cxx11_hdr_mutex cxx11_inline_namespaces cxx11_auto_declarations cxx17_std_apply ] ]
+   [ run ooura_fourier_integrals_multiprecision_example.cpp : : : [ check-target-builds ../config//has_float128 "GCC libquadmath and __float128 support" : <linkflags>-lquadmath ] [ requires cxx11_hdr_mutex cxx11_inline_namespaces cxx11_auto_declarations cxx17_std_apply ] ]
+   [ run reciprocal_fibonacci_constant.cpp : : : [ check-target-builds ../config//has_mpfr "MPFR Support" : <linkflags>"-lmpfr -lgmp" : <build>no ] ]
+;
+
+run root_elliptic_finding.cpp /boost/timer : : : release <link>static  [ requires cxx11_unified_initialization_syntax cxx11_defaulted_functions ] <target-os>freebsd:<linkflags>"-lrt" <target-os>linux:<linkflags>"-lrt -lpthread" ;
+run root_finding_algorithms.cpp /boost/timer : : : release <link>static  [ requires cxx11_hdr_tuple cxx11_unified_initialization_syntax ] <target-os>freebsd:<linkflags>"-lrt" <target-os>linux:<linkflags>"-lrt -lpthread" ;
+run root_n_finding_algorithms.cpp /boost/timer : : : release <link>static  [ requires cxx11_unified_initialization_syntax cxx11_defaulted_functions ] <target-os>freebsd:<linkflags>"-lrt" <target-os>linux:<linkflags>"-lrt -lpthread" ;
+
+explicit root_elliptic_finding  ;
+explicit root_finding_algorithms  ;
+explicit root_n_finding_algorithms  ;

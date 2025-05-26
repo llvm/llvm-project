@@ -1,0 +1,67 @@
+[section:gpu Support for GPU programming in Boost.Math]
+
+[h4 GPU Support]
+
+Selected functions, distributions, tools, etc. support running on both host and devices.
+These functions will have the annotation `BOOST_MATH_GPU_ENABLED` or `BOOST_MATH_CUDA_ENABLED` next to their individual documentation.
+Functions marked with `BOOST_MATH_GPU_ENABLED` are tested using CUDA (both NVCC and NVRTC) as well as SYCL to provide a wide range of support.
+Functions marked with `BOOST_MATH_CUDA_ENABLED` are few, but due to its restrictions SYCL is unsupported.
+
+[h4 Policies]
+
+The default policy on all devices is ignore error due to the lack of throwing ability.
+A user can specify their own policy like usual, but when the code is run on device it will be ignored.
+
+[h4 How to build with device support]
+
+When compiling with CUDA or SYCL you will have to ensure that your code is being run inside of a kernel function.
+It is not enough to simply compile existing code with the NVCC compiler to run the code on the device.
+A simple CUDA kernel to run the Beta Distribution CDF on NVCC would be:
+
+    __global__ void cuda_beta_dist(const double* in, double* out, int num_elements)
+    {
+        const int i = blockDim.x * blockIdx.x + threadIdx.x;
+
+        if (i < num_elements)
+        {
+            out[i] = cdf(boost::math::beta_distribution<double>(), in[i]);
+        }
+    }
+
+And on CUDA on NVRTC:
+
+    const char* cuda_kernel = R"(
+    #include <boost/math/distributions/beta.hpp>
+    extern "C" __global__ 
+    void test_beta_dist_kernel(const double* in, double* out, int num_elements)
+    {
+        const int i = blockDim.x * blockIdx.x + threadIdx.x;
+        if (i < num_elements)
+        {
+            out[i] = boost::math::cdf(boost::math::beta_distribution<double>(), in[i]);
+        }
+    }
+    )";
+
+And lastly on SYCL:
+
+    void sycl_beta_dist(const double* in, double* out, int num_elements, sycl::queue& q)
+    {
+        q.submit([&](sycl::handler& h) {
+            h.parallel_for(sycl::range<1>(num_elements), [=](sycl::id<1> i) {
+                out[i] = boost::math::cdf(boost::math::beta_distribution<double>(), in[i]);
+            });
+        });
+    }
+
+Once your kernel function has been written then use the framework mechanism for launching the kernel.
+
+[endsect] [/section:gpu Support for GPU programming in Boost.Math]
+
+[/ 
+  Copyright 2024. Matt Borland
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

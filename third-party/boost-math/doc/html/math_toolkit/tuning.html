@@ -1,0 +1,7927 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Performance Tuning Macros</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../perf.html" title="Chapter 23. Performance">
+<link rel="prev" href="multiprecision.html" title="Cost of High-Precision Non-built-in Floating-point">
+<link rel="next" href="comp_compilers.html" title="Comparing Different Compilers">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="multiprecision.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../perf.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="comp_compilers.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.tuning"></a><a class="link" href="tuning.html" title="Performance Tuning Macros">Performance Tuning Macros</a>
+</h2></div></div></div>
+<p>
+      There are a small number of performance tuning options that are determined
+      by configuration macros. These should be set in boost/math/tools/user.hpp;
+      or else reported to the Boost-development mailing list so that the appropriate
+      option for a given compiler and OS platform can be set automatically in our
+      configuration setup.
+    </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Macro
+              </p>
+            </th>
+<th>
+              <p>
+                Meaning
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                BOOST_MATH_POLY_METHOD
+              </p>
+            </td>
+<td>
+              <p>
+                Determines how polynomials and most rational functions are evaluated.
+                Define to one of the values 0, 1, 2 or 3: see below for the meaning
+                of these values.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                BOOST_MATH_RATIONAL_METHOD
+              </p>
+            </td>
+<td>
+              <p>
+                Determines how symmetrical rational functions are evaluated: mostly
+                this only effects how the Lanczos approximation is evaluated, and
+                how the <code class="computeroutput"><span class="identifier">evaluate_rational</span></code>
+                function behaves. Define to one of the values 0, 1, 2 or 3: see below
+                for the meaning of these values.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                BOOST_MATH_MAX_POLY_ORDER
+              </p>
+            </td>
+<td>
+              <p>
+                The maximum order of polynomial or rational function that will be
+                evaluated by a method other than 0 (a simple "for" loop).
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                BOOST_MATH_INT_TABLE_TYPE(RT, IT)
+              </p>
+            </td>
+<td>
+              <p>
+                Many of the coefficients to the polynomials and rational functions
+                used by this library are integers. Normally these are stored as tables
+                as integers, but if mixed integer / floating point arithmetic is
+                much slower than regular floating point arithmetic then they can
+                be stored as tables of floating point values instead. If mixed arithmetic
+                is slow then add:
+              </p>
+              <div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+                    define BOOST_MATH_INT_TABLE_TYPE(RT, IT) RT
+                  </li></ol></div>
+              <p>
+                to boost/math/tools/user.hpp, otherwise the default of:
+              </p>
+              <div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem">
+                    define BOOST_MATH_INT_TABLE_TYPE(RT, IT) IT
+                  </li></ol></div>
+              <p>
+                Set in boost/math/config.hpp is fine, and may well result in smaller
+                code.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+<p>
+      The values to which <code class="computeroutput"><span class="identifier">BOOST_MATH_POLY_METHOD</span></code>
+      and <code class="computeroutput"><span class="identifier">BOOST_MATH_RATIONAL_METHOD</span></code>
+      may be set are as follows:
+    </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Value
+              </p>
+            </th>
+<th>
+              <p>
+                Effect
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                0
+              </p>
+            </td>
+<td>
+              <p>
+                The polynomial or rational function is evaluated using Horner's method,
+                and a simple for-loop.
+              </p>
+              <p>
+                Note that if the order of the polynomial or rational function is
+                a runtime parameter, or the order is greater than the value of <code class="computeroutput"><span class="identifier">BOOST_MATH_MAX_POLY_ORDER</span></code>, then
+                this method is always used, irrespective of the value of <code class="computeroutput"><span class="identifier">BOOST_MATH_POLY_METHOD</span></code> or <code class="computeroutput"><span class="identifier">BOOST_MATH_RATIONAL_METHOD</span></code>.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                1
+              </p>
+            </td>
+<td>
+              <p>
+                The polynomial or rational function is evaluated without the use
+                of a loop, and using Horner's method. This only occurs if the order
+                of the polynomial is known at compile time and is less than or equal
+                to <code class="computeroutput"><span class="identifier">BOOST_MATH_MAX_POLY_ORDER</span></code>.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                2
+              </p>
+            </td>
+<td>
+              <p>
+                The polynomial or rational function is evaluated without the use
+                of a loop, and using a second order Horner's method. In theory this
+                permits two operations to occur in parallel for polynomials, and
+                four in parallel for rational functions. This only occurs if the
+                order of the polynomial is known at compile time and is less than
+                or equal to <code class="computeroutput"><span class="identifier">BOOST_MATH_MAX_POLY_ORDER</span></code>.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                3
+              </p>
+            </td>
+<td>
+              <p>
+                The polynomial or rational function is evaluated without the use
+                of a loop, and using a second order Horner's method. In theory this
+                permits two operations to occur in parallel for polynomials, and
+                four in parallel for rational functions. This differs from method
+                "2" in that the code is carefully ordered to make the parallelisation
+                more obvious to the compiler: rather than relying on the compiler's
+                optimiser to spot the parallelisation opportunities. This only occurs
+                if the order of the polynomial is known at compile time and is less
+                than or equal to <code class="computeroutput"><span class="identifier">BOOST_MATH_MAX_POLY_ORDER</span></code>.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+<p>
+      The performance test suite generates a report for your particular compiler
+      showing which method is likely to work best, the following tables show the
+      results for MSVC-14.0 and GCC-5.1.0 (Linux). There's not much to choose between
+      the various methods, but generally loop-unrolled methods perform better. Interestingly,
+      ordering the code to try and "second guess" possible optimizations
+      seems not to be such a good idea (method 3 below).
+    </p>
+<div class="table">
+<a name="math_toolkit.tuning.table_Polynomial_Method_Comparison_with_Microsoft_Visual_C_version_14_2_on_Windows_x64"></a><p class="title"><b>Table 23.4. Polynomial Method Comparison with Microsoft Visual C++ version 14.2
+      on Windows x64</b></p>
+<div class="table-contents"><table class="table" summary="Polynomial Method Comparison with Microsoft Visual C++ version 14.2
+      on Windows x64">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Function
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Integer Coefficients)
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Order 2
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 3
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.33<br> (21ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.33<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (9ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (9ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (9ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (9ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (9ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (9ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 4
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">2.00<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.00<br> (36ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (13ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (13ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 5
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.56<br> (25ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.31<br> (37ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (16ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (16ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.13<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.13<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.56<br> (25ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.56<br> (25ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 6
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (31ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.19<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (22ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (21ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (21ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (21ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.29<br> (27ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.29<br> (27ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 7
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.54<br> (37ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.33<br> (56ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (25ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.13<br> (27ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.17<br> (28ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 8
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.53<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.23<br> (67ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (32ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (32ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (31ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (31ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 9
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.35<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.06<br> (70ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (45ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (34ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (34ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (37ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (36ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 10
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.38<br> (54ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.13<br> (83ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.21<br> (47ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (45ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (39ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (39ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (40ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 11
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (62ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.24<br> (94ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (52ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.26<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (45ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (43ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 12
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (71ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.27<br> (109ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (60ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (61ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (50ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (48ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 13
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.55<br> (76ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.33<br> (114ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (64ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (64ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (51ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (51ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (50ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (49ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 14
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.53<br> (84ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.40<br> (132ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (79ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (77ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (57ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (56ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (55ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (55ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 15
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.51<br> (95ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.33<br> (147ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (86ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.38<br> (87ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (66ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (67ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (63ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (63ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 16
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.47<br> (106ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.18<br> (157ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (101ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (96ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (73ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (74ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (72ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (75ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 17
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.46<br> (114ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.08<br> (162ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (112ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (112ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (78ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (79ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (82ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (80ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 18
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (126ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.08<br> (177ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (122ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.46<br> (124ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (87ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (88ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (86ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (85ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 19
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.49<br> (136ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.07<br> (188ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.47<br> (134ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.47<br> (134ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (92ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (96ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (94ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 20
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.52<br> (150ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.05<br> (203ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.45<br> (144ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.46<br> (145ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (99ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (101ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (101ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (101ns)</span>
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.tuning.table_Rational_Method_Comparison_with_Microsoft_Visual_C_version_14_2_on_Windows_x64"></a><p class="title"><b>Table 23.5. Rational Method Comparison with Microsoft Visual C++ version 14.2 on
+      Windows x64</b></p>
+<div class="table-contents"><table class="table" summary="Rational Method Comparison with Microsoft Visual C++ version 14.2 on
+      Windows x64">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Function
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Integer Coefficients)
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Order 2
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.92<br> (23ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.92<br> (23ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.17<br> (14ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 3
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.89<br> (34ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.28<br> (41ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.67<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.61<br> (29ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (18ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 4
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.72<br> (43ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.16<br> (54ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.64<br> (41ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.60<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (25ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (25ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (25ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (26ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 5
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.41<br> (69ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (54ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 6
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (65ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.42<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (61ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (60ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (63ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.23<br> (74ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (75ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (84ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 7
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (75ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (97ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (72ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (71ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.14<br> (81ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (72ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.20<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.35<br> (96ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 8
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (87ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.38<br> (112ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (84ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (83ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (82ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (81ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.49<br> (202ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.60<br> (211ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 9
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (103ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.61<br> (143ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (105ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (113ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (90ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (89ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 10
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (115ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.46<br> (146ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.14<br> (114ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (112ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (101ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (102ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (101ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (100ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 11
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.21<br> (131ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (160ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.17<br> (126ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (125ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (137ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (109ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 12
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.26<br> (148ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.53<br> (179ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.19<br> (139ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.19<br> (139ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (119ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (145ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (117ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (117ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 13
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (163ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.71<br> (212ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.23<br> (153ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.52<br> (189ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (125ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.29<br> (160ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (125ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (124ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 14
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.42<br> (190ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.56<br> (209ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (177ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.47<br> (197ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (137ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (175ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (134ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (136ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 15
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (194ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.51<br> (219ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (197ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.46<br> (212ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (148ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.30<br> (188ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (145ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.23<br> (323ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 16
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.38<br> (216ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.56<br> (244ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (212ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (204ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (179ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (209ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (156ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.10<br> (328ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 17
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.39<br> (227ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.67<br> (273ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (218ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.69<br> (275ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (163ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (215ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (167ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.53<br> (412ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 18
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (242ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.73<br> (306ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (248ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.56<br> (276ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (187ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (233ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (177ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.15<br> (380ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 19
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.28<br> (254ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.60<br> (319ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (253ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.51<br> (300ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (199ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.22<br> (243ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.80<br> (359ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.92<br> (382ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 20
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.28<br> (268ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.62<br> (338ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (265ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.56<br> (325ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (209ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (259ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.87<br> (391ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.04<br> (427ns)</span>
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.tuning.table_Polynomial_Method_Comparison_with_GNU_C_version_9_2_1_20191008_on_linux"></a><p class="title"><b>Table 23.6. Polynomial Method Comparison with GNU C++ version 9.2.1 20191008 on
+      linux</b></p>
+<div class="table-contents"><table class="table" summary="Polynomial Method Comparison with GNU C++ version 9.2.1 20191008 on
+      linux">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Function
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Integer Coefficients)
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Order 2
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (6ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 3
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.70<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.40<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (10ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (10ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (10ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (10ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (10ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (10ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 4
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.85<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.31<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (14ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (14ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (14ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (15ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (13ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (14ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 5
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.18<br> (37ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.41<br> (41ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.29<br> (22ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (20ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (19ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 6
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.68<br> (37ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.18<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (22ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (22ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (23ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (23ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (23ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 7
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.12<br> (55ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.35<br> (61ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (28ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (29ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (27ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (28ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (27ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (26ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 8
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.81<br> (56ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.42<br> (75ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (34ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (33ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (34ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (31ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (31ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (31ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 9
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.88<br> (64ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.56<br> (87ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (34ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (37ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (35ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (36ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 10
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.70<br> (68ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.65<br> (106ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.20<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.20<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (41ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (41ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (40ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 11
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.91<br> (84ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.45<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (55ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (55ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (45ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (44ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (45ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 12
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.84<br> (92ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.56<br> (128ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (67ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.26<br> (63ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (50ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (51ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (50ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 13
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.02<br> (103ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.73<br> (139ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (70ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (67ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (55ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (52ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (51ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 14
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.02<br> (115ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.74<br> (156ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.49<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (82ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (59ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (58ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (57ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (57ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 15
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.89<br> (125ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.55<br> (168ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.41<br> (93ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.38<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (66ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (66ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (67ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (68ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 16
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.77<br> (136ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.40<br> (185ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (103ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (82ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (77ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (77ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 17
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.77<br> (143ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.60<br> (211ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.43<br> (116ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (117ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (84ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (81ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (83ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (94ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 18
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.85<br> (163ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.39<br> (210ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.47<br> (129ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.53<br> (135ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (88ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (89ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (88ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (88ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 19
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.01<br> (183ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.55<br> (232ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.53<br> (139ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.53<br> (139ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (95ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (96ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (96ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 20
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.94<br> (194ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.55<br> (255ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (148ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.51<br> (151ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (100ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (100ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (118ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (103ns)</span>
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.tuning.table_Rational_Method_Comparison_with_GNU_C_version_9_2_1_20191008_on_linux"></a><p class="title"><b>Table 23.7. Rational Method Comparison with GNU C++ version 9.2.1 20191008 on linux</b></p>
+<div class="table-contents"><table class="table" summary="Rational Method Comparison with GNU C++ version 9.2.1 20191008 on linux">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Function
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Integer Coefficients)
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Order 2
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.92<br> (23ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.92<br> (23ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (15ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (13ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (13ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 3
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.89<br> (36ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.21<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.63<br> (31ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.47<br> (28ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (21ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (22ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 4
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.85<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.42<br> (63ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.54<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.54<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (27ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (26ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 5
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (59ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.42<br> (71ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (50ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (50ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (55ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (55ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (56ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (55ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 6
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (69ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (66ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (62ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (63ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (63ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (65ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (73ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 7
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (81ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.35<br> (100ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (74ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (74ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (74ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (75ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (76ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (76ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 8
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.13<br> (96ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (113ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (86ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (86ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (86ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (88ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 9
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (126ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (99ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (99ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (95ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (94ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (96ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (105ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 10
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.17<br> (123ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (143ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (115ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (115ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (107ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (110ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (106ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (105ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 11
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (135ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (157ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (134ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (128ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (118ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (118ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (117ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (119ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 12
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.19<br> (150ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (169ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.17<br> (148ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.28<br> (161ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (127ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (126ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (126ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (126ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 13
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.28<br> (171ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (187ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (180ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.28<br> (172ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (136ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (134ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (136ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (142ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 14
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (191ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.43<br> (204ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (181ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (188ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (144ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (148ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (143ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (153ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 15
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.41<br> (206ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.50<br> (219ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (199ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (191ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (169ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.30<br> (190ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (149ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (146ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 16
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (217ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (234ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (209ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.35<br> (213ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (209ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.19<br> (188ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (158ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (163ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 17
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (234ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (254ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (227ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.30<br> (224ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.13<br> (194ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (180ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (172ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (176ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 18
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (248ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.57<br> (284ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.35<br> (244ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.39<br> (252ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (195ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (193ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (185ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (181ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 19
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (268ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.77<br> (338ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.38<br> (264ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (267ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (193ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (191ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (195ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (198ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 20
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.39<br> (286ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.63<br> (336ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.41<br> (291ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.45<br> (298ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (206ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (208ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (213ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (209ns)</span>
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.tuning.table_Polynomial_Method_Comparison_with_Clang_version_9_0_0_tags_RELEASE_900_final_on_linux"></a><p class="title"><b>Table 23.8. Polynomial Method Comparison with Clang version 9.0.0 (tags/RELEASE_900/final)
+      on linux</b></p>
+<div class="table-contents"><table class="table" summary="Polynomial Method Comparison with Clang version 9.0.0 (tags/RELEASE_900/final)
+      on linux">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Function
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Integer Coefficients)
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Order 2
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.20<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.20<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.20<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.20<br> (6ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (5ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (5ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 3
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">2.00<br> (16ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.00<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (9ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (9ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (9ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (10ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (8ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (8ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 4
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.83<br> (22ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.67<br> (32ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (13ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (13ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 5
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.71<br> (29ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 6
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.45<br> (29ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.05<br> (41ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.30<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.30<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (22ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (22ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (20ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (21ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 7
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (31ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.22<br> (60ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.22<br> (33ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.22<br> (33ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (29ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (29ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (27ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (27ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 8
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (37ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.18<br> (61ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.43<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (38ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (28ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (29ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 9
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.17<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.72<br> (62ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (38ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.14<br> (41ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (36ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (36ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 10
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.19<br> (79ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.64<br> (59ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.64<br> (59ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (39ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (36ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (36ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 11
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (58ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.02<br> (89ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.66<br> (73ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.68<br> (74ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (44ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 12
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.42<br> (64ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.38<br> (107ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.89<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.84<br> (83ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (47ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (47ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (45ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (45ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 13
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.51<br> (71ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.21<br> (104ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.79<br> (84ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.83<br> (86ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (50ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (52ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (47ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (47ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 14
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.52<br> (79ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.38<br> (124ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.02<br> (105ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.96<br> (102ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (56ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (56ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (52ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (52ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 15
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.92<br> (140ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.56<br> (114ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.60<br> (117ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (78ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (81ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (74ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (73ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 16
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.59<br> (100ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.51<br> (158ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.97<br> (124ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.98<br> (125ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (66ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (67ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (63ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (63ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 17
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.29<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.90<br> (160ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (114ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">4.58<br> (385ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (97ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.05<br> (172ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (84ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.63<br> (137ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 18
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.22<br> (120ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.22<br> (174ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.28<br> (123ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">7.74<br> (418ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (57ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.85<br> (154ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (54ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.78<br> (204ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 19
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.28<br> (130ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.28<br> (187ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.42<br> (138ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">7.74<br> (441ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (61ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.58<br> (204ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (57ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.67<br> (152ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 20
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.43<br> (146ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.35<br> (201ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.53<br> (152ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">8.17<br> (490ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (64ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">4.12<br> (247ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (60ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.90<br> (174ns)</span>
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.tuning.table_Rational_Method_Comparison_with_Clang_version_9_0_0_tags_RELEASE_900_final_on_linux"></a><p class="title"><b>Table 23.9. Rational Method Comparison with Clang version 9.0.0 (tags/RELEASE_900/final)
+      on linux</b></p>
+<div class="table-contents"><table class="table" summary="Rational Method Comparison with Clang version 9.0.0 (tags/RELEASE_900/final)
+      on linux">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Function
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Integer Coefficients)
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Order 2
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">2.00<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.08<br> (25ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 3
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.58<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.89<br> (36ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.47<br> (28ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.53<br> (29ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.58<br> (30ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 4
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (37ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.88<br> (47ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (36ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.52<br> (38ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (25ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (31ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (26ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 5
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (44ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (58ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.16<br> (95ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (52ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.98<br> (87ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (55ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">2.00<br> (88ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 6
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.30<br> (69ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.45<br> (77ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.21<br> (117ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.45<br> (77ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.64<br> (87ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.51<br> (80ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.72<br> (91ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 7
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (81ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (110ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (89ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.78<br> (144ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (88ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.26<br> (102ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (84ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (101ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 8
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (88ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (115ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (100ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.90<br> (165ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (97ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (109ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (87ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.22<br> (106ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 9
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (125ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.30<br> (118ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.08<br> (189ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (105ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (119ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (92ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.21<br> (110ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 10
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (94ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.30<br> (122ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.39<br> (131ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.29<br> (215ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.20<br> (113ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (135ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (99ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.23<br> (116ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 11
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.35<br> (142ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (151ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.25<br> (236ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.23<br> (129ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (147ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (105ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (130ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 12
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (120ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (154ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.46<br> (169ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.27<br> (263ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (134ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.39<br> (161ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (116ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (147ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 13
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (129ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.54<br> (186ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.49<br> (180ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.41<br> (292ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (150ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.45<br> (176ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (121ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (170ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 14
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (139ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (183ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (206ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.22<br> (308ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.26<br> (175ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (191ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (140ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (161ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 15
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (147ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.45<br> (206ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.61<br> (229ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.39<br> (340ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.20<br> (171ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.41<br> (200ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (142ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (167ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 16
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (157ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (214ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.52<br> (233ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.33<br> (357ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.21<br> (185ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.49<br> (228ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (153ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (180ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 17
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (179ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (218ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.45<br> (253ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.17<br> (380ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (203ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (238ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (175ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (192ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 18
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.21<br> (201ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.40<br> (232ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.64<br> (272ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.42<br> (402ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (206ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.60<br> (266ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (166ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.20<br> (200ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 19
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (211ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (252ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.74<br> (295ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.49<br> (423ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.41<br> (240ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.59<br> (271ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (170ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.21<br> (205ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 20
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (223ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.67<br> (294ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.86<br> (327ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.70<br> (475ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (235ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.56<br> (274ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (176ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.21<br> (213ns)</span>
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.tuning.table_Polynomial_Method_Comparison_with_Intel_C_C_0x_mode_version_1910_on_linux"></a><p class="title"><b>Table 23.10. Polynomial Method Comparison with Intel C++ C++0x mode version 1910
+      on linux</b></p>
+<div class="table-contents"><table class="table" summary="Polynomial Method Comparison with Intel C++ C++0x mode version 1910
+      on linux">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Function
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Integer Coefficients)
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Order 2
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (3ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (3ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (4ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (4ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (4ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (3ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 3
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.75<br> (14ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.12<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (8ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (8ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (8ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (8ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (8ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (8ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 4
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.64<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.18<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (13ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (11ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (11ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (11ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (11ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 5
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.60<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.13<br> (32ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (15ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (15ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (16ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (15ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (16ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 6
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.88<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.56<br> (41ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (16ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (16ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (23ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (21ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (20ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.25<br> (20ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 7
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">2.00<br> (36ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.67<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (19ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.28<br> (23ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.28<br> (23ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 8
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.86<br> (41ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.55<br> (56ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (22ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (22ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (29ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (28ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (26ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 9
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.85<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.46<br> (64ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.27<br> (33ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (34ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (30ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (30ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 10
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.69<br> (54ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.28<br> (73ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (32ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (32ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.22<br> (39ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.19<br> (38ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (34ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (35ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 11
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.77<br> (62ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.29<br> (80ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (35ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (35ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.26<br> (44ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.49<br> (52ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (37ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (38ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 12
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.77<br> (71ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.20<br> (88ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.35<br> (54ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.32<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.35<br> (54ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.48<br> (59ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 13
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.81<br> (76ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.33<br> (98ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (43ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (57ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (52ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.57<br> (66ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.36<br> (57ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 14
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.98<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.47<br> (106ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (43ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (43ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (57ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.30<br> (56ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.35<br> (58ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (50ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 15
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.26<br> (95ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.67<br> (112ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (44ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.14<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.17<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.19<br> (50ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (47ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 16
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.31<br> (97ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.86<br> (120ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (43ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (47ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (47ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.33<br> (56ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.69<br> (71ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 17
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.39<br> (105ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.93<br> (129ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (44ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (45ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.34<br> (59ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.23<br> (54ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (45ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 18
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.63<br> (113ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.19<br> (137ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (43ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (43ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.14<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.14<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (59ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.14<br> (49ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 19
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.93<br> (123ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.50<br> (147ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (43ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (47ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.10<br> (46ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 20
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.28<br> (141ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.60<br> (155ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (43ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (44ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.09<br> (47ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.14<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (46ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (45ns)</span>
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.tuning.table_Rational_Method_Comparison_with_Intel_C_C_0x_mode_version_1910_on_linux"></a><p class="title"><b>Table 23.11. Rational Method Comparison with Intel C++ C++0x mode version 1910 on
+      linux</b></p>
+<div class="table-contents"><table class="table" summary="Rational Method Comparison with Intel C++ C++0x mode version 1910 on
+      linux">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Function
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 0<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 1<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 2<br> (Integer Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Double Coefficients)
+              </p>
+            </th>
+<th>
+              <p>
+                Method 3<br> (Integer Coefficients)
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                Order 2
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="grey">-</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.17<br> (26ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">2.00<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (13ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (13ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (12ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 3
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.88<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.18<br> (54ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.59<br> (27ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.41<br> (24ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 4
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">4.00<br> (68ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">4.35<br> (74ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.88<br> (32ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.88<br> (32ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (18ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (17ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 5
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.15<br> (86ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.25<br> (90ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (40ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.20<br> (48ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.23<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.05<br> (42ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (43ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 6
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.16<br> (106ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.20<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (51ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (49ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.08<br> (53ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.06<br> (52ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.24<br> (61ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 7
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.14<br> (126ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.20<br> (130ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (60ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (59ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (60ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (60ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.07<br> (63ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (60ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 8
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.43<br> (170ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.11<br> (148ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.03<br> (72ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (71ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (70ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (70ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (70ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.53<br> (107ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 9
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.06<br> (165ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.12<br> (170ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.14<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.15<br> (92ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.02<br> (82ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (80ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (81ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.44<br> (115ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 10
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.22<br> (189ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.26<br> (192ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.13<br> (96ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (95ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (86ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (88ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (85ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.47<br> (125ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 11
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.15<br> (209ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.15<br> (209ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.12<br> (109ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.20<br> (116ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (97ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (98ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.46<br> (142ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.42<br> (138ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 12
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.10<br> (227ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.17<br> (234ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.19<br> (128ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.13<br> (122ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (109ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.31<br> (141ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.37<br> (148ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 13
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.73<br> (246ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.78<br> (250ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (106ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.17<br> (105ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.01<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (90ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.66<br> (149ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.80<br> (162ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 14
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.92<br> (266ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.03<br> (276ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (107ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.89<br> (263ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (91ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.04<br> (95ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.78<br> (162ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.15<br> (196ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 15
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.97<br> (288ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.97<br> (288ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.98<br> (289ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (97ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.38<br> (231ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.79<br> (174ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.82<br> (177ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 16
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.17<br> (314ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.15<br> (312ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.13<br> (112ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.35<br> (332ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (99ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.53<br> (250ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.89<br> (187ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.94<br> (192ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 17
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.99<br> (326ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.11<br> (339ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.11<br> (121ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.31<br> (361ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (109ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.42<br> (264ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.81<br> (197ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.83<br> (200ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 18
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.43<br> (350ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.52<br> (359ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.21<br> (123ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.94<br> (402ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (102ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.86<br> (292ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.98<br> (202ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.08<br> (212ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 19
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.51<br> (379ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.43<br> (370ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.16<br> (125ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.97<br> (429ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (108ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.01<br> (325ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.94<br> (209ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.17<br> (234ns)</span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                Order 20
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.69<br> (421ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">4.34<br> (495ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.18<br> (134ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">4.31<br> (491ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="green">1.00<br> (114ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">3.08<br> (351ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="blue">1.96<br> (224ns)</span>
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="red">2.06<br> (235ns)</span>
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break">
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="multiprecision.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../perf.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="comp_compilers.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

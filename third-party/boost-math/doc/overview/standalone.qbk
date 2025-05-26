@@ -1,0 +1,29 @@
+[section:standalone Standalone Usage]
+
+This library is able to be used completely standalone - which is to say without any of the rest of the Boost libraries present on your system.  
+In order to do this you must either:
+
+* Be using a compiler which supports `__has_include()` in which case the presence or absence of the other Boost libraries is determined automatically, and/or:
+* Define `BOOST_MATH_STANDALONE` on the compiler command line.  This will force the library into standalone mode even when other Boost headers are present.
+
+Note that once the library is in standalone mode, you must have a conforming C++11 compiler as no allowances will be made for possible compiler defects
+which would otherwise be detected by Boost.Config.  In addition, if you use a section of the library which makes (possibly optional) use of features from
+later C++ standards, then support for that later standard version becomes pretty much mandatory.  In other words, if you hit issues, try upping your compiler's
+conformance level to C++17 if you can.
+
+Latest tarballs of this library can be obtained from:
+
+Latest [@https://github.com/boostorg/math/releases official releases] (including full Boost releases).
+
+[@https://github.com/boostorg/math/archive/refs/heads/master.zip Latest stable code] (master branch).
+
+[@https://github.com/boostorg/math/archive/refs/heads/develop.zip Latest bleeding edge code] (develop branch).
+
+[endsect] [/section:standalone]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

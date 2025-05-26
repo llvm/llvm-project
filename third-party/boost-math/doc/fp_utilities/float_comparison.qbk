@@ -1,0 +1,120 @@
+[section:float_comparison Floating-point Comparison]
+
+[import ../../example/float_comparison_example.cpp]
+
+Comparison of floating-point values has always been a source of endless difficulty and confusion.
+
+Unlike integral values that are exact, all floating-point operations
+will potentially produce an inexact result that will be rounded to the nearest
+available binary representation.  Even apparently innocuous operations such as assigning
+0.1 to a double produces an inexact result (as this decimal number has no
+exact binary representation).
+
+Floating-point computations also involve rounding so that some 'computational noise' is added,
+and hence results are also not exact (although repeatable, at least under identical platforms and compile options).
+
+Sadly, this conflicts with the expectation of most users, as many articles and innumerable cries for help show all too well.
+
+Some background reading is:
+
+* Knuth D.E. The art of computer programming, vol II, section 4.2, especially Floating-Point Comparison 4.2.2, pages 198-220.
+* [@http://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html David Goldberg, "What Every Computer Scientist Should Know About Floating-Point Arithmetic"]
+* [@http://adtmag.com/articles/2000/03/16/comparing-floatshow-to-determine-if-floating-quantities-are-close-enough-once-a-tolerance-has-been-r.aspx
+Alberto Squassabia, Comparing floats listing]
+* [@https://code.google.com/p/googletest/wiki/AdvancedGuide#Floating-Point_Comparison Google Floating-Point_Comparison guide]
+* [@https://www.boost.org/doc/libs/release/libs/test/doc/html/boost_test/testing_tools/extended_comparison/floating_point.html Boost.Test Floating-Point_Comparison]
+
+Boost provides a number of ways to compare floating-point values to see if they are tolerably close enough to each other,
+but first we must decide what kind of comparison we require:
+
+* Absolute difference/error: the absolute difference between two values ['a] and ['b] is simply `fabs(a-b)`.
+This is the only meaningful comparison to make if we know that the result may have cancellation error (see below).
+* The edit distance between the two values: i.e. how many (binary) floating-point values are between two values ['a] and ['b]?
+This is provided by the function __float_distance, but is probably only useful when you know that the distance should be very small.
+This function is somewhat difficult to compute, and doesn't scale to values that are very far apart.  In other words, use with care.
+* The relative distance/error between two values.  This is quick and easy to compute, and is generally the method of choice when
+checking that your results are "tolerably close" to one another.  However, it is not as exact as the edit distance when dealing
+with small differences, and due to the way floating-point values are encoded can "wobble" by a factor of 2 compared to the "true"
+edit distance.  This is the method documented below: if `float_distance` is a surgeon's scalpel, then `relative_difference` is more like a Swiss army knife: both have important but different use cases.
+
+[h5:fp_relative Relative Comparison of Floating-point Values]
+
+
+`#include <boost/math/special_functions/relative_difference.hpp>`
+
+   template <class T, class U>
+   ``__sf_result`` relative_difference(T a, U b);
+
+   template <class T, class U>
+   ``__sf_result`` epsilon_difference(T a, U b);
+
+The function `relative_difference` returns the relative distance/error ['E] between two values as defined by:
+
+[expression E = fabs((a - b) / min(a,b))]
+
+The function `epsilon_difference` is a convenience function that returns `relative_difference(a, b) / eps` where
+`eps` is the machine epsilon for the result type.
+
+The following special cases are handled as follows:
+
+* If either of ['a] or ['b] is a NaN, then returns the largest representable value for T: for example for type `double`, this
+is `std::numeric_limits<double>::max()` which is the same as `DBL_MAX` or `1.7976931348623157e+308`.
+* If ['a] and ['b] differ in sign then returns the largest representable value for T.
+* If both ['a] and ['b] are both infinities (of the same sign), then returns zero.
+* If just one of ['a] and ['b] is an infinity, then returns the largest representable value for T.
+* If both ['a] and ['b] are zero then returns zero.
+* If just one of ['a] or ['b] is a zero or a denormalized value, then it is treated as if it were the
+smallest (non-denormalized) value representable in T for the purposes of the above calculation.
+
+These rules were primarily designed to assist with our own test suite, they are designed to be robust enough
+that the function can in most cases be used blindly, including in cases where the expected result is actually
+too small to represent in type T and underflows to zero.
+
+[h5 Examples]
+
+[compare_floats_using]
+
+[compare_floats_example_1]
+[compare_floats_example_2]
+[compare_floats_example_3]
+[compare_floats_example_4]
+[compare_floats_example_5]
+[compare_floats_example_6]
+
+All the above examples are contained in [@../../example/float_comparison_example.cpp float_comparison_example.cpp].
+
+[h5:small Handling Absolute Errors]
+
+Imagine we're testing the following function:
+
+   double myspecial(double x)
+   {
+      return sin(x) - sin(4 * x);
+   }
+
+This function has multiple roots, some of which are quite predictable in that both
+`sin(x)` and `sin(4x)` are zero together.  Others occur because the values returned
+from those two functions precisely cancel out.  At such points the relative difference
+between the true value of the function and the actual value returned may be ['arbitrarily
+large] due to [@http://en.wikipedia.org/wiki/Loss_of_significance cancellation error].
+
+In such a case, testing the function above by requiring that the values returned by
+`relative_error` or `epsilon_error` are below some threshold is pointless: the best
+we can do is to verify that the ['absolute difference] between the true
+and calculated values is below some threshold.
+
+Of course, determining what that threshold should be is often tricky,
+but a good starting point would be machine epsilon multiplied by the largest
+of the values being summed.  In the example above, the largest value returned
+by `sin(whatever)` is 1, so simply using machine epsilon as the target for
+maximum absolute difference might be a good start (though in practice we may need
+a slightly higher value - some trial and error will be necessary).
+
+[endsect] [/section:float_comparison Floating-point comparison]
+
+[/
+  Copyright 2015 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

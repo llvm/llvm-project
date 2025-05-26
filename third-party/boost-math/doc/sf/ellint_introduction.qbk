@@ -1,0 +1,261 @@
+[section:ellint_intro Elliptic Integral Overview]
+
+The main reference for the elliptic integrals is:
+
+[:M. Abramowitz and I. A. Stegun (Eds.) (1964)
+Handbook of Mathematical Functions with Formulas, Graphs, and
+Mathematical Tables,      
+National Bureau of Standards Applied Mathematics Series, U.S. Government Printing Office, Washington, D.C.]
+
+and its recently revised version __DMLF, in particular
+[:[@https://dlmf.nist.gov/19 Elliptic Integrals, B. C. Carlson]]
+
+Mathworld also contain a lot of useful background information:
+
+[:[@http://mathworld.wolfram.com/EllipticIntegral.html Weisstein, Eric W. 
+"Elliptic Integral." From MathWorld--A Wolfram Web Resource.]]
+
+As does [@http://en.wikipedia.org/wiki/Elliptic_integral Wikipedia Elliptic integral].
+
+[h4 Notation]
+
+All variables are real numbers unless otherwise noted.
+
+[h4 Definition]
+
+[equation ellint1]
+
+is called elliptic integral if ['R(t, s)] is a rational function
+of ['t] and ['s], and ['s[super 2]] is a cubic or quartic polynomial
+in ['t].
+
+Elliptic integrals generally cannot be expressed in terms of
+elementary functions. However, Legendre showed that all elliptic
+integrals can be reduced to the following three canonical forms:
+
+Elliptic Integral of the First Kind (Legendre form)
+
+[equation ellint2]
+
+Elliptic Integral of the Second Kind (Legendre form)
+
+[equation ellint3]
+
+Elliptic Integral of the Third Kind (Legendre form)
+
+[equation ellint4]
+
+where
+
+[equation ellint5]
+
+[note ['[phi]] is called the amplitude.
+
+['k] is called the elliptic modulus or eccentricity. 
+
+['[alpha]] is called the modular angle. 
+
+['n] is called the characteristic.]
+      
+[caution Perhaps more than any other special functions the elliptic
+integrals are expressed in a variety of different ways.  In particular,
+the final parameter /k/ (the modulus) may be expressed using a modular
+angle [alpha], or a parameter /m/.  These are related by:
+
+[expression k = sin[thin][alpha]]
+
+[expression m = k[super 2] = sin[super 2][alpha]]
+
+So that the integral of the third kind (for example) may be expressed as
+either:
+
+[expression [Pi](n, [phi], k)]
+
+[expression [Pi](n, [phi] \\ [alpha])]
+
+[expression [Pi](n, [phi] | m)]
+
+To further complicate matters, some texts refer to the ['complement
+of the parameter m], or 1 - m, where:
+
+[expression 1 - m = 1 - k[super 2] = cos[super 2][alpha]]
+
+This implementation uses /k/ throughout: this matches the requirements
+of the [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf
+Technical Report on C++ Library Extensions].[br]
+
+So you should be extra careful when using these functions!]
+
+[warning Boost.Math order of arguments differs from other implementations: /k/ is always the *first* argument.]
+
+A simple example comparing use of __WolframAlpha with Boost.Math (including much higher precision using __multiprecision)
+is [@../../example/jacobi_zeta_example.cpp jacobi_zeta_example.cpp].
+
+When ['[phi]] = ['[pi]] / 2, the elliptic integrals are called ['complete].
+
+Complete Elliptic Integral of the First Kind (Legendre form)
+
+[equation ellint6]
+
+Complete Elliptic Integral of the Second Kind (Legendre form)
+
+[equation ellint7]
+
+Complete Elliptic Integral of the Third Kind (Legendre form)
+
+[equation ellint8]
+
+Legendre also defined a fourth integral /D([phi],k)/ which is a combination of the other three:
+
+[equation ellint_d]
+
+Like the other Legendre integrals this comes in both complete and incomplete forms.
+
+[h4 Carlson Elliptic Integrals]
+
+Carlson [[link ellint_ref_carlson77 Carlson77]] [[link ellint_ref_carlson78  Carlson78]] gives an alternative definition of
+elliptic integral's canonical forms:
+
+Carlson's Elliptic Integral of the First Kind
+
+[equation ellint9]
+
+where ['x], ['y], ['z] are nonnegative and at most one of them
+may be zero.
+
+Carlson's Elliptic Integral of the Second Kind
+
+[equation ellint10]
+
+where ['x], ['y] are nonnegative, at most one of them may be zero,
+and ['z] must be positive.
+
+Carlson's Elliptic Integral of the Third Kind
+
+[equation ellint11]
+
+where ['x], ['y], ['z] are nonnegative, at most one of them may be
+zero, and ['p] must be nonzero.
+
+Carlson's Degenerate Elliptic Integral
+
+[equation ellint12]
+
+where ['x] is nonnegative and ['y] is nonzero.
+
+[note ['R[sub C](x, y) = R[sub F](x, y, y)] 
+
+['R[sub D](x, y, z) = R[sub J](x, y, z, z)]]
+
+Carlson's Symmetric Integral
+
+[equation ellint27]
+
+[h4 Duplication Theorem]
+
+Carlson proved in [[link ellint_ref_carlson78  Carlson78]] that
+
+[equation ellint13]
+
+[h4 Carlson's Formulas]
+
+The Legendre form and Carlson form of elliptic integrals are related
+by equations:
+
+[equation ellint14]
+
+In particular,
+
+[equation ellint15]
+
+[h4 Miscellaneous Elliptic Integrals]
+
+There are two functions related to the elliptic integrals which otherwise
+defy categorisation, these are the Jacobi Zeta function:
+
+[equation jacobi_zeta]
+
+and the Heuman Lambda function:
+
+[equation heuman_lambda]
+
+Both of these functions are easily implemented in terms of Carlson's integrals, and are
+provided in this library as __jacobi_zeta and __heuman_lambda.
+
+[h4 Numerical Algorithms]
+
+The conventional methods for computing elliptic integrals are Gauss
+and Landen transformations, which converge quadratically and work
+well for elliptic integrals of the first and second kinds.
+Unfortunately they suffer from loss of significant digits for the
+third kind.
+
+Carlson's algorithm [[link ellint_ref_carlson79  Carlson79]] [[link ellint_ref_carlson78  Carlson78]], by contrast,
+provides a unified method for all three kinds of elliptic integrals with satisfactory precisions.
+
+[h4 References]
+
+Special mention goes to:
+
+[:A. M. Legendre, ['Trait[eacute] des Fonctions Elliptiques et des Integrales 
+Euleriennes], Vol. 1. Paris (1825).]
+
+However the main references are:
+
+# [#ellint_ref_AS]M. Abramowitz and I. A. Stegun (Eds.) (1964)
+Handbook of Mathematical Functions with Formulas, Graphs, and
+Mathematical Tables,      
+National Bureau of Standards Applied Mathematics Series, U.S. Government Printing Office, Washington, D.C.
+# [@https://dlmf.nist.gov/19 NIST Digital Library of Mathematical Functions, Elliptic Integrals, B. C. Carlson]
+# [#ellint_ref_carlson79]B.C. Carlson, ['Computing elliptic integrals by duplication],
+    Numerische Mathematik, vol 33, 1 (1979).
+# [#ellint_ref_carlson77]B.C. Carlson, ['Elliptic Integrals of the First Kind],
+    SIAM Journal on Mathematical Analysis, vol 8, 231 (1977).
+# [#ellint_ref_carlson78]B.C. Carlson, ['Short Proofs of Three Theorems on Elliptic Integrals],
+    SIAM Journal on Mathematical Analysis, vol 9, 524 (1978).
+# [#ellint_ref_carlson81]B.C. Carlson and E.M. Notis, ['ALGORITHM 577: Algorithms for Incomplete
+    Elliptic Integrals], ACM Transactions on Mathematical Software,
+    vol 7, 398 (1981).
+# B. C. Carlson, ['On computing elliptic integrals and functions]. J. Math. and
+Phys., 44 (1965), pp. 36-51.
+# B. C. Carlson, ['A table of elliptic integrals of the second kind]. Math. Comp., 49
+(1987), pp. 595-606. (Supplement, ibid., pp. S13-S17.)
+# B. C. Carlson, ['A table of elliptic integrals of the third kind]. Math. Comp., 51 (1988),
+pp. 267-280. (Supplement, ibid., pp. S1-S5.)
+# B. C. Carlson, ['A table of elliptic integrals: cubic cases]. Math. Comp., 53 (1989), pp.
+327-333.
+# B. C. Carlson, ['A table of elliptic integrals: one quadratic factor]. Math. Comp., 56 (1991),
+pp. 267-280.
+# B. C. Carlson, ['A table of elliptic integrals: two quadratic factors]. Math. Comp., 59
+(1992), pp. 165-180.
+# B. C. Carlson, ['[@http://arxiv.org/abs/math.CA/9409227 
+Numerical computation of real or complex elliptic integrals]]. Numerical Algorithms,
+Volume 10, Number 1 / March, 1995, p13-26.
+# B. C. Carlson and John L. Gustafson, ['[@http://arxiv.org/abs/math.CA/9310223
+Asymptotic Approximations for Symmetric Elliptic Integrals]], 
+SIAM Journal on Mathematical Analysis, Volume 25, Issue 2 (March 1994), 288-303.
+
+
+The following references, while not directly relevant to our implementation,
+may also be of interest:
+
+# R. Burlisch, ['Numerical Computation of Elliptic Integrals and Elliptic Functions.]
+Numerical Mathematik 7, 78-90.
+# R. Burlisch, ['An extension of the Bartky Transformation to Incomplete
+Elliptic Integrals of the Third Kind]. Numerical Mathematik 13, 266-284.
+# R. Burlisch, ['Numerical Computation of Elliptic Integrals and Elliptic Functions. III]. 
+Numerical Mathematik 13, 305-315.
+# T. Fukushima and H. Ishizaki, ['[@http://adsabs.harvard.edu/abs/1994CeMDA..59..237F 
+Numerical Computation of Incomplete Elliptic Integrals of a General Form.]]
+Celestial Mechanics and Dynamical Astronomy, Volume 59, Number 3 / July, 1994,
+237-251.
+
+[endsect] [/section:ellint_intro Elliptic Integral Overview]
+
+[/
+Copyright (c) 2006 Xiaogang Zhang
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+

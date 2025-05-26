@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd" [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>hyper_1f1</title>
+<!-- MathML created with MathCast Equation Editor version 0.92 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <msub>
+      <mi/>
+      <mn>1</mn>
+    </msub>
+    <msub>
+      <mi>F</mi>
+      <mn>1</mn>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>a</mi>
+        <mo>;</mo>
+        <mi>b</mi>
+        <mo>;</mo>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <munderover>
+      <mo>&#x2211;</mo>
+      <mrow>
+        <mi>k</mi>
+        <mo>=</mo>
+        <mn>1</mn>
+      </mrow>
+      <mi>&#x221e;</mi>
+    </munderover>
+    <mfrac>
+      <mrow>
+        <msub>
+          <mfenced>
+            <mrow>
+              <mi>a</mi>
+            </mrow>
+          </mfenced>
+          <mi>k</mi>
+        </msub>
+        <msup>
+          <mi>z</mi>
+          <mi>k</mi>
+        </msup>
+      </mrow>
+      <mrow>
+        <msub>
+          <mfenced>
+            <mrow>
+              <mi>b</mi>
+            </mrow>
+          </mfenced>
+          <mi>k</mi>
+        </msub>
+        <mi>k</mi>
+        <mo>!</mo>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math></body>
+</html>

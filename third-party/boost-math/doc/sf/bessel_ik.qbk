@@ -1,0 +1,236 @@
+[section:mbessel Modified Bessel Functions of the First and Second Kinds]
+
+[h4 Synopsis]
+
+`#include <boost/math/special_functions/bessel.hpp>`
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` cyl_bessel_i(T1 v, T2 x);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` cyl_bessel_i(T1 v, T2 x, const ``__Policy``&);
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` cyl_bessel_k(T1 v, T2 x);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` cyl_bessel_k(T1 v, T2 x, const ``__Policy``&);
+   
+   
+[h4 Description]
+
+The functions __cyl_bessel_i and __cyl_bessel_k return the result of the
+modified Bessel functions of the first and second kind respectively:
+
+[:cyl_bessel_i(v, x) = I[sub v](x)]
+
+[:cyl_bessel_k(v, x) = K[sub v](x)]
+
+where:
+
+[equation mbessel2]
+
+[equation mbessel3]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types.  The functions are also optimised for the
+relatively common case that T1 is an integer.
+
+[optional_policy]
+
+The functions return the result of __domain_error whenever the result is
+undefined or complex.  For __cyl_bessel_j this occurs when `x < 0` and v is not
+an integer, or when `x == 0` and `v != 0`.  For __cyl_neumann this occurs
+when `x <= 0`.
+
+The following graph illustrates the exponential behaviour of I[sub v].
+
+[graph cyl_bessel_i]
+
+The following graph illustrates the exponential decay of K[sub v].
+
+[graph cyl_bessel_k]
+
+[h4 Testing]
+
+There are two sets of test values: spot values calculated using
+[@http://functions.wolfram.com functions.wolfram.com],
+and a much larger set of tests computed using
+a simplified version of this implementation
+(with all the special case handling removed).
+
+[h4 Accuracy]
+
+The following tables show how the accuracy of these functions
+varies on various platforms, along with comparison to other libraries.  
+Note that only results for the widest floating-point type on the 
+system are given, as narrower types have __zero_error.  All values
+are relative errors in units of epsilon.  Note that our test suite
+includes some fairly extreme inputs which results in most of the worst
+problem cases in other libraries:
+
+[table_cyl_bessel_i_integer_orders_]
+
+[table_cyl_bessel_i]
+
+[table_cyl_bessel_k_integer_orders_]
+
+[table_cyl_bessel_k]
+
+The following error plot are based on an exhaustive search of the functions domain for I0, I1, K0, and K1, 
+MSVC-15.5 at `double` precision, and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph i0__double]
+
+[graph i0__80_bit_long_double]
+
+[graph i0____float128]
+
+[graph i1__double]
+
+[graph i1__80_bit_long_double]
+
+[graph i1____float128]
+
+[graph k0__double]
+
+[graph k0__80_bit_long_double]
+
+[graph k0____float128]
+
+[graph k1__double]
+
+[graph k1__80_bit_long_double]
+
+[graph k1____float128]
+
+
+[h4 Implementation]
+
+The following are handled as special cases first:
+
+When computing I[sub v] for ['x < 0], then [nu] must be an integer
+or a domain error occurs.  If [nu] is an integer, then the function is
+odd if [nu] is odd and even if [nu] is even, and we can reflect to
+['x > 0].
+
+For I[sub v] with v equal to 0, 1 or 0.5 are handled as special cases.
+
+The 0 and 1 cases use polynomial approximations on
+finite and infinite intervals. The approximating forms
+are based on 
+[@http://www.advanpix.com/2015/11/11/rational-approximations-for-the-modified-bessel-function-of-the-first-kind-i0-computations-double-precision/ 
+"Rational Approximations for the Modified Bessel Function of the First Kind - I[sub 0](x) for Computations with Double Precision"]
+by Pavel Holoborodko, extended by us to deal with up to 128-bit precision (with different approximations for each target precision).
+
+[equation bessel21]
+
+[equation bessel20]
+
+[equation bessel17]
+
+[equation bessel18]
+
+Similarly we have:
+
+[equation bessel22]
+
+[equation bessel23]
+
+[equation bessel24]
+
+[equation bessel25]
+
+The 0.5 case is a simple trigonometric function:
+
+[:I[sub 0.5](x) = sqrt(2 / [pi]x) * sinh(x)]
+
+For K[sub v] with /v/ an integer, the result is calculated using the recurrence relation:
+
+[equation mbessel5]
+
+starting from K[sub 0] and K[sub 1] which are calculated
+using rational the approximations above.  These rational approximations are
+accurate to around 19 digits, and are therefore only used when T has 
+no more than 64 binary digits of precision.
+
+When /x/ is small compared to /v/, I[sub v]x is best computed directly from the series:
+
+[equation mbessel17]
+
+In the general case, we first normalize [nu] to \[[^0, [inf]])
+with the help of the reflection formulae:
+
+[equation mbessel9]
+
+[equation mbessel10]
+
+Let [mu] = [nu] - floor([nu] + 1/2), then [mu] is the fractional part of 
+[nu] such that |[mu]| <= 1/2 (we need this for convergence later). The idea is to
+calculate K[sub [mu]](x) and K[sub [mu]+1](x), and use them to obtain
+I[sub [nu]](x) and K[sub [nu]](x).
+
+The algorithm is proposed by Temme in 
+[:N.M. Temme, ['On the numerical evaluation of the modified bessel function
+    of the third kind], Journal of Computational Physics, vol 19, 324 (1975),]
+which needs two continued fractions as well as the Wronskian:
+
+[equation mbessel11]
+
+[equation mbessel12]
+
+[equation mbessel8]
+
+The continued fractions are computed using the modified Lentz's method
+[:(W.J. Lentz, ['Generating Bessel functions in Mie scattering calculations
+    using continued fractions], Applied Optics, vol 15, 668 (1976)).]
+Their convergence rates depend on ['x], therefore we need
+different strategies for large ['x] and small ['x].
+
+['x > v], CF1 needs O(['x]) iterations to converge, CF2 converges rapidly.
+
+['x <= v], CF1 converges rapidly, CF2 fails to converge when ['x] [^->] 0.
+
+When ['x] is large (['x] > 2), both continued fractions converge (CF1
+may be slow for really large ['x]). K[sub [mu]] and K[sub [mu]+1]
+can be calculated by
+
+[equation mbessel13]
+
+where
+
+[equation mbessel14]
+
+['S] is also a series that is summed along with CF2, see 
+[:I.J. Thompson and A.R. Barnett, ['Modified Bessel functions I_v and K_v
+    of real order and complex argument to selected accuracy], Computer Physics
+    Communications, vol 47, 245 (1987).]
+
+When ['x] is small (['x] <= 2), CF2 convergence may fail (but CF1
+works very well). The solution here is Temme's series:
+
+[equation mbessel15]
+
+where
+
+[equation mbessel16]
+
+f[sub k] and h[sub k]
+are also computed by recursions (involving gamma functions), but the
+formulas are a little complicated, readers are referred to 
+[:N.M. Temme, ['On the numerical evaluation of the modified Bessel function
+    of the third kind], Journal of Computational Physics, vol 19, 324 (1975).]
+Note: Temme's series converge only for |[mu]| <= 1/2.
+
+K[sub [nu]](x) is then calculated from the forward 
+recurrence, as is K[sub [nu]+1](x). With these two values and
+f[sub [nu]], the Wronskian yields I[sub [nu]](x) directly.
+
+[endsect] [/section:mbessel Modified Bessel Functions of the First and Second Kinds]
+
+[/ 
+  Copyright 2006 John Maddock, Paul A. Bristow and Xiaogang Zhang.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

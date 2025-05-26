@@ -1,0 +1,389 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Implementation</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../special_tut.html" title="Tutorial: How to Write a New Special Function">
+<link rel="prev" href="../special_tut.html" title="Tutorial: How to Write a New Special Function">
+<link rel="next" href="special_tut_test.html" title="Testing">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../special_tut.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../special_tut.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="special_tut_test.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.special_tut.special_tut_impl"></a><a class="link" href="special_tut_impl.html" title="Implementation">Implementation</a>
+</h3></div></div></div>
+<p>
+        In this section, we'll provide a "recipe" for adding a new special
+        function to this library to make life easier for future authors wishing to
+        contribute. We'll assume the function returns a single floating-point result,
+        and takes two floating-point arguments. For the sake of exposition we'll
+        give the function the name <em class="replaceable"><code>my_special</code></em>.
+      </p>
+<p>
+        Normally, the implementation of such a function is split into two layers
+        - a public user layer, and an internal implementation layer that does the
+        actual work. The implementation layer is declared inside a <code class="computeroutput"><span class="identifier">detail</span></code> namespace and has a simple signature:
+      </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">detail</span> <span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">Policy</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">my_special_imp</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span><span class="identifier">b</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">Policy</span><span class="special">&amp;</span> <span class="identifier">pol</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">/* Implementation goes here */</span>
+<span class="special">}</span>
+
+<span class="special">}}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+        We'll come back to what can go inside the implementation later, but first
+        lets look at the user layer. This consists of two overloads of the function,
+        with and without a <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument:
+      </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">U</span><span class="special">&gt;</span>
+<span class="keyword">typename</span> <span class="identifier">tools</span><span class="special">::</span><span class="identifier">promote_args</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">U</span><span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">my_special</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">U</span><span class="special">&amp;</span> <span class="identifier">b</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">U</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">Policy</span><span class="special">&gt;</span>
+<span class="keyword">typename</span> <span class="identifier">tools</span><span class="special">::</span><span class="identifier">promote_args</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">U</span><span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">my_special</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">U</span><span class="special">&amp;</span> <span class="identifier">b</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">Policy</span><span class="special">&amp;</span> <span class="identifier">pol</span><span class="special">);</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+        Note how each argument has a different template type - this allows for mixed
+        type arguments - the return type is computed from a traits class and is the
+        "common type" of all the arguments after any integer arguments
+        have been promoted to type <code class="computeroutput"><span class="keyword">double</span></code>.
+      </p>
+<p>
+        The implementation of the non-policy overload is trivial:
+      </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">U</span><span class="special">&gt;</span>
+<span class="keyword">inline</span> <span class="keyword">typename</span> <span class="identifier">tools</span><span class="special">::</span><span class="identifier">promote_args</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">U</span><span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">my_special</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">U</span><span class="special">&amp;</span> <span class="identifier">b</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">// Simply forward with a default policy:</span>
+   <span class="keyword">return</span> <span class="identifier">my_special</span><span class="special">(</span><span class="identifier">a</span><span class="special">,</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">policies</span><span class="special">::</span><span class="identifier">policy</span><span class="special">&lt;&gt;();</span>
+<span class="special">}</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+        The implementation of the other overload is somewhat more complex, as there's
+        some meta-programming to do, but from a runtime perspective is still a one-line
+        forwarding function. Here it is with comments explaining what each line does:
+      </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">U</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">Policy</span><span class="special">&gt;</span>
+<span class="keyword">inline</span> <span class="keyword">typename</span> <span class="identifier">tools</span><span class="special">::</span><span class="identifier">promote_args</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">U</span><span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">my_special</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">U</span><span class="special">&amp;</span> <span class="identifier">b</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">Policy</span><span class="special">&amp;</span> <span class="identifier">pol</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">//</span>
+   <span class="comment">// We've found some standard library functions to misbehave if any FPU exception flags</span>
+   <span class="comment">// are set prior to their call, this code will clear those flags, then reset them</span>
+   <span class="comment">// on exit:</span>
+   <span class="comment">//</span>
+   <span class="identifier">BOOST_FPU_EXCEPTION_GUARD</span>
+   <span class="comment">//</span>
+   <span class="comment">// The type of the result - the common type of T and U after</span>
+   <span class="comment">// any integer types have been promoted to double:</span>
+   <span class="comment">//</span>
+   <span class="keyword">typedef</span> <span class="keyword">typename</span> <span class="identifier">tools</span><span class="special">::</span><span class="identifier">promote_args</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">U</span><span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">result_type</span><span class="special">;</span>
+   <span class="comment">//</span>
+   <span class="comment">// The type used for the calculation.  This may be a wider type than</span>
+   <span class="comment">// the result in order to ensure full precision:</span>
+   <span class="comment">//</span>
+   <span class="keyword">typedef</span> <span class="keyword">typename</span> <span class="identifier">policies</span><span class="special">::</span><span class="identifier">evaluation</span><span class="special">&lt;</span><span class="identifier">result_type</span><span class="special">,</span> <span class="identifier">Policy</span><span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="comment">//</span>
+   <span class="comment">// The type of the policy to forward to the actual implementation.</span>
+   <span class="comment">// We disable promotion of float and double as that's [possibly]</span>
+   <span class="comment">// happened already in the line above.  Also reset to the default</span>
+   <span class="comment">// any policies we don't use (reduces code bloat if we're called</span>
+   <span class="comment">// multiple times with differing policies we don't actually use).</span>
+   <span class="comment">// Also normalise the type, again to reduce code bloat in case we're</span>
+   <span class="comment">// called multiple times with functionally identical policies that happen</span>
+   <span class="comment">// to be different types.</span>
+   <span class="comment">//</span>
+   <span class="keyword">typedef</span> <span class="keyword">typename</span> <span class="identifier">policies</span><span class="special">::</span><span class="identifier">normalise</span><span class="special">&lt;</span>
+      <span class="identifier">Policy</span><span class="special">,</span>
+      <span class="identifier">policies</span><span class="special">::</span><span class="identifier">promote_float</span><span class="special">&lt;</span><span class="keyword">false</span><span class="special">&gt;,</span>
+      <span class="identifier">policies</span><span class="special">::</span><span class="identifier">promote_double</span><span class="special">&lt;</span><span class="keyword">false</span><span class="special">&gt;,</span>
+      <span class="identifier">policies</span><span class="special">::</span><span class="identifier">discrete_quantile</span><span class="special">&lt;&gt;,</span>
+      <span class="identifier">policies</span><span class="special">::</span><span class="identifier">assert_undefined</span><span class="special">&lt;&gt;</span> <span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">forwarding_policy</span><span class="special">;</span>
+   <span class="comment">//</span>
+   <span class="comment">// Whew.  Now we can make the actual call to the implementation.</span>
+   <span class="comment">// Arguments are explicitly cast to the evaluation type, and the result</span>
+   <span class="comment">// passed through checked_narrowing_cast which handles things like overflow</span>
+   <span class="comment">// according to the policy passed:</span>
+   <span class="comment">//</span>
+   <span class="keyword">return</span> <span class="identifier">policies</span><span class="special">::</span><span class="identifier">checked_narrowing_cast</span><span class="special">&lt;</span><span class="identifier">result_type</span><span class="special">,</span> <span class="identifier">forwarding_policy</span><span class="special">&gt;(</span>
+         <span class="identifier">detail</span><span class="special">::</span><span class="identifier">my_special_imp</span><span class="special">(</span>
+               <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;(</span><span class="identifier">a</span><span class="special">),</span>
+               <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;(</span><span class="identifier">x</span><span class="special">),</span>
+               <span class="identifier">forwarding_policy</span><span class="special">()),</span>
+         <span class="string">"boost::math::my_special&lt;%1%&gt;(%1%, %1%)"</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+        We're now almost there, we just need to flesh out the details of the implementation
+        layer:
+      </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">detail</span> <span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">Policy</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">my_special_imp</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span><span class="identifier">b</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">Policy</span><span class="special">&amp;</span> <span class="identifier">pol</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">/* Implementation goes here */</span>
+<span class="special">}</span>
+
+<span class="special">}}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+        The following guidelines indicate what (other than basic arithmetic) can
+        go in the implementation:
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            Error conditions (for example bad arguments) should be handled by calling
+            one of the <a class="link" href="../error_handling.html#math_toolkit.error_handling.finding_more_information">policy
+            based error handlers</a>.
+          </li>
+<li class="listitem">
+            Calls to standard library functions should be made unqualified (this
+            allows argument dependent lookup to find standard library functions for
+            user-defined floating point types such as those from <a href="../../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>).
+            In addition, the macro <code class="computeroutput"><span class="identifier">BOOST_MATH_STD_USING</span></code>
+            should appear at the start of the function (note no semi-colon afterwards!)
+            so that all the math functions in <code class="computeroutput"><span class="keyword">namespace</span>
+            <span class="identifier">std</span></code> are visible in the current
+            scope.
+          </li>
+<li class="listitem">
+            Calls to other special functions should be made as fully qualified calls,
+            and include the policy parameter as the last argument, for example <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tgamma</span><span class="special">(</span><span class="identifier">a</span><span class="special">,</span> <span class="identifier">pol</span><span class="special">)</span></code>.
+          </li>
+<li class="listitem">
+            Where possible, evaluation of series, continued fractions, polynomials,
+            or root finding should use one of the <a class="link" href="../internals_overview.html" title="Overview">boiler-plate
+            functions</a>. In any case, after any iterative method, you should
+            verify that the number of iterations did not exceed the maximum specified
+            in the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> type, and if it did terminate
+            as a result of exceeding the maximum, then the appropriate error handler
+            should be called (see existing code for examples).
+          </li>
+<li class="listitem">
+            Numeric constants such as π etc should be obtained via a call to the <a class="link" href="../constants.html" title="The Mathematical Constants">appropriate function</a>, for example:
+            <code class="computeroutput"><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>.
+          </li>
+<li class="listitem">
+            Where tables of coefficients are used (for example for rational approximations),
+            care should be taken to ensure these are initialized at program startup
+            to ensure thread safety when using user-defined number types. See for
+            example the use of <code class="computeroutput"><span class="identifier">erf_initializer</span></code>
+            in <a href="../../../../include/boost/math/special_functions/erf.hpp" target="_top">erf.hpp</a>.
+          </li>
+</ul></div>
+<p>
+        Here are some other useful internal functions:
+      </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                <p>
+                  function
+                </p>
+              </th>
+<th>
+                <p>
+                  Meaning
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">policies</span><span class="special">::</span><span class="identifier">digits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span>
+                  <span class="identifier">Policy</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Returns number of binary digits in T (possible overridden by the
+                  policy).
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">policies</span><span class="special">::</span><span class="identifier">get_max_series_iterations</span><span class="special">&lt;</span><span class="identifier">Policy</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Maximum number of iterations for series evaluation.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">policies</span><span class="special">::</span><span class="identifier">get_max_root_iterations</span><span class="special">&lt;</span><span class="identifier">Policy</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Maximum number of iterations for root finding.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">polices</span><span class="special">::</span><span class="identifier">get_epsilon</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span>
+                  <span class="identifier">Policy</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Epsilon for type T, possibly overridden by the Policy.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">tools</span><span class="special">::</span><span class="identifier">digits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Returns the number of binary digits in T.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">tools</span><span class="special">::</span><span class="identifier">max_value</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Equivalent to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">max</span><span class="special">()</span></code>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">tools</span><span class="special">::</span><span class="identifier">min_value</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Equivalent to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">min</span><span class="special">()</span></code>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">tools</span><span class="special">::</span><span class="identifier">log_max_value</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Equivalent to the natural logarithm of <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">max</span><span class="special">()</span></code>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">tools</span><span class="special">::</span><span class="identifier">log_min_value</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Equivalent to the natural logarithm of <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">min</span><span class="special">()</span></code>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">tools</span><span class="special">::</span><span class="identifier">epsilon</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Equivalent to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">epsilon</span><span class="special">()</span></code>.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">tools</span><span class="special">::</span><span class="identifier">root_epsilon</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Equivalent to the square root of <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">epsilon</span><span class="special">()</span></code>.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="computeroutput"><span class="identifier">tools</span><span class="special">::</span><span class="identifier">forth_root_epsilon</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>
+                </p>
+              </td>
+<td>
+                <p>
+                  Equivalent to the forth root of <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">epsilon</span><span class="special">()</span></code>.
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../special_tut.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../special_tut.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="special_tut_test.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

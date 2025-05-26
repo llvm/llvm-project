@@ -1,0 +1,360 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Inverse Chi-Squared Distribution Bayes Example</title>
+<link rel="stylesheet" href="../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../weg.html" title="Worked Examples">
+<link rel="prev" href="normal_example/normal_misc.html" title="Some Miscellaneous Examples of the Normal (Gaussian) Distribution">
+<link rel="next" href="nccs_eg.html" title="Non Central Chi Squared Example">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="normal_example/normal_misc.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../weg.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="nccs_eg.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="math_toolkit.stat_tut.weg.inverse_chi_squared_eg"></a><a class="link" href="inverse_chi_squared_eg.html" title="Inverse Chi-Squared Distribution Bayes Example">Inverse
+        Chi-Squared Distribution Bayes Example</a>
+</h4></div></div></div>
+<p>
+          The scaled-inversed-chi-squared distribution is the conjugate prior distribution
+          for the variance (σ<sup>2</sup>) parameter of a normal distribution with known expectation
+          (μ). As such it has widespread application in Bayesian statistics:
+        </p>
+<p>
+          In <a href="http://en.wikipedia.org/wiki/Bayesian_inference" target="_top">Bayesian
+          inference</a>, the strength of belief into certain parameter values
+          is itself described through a distribution. Parameters hence become themselves
+          modelled and interpreted as random variables.
+        </p>
+<p>
+          In this worked example, we perform such a Bayesian analysis by using the
+          scaled-inverse-chi-squared distribution as prior and posterior distribution
+          for the variance parameter of a normal distribution.
+        </p>
+<p>
+          For more general information on Bayesian type of analyses, see:
+        </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+              Andrew Gelman, John B. Carlin, Hal E. Stern, Donald B. Rubin, Bayesian
+              Data Analysis, 2003, ISBN 978-1439840955.
+            </li>
+<li class="listitem">
+              Jim Albert, Bayesian Computation with R, Springer, 2009, ISBN 978-0387922973.
+            </li>
+</ul></div>
+<p>
+          (As the scaled-inversed-chi-squared is another parameterization of the
+          inverse-gamma distribution, this example could also have used the inverse-gamma
+          distribution).
+        </p>
+<p>
+          Consider precision machines which produce balls for a high-quality ball
+          bearing. Ideally each ball should have a diameter of precisely 3000 μm (3
+          mm). Assume that machines generally produce balls of that size on average
+          (mean), but individual balls can vary slightly in either direction following
+          (approximately) a normal distribution. Depending on various production
+          conditions (e.g. raw material used for balls, workplace temperature and
+          humidity, maintenance frequency and quality) some machines produce balls
+          tighter distributed around the target of 3000 μm, while others produce balls
+          with a wider distribution. Therefore the variance parameter of the normal
+          distribution of the ball sizes varies from machine to machine. An extensive
+          survey by the precision machinery manufacturer, however, has shown that
+          most machines operate with a variance between 15 and 50, and near 25 μm<sup>2</sup> on
+          average.
+        </p>
+<p>
+          Using this information, we want to model the variance of the machines.
+          The variance is strictly positive, and therefore we look for a statistical
+          distribution with support in the positive domain of the real numbers. Given
+          the expectation of the normal distribution of the balls is known (3000
+          μm), for reasons of conjugacy, it is customary practice in Bayesian statistics
+          to model the variance to be scaled-inverse-chi-squared distributed.
+        </p>
+<p>
+          In a first step, we will try to use the survey information to model the
+          general knowledge about the variance parameter of machines measured by
+          the manufacturer. This will provide us with a generic prior distribution
+          that is applicable if nothing more specific is known about a particular
+          machine.
+        </p>
+<p>
+          In a second step, we will then combine the prior-distribution information
+          in a Bayesian analysis with data on a specific single machine to derive
+          a posterior distribution for that machine.
+        </p>
+<h6>
+<a name="math_toolkit.stat_tut.weg.inverse_chi_squared_eg.h0"></a>
+          <span class="phrase"><a name="math_toolkit.stat_tut.weg.inverse_chi_squared_eg.step_one_using_the_survey_inform"></a></span><a class="link" href="inverse_chi_squared_eg.html#math_toolkit.stat_tut.weg.inverse_chi_squared_eg.step_one_using_the_survey_inform">Step
+          one: Using the survey information.</a>
+        </h6>
+<p>
+          Using the survey results, we try to find the parameter set of a scaled-inverse-chi-squared
+          distribution so that the properties of this distribution match the results.
+          Using the mathematical properties of the scaled-inverse-chi-squared distribution
+          as guideline, we see that that both the mean and mode of the scaled-inverse-chi-squared
+          distribution are approximately given by the scale parameter (s) of the
+          distribution. As the survey machines operated at a variance of 25 μm<sup>2</sup> on
+          average, we hence set the scale parameter (s<sub>prior</sub>) of our prior distribution
+          equal to this value. Using some trial-and-error and calls to the global
+          quantile function, we also find that a value of 20 for the degrees-of-freedom
+          (ν<sub>prior</sub>) parameter is adequate so that most of the prior distribution mass
+          is located between 15 and 50 (see figure below).
+        </p>
+<p>
+          We first construct our prior distribution using these values, and then
+          list out a few quantiles:
+        </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">priorDF</span> <span class="special">=</span> <span class="number">20.0</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">priorScale</span> <span class="special">=</span> <span class="number">25.0</span><span class="special">;</span>
+
+<span class="identifier">inverse_chi_squared</span> <span class="identifier">prior</span><span class="special">(</span><span class="identifier">priorDF</span><span class="special">,</span> <span class="identifier">priorScale</span><span class="special">);</span>
+<span class="comment">// Using an inverse_gamma distribution instead, we could equivalently write</span>
+<span class="comment">// inverse_gamma prior(priorDF / 2.0, priorScale * priorDF / 2.0);</span>
+
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Prior distribution:"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  2.5% quantile: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">prior</span><span class="special">,</span> <span class="number">0.025</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  50% quantile: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">prior</span><span class="special">,</span> <span class="number">0.5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  97.5% quantile: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">prior</span><span class="special">,</span> <span class="number">0.975</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+          This produces this output:
+        </p>
+<pre class="programlisting"><span class="identifier">Prior</span> <span class="identifier">distribution</span><span class="special">:</span>
+
+<span class="number">2.5</span><span class="special">%</span> <span class="identifier">quantile</span><span class="special">:</span> <span class="number">14.6</span>
+<span class="number">50</span><span class="special">%</span> <span class="identifier">quantile</span><span class="special">:</span> <span class="number">25.9</span>
+<span class="number">97.5</span><span class="special">%</span> <span class="identifier">quantile</span><span class="special">:</span> <span class="number">52.1</span>
+</pre>
+<p>
+          Based on this distribution, we can now calculate the probability of having
+          a machine working with an unusual work precision (variance) at &lt;= 15
+          or &gt; 50. For this task, we use calls to the <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span></code> functions <code class="computeroutput"><span class="identifier">cdf</span></code>
+          and <code class="computeroutput"><span class="identifier">complement</span></code>, respectively,
+          and find a probability of about 0.031 (3.1%) for each case.
+        </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  probability variance &lt;= 15: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">prior</span><span class="special">,</span> <span class="number">15.0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  probability variance &lt;= 25: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">prior</span><span class="special">,</span> <span class="number">25.0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  probability variance &gt; 50: "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">prior</span><span class="special">,</span> <span class="number">50.0</span><span class="special">))</span>
+<span class="special">&lt;&lt;</span> <span class="identifier">endl</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+          This produces this output:
+        </p>
+<pre class="programlisting"><span class="identifier">probability</span> <span class="identifier">variance</span> <span class="special">&lt;=</span> <span class="number">15</span><span class="special">:</span> <span class="number">0.031</span>
+<span class="identifier">probability</span> <span class="identifier">variance</span> <span class="special">&lt;=</span> <span class="number">25</span><span class="special">:</span> <span class="number">0.458</span>
+<span class="identifier">probability</span> <span class="identifier">variance</span> <span class="special">&gt;</span> <span class="number">50</span><span class="special">:</span> <span class="number">0.0318</span>
+</pre>
+<p>
+          Therefore, only 3.1% of all precision machines produce balls with a variance
+          of 15 or less (particularly precise machines), but also only 3.2% of all
+          machines produce balls with a variance of as high as 50 or more (particularly
+          imprecise machines). Moreover, slightly more than one-half (1 - 0.458 =
+          54.2%) of the machines work at a variance greater than 25.
+        </p>
+<p>
+          Notice here the distinction between a <a href="http://en.wikipedia.org/wiki/Bayesian_inference" target="_top">Bayesian</a>
+          analysis and a <a href="http://en.wikipedia.org/wiki/Frequentist_inference" target="_top">frequentist</a>
+          analysis: because we model the variance as random variable itself, we can
+          calculate and straightforwardly interpret probabilities for given parameter
+          values directly, while such an approach is not possible (and interpretationally
+          a strict <span class="emphasis"><em>must-not</em></span>) in the frequentist world.
+        </p>
+<h6>
+<a name="math_toolkit.stat_tut.weg.inverse_chi_squared_eg.h1"></a>
+          <span class="phrase"><a name="math_toolkit.stat_tut.weg.inverse_chi_squared_eg.step_2_investigate_a_single_mach"></a></span><a class="link" href="inverse_chi_squared_eg.html#math_toolkit.stat_tut.weg.inverse_chi_squared_eg.step_2_investigate_a_single_mach">Step
+          2: Investigate a single machine</a>
+        </h6>
+<p>
+          In the second step, we investigate a single machine, which is suspected
+          to suffer from a major fault as the produced balls show fairly high size
+          variability. Based on the prior distribution of generic machinery performance
+          (derived above) and data on balls produced by the suspect machine, we calculate
+          the posterior distribution for that machine and use its properties for
+          guidance regarding continued machine operation or suspension.
+        </p>
+<p>
+          It can be shown that if the prior distribution was chosen to be scaled-inverse-chi-square
+          distributed, then the posterior distribution is also scaled-inverse-chi-squared-distributed
+          (prior and posterior distributions are hence conjugate). For more details
+          regarding conjugacy and formula to derive the parameters set for the posterior
+          distribution see <a href="http://en.wikipedia.org/wiki/Conjugate_prior" target="_top">Conjugate
+          prior</a>.
+        </p>
+<p>
+          Given the prior distribution parameters and sample data (of size n), the
+          posterior distribution parameters are given by the two expressions:
+        </p>
+<p>
+             ν<sub>posterior</sub> = ν<sub>prior</sub> + n
+        </p>
+<p>
+          which gives the posteriorDF below, and
+        </p>
+<p>
+             s<sub>posterior</sub> = (ν<sub>prior</sub>s<sub>prior</sub> + Σ<sup>n</sup><sub>i=1</sub>(x<sub>i</sub> - μ)<sup>2</sup>) / (ν<sub>prior</sub> + n)
+        </p>
+<p>
+          which after some rearrangement gives the formula for the posteriorScale
+          below.
+        </p>
+<p>
+          Machine-specific data consist of 100 balls which were accurately measured
+          and show the expected mean of 3000 μm and a sample variance of 55 (calculated
+          for a sample mean defined to be 3000 exactly). From these data, the prior
+          parameterization, and noting that the term Σ<sup>n</sup><sub>i=1</sub>(x<sub>i</sub> - μ)<sup>2</sup> equals the sample
+          variance multiplied by n - 1, it follows that the posterior distribution
+          of the variance parameter is scaled-inverse-chi-squared distribution with
+          degrees-of-freedom (ν<sub>posterior</sub>) = 120 and scale (s<sub>posterior</sub>) = 49.54.
+        </p>
+<pre class="programlisting"><span class="keyword">int</span> <span class="identifier">ballsSampleSize</span> <span class="special">=</span> <span class="number">100</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span><span class="string">"balls sample size: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ballsSampleSize</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">ballsSampleVariance</span> <span class="special">=</span> <span class="number">55.0</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span><span class="string">"balls sample variance: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ballsSampleVariance</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+
+<span class="keyword">double</span> <span class="identifier">posteriorDF</span> <span class="special">=</span> <span class="identifier">priorDF</span> <span class="special">+</span> <span class="identifier">ballsSampleSize</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"prior degrees-of-freedom: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">priorDF</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"posterior degrees-of-freedom: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">posteriorDF</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+
+<span class="keyword">double</span> <span class="identifier">posteriorScale</span> <span class="special">=</span>
+  <span class="special">(</span><span class="identifier">priorDF</span> <span class="special">*</span> <span class="identifier">priorScale</span> <span class="special">+</span> <span class="special">(</span><span class="identifier">ballsSampleVariance</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">ballsSampleSize</span> <span class="special">-</span> <span class="number">1</span><span class="special">)))</span> <span class="special">/</span> <span class="identifier">posteriorDF</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"prior scale: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">priorScale</span>  <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"posterior scale: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">posteriorScale</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+          An interesting feature here is that one needs only to know a summary statistics
+          of the sample to parameterize the posterior distribution: the 100 individual
+          ball measurements are irrelevant, just knowledge of the sample variance
+          and number of measurements is sufficient.
+        </p>
+<p>
+          That produces this output:
+        </p>
+<pre class="programlisting"><span class="identifier">balls</span> <span class="identifier">sample</span> <span class="identifier">size</span><span class="special">:</span> <span class="number">100</span>
+<span class="identifier">balls</span> <span class="identifier">sample</span> <span class="identifier">variance</span><span class="special">:</span> <span class="number">55</span>
+<span class="identifier">prior</span> <span class="identifier">degrees</span><span class="special">-</span><span class="identifier">of</span><span class="special">-</span><span class="identifier">freedom</span><span class="special">:</span> <span class="number">20</span>
+<span class="identifier">posterior</span> <span class="identifier">degrees</span><span class="special">-</span><span class="identifier">of</span><span class="special">-</span><span class="identifier">freedom</span><span class="special">:</span> <span class="number">120</span>
+<span class="identifier">prior</span> <span class="identifier">scale</span><span class="special">:</span> <span class="number">25</span>
+<span class="identifier">posterior</span> <span class="identifier">scale</span><span class="special">:</span> <span class="number">49.5</span>
+
+</pre>
+<p>
+          To compare the generic machinery performance with our suspect machine,
+          we calculate again the same quantiles and probabilities as above, and find
+          a distribution clearly shifted to greater values (see figure).
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/prior_posterior_plot.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<pre class="programlisting"><span class="identifier">inverse_chi_squared</span> <span class="identifier">posterior</span><span class="special">(</span><span class="identifier">posteriorDF</span><span class="special">,</span> <span class="identifier">posteriorScale</span><span class="special">);</span>
+
+ <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Posterior distribution:"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+ <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  2.5% quantile: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">posterior</span><span class="special">,</span> <span class="number">0.025</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+ <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  50% quantile: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">posterior</span><span class="special">,</span> <span class="number">0.5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+ <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  97.5% quantile: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">posterior</span><span class="special">,</span> <span class="number">0.975</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+
+ <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  probability variance &lt;= 15: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">posterior</span><span class="special">,</span> <span class="number">15.0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+ <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  probability variance &lt;= 25: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">posterior</span><span class="special">,</span> <span class="number">25.0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+ <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"  probability variance &gt; 50: "</span>
+   <span class="special">&lt;&lt;</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">posterior</span><span class="special">,</span> <span class="number">50.0</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+          This produces this output:
+        </p>
+<pre class="programlisting"><span class="identifier">Posterior</span> <span class="identifier">distribution</span><span class="special">:</span>
+
+   <span class="number">2.5</span><span class="special">%</span> <span class="identifier">quantile</span><span class="special">:</span> <span class="number">39.1</span>
+   <span class="number">50</span><span class="special">%</span> <span class="identifier">quantile</span><span class="special">:</span> <span class="number">49.8</span>
+   <span class="number">97.5</span><span class="special">%</span> <span class="identifier">quantile</span><span class="special">:</span> <span class="number">64.9</span>
+
+   <span class="identifier">probability</span> <span class="identifier">variance</span> <span class="special">&lt;=</span> <span class="number">15</span><span class="special">:</span> <span class="number">2.97e-031</span>
+   <span class="identifier">probability</span> <span class="identifier">variance</span> <span class="special">&lt;=</span> <span class="number">25</span><span class="special">:</span> <span class="number">8.85e-010</span>
+   <span class="identifier">probability</span> <span class="identifier">variance</span> <span class="special">&gt;</span> <span class="number">50</span><span class="special">:</span> <span class="number">0.489</span>
+</pre>
+<p>
+          Indeed, the probability that the machine works at a low variance (&lt;=
+          15) is almost zero, and even the probability of working at average or better
+          performance is negligibly small (less than one-millionth of a permille).
+          On the other hand, with an almost near-half probability (49%), the machine
+          operates in the extreme high variance range of &gt; 50 characteristic for
+          poorly performing machines.
+        </p>
+<p>
+          Based on this information the operation of the machine is taken out of
+          use and serviced.
+        </p>
+<p>
+          In summary, the Bayesian analysis allowed us to make exact probabilistic
+          statements about a parameter of interest, and hence provided us results
+          with straightforward interpretation.
+        </p>
+<p>
+          A full sample output is:
+        </p>
+<pre class="programlisting"> Inverse_chi_squared_distribution Bayes example:
+
+   Prior distribution:
+
+    2.5% quantile: 14.6
+    50% quantile: 25.9
+    97.5% quantile: 52.1
+
+    probability variance &lt;= 15: 0.031
+    probability variance &lt;= 25: 0.458
+    probability variance &gt; 50: 0.0318
+
+  balls sample size: 100
+  balls sample variance: 55
+  prior degrees-of-freedom: 20
+  posterior degrees-of-freedom: 120
+  prior scale: 25
+  posterior scale: 49.5
+  Posterior distribution:
+
+    2.5% quantile: 39.1
+    50% quantile: 49.8
+    97.5% quantile: 64.9
+
+    probability variance &lt;= 15: 2.97e-031
+    probability variance &lt;= 25: 8.85e-010
+    probability variance &gt; 50: 0.489
+
+</pre>
+<p>
+          (See also the reference documentation for the <a class="link" href="../../dist_ref/dists/inverse_chi_squared_dist.html" title="Inverse Chi Squared Distribution">Inverse
+          chi squared Distribution</a>.)
+        </p>
+<p>
+          See the full source C++ of this example at <a href="../../../../../example/inverse_chi_squared_bayes_eg.cpp" target="_top">../../example/inverse_chi_squared_bayes_eg.cpp</a>
+        </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="normal_example/normal_misc.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../weg.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="nccs_eg.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

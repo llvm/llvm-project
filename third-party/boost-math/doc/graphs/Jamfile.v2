@@ -1,0 +1,53 @@
+# Copyright John Maddock 2008. Use, modification, and distribution are
+# subject to the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+import os ;
+import common ;
+import modules ;
+import regex ;
+
+inkscape_global = [ modules.peek : INKSCAPE ] ;
+
+if $(inkscape_global)
+{
+   inkscape = $(inkscape_global) ;
+
+   ECHO "Using the INKSCAPE environment variable to set inkscape to: " $(inkscape) ;
+}
+else if [ os.name ] = NT
+{
+
+   inkscape_reg = [ W32_GETREG "HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes\\svgfile\\shell\\Inkscape\\command" ] ;
+   inkscape_parts = [ regex.split $(inkscape_reg) "\"%1" ] ;
+   inkscape = $(inkscape_parts[1]) ;
+
+   ECHO "Using the Windows registry to set the Inkscape path to: " $(inkscape) ;
+   ECHO "If that's not correct, try setting the INKSCAPE environment " ;
+   ECHO "variable to the correct path and executable file name." ;
+}
+else
+{
+   inkscape = "inkscape" ;
+   ECHO "No inkscape path specified, defaulting to \"inkscape\"." ;
+   ECHO "If that's not correct, try setting the INKSCAPE environment " ;
+   ECHO "variable to the correct path and executable file name." ;
+}
+
+#make inkscape.check : : @inkscape-rule ;
+actions inkscape-rule
+{
+    $(inkscape) --version > inkscape.version
+}
+
+
+actions svg2png
+{
+    $(inkscape) -d 120 -e $(<) $(>)
+}
+for local source in [ glob *.svg ]
+{
+   path-constant p : $(source:B).png ;
+   make $(p) : $(source) : @svg2png ;
+}
+

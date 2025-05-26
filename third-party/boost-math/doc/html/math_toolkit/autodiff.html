@@ -1,0 +1,417 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Automatic Differentiation</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../quadrature.html" title="Chapter 14. Quadrature and Differentiation">
+<link rel="prev" href="diff.html" title="Numerical Differentiation">
+<link rel="next" href="diff0.html" title="Lanczos Smoothing Derivatives">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="diff.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../quadrature.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="diff0.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.autodiff"></a><a class="link" href="autodiff.html" title="Automatic Differentiation">Automatic Differentiation</a>
+</h2></div></div></div>
+<h2>
+<a name="math_toolkit.autodiff.h0"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.synopsis"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.synopsis">Synopsis</a>
+    </h2>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">differentiation</span><span class="special">/</span><span class="identifier">autodiff</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span>
+<span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span>
+<span class="keyword">namespace</span> <span class="identifier">differentiation</span> <span class="special">{</span>
+
+<span class="comment">// Function returning a single variable of differentiation. Recommended: Use auto for type.</span>
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">Order</span><span class="special">,</span> <span class="identifier">size_t</span><span class="special">...</span> <span class="identifier">Orders</span><span class="special">&gt;</span>
+<span class="identifier">autodiff_fvar</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">Order</span><span class="special">,</span> <span class="identifier">Orders</span><span class="special">...&gt;</span> <span class="identifier">make_fvar</span><span class="special">(</span><span class="identifier">RealType</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">ca</span><span class="special">);</span>
+
+<span class="comment">// Function returning multiple independent variables of differentiation in a std::tuple.</span>
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">size_t</span><span class="special">...</span> <span class="identifier">Orders</span><span class="special">,</span> <span class="keyword">typename</span><span class="special">...</span> <span class="identifier">RealTypes</span><span class="special">&gt;</span>
+<span class="keyword">auto</span> <span class="identifier">make_ftuple</span><span class="special">(</span><span class="identifier">RealTypes</span> <span class="keyword">const</span><span class="special">&amp;...</span> <span class="identifier">ca</span><span class="special">);</span>
+
+<span class="comment">// Type of combined autodiff types. Recommended: Use auto for return type (C++14).</span>
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="keyword">typename</span><span class="special">...</span> <span class="identifier">RealTypes</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">promote</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">detail</span><span class="special">::</span><span class="identifier">promote_args_n</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">RealTypes</span><span class="special">...&gt;::</span><span class="identifier">type</span><span class="special">;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">detail</span> <span class="special">{</span>
+
+<span class="comment">// Single autodiff variable. Use make_fvar() or make_ftuple() to instantiate.</span>
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">Order</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">fvar</span> <span class="special">{</span>
+ <span class="keyword">public</span><span class="special">:</span>
+  <span class="comment">// Query return value of function to get the derivatives.</span>
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span><span class="special">...</span> <span class="identifier">Orders</span><span class="special">&gt;</span>
+  <span class="identifier">get_type_at</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="keyword">sizeof</span><span class="special">...(</span><span class="identifier">Orders</span><span class="special">)</span> <span class="special">-</span> <span class="number">1</span><span class="special">&gt;</span> <span class="identifier">derivative</span><span class="special">(</span><span class="identifier">Orders</span><span class="special">...</span> <span class="identifier">orders</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+  <span class="comment">// All of the arithmetic and comparison operators are overloaded.</span>
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">RealType2</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">Order2</span><span class="special">&gt;</span>
+  <span class="identifier">fvar</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">+=(</span><span class="identifier">fvar</span><span class="special">&lt;</span><span class="identifier">RealType2</span><span class="special">,</span> <span class="identifier">Order2</span><span class="special">&gt;</span> <span class="keyword">const</span><span class="special">&amp;);</span>
+
+  <span class="identifier">fvar</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">+=(</span><span class="identifier">root_type</span> <span class="keyword">const</span><span class="special">&amp;);</span>
+
+  <span class="comment">// ...</span>
+<span class="special">};</span>
+
+<span class="comment">// Standard math functions are overloaded and called via argument-dependent lookup (ADL).</span>
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">Order</span><span class="special">&gt;</span>
+<span class="identifier">fvar</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">Order</span><span class="special">&gt;</span> <span class="identifier">floor</span><span class="special">(</span><span class="identifier">fvar</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">Order</span><span class="special">&gt;</span> <span class="keyword">const</span><span class="special">&amp;);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">Order</span><span class="special">&gt;</span>
+<span class="identifier">fvar</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">Order</span><span class="special">&gt;</span> <span class="identifier">exp</span><span class="special">(</span><span class="identifier">fvar</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">Order</span><span class="special">&gt;</span> <span class="keyword">const</span><span class="special">&amp;);</span>
+
+<span class="comment">// ...</span>
+
+<span class="special">}</span>  <span class="comment">// namespace detail</span>
+
+<span class="special">}</span>  <span class="comment">// namespace differentiation</span>
+<span class="special">}</span>  <span class="comment">// namespace math</span>
+<span class="special">}</span>  <span class="comment">// namespace boost</span>
+</pre>
+<h2>
+<a name="math_toolkit.autodiff.h1"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.description"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.description">Description</a>
+    </h2>
+<p>
+      Autodiff is a header-only C++ library that facilitates the <a href="https://en.wikipedia.org/wiki/Automatic_differentiation" target="_top">automatic
+      differentiation</a> (forward mode) of mathematical functions of single
+      and multiple variables.
+    </p>
+<p>
+      This implementation is based upon the <a href="https://en.wikipedia.org/wiki/Taylor_series" target="_top">Taylor
+      series</a> expansion of an analytic function <span class="emphasis"><em>f</em></span> at
+      the point <span class="emphasis"><em>x<sub>0</sub></em></span>:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../equations/autodiff/taylor_series.svg"></span>
+        </p></blockquote></div></blockquote></div>
+<p>
+      The essential idea of autodiff is the substitution of numbers with polynomials
+      in the evaluation of <span class="emphasis"><em>f(x<sub>0</sub>)</em></span>. By substituting the number
+      <span class="emphasis"><em>x<sub>0</sub></em></span> with the first-order polynomial <span class="emphasis"><em>x<sub>0</sub>+ε</em></span>,
+      and using the same algorithm to compute <span class="emphasis"><em>f(x<sub>0</sub>+ε)</em></span>,
+      the resulting polynomial in <span class="emphasis"><em>ε</em></span> contains the function's
+      derivatives <span class="emphasis"><em>f'(x<sub>0</sub>)</em></span>, <span class="emphasis"><em>f''(x<sub>0</sub>)</em></span>, <span class="emphasis"><em>f'''(x<sub>0</sub>)</em></span>,
+      ... within the coefficients. Each coefficient is equal to the derivative of
+      its respective order, divided by the factorial of the order.
+    </p>
+<p>
+      In greater detail, assume one is interested in calculating the first <span class="emphasis"><em>N</em></span>
+      derivatives of <span class="emphasis"><em>f</em></span> at <span class="emphasis"><em>x<sub>0</sub></em></span>. Without loss
+      of precision to the calculation of the derivatives, all terms <span class="emphasis"><em>O(ε<sup>N+1</sup>)</em></span>
+      that include powers of <span class="emphasis"><em>ε</em></span> greater than <span class="emphasis"><em>N</em></span>
+      can be discarded. (This is due to the fact that each term in a polynomial depends
+      only upon equal and lower-order terms under arithmetic operations.) Under these
+      truncation rules, <span class="emphasis"><em>f</em></span> provides a polynomial-to-polynomial
+      transformation:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../equations/autodiff/polynomial_transform.svg"></span>
+        </p></blockquote></div></blockquote></div>
+<p>
+      C++'s ability to overload operators and functions allows for the creation of
+      a class <code class="computeroutput"><span class="identifier">fvar</span></code> (<span class="underline">f</span>orward-mode
+      autodiff <span class="underline">var</span>iable) that represents polynomials
+      in <span class="emphasis"><em>ε</em></span>. Thus the same algorithm <span class="emphasis"><em>f</em></span>
+      that calculates the numeric value of <span class="emphasis"><em>y<sub>0</sub>=f(x<sub>0</sub>)</em></span>, when written
+      to accept and return variables of a generic (template) type, is also used to
+      calculate the polynomial <span class="emphasis"><em>Σ<sub>n</sub>y<sub>n</sub>ε<sup>n</sup>=f(x<sub>0</sub>+ε)</em></span>.
+      The derivatives <span class="emphasis"><em>f<sup>(n)</sup>(x<sub>0</sub>)</em></span> are then found from the product
+      of the respective factorial <span class="emphasis"><em>n!</em></span> and coefficient <span class="emphasis"><em>y<sub>n</sub></em></span>:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../equations/autodiff/derivative_formula.svg"></span>
+        </p></blockquote></div></blockquote></div>
+<h2>
+<a name="math_toolkit.autodiff.h2"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.examples"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.examples">Examples</a>
+    </h2>
+<h3>
+<a name="math_toolkit.autodiff.h3"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.example-single-variable"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.example-single-variable">Example
+      1: Single-variable derivatives</a>
+    </h3>
+<h4>
+<a name="math_toolkit.autodiff.h4"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.calculate_derivatives_of_f_x_x_s"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.calculate_derivatives_of_f_x_x_s">Calculate
+      derivatives of <span class="emphasis"><em>f(x)=x<sup>4</sup></em></span> at <span class="emphasis"><em>x</em></span>=2.</a>
+    </h4>
+<p>
+      In this example, <code class="computeroutput"><span class="identifier">make_fvar</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span>
+      <span class="identifier">Order</span><span class="special">&gt;(</span><span class="number">2.0</span><span class="special">)</span></code> instantiates
+      the polynomial 2+<span class="emphasis"><em>ε</em></span>. The <code class="computeroutput"><span class="identifier">Order</span><span class="special">=</span><span class="number">5</span></code> means that
+      enough space is allocated (on the stack) to hold a polynomial of up to degree
+      5 during the proceeding computation.
+    </p>
+<p>
+      Internally, this is modeled by a <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span><span class="number">6</span><span class="special">&gt;</span></code> whose elements <code class="computeroutput"><span class="special">{</span><span class="number">2</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="number">0</span><span class="special">,</span>
+      <span class="number">0</span><span class="special">,</span> <span class="number">0</span><span class="special">,</span> <span class="number">0</span><span class="special">}</span></code>
+      correspond to the 6 coefficients of the polynomial upon initialization. Its
+      fourth power, at the end of the computation, is a polynomial with coefficients
+      <code class="computeroutput"><span class="identifier">y</span> <span class="special">=</span>
+      <span class="special">{</span><span class="number">16</span><span class="special">,</span>
+      <span class="number">32</span><span class="special">,</span> <span class="number">24</span><span class="special">,</span> <span class="number">8</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span>
+      <span class="number">0</span><span class="special">}</span></code>. The
+      derivatives are obtained using the formula <span class="emphasis"><em>f<sup>(n)</sup>(2)=n!*y[n]</em></span>.
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">differentiation</span><span class="special">/</span><span class="identifier">autodiff</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">fourth_power</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">{</span>
+  <span class="identifier">T</span> <span class="identifier">x4</span> <span class="special">=</span> <span class="identifier">x</span> <span class="special">*</span> <span class="identifier">x</span><span class="special">;</span>  <span class="comment">// retval in operator*() uses x4's memory via NRVO.</span>
+  <span class="identifier">x4</span> <span class="special">*=</span> <span class="identifier">x4</span><span class="special">;</span>      <span class="comment">// No copies of x4 are made within operator*=() even when squaring.</span>
+  <span class="keyword">return</span> <span class="identifier">x4</span><span class="special">;</span>     <span class="comment">// x4 uses y's memory in main() via NRVO.</span>
+<span class="special">}</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span> <span class="special">{</span>
+  <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">differentiation</span><span class="special">;</span>
+
+  <span class="keyword">constexpr</span> <span class="keyword">unsigned</span> <span class="identifier">Order</span> <span class="special">=</span> <span class="number">5</span><span class="special">;</span>                  <span class="comment">// Highest order derivative to be calculated.</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">make_fvar</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="identifier">Order</span><span class="special">&gt;(</span><span class="number">2.0</span><span class="special">);</span>  <span class="comment">// Find derivatives at x=2.</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">fourth_power</span><span class="special">(</span><span class="identifier">x</span><span class="special">);</span>
+  <span class="keyword">for</span> <span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;=</span> <span class="identifier">Order</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"y.derivative("</span> <span class="special">&lt;&lt;</span> <span class="identifier">i</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">y</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="identifier">i</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+  <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+<span class="comment">/*
+Output:
+y.derivative(0) = 16
+y.derivative(1) = 32
+y.derivative(2) = 48
+y.derivative(3) = 48
+y.derivative(4) = 24
+y.derivative(5) = 0
+*/</span>
+</pre>
+<p>
+      The above calculates
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../equations/autodiff/example1.svg"></span>
+        </p></blockquote></div></blockquote></div>
+<h3>
+<a name="math_toolkit.autodiff.h5"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.example-multiprecision"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.example-multiprecision">Example
+      2: Multi-variable mixed partial derivatives with multi-precision data type</a>
+    </h3>
+<h4>
+<a name="math_toolkit.autodiff.h6"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.calculate_autodiff_equation_mixe"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.calculate_autodiff_equation_mixe">Calculate
+      <span class="inlinemediaobject"><img src="../../equations/autodiff/mixed12.svg"></span> with a precision of about 50 decimal digits, where <span class="inlinemediaobject"><img src="../../equations/autodiff/example2f.svg"></span>.</a>
+    </h4>
+<p>
+      In this example, <code class="computeroutput"><span class="identifier">make_ftuple</span><span class="special">&lt;</span><span class="identifier">float50</span><span class="special">,</span> <span class="identifier">Nw</span><span class="special">,</span>
+      <span class="identifier">Nx</span><span class="special">,</span> <span class="identifier">Ny</span><span class="special">,</span> <span class="identifier">Nz</span><span class="special">&gt;(</span><span class="number">11</span><span class="special">,</span>
+      <span class="number">12</span><span class="special">,</span> <span class="number">13</span><span class="special">,</span> <span class="number">14</span><span class="special">)</span></code> returns a <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">tuple</span></code> of
+      4 independent <code class="computeroutput"><span class="identifier">fvar</span></code> variables,
+      with values of 11, 12, 13, and 14, for which the maximum order derivative to
+      be calculated for each are 3, 2, 4, 3, respectively. The order of the variables
+      is important, as it is the same order used when calling <code class="computeroutput"><span class="identifier">v</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="identifier">Nw</span><span class="special">,</span>
+      <span class="identifier">Nx</span><span class="special">,</span> <span class="identifier">Ny</span><span class="special">,</span> <span class="identifier">Nz</span><span class="special">)</span></code> in the example below.
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">differentiation</span><span class="special">/</span><span class="identifier">autodiff</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multiprecision</span><span class="special">/</span><span class="identifier">cpp_bin_float</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">differentiation</span><span class="special">;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">W</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">X</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Y</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Z</span><span class="special">&gt;</span>
+<span class="identifier">promote</span><span class="special">&lt;</span><span class="identifier">W</span><span class="special">,</span> <span class="identifier">X</span><span class="special">,</span> <span class="identifier">Y</span><span class="special">,</span> <span class="identifier">Z</span><span class="special">&gt;</span> <span class="identifier">f</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">W</span><span class="special">&amp;</span> <span class="identifier">w</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">X</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">Y</span><span class="special">&amp;</span> <span class="identifier">y</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">Z</span><span class="special">&amp;</span> <span class="identifier">z</span><span class="special">)</span> <span class="special">{</span>
+  <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>
+  <span class="keyword">return</span> <span class="identifier">exp</span><span class="special">(</span><span class="identifier">w</span> <span class="special">*</span> <span class="identifier">sin</span><span class="special">(</span><span class="identifier">x</span> <span class="special">*</span> <span class="identifier">log</span><span class="special">(</span><span class="identifier">y</span><span class="special">)</span> <span class="special">/</span> <span class="identifier">z</span><span class="special">)</span> <span class="special">+</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="identifier">w</span> <span class="special">*</span> <span class="identifier">z</span> <span class="special">/</span> <span class="special">(</span><span class="identifier">x</span> <span class="special">*</span> <span class="identifier">y</span><span class="special">)))</span> <span class="special">+</span> <span class="identifier">w</span> <span class="special">*</span> <span class="identifier">w</span> <span class="special">/</span> <span class="identifier">tan</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span> <span class="special">{</span>
+  <span class="keyword">using</span> <span class="identifier">float50</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">cpp_bin_float_50</span><span class="special">;</span>
+
+  <span class="keyword">constexpr</span> <span class="keyword">unsigned</span> <span class="identifier">Nw</span> <span class="special">=</span> <span class="number">3</span><span class="special">;</span>  <span class="comment">// Max order of derivative to calculate for w</span>
+  <span class="keyword">constexpr</span> <span class="keyword">unsigned</span> <span class="identifier">Nx</span> <span class="special">=</span> <span class="number">2</span><span class="special">;</span>  <span class="comment">// Max order of derivative to calculate for x</span>
+  <span class="keyword">constexpr</span> <span class="keyword">unsigned</span> <span class="identifier">Ny</span> <span class="special">=</span> <span class="number">4</span><span class="special">;</span>  <span class="comment">// Max order of derivative to calculate for y</span>
+  <span class="keyword">constexpr</span> <span class="keyword">unsigned</span> <span class="identifier">Nz</span> <span class="special">=</span> <span class="number">3</span><span class="special">;</span>  <span class="comment">// Max order of derivative to calculate for z</span>
+  <span class="comment">// Declare 4 independent variables together into a std::tuple.</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span> <span class="identifier">variables</span> <span class="special">=</span> <span class="identifier">make_ftuple</span><span class="special">&lt;</span><span class="identifier">float50</span><span class="special">,</span> <span class="identifier">Nw</span><span class="special">,</span> <span class="identifier">Nx</span><span class="special">,</span> <span class="identifier">Ny</span><span class="special">,</span> <span class="identifier">Nz</span><span class="special">&gt;(</span><span class="number">11</span><span class="special">,</span> <span class="number">12</span><span class="special">,</span> <span class="number">13</span><span class="special">,</span> <span class="number">14</span><span class="special">);</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">w</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">get</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt;(</span><span class="identifier">variables</span><span class="special">);</span>  <span class="comment">// Up to Nw derivatives at w=11</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">get</span><span class="special">&lt;</span><span class="number">1</span><span class="special">&gt;(</span><span class="identifier">variables</span><span class="special">);</span>  <span class="comment">// Up to Nx derivatives at x=12</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">get</span><span class="special">&lt;</span><span class="number">2</span><span class="special">&gt;(</span><span class="identifier">variables</span><span class="special">);</span>  <span class="comment">// Up to Ny derivatives at y=13</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">z</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">get</span><span class="special">&lt;</span><span class="number">3</span><span class="special">&gt;(</span><span class="identifier">variables</span><span class="special">);</span>  <span class="comment">// Up to Nz derivatives at z=14</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span> <span class="identifier">v</span> <span class="special">=</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">w</span><span class="special">,</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">y</span><span class="special">,</span> <span class="identifier">z</span><span class="special">);</span>
+  <span class="comment">// Calculated from Mathematica symbolic differentiation.</span>
+  <span class="identifier">float50</span> <span class="keyword">const</span> <span class="identifier">answer</span><span class="special">(</span><span class="string">"1976.319600747797717779881875290418720908121189218755"</span><span class="special">);</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setprecision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">float50</span><span class="special">&gt;::</span><span class="identifier">digits10</span><span class="special">)</span>
+            <span class="special">&lt;&lt;</span> <span class="string">"mathematica   : "</span> <span class="special">&lt;&lt;</span> <span class="identifier">answer</span> <span class="special">&lt;&lt;</span> <span class="char">'\n'</span>
+            <span class="special">&lt;&lt;</span> <span class="string">"autodiff      : "</span> <span class="special">&lt;&lt;</span> <span class="identifier">v</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="identifier">Nw</span><span class="special">,</span> <span class="identifier">Nx</span><span class="special">,</span> <span class="identifier">Ny</span><span class="special">,</span> <span class="identifier">Nz</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="char">'\n'</span>
+            <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span>
+            <span class="special">&lt;&lt;</span> <span class="string">"relative error: "</span> <span class="special">&lt;&lt;</span> <span class="special">(</span><span class="identifier">v</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="identifier">Nw</span><span class="special">,</span> <span class="identifier">Nx</span><span class="special">,</span> <span class="identifier">Ny</span><span class="special">,</span> <span class="identifier">Nz</span><span class="special">)</span> <span class="special">/</span> <span class="identifier">answer</span> <span class="special">-</span> <span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="char">'\n'</span><span class="special">;</span>
+  <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+<span class="comment">/*
+Output:
+mathematica   : 1976.3196007477977177798818752904187209081211892188
+autodiff      : 1976.3196007477977177798818752904187209081211892188
+relative error: 2.67e-50
+*/</span>
+</pre>
+<h3>
+<a name="math_toolkit.autodiff.h7"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.example-black_scholes"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.example-black_scholes">Example
+      3: Black-Scholes Option Pricing with Greeks Automatically Calculated</a>
+    </h3>
+<h4>
+<a name="math_toolkit.autodiff.h8"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.calculate_greeks_directly_from_t"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.calculate_greeks_directly_from_t">Calculate
+      greeks directly from the Black-Scholes pricing function.</a>
+    </h4>
+<p>
+      Below is the standard Black-Scholes pricing function written as a function
+      template, where the price, volatility (sigma), time to expiration (tau) and
+      interest rate are template parameters. This means that any greek based on these
+      4 variables can be calculated using autodiff. The below example calculates
+      delta and gamma where the variable of differentiation is only the price. For
+      examples of more exotic greeks, see <code class="computeroutput"><span class="identifier">example</span><span class="special">/</span><span class="identifier">black_scholes</span><span class="special">.</span><span class="identifier">cpp</span></code>.
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">differentiation</span><span class="special">/</span><span class="identifier">autodiff</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">differentiation</span><span class="special">;</span>
+
+<span class="comment">// Equations and function/variable names are from</span>
+<span class="comment">// https://en.wikipedia.org/wiki/Greeks_(finance)#Formulas_for_European_option_Greeks</span>
+
+<span class="comment">// Standard normal cumulative distribution function</span>
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">X</span><span class="special">&gt;</span>
+<span class="identifier">X</span> <span class="identifier">Phi</span><span class="special">(</span><span class="identifier">X</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">{</span>
+  <span class="keyword">return</span> <span class="number">0.5</span> <span class="special">*</span> <span class="identifier">erfc</span><span class="special">(-</span><span class="identifier">one_div_root_two</span><span class="special">&lt;</span><span class="identifier">X</span><span class="special">&gt;()</span> <span class="special">*</span> <span class="identifier">x</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="keyword">enum</span> <span class="keyword">class</span> <span class="identifier">CP</span> <span class="special">{</span> <span class="identifier">call</span><span class="special">,</span> <span class="identifier">put</span> <span class="special">};</span>
+
+<span class="comment">// Assume zero annual dividend yield (q=0).</span>
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Price</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Sigma</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Tau</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Rate</span><span class="special">&gt;</span>
+<span class="identifier">promote</span><span class="special">&lt;</span><span class="identifier">Price</span><span class="special">,</span> <span class="identifier">Sigma</span><span class="special">,</span> <span class="identifier">Tau</span><span class="special">,</span> <span class="identifier">Rate</span><span class="special">&gt;</span> <span class="identifier">black_scholes_option_price</span><span class="special">(</span><span class="identifier">CP</span> <span class="identifier">cp</span><span class="special">,</span>
+                                                            <span class="keyword">double</span> <span class="identifier">K</span><span class="special">,</span>
+                                                            <span class="identifier">Price</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">S</span><span class="special">,</span>
+                                                            <span class="identifier">Sigma</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">sigma</span><span class="special">,</span>
+                                                            <span class="identifier">Tau</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">tau</span><span class="special">,</span>
+                                                            <span class="identifier">Rate</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">r</span><span class="special">)</span> <span class="special">{</span>
+  <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span> <span class="identifier">d1</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">log</span><span class="special">(</span><span class="identifier">S</span> <span class="special">/</span> <span class="identifier">K</span><span class="special">)</span> <span class="special">+</span> <span class="special">(</span><span class="identifier">r</span> <span class="special">+</span> <span class="identifier">sigma</span> <span class="special">*</span> <span class="identifier">sigma</span> <span class="special">/</span> <span class="number">2</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">tau</span><span class="special">)</span> <span class="special">/</span> <span class="special">(</span><span class="identifier">sigma</span> <span class="special">*</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="identifier">tau</span><span class="special">));</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span> <span class="identifier">d2</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">log</span><span class="special">(</span><span class="identifier">S</span> <span class="special">/</span> <span class="identifier">K</span><span class="special">)</span> <span class="special">+</span> <span class="special">(</span><span class="identifier">r</span> <span class="special">-</span> <span class="identifier">sigma</span> <span class="special">*</span> <span class="identifier">sigma</span> <span class="special">/</span> <span class="number">2</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">tau</span><span class="special">)</span> <span class="special">/</span> <span class="special">(</span><span class="identifier">sigma</span> <span class="special">*</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="identifier">tau</span><span class="special">));</span>
+  <span class="keyword">switch</span> <span class="special">(</span><span class="identifier">cp</span><span class="special">)</span> <span class="special">{</span>
+    <span class="keyword">case</span> <span class="identifier">CP</span><span class="special">::</span><span class="identifier">call</span><span class="special">:</span>
+      <span class="keyword">return</span> <span class="identifier">S</span> <span class="special">*</span> <span class="identifier">Phi</span><span class="special">(</span><span class="identifier">d1</span><span class="special">)</span> <span class="special">-</span> <span class="identifier">exp</span><span class="special">(-</span><span class="identifier">r</span> <span class="special">*</span> <span class="identifier">tau</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">K</span> <span class="special">*</span> <span class="identifier">Phi</span><span class="special">(</span><span class="identifier">d2</span><span class="special">);</span>
+    <span class="keyword">case</span> <span class="identifier">CP</span><span class="special">::</span><span class="identifier">put</span><span class="special">:</span>
+      <span class="keyword">return</span> <span class="identifier">exp</span><span class="special">(-</span><span class="identifier">r</span> <span class="special">*</span> <span class="identifier">tau</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">K</span> <span class="special">*</span> <span class="identifier">Phi</span><span class="special">(-</span><span class="identifier">d2</span><span class="special">)</span> <span class="special">-</span> <span class="identifier">S</span> <span class="special">*</span> <span class="identifier">Phi</span><span class="special">(-</span><span class="identifier">d1</span><span class="special">);</span>
+  <span class="special">}</span>
+<span class="special">}</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span> <span class="special">{</span>
+  <span class="keyword">double</span> <span class="keyword">const</span> <span class="identifier">K</span> <span class="special">=</span> <span class="number">100.0</span><span class="special">;</span>                    <span class="comment">// Strike price.</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span> <span class="identifier">S</span> <span class="special">=</span> <span class="identifier">make_fvar</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">2</span><span class="special">&gt;(</span><span class="number">105</span><span class="special">);</span>  <span class="comment">// Stock price.</span>
+  <span class="keyword">double</span> <span class="keyword">const</span> <span class="identifier">sigma</span> <span class="special">=</span> <span class="number">5</span><span class="special">;</span>                    <span class="comment">// Volatility.</span>
+  <span class="keyword">double</span> <span class="keyword">const</span> <span class="identifier">tau</span> <span class="special">=</span> <span class="number">30.0</span> <span class="special">/</span> <span class="number">365</span><span class="special">;</span>             <span class="comment">// Time to expiration in years. (30 days).</span>
+  <span class="keyword">double</span> <span class="keyword">const</span> <span class="identifier">r</span> <span class="special">=</span> <span class="number">1.25</span> <span class="special">/</span> <span class="number">100</span><span class="special">;</span>               <span class="comment">// Interest rate.</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span> <span class="identifier">call_price</span> <span class="special">=</span> <span class="identifier">black_scholes_option_price</span><span class="special">(</span><span class="identifier">CP</span><span class="special">::</span><span class="identifier">call</span><span class="special">,</span> <span class="identifier">K</span><span class="special">,</span> <span class="identifier">S</span><span class="special">,</span> <span class="identifier">sigma</span><span class="special">,</span> <span class="identifier">tau</span><span class="special">,</span> <span class="identifier">r</span><span class="special">);</span>
+  <span class="keyword">auto</span> <span class="keyword">const</span> <span class="identifier">put_price</span> <span class="special">=</span> <span class="identifier">black_scholes_option_price</span><span class="special">(</span><span class="identifier">CP</span><span class="special">::</span><span class="identifier">put</span><span class="special">,</span> <span class="identifier">K</span><span class="special">,</span> <span class="identifier">S</span><span class="special">,</span> <span class="identifier">sigma</span><span class="special">,</span> <span class="identifier">tau</span><span class="special">,</span> <span class="identifier">r</span><span class="special">);</span>
+
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"black-scholes call price = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">call_price</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="number">0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="char">'\n'</span>
+            <span class="special">&lt;&lt;</span> <span class="string">"black-scholes put  price = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">put_price</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="number">0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="char">'\n'</span>
+            <span class="special">&lt;&lt;</span> <span class="string">"call delta = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">call_price</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="char">'\n'</span>
+            <span class="special">&lt;&lt;</span> <span class="string">"put  delta = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">put_price</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="char">'\n'</span>
+            <span class="special">&lt;&lt;</span> <span class="string">"call gamma = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">call_price</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="number">2</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="char">'\n'</span>
+            <span class="special">&lt;&lt;</span> <span class="string">"put  gamma = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">put_price</span><span class="special">.</span><span class="identifier">derivative</span><span class="special">(</span><span class="number">2</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="char">'\n'</span><span class="special">;</span>
+  <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+<span class="comment">/*
+Output:
+black-scholes call price = 56.5136
+black-scholes put  price = 51.4109
+call delta = 0.773818
+put  delta = -0.226182
+call gamma = 0.00199852
+put  gamma = 0.00199852
+*/</span>
+</pre>
+<h2>
+<a name="math_toolkit.autodiff.h9"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.advantages_of_automatic_differen"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.advantages_of_automatic_differen">Advantages
+      of Automatic Differentiation</a>
+    </h2>
+<p>
+      The above examples illustrate some of the advantages of using autodiff:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Elimination of code redundancy. The existence of <span class="emphasis"><em>N</em></span>
+          separate functions to calculate derivatives is a form of code redundancy,
+          with all the liabilities that come with it:
+          <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; ">
+<li class="listitem">
+                Changes to one function require <span class="emphasis"><em>N</em></span> additional
+                changes to other functions. In the 3rd example above, consider how
+                much larger and inter-dependent the above code base would be if a
+                separate function were written for <a href="https://en.wikipedia.org/wiki/Greeks_(finance)#Formulas_for_European_option_Greeks" target="_top">each
+                Greek</a> value.
+              </li>
+<li class="listitem">
+                Dependencies upon a derivative function for a different purpose will
+                break when changes are made to the original function. What doesn't
+                need to exist cannot break.
+              </li>
+<li class="listitem">
+                Code bloat, reducing conceptual integrity. Control over the evolution
+                of code is easier/safer when the code base is smaller and able to
+                be intuitively grasped.
+              </li>
+</ul></div>
+        </li>
+<li class="listitem">
+          Accuracy of derivatives over finite difference methods. Single-iteration
+          finite difference methods always include a <span class="emphasis"><em>Δx</em></span>
+          free variable that must be carefully chosen for each application. If <span class="emphasis"><em>Δx</em></span>
+          is too small, then numerical errors become large. If <span class="emphasis"><em>Δx</em></span>
+          is too large, then mathematical errors become large. With autodiff, there
+          are no free variables to set and the accuracy of the answer is generally
+          superior to finite difference methods even with the best choice of <span class="emphasis"><em>Δx</em></span>.
+        </li>
+</ul></div>
+<h2>
+<a name="math_toolkit.autodiff.h10"></a>
+      <span class="phrase"><a name="math_toolkit.autodiff.manual"></a></span><a class="link" href="autodiff.html#math_toolkit.autodiff.manual">Manual</a>
+    </h2>
+<p>
+      Additional details are in the <a href="../../differentiation/autodiff.pdf" target="_top">autodiff
+      manual</a>.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="diff.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../quadrature.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="diff0.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

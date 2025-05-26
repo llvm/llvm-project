@@ -1,0 +1,227 @@
+[section:expint Exponential Integrals]
+
+[section:expint_n Exponential Integral En]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/expint.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` expint(unsigned n, T z);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` expint(unsigned n, T z, const ``__Policy``&);
+   
+   }} // namespaces
+   
+The return type of these functions is computed using the __arg_promotion_rules:
+the return type is `double` if T is an integer type, and T otherwise.
+
+[optional_policy]
+
+[h4 Description]
+
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` expint(unsigned n, T z);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` expint(unsigned n, T z, const ``__Policy``&);
+   
+Returns the [@http://mathworld.wolfram.com/En-Function.html exponential integral En]
+of z:
+
+[equation expint_n_1]
+
+[graph expint2]
+
+[h4 Accuracy]
+
+The following table shows the peak errors (in units of epsilon) 
+found on various platforms with various floating point types, 
+along with comparisons to other libraries.
+Unless otherwise specified any floating point type that is narrower
+than the one shown will have __zero_error.
+
+[table_expint_En_]
+
+[h4 Testing]
+
+The tests for these functions come in two parts:
+basic sanity checks use spot values calculated using
+[@http://functions.wolfram.com/webMathematica/FunctionEvaluation.jsp?name=ExpIntegralE Mathworld's online evaluator],
+while accuracy checks use high-precision test values calculated at 1000-bit precision with
+[@http://shoup.net/ntl/doc/RR.txt NTL::RR] and this implementation. 
+Note that the generic and type-specific
+versions of these functions use differing implementations internally, so this
+gives us reasonably independent test data.  Using our test data to test other
+"known good" implementations also provides an additional sanity check. 
+
+[h4 Implementation]
+
+The generic version of this function uses the continued fraction:
+
+[equation expint_n_3]
+
+for large /x/ and the infinite series:
+
+[equation expint_n_2]
+
+for small /x/.
+
+Where the precision of /x/ is known at compile time and is 113 bits or fewer
+in precision, then rational approximations [jm_rationals] are used for the 
+`n == 1` case.
+
+For `x < 1` the approximating form is a minimax approximation:
+
+[equation expint_n_4]
+
+and for `x > 1` a Chebyshev interpolated approximation of the form:
+
+[equation expint_n_5]
+
+is used.
+
+[endsect] [/section:expint_n Exponential Integral En]
+
+
+[section:expint_i Exponential Integral Ei]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/expint.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` expint(T z);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` expint(T z, const ``__Policy``&);
+   
+   }} // namespaces
+   
+The return type of these functions is computed using the __arg_promotion_rules:
+the return type is `double` if T is an integer type, and T otherwise.
+
+[optional_policy]
+
+[h4 Description]
+
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` expint(T z);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` expint(T z, const ``__Policy``&);
+   
+Returns the [@http://mathworld.wolfram.com/ExponentialIntegral.html exponential integral]
+of z:
+
+[equation expint_i_1]
+
+[graph expint_i]
+
+[h4 Accuracy]
+
+The following table shows the peak errors (in units of epsilon) 
+found on various platforms with various floating point types, 
+along with comparisons to Cody's SPECFUN implementation and the __gsl library.
+Unless otherwise specified any floating point type that is narrower
+than the one shown will have __zero_error.
+
+[table_expint_Ei_]
+
+It should be noted that all three libraries tested above 
+offer sub-epsilon precision over most of their range.
+
+GSL has the greatest difficulty near the positive root of En, while
+Cody's SPECFUN along with this implementation increase their
+error rates very slightly over the range \[4,6\].
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph exponential_integral_ei__double]
+
+[graph exponential_integral_ei__80_bit_long_double]
+
+[graph exponential_integral_ei____float128]
+
+[h4 Testing]
+
+The tests for these functions come in two parts:
+basic sanity checks use spot values calculated using
+[@http://functions.wolfram.com/webMathematica/FunctionEvaluation.jsp?name=ExpIntegralEi Mathworld's online evaluator],
+while accuracy checks use high-precision test values calculated at 1000-bit precision with
+[@http://shoup.net/ntl/doc/RR.txt NTL::RR] and this implementation. 
+Note that the generic and type-specific
+versions of these functions use differing implementations internally, so this
+gives us reasonably independent test data.  Using our test data to test other
+"known good" implementations also provides an additional sanity check. 
+
+[h4 Implementation]
+
+For x < 0 this function just calls __expint_n(1, -x): which in turn is implemented
+in terms of rational approximations when the type of x has 113 or fewer bits of
+precision.
+
+For x > 0 the generic version is implemented using the infinite series:
+
+[equation expint_i_2]
+
+However, when the precision of the argument type is known at compile time
+and is 113 bits or less, then rational approximations [jm_rationals] are used.
+
+For 0 < z < 6 a root-preserving approximation of the form:
+
+[equation expint_i_3]
+
+is used, where z[sub 0] is the positive root of the function, and
+R(z/3 - 1) is a minimax rational approximation rescaled so that
+it is evaluated over \[-1,1\].  Note that while the rational approximation
+over \[0,6\] converges rapidly to the minimax solution it is rather
+ill-conditioned in practice.  Cody and Thacher
+[footnote W. J. Cody and H. C. Thacher, Jr., 
+Rational Chebyshev approximations for the exponential integral E[sub 1](x), 
+Math. Comp. 22 (1968), 641-649,
+and W. J. Cody and H. C. Thacher, Jr., Chebyshev approximations for the 
+exponential integral Ei(x), Math. Comp. 23 (1969), 289-303.]
+experienced the same issue and 
+converted the polynomials into Chebeshev form to ensure stable
+computation.  By experiment we found that the polynomials are just as stable
+in polynomial as Chebyshev form, /provided/ they are computed
+over the interval \[-1,1\].
+
+Over the a series of intervals ['[a, b]] and ['[b, INF]] the rational approximation
+takes the form:
+
+[equation expint_i_4]
+
+where /c/ is a constant, and ['R(t)] is a minimax solution optimised for low
+absolute error compared to /c/.  Variable /t/ is `1/z` when the range in infinite
+and `2z/(b-a) - (2a/(b-a) + 1)` otherwise: this has the effect of scaling z to the 
+interval \[-1,1\].  As before rational approximations over arbitrary intervals
+were found to be ill-conditioned: Cody and Thacher solved this issue by 
+converting the polynomials to their J-Fraction equivalent.  However, as long
+as the interval of evaluation was \[-1,1\] and the number of terms carefully chosen,
+it was found that the polynomials /could/ be evaluated to suitable precision:
+error rates are typically 2 to 3 epsilon which is comparable to the error
+rate that Cody and Thacher achieved using J-Fractions, but marginally more
+efficient given that fewer divisions are involved.
+
+[endsect] [/section:expint_n Exponential Integral En] 
+
+[endsect] [/section:expint Exponential Integrals]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

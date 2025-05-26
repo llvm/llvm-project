@@ -1,0 +1,15 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mo>|</mo>
+    <mfrac>
+      <mrow>
+        <mi>a</mi>
+        <mo>&#x2212;</mo>
+        <mi>v</mi>
+      </mrow>
+      <mi>a</mi>
+    </mfrac>
+    <mo>|</mo>
+  </mrow>
+</math>
+

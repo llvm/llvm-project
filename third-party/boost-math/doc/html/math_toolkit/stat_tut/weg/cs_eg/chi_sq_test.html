@@ -1,0 +1,296 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Chi-Square Test for the Standard Deviation</title>
+<link rel="stylesheet" href="../../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../cs_eg.html" title="Chi Squared Distribution Examples">
+<link rel="prev" href="chi_sq_intervals.html" title="Confidence Intervals on the Standard Deviation">
+<link rel="next" href="chi_sq_size.html" title="Estimating the Required Sample Sizes for a Chi-Square Test for the Standard Deviation">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="chi_sq_intervals.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../cs_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="chi_sq_size.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="math_toolkit.stat_tut.weg.cs_eg.chi_sq_test"></a><a class="link" href="chi_sq_test.html" title="Chi-Square Test for the Standard Deviation">Chi-Square
+          Test for the Standard Deviation</a>
+</h5></div></div></div>
+<p>
+            We use this test to determine whether the standard deviation of a sample
+            differs from a specified value. Typically this occurs in process change
+            situations where we wish to compare the standard deviation of a new process
+            to an established one.
+          </p>
+<p>
+            The code for this example is contained in <a href="../../../../../../example/chi_square_std_dev_test.cpp" target="_top">chi_square_std_dev_test.cpp</a>,
+            and we'll begin by defining the procedure that will print out the test
+            statistics:
+          </p>
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">chi_squared_test</span><span class="special">(</span>
+    <span class="keyword">double</span> <span class="identifier">Sd</span><span class="special">,</span>     <span class="comment">// Sample std deviation</span>
+    <span class="keyword">double</span> <span class="identifier">D</span><span class="special">,</span>      <span class="comment">// True std deviation</span>
+    <span class="keyword">unsigned</span> <span class="identifier">N</span><span class="special">,</span>    <span class="comment">// Sample size</span>
+    <span class="keyword">double</span> <span class="identifier">alpha</span><span class="special">)</span>  <span class="comment">// Significance level</span>
+<span class="special">{</span>
+</pre>
+<p>
+            The procedure begins by printing a summary of the input data:
+          </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">;</span>
+
+<span class="comment">// Print header:</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span>
+   <span class="string">"______________________________________________\n"</span>
+   <span class="string">"Chi Squared test for sample standard deviation\n"</span>
+   <span class="string">"______________________________________________\n\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">55</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Number of Observations"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">N</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">55</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Sample Standard Deviation"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">Sd</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">55</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Expected True Standard Deviation"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">D</span> <span class="special">&lt;&lt;</span> <span class="string">"\n\n"</span><span class="special">;</span>
+</pre>
+<p>
+            The test statistic (T) is simply the ratio of the sample and "true"
+            standard deviations squared, multiplied by the number of degrees of freedom
+            (the sample size less one):
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">t_stat</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">N</span> <span class="special">-</span> <span class="number">1</span><span class="special">)</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">Sd</span> <span class="special">/</span> <span class="identifier">D</span><span class="special">)</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">Sd</span> <span class="special">/</span> <span class="identifier">D</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">55</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Test Statistic"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">t_stat</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+</pre>
+<p>
+            The distribution we need to use, is a Chi Squared distribution with N-1
+            degrees of freedom:
+          </p>
+<pre class="programlisting"><span class="identifier">chi_squared</span> <span class="identifier">dist</span><span class="special">(</span><span class="identifier">N</span> <span class="special">-</span> <span class="number">1</span><span class="special">);</span>
+</pre>
+<p>
+            The various hypothesis that can be tested are summarised in the following
+            table:
+          </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                    <p>
+                      Hypothesis
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      Test
+                    </p>
+                  </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                    <p>
+                      The null-hypothesis: there is no difference in standard deviation
+                      from the specified value
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      Reject if T &lt; χ<sup>2</sup><sub>(1-alpha/2; N-1)</sub> or T &gt; χ<sup>2</sup><sub>(alpha/2; N-1)</sub>
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      The alternative hypothesis: there is a difference in standard
+                      deviation from the specified value
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      Reject if χ<sup>2</sup><sub>(1-alpha/2; N-1)</sub> &gt;= T &gt;= χ<sup>2</sup><sub>(alpha/2; N-1)</sub>
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      The alternative hypothesis: the standard deviation is less
+                      than the specified value
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      Reject if χ<sup>2</sup><sub>(1-alpha; N-1)</sub> &lt;= T
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      The alternative hypothesis: the standard deviation is greater
+                      than the specified value
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      Reject if χ<sup>2</sup><sub>(alpha; N-1)</sub> &gt;= T
+                    </p>
+                  </td>
+</tr>
+</tbody>
+</table></div>
+<p>
+            Where χ<sup>2</sup><sub>(alpha; N-1)</sub> is the upper critical value of the Chi Squared distribution,
+            and χ<sup>2</sup><sub>(1-alpha; N-1)</sub> is the lower critical value.
+          </p>
+<p>
+            Recall that the lower critical value is the same as the quantile, and
+            the upper critical value is the same as the quantile from the complement
+            of the probability, that gives us the following code to calculate the
+            critical values:
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">ucv</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">));</span>
+<span class="keyword">double</span> <span class="identifier">ucv2</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="identifier">alpha</span> <span class="special">/</span> <span class="number">2</span><span class="special">));</span>
+<span class="keyword">double</span> <span class="identifier">lcv</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">);</span>
+<span class="keyword">double</span> <span class="identifier">lcv2</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="identifier">alpha</span> <span class="special">/</span> <span class="number">2</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">55</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Upper Critical Value at alpha: "</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span>
+   <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">scientific</span> <span class="special">&lt;&lt;</span> <span class="identifier">ucv</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">55</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Upper Critical Value at alpha/2: "</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span>
+   <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">scientific</span> <span class="special">&lt;&lt;</span> <span class="identifier">ucv2</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">55</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Lower Critical Value at alpha: "</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span>
+   <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">scientific</span> <span class="special">&lt;&lt;</span> <span class="identifier">lcv</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">55</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Lower Critical Value at alpha/2: "</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span>
+   <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">scientific</span> <span class="special">&lt;&lt;</span> <span class="identifier">lcv2</span> <span class="special">&lt;&lt;</span> <span class="string">"\n\n"</span><span class="special">;</span>
+</pre>
+<p>
+            Now that we have the critical values, we can compare these to our test
+            statistic, and print out the result of each hypothesis and test:
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">55</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span>
+   <span class="string">"Results for Alternative Hypothesis and alpha"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span>
+   <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">4</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">alpha</span> <span class="special">&lt;&lt;</span> <span class="string">"\n\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Alternative Hypothesis              Conclusion\n"</span><span class="special">;</span>
+
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Standard Deviation != "</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">D</span> <span class="special">&lt;&lt;</span> <span class="string">"            "</span><span class="special">;</span>
+<span class="keyword">if</span><span class="special">((</span><span class="identifier">ucv2</span> <span class="special">&lt;</span> <span class="identifier">t_stat</span><span class="special">)</span> <span class="special">||</span> <span class="special">(</span><span class="identifier">lcv2</span> <span class="special">&gt;</span> <span class="identifier">t_stat</span><span class="special">))</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"ACCEPTED\n"</span><span class="special">;</span>
+<span class="keyword">else</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"REJECTED\n"</span><span class="special">;</span>
+
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Standard Deviation  &lt; "</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">D</span> <span class="special">&lt;&lt;</span> <span class="string">"            "</span><span class="special">;</span>
+<span class="keyword">if</span><span class="special">(</span><span class="identifier">lcv</span> <span class="special">&gt;</span> <span class="identifier">t_stat</span><span class="special">)</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"ACCEPTED\n"</span><span class="special">;</span>
+<span class="keyword">else</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"REJECTED\n"</span><span class="special">;</span>
+
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Standard Deviation  &gt; "</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">D</span> <span class="special">&lt;&lt;</span> <span class="string">"            "</span><span class="special">;</span>
+<span class="keyword">if</span><span class="special">(</span><span class="identifier">ucv</span> <span class="special">&lt;</span> <span class="identifier">t_stat</span><span class="special">)</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"ACCEPTED\n"</span><span class="special">;</span>
+<span class="keyword">else</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"REJECTED\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            To see some example output we'll use the <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda3581.htm" target="_top">gear
+            data</a> from the <a href="http://www.itl.nist.gov/div898/handbook/" target="_top">NIST/SEMATECH
+            e-Handbook of Statistical Methods.</a>. The data represents measurements
+            of gear diameter from a manufacturing process. The program output is
+            deliberately designed to mirror the DATAPLOT output shown in the <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda358.htm" target="_top">NIST
+            Handbook Example</a>.
+          </p>
+<pre class="programlisting">______________________________________________
+Chi Squared test for sample standard deviation
+______________________________________________
+
+Number of Observations                                 =  100
+Sample Standard Deviation                              =  0.00628
+Expected True Standard Deviation                       =  0.10000
+
+Test Statistic                                         =  0.39030
+CDF of test statistic:                                 =  1.438e-099
+Upper Critical Value at alpha:                         =  1.232e+002
+Upper Critical Value at alpha/2:                       =  1.284e+002
+Lower Critical Value at alpha:                         =  7.705e+001
+Lower Critical Value at alpha/2:                       =  7.336e+001
+
+Results for Alternative Hypothesis and alpha           =  0.0500
+
+Alternative Hypothesis              Conclusion
+Standard Deviation != 0.100            ACCEPTED
+Standard Deviation  &lt; 0.100            ACCEPTED
+Standard Deviation  &gt; 0.100            REJECTED
+</pre>
+<p>
+            In this case we are testing whether the sample standard deviation is
+            0.1, and the null-hypothesis is rejected, so we conclude that the standard
+            deviation <span class="emphasis"><em>is not</em></span> 0.1.
+          </p>
+<p>
+            For an alternative example, consider the <a href="http://www.itl.nist.gov/div898/handbook/prc/section2/prc23.htm" target="_top">silicon
+            wafer data</a> again from the <a href="http://www.itl.nist.gov/div898/handbook/" target="_top">NIST/SEMATECH
+            e-Handbook of Statistical Methods.</a>. In this scenario a supplier
+            of 100 ohm.cm silicon wafers claims that his fabrication process can
+            produce wafers with sufficient consistency so that the standard deviation
+            of resistivity for the lot does not exceed 10 ohm.cm. A sample of N =
+            10 wafers taken from the lot has a standard deviation of 13.97 ohm.cm,
+            and the question we ask ourselves is "Is the suppliers claim correct?".
+          </p>
+<p>
+            The program output now looks like this:
+          </p>
+<pre class="programlisting">______________________________________________
+Chi Squared test for sample standard deviation
+______________________________________________
+
+Number of Observations                                 =  10
+Sample Standard Deviation                              =  13.97000
+Expected True Standard Deviation                       =  10.00000
+
+Test Statistic                                         =  17.56448
+CDF of test statistic:                                 =  9.594e-001
+Upper Critical Value at alpha:                         =  1.692e+001
+Upper Critical Value at alpha/2:                       =  1.902e+001
+Lower Critical Value at alpha:                         =  3.325e+000
+Lower Critical Value at alpha/2:                       =  2.700e+000
+
+Results for Alternative Hypothesis and alpha           =  0.0500
+
+Alternative Hypothesis              Conclusion
+Standard Deviation != 10.000            REJECTED
+Standard Deviation  &lt; 10.000            REJECTED
+Standard Deviation  &gt; 10.000            ACCEPTED
+</pre>
+<p>
+            In this case, our null-hypothesis is that the standard deviation of the
+            sample is less than 10: this hypothesis is rejected in the analysis above,
+            and so we reject the manufacturers claim.
+          </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="chi_sq_intervals.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../cs_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="chi_sq_size.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

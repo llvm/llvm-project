@@ -1,0 +1,232 @@
+[/These are templates used in many other Quickbook files.]
+
+[template policy_overview[]
+
+Policies are a powerful fine-grain mechanism that allow you to customise the
+behaviour of this library according to your needs.  There is more information
+available in the [link math_toolkit.pol_tutorial policy tutorial]
+and the [link math_toolkit.pol_ref policy reference].
+
+Generally speaking, unless you find that the
+[link math_toolkit.pol_tutorial.policy_tut_defaults
+ default policy behaviour]
+when encountering 'bad' argument values does not meet your needs,
+you should not need to worry about policies.
+
+Policies are a compile-time mechanism that allow you to change
+error-handling or calculation precision either
+program wide, or at the call site.
+
+Although the policy mechanism itself is rather complicated,
+in practice it is easy to use, and very flexible.
+
+Using policies you can control:
+
+* [link math_toolkit.pol_ref.error_handling_policies How results from 'bad' arguments are handled],
+   including those that cannot be fully evaluated.
+* How [link math_toolkit.pol_ref.internal_promotion accuracy is controlled by internal promotion] to use more precise types.
+* What working [link math_toolkit.pol_ref.precision_pol precision] should be used to calculate results.
+* What to do when a [link math_toolkit.pol_ref.assert_undefined mathematically undefined function]
+  is used:  Should this raise a run-time or compile-time error?
+* Whether [link math_toolkit.pol_ref.discrete_quant_ref discrete functions],
+  like the binomial, should return real or only integral values, and how they are rounded.
+* How many iterations a special function is permitted to perform in
+  a series evaluation or root finding algorithm before it gives up and raises an
+  __evaluation_error.
+
+You can control policies:
+
+* Using [link math_toolkit.pol_ref.policy_defaults macros] to
+change any default policy: the is the preferred method for installation
+wide policies.
+* At your chosen [link math_toolkit.pol_ref.namespace_pol
+namespace scope] for distributions and/or functions: this is the
+preferred method for project, namespace, or translation unit scope
+policies.
+* In an ad-hoc manner [link math_toolkit.pol_tutorial.ad_hoc_sf_policies
+by passing a specific policy to a special function], or to a
+[link math_toolkit.pol_tutorial.ad_hoc_dist_policies
+statistical distribution].
+
+] [/template policy_overview]
+
+
+[template performance_overview[]
+
+By and large the performance of this library should be acceptable
+for most needs.  However, often the library has to make a choice whether to
+be accurate or fast and by default it chooses accuracy over speed.  If
+you would rather have fast rather than fully accurate routines, then
+refer to the [link perf performance section] for information and examples on how to
+achieve this.
+
+In terms of the algorithms used, this library aims to use the same "best
+of breed" algorithms as many other libraries: the principle difference
+is that this library is implemented in C++ - taking advantage of all
+the abstraction mechanisms that C++ offers - where as most traditional
+numeric libraries are implemented in C or FORTRAN.  Traditionally
+languages such as C or FORTRAN are perceived as easier to optimise
+than more complex languages like C++, so in a sense this library
+provides a good test of current compiler technology, and the
+"abstraction penalty" - if any - of C++ compared to other languages.
+
+The three most important things you can do to ensure the best performance
+from this library are:
+
+# Turn on your compilers optimisations: the difference between "release"
+and "debug" builds can easily be a [link math_toolkit.getting_best factor of 20].
+# Pick your compiler carefully: [link math_toolkit.comp_compilers
+performance differences of up to
+8 fold] have been found between some Windows compilers for example.
+# Disable internal use of `long double`, this will reduce accuracy but
+typically yield a 2x speedup on modern x64 hardware/compilers.
+
+The [link perf performance section] contains more
+information on the performance
+of this library, what you can do to fine tune it, and how this library
+compares to some other open source alternatives.
+
+] [/template performance_overview]
+
+[template compilers_overview[]
+
+This section contains some information about how various compilers
+work with this library.
+It is not comprehensive and updated experiences are always welcome.
+Some effort has been made to suppress unhelpful warnings but it is
+difficult to achieve this on all systems.
+
+[table Supported/Tested Compilers
+[[Platform][Compiler][Has long double support][Notes]]
+[[Windows][MSVC 7.1 and later][Yes]
+   [All tests OK.
+
+   We aim to keep our headers warning free at level 4 with
+   this compiler.]]
+[[Windows][Intel 8.1 and later][Yes]
+   [All tests OK.
+
+   We aim to keep our headers warning free at level 4 with
+   this compiler.  However, The tests cases tend to generate a lot of
+      warnings relating to numeric underflow of the test data: these are
+      harmless.]]
+[[Windows][GNU Mingw32 C++][Yes]
+   [All tests OK.
+
+   We aim to keep our headers warning free with -Wall with this compiler.]]
+[[Windows][GNU Cygwin C++][No]
+   [All tests OK.
+
+   We aim to keep our headers warning free with -Wall with this compiler.
+
+   Long double support has been disabled because there are no native
+   long double C std library functions available.]]
+[[Windows][Borland C++ 5.8.2 (Developer studio 2006)][No]
+   [We have only partial compatibility with this compiler:
+
+   Long double support has been disabled because the native
+   long double C standard library functions really only forward to the
+   double versions.  This can result in unpredictable behaviour when
+   using the long double overloads: for example `sqrtl` applied to a
+   finite value, can result in an infinite result.
+
+   Some functions still fail to compile, there are no known workarounds at present.]]
+[[Windows 7/Netbeans 7.2][Clang 3.1][Yes][Spot examples OK. Expect all tests to compile and run OK.]]
+
+[[Linux][GNU C++ 3.4 and later][Yes]
+   [All tests OK.
+
+   We aim to keep our headers warning free with -Wall with this compiler.]]
+[[Linux][Clang 3.2][Yes][All tests OK.]]
+[[Linux][Intel C++ 10.0 and later][Yes]
+   [All tests OK.
+
+   We aim to keep our headers warning free with -Wall with this compiler.
+   However, The tests cases tend to generate a lot of
+   warnings relating to numeric underflow of the test data: these are
+   harmless.]]
+[[Linux][Intel C++ 8.1 and 9.1][No]
+   [All tests OK.
+
+   Long double support has been disabled with these compiler releases
+   because calling the standard library long double math functions
+   can result in a segfault.  The issue is Linux distribution and
+   glibc version specific and is Intel bug report #409291.  Fully up to date
+   releases of Intel 9.1 (post version l_cc_c_9.1.046)
+   shouldn't have this problem.  If you need long
+   double support with this compiler, then comment out the define of
+   BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS at line 55 of
+   [@../../../../boost/math/tools/config.hpp boost/math/tools/config.hpp].
+
+   We aim to keep our headers warning free with -Wall with this compiler.
+   However, The tests cases tend to generate a lot of
+   warnings relating to numeric underflow of the test data: these are
+   harmless.]]
+[[Linux][QLogic PathScale 3.0][Yes]
+   [Some tests involving conceptual checks fail to build, otherwise
+   there appear to be no issues.]]
+[[Linux][Sun Studio 12][Yes]
+   [Some tests involving function overload resolution fail to build,
+   these issues should be rarely encountered in practice.]]
+[[Solaris][Sun Studio 12][Yes]
+   [Some tests involving function overload resolution fail to build,
+   these issues should be rarely encountered in practice.]]
+[[Solaris][GNU C++ 4.x][Yes]
+   [All tests OK.
+
+   We aim to keep our headers warning free with -Wall with this compiler.]]
+[[HP Tru64][Compaq C++ 7.1][Yes]
+   [All tests OK.]]
+[[HP-UX Itanium][HP aCC 6.x][Yes]
+   [All tests OK.
+
+   Unfortunately this compiler emits quite a few warnings from libraries
+   upon which we depend (TR1, Array etc).]]
+[[HP-UX PA-RISC][GNU C++ 3.4][No]
+   [All tests OK.]]
+[[Apple Mac OS X, Intel][Darwin/GNU C++ 4.x][Yes][All tests OK.]]
+[[Apple Mac OS X, PowerPC][Darwin/GNU C++ 4.x][No]
+   [All tests OK.
+
+   Long double support has been disabled on this platform due to the
+   rather strange nature of Darwin's 106-bit long double
+   implementation.  It should be possible to make this work if someone
+   is prepared to offer assistance.]]
+[[Apple Mac OS X,][Clang 3.2][Yes][All tests expected to be OK.]]
+[[IBM AIX][IBM xlc 5.3][Yes]
+   [All tests pass except for our fpclassify tests which fail due to a
+   bug in `std::numeric_limits`, the bug effects the test code, not
+   fpclassify itself.  The IBM compiler group are aware of the problem.]]
+]
+
+[table Unsupported Compilers
+[[Platform][Compiler]]
+[[Windows][Borland C++ 5.9.2 (Borland Developer Studio 2007)]]
+[[Windows][MSVC 6 and 7]]
+]
+
+If your compiler or platform is not listed above, please try running the
+regression tests: cd into boost-root/libs/math/test and do a:
+
+   bjam mytoolset
+
+where "mytoolset" is the name of the
+[@http://www.boost.org/doc/html/bbv2.html Boost.Build]
+toolset used for your
+compiler.  The chances are that [*many of the accuracy tests will fail
+at this stage] - don't panic - the default acceptable error tolerances
+are quite tight, especially for long double types with an extended
+exponent range (these cause more extreme test cases to be executed
+for some functions).
+You will need to cast an eye over the output from
+the failing tests and make a judgement as to whether
+the error rates are acceptable or not.
+] [/template compilers_overview]
+
+[/ common_overviews.qbk
+  Copyright 2007, 2012, 2014 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

@@ -1,0 +1,579 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Noncentral Chi-Squared Distribution</title>
+<link rel="stylesheet" href="../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../dists.html" title="Distributions">
+<link rel="prev" href="nc_beta_dist.html" title="Noncentral Beta Distribution">
+<link rel="next" href="nc_f_dist.html" title="Noncentral F Distribution">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="nc_beta_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="nc_f_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist"></a><a class="link" href="nc_chi_squared_dist.html" title="Noncentral Chi-Squared Distribution">Noncentral
+        Chi-Squared Distribution</a>
+</h4></div></div></div>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">non_central_chi_squared</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">,</span>
+          <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a>   <span class="special">=</span> <a class="link" href="../../pol_ref/pol_ref_ref.html" title="Policy Class Reference">policies::policy&lt;&gt;</a> <span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">non_central_chi_squared_distribution</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">non_central_chi_squared_distribution</span><span class="special">&lt;&gt;</span> <span class="identifier">non_central_chi_squared</span><span class="special">;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">non_central_chi_squared_distribution</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+   <span class="keyword">typedef</span> <span class="identifier">RealType</span>  <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">Policy</span>    <span class="identifier">policy_type</span><span class="special">;</span>
+
+   <span class="comment">// Constructor:</span>
+   <span class="identifier">non_central_chi_squared_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">lambda</span><span class="special">);</span>
+
+   <span class="comment">// Accessor to degrees of freedom parameter v:</span>
+   <span class="identifier">RealType</span> <span class="identifier">degrees_of_freedom</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+
+   <span class="comment">// Accessor to non centrality parameter lambda:</span>
+   <span class="identifier">RealType</span> <span class="identifier">non_centrality</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+
+   <span class="comment">// Parameter finders:</span>
+   <span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_degrees_of_freedom</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">lambda</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">);</span>
+   <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">A</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">B</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">C</span><span class="special">&gt;</span>
+   <span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_degrees_of_freedom</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">complemented3_type</span><span class="special">&lt;</span><span class="identifier">A</span><span class="special">,</span><span class="identifier">B</span><span class="special">,</span><span class="identifier">C</span><span class="special">&gt;&amp;</span> <span class="identifier">c</span><span class="special">);</span>
+
+   <span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_non_centrality</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">);</span>
+   <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">A</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">B</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">C</span><span class="special">&gt;</span>
+   <span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_non_centrality</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">complemented3_type</span><span class="special">&lt;</span><span class="identifier">A</span><span class="special">,</span><span class="identifier">B</span><span class="special">,</span><span class="identifier">C</span><span class="special">&gt;&amp;</span> <span class="identifier">c</span><span class="special">);</span>
+<span class="special">};</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+          The noncentral chi-squared distribution is a generalization of the <a class="link" href="chi_squared_dist.html" title="Chi Squared Distribution">Chi Squared Distribution</a>.
+          If <span class="emphasis"><em>X<sub>i</sub></em></span> are ν independent, normally distributed random
+          variables with means μ<sub>i</sub> and variances <span class="emphasis"><em>σ<sub>i</sub><sup>2</sup></em></span>, then the random
+          variable
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_chi_squ_ref1.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          is distributed according to the noncentral chi-squared distribution.
+        </p>
+<p>
+          The noncentral chi-squared distribution has two parameters: ν which specifies
+          the number of degrees of freedom (i.e. the number of <span class="emphasis"><em>X<sub>i</sub>)</em></span>,
+          and λ which is related to the mean of the random variables <span class="emphasis"><em>X<sub>i</sub></em></span>
+          by:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_chi_squ_ref2.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          (Note that some references define λ as one half of the above sum).
+        </p>
+<p>
+          This leads to a PDF of:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_chi_squ_ref3.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          where <span class="emphasis"><em>f(x;ν)</em></span> is the central chi-squared distribution
+          PDF, and <span class="emphasis"><em>I<sub>v</sub>(x)</em></span> is a modified Bessel function of the
+          first kind.
+        </p>
+<p>
+          The following graph illustrates how the distribution changes for different
+          values of λ:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/nccs_pdf.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.h0"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.member_functions"></a></span><a class="link" href="nc_chi_squared_dist.html#math_toolkit.dist_ref.dists.nc_chi_squared_dist.member_functions">Member
+          Functions</a>
+        </h5>
+<pre class="programlisting"><span class="identifier">non_central_chi_squared_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">lambda</span><span class="special">);</span>
+</pre>
+<p>
+          Constructs a Chi-Squared distribution with ν degrees of freedom and non-centrality
+          parameter <span class="emphasis"><em>lambda</em></span>.
+        </p>
+<p>
+          Requires ν &gt; 0 and lambda &gt;= 0, otherwise calls <a class="link" href="../../error_handling.html#math_toolkit.error_handling.domain_error">domain_error</a>.
+        </p>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">degrees_of_freedom</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+</pre>
+<p>
+          Returns the parameter ν from which this object was constructed.
+        </p>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">non_centrality</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+</pre>
+<p>
+          Returns the parameter <span class="emphasis"><em>lambda</em></span> from which this object
+          was constructed.
+        </p>
+<pre class="programlisting"><span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_degrees_of_freedom</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">lambda</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">);</span>
+</pre>
+<p>
+          This function returns the number of degrees of freedom ν such that: <code class="computeroutput"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">non_central_chi_squared</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">Policy</span><span class="special">&gt;(</span><span class="identifier">v</span><span class="special">,</span> <span class="identifier">lambda</span><span class="special">),</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">==</span> <span class="identifier">p</span></code>
+        </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">A</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">B</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">C</span><span class="special">&gt;</span>
+<span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_degrees_of_freedom</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">complemented3_type</span><span class="special">&lt;</span><span class="identifier">A</span><span class="special">,</span><span class="identifier">B</span><span class="special">,</span><span class="identifier">C</span><span class="special">&gt;&amp;</span> <span class="identifier">c</span><span class="special">);</span>
+</pre>
+<p>
+          When called with argument <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">lambda</span><span class="special">,</span> <span class="identifier">x</span><span class="special">,</span>
+          <span class="identifier">q</span><span class="special">)</span></code>
+          this function returns the number of degrees of freedom ν such that:
+        </p>
+<p>
+          <code class="computeroutput"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">non_central_chi_squared</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">Policy</span><span class="special">&gt;(</span><span class="identifier">v</span><span class="special">,</span> <span class="identifier">lambda</span><span class="special">),</span> <span class="identifier">x</span><span class="special">))</span> <span class="special">==</span> <span class="identifier">q</span></code>.
+        </p>
+<pre class="programlisting"><span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_non_centrality</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">p</span><span class="special">);</span>
+</pre>
+<p>
+          This function returns the non centrality parameter <span class="emphasis"><em>lambda</em></span>
+          such that:
+        </p>
+<p>
+          <code class="computeroutput"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">non_central_chi_squared</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">Policy</span><span class="special">&gt;(</span><span class="identifier">v</span><span class="special">,</span> <span class="identifier">lambda</span><span class="special">),</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">==</span> <span class="identifier">p</span></code>
+        </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">A</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">B</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">C</span><span class="special">&gt;</span>
+<span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_non_centrality</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">complemented3_type</span><span class="special">&lt;</span><span class="identifier">A</span><span class="special">,</span><span class="identifier">B</span><span class="special">,</span><span class="identifier">C</span><span class="special">&gt;&amp;</span> <span class="identifier">c</span><span class="special">);</span>
+</pre>
+<p>
+          When called with argument <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">v</span><span class="special">,</span>
+          <span class="identifier">x</span><span class="special">,</span>
+          <span class="identifier">q</span><span class="special">)</span></code>
+          this function returns the non centrality parameter <span class="emphasis"><em>lambda</em></span>
+          such that:
+        </p>
+<p>
+          <code class="computeroutput"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">non_central_chi_squared</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">,</span> <span class="identifier">Policy</span><span class="special">&gt;(</span><span class="identifier">v</span><span class="special">,</span> <span class="identifier">lambda</span><span class="special">),</span> <span class="identifier">x</span><span class="special">))</span> <span class="special">==</span> <span class="identifier">q</span></code>.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.h1"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.non_member_accessors"></a></span><a class="link" href="nc_chi_squared_dist.html#math_toolkit.dist_ref.dists.nc_chi_squared_dist.non_member_accessors">Non-member
+          Accessors</a>
+        </h5>
+<p>
+          All the <a class="link" href="../nmp.html" title="Non-Member Properties">usual non-member accessor
+          functions</a> that are generic to all distributions are supported:
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.cdf">Cumulative Distribution Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.pdf">Probability Density Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.quantile">Quantile</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.hazard">Hazard Function</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.chf">Cumulative Hazard Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mean">mean</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.median">median</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mode">mode</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.variance">variance</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.sd">standard deviation</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.skewness">skewness</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis">kurtosis</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis_excess">kurtosis_excess</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.range">range</a> and <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.support">support</a>.
+        </p>
+<p>
+          The domain of the random variable is [0, +∞].
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.h2"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.examples"></a></span><a class="link" href="nc_chi_squared_dist.html#math_toolkit.dist_ref.dists.nc_chi_squared_dist.examples">Examples</a>
+        </h5>
+<p>
+          There is a <a class="link" href="../../stat_tut/weg/nccs_eg.html" title="Non Central Chi Squared Example">worked example</a>
+          for the noncentral chi-squared distribution.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.h3"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.accuracy"></a></span><a class="link" href="nc_chi_squared_dist.html#math_toolkit.dist_ref.dists.nc_chi_squared_dist.accuracy">Accuracy</a>
+        </h5>
+<p>
+          The following table shows the peak errors (in units of <a href="http://en.wikipedia.org/wiki/Machine_epsilon" target="_top">epsilon</a>)
+          found on various platforms with various floating point types. The failures
+          in the comparison to the <a href="http://www.r-project.org/" target="_top">R Math
+          library</a>, seem to be mostly in the corner cases when the probability
+          would be very small. Unless otherwise specified any floating-point type
+          that is narrower than the one shown will have <a class="link" href="../../relative_error.html#math_toolkit.relative_error.zero_error">effectively
+          zero error</a>.
+        </p>
+<div class="table">
+<a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.table_non_central_chi_squared_CDF"></a><p class="title"><b>Table 5.6. Error rates for non central chi squared CDF</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for non central chi squared CDF">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Microsoft Visual C++ version 14.1<br> Win32<br> double
+                  </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                  <p>
+                    Non Central Chi Squared, medium parameters
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 0.99ε (Mean = 0.0544ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> Max = 727ε (Mean = 121ε))
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 46.5ε (Mean = 10.3ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 115ε (Mean = 13.9ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 48.9ε (Mean = 10ε)</span>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    Non Central Chi Squared, large parameters
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 1.07ε (Mean = 0.102ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> <span class="red">Max
+                    = 3.27e+08ε (Mean = 2.23e+07ε))</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 3.07e+03ε (Mean = 336ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 6.17e+03ε (Mean = 677ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 9.79e+03ε (Mean = 723ε)</span>
+                  </p>
+                </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.table_non_central_chi_squared_CDF_complement"></a><p class="title"><b>Table 5.7. Error rates for non central chi squared CDF complement</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for non central chi squared CDF complement">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Microsoft Visual C++ version 14.1<br> Win32<br> double
+                  </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                  <p>
+                    Non Central Chi Squared, medium parameters
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 0.96ε (Mean = 0.0635ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> <span class="red">Max
+                    = +INFε (Mean = +INFε) <a class="link" href="../../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_non_central_chi_squared_CDF_complement_Rmath_3_2_3_Non_Central_Chi_Squared_medium_parameters">And
+                    other failures.</a>)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 107ε (Mean = 17.2ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 171ε (Mean = 22.8ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 98.6ε (Mean = 15.8ε)</span>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    Non Central Chi Squared, large parameters
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 2.11ε (Mean = 0.278ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> <span class="red">Max
+                    = +INFε (Mean = +INFε) <a class="link" href="../../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_non_central_chi_squared_CDF_complement_Rmath_3_2_3_Non_Central_Chi_Squared_large_parameters">And
+                    other failures.</a>)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 5.02e+03ε (Mean = 630ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 5.1e+03ε (Mean = 577ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 5.43e+03ε (Mean = 705ε)</span>
+                  </p>
+                </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+          Error rates for the quantile functions are broadly similar. Special mention
+          should go to the <code class="computeroutput"><span class="identifier">mode</span></code> function:
+          there is no closed form for this function, so it is evaluated numerically
+          by finding the maxima of the PDF: in principal this can not produce an
+          accuracy greater than the square root of the machine epsilon.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.h4"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.tests"></a></span><a class="link" href="nc_chi_squared_dist.html#math_toolkit.dist_ref.dists.nc_chi_squared_dist.tests">Tests</a>
+        </h5>
+<p>
+          There are two sets of test data used to verify this implementation: firstly
+          we can compare with published data, for example with Table 6 of "Self-Validating
+          Computations of Probabilities for Selected Central and Noncentral Univariate
+          Probability Functions", Morgan C. Wang and William J. Kennedy, Journal
+          of the American Statistical Association, Vol. 89, No. 427. (Sep., 1994),
+          pp. 878-887. Secondly, we have tables of test data, computed with this
+          implementation and using interval arithmetic - this data should be accurate
+          to at least 50 decimal digits - and is the used for our accuracy tests.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.h5"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_chi_squared_dist.implementation"></a></span><a class="link" href="nc_chi_squared_dist.html#math_toolkit.dist_ref.dists.nc_chi_squared_dist.implementation">Implementation</a>
+        </h5>
+<p>
+          The CDF and its complement are evaluated as follows:
+        </p>
+<p>
+          First we determine which of the two values (the CDF or its complement)
+          is likely to be the smaller: for this we can use the relation due to Temme
+          (see "Asymptotic and Numerical Aspects of the Noncentral Chi-Square
+          Distribution", N. M. Temme, Computers Math. Applic. Vol 25, No. 5,
+          55-63, 1993) that:
+        </p>
+<p>
+          F(ν,λ;ν+λ) ≈ 0.5
+        </p>
+<p>
+          and so compute the CDF when the random variable is less than ν+λ, and its
+          complement when the random variable is greater than ν+λ. If necessary the
+          computed result is then subtracted from 1 to give the desired result (the
+          CDF or its complement).
+        </p>
+<p>
+          For small values of the non centrality parameter, the CDF is computed using
+          the method of Ding (see "Algorithm AS 275: Computing the Non-Central
+          #2 Distribution Function", Cherng G. Ding, Applied Statistics, Vol.
+          41, No. 2. (1992), pp. 478-482). This uses the following series representation:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_chi_squ_ref4.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          which requires just one call to <a class="link" href="../../sf_gamma/gamma_derivatives.html" title="Derivative of the Incomplete Gamma Function">gamma_p_derivative</a>
+          with the subsequent terms being computed by recursion as shown above.
+        </p>
+<p>
+          For larger values of the non-centrality parameter, Ding's method can take
+          an unreasonable number of terms before convergence is achieved. Furthermore,
+          the largest term is not the first term, so in extreme cases the first term
+          may be zero, leading to a zero result, even though the true value may be
+          non-zero.
+        </p>
+<p>
+          Therefore, when the non-centrality parameter is greater than 200, the method
+          due to Krishnamoorthy (see "Computing discrete mixtures of continuous
+          distributions: noncentral chisquare, noncentral t and the distribution
+          of the square of the sample multiple correlation coefficient", Denise
+          Benton and K. Krishnamoorthy, Computational Statistics &amp; Data Analysis,
+          43, (2003), 249-267) is used.
+        </p>
+<p>
+          This method uses the well known sum:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_chi_squ_ref5.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          Where <span class="emphasis"><em>P<sub>a</sub>(x)</em></span> is the incomplete gamma function.
+        </p>
+<p>
+          The method starts at the λth term, which is where the Poisson weighting
+          function achieves its maximum value, although this is not necessarily the
+          largest overall term. Subsequent terms are calculated via the normal recurrence
+          relations for the incomplete gamma function, and iteration proceeds both
+          forwards and backwards until sufficient precision has been achieved. It
+          should be noted that recurrence in the forwards direction of P<sub>a</sub>(x) is numerically
+          unstable. However, since we always start <span class="emphasis"><em>after</em></span> the
+          largest term in the series, numeric instability is introduced more slowly
+          than the series converges.
+        </p>
+<p>
+          Computation of the complement of the CDF uses an extension of Krishnamoorthy's
+          method, given that:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_chi_squ_ref6.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          we can again start at the λ'th term and proceed in both directions from
+          there until the required precision is achieved. This time it is backwards
+          recursion on the incomplete gamma function Q<sub>a</sub>(x) which is unstable. However,
+          as long as we start well <span class="emphasis"><em>before</em></span> the largest term,
+          this is not an issue in practice.
+        </p>
+<p>
+          The PDF is computed directly using the relation:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_chi_squ_ref3.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          Where <span class="emphasis"><em>f(x;ν)</em></span> is the PDF of the central <a class="link" href="chi_squared_dist.html" title="Chi Squared Distribution">Chi
+          Squared Distribution</a> and <span class="emphasis"><em>I<sub>v</sub>(x)</em></span> is a modified
+          Bessel function, see <a class="link" href="../../bessel/mbessel.html" title="Modified Bessel Functions of the First and Second Kinds">cyl_bessel_i</a>.
+          For small values of the non-centrality parameter the relation in terms
+          of <a class="link" href="../../bessel/mbessel.html" title="Modified Bessel Functions of the First and Second Kinds">cyl_bessel_i</a> is used.
+          However, this method fails for large values of the non-centrality parameter,
+          so in that case the infinite sum is evaluated using the method of Benton
+          and Krishnamoorthy, and the usual recurrence relations for successive terms.
+        </p>
+<p>
+          The quantile functions are computed by numeric inversion of the CDF. An
+          improve starting guess is from Thomas Luu, <a href="http://discovery.ucl.ac.uk/1482128/%2c" target="_top">Fast
+          and accurate parallel computation of quantile functions for random number
+          generation, Doctoral Thesis, 2016</a>.
+        </p>
+<p>
+          There is no <a href="http://en.wikipedia.org/wiki/Closed_form" target="_top">closed
+          form</a> for the mode of the noncentral chi-squared distribution: it
+          is computed numerically by finding the maximum of the PDF. Likewise, the
+          median is computed numerically via the quantile.
+        </p>
+<p>
+          The remaining non-member functions use the following formulas:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_chi_squ_ref7.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          Some analytic properties of noncentral distributions (particularly unimodality,
+          and monotonicity of their modes) are surveyed and summarized by:
+        </p>
+<p>
+          Andrea van Aubel &amp; Wolfgang Gawronski, Applied Mathematics and Computation,
+          141 (2003) 3-12.
+        </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="nc_beta_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="nc_f_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

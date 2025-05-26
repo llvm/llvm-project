@@ -1,0 +1,145 @@
+[section:error_inv Error Function Inverses]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/erf.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` erf_inv(T p);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` erf_inv(T p, const ``__Policy``&);
+   
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` erfc_inv(T p);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` erfc_inv(T p, const ``__Policy``&);
+   
+   }} // namespaces
+   
+The return type of these functions is computed using the __arg_promotion_rules:
+the return type is `double` if T is an integer type, and T otherwise.
+
+[optional_policy]
+
+[h4 Description]
+
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` erf_inv(T z);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` erf_inv(T z, const ``__Policy``&);
+   
+Returns the [@http://functions.wolfram.com/GammaBetaErf/InverseErf/ inverse error function]
+of z, that is a value x such that:
+
+[expression ['p = erf(x);]]
+
+[graph erf_inv]
+
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` erfc_inv(T z);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` erfc_inv(T z, const ``__Policy``&);
+   
+Returns the inverse of the complement of the error function of z, that is a
+value x such that:
+
+[expression ['p = erfc(x);]]
+
+[graph erfc_inv]
+
+[h4 Accuracy]
+
+For types up to and including 80-bit long doubles the approximations used
+are accurate to less than ~ 2 epsilon.  For higher precision types these 
+functions have the same accuracy as the 
+[link math_toolkit.sf_erf.error_function forward error functions].
+
+[table_erf_inv]
+
+[table_erfc_inv]
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph erfc__double]
+
+[graph erfc__80_bit_long_double]
+
+[graph erfc____float128]
+
+[h4 Testing]
+
+There are two sets of tests: 
+
+* Basic sanity checks attempt to "round-trip" from
+/x/ to /p/ and back again.  These tests have quite
+generous tolerances: in general both the error functions and their
+inverses change so rapidly in some places that round tripping to more than a couple
+of significant digits isn't possible.  This is especially true when
+/p/ is very near one: in this case there isn't enough 
+"information content" in the input to the inverse function to get
+back where you started.
+* Accuracy checks using high-precision test values.  These measure
+the accuracy of the result, given /exact/ input values.
+
+[h4 Implementation]
+
+These functions use a rational approximation [jm_rationals] 
+to calculate an initial
+approximation to the result that is accurate to ~10[super -19], 
+then only if that has insufficient accuracy compared to the epsilon for T,
+do we clean up the result using
+[@http://en.wikipedia.org/wiki/Simple_rational_approximation Halley iteration].
+
+Constructing rational approximations to the erf/erfc functions is actually
+surprisingly hard, especially at high precision.  For this reason no attempt
+has been made to achieve 10[super -34 ] accuracy suitable for use with 128-bit
+reals.
+
+In the following discussion, /p/ is the value passed to erf_inv, and /q/ is
+the value passed to erfc_inv, so that /p = 1 - q/ and /q = 1 - p/ and in both
+cases we want to solve for the same result /x/.
+
+For /p < 0.5/ the inverse erf function is reasonably smooth and the approximation:
+
+[expression ['x = p(p + 10)(Y + R(p))]]
+   
+Gives a good result for a constant Y, and R(p) optimised for low absolute error
+compared to |Y|.
+
+For q < 0.5 things get trickier, over the interval /0.5 > q > 0.25/
+the following approximation works well:
+
+[expression ['x = sqrt(-2log(q)) / (Y + R(q))]]
+   
+While for q < 0.25, let 
+
+[expression ['z = sqrt(-log(q))]]
+
+Then the result is given by:
+
+[expression ['x = z(Y + R(z - B))]]
+
+As before Y is a constant and the rational function R is optimised for low
+absolute error compared to |Y|.  B is also a constant: it is the smallest value
+of /z/ for which each approximation is valid.  There are several approximations
+of this form each of which reaches a little further into the tail of the erfc 
+function (at `long double` precision the extended exponent range compared to
+`double` means that the tail goes on for a very long way indeed).
+
+[endsect] [/ :error_inv The Error Function Inverses]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

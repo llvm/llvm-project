@@ -1,0 +1,173 @@
+[/
+  Copyright 2017, Nick Thompson
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:chebyshev Chebyshev Polynomials]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/chebyshev.hpp>
+``
+
+   namespace boost{ namespace math{
+
+   template<class Real1, class Real2, class Real3>
+   ``__sf_result`` chebyshev_next(Real1 const & x, Real2 const & Tn, Real3 const & Tn_1);
+
+   template<class Real>
+   ``__sf_result`` chebyshev_t(unsigned n, Real const & x);
+
+   template<class Real, class ``__Policy``>
+   ``__sf_result`` chebyshev_t(unsigned n, Real const & x, const ``__Policy``&);
+
+   template<class Real>
+   ``__sf_result`` chebyshev_u(unsigned n, Real const & x);
+
+   template<class Real, class ``__Policy``>
+   ``__sf_result`` chebyshev_u(unsigned n, Real const & x, const ``__Policy``&);
+
+   template<class Real>
+   ``__sf_result`` chebyshev_t_prime(unsigned n, Real const & x);
+
+   template<class Real1, class Real2>
+   ``__sf_result`` chebyshev_clenshaw_recurrence(const Real1* const c, size_t length, Real2 x);
+
+   template<typename Real>
+   Real chebyshev_clenshaw_recurrence(const Real* const c, size_t length, Real a, Real b, Real x);
+
+   }} // namespaces
+
+
+['"Real analysts cannot do without Fourier, complex analysts cannot do without Laurent, and numerical analysts cannot do without Chebyshev"] --Lloyd N. Trefethen
+
+The Chebyshev polynomials of the first kind are defined by the recurrence /T/[sub n+1](/x/) := /2xT/[sub n](/x/) - /T/[sub n-1](/x/), /n > 0/,
+where /T/[sub 0](/x/) := 1 and /T/[sub 1](/x/) := /x/.
+These can be calculated in Boost using the following simple code
+
+    double x = 0.5;
+    double T12 = boost::math::chebyshev_t(12, x);
+
+Calculation of derivatives is also straightforward:
+
+    double T12_prime = boost::math::chebyshev_t_prime(12, x);
+
+The complexity of evaluation of the /n/-th Chebyshev polynomial by these functions is linear.
+So they are unsuitable for use in calculation of (say) a Chebyshev series, as a sum of linear scaling functions scales quadratically.
+Though there are very sophisticated algorithms for the evaluation of Chebyshev series,
+a linear time algorithm is presented below:
+
+    double x = 0.5;
+    std::vector<double> c{14.2, -13.7, 82.3, 96};
+    double T0 = 1;
+    double T1 = x;
+    double f = c[0]*T0/2;
+    unsigned l = 1;
+    while(l < c.size())
+    {
+       f += c[l]*T1;
+       std::swap(T0, T1);
+       T1 = boost::math::chebyshev_next(x, T0, T1);
+       ++l;
+    }
+
+This uses the `chebyshev_next` function to evaluate each term of the Chebyshev series in constant time.
+However, this naive algorithm has a catastrophic loss of precision as /x/ approaches 1.
+A method to mitigate this way given by [@http://www.ams.org/journals/mcom/1955-09-051/S0025-5718-1955-0071856-0/S0025-5718-1955-0071856-0.pdf Clenshaw],
+and is implemented in boost as
+
+    double x = 0.5;
+    std::vector<double> c{14.2, -13.7, 82.3, 96};
+    double f = chebyshev_clenshaw_recurrence(c.data(), c.size(), x);
+
+
+N.B.: There is factor of /2/ difference in our definition of the first coefficient in the Chebyshev series from Clenshaw's original work.
+This is because two traditions exist in notation for the Chebyshev series expansion,
+
+[$../graphs/chebyshev_convention_1.svg]
+
+
+and
+
+[$../graphs/chebyshev_convention_2.svg]
+
+['*boost math always uses the second convention, with the factor of 1/2 on the first coefficient.*]
+
+Another common use case is when the polynomial must be evaluated on some interval  \[/a/, /b/\].
+The translation to the interval  \[-1, 1\] causes a few accuracy problems and also gives us some opportunities.
+For this case, we use [@https://doi.org/10.1093/imamat/20.3.379 Reinch's modification] to the Clenshaw recurrence, which is also discussed [@https://archive.siam.org/books/ot99/OT99SampleChapter.pdf here].
+The usage is as follows:
+
+    double x = 9;
+    double a = 7;
+    double b = 12;
+    std::vector<double> c{14.2, -13.7, 82.3, 96};
+    double f = chebyshev_clenshaw_recurrence(c.data(), c.size(), a, b, x);
+
+Chebyshev polynomials of the second kind can be evaluated via `chebyshev_u`:
+
+    double x = -0.23;
+    double U1 = boost::math::chebyshev_u(1, x);
+
+The evaluation of Chebyshev polynomials by a three-term recurrence is known to be
+[@https://link.springer.com/article/10.1007/s11075-014-9925-x mixed forward-backward stable] for /x/ \u220A \[-1, 1\].
+However, the author does not know of a similar result for /x/ outside \[-1, 1\].
+For this reason, evaluation of Chebyshev polynomials outside of \[-1, 1\] is strongly discouraged.
+That said, small rounding errors in the course of a computation will often lead to this situation,
+and termination of the computation due to these small problems is very discouraging.
+For this reason, `chebyshev_t` and `chebyshev_u` have code paths for /x > 1/ and /x < -1/ which do not use three-term recurrences.
+These code paths are /much slower/, and should be avoided if at all possible.
+
+Evaluation of a Chebyshev series is relatively simple.
+The real challenge is /generation/ of the Chebyshev series.
+For this purpose, boost provides a /Chebyshev transform/, a projection operator which projects a function onto a finite-dimensional span of Chebyshev polynomials.
+But before we discuss the API, let's analyze why we might want to project a function onto a span of Chebyshev polynomials.
+
+* We want a numerically stable way to evaluate the function's derivative.
+* Our function is expensive to evaluate, and we wish to find a less expensive way to estimate its value.
+An example are the standard library transcendental functions:
+These functions are guaranteed to evaluate to within 1 ulp of the exact value, but often this accuracy is not needed.
+A projection onto the Chebyshev polynomials with a low accuracy requirement can vastly accelerate the computation of these functions.
+* We wish to numerically integrate the function.
+
+The API is given below.
+
+``
+#include <boost/math/special_functions/chebyshev_transform.hpp>
+``
+
+   namespace boost{ namespace math{
+
+   template<class Real>
+   class chebyshev_transform
+   {
+   public:
+       template<class F>
+       chebyshev_transform(const F& f, Real a, Real b, Real tol=500*std::numeric_limits<Real>::epsilon());
+
+       Real operator()(Real x) const
+
+       Real integrate() const
+
+       const std::vector<Real>& coefficients() const
+
+       Real prime(Real x) const
+   };
+
+   }}// end namespaces
+
+
+The Chebyshev transform takes a function /f/ and returns a /near-minimax/ approximation to /f/ in terms of Chebyshev polynomials.
+By /near-minimax/, we mean that the resulting Chebyshev polynomial is "very close" the polynomial /p/[sub n]  which minimizes the uniform norm of /f/ - /p/[sub n].
+The notion of "very close" can be made rigorous; see Trefethen's "Approximation Theory and Approximation Practice" for details.
+
+The Chebyshev transform works by creating a vector of values by evaluating the input function at the Chebyshev points, and then performing a discrete cosine transform on the resulting vector.
+In order to do this efficiently, we have used [@http://www.fftw.org/ FFTW3].
+So to compile, you must have `FFTW3` installed, and link with `-lfftw3` for double precision, `-lfftw3f` for float precision, `-lfftw3l` for long double precision, and `-lfftw3q` for quad (`__float128`) precision.
+After the coefficients of the Chebyshev series are known, the routine goes back through them and filters out all the coefficients whose absolute ratio to the largest coefficient are less than the tolerance requested in the constructor.
+
+[endsect] [/section:chebyshev Chebyshev Polynomials]
+

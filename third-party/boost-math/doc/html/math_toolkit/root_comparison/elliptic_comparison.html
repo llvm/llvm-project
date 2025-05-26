@@ -1,0 +1,1868 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Comparison of Elliptic Integral Root Finding Algorithms</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../root_comparison.html" title="Comparison of Root Finding Algorithms">
+<link rel="prev" href="root_n_comparison.html" title="Comparison of Nth-root Finding Algorithms">
+<link rel="next" href="../../optimization.html" title="Chapter 11. Optimization">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="root_n_comparison.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_comparison.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../../optimization.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.root_comparison.elliptic_comparison"></a><a class="link" href="elliptic_comparison.html" title="Comparison of Elliptic Integral Root Finding Algorithms">Comparison
+      of Elliptic Integral Root Finding Algorithms</a>
+</h3></div></div></div>
+<p>
+        A second example compares four root finding algorithms for locating the second
+        radius of an ellipse with first radius 28 and arc length 300, for four floating-point
+        types, <code class="computeroutput"><span class="keyword">float</span></code>, <code class="computeroutput"><span class="keyword">double</span></code>, <code class="computeroutput"><span class="keyword">long</span>
+        <span class="keyword">double</span></code> and a <a href="../../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>
+        type <code class="computeroutput"><span class="identifier">cpp_bin_float_50</span></code>.
+      </p>
+<p>
+        Which is to say we're solving:
+      </p>
+<pre class="programlisting">4xE(sqrt(1 - 28<sup>2</sup> / x<sup>2</sup>)) - 300 = 0</pre>
+<p>
+        In each case the target accuracy was set using our "recommended"
+        accuracy limits (or at least limits that make a good starting point - which
+        is likely to give close to full accuracy without resorting to unnecessary
+        iterations).
+      </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                <p>
+                  Function
+                </p>
+              </th>
+<th>
+                <p>
+                  Precision Requested
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  TOMS748
+                </p>
+              </td>
+<td>
+                <p>
+                  numeric_limits&lt;T&gt;::digits - 2
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Newton
+                </p>
+              </td>
+<td>
+                <p>
+                  floor(numeric_limits&lt;T&gt;::digits * 0.6)
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Halley
+                </p>
+              </td>
+<td>
+                <p>
+                  floor(numeric_limits&lt;T&gt;::digits * 0.4)
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Schröder
+                </p>
+              </td>
+<td>
+                <p>
+                  floor(numeric_limits&lt;T&gt;::digits * 0.4)
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+<p>
+        Tests used Microsoft Visual Studio 2013 (Update 1) and GCC 4.9.1 using source
+        code <a href="../../../../example/root_elliptic_finding.cpp" target="_top">root_elliptic_finding.cpp</a>.
+      </p>
+<p>
+        The timing uncertainty (especially using MSVC) is at least 5% of normalized
+        time 'Norm'.
+      </p>
+<p>
+        To pick out the 'best' and 'worst' algorithms are highlighted in blue and
+        red. More than one result can be 'best' when normalized times are indistinguishable
+        within the uncertainty.
+      </p>
+<h4>
+<a name="math_toolkit.root_comparison.elliptic_comparison.h0"></a>
+        <span class="phrase"><a name="math_toolkit.root_comparison.elliptic_comparison.program_example_root_elliptic_fi"></a></span><a class="link" href="elliptic_comparison.html#math_toolkit.root_comparison.elliptic_comparison.program_example_root_elliptic_fi">Program
+        root_elliptic_finding.cpp,
+        Microsoft Visual C++ version 14.1, Dinkumware standard library version 650,
+        Win32 Compiled in optimise mode., _X86_SSE2</a>
+      </h4>
+<div class="table">
+<a name="math_toolkit.root_comparison.elliptic_comparison.elliptic"></a><p class="title"><b>Table 10.12. root with radius 28 and arc length 300) for float, double, long double
+        and cpp_bin_float_50 types, using _X86_SSE2</b></p>
+<div class="table-contents"><table class="table" summary="root with radius 28 and arc length 300) for float, double, long double
+        and cpp_bin_float_50 types, using _X86_SSE2">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  float
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+                <p>
+                  double
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+                <p>
+                  long d
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+                <p>
+                  cpp50
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<td class="auto-generated"> </td>
+<td class="auto-generated"> </td>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Algo
+                </p>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  TOMS748
+                </p>
+              </td>
+<td>
+                <p>
+                  6
+                </p>
+              </td>
+<td>
+                <p>
+                  906
+                </p>
+              </td>
+<td>
+                <p>
+                  2.07
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  9
+                </p>
+              </td>
+<td>
+                <p>
+                  1312
+                </p>
+              </td>
+<td>
+                <p>
+                  1.79
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  9
+                </p>
+              </td>
+<td>
+                <p>
+                  1281
+                </p>
+              </td>
+<td>
+                <p>
+                  1.75
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  11
+                </p>
+              </td>
+<td>
+                <p>
+                  1690625
+                </p>
+              </td>
+<td>
+                <p>
+                  1.52
+                </p>
+              </td>
+<td>
+                <p>
+                  -3
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Newton
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  640
+                </p>
+              </td>
+<td>
+                <p>
+                  1.46
+                </p>
+              </td>
+<td>
+                <p>
+                  -1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  875
+                </p>
+              </td>
+<td>
+                <p>
+                  1.19
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  843
+                </p>
+              </td>
+<td>
+                <p>
+                  1.15
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  5
+                </p>
+              </td>
+<td>
+                <p>
+                  1368750
+                </p>
+              </td>
+<td>
+                <p>
+                  1.23
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Halley
+                </p>
+              </td>
+<td>
+                <p>
+                  2
+                </p>
+              </td>
+<td>
+                <p>
+                  437
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  734
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  734
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  1109375
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Schröder
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  671
+                </p>
+              </td>
+<td>
+                <p>
+                  1.54
+                </p>
+              </td>
+<td>
+                <p>
+                  -1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  6
+                </p>
+              </td>
+<td>
+                <p>
+                  1296
+                </p>
+              </td>
+<td>
+                <p>
+                  1.77
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  6
+                </p>
+              </td>
+<td>
+                <p>
+                  1406
+                </p>
+              </td>
+<td>
+                <p>
+                  1.92
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  5
+                </p>
+              </td>
+<td>
+                <p>
+                  1462500
+                </p>
+              </td>
+<td>
+                <p>
+                  1.32
+                </p>
+              </td>
+<td>
+                <p>
+                  -2
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><h4>
+<a name="math_toolkit.root_comparison.elliptic_comparison.h1"></a>
+        <span class="phrase"><a name="math_toolkit.root_comparison.elliptic_comparison.program_example_root_elliptic_f0"></a></span><a class="link" href="elliptic_comparison.html#math_toolkit.root_comparison.elliptic_comparison.program_example_root_elliptic_f0">Program
+        root_elliptic_finding.cpp,
+        Microsoft Visual C++ version 12.0, Dinkumware standard library version 610,
+        Win32 Compiled in optimise mode., _X64_AVX</a>
+      </h4>
+<div class="table">
+<a name="math_toolkit.root_comparison.elliptic_comparison.elliptic0"></a><p class="title"><b>Table 10.13. root with radius 28 and arc length 300) for float, double, long double
+        and cpp_bin_float_50 types, using _X64_AVX</b></p>
+<div class="table-contents"><table class="table" summary="root with radius 28 and arc length 300) for float, double, long double
+        and cpp_bin_float_50 types, using _X64_AVX">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  float
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+                <p>
+                  double
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+                <p>
+                  long d
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+                <p>
+                  cpp50
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<td class="auto-generated"> </td>
+<td class="auto-generated"> </td>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Algo
+                </p>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  TOMS748
+                </p>
+              </td>
+<td>
+                <p>
+                  5
+                </p>
+              </td>
+<td>
+                <p>
+                  500
+                </p>
+              </td>
+<td>
+                <p>
+                  1.33
+                </p>
+              </td>
+<td>
+                <p>
+                  -1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  9
+                </p>
+              </td>
+<td>
+                <p>
+                  1046
+                </p>
+              </td>
+<td>
+                <p>
+                  1.72
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  9
+                </p>
+              </td>
+<td>
+                <p>
+                  1062
+                </p>
+              </td>
+<td>
+                <p>
+                  1.70
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  11
+                </p>
+              </td>
+<td>
+                <p>
+                  698437
+                </p>
+              </td>
+<td>
+                <p>
+                  1.54
+                </p>
+              </td>
+<td>
+                <p>
+                  -3
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Newton
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  484
+                </p>
+              </td>
+<td>
+                <p>
+                  1.29
+                </p>
+              </td>
+<td>
+                <p>
+                  -1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  734
+                </p>
+              </td>
+<td>
+                <p>
+                  1.21
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  687
+                </p>
+              </td>
+<td>
+                <p>
+                  1.10
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  5
+                </p>
+              </td>
+<td>
+                <p>
+                  545312
+                </p>
+              </td>
+<td>
+                <p>
+                  1.20
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Halley
+                </p>
+              </td>
+<td>
+                <p>
+                  2
+                </p>
+              </td>
+<td>
+                <p>
+                  375
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  609
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  625
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  453125
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Schröder
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  546
+                </p>
+              </td>
+<td>
+                <p>
+                  1.46
+                </p>
+              </td>
+<td>
+                <p>
+                  -1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  6
+                </p>
+              </td>
+<td>
+                <p>
+                  1109
+                </p>
+              </td>
+<td>
+                <p>
+                  1.82
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  6
+                </p>
+              </td>
+<td>
+                <p>
+                  1187
+                </p>
+              </td>
+<td>
+                <p>
+                  1.90
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  5
+                </p>
+              </td>
+<td>
+                <p>
+                  564062
+                </p>
+              </td>
+<td>
+                <p>
+                  1.24
+                </p>
+              </td>
+<td>
+                <p>
+                  -2
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><h4>
+<a name="math_toolkit.root_comparison.elliptic_comparison.h2"></a>
+        <span class="phrase"><a name="math_toolkit.root_comparison.elliptic_comparison.program_example_root_elliptic_f1"></a></span><a class="link" href="elliptic_comparison.html#math_toolkit.root_comparison.elliptic_comparison.program_example_root_elliptic_f1">Program
+        root_elliptic_finding.cpp,
+        GNU C++ version 7.1.0, GNU libstdc++ version 20170502, Win32 Compiled in
+        optimise mode., _X64_SSE2</a>
+      </h4>
+<div class="table">
+<a name="math_toolkit.root_comparison.elliptic_comparison.elliptic1"></a><p class="title"><b>Table 10.14. root with radius 28 and arc length 300) for float, double, long double
+        and cpp_bin_float_50 types, using _X64_SSE2</b></p>
+<div class="table-contents"><table class="table" summary="root with radius 28 and arc length 300) for float, double, long double
+        and cpp_bin_float_50 types, using _X64_SSE2">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  float
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+                <p>
+                  double
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+                <p>
+                  long d
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<th>
+                <p>
+                  cpp50
+                </p>
+              </th>
+<th>
+              </th>
+<th>
+              </th>
+<td class="auto-generated"> </td>
+<td class="auto-generated"> </td>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Algo
+                </p>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  Its
+                </p>
+              </td>
+<td>
+                <p>
+                  Times
+                </p>
+              </td>
+<td>
+                <p>
+                  Norm
+                </p>
+              </td>
+<td>
+                <p>
+                  Dis
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  TOMS748
+                </p>
+              </td>
+<td>
+                <p>
+                  5
+                </p>
+              </td>
+<td>
+                <p>
+                  328
+                </p>
+              </td>
+<td>
+                <p>
+                  1.24
+                </p>
+              </td>
+<td>
+                <p>
+                  -1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  8
+                </p>
+              </td>
+<td>
+                <p>
+                  890
+                </p>
+              </td>
+<td>
+                <p>
+                  1.50
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  8
+                </p>
+              </td>
+<td>
+                <p>
+                  1234
+                </p>
+              </td>
+<td>
+                <p>
+                  1.61
+                </p>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  11
+                </p>
+              </td>
+<td>
+                <p>
+                  487500
+                </p>
+              </td>
+<td>
+                <p>
+                  1.57
+                </p>
+              </td>
+<td>
+                <p>
+                  -3
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Newton
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  359
+                </p>
+              </td>
+<td>
+                <p>
+                  1.35
+                </p>
+              </td>
+<td>
+                <p>
+                  -1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  718
+                </p>
+              </td>
+<td>
+                <p>
+                  1.21
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  843
+                </p>
+              </td>
+<td>
+                <p>
+                  1.10
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  5
+                </p>
+              </td>
+<td>
+                <p>
+                  379687
+                </p>
+              </td>
+<td>
+                <p>
+                  1.22
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Halley
+                </p>
+              </td>
+<td>
+                <p>
+                  2
+                </p>
+              </td>
+<td>
+                <p>
+                  265
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  593
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  765
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  7
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  310937
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">1.00</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Schröder
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  343
+                </p>
+              </td>
+<td>
+                <p>
+                  1.29
+                </p>
+              </td>
+<td>
+                <p>
+                  -1
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  812
+                </p>
+              </td>
+<td>
+                <p>
+                  1.37
+                </p>
+              </td>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  1046
+                </p>
+              </td>
+<td>
+                <p>
+                  1.37
+                </p>
+              </td>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+              </td>
+<td>
+                <p>
+                  5
+                </p>
+              </td>
+<td>
+                <p>
+                  390625
+                </p>
+              </td>
+<td>
+                <p>
+                  1.26
+                </p>
+              </td>
+<td>
+                <p>
+                  -2
+                </p>
+              </td>
+<td>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+        Remarks:
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            The function being solved is now moderately expensive to call, and twice
+            as expensive to call when obtaining the derivative than when not. Consequently
+            there is very little improvement in moving from a derivative free method,
+            to Newton iteration. However, once you've calculated the first derivative
+            the second comes almost for free, consequently the third order methods
+            (Halley) does much the best.
+          </li>
+<li class="listitem">
+            Of the two second order methods, Halley does best as would be expected:
+            the Schroder method offers better guarantees of <span class="emphasis"><em>quadratic</em></span>
+            convergence, while Halley relies on a smooth function with a single root
+            to give <span class="emphasis"><em>cubic</em></span> convergence. It's not entirely clear
+            why Schroder iteration often does worse than Newton.
+          </li>
+</ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="root_n_comparison.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_comparison.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../../optimization.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

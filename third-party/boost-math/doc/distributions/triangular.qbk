@@ -1,0 +1,178 @@
+[section:triangular_dist Triangular Distribution]
+
+
+``#include <boost/math/distributions/triangular.hpp>``
+
+   namespace boost{ namespace math{
+    template <class RealType = double,
+              class ``__Policy``   = ``__policy_class`` >
+    class triangular_distribution;
+
+    typedef triangular_distribution<> triangular;
+
+    template <class RealType, class ``__Policy``>
+    class triangular_distribution
+    {
+    public:
+       typedef RealType value_type;
+       typedef Policy   policy_type;
+
+       BOOST_MATH_GPU_ENABLED triangular_distribution(RealType lower = -1, RealType mode = 0, RealType upper = 1); // Constructor.
+          : m_lower(lower), m_mode(mode), m_upper(upper) // Default is -1, 0, +1 symmetric triangular distribution.
+       // Accessor functions.
+       BOOST_MATH_GPU_ENABLED RealType lower()const;
+       BOOST_MATH_GPU_ENABLED RealType mode()const;
+       BOOST_MATH_GPU_ENABLED RealType upper()const;
+    }; // class triangular_distribution
+
+   }} // namespaces
+
+The [@http://en.wikipedia.org/wiki/Triangular_distribution triangular distribution]
+is a [@http://en.wikipedia.org/wiki/Continuous_distribution continuous]
+[@http://en.wikipedia.org/wiki/Probability_distribution probability distribution]
+with a lower limit a,
+[@http://en.wikipedia.org/wiki/Mode_%28statistics%29 mode c],
+and upper limit b.
+
+The triangular distribution is often used where the distribution is only vaguely known,
+but, like the [@http://en.wikipedia.org/wiki/Uniform_distribution_%28continuous%29 uniform distribution],
+upper and limits are 'known', but a 'best guess', the mode or center point, is also added.
+It has been recommended as a
+[@https://www.jstor.org/stable/2988573 proxy for the beta distribution.]
+The distribution is used in business decision making and project planning.
+
+The [@http://en.wikipedia.org/wiki/Triangular_distribution triangular distribution]
+is a distribution with the
+[@http://en.wikipedia.org/wiki/Probability_density_function probability density function]:
+
+[expression f(x) = 2(x-a)/(b-a) (c-a) [sixemspace]  for a <= x <= c]
+[expression f(x) = 2(b-x)/(b-a) (b-c) [sixemspace] for c < x <= b]
+
+Parameter ['a] (lower) can be any finite value.
+Parameter ['b] (upper) can be any finite value > a (lower).
+Parameter ['c] (mode) a <= c <= b.  This is the most probable value.
+
+The [@http://en.wikipedia.org/wiki/Random_variate random variate] x must also be finite, and is supported lower <= x <= upper.
+
+The triangular distribution may be appropriate when an assumption of a normal distribution
+is unjustified because uncertainty is caused by rounding and quantization from analog to digital conversion.
+Upper and lower limits are known, and the most probable value lies midway.
+
+The distribution simplifies when the 'best guess' is either the lower or upper limit - a 90 degree angle triangle.
+The 001 triangular distribution which expresses an estimate that the lowest value is the most likely;
+for example, you believe that the next-day quoted delivery date is most likely
+(knowing that a quicker delivery is impossible - the postman only comes once a day),
+and that longer delays are decreasingly likely,
+and delivery is assumed to never take more than your upper limit.
+
+The following graph illustrates how the
+[@http://en.wikipedia.org/wiki/Probability_density_function probability density function PDF]
+varies with the various parameters:
+
+[graph triangular_pdf]
+
+and cumulative distribution function
+
+[graph triangular_cdf]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED triangular_distribution(RealType lower = 0, RealType mode = 0 RealType upper = 1);
+
+Constructs a [@http://en.wikipedia.org/wiki/triangular_distribution triangular distribution]
+with lower  /lower/ (a) and upper /upper/ (b).
+
+Requires that the /lower/, /mode/ and /upper/ parameters are all finite,
+otherwise calls __domain_error.
+
+[warning These constructors are slightly different from the analogs provided by __Mathworld
+[@http://reference.wolfram.com/language/ref/TriangularDistribution.html Triangular distribution],
+where
+
+[^TriangularDistribution\[{min, max}\]]  represents a [*symmetric] triangular statistical distribution giving values between min and max.[br]
+[^TriangularDistribution\[\]] represents a [*symmetric] triangular statistical distribution giving values between 0 and 1.[br]
+[^TriangularDistribution\[{min, max}, c\]] represents a triangular distribution with mode at c (usually [*asymmetric]).[br]
+
+So, for example, to compute a variance using __WolframAlpha, use
+[^N\[variance\[TriangularDistribution{1, +2}\], 50\]]
+]
+
+The parameters of a distribution can be obtained using these member functions:
+
+   BOOST_MATH_GPU_ENABLED RealType lower()const;
+
+Returns the ['lower] parameter of this distribution (default -1).
+
+   BOOST_MATH_GPU_ENABLED RealType mode()const;
+
+Returns the ['mode] parameter of this distribution (default 0).
+
+   BOOST_MATH_GPU_ENABLED RealType upper()const;
+
+Returns the ['upper] parameter of this distribution (default+1).
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \lower\ to \upper\,
+and the supported range is lower <= x <= upper.
+
+[h4 Accuracy]
+
+The triangular distribution is implemented with simple arithmetic operators and so should have errors within an epsilon or two,
+except quantiles with arguments nearing the extremes of zero and unity.
+
+[h4 Implementation]
+
+In the following table, a is the /lower/ parameter of the distribution,
+c is the /mode/ parameter,
+b is the /upper/ parameter,
+/x/ is the random variate, /p/ is the probability and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = 0 for x < mode, 2(x-a)\/(b-a)(c-a) else 2*(b-x)\/((b-a)(b-c))]]
+[[cdf][Using the relation: cdf = 0 for x < mode (x-a)[super 2]\/((b-a)(c-a)) else 1 - (b-x)[super 2]\/((b-a)(b-c))]]
+[[cdf complement][Using the relation: q = 1 - p ]]
+[[quantile][let p0 = (c-a)\/(b-a) the point of inflection on the cdf,
+then given probability p and q = 1-p:
+
+x = sqrt((b-a)(c-a)p) + a ; for p < p0
+
+x = c                     ; for p == p0
+
+x = b - sqrt((b-a)(b-c)q) ; for p > p0
+
+(See [@../../../../boost/math/distributions/triangular.hpp /boost/math/distributions/triangular.hpp] for details.)]]
+[[quantile from the complement][As quantile (See [@../../../../boost/math/distributions/triangular.hpp /boost/math/distributions/triangular.hpp] for details.)]]
+[[mean][(a + b + 3) \/ 3 ]]
+[[variance][(a[super 2]+b[super 2]+c[super 2] - ab - ac - bc)\/18]]
+[[mode][c]]
+[[skewness][(See [@../../../../boost/math/distributions/triangular.hpp /boost/math/distributions/triangular.hpp] for details). ]]
+[[kurtosis][12\/5]]
+[[kurtosis excess][-3\/5]]
+]
+
+Some 'known good' test values were obtained using __WolframAlpha.
+
+[h4 References]
+
+* [@http://en.wikipedia.org/wiki/Triangular_distribution Wikipedia triangular distribution]
+* [@http://mathworld.wolfram.com/TriangularDistribution.html Weisstein, Eric W. "Triangular Distribution." From MathWorld--A Wolfram Web Resource.]
+* Evans, M.; Hastings, N.; and Peacock, B. "Triangular Distribution." Ch. 40 in Statistical Distributions, 3rd ed. New York: Wiley, pp. 187-188, 2000, ISBN - 0471371246.
+* [@http://www.measurement.sk/2002/S1/Wimmer2.pdf Gejza Wimmer, Viktor Witkovsky and Tomas Duby,
+Measurement Science Review, Volume 2, Section 1, 2002, Proper Rounding Of The Measurement Results Under The Assumption Of Triangular Distribution.]
+
+[endsect][/section:triangular_dist triangular]
+
+[/
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

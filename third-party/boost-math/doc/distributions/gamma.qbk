@@ -1,0 +1,145 @@
+[section:gamma_dist Gamma (and Erlang) Distribution]
+
+``#include <boost/math/distributions/gamma.hpp>``
+
+   namespace boost{ namespace math{ 
+      
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class gamma_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+
+      BOOST_MATH_GPU_ENABLED gamma_distribution(RealType shape, RealType scale = 1)
+
+      BOOST_MATH_GPU_ENABLED RealType shape()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+   };
+   
+   }} // namespaces
+   
+The gamma distribution is a continuous probability distribution.
+When the shape parameter is an integer then it is known as the 
+Erlang Distribution.  It is also closely related to the Poisson
+and Chi Squared Distributions.
+
+When the shape parameter has an integer value, the distribution is the
+[@http://en.wikipedia.org/wiki/Erlang_distribution Erlang distribution].
+Since this can be produced by ensuring that the shape parameter has an
+integer value > 0, the Erlang distribution is not separately implemented.
+
+[note
+To avoid potential confusion with the gamma functions, this
+distribution does not provide the typedef:
+
+``typedef gamma_distribution<double> gamma;`` 
+
+Instead if you want a double precision gamma distribution you can write 
+
+``boost::math::gamma_distribution<> my_gamma(1, 1);``
+]
+
+For shape parameter /k/ and scale parameter [theta] it is defined by the
+probability density function:
+
+[equation gamma_dist_ref1]
+
+Sometimes an alternative formulation is used: given parameters
+[alpha] = k and [beta] = 1 / [theta], then the 
+distribution can be defined by the PDF:
+
+[equation gamma_dist_ref2]
+
+In this form the inverse scale parameter is called a /rate parameter/.
+
+Both forms are in common usage: this library uses the first definition
+throughout.  Therefore to construct a Gamma Distribution from a ['rate
+parameter], you should pass the reciprocal of the rate as the scale parameter.
+
+The following two graphs illustrate how the PDF of the gamma distribution
+varies as the parameters vary:
+
+[graph gamma1_pdf]
+
+[graph gamma2_pdf]
+
+The [*Erlang Distribution] is the same as the Gamma, but with the shape parameter
+an integer.  It is often expressed using a /rate/ rather than a /scale/ as the 
+second parameter (remember that the rate is the reciprocal of the scale).
+
+Internally the functions used to implement the Gamma Distribution are
+already optimised for small-integer arguments, so in general there should
+be no great loss of performance from using a Gamma Distribution rather than
+a dedicated Erlang Distribution.
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED gamma_distribution(RealType shape, RealType scale = 1);
+   
+Constructs a gamma distribution with shape /shape/ and 
+scale /scale/.
+
+Requires that the shape and scale parameters are greater than zero, otherwise calls
+__domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType shape()const;
+   
+Returns the /shape/ parameter of this distribution.
+   
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+      
+Returns the /scale/ parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[0,+[infin]\].
+
+In this distribution the implementation of `logpdf` is specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The gamma distribution is implemented in terms of the 
+incomplete gamma functions __gamma_p and __gamma_q and their
+inverses __gamma_p_inv and __gamma_q_inv: refer to the accuracy
+data for those functions for more information.
+
+[h4 Implementation]
+
+In the following table /k/ is the shape parameter of the distribution, 
+[theta] is its scale parameter, /x/ is the random variate, /p/ is the probability
+and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = __gamma_p_derivative(k, x / [theta]) / [theta] ]]
+[[logpdf][log(pdf) = -k*log([theta]) + (k-1)*log(x) - lgamma(k) - (x/[theta]) ]]
+[[cdf][Using the relation: p = __gamma_p(k, x / [theta]) ]]
+[[cdf complement][Using the relation: q = __gamma_q(k, x / [theta]) ]]
+[[quantile][Using the relation: x = [theta] * __gamma_p_inv(k, p) ]]
+[[quantile from the complement][Using the relation: x = [theta]* __gamma_q_inv(k, p) ]]
+[[mean][k[theta] ]]
+[[variance][k[theta][super 2] ]]
+[[mode][(k-1)[theta] for ['k>1] otherwise a __domain_error ]]
+[[skewness][2 / sqrt(k) ]]
+[[kurtosis][3 + 6 / k]]
+[[kurtosis excess][6 / k ]]
+]
+
+[endsect] [/section:gamma_dist Gamma (and Erlang) Distribution]
+
+
+[/ 
+  Copyright 2006, 2010 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

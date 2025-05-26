@@ -1,0 +1,412 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Chi Squared Distribution</title>
+<link rel="stylesheet" href="../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../dists.html" title="Distributions">
+<link rel="prev" href="cauchy_dist.html" title="Cauchy-Lorentz Distribution">
+<link rel="next" href="empirical_cdf.html" title="Empirical Cumulative Distribution Function">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="cauchy_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="empirical_cdf.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="math_toolkit.dist_ref.dists.chi_squared_dist"></a><a class="link" href="chi_squared_dist.html" title="Chi Squared Distribution">Chi Squared
+        Distribution</a>
+</h4></div></div></div>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">chi_squared</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">,</span>
+          <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a>   <span class="special">=</span> <a class="link" href="../../pol_ref/pol_ref_ref.html" title="Policy Class Reference">policies::policy&lt;&gt;</a> <span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">chi_squared_distribution</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">chi_squared_distribution</span><span class="special">&lt;&gt;</span> <span class="identifier">chi_squared</span><span class="special">;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">chi_squared_distribution</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+   <span class="keyword">typedef</span> <span class="identifier">RealType</span>  <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">Policy</span>    <span class="identifier">policy_type</span><span class="special">;</span>
+
+   <span class="comment">// Constructor:</span>
+   <span class="identifier">chi_squared_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">i</span><span class="special">);</span>
+
+   <span class="comment">// Accessor to parameter:</span>
+   <span class="identifier">RealType</span> <span class="identifier">degrees_of_freedom</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+
+   <span class="comment">// Parameter estimation:</span>
+   <span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_degrees_of_freedom</span><span class="special">(</span>
+      <span class="identifier">RealType</span> <span class="identifier">difference_from_mean</span><span class="special">,</span>
+      <span class="identifier">RealType</span> <span class="identifier">alpha</span><span class="special">,</span>
+      <span class="identifier">RealType</span> <span class="identifier">beta</span><span class="special">,</span>
+      <span class="identifier">RealType</span> <span class="identifier">sd</span><span class="special">,</span>
+      <span class="identifier">RealType</span> <span class="identifier">hint</span> <span class="special">=</span> <span class="number">100</span><span class="special">);</span>
+<span class="special">};</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+          The Chi-Squared distribution is one of the most widely used distributions
+          in statistical tests. If χ<sub>i</sub> are ν 
+independent, normally distributed random
+          variables with means μ<sub>i</sub> and variances σ<sub>i</sub><sup>2</sup>, then the random variable:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/chi_squ_ref1.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          is distributed according to the Chi-Squared distribution.
+        </p>
+<p>
+          The Chi-Squared distribution is a special case of the gamma distribution
+          and has a single parameter ν that specifies the number of degrees of freedom.
+          The following graph illustrates how the distribution changes for different
+          values of ν:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/chi_squared_pdf.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<h5>
+<a name="math_toolkit.dist_ref.dists.chi_squared_dist.h0"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.chi_squared_dist.member_functions"></a></span><a class="link" href="chi_squared_dist.html#math_toolkit.dist_ref.dists.chi_squared_dist.member_functions">Member
+          Functions</a>
+        </h5>
+<pre class="programlisting"><span class="identifier">chi_squared_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">v</span><span class="special">);</span>
+</pre>
+<p>
+          Constructs a Chi-Squared distribution with <span class="emphasis"><em>v</em></span> degrees
+          of freedom.
+        </p>
+<p>
+          Requires v &gt; 0, otherwise calls <a class="link" href="../../error_handling.html#math_toolkit.error_handling.domain_error">domain_error</a>.
+        </p>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">degrees_of_freedom</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+</pre>
+<p>
+          Returns the parameter <span class="emphasis"><em>v</em></span> from which this object was
+          constructed.
+        </p>
+<pre class="programlisting"><span class="keyword">static</span> <span class="identifier">RealType</span> <span class="identifier">find_degrees_of_freedom</span><span class="special">(</span>
+   <span class="identifier">RealType</span> <span class="identifier">difference_from_variance</span><span class="special">,</span>
+   <span class="identifier">RealType</span> <span class="identifier">alpha</span><span class="special">,</span>
+   <span class="identifier">RealType</span> <span class="identifier">beta</span><span class="special">,</span>
+   <span class="identifier">RealType</span> <span class="identifier">variance</span><span class="special">,</span>
+   <span class="identifier">RealType</span> <span class="identifier">hint</span> <span class="special">=</span> <span class="number">100</span><span class="special">);</span>
+</pre>
+<p>
+          Estimates the sample size required to detect a difference from a nominal
+          variance in a Chi-Squared test for equal standard deviations.
+        </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">difference_from_variance</span></dt>
+<dd><p>
+                The difference from the assumed nominal variance that is to be detected:
+                Note that the sign of this value is critical, see below.
+              </p></dd>
+<dt><span class="term">alpha</span></dt>
+<dd><p>
+                The maximum acceptable risk of rejecting the null hypothesis when
+                it is in fact true.
+              </p></dd>
+<dt><span class="term">beta</span></dt>
+<dd><p>
+                The maximum acceptable risk of falsely failing to reject the null
+                hypothesis.
+              </p></dd>
+<dt><span class="term">variance</span></dt>
+<dd><p>
+                The nominal variance being tested against.
+              </p></dd>
+<dt><span class="term">hint</span></dt>
+<dd><p>
+                An optional hint on where to start looking for a result: the current
+                sample size would be a good choice.
+              </p></dd>
+</dl>
+</div>
+<p>
+          Note that this calculation works with <span class="emphasis"><em>variances</em></span> and
+          not <span class="emphasis"><em>standard deviations</em></span>.
+        </p>
+<p>
+          The sign of the parameter <span class="emphasis"><em>difference_from_variance</em></span>
+          is important: the Chi Squared distribution is asymmetric, and the caller
+          must decide in advance whether they are testing for a variance greater
+          than a nominal value (positive <span class="emphasis"><em>difference_from_variance</em></span>)
+          or testing for a variance less than a nominal value (negative <span class="emphasis"><em>difference_from_variance</em></span>).
+          If the latter, then obviously it is a requirement that <code class="computeroutput"><span class="identifier">variance</span>
+          <span class="special">+</span> <span class="identifier">difference_from_variance</span>
+          <span class="special">&gt;</span> <span class="number">0</span></code>,
+          since no sample can have a negative variance!
+        </p>
+<p>
+          This procedure uses the method in Diamond, W. J. (1989). Practical Experiment
+          Designs, Van-Nostrand Reinhold, New York.
+        </p>
+<p>
+          See also section on Sample sizes required in <a href="http://www.itl.nist.gov/div898/handbook/prc/section2/prc232.htm" target="_top">the
+          NIST Engineering Statistics Handbook, Section 7.2.3.2</a>.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.chi_squared_dist.h1"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.chi_squared_dist.non_member_accessors"></a></span><a class="link" href="chi_squared_dist.html#math_toolkit.dist_ref.dists.chi_squared_dist.non_member_accessors">Non-member
+          Accessors</a>
+        </h5>
+<p>
+          All the <a class="link" href="../nmp.html" title="Non-Member Properties">usual non-member accessor
+          functions</a> that are generic to all distributions are supported:
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.cdf">Cumulative Distribution Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.pdf">Probability Density Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.quantile">Quantile</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.hazard">Hazard Function</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.chf">Cumulative Hazard Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mean">mean</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.median">median</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mode">mode</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.variance">variance</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.sd">standard deviation</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.skewness">skewness</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis">kurtosis</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis_excess">kurtosis_excess</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.range">range</a> and <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.support">support</a>.
+        </p>
+<p>
+          (We have followed the usual restriction of the mode to degrees of freedom
+          &gt;= 2, but note that the maximum of the pdf is actually zero for degrees
+          of freedom from 2 down to 0, and provide an extended definition that would
+          avoid a discontinuity in the mode as alternative code in a comment).
+        </p>
+<p>
+          The domain of the random variable is [0, +∞].
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.chi_squared_dist.h2"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.chi_squared_dist.examples"></a></span><a class="link" href="chi_squared_dist.html#math_toolkit.dist_ref.dists.chi_squared_dist.examples">Examples</a>
+        </h5>
+<p>
+          Various <a class="link" href="../../stat_tut/weg/cs_eg.html" title="Chi Squared Distribution Examples">worked examples</a>
+          are available illustrating the use of the Chi Squared Distribution.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.chi_squared_dist.h3"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.chi_squared_dist.accuracy"></a></span><a class="link" href="chi_squared_dist.html#math_toolkit.dist_ref.dists.chi_squared_dist.accuracy">Accuracy</a>
+        </h5>
+<p>
+          The Chi-Squared distribution is implemented in terms of the <a class="link" href="../../sf_gamma/igamma.html" title="Incomplete Gamma Functions">incomplete
+          gamma functions</a>: please refer to the accuracy data for those functions.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.chi_squared_dist.h4"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.chi_squared_dist.implementation"></a></span><a class="link" href="chi_squared_dist.html#math_toolkit.dist_ref.dists.chi_squared_dist.implementation">Implementation</a>
+        </h5>
+<p>
+          In the following table <span class="emphasis"><em>v</em></span> is the number of degrees
+          of freedom of the distribution, <span class="emphasis"><em>x</em></span> is the random variate,
+          <span class="emphasis"><em>p</em></span> is the probability, and <span class="emphasis"><em>q = 1-p</em></span>.
+        </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                  <p>
+                    Function
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Implementation Notes
+                  </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                  <p>
+                    pdf
+                  </p>
+                </td>
+<td>
+                  <p>
+                    Using the relation: pdf = <a class="link" href="../../sf_gamma/gamma_derivatives.html" title="Derivative of the Incomplete Gamma Function">gamma_p_derivative</a>(v
+                    / 2, x / 2) / 2
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    cdf
+                  </p>
+                </td>
+<td>
+                  <p>
+                    Using the relation: p = <a class="link" href="../../sf_gamma/igamma.html" title="Incomplete Gamma Functions">gamma_p</a>(v
+                    / 2, x / 2)
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    cdf complement
+                  </p>
+                </td>
+<td>
+                  <p>
+                    Using the relation: q = <a class="link" href="../../sf_gamma/igamma.html" title="Incomplete Gamma Functions">gamma_q</a>(v
+                    / 2, x / 2)
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    quantile
+                  </p>
+                </td>
+<td>
+                  <p>
+                    Using the relation: x = 2 * <a class="link" href="../../sf_gamma/igamma_inv.html" title="Incomplete Gamma Function Inverses">gamma_p_inv</a>(v
+                    / 2, p)
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    quantile from the complement
+                  </p>
+                </td>
+<td>
+                  <p>
+                    Using the relation: x = 2 * <a class="link" href="../../sf_gamma/igamma_inv.html" title="Incomplete Gamma Function Inverses">gamma_q_inv</a>(v
+                    / 2, p)
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    mean
+                  </p>
+                </td>
+<td>
+                  <p>
+                    v
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    variance
+                  </p>
+                </td>
+<td>
+                  <p>
+                    2v
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    mode
+                  </p>
+                </td>
+<td>
+                  <p>
+                    v - 2 (if v &gt;= 2)
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    skewness
+                  </p>
+                </td>
+<td>
+                  <p>
+                    2 * sqrt(2 / v) == sqrt(8 / v)
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    kurtosis
+                  </p>
+                </td>
+<td>
+                  <p>
+                    3 + 12 / v
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    kurtosis excess
+                  </p>
+                </td>
+<td>
+                  <p>
+                    12 / v
+                  </p>
+                </td>
+</tr>
+</tbody>
+</table></div>
+<h5>
+<a name="math_toolkit.dist_ref.dists.chi_squared_dist.h5"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.chi_squared_dist.references"></a></span><a class="link" href="chi_squared_dist.html#math_toolkit.dist_ref.dists.chi_squared_dist.references">References</a>
+        </h5>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+              <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda3666.htm" target="_top">NIST
+              Exploratory Data Analysis</a>
+            </li>
+<li class="listitem">
+              <a href="http://en.wikipedia.org/wiki/Chi-square_distribution" target="_top">Chi-square
+              distribution</a>
+            </li>
+<li class="listitem">
+              <a href="http://mathworld.wolfram.com/Chi-SquaredDistribution.html" target="_top">Weisstein,
+              Eric W. "Chi-Squared Distribution." From MathWorld--A Wolfram
+              Web Resource.</a>
+            </li>
+</ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="cauchy_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="empirical_cdf.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

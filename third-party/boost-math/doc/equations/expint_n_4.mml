@@ -1,0 +1,31 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <msub>
+      <mi>E</mi>
+      <mn>1</mn>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <mi>x</mi>
+    <mo>+</mo>
+    <mi>log</mi>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mo>+</mo>
+    <mi>c</mi>
+    <mo>+</mo>
+    <mi>R</mi>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+  </mrow>
+</math>

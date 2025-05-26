@@ -1,0 +1,108 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Quaternion Value Operations</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../quaternions.html" title="Chapter 17. Quaternions">
+<link rel="prev" href="quat_non_mem.html" title="Quaternion Non-Member Operators">
+<link rel="next" href="create.html" title="Quaternion Creation Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="quat_non_mem.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../quaternions.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="create.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.value_op"></a><a class="link" href="value_op.html" title="Quaternion Value Operations">Quaternion Value Operations</a>
+</h2></div></div></div>
+<h5>
+<a name="math_toolkit.value_op.h0"></a>
+      <span class="phrase"><a name="math_toolkit.value_op.real_and_unreal"></a></span><a class="link" href="value_op.html#math_toolkit.value_op.real_and_unreal">real
+      and unreal</a>
+    </h5>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">T</span>              <span class="identifier">real</span><span class="special">(</span><span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">q</span><span class="special">);</span>
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span>  <span class="identifier">unreal</span><span class="special">(</span><span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">q</span><span class="special">);</span>
+</pre>
+<p>
+      These return <code class="computeroutput"><span class="identifier">q</span><span class="special">.</span><span class="identifier">real</span><span class="special">()</span></code> and
+      <code class="computeroutput"><span class="identifier">q</span><span class="special">.</span><span class="identifier">unreal</span><span class="special">()</span></code>
+      respectively.
+    </p>
+<h5>
+<a name="math_toolkit.value_op.h1"></a>
+      <span class="phrase"><a name="math_toolkit.value_op.conj"></a></span><a class="link" href="value_op.html#math_toolkit.value_op.conj">conj</a>
+    </h5>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span>  <span class="identifier">conj</span><span class="special">(</span><span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">q</span><span class="special">);</span>
+</pre>
+<p>
+      This returns the conjugate of the quaternion.
+    </p>
+<h5>
+<a name="math_toolkit.value_op.h2"></a>
+      <span class="phrase"><a name="math_toolkit.value_op.sup"></a></span><a class="link" href="value_op.html#math_toolkit.value_op.sup">sup</a>
+    </h5>
+<p>
+      template&lt;typename T&gt; T sup(quaternion&lt;T&gt; const &amp; q);
+    </p>
+<p>
+      This return the sup norm (the greatest among <code class="computeroutput"><span class="identifier">abs</span><span class="special">(</span><span class="identifier">q</span><span class="special">.</span><span class="identifier">R_component_1</span><span class="special">())...</span><span class="identifier">abs</span><span class="special">(</span><span class="identifier">q</span><span class="special">.</span><span class="identifier">R_component_4</span><span class="special">()))</span></code> of the quaternion.
+    </p>
+<h5>
+<a name="math_toolkit.value_op.h3"></a>
+      <span class="phrase"><a name="math_toolkit.value_op.l1"></a></span><a class="link" href="value_op.html#math_toolkit.value_op.l1">l1</a>
+    </h5>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">T</span>  <span class="identifier">l1</span><span class="special">(</span><span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">q</span><span class="special">);</span>
+</pre>
+<p>
+      This return the l1 norm <code class="computeroutput"><span class="special">(</span><span class="identifier">abs</span><span class="special">(</span><span class="identifier">q</span><span class="special">.</span><span class="identifier">R_component_1</span><span class="special">())+...+</span><span class="identifier">abs</span><span class="special">(</span><span class="identifier">q</span><span class="special">.</span><span class="identifier">R_component_4</span><span class="special">()))</span></code> of the quaternion.
+    </p>
+<h5>
+<a name="math_toolkit.value_op.h4"></a>
+      <span class="phrase"><a name="math_toolkit.value_op.abs"></a></span><a class="link" href="value_op.html#math_toolkit.value_op.abs">abs</a>
+    </h5>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">T</span>  <span class="identifier">abs</span><span class="special">(</span><span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">q</span><span class="special">);</span>
+</pre>
+<p>
+      This return the magnitude (Euclidean norm) of the quaternion.
+    </p>
+<h5>
+<a name="math_toolkit.value_op.h5"></a>
+      <span class="phrase"><a name="math_toolkit.value_op.norm"></a></span><a class="link" href="value_op.html#math_toolkit.value_op.norm">norm</a>
+    </h5>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">T</span>  <span class="identifier">norm</span><span class="special">(</span><span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span><span class="keyword">const</span>  <span class="special">&amp;</span> <span class="identifier">q</span><span class="special">);</span>
+</pre>
+<p>
+      This return the (Cayley) norm of the quaternion. The term "norm"
+      might be confusing, as most people associate it with the Euclidian norm (and
+      quadratic functionals). For this version of (the mathematical objects known
+      as) quaternions, the Euclidean norm (also known as magnitude) is the square
+      root of the Cayley norm.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="quat_non_mem.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../quaternions.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="create.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

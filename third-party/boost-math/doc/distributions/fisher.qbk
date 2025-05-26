@@ -1,0 +1,192 @@
+[section:f_dist F Distribution]
+
+``#include <boost/math/distributions/fisher_f.hpp>``
+
+   namespace boost{ namespace math{ 
+      
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class fisher_f_distribution;
+   
+   typedef fisher_f_distribution<> fisher_f;
+
+   template <class RealType, class ``__Policy``>
+   class fisher_f_distribution
+   {
+   public:
+      typedef RealType value_type;
+      
+      // Construct:
+      BOOST_MATH_GPU_ENABLED fisher_f_distribution(const RealType& i, const RealType& j);
+      
+      // Accessors:
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom1()const;
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom2()const;
+   };
+   
+   }} //namespaces
+
+The F distribution is a continuous distribution that arises when testing
+whether two samples have the same variance.  If [chi][super 2][sub m] and
+[chi][super 2][sub n] are independent variates each distributed as 
+Chi-Squared with /m/ and /n/ degrees of freedom, then the test statistic:
+
+[expression F[sub n,m] = ([chi][super 2][sub n] / n) / ([chi][super 2][sub m] / m)]
+
+Is distributed over the range \[0, [infin]\] with an F distribution, and
+has the PDF:
+
+[equation fisher_pdf]
+
+The following graph illustrates how the PDF varies depending on the
+two degrees of freedom parameters.
+
+[graph fisher_f_pdf]
+
+
+[h4 Member Functions]
+
+      BOOST_MATH_GPU_ENABLED fisher_f_distribution(const RealType& df1, const RealType& df2);
+      
+Constructs an F-distribution with numerator degrees of freedom /df1/
+and denominator degrees of freedom /df2/.
+
+Requires that /df1/ and /df2/ are both greater than zero, otherwise __domain_error
+is called.
+      
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom1()const;
+      
+Returns the numerator degrees of freedom parameter of the distribution.
+
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom2()const;
+      
+Returns the denominator degrees of freedom parameter of the distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[0, +[infin]\].
+
+[h4 Examples]
+
+Various [link math_toolkit.stat_tut.weg.f_eg worked examples] are 
+available illustrating the use of the F Distribution.
+
+[h4 Accuracy]
+
+The F distribution is implemented in terms of the 
+[link math_toolkit.sf_beta.ibeta_function incomplete beta function]
+and its [link math_toolkit.sf_beta.ibeta_inv_function inverses], 
+refer to those functions for accuracy data.
+
+[h4 Implementation]
+
+In the following table /v1/ and /v2/ are the first and second
+degrees of freedom parameters of the distribution,
+/x/ is the random variate, /p/ is the probability, and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][The usual form of the PDF is given by:
+
+[equation fisher_pdf]
+
+However, that form is hard to evaluate directly without incurring problems with
+either accuracy or numeric overflow.
+
+Direct differentiation of the CDF expressed in terms of the incomplete beta function
+
+led to the following two formulas:
+
+[expression f[sub v1,v2](x) = y * __ibeta_derivative(v2 \/ 2, v1 \/ 2, v2 \/ (v2 + v1 * x))]
+
+with y = (v2 * v1) \/ ((v2 + v1 * x) * (v2 + v1 * x))
+
+and
+
+[expression f[sub v1,v2](x) = y * __ibeta_derivative(v1 \/ 2, v2 \/ 2, v1 * x \/ (v2 + v1 * x))]
+
+with y = (z * v1 - x * v1 * v1) \/ z[super 2]
+
+and z = v2 + v1 * x
+
+The first of these is used for v1 * x > v2, otherwise the second is used.
+
+The aim is to keep the /x/ argument to __ibeta_derivative away from 1 to avoid
+rounding error. ]]
+[[cdf][Using the relations:
+
+[expression p = __ibeta(v1 \/ 2, v2 \/ 2, v1 * x \/ (v2 + v1 * x))]
+
+and
+
+[expression :p = __ibetac(v2 \/ 2, v1 \/ 2, v2 \/ (v2 + v1 * x))]
+
+The first is used for v1 * x > v2, otherwise the second is used.
+
+The aim is to keep the /x/ argument to __ibeta well away from 1 to
+avoid rounding error. ]]
+
+[[cdf complement][Using the relations:
+
+[expression p = __ibetac(v1 \/ 2, v2 \/ 2, v1 * x \/ (v2 + v1 * x))]
+
+and
+
+[expression p = __ibeta(v2 \/ 2, v1 \/ 2, v2 \/ (v2 + v1 * x))]
+
+The first is used for v1 * x < v2, otherwise the second is used.
+
+The aim is to keep the /x/ argument to __ibeta well away from 1 to
+avoid rounding error. ]]
+[[quantile][Using the relation: 
+
+[expression x = v2 * a \/ (v1 * b)]
+
+where:
+
+[expression a = __ibeta_inv(v1 \/ 2, v2 \/ 2, p)]
+
+and
+
+[expression b = 1 - a]
+
+Quantities /a/ and /b/ are both computed by __ibeta_inv without the
+subtraction implied above.]]
+[[quantile
+
+from the complement][Using the relation:
+
+[expression x = v2 * a \/ (v1 * b)]
+
+where
+
+[expression a = __ibetac_inv(v1 \/ 2, v2 \/ 2, p)]
+
+and
+
+[expression b = 1 - a]
+
+Quantities /a/ and /b/ are both computed by __ibetac_inv without the
+subtraction implied above.]]
+[[mean][v2 \/ (v2 - 2)]]
+[[variance][2 * v2[super 2 ] * (v1 + v2 - 2) \/ (v1 * (v2 - 2) * (v2 - 2) * (v2 - 4))]]
+[[mode][v2 * (v1 - 2) \/ (v1 * (v2 + 2))]]
+[[skewness][2 * (v2 + 2 * v1 - 2) * sqrt((2 * v2 - 8) \/ (v1 * (v2 + v1 - 2))) \/ (v2 - 6)]]
+[[kurtosis and kurtosis excess]
+    [Refer to, [@http://mathworld.wolfram.com/F-Distribution.html
+    Weisstein, Eric W. "F-Distribution." From MathWorld--A Wolfram Web Resource.]  ]]
+]
+
+[endsect] [/section:f_dist F distribution]
+
+[/ fisher.qbk
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

@@ -1,0 +1,111 @@
+[/
+Copyright (c) 2017 John Maddock
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:gauss Gauss-Legendre quadrature]
+
+[heading Synopsis]
+
+`#include <boost/math/quadrature/gauss.hpp>`
+
+   namespace boost{ namespace math{ namespace quadrature{
+
+   template <class Real, unsigned Points, class ``__Policy`` = boost::math::policies::policy<> >
+   struct gauss
+   {
+      static const RandomAccessContainer& abscissa();
+      static const RandomAccessContainer& weights();
+
+      template <class F>
+      static auto integrate(F f, Real* pL1 = nullptr)->decltype(std::declval<F>()(std::declval<Real>()))
+
+      template <class F>
+      static auto integrate(F f, Real a, Real b, Real* pL1 = nullptr)->decltype(std::declval<F>()(std::declval<Real>()))
+   };
+
+   }}} // namespaces
+
+[heading description]
+
+The `gauss` class template performs "one shot" non-adaptive Gauss-Legendre integration on some arbitrary function /f/ using the
+number of evaluation points as specified by /Points/.
+
+This is intentionally a very simple quadrature routine, it obtains no estimate of the error, and is not adaptive, but is very efficient
+in simple cases that involve integrating smooth "bell like" functions and functions with rapidly convergent power series.
+
+   static const RandomAccessContainer& abscissa();
+   static const RandomAccessContainer& weights();
+
+These functions provide direct access to the abscissa and weights used to perform the quadrature: the return type depends on the
+/Points/ template parameter, but is always a RandomAccessContainer type.  Note that only positive (or zero) abscissa and weights
+are stored.
+
+    template <class F>
+    static auto integrate(F f, Real* pL1 = nullptr)->decltype(std::declval<F>()(std::declval<Real>()))
+
+Integrates /f/ over (-1,1), and optionally sets `*pL1` to the L1 norm of the returned value: if this is substantially larger
+than the return value, then the sum was ill-conditioned.  Note however, that no error estimate is available.
+
+    template <class F>
+    static auto integrate(F f, Real a, Real b, Real* pL1 = nullptr)->decltype(std::declval<F>()(std::declval<Real>()))
+
+Integrates /f/ over (a,b), and optionally sets `*pL1` to the L1 norm of the returned value: if this is substantially larger
+than the return value, then the sum was ill-conditioned.  Note however, that no error estimate is available.  This function
+supports both finite and infinite /a/ and /b/, as long as `a < b`.
+
+The Gaussian quadrature routine support both real and complex-valued quadrature.
+For example, the Lambert-W function admits the integral representation
+
+[expression ['W(z) = 1/2\u03A0 \u222B[sub -\u03A0][super \u03A0]  ((1- v cot(v) )^2 + v^2)/(z + v csc(v) exp(-v cot(v))) dv]]
+
+so it can be effectively computed via Gaussian quadrature using the following code:
+
+    Complex z{2, 3};
+    auto lw = [&z](Real v)->Complex {
+      using std::cos;
+      using std::sin;
+      using std::exp;
+      Real sinv = sin(v);
+      Real cosv = cos(v);
+
+      Real cotv = cosv/sinv;
+      Real cscv = 1/sinv;
+      Real t = (1-v*cotv)*(1-v*cotv) + v*v;
+      Real x = v*cscv*exp(-v*cotv);
+      Complex den = z + x;
+      Complex num = t*(z/pi<Real>());
+      Complex res = num/den;
+      return res;
+    };
+
+    boost::math::quadrature::gauss<Real, 30> integrator;
+    Complex W = integrator.integrate(lw, (Real) 0, pi<Real>());
+
+
+[heading Choosing the number of points]
+
+Internally class `gauss` has pre-computed tables of abscissa and weights for 7, 15, 20, 25 and 30 points at up to 100-decimal
+digit precision.  That means that using for example, `gauss<double, 30>::integrate` incurs absolutely zero set-up overhead from
+computing the abscissa/weight pairs.  When using multiprecision types with less than 100 digits of precision, then there is a small
+initial one time cost, while the abscissa/weight pairs are constructed from strings.
+
+However, for types with higher precision, or numbers of points other than those given above, the abscissa/weight pairs are computed
+when first needed and then cached for future use, which does incur a noticeable overhead.  If this is likely to be an issue, then
+
+* Defining BOOST_MATH_GAUSS_NO_COMPUTE_ON_DEMAND will result in a compile-time error, whenever a combination of number type
+and number of points is used which does not have pre-computed values.
+* There is a program [@../../tools/gauss_kronrod_constants.cpp gauss_kronrod_constants.cpp] which was used to provide the
+pre-computed values already in gauss.hpp.  The program can be trivially modified to generate code and constants for other precisions
+and numbers of points.
+
+[heading Examples]
+
+[import ../../example/gauss_example.cpp]
+
+[gauss_example]
+
+[endsect] [/section:gauss Gauss-Legendre quadrature]
+

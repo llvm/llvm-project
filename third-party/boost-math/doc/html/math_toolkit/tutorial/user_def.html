@@ -1,0 +1,335 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Use With User-Defined Types</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../tutorial.html" title="Tutorial">
+<link rel="prev" href="templ.html" title="Use in template code">
+<link rel="next" href="../constants.html" title="The Mathematical Constants">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="templ.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../tutorial.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../constants.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.tutorial.user_def"></a><a class="link" href="user_def.html" title="Use With User-Defined Types">Use With User-Defined
+      Types</a>
+</h3></div></div></div>
+<p>
+        The most common example of a high-precision user-defined type will probably
+        be <a href="../../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>.
+      </p>
+<p>
+        The syntax for using the function-call constants with user-defined types
+        is the same as it is in the template class, which is to say we use:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">constants</span><span class="special">/</span><span class="identifier">constants</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">&lt;</span><span class="identifier">UserDefinedType</span><span class="special">&gt;();</span>
+</pre>
+<p>
+        For example:
+      </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">cpp_dec_float_50</span><span class="special">&gt;();</span>
+</pre>
+<p>
+        giving π with a precision of 50 decimal digits.
+      </p>
+<p>
+        However, since the precision of the user-defined type may be much greater
+        than that of the built-in floating point types, how the value returned is
+        created is as follows:
+      </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+            If the precision of the type is known at compile time:
+            <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; ">
+<li class="listitem">
+                  If the precision is less than or equal to that of a <code class="computeroutput"><span class="keyword">float</span></code> and the type is constructible
+                  from a <code class="computeroutput"><span class="keyword">float</span></code> then
+                  our code returns a <code class="computeroutput"><span class="keyword">float</span></code>
+                  literal. If the user-defined type is a literal type then the function
+                  call that returns the constant will be a <code class="computeroutput"><span class="identifier">constexp</span></code>.
+                </li>
+<li class="listitem">
+                  If the precision is less than or equal to that of a <code class="computeroutput"><span class="keyword">double</span></code> and the type is constructible
+                  from a <code class="computeroutput"><span class="keyword">double</span></code> then
+                  our code returns a <code class="computeroutput"><span class="keyword">double</span></code>
+                  literal. If the user-defined type is a literal type then the function
+                  call that returns the constant will be a <code class="computeroutput"><span class="identifier">constexp</span></code>.
+                </li>
+<li class="listitem">
+                  If the precision is less than or equal to that of a <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+                  and the type is constructible from a <code class="computeroutput"><span class="keyword">long</span>
+                  <span class="keyword">double</span></code> then our code returns
+                  a <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+                  literal. If the user-defined type is a literal type then the function
+                  call that returns the constant will be a <code class="computeroutput"><span class="identifier">constexp</span></code>.
+                </li>
+<li class="listitem">
+                  If the precision is less than or equal to that of a <code class="computeroutput"><span class="identifier">__float128</span></code> (and the compiler
+                  supports such a type) and the type is constructible from a <code class="computeroutput"><span class="identifier">__float128</span></code> then our code returns
+                  a <code class="computeroutput"><span class="identifier">__float128</span></code> literal.
+                  If the user-defined type is a literal type then the function call
+                  that returns the constant will be a <code class="computeroutput"><span class="identifier">constexp</span></code>.
+                </li>
+<li class="listitem">
+                  If the precision is less than 100 decimal digits, then the constant
+                  will be constructed (just the once, then cached in a thread-safe
+                  manner) from a string representation of the constant. In this case
+                  the value is returned as a const reference to the cached value.
+                </li>
+<li class="listitem">
+                  Otherwise the value is computed (just once, then cached in a thread-safe
+                  manner). In this case the value is returned as a const reference
+                  to the cached value.
+                </li>
+</ul></div>
+          </li>
+<li class="listitem">
+            If the precision is unknown at compile time then:
+            <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; ">
+<li class="listitem">
+                  If the runtime precision (obtained from a call to <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">digits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;()</span></code>)
+                  is less than 100 decimal digits, then the constant is constructed
+                  "on the fly" from the string representation of the constant.
+                </li>
+<li class="listitem">
+                  Otherwise the value is constructed "on the fly" by calculating
+                  then value of the constant using the current default precision
+                  of the type. Note that this can make use of the constants rather
+                  expensive.
+                </li>
+</ul></div>
+          </li>
+</ul></div>
+<p>
+        In addition, it is possible to pass a <code class="computeroutput"><span class="identifier">Policy</span></code>
+        type as a second template argument, and use this to control the precision:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">constants</span><span class="special">/</span><span class="identifier">constants</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">digits2</span><span class="special">&lt;</span><span class="number">80</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">my_policy_type</span><span class="special">;</span>
+<span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">&lt;</span><span class="identifier">MyType</span><span class="special">,</span> <span class="identifier">my_policy_type</span><span class="special">&gt;();</span>
+</pre>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          Boost.Math doesn't know how to control the internal precision of <code class="computeroutput"><span class="identifier">MyType</span></code>, the policy just controls how
+          the selection process above is carried out, and the calculation precision
+          if the result is computed.
+        </p></td></tr>
+</table></div>
+<p>
+        It is also possible to control which method is used to construct the constant
+        by specialising the traits class <code class="computeroutput"><span class="identifier">construction_traits</span></code>:
+      </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">constant</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">Policy</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">construction_traits</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">integral_constant</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span> <span class="identifier">N</span><span class="special">&gt;</span> <span class="identifier">type</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="special">}}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+        Where <span class="emphasis"><em>N</em></span> takes one of the following values:
+      </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                <p>
+                  <span class="emphasis"><em>N</em></span>
+                </p>
+              </th>
+<th>
+                <p>
+                  Meaning
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  0
+                </p>
+              </td>
+<td>
+                <p>
+                  The precision is unavailable at compile time; either construct
+                  from a decimal digit string or calculate on the fly depending upon
+                  the runtime precision.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  1
+                </p>
+              </td>
+<td>
+                <p>
+                  Return a float precision constant.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  2
+                </p>
+              </td>
+<td>
+                <p>
+                  Return a double precision constant.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  3
+                </p>
+              </td>
+<td>
+                <p>
+                  Return a long double precision constant.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  4
+                </p>
+              </td>
+<td>
+                <p>
+                  Construct the result from the string representation, and cache
+                  the result.
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Any other value <span class="emphasis"><em>N</em></span>
+                </p>
+              </td>
+<td>
+                <p>
+                  Sets the compile time precision to <span class="emphasis"><em>N</em></span> bits.
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+<h6>
+<a name="math_toolkit.tutorial.user_def.h0"></a>
+        <span class="phrase"><a name="math_toolkit.tutorial.user_def.custom_specializing_a_constant"></a></span><a class="link" href="user_def.html#math_toolkit.tutorial.user_def.custom_specializing_a_constant">Custom
+        Specializing a constant</a>
+      </h6>
+<p>
+        In addition, for user-defined types that need special handling, it's possible
+        to partially-specialize the internal structure used by each constant. For
+        example, suppose we're using the C++ wrapper around MPFR <code class="computeroutput"><span class="identifier">mpfr_class</span></code>:
+        this has its own representation of Pi which we may well wish to use in place
+        of the above mechanism. We can achieve this by specialising the class template
+        <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">detail</span><span class="special">::</span><span class="identifier">constant_pi</span></code>:
+      </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">constants</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">detail</span><span class="special">{</span>
+
+<span class="keyword">template</span><span class="special">&lt;&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">constant_pi</span><span class="special">&lt;</span><span class="identifier">mpfr_class</span><span class="special">&gt;</span>
+<span class="special">{</span>
+   <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">int</span> <span class="identifier">N</span><span class="special">&gt;</span>
+   <span class="keyword">static</span> <span class="identifier">mpfr_class</span> <span class="identifier">get</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">integral_constant</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span> <span class="identifier">N</span><span class="special">&gt;&amp;)</span>
+   <span class="special">{</span>
+      <span class="comment">// The template param N is one of the values in the table above,</span>
+      <span class="comment">// we can either handle all cases in one as is the case here,</span>
+      <span class="comment">// or overload "get" for the different options.</span>
+      <span class="identifier">mpfr_class</span> <span class="identifier">result</span><span class="special">;</span>
+      <span class="identifier">mpfr_const_pi</span><span class="special">(</span><span class="identifier">result</span><span class="special">.</span><span class="identifier">get_mpfr_t</span><span class="special">(),</span> <span class="identifier">GMP_RNDN</span><span class="special">);</span>
+      <span class="keyword">return</span> <span class="identifier">result</span><span class="special">;</span>
+   <span class="special">}</span>
+<span class="special">};</span>
+
+<span class="special">}}}}</span> <span class="comment">// namespaces</span>
+</pre>
+<h6>
+<a name="math_toolkit.tutorial.user_def.h1"></a>
+        <span class="phrase"><a name="math_toolkit.tutorial.user_def.diagnosing_what_meta_programmed_"></a></span><a class="link" href="user_def.html#math_toolkit.tutorial.user_def.diagnosing_what_meta_programmed_">Diagnosing
+        what meta-programmed code is doing</a>
+      </h6>
+<p>
+        Finally, since it can be tricky to diagnose what meta-programmed code is
+        doing, there is a diagnostic routine that prints information about how this
+        library will handle a specific type, it can be used like this:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">constants</span><span class="special">/</span><span class="identifier">info</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">print_info_on_type</span><span class="special">&lt;</span><span class="identifier">MyType</span><span class="special">&gt;();</span>
+<span class="special">}</span>
+</pre>
+<p>
+        If you wish, you can also pass an optional std::ostream argument to the
+        <code class="computeroutput"><span class="identifier">print_info_on_type</span></code> function.
+        Typical output for a user-defined type looks like this:
+      </p>
+<pre class="programlisting">Information on the Implementation and Handling of
+Mathematical Constants for Type class boost::math::concepts::real_concept
+
+Checking for std::numeric_limits&lt;class boost::math::concepts::real_concept&gt; specialisation: no
+boost::math::policies::precision&lt;class boost::math::concepts::real_concept, Policy&gt;
+reports that there is no compile type precision available.
+boost::math::tools::digits&lt;class boost::math::concepts::real_concept&gt;()
+reports that the current runtime precision is
+53 binary digits.
+No compile time precision is available, the construction method
+will be decided at runtime and results will not be cached
+- this may lead to poor runtime performance.
+Current runtime precision indicates that
+the constant will be constructed from a string on each call.
+</pre>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="templ.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../tutorial.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../constants.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

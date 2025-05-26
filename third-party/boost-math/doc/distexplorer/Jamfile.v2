@@ -1,0 +1,56 @@
+#   Copyright Paul A. Bristow 2008
+#   Copyright John Maddock 2008
+  
+#   Distributed under the Boost Software License, Version 1.0.
+#   (See accompanying file LICENSE_1_0.txt
+#   or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+#   Reminder: whitespace MUST terminate variable name!
+#   so space BEFORE ; and :
+
+# Distexplorer documentation as html from Quickbook.
+
+# project boost/doc ;
+
+using quickbook ;
+
+#path-constant images_location : html ;
+# location of SVG images referenced by Quickbook.
+# screenshots installed as recommended by Sourceforge.
+
+xml distexplorer
+  :
+    distexplorer.qbk
+  :
+;
+
+# import boostbook : boostbook ;
+
+boostbook standalone 
+  :  
+    distexplorer
+  :
+    # Path for links to Boost:
+    <xsl:param>boost.root=../../../../..
+
+	# Some general style settings:
+	<xsl:param>table.footnote.number.format=1
+	<xsl:param>footnote.number.format=1
+        
+	# HTML options first:
+	# Use graphics not text for navigation:
+	<xsl:param>navig.graphics=1
+	# How far down we chunk nested sections, basically all of them:
+	<xsl:param>chunk.section.depth=10
+	# Don't put the first section on the same page as the TOC:
+	<xsl:param>chunk.first.sections=1
+	# How far down sections get TOC's
+	<xsl:param>toc.section.depth=10
+	# Max depth in each TOC:
+	<xsl:param>toc.max.depth=4
+	# How far down we go with TOC's
+	<xsl:param>generate.section.toc.level=10
+	#<xsl:param>root.filename="distexplorer"
+;
+
+

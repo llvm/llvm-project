@@ -1,0 +1,66 @@
+Results of quaternion test.
+ 
+(C) Copyright Hubert Holin 2003-2005.
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+ 
+Running 19 test cases...
+Testing multiplication for float.
+Testing multiplication for double.
+Testing multiplication for long double.
+Testing exp for float.
+Testing exp for double.
+Testing exp for long double.
+Testing cos for float.
+Testing cos for double.
+Testing cos for long double.
+Testing sin for float.
+Testing sin for double.
+Testing sin for long double.
+Testing cosh for float.
+Testing cosh for double.
+Testing cosh for long double.
+Testing sinh for float.
+Testing sinh for double.
+Testing sinh for long double.
+Please input a quaternion...
+You have entered the quaternion (1,2,3,4) .
+For this quaternion:
+the value of the real part is 1
+the value of the unreal part is (0,2,3,4)
+the value of the sup norm is 4
+the value of the l1 norm is 10
+the value of the magnitude (Euclidean norm) is 5.47723
+the value of the (Cayley) norm is 30
+the value of the conjugate is (1,-2,-3,-4)
+the value of the exponential is (1.69392,-0.78956,-1.18434,-1.57912)
+the value of the cube is (-86,-52,-78,-104)
+the value of the cosinus is (58.9336,-34.0862,-51.1293,-68.1724)
+the value of the sinus is (91.7837,21.8865,32.8297,43.773)
+the value of the tangent is (3.82105e-05,0.371397,0.557096,0.742794)
+the value of the hyperbolic cosinus is (0.961585,-0.341352,-0.512028,-0.682704)
+the value of the hyperbolic sinus is (0.732338,-0.448207,-0.672311,-0.896415)
+the value of the hyperbolic tangent is (1.02487,-0.102296,-0.153444,-0.204591)
+the value of the Sinus Cardinal (of index pi) is (13.6379,-5.38936,-8.08405,-10.7787)
+the value of the Hyperbolic Sinus Cardinal (of index pi) is (-0.192222,-0.0637628,-0.0956441,-0.127526)
+ 
+The value of the quaternion represented in spherical form by rho = 2.82843 , theta = 0.785398 , phi1 = 0.785398 , phi2 = 0.785398 is (1,1,1.41421,2)
+The value of the quaternion represented in semipolar form by rho = 2.82843 , alpha = 0.785398 , phi1 = 0.785398 , phi2 = 0.785398 is (1.41421,1.41421,1.41421,1.41421)
+The value of the quaternion represented in multipolar form by rho1 = 1 , theta1 = 0 , rho2 = 2 , theta2 = 1.5708 is (1,0,-8.74228e-08,2)
+The value of the quaternion represented in cylindrospherical form by t = 5 , radius = 1.41421 , longitude = 0.785398 , latitude = 1.0472 is (5,0.5,0.5,1.22474)
+The value of the quaternion represented in cylindrical form by r = 1.41421 , angle = 0.785398 , h1 = 3 , h2 = 4 is (1,1,3,4)
+ 
+Real 1: 1 ; Complex 1: (1,0) ; Quaternion 1: (1,0,0,0) .
+Complex i: (0,1) ; Quaternion i: (0,1,0,0) .
+Quaternion j: (0,0,1,0) .
+Quaternion k: (0,0,0,1) .
+ 
+i*i: (-1,0,0,0) ; j*j: (-1,0,0,0) ; k*k: (-1,0,0,0) .
+i*j: (0,0,0,1) ; j*i: (0,0,0,-1) .
+j*k: (0,1,0,0) ; k*j: (0,-1,0,0) .
+k*i: (0,0,1,0) ; i*k: (0,0,-1,0) .
+ 
+
+*** No errors detected
+

@@ -1,0 +1,20 @@
+[section:c_sharp Using the Distributions from Within C#]
+
+The distributions in this library can be used from the C# programming language
+when they are built using Microsoft's Common Language Runtime (CLR) option.
+
+An example of this kind of usage is given in the
+[@../distexplorer/html/index.html Distribution Explorer]
+example.  See =boost-root/libs/math/dot_net_example=
+for the source code: the application consists of a C++ .dll that contains the
+actual distributions, and a C# GUI that allows you to explore their properties.
+
+[endsect] [/section:c_sharp]
+
+[/
+  Copyright 2006, 2013 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

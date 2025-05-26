@@ -1,0 +1,197 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Daubechies Filters</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../filters.html" title="Chapter 15. Filters">
+<link rel="prev" href="../filters.html" title="Chapter 15. Filters">
+<link rel="next" href="../inverse_complex.html" title="Chapter 16. Complex Number Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../filters.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../filters.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../inverse_complex.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.daubechies_filters"></a><a class="link" href="daubechies_filters.html" title="Daubechies Filters">Daubechies Filters</a>
+</h2></div></div></div>
+<h5>
+<a name="math_toolkit.daubechies_filters.h0"></a>
+      <span class="phrase"><a name="math_toolkit.daubechies_filters.synopsis"></a></span><a class="link" href="daubechies_filters.html#math_toolkit.daubechies_filters.synopsis">Synopsis</a>
+    </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">filters</span><span class="special">/</span><span class="identifier">daubechies</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">:</span><span class="identifier">filters</span> <span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">p</span><span class="special">&gt;</span>
+<span class="keyword">constexpr</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">2</span><span class="special">*</span><span class="identifier">p</span><span class="special">&gt;</span> <span class="identifier">daubechies_scaling_filter</span><span class="special">();</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Real</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">p</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="number">2</span><span class="special">*</span><span class="identifier">p</span><span class="special">&gt;</span> <span class="identifier">daubechies_wavelet_filter</span><span class="special">();</span>
+
+<span class="special">}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+      The Daubechies filters provided by Boost.Math return the filter coefficients
+      of the compactly-supported family discovered by Daubechies.
+    </p>
+<p>
+      A basic usage is as follows:
+    </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">filters</span><span class="special">::</span><span class="identifier">daubechies_scaling_filter</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">filters</span><span class="special">::</span><span class="identifier">daubechies_wavelet_filter</span><span class="special">;</span>
+
+<span class="keyword">auto</span> <span class="identifier">h</span> <span class="special">=</span> <span class="identifier">daubechies_scaling_filter</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">8</span><span class="special">&gt;();</span>
+<span class="keyword">auto</span> <span class="identifier">g</span> <span class="special">=</span> <span class="identifier">daubechies_wavelet_filter</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">8</span><span class="special">&gt;();</span>
+</pre>
+<p>
+      The filters take the number of vanishing moments as a template argument, returning
+      a <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span></code> which has twice as many entries as
+      vanishing moments.
+    </p>
+<h4>
+<a name="math_toolkit.daubechies_filters.h1"></a>
+      <span class="phrase"><a name="math_toolkit.daubechies_filters.caveats_and_ambiguities"></a></span><a class="link" href="daubechies_filters.html#math_toolkit.daubechies_filters.caveats_and_ambiguities">Caveats and
+      Ambiguities</a>
+    </h4>
+<p>
+      Numerous notational conventions for the filter coefficients exist. The first
+      ambiguity is whether they should be indexed by the number of vanishing moments,
+      or the number of filter taps. <span class="emphasis"><em>Boost.Math indexes the family by the
+      number of vanishing moments.</em></span> This indexing convention is the same
+      as PyWavelets and Mathematica, but Numerical Recipes and Wikipedia index by
+      the number of filter taps.
+    </p>
+<p>
+      The next ambiguity is the overall scale. Boost (and PyWavelets) normalize the
+      filters so that their L<sub>2</sub> norm is 1. Others normalize so that the L<sub>2</sub> norm is √2.
+    </p>
+<p>
+      Finally, we can use a convolutional representation of the filters, or a dot
+      product representation. The dot product has all elements reversed relative
+      to the convolutional representation.
+    </p>
+<p>
+      The Boost representation agrees with Table 1 of Daubechies 1988 paper "Orthonormal
+      Bases of Compactly Supported Wavelets", and Mallat's "A Wavelet Tour
+      of Signal Processing", Table 7.2.
+    </p>
+<p>
+      The Boost convention:
+    </p>
+<pre class="programlisting"><span class="comment">// ... </span>
+<span class="keyword">constexpr</span> <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">p</span> <span class="special">=</span> <span class="number">2</span><span class="special">;</span>
+<span class="keyword">auto</span> <span class="identifier">h</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">filters</span><span class="special">::</span><span class="identifier">daubechies_scaling_filter</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="identifier">p</span><span class="special">&gt;();</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"h = {"</span> <span class="special">&lt;&lt;</span> <span class="identifier">h</span><span class="special">[</span><span class="number">0</span><span class="special">]</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">h</span><span class="special">[</span><span class="number">1</span><span class="special">]</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">h</span><span class="special">[</span><span class="number">2</span><span class="special">]</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">h</span><span class="special">[</span><span class="number">3</span><span class="special">]</span> <span class="special">&lt;&lt;</span> <span class="string">"}\n"</span><span class="special">;</span>
+<span class="comment">// output:</span>
+<span class="identifier">h</span> <span class="special">=</span> <span class="special">{</span><span class="number">0.48296291314453416</span><span class="special">,</span> <span class="number">0.83651630373780794</span><span class="special">,</span> <span class="number">0.22414386804201339</span><span class="special">,</span> <span class="special">-</span><span class="number">0.12940952255126037</span><span class="special">}</span>
+</pre>
+<p>
+      Mathematica conventions:
+    </p>
+<pre class="programlisting"><span class="identifier">WaveletFilterCoefficients</span><span class="special">[</span><span class="identifier">DaubechiesWavelet</span><span class="special">[</span><span class="number">2</span><span class="special">],</span> <span class="string">"PrimalLowpass"</span><span class="special">]</span>
+<span class="special">{{</span><span class="number">0</span><span class="special">,</span> <span class="number">0.341506</span><span class="special">},</span> <span class="special">{</span><span class="number">1</span><span class="special">,</span> <span class="number">0.591506</span><span class="special">},</span> <span class="special">{</span><span class="number">2</span><span class="special">,</span> <span class="number">0.158494</span><span class="special">},</span> <span class="special">{</span><span class="number">3</span><span class="special">,</span> <span class="special">-</span><span class="number">0.0915064</span><span class="special">}}</span>
+</pre>
+<p>
+      (Multiplying all elements of the Mathematica filter by √2 gives the Boost filter.)
+    </p>
+<p>
+      PyWavelet conventions:
+    </p>
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">import</span> <span class="identifier">pywt</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">print</span><span class="special">(</span><span class="identifier">pywt</span><span class="special">.</span><span class="identifier">Wavelet</span><span class="special">(</span><span class="char">'db2'</span><span class="special">).</span><span class="identifier">dec_lo</span><span class="special">)</span>
+<span class="special">[-</span><span class="number">0.12940952255126037</span><span class="special">,</span> <span class="number">0.2241438680420134</span><span class="special">,</span> <span class="number">0.8365163037378079</span><span class="special">,</span> <span class="number">0.48296291314453416</span><span class="special">]</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">np</span><span class="special">.</span><span class="identifier">linalg</span><span class="special">.</span><span class="identifier">norm</span><span class="special">(</span><span class="identifier">pywt</span><span class="special">.</span><span class="identifier">Wavelet</span><span class="special">(</span><span class="char">'db2'</span><span class="special">).</span><span class="identifier">dec_lo</span><span class="special">)</span>
+<span class="number">1.0</span>
+</pre>
+<p>
+      (Reversing the PyWavelet filter gives the Boost filter.)
+    </p>
+<p>
+      The wavelet filters bring additional ambiguity, because they are defined only
+      by being orthogonal to the scaling filter. So both sign and scale are determined
+      by convention.
+    </p>
+<p>
+      For this reason, we demo some other conventions for the wavelet filter as well:
+    </p>
+<p>
+      Boost:
+    </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="identifier">g</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">filters</span><span class="special">::</span><span class="identifier">daubechies_wavelet_filter</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="identifier">p</span><span class="special">&gt;();</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"g = {"</span> <span class="special">&lt;&lt;</span> <span class="identifier">g</span><span class="special">[</span><span class="number">0</span><span class="special">]</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">g</span><span class="special">[</span><span class="number">1</span><span class="special">]</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">g</span><span class="special">[</span><span class="number">2</span><span class="special">]</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="identifier">g</span><span class="special">[</span><span class="number">3</span><span class="special">]</span> <span class="special">&lt;&lt;</span> <span class="string">"}\n"</span><span class="special">;</span>
+<span class="comment">// output:</span>
+<span class="identifier">g</span> <span class="special">=</span> <span class="special">{-</span><span class="number">0.12940952255126037</span><span class="special">,</span> <span class="special">-</span><span class="number">0.22414386804201339</span><span class="special">,</span> <span class="number">0.83651630373780794</span><span class="special">,</span> <span class="special">-</span><span class="number">0.48296291314453416</span><span class="special">}</span>
+</pre>
+<p>
+      Mathematica:
+    </p>
+<pre class="programlisting"><span class="identifier">WaveletFilterCoefficients</span><span class="special">[</span><span class="identifier">DaubechiesWavelet</span><span class="special">[</span><span class="number">2</span><span class="special">],</span> <span class="string">"PrimalHighpass"</span><span class="special">]</span>
+<span class="special">{{-</span><span class="number">2</span><span class="special">,</span> <span class="special">-</span><span class="number">0.0915064</span><span class="special">},</span> <span class="special">{-</span><span class="number">1</span><span class="special">,</span> <span class="special">-</span><span class="number">0.158494</span><span class="special">},</span> <span class="special">{</span><span class="number">0</span><span class="special">,</span> <span class="number">0.591506</span><span class="special">},</span> <span class="special">{</span><span class="number">1</span><span class="special">,</span> <span class="special">-</span><span class="number">0.341506</span><span class="special">}}</span>
+</pre>
+<p>
+      (Note how Mathematica indexes the filter starting at -2; Boost starts at 0,
+      and the scaling convention is different.)
+    </p>
+<p>
+      PyWavelets:
+    </p>
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">print</span><span class="special">(</span><span class="identifier">pywt</span><span class="special">.</span><span class="identifier">Wavelet</span><span class="special">(</span><span class="char">'db2'</span><span class="special">).</span><span class="identifier">dec_hi</span><span class="special">)</span>
+<span class="special">[-</span><span class="number">0.48296291314453416</span><span class="special">,</span> <span class="number">0.8365163037378079</span><span class="special">,</span> <span class="special">-</span><span class="number">0.2241438680420134</span><span class="special">,</span> <span class="special">-</span><span class="number">0.12940952255126037</span><span class="special">]</span>
+</pre>
+<p>
+      (Again, reversing the PyWavelets filter gives the Boost filter.)
+    </p>
+<h4>
+<a name="math_toolkit.daubechies_filters.h2"></a>
+      <span class="phrase"><a name="math_toolkit.daubechies_filters.accuracy"></a></span><a class="link" href="daubechies_filters.html#math_toolkit.daubechies_filters.accuracy">Accuracy</a>
+    </h4>
+<p>
+      The filters are accurate to octuple precision.
+    </p>
+<h4>
+<a name="math_toolkit.daubechies_filters.h3"></a>
+      <span class="phrase"><a name="math_toolkit.daubechies_filters.references"></a></span><a class="link" href="daubechies_filters.html#math_toolkit.daubechies_filters.references">References</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Ingrid Daubechies, <span class="emphasis"><em>Ten Lectures on Wavelets</em></span>, SIAM
+          Volume 61, 1992
+        </li>
+<li class="listitem">
+          Ingrid Daubechies, <span class="emphasis"><em>Orthonormal bases of compactly supported wavelets</em></span>,
+          Communications on pure and applied mathematics 41.7 (1988): 909-996.
+        </li>
+<li class="listitem">
+          Stéphane Mallat. <span class="emphasis"><em>A wavelet tour of signal processing.</em></span>
+          Elsevier, 1999.
+        </li>
+</ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../filters.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../filters.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../inverse_complex.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

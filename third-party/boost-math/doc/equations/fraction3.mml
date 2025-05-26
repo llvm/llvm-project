@@ -1,0 +1,38 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mtext>Golden Ratio</mtext>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mfrac>
+      <mn>1</mn>
+      <mrow>
+        <mn>1</mn>
+        <mo>+</mo>
+        <mfrac>
+          <mn>1</mn>
+          <mrow>
+            <mn>1</mn>
+            <mo>+</mo>
+            <mfrac>
+              <mn>1</mn>
+              <mrow>
+                <mn>1</mn>
+                <mo>+</mo>
+                <mfrac>
+                  <mn>1</mn>
+                  <mrow>
+                    <mn>1</mn>
+                    <mo>+</mo>
+                    <mo>&#x2026;</mo>
+                  </mrow>
+                </mfrac>
+              </mrow>
+            </mfrac>
+          </mrow>
+        </mfrac>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+

@@ -1,0 +1,118 @@
+[section:series_evaluation Series Evaluation]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/tools/series.hpp>
+``
+
+   namespace boost{ namespace math{ namespace tools{
+   
+   template <class Functor, class U, class V>
+   inline typename Functor::result_type sum_series(Functor& func, const U& tolerance, std::uintmax_t& max_terms, const V& init_value);
+   
+   template <class Functor, class U, class V>
+   inline typename Functor::result_type sum_series(Functor& func, const U& tolerance, std::uintmax_t& max_terms);
+
+   //
+   // The following interfaces are now deprecated:
+   //   
+   template <class Functor>
+   typename Functor::result_type sum_series(Functor& func, int bits);
+   
+   template <class Functor>
+   typename Functor::result_type sum_series(Functor& func, int bits, std::uintmax_t& max_terms);
+   
+   template <class Functor, class U>
+   typename Functor::result_type sum_series(Functor& func, int bits, U init_value);
+   
+   template <class Functor, class U>
+   typename Functor::result_type sum_series(Functor& func, int bits, std::uintmax_t& max_terms, U init_value);
+   
+   template <class Functor>
+   typename Functor::result_type kahan_sum_series(Functor& func, int bits);
+   
+   template <class Functor>
+   typename Functor::result_type kahan_sum_series(Functor& func, int bits, std::uintmax_t& max_terms);
+   
+   }}} // namespaces
+
+[h4 Description]
+
+These algorithms are intended for the
+[@http://en.wikipedia.org/wiki/Series_%28mathematics%29 summation of infinite series].
+
+Each of the algorithms takes a nullary-function object as the first argument:
+the function object will be repeatedly invoked to pull successive terms from
+the series being summed.  
+
+The second argument is the precision required, 
+summation will stop when the next term is less than
+/tolerance/ times the result.  The deprecated versions of `sum_series`
+take an integer number of bits here - internally they just convert this to
+a tolerance and forward the call.
+
+The third argument /max_terms/ sets an upper limit on the number
+of terms of the series to evaluate. In addition, on exit the function will
+set /max_terms/ to the actual number of terms of the series that were 
+evaluated: this is particularly useful for profiling the convergence
+properties of a new series.
+
+The final optional argument /init_value/ is the initial value of the sum
+to which the terms of the series should be added.  This is useful in two situations:
+
+* Where the first value of the series has a different formula to successive
+terms.  In this case the first value in the series can be passed as the
+last argument and the logic of the function object can then be simplified 
+to return subsequent terms.
+* Where the series is being added (or subtracted) from some other value:
+termination of the series will likely occur much more rapidly if that other 
+value is passed as the last argument.  For example, there are several functions
+that can be expressed as /1 - S(z)/ where S(z) is an infinite series.  In this
+case, pass -1 as the last argument and then negate the result of the summation
+to get the result of /1 - S(z)/.
+
+The two /kahan_sum_series/ variants of these algorithms maintain a carry term
+that corrects for roundoff error during summation.  
+They are inspired by the
+[@http://en.wikipedia.org/wiki/Kahan_Summation_Algorithm /Kahan Summation Formula/]
+that appears in
+[@http://docs.sun.com/source/806-3568/ncg_goldberg.html What Every Computer Scientist Should Know About Floating-Point Arithmetic].
+However, it should be pointed out that there are very few series that require
+summation in this way.
+
+[h4 Examples]
+
+[import ../../example/series.cpp]
+
+These examples are all in [@../../example/series.cpp]
+
+Let's suppose we want to implement /log(1+x)/ via its infinite series,
+
+[equation log1pseries]
+
+We begin by writing a small function object to return successive terms
+of the series:
+
+[series_log1p]
+
+Implementing log(1+x) is now fairly trivial:
+
+[series_log1p_func]
+
+We can almost use the code above for complex numbers as well - unfortunately we need a slightly different
+definition for epsilon, and within the functor, mixed complex and integer arithmetic is sadly not supported
+(as of C++17), so we need to cast out integers to floats:
+
+[series_clog1p_func]
+
+Of course with a few traits classes and a bit of meta-programming we could fold these two implementations into one, but that's beyond the scope of these examples.
+
+[endsect] [/section Series Evaluation]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

@@ -1,0 +1,554 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>The Remez Method</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../backgrounders.html" title="Chapter 24. Backgrounders">
+<link rel="prev" href="lanczos.html" title="The Lanczos Approximation">
+<link rel="next" href="refs.html" title="References">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="lanczos.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../backgrounders.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="refs.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.remez"></a><a class="link" href="remez.html" title="The Remez Method">The Remez Method</a>
+</h2></div></div></div>
+<p>
+      The <a href="http://en.wikipedia.org/wiki/Remez_algorithm" target="_top">Remez algorithm</a>
+      is a methodology for locating the minimax rational approximation to a function.
+      This short article gives a brief overview of the method, but it should not
+      be regarded as a thorough theoretical treatment, for that you should consult
+      your favorite textbook.
+    </p>
+<p>
+      Imagine that you want to approximate some function <span class="emphasis"><em>f(x)</em></span>
+      by way of a rational function <span class="emphasis"><em>R(x)</em></span>, where <span class="emphasis"><em>R(x)</em></span>
+      may be either a polynomial <span class="emphasis"><em>P(x)</em></span> or a ratio of two polynomials
+      <span class="emphasis"><em>P(x)/Q(x)</em></span> (a rational function). Initially we'll concentrate
+      on the polynomial case, as it's by far the easier to deal with, later we'll
+      extend to the full rational function case.
+    </p>
+<p>
+      We want to find the "best" rational approximation, where "best"
+      is defined to be the approximation that has the least deviation from <span class="emphasis"><em>f(x)</em></span>.
+      We can measure the deviation by way of an error function:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">E<sub>abs</sub>(x) = f(x) - R(x)</span>
+      </p></blockquote></div>
+<p>
+      which is expressed in terms of absolute error, but we can equally use relative
+      error:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">E<sub>rel</sub>(x) = (f(x) - R(x)) / |f(x)|</span>
+      </p></blockquote></div>
+<p>
+      And indeed in general we can scale the error function in any way we want, it
+      makes no difference to the maths, although the two forms above cover almost
+      every practical case that you're likely to encounter.
+    </p>
+<p>
+      The minimax rational function <span class="emphasis"><em>R(x)</em></span> is then defined to
+      be the function that yields the smallest maximal value of the error function.
+      Chebyshev showed that there is a unique minimax solution for <span class="emphasis"><em>R(x)</em></span>
+      that has the following properties:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          If <span class="emphasis"><em>R(x)</em></span> is a polynomial of degree <span class="emphasis"><em>N</em></span>,
+          then there are <span class="emphasis"><em>N+2</em></span> unknowns: the <span class="emphasis"><em>N+1</em></span>
+          coefficients of the polynomial, and maximal value of the error function.
+        </li>
+<li class="listitem">
+          The error function has <span class="emphasis"><em>N+1</em></span> roots, and <span class="emphasis"><em>N+2</em></span>
+          extrema (minima and maxima).
+        </li>
+<li class="listitem">
+          The extrema alternate in sign, and all have the same magnitude.
+        </li>
+</ul></div>
+<p>
+      That means that if we know the location of the extrema of the error function
+      then we can write <span class="emphasis"><em>N+2</em></span> simultaneous equations:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">R(x<sub>i</sub>) + (-1)<sup>i</sup>E = f(x<sub>i</sub>)</span>
+      </p></blockquote></div>
+<p>
+      where <span class="emphasis"><em>E</em></span> is the maximal error term, and <span class="emphasis"><em>x<sub>i</sub></em></span>
+      are the abscissa values of the <span class="emphasis"><em>N+2</em></span> extrema of the error
+      function. It is then trivial to solve the simultaneous equations to obtain
+      the polynomial coefficients and the error term.
+    </p>
+<p>
+      <span class="emphasis"><em>Unfortunately we don't know where the extrema of the error function
+      are located!</em></span>
+    </p>
+<h5>
+<a name="math_toolkit.remez.h0"></a>
+      <span class="phrase"><a name="math_toolkit.remez.the_remez_method"></a></span><a class="link" href="remez.html#math_toolkit.remez.the_remez_method">The
+      Remez Method</a>
+    </h5>
+<p>
+      The Remez method is an iterative technique which, given a broad range of assumptions,
+      will converge on the extrema of the error function, and therefore the minimax
+      solution.
+    </p>
+<p>
+      In the following discussion we'll use a concrete example to illustrate the
+      Remez method: an approximation to the function e<sup>x</sup> over the range [-1, 1].
+    </p>
+<p>
+      Before we can begin the Remez method, we must obtain an initial value for the
+      location of the extrema of the error function. We could "guess" these,
+      but a much closer first approximation can be obtained by first constructing
+      an interpolated polynomial approximation to <span class="emphasis"><em>f(x)</em></span>.
+    </p>
+<p>
+      In order to obtain the <span class="emphasis"><em>N+1</em></span> coefficients of the interpolated
+      polynomial we need N+1 points /(x<sub>0</sub>…x<sub>N</sub>): with our interpolated form passing through
+      each of those points that yields <span class="emphasis"><em>N+1</em></span> simultaneous equations:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">f(x<sub>i</sub>) = P(x<sub>i</sub>) = c<sub>0</sub> + c<sub>1</sub>x<sub>i</sub> … + c<sub>N</sub>x<sub>i</sub><sup>N</sup></span>
+      </p></blockquote></div>
+<p>
+      Which can be solved for the coefficients <span class="emphasis"><em>c<sub>0</sub> …c<sub>N</sub></em></span> in <span class="emphasis"><em>P(x)</em></span>.
+    </p>
+<p>
+      Obviously this is not a minimax solution, indeed our only guarantee is that
+      <span class="emphasis"><em>f(x)</em></span> and <span class="emphasis"><em>P(x)</em></span> touch at <span class="emphasis"><em>N+1</em></span>
+      locations, away from those points the error may be arbitrarily large. However,
+      we would clearly like this initial approximation to be as close to <span class="emphasis"><em>f(x)</em></span>
+      as possible, and it turns out that using the zeros of an orthogonal polynomial
+      as the initial interpolation points is a good choice. In our example we'll
+      use the zeros of a Chebyshev polynomial as these are particularly easy to calculate,
+      interpolating for a polynomial of degree 4, and measuring <span class="emphasis"><em>relative
+      error</em></span> we get the following error function:
+    </p>
+<p>
+      <span class="inlinemediaobject"><img src="../../graphs/remez-2.png"></span>
+    </p>
+<p>
+      Which has a peak relative error of 1.2x10<sup>-3</sup>.
+    </p>
+<p>
+      While this is a pretty good approximation already, judging by the shape of
+      the error function we can clearly do better. Before starting on the Remez method
+      proper, we have one more step to perform: locate all the extrema of the error
+      function, and store these locations as our initial <span class="emphasis"><em>Chebyshev control
+      points</em></span>.
+    </p>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top">
+<p>
+        In the simple case of a polynomial approximation, by interpolating through
+        the roots of a Chebyshev polynomial we have in fact created a <span class="emphasis"><em>Chebyshev
+        approximation</em></span> to the function: in terms of <span class="emphasis"><em>absolute
+        error</em></span> this is the best a priori choice for the interpolated form
+        we can achieve, and typically is very close to the minimax solution.
+      </p>
+<p>
+        However, if we want to optimise for <span class="emphasis"><em>relative error</em></span>,
+        or if the approximation is a rational function, then the initial Chebyshev
+        solution can be quite far from the ideal minimax solution.
+      </p>
+<p>
+        A more technical discussion of the theory involved can be found in this
+        <a href="http://math.fullerton.edu/mathews/n2003/ChebyshevPolyMod.html" target="_top">online
+        course</a>.
+      </p>
+</td></tr>
+</table></div>
+<h5>
+<a name="math_toolkit.remez.h1"></a>
+      <span class="phrase"><a name="math_toolkit.remez.remez_step_1"></a></span><a class="link" href="remez.html#math_toolkit.remez.remez_step_1">Remez
+      Step 1</a>
+    </h5>
+<p>
+      The first step in the Remez method, given our current set of <span class="emphasis"><em>N+2</em></span>
+      Chebyshev control points <span class="emphasis"><em>x<sub>i</sub></em></span>, is to solve the <span class="emphasis"><em>N+2</em></span>
+      simultaneous equations:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">P(x<sub>i</sub>) + (-1)<sup>i</sup>E = f(x<sub>i</sub>)</span>
+      </p></blockquote></div>
+<p>
+      To obtain the error term <span class="emphasis"><em>E</em></span>, and the coefficients of the
+      polynomial <span class="emphasis"><em>P(x)</em></span>.
+    </p>
+<p>
+      This gives us a new approximation to <span class="emphasis"><em>f(x)</em></span> that has the
+      same error <span class="emphasis"><em>E</em></span> at each of the control points, and whose
+      error function <span class="emphasis"><em>alternates in sign</em></span> at the control points.
+      This is still not necessarily the minimax solution though: since the control
+      points may not be at the extrema of the error function. After this first step
+      here's what our approximation's error function looks like:
+    </p>
+<p>
+      <span class="inlinemediaobject"><img src="../../graphs/remez-3.png"></span>
+    </p>
+<p>
+      Clearly this is still not the minimax solution since the control points are
+      not located at the extrema, but the maximum relative error has now dropped
+      to 5.6x10<sup>-4</sup>.
+    </p>
+<h5>
+<a name="math_toolkit.remez.h2"></a>
+      <span class="phrase"><a name="math_toolkit.remez.remez_step_2"></a></span><a class="link" href="remez.html#math_toolkit.remez.remez_step_2">Remez
+      Step 2</a>
+    </h5>
+<p>
+      The second step is to locate the extrema of the new approximation, which we
+      do in two stages: first, since the error function changes sign at each control
+      point, we must have N+1 roots of the error function located between each pair
+      of N+2 control points. Once these roots are found by standard root finding
+      techniques, we know that N extrema are bracketed between each pair of roots,
+      plus two more between the endpoints of the range and the first and last roots.
+      The N+2 extrema can then be found using standard function minimisation techniques.
+    </p>
+<p>
+      We now have a choice: multi-point exchange, or single point exchange.
+    </p>
+<p>
+      In single point exchange, we move the control point nearest to the largest
+      extrema to the abscissa value of the extrema.
+    </p>
+<p>
+      In multi-point exchange we swap all the current control points, for the locations
+      of the extrema.
+    </p>
+<p>
+      In our example we perform multi-point exchange.
+    </p>
+<h5>
+<a name="math_toolkit.remez.h3"></a>
+      <span class="phrase"><a name="math_toolkit.remez.iteration"></a></span><a class="link" href="remez.html#math_toolkit.remez.iteration">Iteration</a>
+    </h5>
+<p>
+      The Remez method then performs steps 1 and 2 above iteratively until the control
+      points are located at the extrema of the error function: this is then the minimax
+      solution.
+    </p>
+<p>
+      For our current example, two more iterations converges on a minimax solution
+      with a peak relative error of 5x10<sup>-4</sup> and an error function that looks like:
+    </p>
+<p>
+      <span class="inlinemediaobject"><img src="../../graphs/remez-4.png"></span>
+    </p>
+<h5>
+<a name="math_toolkit.remez.h4"></a>
+      <span class="phrase"><a name="math_toolkit.remez.rational_approximations"></a></span><a class="link" href="remez.html#math_toolkit.remez.rational_approximations">Rational
+      Approximations</a>
+    </h5>
+<p>
+      If we wish to extend the Remez method to a rational approximation of the form
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">f(x) = R(x) = P(x) / Q(x)</span>
+      </p></blockquote></div>
+<p>
+      where <span class="emphasis"><em>P(x)</em></span> and <span class="emphasis"><em>Q(x)</em></span> are polynomials,
+      then we proceed as before, except that now we have <span class="emphasis"><em>N+M+2</em></span>
+      unknowns if <span class="emphasis"><em>P(x)</em></span> is of order <span class="emphasis"><em>N</em></span> and
+      <span class="emphasis"><em>Q(x)</em></span> is of order <span class="emphasis"><em>M</em></span> This assumes that
+      <span class="emphasis"><em>Q(x)</em></span> is normalised so that its leading coefficient is
+      1, giving <span class="emphasis"><em>N+M+1</em></span> polynomial coefficients in total, plus
+      the error term <span class="emphasis"><em>E</em></span>.
+    </p>
+<p>
+      The simultaneous equations to be solved are now:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">P(x<sub>i</sub>) / Q(x<sub>i</sub>) + (-1)<sup>i</sup>E = f(x<sub>i</sub>)</span>
+      </p></blockquote></div>
+<p>
+      Evaluated at the <span class="emphasis"><em>N+M+2</em></span> control points <span class="emphasis"><em>x<sub>i</sub></em></span>.
+    </p>
+<p>
+      Unfortunately these equations are non-linear in the error term <span class="emphasis"><em>E</em></span>:
+      we can only solve them if we know <span class="emphasis"><em>E</em></span>, and yet <span class="emphasis"><em>E</em></span>
+      is one of the unknowns!
+    </p>
+<p>
+      The method usually adopted to solve these equations is an iterative one: we
+      guess the value of <span class="emphasis"><em>E</em></span>, solve the equations to obtain a
+      new value for <span class="emphasis"><em>E</em></span> (as well as the polynomial coefficients),
+      then use the new value of <span class="emphasis"><em>E</em></span> as the next guess. The method
+      is repeated until <span class="emphasis"><em>E</em></span> converges on a stable value.
+    </p>
+<p>
+      These complications extend the running time required for the development of
+      rational approximations quite considerably. It is often desirable to obtain
+      a rational rather than polynomial approximation none the less: rational approximations
+      will often match more difficult to approximate functions, to greater accuracy,
+      and with greater efficiency, than their polynomial alternatives. For example,
+      if we takes our previous example of an approximation to e<sup>x</sup>, we obtained 5x10<sup>-4</sup> accuracy
+      with an order 4 polynomial. If we move two of the unknowns into the denominator
+      to give a pair of order 2 polynomials, and re-minimise, then the peak relative
+      error drops to 8.7x10<sup>-5</sup>. That's a 5 fold increase in accuracy, for the same
+      number of terms overall.
+    </p>
+<h5>
+<a name="math_toolkit.remez.h5"></a>
+      <span class="phrase"><a name="math_toolkit.remez.remez_practical"></a></span><a class="link" href="remez.html#math_toolkit.remez.remez_practical">Practical
+      Considerations</a>
+    </h5>
+<p>
+      Most treatises on approximation theory stop at this point. However, from a
+      practical point of view, most of the work involves finding the right approximating
+      form, and then persuading the Remez method to converge on a solution.
+    </p>
+<p>
+      So far we have used a direct approximation:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">f(x) = R(x)</span>
+      </p></blockquote></div>
+<p>
+      But this will converge to a useful approximation only if <span class="emphasis"><em>f(x)</em></span>
+      is smooth. In addition round-off errors when evaluating the rational form mean
+      that this will never get closer than within a few epsilon of machine precision.
+      Therefore this form of direct approximation is often reserved for situations
+      where we want efficiency, rather than accuracy.
+    </p>
+<p>
+      The first step in improving the situation is generally to split <span class="emphasis"><em>f(x)</em></span>
+      into a dominant part that we can compute accurately by another method, and
+      a slowly changing remainder which can be approximated by a rational approximation.
+      We might be tempted to write:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">f(x) = g(x) + R(x)</span>
+      </p></blockquote></div>
+<p>
+      where <span class="emphasis"><em>g(x)</em></span> is the dominant part of <span class="emphasis"><em>f(x)</em></span>,
+      but if <span class="emphasis"><em>f(x)/g(x)</em></span> is approximately constant over the interval
+      of interest then:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">f(x) = g(x)(c + R(x))</span>
+      </p></blockquote></div>
+<p>
+      Will yield a much better solution: here <span class="emphasis"><em>c</em></span> is a constant
+      that is the approximate value of <span class="emphasis"><em>f(x)/g(x)</em></span> and <span class="emphasis"><em>R(x)</em></span>
+      is typically tiny compared to <span class="emphasis"><em>c</em></span>. In this situation if
+      <span class="emphasis"><em>R(x)</em></span> is optimised for absolute error, then as long as
+      its error is small compared to the constant <span class="emphasis"><em>c</em></span>, that error
+      will effectively get wiped out when <span class="emphasis"><em>R(x)</em></span> is added to
+      <span class="emphasis"><em>c</em></span>.
+    </p>
+<p>
+      The difficult part is obviously finding the right <span class="emphasis"><em>g(x)</em></span>
+      to extract from your function: often the asymptotic behaviour of the function
+      will give a clue, so for example the function <a class="link" href="sf_erf/error_function.html" title="Error Function erf and complement erfc">erfc</a>
+      becomes proportional to <span class="emphasis"><em>e<sup>-x<sup>2</sup></sup>/x</em></span> as <span class="emphasis"><em>x</em></span>
+      becomes large. Therefore using:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="serif_italic">erfc(z) = (C + R(x)) e<sup>-x<sup>2</sup></sup>/x</span>
+      </p></blockquote></div>
+<p>
+      as the approximating form seems like an obvious thing to try, and does indeed
+      yield a useful approximation.
+    </p>
+<p>
+      However, the difficulty then becomes one of converging the minimax solution.
+      Unfortunately, it is known that for some functions the Remez method can lead
+      to divergent behaviour, even when the initial starting approximation is quite
+      good. Furthermore, it is not uncommon for the solution obtained in the first
+      Remez step above to be a bad one: the equations to be solved are generally
+      "stiff", often very close to being singular, and assuming a solution
+      is found at all, round-off errors and a rapidly changing error function, can
+      lead to a situation where the error function does not in fact change sign at
+      each control point as required. If this occurs, it is fatal to the Remez method.
+      It is also possible to obtain solutions that are perfectly valid mathematically,
+      but which are quite useless computationally: either because there is an unavoidable
+      amount of roundoff error in the computation of the rational function, or because
+      the denominator has one or more roots over the interval of the approximation.
+      In the latter case while the approximation may have the correct limiting value
+      at the roots, the approximation is nonetheless useless.
+    </p>
+<p>
+      Assuming that the approximation does not have any fatal errors, and that the
+      only issue is converging adequately on the minimax solution, the aim is to
+      get as close as possible to the minimax solution before beginning the Remez
+      method. Using the zeros of a Chebyshev polynomial for the initial interpolation
+      is a good start, but may not be ideal when dealing with relative errors and/or
+      rational (rather than polynomial) approximations. One approach is to skew the
+      initial interpolation points to one end: for example if we raise the roots
+      of the Chebyshev polynomial to a positive power greater than 1 then the roots
+      will be skewed towards the middle of the [-1,1] interval, while a positive
+      power less than one will skew them towards either end. More usefully, if we
+      initially rescale the points over [0,1] and then raise to a positive power,
+      we can skew them to the left or right. Returning to our example of e<sup>x</sup> over [-1,1],
+      the initial interpolated form was some way from the minimax solution:
+    </p>
+<p>
+      <span class="inlinemediaobject"><img src="../../graphs/remez-2.png"></span>
+    </p>
+<p>
+      However, if we first skew the interpolation points to the left (rescale them
+      to [0, 1], raise to the power 1.3, and then rescale back to [-1,1]) we reduce
+      the error from 1.3x10<sup>-3</sup> to 6x10<sup>-4</sup>:
+    </p>
+<p>
+      <span class="inlinemediaobject"><img src="../../graphs/remez-5.png"></span>
+    </p>
+<p>
+      It's clearly still not ideal, but it is only a few percent away from our desired
+      minimax solution (5x10<sup>-4</sup>).
+    </p>
+<h5>
+<a name="math_toolkit.remez.h6"></a>
+      <span class="phrase"><a name="math_toolkit.remez.remez_method_checklist"></a></span><a class="link" href="remez.html#math_toolkit.remez.remez_method_checklist">Remez
+      Method Checklist</a>
+    </h5>
+<p>
+      The following lists some of the things to check if the Remez method goes wrong,
+      it is by no means an exhaustive list, but is provided in the hopes that it
+      will prove useful.
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Is the function smooth enough? Can it be better separated into a rapidly
+          changing part, and an asymptotic part?
+        </li>
+<li class="listitem">
+          Does the function being approximated have any "blips" in it?
+          Check for problems as the function changes computation method, or if a
+          root, or an infinity has been divided out. The telltale sign is if there
+          is a narrow region where the Remez method will not converge.
+        </li>
+<li class="listitem">
+          Check you have enough accuracy in your calculations: remember that the
+          Remez method works on the difference between the approximation and the
+          function being approximated: so you must have more digits of precision
+          available than the precision of the approximation being constructed. So
+          for example at double precision, you shouldn't expect to be able to get
+          better than a float precision approximation.
+        </li>
+<li class="listitem">
+          Try skewing the initial interpolated approximation to minimise the error
+          before you begin the Remez steps.
+        </li>
+<li class="listitem">
+          If the approximation won't converge or is ill-conditioned from one starting
+          location, try starting from a different location.
+        </li>
+<li class="listitem">
+          If a rational function won't converge, one can minimise a polynomial (which
+          presents no problems), then rotate one term from the numerator to the denominator
+          and minimise again. In theory one can continue moving terms one at a time
+          from numerator to denominator, and then re-minimising, retaining the last
+          set of control points at each stage.
+        </li>
+<li class="listitem">
+          Try using a smaller interval. It may also be possible to optimise over
+          one (small) interval, rescale the control points over a larger interval,
+          and then re-minimise.
+        </li>
+<li class="listitem">
+          Keep abscissa values small: use a change of variable to keep the abscissa
+          over, say [0, b], for some smallish value <span class="emphasis"><em>b</em></span>.
+        </li>
+</ul></div>
+<h5>
+<a name="math_toolkit.remez.h7"></a>
+      <span class="phrase"><a name="math_toolkit.remez.references"></a></span><a class="link" href="remez.html#math_toolkit.remez.references">References</a>
+    </h5>
+<p>
+      The original references for the Remez Method and its extension to rational
+      functions are unfortunately in Russian:
+    </p>
+<p>
+      Remez, E.Ya., <span class="emphasis"><em>Fundamentals of numerical methods for Chebyshev approximations</em></span>,
+      "Naukova Dumka", Kiev, 1969.
+    </p>
+<p>
+      Remez, E.Ya., Gavrilyuk, V.T., <span class="emphasis"><em>Computer development of certain approaches
+      to the approximate construction of solutions of Chebyshev problems nonlinearly
+      depending on parameters</em></span>, Ukr. Mat. Zh. 12 (1960), 324-338.
+    </p>
+<p>
+      Gavrilyuk, V.T., <span class="emphasis"><em>Generalization of the first polynomial algorithm
+      of E.Ya.Remez for the problem of constructing rational-fractional Chebyshev
+      approximations</em></span>, Ukr. Mat. Zh. 16 (1961), 575-585.
+    </p>
+<p>
+      Some English language sources include:
+    </p>
+<p>
+      Fraser, W., Hart, J.F., <span class="emphasis"><em>On the computation of rational approximations
+      to continuous functions</em></span>, Comm. of the ACM 5 (1962), 401-403, 414.
+    </p>
+<p>
+      Ralston, A., <span class="emphasis"><em>Rational Chebyshev approximation by Remes' algorithms</em></span>,
+      Numer.Math. 7 (1965), no. 4, 322-330.
+    </p>
+<p>
+      A. Ralston, <span class="emphasis"><em>Rational Chebyshev approximation, Mathematical Methods
+      for Digital Computers v. 2</em></span> (Ralston A., Wilf H., eds.), Wiley, New
+      York, 1967, pp. 264-284.
+    </p>
+<p>
+      Hart, J.F. e.a., <span class="emphasis"><em>Computer approximations</em></span>, Wiley, New York
+      a.o., 1968.
+    </p>
+<p>
+      Cody, W.J., Fraser, W., Hart, J.F., <span class="emphasis"><em>Rational Chebyshev approximation
+      using linear equations</em></span>, Numer.Math. 12 (1968), 242-251.
+    </p>
+<p>
+      Cody, W.J., <span class="emphasis"><em>A survey of practical rational and polynomial approximation
+      of functions</em></span>, SIAM Review 12 (1970), no. 3, 400-423.
+    </p>
+<p>
+      Barrar, R.B., Loeb, H.J., <span class="emphasis"><em>On the Remez algorithm for non-linear families</em></span>,
+      Numer.Math. 15 (1970), 382-391.
+    </p>
+<p>
+      Dunham, Ch.B., <span class="emphasis"><em>Convergence of the Fraser-Hart algorithm for rational
+      Chebyshev approximation</em></span>, Math. Comp. 29 (1975), no. 132, 1078-1082.
+    </p>
+<p>
+      G. L. Litvinov, <span class="emphasis"><em>Approximate construction of rational approximations
+      and the effect of error autocorrection</em></span>, Russian Journal of Mathematical
+      Physics, vol.1, No. 3, 1994.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="lanczos.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../backgrounders.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="refs.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

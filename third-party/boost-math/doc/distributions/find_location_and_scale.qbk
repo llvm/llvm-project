@@ -1,0 +1,37 @@
+[section:find_eg Find Location and Scale Examples]
+
+[section:find_location_eg Find Location (Mean) Example]
+[import ../../example/find_location_example.cpp]
+[find_location1]
+[find_location2]
+See [@../../example/find_location_example.cpp find_location_example.cpp]
+for full source code: the program output looks like this:
+[find_location_example_output]
+[endsect] [/section:find_location_eg Find Location (Mean) Example]
+
+[section:find_scale_eg Find Scale (Standard Deviation) Example]
+[import ../../example/find_scale_example.cpp]
+[find_scale1]
+[find_scale2]
+See [@../../example/find_scale_example.cpp find_scale_example.cpp]
+for full source code: the program output looks like this:
+[find_scale_example_output]
+[endsect] [/section:find_scale_eg Scale (Standard Deviation) Example]
+[section:find_mean_and_sd_eg Find mean and standard deviation example]
+
+[import ../../example/find_mean_and_sd_normal.cpp]
+[normal_std]
+[normal_find_location_and_scale_eg]
+See [@../../example/find_mean_and_sd_normal.cpp find_mean_and_sd_normal.cpp]
+for full source code & appended program output.
+[endsect] [/find_mean_and_sd_eg Find mean and standard deviation example]
+
+[endsect] [/section:find_eg Find Location and Scale Examples]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

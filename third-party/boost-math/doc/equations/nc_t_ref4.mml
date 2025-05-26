@@ -1,0 +1,125 @@
+<?xml version='1.0'?>
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN'
+  'http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd'
+  [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head><title>nc_t_ref4</title>
+<!-- MathML created with MathCast Equation Editor version 0.88 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mn>1</mn>
+    <mo>&#x2212;</mo>
+    <mi>P</mi>
+    <mfenced>
+      <mrow>
+        <mi>t</mi>
+        <mo>;</mo>
+        <mi>&#x03BD;</mi>
+        <mo>;</mo>
+        <mi>&#x03B4;</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mfrac>
+      <mn>1</mn>
+      <mn>2</mn>
+    </mfrac>
+    <munderover>
+      <mo>&#x2211;</mo>
+      <mrow>
+        <mi>i</mi>
+        <mo>=</mo>
+        <mn>0</mn>
+      </mrow>
+      <mi>&#x221E;</mi>
+    </munderover>
+    <mfenced>
+      <mrow>
+        <msub>
+          <mi>P</mi>
+          <mi>i</mi>
+        </msub>
+        <msub>
+          <mi>I</mi>
+          <mi>y</mi>
+        </msub>
+        <mfenced>
+          <mrow>
+            <mrow>
+              <mfrac>
+                <mi>&#x03BD;</mi>
+                <mn>2</mn>
+              </mfrac>
+            </mrow>
+            <mo>,</mo>
+            <mrow>
+              <mi>i</mi>
+              <mo>+</mo>
+              <mfrac>
+                <mn>1</mn>
+                <mn>2</mn>
+              </mfrac>
+            </mrow>
+          </mrow>
+        </mfenced>
+        <mo>+</mo>
+        <mfrac>
+          <mi>&#x03B4;</mi>
+          <mrow>
+            <msqrt>
+              <mn>2</mn>
+            </msqrt>
+          </mrow>
+        </mfrac>
+        <msub>
+          <mi>Q</mi>
+          <mi>i</mi>
+        </msub>
+        <msub>
+          <mi>I</mi>
+          <mi>y</mi>
+        </msub>
+        <mfenced>
+          <mrow>
+            <mrow>
+              <mfrac>
+                <mi>&#x03BD;</mi>
+                <mn>2</mn>
+              </mfrac>
+            </mrow>
+            <mo>,</mo>
+            <mi>i</mi>
+            <mo>+</mo>
+            <mn>1</mn>
+          </mrow>
+        </mfenced>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>;</mo>
+    <mspace width="1em"/>
+    <mi>y</mi>
+    <mo>=</mo>
+    <mn>1</mn>
+    <mo>&#x2212;</mo>
+    <mi>x</mi>
+    <mo>=</mo>
+    <mfrac>
+      <mi>&#x03BD;</mi>
+      <mrow>
+        <mi>&#x03BD;</mi>
+        <mo>+</mo>
+        <msup>
+          <mi>t</mi>
+          <mn>2</mn>
+        </msup>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+</body>
+</html>

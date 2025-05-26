@@ -1,0 +1,88 @@
+[section:sph_bessel Spherical Bessel Functions of the First and Second Kinds]
+
+[h4 Synopsis]
+
+`#include <boost/math/special_functions/bessel.hpp>`
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` sph_bessel(unsigned v, T2 x);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` sph_bessel(unsigned v, T2 x, const ``__Policy``&);
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` sph_neumann(unsigned v, T2 x);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` sph_neumann(unsigned v, T2 x, const ``__Policy``&);
+   
+[h4 Description]
+
+The functions __sph_bessel and __sph_neumann return the result of the
+Spherical Bessel functions of the first and second kinds respectively:
+
+[:sph_bessel(v, x) = j[sub v](x)]
+
+[:sph_neumann(v, x) = y[sub v](x) = n[sub v](x)]
+
+where:
+
+[equation sbessel2]
+
+The return type of these functions is computed using the __arg_promotion_rules
+for the single argument type T.
+
+[optional_policy]
+
+The functions return the result of __domain_error whenever the result is
+undefined or complex: this occurs when `x < 0`.
+
+The j[sub v] function is cyclic like J[sub v] but differs in its behaviour at the origin:
+
+[graph sph_bessel]
+
+Likewise y[sub v] is also cyclic for large x, but tends to -[infin]
+for small /x/:
+
+[graph sph_neumann]
+
+[h4 Testing]
+
+There are two sets of test values: spot values calculated using
+[@http://functions.wolfram.com/ functions.wolfram.com],
+and a much larger set of tests computed using
+a simplified version of this implementation
+(with all the special case handling removed).
+
+[h4 Accuracy]
+
+[table_sph_bessel]
+
+[table_sph_neumann]
+
+[h4 Implementation]
+
+Other than error handling and a couple of special cases these functions
+are implemented directly in terms of their definitions:
+
+[equation sbessel2]
+
+The special cases occur for:
+
+[:j[sub 0]= __sinc_pi(x) = sin(x) / x]
+
+and for small ['x < 1], we can use the series:
+
+[equation sbessel5]
+
+which neatly avoids the problem of calculating 0/0 that can occur with the
+main definition as x [rarr] 0.
+
+[endsect] [/section:sph_bessel Spherical Bessel Functions of the First and Second Kinds]
+
+[/ 
+  Copyright 2006 John Maddock, Paul A. Bristow and Xiaogang Zhang.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

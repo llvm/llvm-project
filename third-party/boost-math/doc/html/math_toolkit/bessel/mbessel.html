@@ -1,0 +1,1198 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Modified Bessel Functions of the First and Second Kinds</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../bessel.html" title="Bessel Functions">
+<link rel="prev" href="bessel_root.html" title="Finding Zeros of Bessel Functions of the First and Second Kinds">
+<link rel="next" href="sph_bessel.html" title="Spherical Bessel Functions of the First and Second Kinds">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bessel_root.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../bessel.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="sph_bessel.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.bessel.mbessel"></a><a class="link" href="mbessel.html" title="Modified Bessel Functions of the First and Second Kinds">Modified Bessel Functions
+      of the First and Second Kinds</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.bessel.mbessel.h0"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.mbessel.synopsis"></a></span><a class="link" href="mbessel.html#math_toolkit.bessel.mbessel.synopsis">Synopsis</a>
+      </h5>
+<p>
+        <code class="computeroutput"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">bessel</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">cyl_bessel_i</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">cyl_bessel_i</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">cyl_bessel_k</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">cyl_bessel_k</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+</pre>
+<h5>
+<a name="math_toolkit.bessel.mbessel.h1"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.mbessel.description"></a></span><a class="link" href="mbessel.html#math_toolkit.bessel.mbessel.description">Description</a>
+      </h5>
+<p>
+        The functions <a class="link" href="mbessel.html" title="Modified Bessel Functions of the First and Second Kinds">cyl_bessel_i</a>
+        and <a class="link" href="mbessel.html" title="Modified Bessel Functions of the First and Second Kinds">cyl_bessel_k</a> return
+        the result of the modified Bessel functions of the first and second kind
+        respectively:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          cyl_bessel_i(v, x) = I<sub>v</sub>(x)
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          cyl_bessel_k(v, x) = K<sub>v</sub>(x)
+        </p></blockquote></div>
+<p>
+        where:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel2.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel3.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        The return type of these functions is computed using the <a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>result
+        type calculation rules</em></span></a> when T1 and T2 are different types.
+        The functions are also optimised for the relatively common case that T1 is
+        an integer.
+      </p>
+<p>
+        The final <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+        be used to control the behaviour of the function: how it handles errors,
+        what level of precision to use etc. Refer to the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy
+        documentation for more details</a>.
+      </p>
+<p>
+        The functions return the result of <a class="link" href="../error_handling.html#math_toolkit.error_handling.domain_error">domain_error</a>
+        whenever the result is undefined or complex. For <a class="link" href="bessel_first.html" title="Bessel Functions of the First and Second Kinds">cyl_bessel_j</a>
+        this occurs when <code class="computeroutput"><span class="identifier">x</span> <span class="special">&lt;</span>
+        <span class="number">0</span></code> and v is not an integer, or when
+        <code class="computeroutput"><span class="identifier">x</span> <span class="special">==</span>
+        <span class="number">0</span></code> and <code class="computeroutput"><span class="identifier">v</span>
+        <span class="special">!=</span> <span class="number">0</span></code>.
+        For <a class="link" href="bessel_first.html" title="Bessel Functions of the First and Second Kinds">cyl_neumann</a> this
+        occurs when <code class="computeroutput"><span class="identifier">x</span> <span class="special">&lt;=</span>
+        <span class="number">0</span></code>.
+      </p>
+<p>
+        The following graph illustrates the exponential behaviour of I<sub>v</sub>.
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/cyl_bessel_i.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<p>
+        The following graph illustrates the exponential decay of K<sub>v</sub>.
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/cyl_bessel_k.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.bessel.mbessel.h2"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.mbessel.testing"></a></span><a class="link" href="mbessel.html#math_toolkit.bessel.mbessel.testing">Testing</a>
+      </h5>
+<p>
+        There are two sets of test values: spot values calculated using <a href="http://functions.wolfram.com" target="_top">functions.wolfram.com</a>,
+        and a much larger set of tests computed using a simplified version of this
+        implementation (with all the special case handling removed).
+      </p>
+<h5>
+<a name="math_toolkit.bessel.mbessel.h3"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.mbessel.accuracy"></a></span><a class="link" href="mbessel.html#math_toolkit.bessel.mbessel.accuracy">Accuracy</a>
+      </h5>
+<p>
+        The following tables show how the accuracy of these functions varies on various
+        platforms, along with comparison to other libraries. Note that only results
+        for the widest floating-point type on the system are given, as narrower types
+        have <a class="link" href="../relative_error.html#math_toolkit.relative_error.zero_error">effectively zero
+        error</a>. All values are relative errors in units of epsilon. Note that
+        our test suite includes some fairly extreme inputs which results in most
+        of the worst problem cases in other libraries:
+      </p>
+<div class="table">
+<a name="math_toolkit.bessel.mbessel.table_cyl_bessel_i_integer_orders_"></a><p class="title"><b>Table 8.44. Error rates for cyl_bessel_i (integer orders)</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for cyl_bessel_i (integer orders)">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> double
+                </p>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Microsoft Visual C++ version 14.1<br> Win32<br> double
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Bessel I0: Mathworld Data (Integer Version)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 0.79ε (Mean = 0.482ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 1.52ε (Mean = 0.622ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_integer_orders__Rmath_3_2_3_Bessel_I0_Mathworld_Data_Integer_Version_">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.95ε (Mean = 0.738ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 8.49ε (Mean = 3.46ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_i_integer_orders___cmath__Bessel_I0_Mathworld_Data_Integer_Version_">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.95ε (Mean = 0.661ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.762ε (Mean = 0.329ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel I1: Mathworld Data (Integer Version)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 0.82ε (Mean = 0.456ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 1.53ε (Mean = 0.483ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_integer_orders__Rmath_3_2_3_Bessel_I1_Mathworld_Data_Integer_Version_">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.64ε (Mean = 0.202ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 5ε (Mean = 2.15ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_i_integer_orders___cmath__Bessel_I1_Mathworld_Data_Integer_Version_">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.64ε (Mean = 0.202ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.767ε (Mean = 0.398ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel In: Mathworld Data (Integer Version)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 5.15ε (Mean = 2.13ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_integer_orders__GSL_2_1_Bessel_In_Mathworld_Data_Integer_Version_">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 1.73ε (Mean = 0.601ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_integer_orders__Rmath_3_2_3_Bessel_In_Mathworld_Data_Integer_Version_">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.8ε (Mean = 1.33ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 430ε (Mean = 163ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_i_integer_orders___cmath__Bessel_In_Mathworld_Data_Integer_Version_">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 463ε (Mean = 140ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.46ε (Mean = 1.32ε)</span>
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.bessel.mbessel.table_cyl_bessel_i"></a><p class="title"><b>Table 8.45. Error rates for cyl_bessel_i</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for cyl_bessel_i">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> double
+                </p>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Microsoft Visual C++ version 14.1<br> Win32<br> double
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Bessel I0: Mathworld Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 270ε (Mean = 91.6ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_GSL_2_1_Bessel_I0_Mathworld_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 1.52ε (Mean = 0.622ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_Rmath_3_2_3_Bessel_I0_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.95ε (Mean = 0.738ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 8.49ε (Mean = 3.46ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_i__cmath__Bessel_I0_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.95ε (Mean = 0.661ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.762ε (Mean = 0.329ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel I1: Mathworld Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 128ε (Mean = 41ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_GSL_2_1_Bessel_I1_Mathworld_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 1.53ε (Mean = 0.483ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_Rmath_3_2_3_Bessel_I1_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.64ε (Mean = 0.202ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 5ε (Mean = 2.15ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_i__cmath__Bessel_I1_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.64ε (Mean = 0.202ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.767ε (Mean = 0.398ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel In: Mathworld Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 2.31ε (Mean = 0.838ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_GSL_2_1_Bessel_In_Mathworld_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 1.73ε (Mean = 0.601ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_Rmath_3_2_3_Bessel_In_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.8ε (Mean = 1.33ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 430ε (Mean = 163ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_i__cmath__Bessel_In_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 463ε (Mean = 140ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.46ε (Mean = 1.32ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel Iv: Mathworld Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 5.95ε (Mean = 2.08ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_GSL_2_1_Bessel_Iv_Mathworld_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 3.53ε (Mean = 1.39ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 4.12ε (Mean = 1.85ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 616ε (Mean = 221ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_i__cmath__Bessel_Iv_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 4.12ε (Mean = 1.95ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 2.97ε (Mean = 1.24ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel In: Random Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 261ε (Mean = 53.2ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_GSL_2_1_Bessel_In_Random_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 7.37ε (Mean = 2.4ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 4.62ε (Mean = 1.06ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 645ε (Mean = 132ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 176ε (Mean = 39.1ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 9.67ε (Mean = 1.88ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel Iv: Random Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.661ε (Mean = 0.0441ε)</span><br>
+                  <br> (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 6.18e+03ε (Mean = 1.55e+03ε)
+                  <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_GSL_2_1_Bessel_Iv_Random_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  <span class="red">Max = 4.28e+08ε (Mean = 2.85e+07ε))</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 8.35ε (Mean = 1.62ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 1.05e+03ε (Mean = 224ε)
+                  <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_i__cmath__Bessel_Iv_Random_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 283ε (Mean = 88.4ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 7.46ε (Mean = 1.71ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel Iv: Mathworld Data (large values)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 37ε (Mean = 18ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_GSL_2_1_Bessel_Iv_Mathworld_Data_large_values_">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  <span class="red">Max = 3.77e+168ε (Mean = 2.39e+168ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_i_Rmath_3_2_3_Bessel_Iv_Mathworld_Data_large_values_">And
+                  other failures.</a>)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 14.7ε (Mean = 6.66ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 118ε (Mean = 57.2ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_i__cmath__Bessel_Iv_Mathworld_Data_large_values_">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 14.7ε (Mean = 6.59ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.67ε (Mean = 1.64ε)</span>
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.bessel.mbessel.table_cyl_bessel_k_integer_orders_"></a><p class="title"><b>Table 8.46. Error rates for cyl_bessel_k (integer orders)</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for cyl_bessel_k (integer orders)">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> double
+                </p>
+              </th>
+<th>
+                <p>
+                  Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Microsoft Visual C++ version 14.1<br> Win32<br> double
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Bessel K0: Mathworld Data (Integer Version)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.833ε (Mean = 0.436ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 9.33ε (Mean = 3.25ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 1.2ε (Mean = 0.733ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 0.833ε (Mean = 0.601ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.833ε (Mean = 0.436ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.833ε (Mean = 0.552ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel K1: Mathworld Data (Integer Version)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.786ε (Mean = 0.329ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 8.94ε (Mean = 3.19ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 0.626ε (Mean = 0.333ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 0.894ε (Mean = 0.516ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.786ε (Mean = 0.329ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.786ε (Mean = 0.39ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel Kn: Mathworld Data (Integer Version)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 2.6ε (Mean = 1.21ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 12.9ε (Mean = 4.91ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_k_integer_orders___cmath__Bessel_Kn_Mathworld_Data_Integer_Version_">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 168ε (Mean = 59.5ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 8.48ε (Mean = 2.98ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 2.6ε (Mean = 1.21ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.63ε (Mean = 1.46ε)</span>
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.bessel.mbessel.table_cyl_bessel_k"></a><p class="title"><b>Table 8.47. Error rates for cyl_bessel_k</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for cyl_bessel_k">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> double
+                </p>
+              </th>
+<th>
+                <p>
+                  Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Microsoft Visual C++ version 14.1<br> Win32<br> double
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Bessel K0: Mathworld Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.833ε (Mean = 0.436ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 9.33ε (Mean = 3.25ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 6.04ε (Mean = 2.16ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 0.833ε (Mean = 0.601ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.833ε (Mean = 0.436ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.833ε (Mean = 0.552ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel K1: Mathworld Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.786ε (Mean = 0.329ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 8.94ε (Mean = 3.19ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 6.26ε (Mean = 2.21ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 0.894ε (Mean = 0.516ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.786ε (Mean = 0.329ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.786ε (Mean = 0.39ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel Kn: Mathworld Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 2.6ε (Mean = 1.21ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 12.9ε (Mean = 4.91ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_k__cmath__Bessel_Kn_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 3.36ε (Mean = 1.43ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_k_GSL_2_1_Bessel_Kn_Mathworld_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 8.48ε (Mean = 2.98ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 2.6ε (Mean = 1.21ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.63ε (Mean = 1.46ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel Kv: Mathworld Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.58ε (Mean = 2.39ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 13ε (Mean = 4.81ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_k__cmath__Bessel_Kv_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 5.47ε (Mean = 2.04ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_k_GSL_2_1_Bessel_Kv_Mathworld_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 3.15ε (Mean = 1.35ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 5.21ε (Mean = 2.53ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 4.78ε (Mean = 2.19ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel Kv: Mathworld Data (large values)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 42.3ε (Mean = 21ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 42.3ε (Mean = 19.8ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_k__cmath__Bessel_Kv_Mathworld_Data_large_values_">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 308ε (Mean = 142ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_k_GSL_2_1_Bessel_Kv_Mathworld_Data_large_values_">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 84.6ε (Mean = 37.8ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 42.3ε (Mean = 21ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 59.8ε (Mean = 26.9ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel Kn: Random Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 4.55ε (Mean = 1.12ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 13.9ε (Mean = 2.91ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.764ε (Mean = 0.0348ε)</span><br>
+                  <br> (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 8.71ε (Mean = 1.76ε)
+                  <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_k_GSL_2_1_Bessel_Kn_Random_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 7.47ε (Mean = 1.34ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 4.55ε (Mean = 1.12ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 9.34ε (Mean = 1.7ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Bessel Kv: Random Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 7.88ε (Mean = 1.48ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> Max = 13.6ε (Mean = 2.68ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_cyl_bessel_k__cmath__Bessel_Kv_Random_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.507ε (Mean = 0.0313ε)</span><br>
+                  <br> (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 9.71ε (Mean = 1.47ε)
+                  <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_cyl_bessel_k_GSL_2_1_Bessel_Kv_Random_Data">And
+                  other failures.</a>)<br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span>
+                  Max = 7.37ε (Mean = 1.49ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 7.88ε (Mean = 1.47ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 8.33ε (Mean = 1.62ε)</span>
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+        The following error plot are based on an exhaustive search of the functions
+        domain for I0, I1, K0, and K1, MSVC-15.5 at <code class="computeroutput"><span class="keyword">double</span></code>
+        precision, and GCC-7.1/Ubuntu for <code class="computeroutput"><span class="keyword">long</span>
+        <span class="keyword">double</span></code> and <code class="computeroutput"><span class="identifier">__float128</span></code>.
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/i0__double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/i0__80_bit_long_double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/i0____float128.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/i1__double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/i1__80_bit_long_double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/i1____float128.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/k0__double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/k0__80_bit_long_double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/k0____float128.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/k1__double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/k1__80_bit_long_double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/k1____float128.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.bessel.mbessel.h4"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.mbessel.implementation"></a></span><a class="link" href="mbessel.html#math_toolkit.bessel.mbessel.implementation">Implementation</a>
+      </h5>
+<p>
+        The following are handled as special cases first:
+      </p>
+<p>
+        When computing I<sub>v</sub> for <span class="emphasis"><em>x &lt; 0</em></span>, then ν must be an integer
+        or a domain error occurs. If ν is an integer, then the function is odd if ν is
+        odd and even if ν is even, and we can reflect to <span class="emphasis"><em>x &gt; 0</em></span>.
+      </p>
+<p>
+        For I<sub>v</sub> with v equal to 0, 1 or 0.5 are handled as special cases.
+      </p>
+<p>
+        The 0 and 1 cases use polynomial approximations on finite and infinite intervals.
+        The approximating forms are based on <a href="http://www.advanpix.com/2015/11/11/rational-approximations-for-the-modified-bessel-function-of-the-first-kind-i0-computations-double-precision/" target="_top">"Rational
+        Approximations for the Modified Bessel Function of the First Kind - I<sub>0</sub>(x)
+        for Computations with Double Precision"</a> by Pavel Holoborodko,
+        extended by us to deal with up to 128-bit precision (with different approximations
+        for each target precision).
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/bessel21.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/bessel20.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/bessel17.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/bessel18.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Similarly we have:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/bessel22.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/bessel23.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/bessel24.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/bessel25.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        The 0.5 case is a simple trigonometric function:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          I<sub>0.5</sub>(x) = sqrt(2 / πx) * sinh(x)
+        </p></blockquote></div>
+<p>
+        For K<sub>v</sub> with <span class="emphasis"><em>v</em></span> an integer, the result is calculated using
+        the recurrence relation:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel5.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        starting from K<sub>0</sub> and K<sub>1</sub> which are calculated using rational the approximations
+        above. These rational approximations are accurate to around 19 digits, and
+        are therefore only used when T has no more than 64 binary digits of precision.
+      </p>
+<p>
+        When <span class="emphasis"><em>x</em></span> is small compared to <span class="emphasis"><em>v</em></span>,
+        I<sub>v</sub>x is best computed directly from the series:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel17.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        In the general case, we first normalize ν to [<code class="literal">0, [inf]</code>)
+        with the help of the reflection formulae:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel9.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel10.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Let μ = ν - floor(ν + 1/2), then μ is the fractional part of ν such that |μ| &lt;= 1/2
+        (we need this for convergence later). The idea is to calculate K<sub>μ</sub>(x) and K<sub>μ+1</sub>(x),
+        and use them to obtain I<sub>ν</sub>(x) and K<sub>ν</sub>(x).
+      </p>
+<p>
+        The algorithm is proposed by Temme in
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          N.M. Temme, <span class="emphasis"><em>On the numerical evaluation of the modified bessel
+          function of the third kind</em></span>, Journal of Computational Physics,
+          vol 19, 324 (1975),
+        </p></blockquote></div>
+<p>
+        which needs two continued fractions as well as the Wronskian:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel11.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel12.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel8.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        The continued fractions are computed using the modified Lentz's method
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          (W.J. Lentz, <span class="emphasis"><em>Generating Bessel functions in Mie scattering calculations
+          using continued fractions</em></span>, Applied Optics, vol 15, 668 (1976)).
+        </p></blockquote></div>
+<p>
+        Their convergence rates depend on <span class="emphasis"><em>x</em></span>, therefore we need
+        different strategies for large <span class="emphasis"><em>x</em></span> and small <span class="emphasis"><em>x</em></span>.
+      </p>
+<p>
+        <span class="emphasis"><em>x &gt; v</em></span>, CF1 needs O(<span class="emphasis"><em>x</em></span>) iterations
+        to converge, CF2 converges rapidly.
+      </p>
+<p>
+        <span class="emphasis"><em>x &lt;= v</em></span>, CF1 converges rapidly, CF2 fails to converge
+        when <span class="emphasis"><em>x</em></span> <code class="literal">-&gt;</code> 0.
+      </p>
+<p>
+        When <span class="emphasis"><em>x</em></span> is large (<span class="emphasis"><em>x</em></span> &gt; 2), both
+        continued fractions converge (CF1 may be slow for really large <span class="emphasis"><em>x</em></span>).
+        K<sub>μ</sub> and K<sub>μ+1</sub>
+can be calculated by
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel13.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        where
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel14.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        <span class="emphasis"><em>S</em></span> is also a series that is summed along with CF2, see
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          I.J. Thompson and A.R. Barnett, <span class="emphasis"><em>Modified Bessel functions I_v
+          and K_v of real order and complex argument to selected accuracy</em></span>,
+          Computer Physics Communications, vol 47, 245 (1987).
+        </p></blockquote></div>
+<p>
+        When <span class="emphasis"><em>x</em></span> is small (<span class="emphasis"><em>x</em></span> &lt;= 2), CF2
+        convergence may fail (but CF1 works very well). The solution here is Temme's
+        series:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel15.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        where
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/mbessel16.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        f<sub>k</sub> and h<sub>k</sub>
+are also computed by recursions (involving gamma functions), but
+        the formulas are a little complicated, readers are referred to
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          N.M. Temme, <span class="emphasis"><em>On the numerical evaluation of the modified Bessel
+          function of the third kind</em></span>, Journal of Computational Physics,
+          vol 19, 324 (1975).
+        </p></blockquote></div>
+<p>
+        Note: Temme's series converge only for |μ| &lt;= 1/2.
+      </p>
+<p>
+        K<sub>ν</sub>(x) is then calculated from the forward recurrence, as is K<sub>ν+1</sub>(x). With these
+        two values and f<sub>ν</sub>, the Wronskian yields I<sub>ν</sub>(x) directly.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bessel_root.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../bessel.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="sph_bessel.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

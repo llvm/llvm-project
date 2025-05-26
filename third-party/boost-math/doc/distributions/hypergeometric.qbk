@@ -1,0 +1,256 @@
+[section:hypergeometric_dist Hypergeometric Distribution]
+
+``#include <boost/math/distributions/hypergeometric.hpp>``
+
+   namespace boost{ namespace math{
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class hypergeometric_distribution;
+
+   template <class RealType, class Policy>
+   class hypergeometric_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+      // Construct:
+      hypergeometric_distribution(uint64_t r, uint64_t n, uint64_t N); // r=defective/failures/success, n=trials/draws, N=total population.
+      // Accessors:
+      uint64_t total()const;
+      uint64_t defective()const;
+      uint64_t sample_count()const;
+   };
+
+   typedef hypergeometric_distribution<> hypergeometric;
+
+   }} // namespaces
+
+The hypergeometric distribution describes the number of "events" /k/
+from a sample /n/ drawn from a total population /N/ ['without replacement].
+
+Imagine we have a sample of /N/ objects of which /r/ are "defective"
+and N-r are "not defective"
+(the terms "success\/failure" or "red\/blue" are also used).  If we sample /n/
+items /without replacement/ then what is the probability that exactly
+/k/ items in the sample are defective?  The answer is given by the pdf of the
+hypergeometric distribution `f(k; r, n, N)`, whilst the probability of
+/k/ defectives or fewer is given by F(k; r, n, N), where F(k) is the
+CDF of the hypergeometric distribution.
+
+[note Unlike almost all of the other distributions in this library,
+the hypergeometric distribution is strictly discrete: it can not be
+extended to real valued arguments of its parameters or random variable.]
+
+The following graph shows how the distribution changes as the proportion
+of "defective" items changes, while keeping the population and sample sizes
+constant:
+
+[graph hypergeometric_pdf_1]
+
+Note that since the distribution is symmetrical in parameters /n/ and /r/, if we
+change the sample size and keep the population and proportion "defective" the same
+then we obtain basically the same graphs:
+
+[graph hypergeometric_pdf_2]
+
+[h4 Member Functions]
+
+   hypergeometric_distribution(uint64_t r, uint64_t n, uint64_t N);
+
+Constructs a hypergeometric distribution with a population of /N/ objects,
+of which /r/ are defective, and from which /n/ are sampled.
+
+   uint64_t total()const;
+
+Returns the total number of objects /N/.
+
+   uint64_t defective()const;
+
+Returns the number of objects /r/ in population /N/ which are defective.
+
+   uint64_t sample_count()const;
+
+Returns the number of objects /n/ which are sampled from the population /N/.
+
+[warning Both naming/symbol and order of parameters is confusing with no two implementations the same!
+See Wolfram Mathematica
+[@https://mathworld.wolfram.com/HypergeometricDistribution.html Hypergeometric Distribution]
+and Wikipedia
+[@https://en.wikipedia.org/wiki/Hypergeometric_distribution Hypergeometric Distribution]
+and Python 
+[@https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.hypergeom.html#scipy.stats.hypergeom  scipy.stats.hypergeom].
+]
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+
+The domain of the random variable are the 64-bit unsigned integers in the range
+\[max(0, n + r - N), min(n, r)\].  A __domain_error is raised if the
+random variable is outside this range, or is not an integral value.
+
+[caution
+The quantile function will by default return an integer result that has been
+/rounded outwards/.  That is to say lower quantiles (where the probability is
+less than 0.5) are rounded downward, and upper quantiles (where the probability
+is greater than 0.5) are rounded upwards.  This behaviour
+ensures that if an X% quantile is requested, then /at least/ the requested
+coverage will be present in the central region, and /no more than/
+the requested coverage will be present in the tails.
+
+This behaviour can be changed so that the quantile functions are rounded
+differently using
+[link math_toolkit.pol_overview Policies].  It is strongly
+recommended that you read the tutorial
+[link math_toolkit.pol_tutorial.understand_dis_quant
+Understanding Quantiles of Discrete Distributions] before
+using the quantile function on the Hypergeometric distribution.  The
+[link math_toolkit.pol_ref.discrete_quant_ref reference docs]
+describe how to change the rounding policy
+for these distributions.
+
+However, note that the implementation method of the quantile function
+always returns an integral value, therefore attempting to use a __Policy
+that requires (or produces) a real valued result will result in a
+compile time error.
+] [/ caution]
+
+
+[h4 Accuracy]
+
+For small N such that
+`N < boost::math::max_factorial<RealType>::value` then table based
+lookup of the results gives an accuracy to a few epsilon.
+`boost::math::max_factorial<RealType>::value` is 170 at double or long double
+precision.
+
+For larger N such that `N < boost::math::prime(boost::math::max_prime)`
+then only basic arithmetic is required for the calculation
+and the accuracy is typically < 20 epsilon.  This takes care of N
+up to 104729.
+
+For `N > boost::math::prime(boost::math::max_prime)` then accuracy quickly
+degrades, with 5 or 6 decimal digits being lost for N = 110000.
+
+In general for very large N, the user should expect to lose log[sub 10]N
+decimal digits of precision during the calculation, with the results
+becoming meaningless for N >= 10[super 15].
+
+[h4 Testing]
+
+There are three sets of tests: our implementation is tested against a table of values
+produced by Mathematica's implementation of this distribution. We also sanity check
+our implementation against some spot values computed using the online calculator
+here [@http://stattrek.com/Tables/Hypergeometric.aspx http://stattrek.com/Tables/Hypergeometric.aspx].
+Finally we test accuracy against some high precision test data using
+this implementation and NTL::RR.
+Spot test values for moments (mean to kurtosis) are from Mathematica [@https://mathworld.wolfram.com/HypergeometricDistribution.html Hypergeometric Distribution]
+and agree with an implementation of Wikipedia [@https://en.wikipedia.org/wiki/Hypergeometric_distribution Hypergeometric Distribution]
+and Python [@https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.hypergeom.html#scipy.stats.hypergeom  scipy.stats.hypergeom].
+
+[h4 Implementation]
+
+The PDF can be calculated directly using the formula:
+
+[equation hypergeometric1]
+
+However, this can only be used directly when the largest of the factorials
+is guaranteed not to overflow the floating point representation used.
+This formula is used directly when `N < max_factorial<RealType>::value`
+in which case table lookup of the factorials gives a rapid and accurate
+implementation method.
+
+For larger /N/ the method described in
+"An Accurate Computation of the Hypergeometric Distribution Function",
+Trong Wu, ACM Transactions on Mathematical Software, Vol. 19, No. 1,
+March 1993, Pages 33-43 is used.  The method relies on the fact that
+there is an easy method for factorising a factorial into the product
+of prime numbers:
+
+[equation hypergeometric2]
+
+Where p[sub i] is the i'th prime number, and e[sub i] is a small
+positive integer or zero, which can be calculated via:
+
+[equation hypergeometric3]
+
+Further we can combine the factorials in the expression for the PDF
+to yield the PDF directly as the product of prime numbers:
+
+[equation hypergeometric4]
+
+With this time the exponents e[sub i] being either positive, negative
+or zero.  Indeed such a degree of cancellation occurs in the calculation
+of the e[sub i] that many are zero, and typically most have a magnitude
+or no more than 1 or 2.
+
+Calculation of the product of the primes requires some care to prevent
+numerical overflow, we use a novel recursive method which splits the
+calculation into a series of sub-products, with a new sub-product
+started each time the next multiplication would cause either overflow
+or underflow.  The sub-products are stored in a linked list on the
+program stack, and combined in an order that will guarantee no overflow
+or unnecessary-underflow once the last sub-product has been calculated.
+
+This method can be used as long as N is smaller than the largest prime
+number we have stored in our table of primes (currently 104729).  The method
+is relatively slow (calculating the exponents requires the most time), but
+requires only a small number of arithmetic operations to
+calculate the result (indeed there is no shorter method involving only basic
+arithmetic once the exponents have been found), the method is therefore
+much more accurate than the alternatives.
+
+For much larger N, we can calculate the PDF from the factorials using
+either lgamma, or by directly combining lanczos approximations to avoid
+calculating via logarithms.  We use the latter method, as it is usually
+1 or 2 decimal digits more accurate than computing via logarithms with
+lgamma.  However, in this area where N > 104729, the user should expect
+to lose around log[sub 10]N decimal digits during the calculation in
+the worst case.
+
+The CDF and its complement is calculated by directly summing the PDFs.
+We start by deciding whether the CDF, or its complement, is likely to be
+the smaller of the two and then calculate the PDF at /k/ (or /k+1/ if we're
+calculating the complement) and calculate successive PDF values via the
+recurrence relations:
+
+[equation hypergeometric5]
+
+Until we either reach the end of the distributions domain, or the next
+PDF value to be summed would be too small to affect the result.
+
+The quantile is calculated in a similar manner to the CDF: we first guess
+which end of the distribution we're nearer to, and then sum PDFs starting
+from the end of the distribution this time, until we have some value /k/ that
+gives the required CDF.
+
+The median is simply the quantile at 0.5, and the remaining properties are
+calculated via:
+
+[/
+Requires amsmath and mathtools:
+
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\begin{equation*}
+\begin{split}
+mean & = \frac{rn}{N} \\
+mode & = \floor*{ \frac{(r+1)(n+1)}{N+2} }\\
+variance & = \frac{r(\frac{n}{N})(1-\frac{n}{N})(N-r)}{(N-1)}\\
+skewness & = \frac{(N-2n)\sqrt{(N-1)}(N-2r)}{\sqrt{rn(N-n)(N-r)}(N-2)}\\
+kurtosis & = \frac{((N - 1) N^2 ((3 r (N - r) (n^2 (-N) + (n - 2) N^2 + 6 n (N - n)))/N^2 - 6 n (N - n) + N (N + 1)))}{(r n (N - 3) (N - 2) (N - r) (N - n))}
+\end{split}
+\end{equation*}
+]
+
+[equation hypergeometric6]
+
+[endsect]
+
+[/ hypergeometric.qbk
+  Copyright 2008 John Maddock.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

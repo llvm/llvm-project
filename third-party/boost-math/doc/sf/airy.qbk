@@ -1,0 +1,390 @@
+[/
+Copyright (c) 2012 John Maddock
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:airy Airy Functions]
+
+[section:ai Airy Ai Function]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/airy.hpp>
+``
+
+  namespace boost { namespace math {
+
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` airy_ai(T x);
+
+   template <class T, class Policy>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` airy_ai(T x, const Policy&);
+
+  }} // namespaces
+  
+[heading Description]
+
+The function __airy_ai calculates the Airy function Ai which is the first solution
+to the differential equation:
+
+[equation airy]
+
+See Weisstein, Eric W. "Airy Functions." From MathWorld--A Wolfram Web Resource.
+[@http://mathworld.wolfram.com/AiryFunctions.html]
+
+and [@https://en.wikipedia.org/wiki/Airy_zeta_function Airy Zeta function].
+
+[optional_policy]
+
+The following graph illustrates how this function changes as /x/ changes: for negative /x/
+the function is cyclic, while for positive /x/ the value tends to zero:
+
+[graph airy_ai]
+
+[heading Accuracy]
+
+This function is implemented entirely in terms of the Bessel functions 
+__cyl_bessel_j and __cyl_bessel_k - refer to those functions for detailed accuracy information.
+
+In general though, the relative error is low (less than 100 [epsilon]) for /x > 0/ while
+only the absolute error is low for /x < 0/ as the following error plot illustrates:
+
+[graph ai__double]
+
+[heading Testing]
+
+Since this function is implemented in terms of other special functions, there are only a few 
+basic sanity checks, using test values from [@http://functions.wolfram.com/ Wolfram Airy Functions].
+
+[heading Implementation]
+
+This function is implemented in terms of the Bessel functions using the relations:
+
+[equation airy_ai]
+
+[endsect] [/section:ai Airy Ai Function]
+
+[section:bi Airy Bi Function]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/airy.hpp>
+``
+
+  namespace boost { namespace math {
+
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` airy_bi(T x);
+
+   template <class T, class Policy>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` airy_bi(T x, const Policy&);
+
+  }} // namespaces
+  
+[heading Description]
+
+The function __airy_bi calculates the Airy function Bi which is the second solution to the differential equation:
+
+[equation airy]
+
+[optional_policy]
+
+The following graph illustrates how this function changes as /x/ changes: for negative /x/
+the function is cyclic, while for positive /x/ the value tends to infinity:
+
+[graph airy_bi]
+
+[heading Accuracy]
+
+This function is implemented entirely in terms of the Bessel functions 
+__cyl_bessel_i and __cyl_bessel_j - refer to those functions for detailed accuracy information.
+
+In general though, the relative error is low (less than 100 [epsilon]) for /x > 0/ while
+only the absolute error is low for /x < 0/ as the following error plot illustrate:
+
+[graph bi__double]
+
+[heading Testing]
+
+Since this function is implemented in terms of other special functions, there are only a few 
+basic sanity checks, using test values from [@http://functions.wolfram.com functions.wolfram.com].
+
+[heading Implementation]
+
+This function is implemented in terms of the Bessel functions using the relations:
+
+[equation airy_bi]
+
+[endsect] [/section:bi Airy Bi Function]
+
+[section:aip Airy Ai' Function]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/airy.hpp>
+``
+
+  namespace boost { namespace math {
+
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` airy_ai_prime(T x);
+
+   template <class T, class Policy>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` airy_ai_prime(T x, const Policy&);
+
+  }} // namespaces
+  
+[heading Description]
+
+The function __airy_ai_prime calculates the Airy function Ai' which is the derivative of the first solution to the differential equation:
+
+[equation airy]
+
+[optional_policy]
+
+The following graph illustrates how this function changes as /x/ changes: for negative /x/
+the function is cyclic, while for positive /x/ the value tends to zero:
+
+[graph airy_aip]
+
+[heading Accuracy]
+
+This function is implemented entirely in terms of the Bessel functions 
+__cyl_bessel_j and __cyl_bessel_k - refer to those functions for detailed accuracy information.
+
+In general though, the relative error is low (less than 100 [epsilon]) for /x > 0/ while
+only the absolute error is low for /x < 0/ as the following error plot illustrates:
+
+[graph ai_prime__double]
+
+[heading Testing]
+
+Since this function is implemented in terms of other special functions, there are only a few 
+basic sanity checks, using test values from [@http://functions.wolfram.com functions.wolfram.com].
+
+[heading Implementation]
+
+This function is implemented in terms of the Bessel functions using the relations:
+
+[equation airy_aip]
+
+[endsect] [/section:aip Airy Ai' Function]
+
+[section:bip Airy Bi' Function]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/airy.hpp>
+``
+
+  namespace boost { namespace math {
+
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` airy_bi_prime(T x);
+
+   template <class T, class Policy>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` airy_bi_prime(T x, const Policy&);
+
+  }} // namespaces
+  
+[heading Description]
+
+The function __airy_bi_prime calculates the Airy function Bi' which is the derivative of the second solution to the differential equation:
+
+[equation airy]
+
+[optional_policy]
+
+The following graph illustrates how this function changes as /x/ changes: for negative /x/
+the function is cyclic, while for positive /x/ the value tends to infinity:
+
+[graph airy_bi]
+
+[heading Accuracy]
+
+This function is implemented entirely in terms of the Bessel functions 
+__cyl_bessel_i and __cyl_bessel_j - refer to those functions for detailed accuracy information.
+
+In general though, the relative error is low (less than 100 [epsilon]) for /x > 0/ while
+only the absolute error is low for /x < 0/ as the following error plot illustrates:
+
+[graph bi_prime__double]
+
+[heading Testing]
+
+Since this function is implemented in terms of other special functions, there are only a few 
+basic sanity checks, using test values from [@http://functions.wolfram.com functions.wolfram.com].
+
+[heading Implementation]
+
+This function is implemented in terms of the Bessel functions using the relations:
+
+[equation airy_bip]
+
+[endsect] [/section:bip Airy Bi' Function]
+
+[section:airy_root Finding Zeros of Airy Functions]
+
+[h4 Synopsis]
+
+`#include <boost/math/special_functions/airy.hpp>`
+
+Functions for obtaining both a single zero or root of the Airy functions,
+and placing multiple zeros into a container like `std::vector`
+by providing an output iterator.
+
+The signature of the single value functions are:
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED T airy_ai_zero(
+           int m);         // 1-based index of zero.
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED T airy_bi_zero(
+           int m);         // 1-based index of zero.
+
+and for multiple zeros:
+
+ template <class T, class OutputIterator>
+ BOOST_MATH_GPU_ENABLED OutputIterator airy_ai_zero(
+                      int start_index,           // 1-based index of first zero.
+                      unsigned number_of_zeros,  // How many zeros to generate.
+                      OutputIterator out_it);    // Destination for zeros.
+
+ template <class T, class OutputIterator>
+ BOOST_MATH_GPU_ENABLED OutputIterator airy_bi_zero(
+                      int start_index,           // 1-based index of zero.
+                      unsigned number_of_zeros,  // How many zeros to generate
+                      OutputIterator out_it);    // Destination for zeros.
+
+There are also versions which allow control of the __policy_section for error handling and precision.
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED T airy_ai_zero(
+           int m,          // 1-based index of zero.
+           const Policy&); // Policy to use.
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED T airy_bi_zero(
+           int m,          // 1-based index of zero.
+           const Policy&); // Policy to use.
+
+
+ template <class T, class OutputIterator>
+ BOOST_MATH_GPU_ENABLED OutputIterator airy_ai_zero(
+                      int start_index,           // 1-based index of first zero.
+                      unsigned number_of_zeros,  // How many zeros to generate.
+                      OutputIterator out_it,     // Destination for zeros.
+                      const Policy& pol);        // Policy to use.
+
+ template <class T, class OutputIterator>
+ BOOST_MATH_GPU_ENABLED OutputIterator airy_bi_zero(
+                      int start_index,           // 1-based index of zero.
+                      unsigned number_of_zeros,  // How many zeros to generate.
+                      OutputIterator out_it,     // Destination for zeros.
+                      const Policy& pol);        // Policy to use.
+
+[h4 Description]
+
+The Airy Ai and Bi functions have an infinite
+number of zeros on the negative real axis. The real zeros on the negative real
+axis can be found by solving for the roots of
+
+[:['Ai(x[sub m]) = 0]]
+
+[:['Bi(y[sub m]) = 0]]
+
+Here, ['x[sub m]] represents the ['m[super th]]
+root of the Airy Ai function,
+and ['y[sub m]] represents the ['m[super th]]
+root of the Airy Bi function.
+
+The zeros or roots (values of `x` where the function crosses the horizontal `y = 0` axis)
+of the Airy Ai and Bi functions are computed by two functions,
+`airy_ai_zero` and `airy_bi_zero`.
+
+In each case the index or rank of the zero
+returned is 1-based, which is to say:
+
+   airy_ai_zero(1);
+
+returns the first zero of Ai.
+
+Passing an `start_index <= 0` results in a __domain_error being raised.
+
+The first few zeros returned by these functions have approximate values as follows:
+
+[table
+[[m][Ai][Bi]]
+[[1][-2.33811...][-1.17371...]]
+[[2][-4.08795...][-3.27109...]]
+[[3][-5.52056...][-4.83074...]]
+[[4][-6.78671...][-6.16985...]]
+[[5][-7.94413...][-7.37676...]]
+[[6][-9.02265...][-8.49195...]]
+]
+
+[graph airy_zeros]
+
+[h4 Examples of finding Airy Zeros]
+
+[import ../../example/airy_zeros_example.cpp]
+
+[airy_zeros_example_1]
+[airy_zeros_example_2]
+
+Produces the program output:
+[pre
+boost::math::airy_ai_zero<double>(1) = -2.33811
+boost::math::airy_ai_zero<double>(2) = -4.08795
+boost::math::airy_bi_zero<double>(3) = -4.83074
+airy_ai_zeros:
+-2.33811
+-4.08795
+-5.52056
+-6.78671
+-7.94413
+
+boost::math::airy_bi_zero<float_type>(1)  = -2.3381074104597670384891972524467354406385401456711
+boost::math::airy_bi_zero<float_type>(2)  = -4.0879494441309706166369887014573910602247646991085
+boost::math::airy_bi_zero<float_type>(7)  = -9.5381943793462388866329885451560196208390720763825
+airy_ai_zeros:
+-2.3381074104597670384891972524467354406385401456711
+-4.0879494441309706166369887014573910602247646991085
+-5.5205598280955510591298555129312935737972142806175
+]
+
+The full code (and output) for this example is at
+[@../../example/airy_zeros_example.cpp airy_zeros_example.cpp],
+
+[h3 Implementation]
+
+Given the following function (A&S 10.4.105):
+
+[equation airy_zero_1]
+
+Then an initial estimate for the n[super th] zero a[sub n] of Ai is given by (A&S 10.4.94):
+
+[equation airy_zero_2]
+
+and an initial estimate for the n[super th] zero b[sub n] of Bi is given by (A&S 10.4.98):
+
+[equation airy_zero_3]
+
+Thereafter the roots are refined using Newton iteration.
+
+[h3 Testing]
+
+The precision of evaluation of zeros was tested at 50 decimal digits using `cpp_dec_float_50`
+and found identical with spot values computed by __WolframAlpha.
+
+[endsect] [/section:airy_root Finding Zeros of Airy Functions]
+
+[endsect] [/section:airy Airy Functions]
+

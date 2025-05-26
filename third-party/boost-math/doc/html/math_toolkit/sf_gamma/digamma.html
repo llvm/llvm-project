@@ -1,0 +1,483 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Digamma</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../sf_gamma.html" title="Gamma Functions">
+<link rel="prev" href="lgamma.html" title="Log Gamma">
+<link rel="next" href="trigamma.html" title="Trigamma">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="lgamma.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../sf_gamma.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="trigamma.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.sf_gamma.digamma"></a><a class="link" href="digamma.html" title="Digamma">Digamma</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.sf_gamma.digamma.h0"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.digamma.synopsis"></a></span><a class="link" href="digamma.html#math_toolkit.sf_gamma.digamma.synopsis">Synopsis</a>
+      </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">digamma</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">digamma</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">digamma</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<h5>
+<a name="math_toolkit.sf_gamma.digamma.h1"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.digamma.description"></a></span><a class="link" href="digamma.html#math_toolkit.sf_gamma.digamma.description">Description</a>
+      </h5>
+<p>
+        Returns the digamma or psi function of <span class="emphasis"><em>x</em></span>. Digamma is
+        defined as the logarithmic derivative of the gamma function:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/digamma1.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/digamma.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<p>
+        The final <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+        be used to control the behaviour of the function: how it handles errors,
+        what level of precision to use etc. Refer to the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy
+        documentation for more details</a>.
+      </p>
+<p>
+        The return type of this function is computed using the <a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>result
+        type calculation rules</em></span></a>: the result is of type <code class="computeroutput"><span class="keyword">double</span></code> when T is an integer type, and type
+        T otherwise.
+      </p>
+<h5>
+<a name="math_toolkit.sf_gamma.digamma.h2"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.digamma.accuracy"></a></span><a class="link" href="digamma.html#math_toolkit.sf_gamma.digamma.accuracy">Accuracy</a>
+      </h5>
+<p>
+        The following table shows the peak errors (in units of epsilon) found on
+        various platforms with various floating point types. Unless otherwise specified
+        any floating point type that is narrower than the one shown will have <a class="link" href="../relative_error.html#math_toolkit.relative_error.zero_error">effectively zero error</a>.
+      </p>
+<div class="table">
+<a name="math_toolkit.sf_gamma.digamma.table_digamma"></a><p class="title"><b>Table 8.4. Error rates for digamma</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for digamma">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> double
+                </p>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Microsoft Visual C++ version 14.1<br> Win32<br> double
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Digamma Function: Large Values
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 1.84ε (Mean = 0.71ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 1.18ε (Mean = 0.331ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.39ε (Mean = 0.413ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.39ε (Mean = 0.413ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.98ε (Mean = 0.369ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Digamma Function: Near the Positive Root
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.891ε (Mean = 0.0995ε)</span><br>
+                  <br> (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 135ε (Mean = 11.9ε))<br>
+                  (<span class="emphasis"><em>Rmath 3.2.3:</em></span> Max = 2.02e+03ε (Mean = 256ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.37ε (Mean = 0.477ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1.31ε (Mean = 0.471ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.997ε (Mean = 0.527ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Digamma Function: Near Zero
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 0.953ε (Mean = 0.348ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 1.17ε (Mean = 0.564ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.984ε (Mean = 0.361ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.984ε (Mean = 0.361ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.953ε (Mean = 0.337ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Digamma Function: Negative Values
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 4.56e+04ε (Mean = 3.91e+03ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 4.6e+04ε (Mean = 3.94e+03ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 180ε (Mean = 13ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 180ε (Mean = 13ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 214ε (Mean = 16.1ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Digamma Function: Values near 0
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 0.866ε (Mean = 0.387ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 3.58e+05ε (Mean = 1.6e+05ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1ε (Mean = 0.592ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 1ε (Mean = 0.592ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Digamma Function: Integer arguments
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.992ε (Mean = 0.215ε)</span><br> <br>
+                  (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 1.18ε (Mean = 0.607ε))<br>
+                  (<span class="emphasis"><em>Rmath 3.2.3:</em></span> Max = 4.33ε (Mean = 0.982ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.888ε (Mean = 0.403ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.888ε (Mean = 0.403ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.992ε (Mean = 0.452ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Digamma Function: Half integer arguments
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 1.09ε (Mean = 0.531ε))<br> (<span class="emphasis"><em>Rmath
+                  3.2.3:</em></span> Max = 46.2ε (Mean = 7.24ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.906ε (Mean = 0.409ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.906ε (Mean = 0.409ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.78ε (Mean = 0.314ε)</span>
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+        As shown above, error rates for positive arguments are generally very low.
+        For negative arguments there are an infinite number of irrational roots:
+        relative errors very close to these can be arbitrarily large, although absolute
+        error will remain very low.
+      </p>
+<p>
+        The following error plot are based on an exhaustive search of the functions
+        domain, MSVC-15.5 at <code class="computeroutput"><span class="keyword">double</span></code>
+        precision, and GCC-7.1/Ubuntu for <code class="computeroutput"><span class="keyword">long</span>
+        <span class="keyword">double</span></code> and <code class="computeroutput"><span class="identifier">__float128</span></code>.
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/digamma__double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/digamma__80_bit_long_double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/digamma____float128.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.sf_gamma.digamma.h3"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.digamma.testing"></a></span><a class="link" href="digamma.html#math_toolkit.sf_gamma.digamma.testing">Testing</a>
+      </h5>
+<p>
+        There are two sets of tests: spot values are computed using the online calculator
+        at functions.wolfram.com, while random test values are generated using the
+        high-precision reference implementation (a differentiated <a class="link" href="../lanczos.html" title="The Lanczos Approximation">Lanczos
+        approximation</a> see below).
+      </p>
+<h5>
+<a name="math_toolkit.sf_gamma.digamma.h4"></a>
+        <span class="phrase"><a name="math_toolkit.sf_gamma.digamma.implementation"></a></span><a class="link" href="digamma.html#math_toolkit.sf_gamma.digamma.implementation">Implementation</a>
+      </h5>
+<p>
+        The implementation is divided up into the following domains:
+      </p>
+<p>
+        For Negative arguments the reflection formula:
+      </p>
+<pre class="programlisting"><span class="identifier">digamma</span><span class="special">(</span><span class="number">1</span><span class="special">-</span><span class="identifier">x</span><span class="special">)</span> <span class="special">=</span> <span class="identifier">digamma</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">+</span> <span class="identifier">pi</span><span class="special">/</span><span class="identifier">tan</span><span class="special">(</span><span class="identifier">pi</span><span class="special">*</span><span class="identifier">x</span><span class="special">);</span>
+</pre>
+<p>
+        is used to make <span class="emphasis"><em>x</em></span> positive.
+      </p>
+<p>
+        For arguments in the range [0,1] the recurrence relation:
+      </p>
+<pre class="programlisting"><span class="identifier">digamma</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">=</span> <span class="identifier">digamma</span><span class="special">(</span><span class="identifier">x</span><span class="special">+</span><span class="number">1</span><span class="special">)</span> <span class="special">-</span> <span class="number">1</span><span class="special">/</span><span class="identifier">x</span>
+</pre>
+<p>
+        is used to shift the evaluation to [1,2].
+      </p>
+<p>
+        For arguments in the range [1,2] a rational approximation <a class="link" href="../sf_implementation.html#math_toolkit.sf_implementation.rational_approximations_used">devised
+        by JM</a> is used (see below).
+      </p>
+<p>
+        For arguments in the range [2,BIG] the recurrence relation:
+      </p>
+<pre class="programlisting"><span class="identifier">digamma</span><span class="special">(</span><span class="identifier">x</span><span class="special">+</span><span class="number">1</span><span class="special">)</span> <span class="special">=</span> <span class="identifier">digamma</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">+</span> <span class="number">1</span><span class="special">/</span><span class="identifier">x</span><span class="special">;</span>
+</pre>
+<p>
+        is used to shift the evaluation to the range [1,2].
+      </p>
+<p>
+        For arguments &gt; BIG the asymptotic expansion:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/digamma2.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        can be used. However, this expansion is divergent after a few terms: exactly
+        how many terms depends on the size of <span class="emphasis"><em>x</em></span>. Therefore the
+        value of <span class="emphasis"><em>BIG</em></span> must be chosen so that the series can be
+        truncated at a term that is too small to have any effect on the result when
+        evaluated at <span class="emphasis"><em>BIG</em></span>. Choosing BIG=10 for up to 80-bit reals,
+        and BIG=20 for 128-bit reals allows the series to truncated after a suitably
+        small number of terms and evaluated as a polynomial in <code class="computeroutput"><span class="number">1</span><span class="special">/(</span><span class="identifier">x</span><span class="special">*</span><span class="identifier">x</span><span class="special">)</span></code>.
+      </p>
+<p>
+        The arbitrary precision version of this function uses recurrence relations
+        until x &gt; BIG, and then evaluation via the asymptotic expansion above.
+        As special cases integer and half integer arguments are handled via:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/digamma4.svg"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/digamma5.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        The rational approximation <a class="link" href="../sf_implementation.html#math_toolkit.sf_implementation.rational_approximations_used">devised
+        by JM</a> in the range [1,2] is derived as follows.
+      </p>
+<p>
+        First a high precision approximation to digamma was constructed using a 60-term
+        differentiated <a class="link" href="../lanczos.html" title="The Lanczos Approximation">Lanczos approximation</a>,
+        the form used is:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/digamma3.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Where P(x) and Q(x) are the polynomials from the rational form of the Lanczos
+        sum, and P'(x) and Q'(x) are their first derivatives. The Lanzos part of
+        this approximation has a theoretical precision of ~100 decimal digits. However,
+        cancellation in the above sum will reduce that to around <code class="computeroutput"><span class="number">99</span><span class="special">-(</span><span class="number">1</span><span class="special">/</span><span class="identifier">y</span><span class="special">)</span></code> digits
+        if <span class="emphasis"><em>y</em></span> is the result. This approximation was used to calculate
+        the positive root of digamma, and was found to agree with the value used
+        by Cody to 25 digits (See Math. Comp. 27, 123-127 (1973) by Cody, Strecok
+        and Thacher) and with the value used by Morris to 35 digits (See TOMS Algorithm
+        708).
+      </p>
+<p>
+        Likewise a few spot tests agreed with values calculated using functions.wolfram.com
+        to &gt;40 digits. That's sufficiently precise to insure that the approximation
+        below is accurate to double precision. Achieving 128-bit long double precision
+        requires that the location of the root is known to ~70 digits, and it's not
+        clear whether the value calculated by this method meets that requirement:
+        the difficulty lies in independently verifying the value obtained.
+      </p>
+<p>
+        The rational approximation <a class="link" href="../sf_implementation.html#math_toolkit.sf_implementation.rational_approximations_used">devised
+        by JM</a> was optimised for absolute error using the form:
+      </p>
+<pre class="programlisting"><span class="identifier">digamma</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">x</span> <span class="special">-</span> <span class="identifier">X0</span><span class="special">)(</span><span class="identifier">Y</span> <span class="special">+</span> <span class="identifier">R</span><span class="special">(</span><span class="identifier">x</span> <span class="special">-</span> <span class="number">1</span><span class="special">));</span>
+</pre>
+<p>
+        Where X0 is the positive root of digamma, Y is a constant, and R(x - 1) is
+        the rational approximation. Note that since X0 is irrational, we need twice
+        as many digits in X0 as in x in order to avoid cancellation error during
+        the subtraction (this assumes that <span class="emphasis"><em>x</em></span> is an exact value,
+        if it's not then all bets are off). That means that even when x is the value
+        of the root rounded to the nearest representable value, the result of digamma(x)
+        <span class="emphasis"><em><span class="bold"><strong>will not be zero</strong></span></em></span>.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="lgamma.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../sf_gamma.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="trigamma.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

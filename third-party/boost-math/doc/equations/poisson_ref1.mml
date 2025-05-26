@@ -1,0 +1,35 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mtext>f</mtext>
+    <mfenced>
+      <mrow>
+        <mi>k</mi>
+        <mo>;</mo>
+        <mi>&#x03BB;</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mfrac>
+      <mrow>
+        <msup>
+          <mi>e</mi>
+          <mrow>
+            <mo>&#x2212;</mo>
+            <mi>&#x03BB;</mi>
+          </mrow>
+        </msup>
+        <msup>
+          <mi>&#x03BB;</mi>
+          <mi>k</mi>
+        </msup>
+      </mrow>
+      <mrow>
+        <mi>k</mi>
+        <mo>!</mo>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+

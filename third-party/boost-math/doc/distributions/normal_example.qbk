@@ -1,0 +1,36 @@
+[section:normal_example Normal Distribution Examples]
+
+(See also the reference documentation for the __normal_distrib.)
+
+[section:normal_misc Some Miscellaneous Examples of the Normal (Gaussian) Distribution]
+
+The sample program [@../../example/normal_misc_examples.cpp 
+normal_misc_examples.cpp] illustrates their use.
+
+[import ../../example/normal_misc_examples.cpp]
+
+[h4 Traditional Tables]
+[normal_basic1]
+
+[h4 Standard deviations either side of the Mean]
+[normal_basic2]
+[h4 Some simple examples]
+[h4 Life of light bulbs]
+[normal_bulbs_example1]
+[h4 How many onions?]
+[normal_bulbs_example3]
+[h4 Packing beef]
+[normal_bulbs_example4]
+[h4 Length of bolts]
+[normal_bulbs_example5]
+
+[endsect] [/section:normal_misc Some Miscellaneous Examples of the Normal Distribution]
+[endsect] [/section:normal_example Normal Distribution Examples]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

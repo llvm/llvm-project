@@ -1,0 +1,497 @@
+[/ def names all end in distrib to avoid clashes with names of functions]
+
+[def __binomial_distrib [link math_toolkit.dist_ref.dists.binomial_dist Binomial Distribution]]
+[def __chi_squared_distrib [link math_toolkit.dist_ref.dists.chi_squared_dist Chi Squared Distribution]]
+[def __normal_distrib [link math_toolkit.dist_ref.dists.normal_dist Normal Distribution]]
+[def __F_distrib [link math_toolkit.dist_ref.dists.f_dist Fisher F Distribution]]
+[def __students_t_distrib [link math_toolkit.dist_ref.dists.students_t_dist Students t Distribution]]
+
+[def __handbook [@http://www.itl.nist.gov/div898/handbook/
+NIST/SEMATECH e-Handbook of Statistical Methods.]]
+
+[section:stat_tut Statistical Distributions Tutorial]
+This library is centred around statistical distributions, this tutorial
+will give you an overview of what they are, how they can be used, and
+provides a few worked examples of applying the library to statistical tests.
+
+[section:overview Overview of Statistical Distributions]
+
+[section:headers Headers and Namespaces]
+
+All the code in this library is inside `namespace boost::math`.
+
+In order to use a distribution /my_distribution/ you will need to include
+either the header(s) `<boost/math/my_distribution.hpp>` (quicker compiles), or
+the "include all the distributions" header: `<boost/math/distributions.hpp>`.
+
+For example, to use the Students-t distribution include either
+`<boost/math/students_t.hpp>` or
+`<boost/math/distributions.hpp>`
+
+You also need to bring distribution names into scope,
+perhaps with a `using namespace boost::math;` declaration,
+
+or specific  `using` declarations like `using boost::math::normal;` (*recommended*).
+
+[caution Some math function names are also used in `namespace std` so including `<random>` could cause ambiguity!]
+
+[endsect] [/ section:headers Headers and Namespaces]
+
+[section:objects Distributions are Objects]
+
+Each kind of distribution in this library is a class type - an object, with member functions.
+
+[tip If you are familiar with statistics libraries using functions,
+and 'Distributions as Objects' seem alien, see
+[link math_toolkit.stat_tut.weg.nag_library the comparison to
+other statistics libraries.]
+] [/tip]
+
+[link policy Policies] provide optional fine-grained control
+of the behaviour of these classes, allowing the user to customise
+behaviour such as how errors are handled, or how the quantiles
+of discrete distributions behave.
+
+Making distributions class types does two things:
+
+* It encapsulates the kind of distribution in the C++ type system;
+so, for example, Students-t distributions are always a different C++ type from
+Chi-Squared distributions.
+* The distribution objects store any parameters associated with the
+distribution: for example, the Students-t distribution has a
+['degrees of freedom] parameter that controls the shape of the distribution.
+This ['degrees of freedom] parameter has to be provided
+to the Students-t object when it is constructed.
+
+Although the distribution classes in this library are templates, there
+are typedefs on type /double/ that mostly take the usual name of the
+distribution
+(except where there is a clash with a function of the same name: beta and gamma,
+in which case using the default template arguments - `RealType = double` -
+is nearly as convenient).
+Probably 95% of uses are covered by these typedefs:
+
+   // using namespace boost::math; // Avoid potential ambiguity with names in std <random>
+   // Safer to declare specific functions with using statement(s):
+
+   using boost::math::beta_distribution;
+   using boost::math::binomial_distribution;
+   using boost::math::students_t;
+
+   // Construct a students_t distribution with 4 degrees of freedom:
+   students_t d1(4);
+
+   // Construct a double-precision beta distribution
+   // with parameters a = 10, b = 20
+   beta_distribution<> d2(10, 20); // Note: _distribution<> suffix !
+
+If you need to use the distributions with a type other than `double`,
+then you can instantiate the template directly: the names of the
+templates are the same as the `double` typedef but with `_distribution`
+appended, for example: __students_t_distrib or __binomial_distrib:
+
+   // Construct a students_t distribution, of float type,
+   // with 4 degrees of freedom:
+   students_t_distribution<float> d3(4);
+
+   // Construct a binomial distribution, of long double type,
+   // with probability of success 0.3
+   // and 20 trials in total:
+   binomial_distribution<long double> d4(20, 0.3);
+
+The parameters passed to the distributions can be accessed via getter member
+functions:
+
+   d1.degrees_of_freedom();  // returns 4.0
+
+This is all well and good, but not very useful so far.  What we often want
+is to be able to calculate the /cumulative distribution functions/ and
+/quantiles/ etc for these distributions.
+
+[endsect] [/section:objects Distributions are Objects]
+
+
+[section:generic Generic operations common to all distributions are non-member functions]
+
+Want to calculate the PDF (Probability Density Function) of a distribution?
+No problem, just use:
+
+   pdf(my_dist, x);  // Returns PDF (density) at point x of distribution my_dist.
+
+Or how about the CDF (Cumulative Distribution Function):
+
+   cdf(my_dist, x);  // Returns CDF (integral from -infinity to point x)
+                     // of distribution my_dist.
+
+And quantiles are just the same:
+
+   quantile(my_dist, p);  // Returns the value of the random variable x
+                          // such that cdf(my_dist, x) == p.
+
+As are the logcdf (Natural log of the Cumulative Distribution Function):
+
+   logcdf(my_dist, x); // Returns logcdf at at point x of distribution my_dist.
+
+And the logpdf (Natural log of the Probability Density Function):
+
+   logpdf(my_dist, x); // Returns logpdf at point x of distribution my_dist.
+
+If you're wondering why these aren't member functions, it's to
+make the library more easily extensible: if you want to add additional
+generic operations - let's say the /n'th moment/ - then all you have to
+do is add the appropriate non-member functions, overloaded for each
+implemented distribution type.
+
+The logcdf and logpdf functions are minimally calculated with log(cdf(my_dist, x)),
+and log(pdf(my_dist, x)) respectively. The following distributions have specialized
+implementations of the logcdf:
+
+* Exponential
+* Extreme Value
+* Geometric
+* Laplace
+* Logistic
+* Pareto
+* Rayleigh
+* Weibull
+
+And the following distributions have specialized implementations of logpdf:
+
+* Exponential
+* Extreme Value
+* Gamma
+* Inverse Gamma
+* Inverse Gaussian
+* Laplace
+* Normal
+* Poisson
+* Rayleigh
+* Weibull
+
+These above listed specialized implementations allow a higher degree of precision
+than can be obtained through the naive generic method.
+
+[tip
+
+[*Random numbers that approximate Quantiles of Distributions]
+
+If you want random numbers that are distributed in a specific way,
+for example in a uniform, normal or triangular,
+see [@http://www.boost.org/libs/random/ Boost.Random].
+
+Whilst in principal there's nothing to prevent you from using the
+quantile function to convert a uniformly distributed random
+number to another distribution, in practice there are much more
+efficient algorithms available that are specific to random number generation.
+] [/tip Random numbers that approximate Quantiles of Distributions]
+
+For example, the binomial distribution has two parameters:
+n (the number of trials) and p (the probability of success on any one trial).
+
+The `binomial_distribution` constructor therefore has two parameters:
+
+`binomial_distribution(RealType n, RealType p);`
+
+For this distribution the __random_variate is k: the number of successes observed.
+The probability density\/mass function (pdf) is therefore written as ['f(k; n, p)].
+
+[note
+
+[*Random Variates and Distribution Parameters]
+
+The concept of a __random_variable is closely linked to the term __random_variate:
+a random variate is a particular value (outcome) of a random variable.
+and [@http://en.wikipedia.org/wiki/Parameter distribution parameters]
+are conventionally distinguished (for example in Wikipedia and Wolfram MathWorld)
+by placing a semi-colon or vertical bar)
+/after/ the __random_variable (whose value you 'choose'),
+to separate the variate from the parameter(s) that defines the shape of the distribution.
+
+For example, the binomial distribution probability distribution function (PDF) is written as
+[role serif_italic ['f(k| n, p)] = Pr(K = k|n, p) = ] probability of observing k successes out of n trials.
+K is the __random_variable, k is the __random_variate, 
+the parameters are n (trials) and p (probability).
+] [/tip Random Variates and Distribution Parameters]
+
+[note  By convention, __random_variate are lower case, usually k is integral, x if real, and
+__random_variable are upper case, K if integral, X if real.  But this implementation treats
+all as floating point values `RealType`, so if you really want an integral result,
+you must round: see note on Discrete Probability Distributions below for details.] 
+
+As noted above the non-member function `pdf` has one parameter for the distribution object,
+and a second for the random variate.  So taking our binomial distribution
+example, we would write:
+
+`pdf(binomial_distribution<RealType>(n, p), k);`
+
+The ranges of __random_variate values that are permitted and are supported can be
+tested by using two functions `range` and `support`.
+
+The distribution (effectively the __random_variate) is said to be 'supported'
+over a range that is
+[@http://en.wikipedia.org/wiki/Probability_distribution
+ "the smallest closed set whose complement has probability zero"].
+MathWorld uses the word 'defined' for this range.
+Non-mathematicians might say it means the 'interesting' smallest range
+of random variate x that has the cdf going from zero to unity.
+Outside are uninteresting zones where the pdf is zero, and the cdf zero or unity.
+
+For most distributions, with probability distribution functions one might describe
+as 'well-behaved', we have decided that it is most useful for the supported range
+to *exclude* random variate values like exact zero *if the end point is discontinuous*.
+For example, the Weibull (scale 1, shape 1) distribution smoothly heads for unity
+as the random variate x declines towards zero.
+But at x = zero, the value of the pdf is suddenly exactly zero, by definition.
+If you are plotting the PDF, or otherwise calculating,
+zero is not the most useful value for the lower limit of supported, as we discovered.
+So for this, and similar distributions,
+we have decided it is most numerically useful to use
+the closest value to zero, min_value, for the limit of the supported range.
+(The `range` remains from zero, so you will still get `pdf(weibull, 0) == 0`).
+(Exponential and gamma distributions have similarly discontinuous functions).
+
+Mathematically, the functions may make sense with an (+ or -) infinite value,
+but except for a few special cases (in the Normal and Cauchy distributions)
+this implementation limits random variates to finite values from the `max`
+to `min` for the `RealType`.
+(See [link math_toolkit.sf_implementation.handling_of_floating_point_infin
+Handling of Floating-Point Infinity] for rationale).
+
+
+[note
+
+[*Discrete Probability Distributions]
+
+Note that the [@http://en.wikipedia.org/wiki/Discrete_probability_distribution
+discrete distributions], including the binomial, negative binomial, Poisson & Bernoulli,
+are all mathematically defined as discrete functions:
+that is to say the functions `cdf` and `pdf` are only defined for integral values
+of the random variate.
+
+However, because the method of calculation often uses continuous functions
+it is convenient to treat them as if they were continuous functions,
+and permit non-integral values of their parameters.
+
+Users wanting to enforce a strict mathematical model may use `floor`
+or `ceil` functions on the random variate prior to calling the distribution
+function.
+
+The quantile functions for these distributions are hard to specify
+in a manner that will satisfy everyone all of the time.  The default
+behaviour is to return an integer result, that has been rounded
+/outwards/: that is to say, lower quantiles - where the probability
+is less than 0.5 are rounded down, while upper quantiles - where
+the probability is greater than 0.5 - are rounded up.  This behaviour
+ensures that if an X% quantile is requested, then /at least/ the requested
+coverage will be present in the central region, and /no more than/
+the requested coverage will be present in the tails.
+
+This behaviour can be changed so that the quantile functions are rounded
+differently, or return a real-valued result using
+[link math_toolkit.pol_overview Policies].  It is strongly
+recommended that you read the tutorial
+[link math_toolkit.pol_tutorial.understand_dis_quant
+Understanding Quantiles of Discrete Distributions] before
+using the quantile function on a discrete distribution.  The
+[link math_toolkit.pol_ref.discrete_quant_ref reference docs]
+describe how to change the rounding policy
+for these distributions.
+
+For similar reasons continuous distributions with parameters like
+"degrees of freedom"
+that might appear to be integral, are treated as real values
+(and are promoted from integer to floating-point if necessary).
+In this case however, there are a small number of situations where non-integral
+degrees of freedom do have a genuine meaning.
+]
+
+[endsect] [/ section:generic Generic operations common to all distributions are non-member functions]
+
+[section:complements Complements are supported too - and when to use them]
+
+Often you don't want the value of the CDF, but its complement, which is
+to say `1-p` rather than `p`.  It is tempting to calculate the CDF and subtract
+it from `1`, but if `p` is very close to `1` then cancellation error
+will cause you to lose accuracy, perhaps totally.
+
+[link why_complements See below ['"Why and when to use complements?"]]
+
+In this library, whenever you want to receive a complement, just wrap
+all the function arguments in a call to `complement(...)`, for example:
+
+   students_t dist(5);
+   cout << "CDF at t = 1 is " << cdf(dist, 1.0) << endl;
+   cout << "Complement of CDF at t = 1 is " << cdf(complement(dist, 1.0)) << endl;
+
+But wait, now that we have a complement, we have to be able to use it as well.
+Any function that accepts a probability as an argument can also accept a complement
+by wrapping all of its arguments in a call to `complement(...)`, for example:
+
+   students_t dist(5);
+
+   for(double i = 10; i < 1e10; i *= 10)
+   {
+      // Calculate the quantile for a 1 in i chance:
+      double t = quantile(complement(dist, 1/i));
+      // Print it out:
+      cout << "Quantile of students-t with 5 degrees of freedom\n"
+              "for a 1 in " << i << " chance is " << t << endl;
+   }
+
+[tip
+
+[*Critical values are just quantiles]
+
+Some texts talk about quantiles, or percentiles or fractiles,
+others about critical values, the basic rule is:
+
+['Lower critical values] are the same as the quantile.
+
+['Upper critical values] are the same as the quantile from the complement
+of the probability.
+
+For example, suppose we have a Bernoulli process, giving rise to a binomial
+distribution with success ratio 0.1 and 100 trials in total.  The
+['lower critical value] for a probability of 0.05 is given by:
+
+`quantile(binomial(100, 0.1), 0.05)`
+
+and the ['upper critical value] is given by:
+
+`quantile(complement(binomial(100, 0.1), 0.05))`
+
+which return 4.82 and 14.63 respectively.
+]
+
+[#why_complements]
+[tip
+
+[*Why bother with complements anyway?]
+
+It's very tempting to dispense with complements, and simply subtract
+the probability from 1 when required.  However, consider what happens when
+the probability is very close to 1: let's say the probability expressed at
+float precision is `0.999999940f`, then `1 - 0.999999940f = 5.96046448e-008`,
+but the result is actually accurate to just ['one single bit]: the only
+bit that didn't cancel out!
+
+Or to look at this another way: consider that we want the risk of falsely
+rejecting the null-hypothesis in the Student's t test to be 1 in 1 billion,
+for a sample size of 10,000.
+This gives a probability of 1 - 10[super -9], which is exactly 1 when
+calculated at float precision.  In this case calculating the quantile from
+the complement neatly solves the problem, so for example:
+
+`quantile(complement(students_t(10000), 1e-9))`
+
+returns the expected t-statistic `6.00336`, where as:
+
+`quantile(students_t(10000), 1-1e-9f)`
+
+raises an overflow error, since it is the same as:
+
+`quantile(students_t(10000), 1)`
+
+Which has no finite result.
+
+With all distributions, even for more reasonable probability
+(unless the value of p can be represented exactly in the floating-point type)
+the loss of accuracy quickly becomes significant if you simply calculate probability from 1 - p
+(because it will be mostly garbage digits for p ~ 1).
+
+So always avoid, for example, using a probability near to unity like 0.99999
+
+`quantile(my_distribution, 0.99999)`
+
+and instead use
+
+`quantile(complement(my_distribution, 0.00001))`
+
+since 1 - 0.99999 is not exactly equal to 0.00001 when using floating-point arithmetic.
+
+This assumes that the 0.00001 value is either a constant,
+or can be computed by some manner other than subtracting 0.99999 from 1.
+
+] [/ tip *Why bother with complements anyway?]
+
+[endsect] [/ section:complements Complements are supported too - and why]
+
+[section:parameters Parameters can be calculated]
+
+Sometimes it's the parameters that define the distribution that you
+need to find.  Suppose, for example, you have conducted a Students-t test
+for equal means and the result is borderline.  Maybe your two samples
+differ from each other, or maybe they don't; based on the result
+of the test you can't be sure.  A legitimate question to ask then is
+"How many more measurements would I have to take before I would get
+an X% probability that the difference is real?"  Parameter finders
+can answer questions like this, and are necessarily different for
+each distribution.  They are implemented as static member functions
+of the distributions, for example:
+
+   students_t::find_degrees_of_freedom(
+      1.3,        // difference from true mean to detect
+      0.05,       // maximum risk of falsely rejecting the null-hypothesis.
+      0.1,        // maximum risk of falsely failing to reject the null-hypothesis.
+      0.13);      // sample standard deviation
+
+Returns the number of degrees of freedom required to obtain a 95%
+probability that the observed differences in means is not down to
+chance alone.  In the case that a borderline Students-t test result
+was previously obtained, this can be used to estimate how large the sample size
+would have to become before the observed difference was considered
+significant.  It assumes, of course, that the sample mean and standard
+deviation are invariant with sample size.
+
+[endsect] [/ section:parameters Parameters can be calculated]
+
+[section:summary Summary]
+
+* Distributions are objects, which are constructed from whatever
+parameters the distribution may have.
+* Member functions allow you to retrieve the parameters of a distribution.
+* Generic non-member functions provide access to the properties that
+are common to all the distributions (PDF, CDF, quantile etc).
+* Complements of probabilities are calculated by wrapping the function's
+arguments in a call to `complement(...)`.
+* Functions that accept a probability can accept a complement of the
+probability as well, by wrapping the function's
+arguments in a call to `complement(...)`.
+* Static member functions allow the parameters of a distribution
+to be found from other information.
+
+Now that you have the basics, the next section looks at some worked examples.
+
+[endsect] [/section:summary Summary]
+[endsect] [/section:overview Overview]
+
+[section:weg Worked Examples]
+[include distribution_construction.qbk]
+[include students_t_examples.qbk]
+[include chi_squared_examples.qbk]
+[include f_dist_example.qbk]
+[include binomial_example.qbk]
+[include geometric_example.qbk]
+[include negative_binomial_example.qbk]
+[include normal_example.qbk]
+[/include inverse_gamma_example.qbk]
+[/include inverse_gaussian_example.qbk]
+[include inverse_chi_squared_eg.qbk]
+[include nc_chi_squared_example.qbk]
+[include error_handling_example.qbk]
+[include find_location_and_scale.qbk]
+[include nag_library.qbk]
+[include c_sharp.qbk]
+[endsect] [/section:weg Worked Examples]
+
+[include background.qbk]
+
+[endsect] [/ section:stat_tut Statistical Distributions Tutorial]
+
+[/ dist_tutorial.qbk
+  Copyright 2006, 2010, 2011 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

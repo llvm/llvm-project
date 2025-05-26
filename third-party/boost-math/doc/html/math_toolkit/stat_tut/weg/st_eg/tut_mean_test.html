@@ -1,0 +1,333 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Testing a sample mean for difference from a "true" mean</title>
+<link rel="stylesheet" href="../../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../st_eg.html" title="Student's t Distribution Examples">
+<link rel="prev" href="tut_mean_intervals.html" title="Calculating confidence intervals on the mean with the Students-t distribution">
+<link rel="next" href="tut_mean_size.html" title="Estimating how large a sample size would have to become in order to give a significant Students-t test result with a single sample test">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tut_mean_intervals.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../st_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="tut_mean_size.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="math_toolkit.stat_tut.weg.st_eg.tut_mean_test"></a><a class="link" href="tut_mean_test.html" title='Testing a sample mean for difference from a "true" mean'>Testing
+          a sample mean for difference from a "true" mean</a>
+</h5></div></div></div>
+<p>
+            When calibrating or comparing a scientific instrument or measurement
+            method of some kind, we want to be answer the question "Does an
+            observed sample mean differ from the "true" mean in any significant
+            way?". If it does, then we have evidence of a systematic difference.
+            This question can be answered with a Students-t test: more information
+            can be found <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm" target="_top">on
+            the NIST site</a>.
+          </p>
+<p>
+            Of course, the assignment of "true" to one mean may be quite
+            arbitrary, often this is simply a "traditional" method of measurement.
+          </p>
+<p>
+            The following example code is taken from the example program <a href="../../../../../../example/students_t_single_sample.cpp" target="_top">students_t_single_sample.cpp</a>.
+          </p>
+<p>
+            We'll begin by defining a procedure to determine which of the possible
+            hypothesis are rejected or not-rejected at a given significance level:
+          </p>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+              Non-statisticians might say 'not-rejected' means 'accepted', (often
+              of the null-hypothesis) implying, wrongly, that there really <span class="bold"><strong>IS</strong></span> no difference, but statisticians eschew this
+              to avoid implying that there is positive evidence of 'no difference'.
+              'Not-rejected' here means there is <span class="bold"><strong>no evidence</strong></span>
+              of difference, but there still might well be a difference. For example,
+              see <a href="http://en.wikipedia.org/wiki/Argument_from_ignorance" target="_top">argument
+              from ignorance</a> and <a href="http://www.bmj.com/cgi/content/full/311/7003/485" target="_top">Absence
+              of evidence does not constitute evidence of absence.</a>
+            </p></td></tr>
+</table></div>
+<pre class="programlisting"><span class="comment">// Needed includes:</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">students_t</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iomanip</span><span class="special">&gt;</span>
+<span class="comment">// Bring everything into global namespace for ease of use:</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>
+
+<span class="keyword">void</span> <span class="identifier">single_sample_t_test</span><span class="special">(</span><span class="keyword">double</span> <span class="identifier">M</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">Sm</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">Sd</span><span class="special">,</span> <span class="keyword">unsigned</span> <span class="identifier">Sn</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">alpha</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">//</span>
+   <span class="comment">// M = true mean.</span>
+   <span class="comment">// Sm = Sample Mean.</span>
+   <span class="comment">// Sd = Sample Standard Deviation.</span>
+   <span class="comment">// Sn = Sample Size.</span>
+   <span class="comment">// alpha = Significance Level.</span>
+</pre>
+<p>
+            Most of the procedure is pretty-printing, so let's just focus on the
+            calculation, we begin by calculating the t-statistic:
+          </p>
+<pre class="programlisting"><span class="comment">// Difference in means:</span>
+<span class="keyword">double</span> <span class="identifier">diff</span> <span class="special">=</span> <span class="identifier">Sm</span> <span class="special">-</span> <span class="identifier">M</span><span class="special">;</span>
+<span class="comment">// Degrees of freedom:</span>
+<span class="keyword">unsigned</span> <span class="identifier">v</span> <span class="special">=</span> <span class="identifier">Sn</span> <span class="special">-</span> <span class="number">1</span><span class="special">;</span>
+<span class="comment">// t-statistic:</span>
+<span class="keyword">double</span> <span class="identifier">t_stat</span> <span class="special">=</span> <span class="identifier">diff</span> <span class="special">*</span> <span class="identifier">sqrt</span><span class="special">(</span><span class="keyword">double</span><span class="special">(</span><span class="identifier">Sn</span><span class="special">))</span> <span class="special">/</span> <span class="identifier">Sd</span><span class="special">;</span>
+</pre>
+<p>
+            Finally calculate the probability from the t-statistic. If we're interested
+            in simply whether there is a difference (either less or greater) or not,
+            we don't care about the sign of the t-statistic, and we take the complement
+            of the probability for comparison to the significance level:
+          </p>
+<pre class="programlisting"><span class="identifier">students_t</span> <span class="identifier">dist</span><span class="special">(</span><span class="identifier">v</span><span class="special">);</span>
+<span class="keyword">double</span> <span class="identifier">q</span> <span class="special">=</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="identifier">fabs</span><span class="special">(</span><span class="identifier">t_stat</span><span class="special">)));</span>
+</pre>
+<p>
+            The procedure then prints out the results of the various tests that can
+            be done, these can be summarised in the following table:
+          </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                    <p>
+                      Hypothesis
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      Test
+                    </p>
+                  </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                    <p>
+                      The Null-hypothesis: there is <span class="bold"><strong>no difference</strong></span>
+                      in means
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      Reject if complement of CDF for |t| &lt; significance level
+                      / 2:
+                    </p>
+                    <p>
+                      <code class="computeroutput"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span>
+                      <span class="identifier">fabs</span><span class="special">(</span><span class="identifier">t</span><span class="special">)))</span>
+                      <span class="special">&lt;</span> <span class="identifier">alpha</span>
+                      <span class="special">/</span> <span class="number">2</span></code>
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      The Alternative-hypothesis: there <span class="bold"><strong>is
+                      difference</strong></span> in means
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      Reject if complement of CDF for |t| &gt; significance level
+                      / 2:
+                    </p>
+                    <p>
+                      <code class="computeroutput"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span>
+                      <span class="identifier">fabs</span><span class="special">(</span><span class="identifier">t</span><span class="special">)))</span>
+                      <span class="special">&gt;</span> <span class="identifier">alpha</span>
+                      <span class="special">/</span> <span class="number">2</span></code>
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      The Alternative-hypothesis: the sample mean <span class="bold"><strong>is
+                      less</strong></span> than the true mean.
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      Reject if CDF of t &gt; 1 - significance level:
+                    </p>
+                    <p>
+                      <code class="computeroutput"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span>
+                      <span class="identifier">t</span><span class="special">))</span>
+                      <span class="special">&lt;</span> <span class="identifier">alpha</span></code>
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      The Alternative-hypothesis: the sample mean <span class="bold"><strong>is
+                      greater</strong></span> than the true mean.
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      Reject if complement of CDF of t &lt; significance level:
+                    </p>
+                    <p>
+                      <code class="computeroutput"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span>
+                      <span class="identifier">t</span><span class="special">)</span>
+                      <span class="special">&lt;</span> <span class="identifier">alpha</span></code>
+                    </p>
+                  </td>
+</tr>
+</tbody>
+</table></div>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+              Notice that the comparisons are against <code class="computeroutput"><span class="identifier">alpha</span>
+              <span class="special">/</span> <span class="number">2</span></code>
+              for a two-sided test and against <code class="computeroutput"><span class="identifier">alpha</span></code>
+              for a one-sided test
+            </p></td></tr>
+</table></div>
+<p>
+            Now that we have all the parts in place, let's take a look at some sample
+            output, first using the <a href="http://www.itl.nist.gov/div898/handbook/eda/section4/eda428.htm" target="_top">Heat
+            flow data</a> from the NIST site. The data set was collected by Bob
+            Zarr of NIST in January, 1990 from a heat flow meter calibration and
+            stability analysis. The corresponding dataplot output for this test can
+            be found in <a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm" target="_top">section
+            3.5.2</a> of the <a href="http://www.itl.nist.gov/div898/handbook/" target="_top">NIST/SEMATECH
+            e-Handbook of Statistical Methods.</a>.
+          </p>
+<pre class="programlisting">__________________________________
+Student t test for a single sample
+__________________________________
+
+Number of Observations                                 =  195
+Sample Mean                                            =  9.26146
+Sample Standard Deviation                              =  0.02279
+Expected True Mean                                     =  5.00000
+
+Sample Mean - Expected Test Mean                       =  4.26146
+Degrees of Freedom                                     =  194
+T Statistic                                            =  2611.28380
+Probability that difference is due to chance           =  0.000e+000
+
+Results for Alternative Hypothesis and alpha           =  0.0500
+
+Alternative Hypothesis     Conclusion
+Mean != 5.000            NOT REJECTED
+Mean  &lt; 5.000            REJECTED
+Mean  &gt; 5.000            NOT REJECTED
+</pre>
+<p>
+            You will note the line that says the probability that the difference
+            is due to chance is zero. From a philosophical point of view, of course,
+            the probability can never reach zero. However, in this case the calculated
+            probability is smaller than the smallest representable double precision
+            number, hence the appearance of a zero here. Whatever its "true"
+            value is, we know it must be extraordinarily small, so the alternative
+            hypothesis - that there is a difference in means - is not rejected.
+          </p>
+<p>
+            For comparison the next example data output is taken from <span class="emphasis"><em>P.K.Hou,
+            O. W. Lau &amp; M.C. Wong, Analyst (1983) vol. 108, p 64. and from Statistics
+            for Analytical Chemistry, 3rd ed. (1994), pp 54-55 J. C. Miller and J.
+            N. Miller, Ellis Horwood ISBN 0 13 0309907.</em></span> The values result
+            from the determination of mercury by cold-vapour atomic absorption.
+          </p>
+<pre class="programlisting">__________________________________
+Student t test for a single sample
+__________________________________
+
+Number of Observations                                 =  3
+Sample Mean                                            =  37.80000
+Sample Standard Deviation                              =  0.96437
+Expected True Mean                                     =  38.90000
+
+Sample Mean - Expected Test Mean                       =  -1.10000
+Degrees of Freedom                                     =  2
+T Statistic                                            =  -1.97566
+Probability that difference is due to chance           =  1.869e-001
+
+Results for Alternative Hypothesis and alpha           =  0.0500
+
+Alternative Hypothesis     Conclusion
+Mean != 38.900            REJECTED
+Mean  &lt; 38.900            NOT REJECTED
+Mean  &gt; 38.900            NOT REJECTED
+</pre>
+<p>
+            As you can see the small number of measurements (3) has led to a large
+            uncertainty in the location of the true mean. So even though there appears
+            to be a difference between the sample mean and the expected true mean,
+            we conclude that there is no significant difference, and are unable to
+            reject the null hypothesis. However, if we were to lower the bar for
+            acceptance down to alpha = 0.1 (a 90% confidence level) we see a different
+            output:
+          </p>
+<pre class="programlisting">__________________________________
+Student t test for a single sample
+__________________________________
+
+Number of Observations                                 =  3
+Sample Mean                                            =  37.80000
+Sample Standard Deviation                              =  0.96437
+Expected True Mean                                     =  38.90000
+
+Sample Mean - Expected Test Mean                       =  -1.10000
+Degrees of Freedom                                     =  2
+T Statistic                                            =  -1.97566
+Probability that difference is due to chance           =  1.869e-001
+
+Results for Alternative Hypothesis and alpha           =  0.1000
+
+Alternative Hypothesis     Conclusion
+Mean != 38.900            REJECTED
+Mean  &lt; 38.900            NOT REJECTED
+Mean  &gt; 38.900            REJECTED
+</pre>
+<p>
+            In this case, we really have a borderline result, and more data (and/or
+            more accurate data), is needed for a more convincing conclusion.
+          </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tut_mean_intervals.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../st_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="tut_mean_size.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

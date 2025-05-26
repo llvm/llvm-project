@@ -1,0 +1,124 @@
+[/
+Copyright (c) 2017 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:cardinal_cubic_b Cardinal Cubic B-spline interpolation]
+
+[heading Synopsis]
+``
+  #include <boost/math/interpolators/cardinal_cubic_b_spline.hpp>
+``
+
+  namespace boost { namespace math { namespace interpolators {
+
+    template <class Real>
+    class cardinal_cubic_b_spline
+    {
+    public:
+
+      template <class BidiIterator>
+        cardinal_cubic_b_spline(BidiIterator a, BidiIterator b, Real left_endpoint, Real step_size,
+                       Real left_endpoint_derivative = std::numeric_limits<Real>::quiet_NaN(),
+                       Real right_endpoint_derivative = std::numeric_limits<Real>::quiet_NaN());
+        cardinal_cubic_b_spline(const Real* const f, size_t length, Real left_endpoint, Real step_size,
+                       Real left_endpoint_derivative = std::numeric_limits<Real>::quiet_NaN(),
+                       Real right_endpoint_derivative = std::numeric_limits<Real>::quiet_NaN());
+
+        Real operator()(Real x) const;
+
+        Real prime(Real x) const;
+
+        Real double_prime(Real x) const;
+    };
+
+  }}} // namespaces
+
+
+[heading Cardinal Cubic B-Spline Interpolation]
+
+The cardinal cubic /B/-spline class provided by Boost allows fast and accurate interpolation of a function which is known at equally spaced points.
+The cubic /B/-spline interpolation is numerically stable as it uses compactly supported basis functions constructed via iterative convolution.
+This is to be contrasted to one-sided power function cubic spline interpolation which is ill-conditioned as the global support of cubic polynomials causes small changes far from the evaluation point to exert a large influence on the calculated value.
+
+There are many use cases for interpolating a function at equally spaced points.
+One particularly important example is solving ODEs whose coefficients depend on data determined from experiment or numerical simulation.
+Since most ODE steppers are adaptive, they must be able to sample the coefficients at arbitrary points;
+not just at the points we know the values of our function.
+
+The first two arguments to the constructor are either:
+
+* A pair of bidirectional iterators into the data, or
+* A pointer to the data, and a length of the data array.
+
+These are then followed by:
+
+* The start of the functions domain,
+* The step size.
+
+Optionally, you may provide two additional arguments to the constructor, namely the derivative of the function at the left endpoint, and the derivative at the right endpoint.
+If you do not provide these arguments, they will be estimated using one-sided finite-difference formulas.
+An example of a valid call to the constructor is
+
+    std::vector<double> f{0.01, -0.02, 0.3, 0.8, 1.9, -8.78, -22.6};
+    double t0 = 0;
+    double h = 0.01;
+    boost::math::interpolators::cardinal_cubic_b_spline<double> spline(f.begin(), f.end(), t0, h);
+
+The endpoints are estimated using a one-sided finite-difference formula.
+If you know the derivative at the endpoint, you may pass it to the constructor via
+
+    boost::math::interpolators::cardinal_cubic_b_spline<double> spline(f.begin(), f.end(), t0, h, a_prime, b_prime);
+
+To evaluate the interpolant at a point, we simply use
+
+    double y = spline(x);
+
+and to evaluate the derivative of the interpolant we use
+
+    double yp = spline.prime(x);
+
+Be aware that the accuracy guarantees on the derivative of the spline are an order lower than the guarantees on the original function,
+see [@http://www.springer.com/us/book/9780387984087 Numerical Analysis, Graduate Texts in Mathematics, 181, Rainer Kress] for details.
+
+The last interesting member is the second derivative, evaluated via
+
+    double ypp = spline.double_prime(x);
+
+The basis functions of the spline are cubic polynomials, so the second derivative is simply linear interpolation.
+But the interpolation is not constrained by data (you don't pass in the second derivatives),
+and hence is less accurate than would be naively expected from a linear interpolator.
+The problem is especially pronounced at the boundaries, where the second derivative is totally unconstrained.
+Use the second derivative of the cubic B-spline interpolator only in desperation.
+The quintic /B/-spline interpolator is recommended for cases where second derivatives are needed.
+
+
+[heading Complexity and Performance]
+
+The call to the constructor requires [bigo](/n/) operations, where /n/ is the number of points to interpolate.
+Each call the the interpolant is [bigo](1) (constant time).
+On the author's Intel Xeon E3-1230, this takes 21ns as long as the vector is small enough to fit in cache.
+
+[heading Accuracy]
+
+Let /h/ be the stepsize. If /f/ is four-times continuously differentiable, then the interpolant is ['[bigo](h[super 4])] accurate and the derivative is ['[bigo](h[super 3])] accurate.
+
+[heading Testing]
+
+Since the interpolant obeys [role serif_italic s(x[sub j]) = f(x[sub j])] at all interpolation points,
+the tests generate random data and evaluate the interpolant at the interpolation points,
+validating that equality with the data holds.
+
+In addition, constant, linear, and quadratic functions are interpolated to ensure that the interpolant behaves as expected.
+
+[heading Example]
+
+[import ../../example/cardinal_cubic_b_spline_example.cpp]
+
+[cubic_b_spline_example]
+
+[cubic_b_spline_example_out]
+
+[endsect] [/section:cardinal_cubic_b]

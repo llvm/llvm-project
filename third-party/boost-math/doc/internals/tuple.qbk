@@ -1,0 +1,31 @@
+[section:tuples Tuples]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/tools/tuple.hpp>
+``
+
+[h4 Description]
+
+This header defines the type `boost::math::tuple`,
+the associated free functions `ignore`, `tie`, `make_tuple`, `get`,
+and associated types `tuple_size` and `tuple_element`.
+
+These types and functions are aliases for:
+
+* `std::tuple` etc when available, otherwise:
+* `std::tr1::tuple` etc when available, otherwise:
+* `boost::fusion::tuple` etc if the compiler supports it, otherwise:
+* `boost::tuple`.
+
+So this `boost::math::tuple` is strongly recommended for maximum portability.
+
+[endsect] [/section:Tuples Tuples]
+[/
+  Copyright 2010 John Maddock.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

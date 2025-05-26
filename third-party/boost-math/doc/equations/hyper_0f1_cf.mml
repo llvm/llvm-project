@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd" [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>hyper_0f1_cf</title>
+<!-- MathML created with MathCast Equation Editor version 0.92 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <msub>
+      <mi/>
+      <mn>0</mn>
+    </msub>
+    <msub>
+      <mi>F</mi>
+      <mn>1</mn>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mo>;</mo>
+        <mi>b</mi>
+        <mo>;</mo>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <mn>1</mn>
+    <mo>+</mo>
+    <mfrac>
+      <mrow>
+        <mi>z</mi>
+      </mrow>
+      <mrow>
+        <mi>b</mi>
+        <mfenced>
+          <mrow>
+            <mn>1</mn>
+            <mo>+</mo>
+            <msub>
+              <mi>K</mi>
+              <mi>k</mi>
+            </msub>
+            <msubsup>
+              <mfenced>
+                <mrow>
+                  <mo>&#x2212;</mo>
+                  <mfrac>
+                    <mi>z</mi>
+                    <mrow>
+                      <mfenced>
+                        <mrow>
+                          <mi>k</mi>
+                          <mo>+</mo>
+                          <mn>1</mn>
+                        </mrow>
+                      </mfenced>
+                      <mfenced>
+                        <mrow>
+                          <mi>b</mi>
+                          <mo>+</mo>
+                          <mi>k</mi>
+                        </mrow>
+                      </mfenced>
+                    </mrow>
+                  </mfrac>
+                  <mo>,</mo>
+                  <mfrac>
+                    <mi>z</mi>
+                    <mrow>
+                      <mfenced>
+                        <mrow>
+                          <mi>k</mi>
+                          <mo>+</mo>
+                          <mn>1</mn>
+                        </mrow>
+                      </mfenced>
+                      <mfenced>
+                        <mrow>
+                          <mi>b</mi>
+                          <mo>+</mo>
+                          <mi>k</mi>
+                        </mrow>
+                      </mfenced>
+                    </mrow>
+                  </mfrac>
+                  <mo>+</mo>
+                  <mn>1</mn>
+                </mrow>
+              </mfenced>
+              <mrow>
+                <mn>1</mn>
+              </mrow>
+              <mi>&#x221e;</mi>
+            </msubsup>
+          </mrow>
+        </mfenced>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math></body>
+</html>

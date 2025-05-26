@@ -1,0 +1,361 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Elliptic Integrals of the Third Kind - Legendre Form</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../ellint.html" title="Elliptic Integrals">
+<link rel="prev" href="ellint_2.html" title="Elliptic Integrals of the Second Kind - Legendre Form">
+<link rel="next" href="ellint_d.html" title="Elliptic Integral D - Legendre Form">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="ellint_2.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ellint.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="ellint_d.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.ellint.ellint_3"></a><a class="link" href="ellint_3.html" title="Elliptic Integrals of the Third Kind - Legendre Form">Elliptic Integrals of the
+      Third Kind - Legendre Form</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.ellint.ellint_3.h0"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_3.synopsis"></a></span><a class="link" href="ellint_3.html#math_toolkit.ellint.ellint_3.synopsis">Synopsis</a>
+      </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">ellint_3</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">ellint_3</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">k</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">phi</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">ellint_3</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">k</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">phi</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">ellint_3</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">k</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">n</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">ellint_3</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">k</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">n</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<h5>
+<a name="math_toolkit.ellint.ellint_3.h1"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_3.description"></a></span><a class="link" href="ellint_3.html#math_toolkit.ellint.ellint_3.description">Description</a>
+      </h5>
+<p>
+        These two functions evaluate the incomplete elliptic integral of the third
+        kind <span class="emphasis"><em>Π(n, φ, k)</em></span> and its complete counterpart <span class="emphasis"><em>Π(n,
+        k) = E(n, π/2, k)</em></span>.
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/ellint_3.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<p>
+        The return type of these functions is computed using the <a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>result
+        type calculation rules</em></span></a> when the arguments are of different
+        types: when they are the same type then the result is the same type as the
+        arguments.
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">ellint_3</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">k</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">phi</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">ellint_3</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">k</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">phi</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+</pre>
+<p>
+        Returns the incomplete elliptic integral of the third kind <span class="emphasis"><em>Π(n,
+        φ, k)</em></span>:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint4.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Requires <span class="emphasis"><em>k<sup>2</sup>sin<sup>2</sup>(phi) &lt; 1</em></span> and <span class="emphasis"><em>n &lt; 1/sin<sup>2</sup>(φ)</em></span>,
+        otherwise returns the result of <a class="link" href="../error_handling.html#math_toolkit.error_handling.domain_error">domain_error</a>
+        (outside this range the result would be complex).
+      </p>
+<p>
+        The final <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+        be used to control the behaviour of the function: how it handles errors,
+        what level of precision to use etc. Refer to the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy
+        documentation for more details</a>.
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">ellint_3</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">k</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">n</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">ellint_3</span><span class="special">(</span><span class="identifier">T1</span> <span class="identifier">k</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">n</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+</pre>
+<p>
+        Returns the complete elliptic integral of the first kind <span class="emphasis"><em>Π(n, k)</em></span>:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint8.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Requires <span class="emphasis"><em>|k| &lt; 1</em></span> and <span class="emphasis"><em>n &lt; 1</em></span>,
+        otherwise returns the result of <a class="link" href="../error_handling.html#math_toolkit.error_handling.domain_error">domain_error</a>
+        (outside this range the result would be complex).
+      </p>
+<p>
+        The final <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+        be used to control the behaviour of the function: how it handles errors,
+        what level of precision to use etc. Refer to the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy
+        documentation for more details</a>.
+      </p>
+<h5>
+<a name="math_toolkit.ellint.ellint_3.h2"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_3.accuracy"></a></span><a class="link" href="ellint_3.html#math_toolkit.ellint.ellint_3.accuracy">Accuracy</a>
+      </h5>
+<p>
+        These functions are computed using only basic arithmetic operations, so there
+        isn't much variation in accuracy over differing platforms. Note that only
+        results for the widest floating point type on the system are given as narrower
+        types have <a class="link" href="../relative_error.html#math_toolkit.relative_error.zero_error">effectively
+        zero error</a>. All values are relative errors in units of epsilon.
+      </p>
+<div class="table">
+<a name="math_toolkit.ellint.ellint_3.table_ellint_3"></a><p class="title"><b>Table 8.65. Error rates for ellint_3</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for ellint_3">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> double
+                </p>
+              </th>
+<th>
+                <p>
+                  Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Microsoft Visual C++ version 14.1<br> Win32<br> double
+                </p>
+              </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  Elliptic Integral PI: Mathworld Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 475ε (Mean = 86.3ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> <span class="red">Max = +INFε (Mean
+                  = +INFε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_ellint_3__cmath__Elliptic_Integral_PI_Mathworld_Data">And
+                  other failures.</a>)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 1.48e+05ε (Mean = 2.54e+04ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_ellint_3_GSL_2_1_Elliptic_Integral_PI_Mathworld_Data">And
+                  other failures.</a>)
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 475ε (Mean = 86.3ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 565ε (Mean = 102ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Elliptic Integral PI: Random Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 4.54ε (Mean = 0.895ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> <span class="red">Max = 3.37e+20ε (Mean
+                  = 3.47e+19ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_ellint_3__cmath__Elliptic_Integral_PI_Random_Data">And
+                  other failures.</a>)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>GSL
+                  2.1:</em></span> Max = 633ε (Mean = 50.1ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 4.49ε (Mean = 0.885ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 8.33ε (Mean = 0.971ε)</span>
+                </p>
+              </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  Elliptic Integral PI: Large Random Data
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.7ε (Mean = 0.893ε)</span><br> <br>
+                  (<span class="emphasis"><em>&lt;cmath&gt;:</em></span> <span class="red">Max = 2.52e+18ε (Mean
+                  = 4.83e+17ε) <a class="link" href="../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_long_double_ellint_3__cmath__Elliptic_Integral_PI_Large_Random_Data">And
+                  other failures.</a>)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0.557ε (Mean = 0.0389ε)</span><br>
+                  <br> (<span class="emphasis"><em>GSL 2.1:</em></span> Max = 40.1ε (Mean = 7.77ε))
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 3.7ε (Mean = 0.892ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 2.86ε (Mean = 0.944ε)</span>
+                </p>
+              </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><h5>
+<a name="math_toolkit.ellint.ellint_3.h3"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_3.testing"></a></span><a class="link" href="ellint_3.html#math_toolkit.ellint.ellint_3.testing">Testing</a>
+      </h5>
+<p>
+        The tests use a mixture of spot test values calculated using the online calculator
+        at <a href="http://functions.wolfram.com" target="_top">functions.wolfram.com</a>,
+        and random test data generated using NTL::RR at 1000-bit precision and this
+        implementation.
+      </p>
+<h5>
+<a name="math_toolkit.ellint.ellint_3.h4"></a>
+        <span class="phrase"><a name="math_toolkit.ellint.ellint_3.implementation"></a></span><a class="link" href="ellint_3.html#math_toolkit.ellint.ellint_3.implementation">Implementation</a>
+      </h5>
+<p>
+        The implementation for Π(n, φ, k) first siphons off the special cases:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic"><span class="emphasis"><em>Π(0, φ, k) = F(φ, k)</em></span></span>
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic"><span class="emphasis"><em>Π(n, π/2, k) = Π(n, k)</em></span></span>
+        </p></blockquote></div>
+<p>
+        and
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint23.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Then if n &lt; 0 the relations (A&amp;S 17.7.15/16):
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint24.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        are used to shift <span class="emphasis"><em>n</em></span> to the range [0, 1].
+      </p>
+<p>
+        Then the relations:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic"><span class="emphasis"><em>Π(n, -φ, k) = -Π(n, φ, k)</em></span></span>
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic"><span class="emphasis"><em>Π(n, φ+mπ, k) = Π(n, φ, k) + 2mΠ(n, k)
+          ; n &lt;= 1</em></span></span>
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic"><span class="emphasis"><em>Π(n, φ+mπ, k) = Π(n, φ, k) ; n &gt; 1</em></span>
+                  
+<a href="#ftn.math_toolkit.ellint.ellint_3.f0" class="footnote" name="math_toolkit.ellint.ellint_3.f0"><sup class="footnote">[4]</sup></a></span>
+        </p></blockquote></div>
+<p>
+        are used to move φ to the range [0, π/2].
+      </p>
+<p>
+        The functions are then implemented in terms of Carlson's integrals using
+        the relations:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint25.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        and
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/ellint26.svg"></span>
+
+        </p></blockquote></div>
+<div class="footnotes">
+<br><hr style="width:100; text-align:left;margin-left: 0">
+<div id="ftn.math_toolkit.ellint.ellint_3.f0" class="footnote"><p><a href="#math_toolkit.ellint.ellint_3.f0" class="para"><sup class="para">[4] </sup></a>
+            I haven't been able to find a literature reference for this relation,
+            but it appears to be the convention used by Mathematica. Intuitively
+            the first <span class="emphasis"><em>2 * m * Π(n, k)</em></span> terms cancel out as the
+            derivative alternates between +∞ and -∞.
+          </p></div>
+</div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="ellint_2.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../ellint.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="ellint_d.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

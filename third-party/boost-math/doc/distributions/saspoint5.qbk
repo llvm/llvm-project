@@ -1,0 +1,116 @@
+﻿[section:saspoint5_dist S[alpha]S Point5 Distribution]
+
+``#include <boost/math/distributions/saspoint5.hpp>``
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class saspoint5_distribution;
+
+   typedef saspoint5_distribution<> saspoint5;
+
+   template <class RealType, class ``__Policy``>
+   class saspoint5_distribution
+   {
+   public:
+      typedef RealType  value_type;
+      typedef Policy    policy_type;
+
+      BOOST_MATH_GPU_ENABLED saspoint5_distribution(RealType location = 0, RealType scale = 1);
+
+      BOOST_MATH_GPU_ENABLED RealType location()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+   };
+
+It is special case of a [@http://en.wikipedia.org/wiki/Stable_distribution stable distribution]
+with shape parameter [alpha]=1/2, [beta]=0.
+
+[@http://en.wikipedia.org/wiki/Probability_distribution probability distribution function PDF]
+given by:
+
+[equation saspoint5_ref1]  [/f(x; \mu, c)=\frac{1}{2 \pi} \int_{-\infty}^{\infty} \exp( i t \mu - \sqrt{|c t|} ) e^{-i x t} dt]
+
+The location parameter [mu] is the location of the distribution,
+while the scale parameter [c] determines the width of the distribution.
+If the location is
+zero, and the scale 1, then the result is a standard S[alpha]S Point5
+distribution.
+
+This distribution has heavier tails than the Cauchy distribution.
+
+The following graph shows how the distributions moves as the
+location parameter changes:
+
+[graph saspoint5_pdf1]
+
+While the following graph shows how the shape (scale) parameter alters
+the distribution:
+
+[graph saspoint5_pdf2]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED saspoint5_distribution(RealType location = 0, RealType scale = 1);
+
+Constructs a S[alpha]S Point5 distribution, with location parameter /location/
+and scale parameter /scale/.  When these parameters take their default
+values (location = 0, scale = 1)
+then the result is a Standard S[alpha]S Point5 Distribution.
+
+Requires scale > 0, otherwise calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType location()const;
+
+Returns the location parameter of the distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+
+Returns the scale parameter of the distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+Note however that the S[alpha]S Point5 distribution does not have a mean,
+standard deviation, etc. See __math_undefined
+[/link math_toolkit.pol_ref.assert_undefined mathematically undefined function]
+to control whether these should fail to compile with a BOOST_STATIC_ASSERTION_FAILURE,
+which is the default.
+
+Alternately, the functions __mean, __sd,
+__variance, __skewness, __kurtosis and __kurtosis_excess will all
+return a __domain_error if called.
+
+The domain of the random variable is \[-[max_value], +[min_value]\].
+
+[h4 Accuracy]
+
+The error is within 4 epsilon.
+
+Errors in the PDF at 64-bit double precision:
+
+[$../graphs/saspoint5_pdf_accuracy_64.png]
+
+Errors in the CDF-complement at 64-bit double precision:
+
+[$../graphs/saspoint5_ccdf_accuracy_64.png]
+
+[h4 Implementation]
+
+See references.
+
+[h4 References]
+
+* T. Yoshimura, Numerical Evaluation and High Precision Approximation Formula for S[alpha]S Point5 Distribution,
+DOI: 10.36227/techrxiv.172055253.37208198/v1, 2024.
+
+[endsect][/section:saspoint5_dist saspoint5]
+
+[/ saspoint5.qbk
+  Copyright Takuma Yoshimura 2024.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

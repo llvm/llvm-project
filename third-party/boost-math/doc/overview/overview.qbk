@@ -1,0 +1,106 @@
+[section:main_intro About the Math Toolkit]
+
+This library is divided into several interconnected parts:
+
+[h4 Floating Point Utilities]
+
+Utility functions for dealing with floating-point arithmetic, includes functions
+for floating point classification (`fpclassify`, `isnan`, `isinf` etc), sign manipulation,
+rounding, comparison, and computing the distance between floating point numbers.
+
+[h4 Specific Width Floating-Point Types]
+
+A set of `typedef`s similar to those provided by `<cstdint>` but for floating-point types.
+
+[h4 Mathematical Constants]
+
+A wide range of high-precision constants ranging from various multiples of [pi], fractions, through to Euler's constant etc.
+
+These are of course usable from template code, or as non-templates with a simplified interface if that is more appropriate.
+
+[h4 Statistical Distributions]
+
+Provides a reasonably comprehensive set of
+[link dist statistical distributions],
+upon which higher level statistical tests can be built.
+
+The initial focus is on the central
+[@http://en.wikipedia.org/wiki/Univariate univariate ]
+[@http://mathworld.wolfram.com/StatisticalDistribution.html distributions].
+Both [@http://mathworld.wolfram.com/ContinuousDistribution.html continuous]
+(like [link math_toolkit.dist_ref.dists.normal_dist normal]
+& [link math_toolkit.dist_ref.dists.f_dist Fisher])
+and [@http://mathworld.wolfram.com/DiscreteDistribution.html discrete]
+(like [link math_toolkit.dist_ref.dists.binomial_dist binomial]
+& [link math_toolkit.dist_ref.dists.poisson_dist Poisson])
+distributions are provided.
+
+A [link math_toolkit.stat_tut comprehensive tutorial is provided],
+along with a series of
+[link math_toolkit.stat_tut.weg worked examples] illustrating
+how the library is used to conduct statistical tests.
+
+[h4 Mathematical Special Functions]
+
+Provides a small number of high quality
+[link special special functions],
+initially these were concentrated on functions used in statistical applications
+along with those in the [tr1].
+
+The function families currently implemented are the gamma, beta & erf functions
+along with the incomplete gamma and beta functions (four variants
+of each) and all the possible inverses of these, plus digamma,
+various factorial functions,
+Bessel functions, elliptic integrals, sinus cardinals (along with their
+hyperbolic variants), inverse hyperbolic functions, Legendre/Laguerre/Hermite
+polynomials and various
+special power and logarithmic functions.
+
+All the implementations
+are fully generic and support the use of arbitrary "real-number" types,
+including __multiprecision,
+although they are optimised for use with types with known-about
+[@http://en.wikipedia.org/wiki/Significand significand (or mantissa)]
+sizes: typically `float`, `double` or `long double`.
+
+These functions also provide the basis of support for the TR1 special functions.
+
+[h4 Root Finding and Function Minimisation]
+
+A comprehensive set of root finding algorithms over the real-line, both with and without derivative support.
+
+Also function minimisation via Brent's Method.
+
+[h4 Polynomials and Rational Functions]
+
+Tools for manipulating polynomials and for efficient evaluation of rationals or polynomials.
+
+[h4 Interpolation]
+
+Function interpolation via Barycentric or cubic B_spline approximations. Smoothing.
+
+[h4 Numerical Integration (Quadrature) and Differentiation]
+
+A reasonably comprehensive set of routines for integration (trapezoidal, Gauss-Legendre, Gauss-Kronrod and double-exponential) 
+and differentiation. (See also automatic differentiation).
+
+The integration routines are all usable for functions returning complex results - and as a result for contour integrals as well.
+
+[h4 Quaternions and Octonions]
+
+Quaternions and Octonians as class templates similar to `std::complex`.
+
+[h4 Automatic Differentiation]
+
+Autodiff is a header-only C++ library that facilitates the automaticdifferentiation (forward mode) 
+of mathematical functions of single and multiple variables.
+
+[endsect] [/section:main_intro About the Math Toolkit]
+
+
+[/
+  Copyright 2006, 2012, 2015 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

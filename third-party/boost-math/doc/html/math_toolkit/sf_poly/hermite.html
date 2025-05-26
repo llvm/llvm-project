@@ -1,0 +1,245 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hermite Polynomials</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../sf_poly.html" title="Polynomials">
+<link rel="prev" href="laguerre.html" title="Laguerre (and Associated) Polynomials">
+<link rel="next" href="chebyshev.html" title="Chebyshev Polynomials">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="laguerre.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../sf_poly.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="chebyshev.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.sf_poly.hermite"></a><a class="link" href="hermite.html" title="Hermite Polynomials">Hermite Polynomials</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.sf_poly.hermite.h0"></a>
+        <span class="phrase"><a name="math_toolkit.sf_poly.hermite.synopsis"></a></span><a class="link" href="hermite.html#math_toolkit.sf_poly.hermite.synopsis">Synopsis</a>
+      </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">hermite</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hermite</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hermite</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hermite_next</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T1</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">Hn</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">Hnm1</span><span class="special">);</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<h5>
+<a name="math_toolkit.sf_poly.hermite.h1"></a>
+        <span class="phrase"><a name="math_toolkit.sf_poly.hermite.description"></a></span><a class="link" href="hermite.html#math_toolkit.sf_poly.hermite.description">Description</a>
+      </h5>
+<p>
+        The return type of these functions is computed using the <a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>result
+        type calculation rules</em></span></a>: note than when there is a single
+        template argument the result is the same type as that argument or <code class="computeroutput"><span class="keyword">double</span></code> if the template argument is an integer
+        type.
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hermite</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hermite</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+</pre>
+<p>
+        Returns the value of the Hermite Polynomial of order <span class="emphasis"><em>n</em></span>
+        at point <span class="emphasis"><em>x</em></span>:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/hermite_0.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        The final <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+        be used to control the behaviour of the function: how it handles errors,
+        what level of precision to use etc. Refer to the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy
+        documentation for more details</a>.
+      </p>
+<p>
+        The following graph illustrates the behaviour of the first few Hermite Polynomials:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/hermite.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T2</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T3</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">hermite_next</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">T1</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">T2</span> <span class="identifier">Hn</span><span class="special">,</span> <span class="identifier">T3</span> <span class="identifier">Hnm1</span><span class="special">);</span>
+</pre>
+<p>
+        Implements the three term recurrence relation for the Hermite polynomials,
+        this function can be used to create a sequence of values evaluated at the
+        same <span class="emphasis"><em>x</em></span>, and for rising <span class="emphasis"><em>n</em></span>.
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/hermite_1.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        For example we could produce a vector of the first 10 polynomial values using:
+      </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="number">0.5</span><span class="special">;</span>  <span class="comment">// Abscissa value</span>
+<span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">;</span>
+<span class="identifier">v</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">hermite</span><span class="special">(</span><span class="number">0</span><span class="special">,</span> <span class="identifier">x</span><span class="special">)).</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">hermite</span><span class="special">(</span><span class="number">1</span><span class="special">,</span> <span class="identifier">x</span><span class="special">));</span>
+<span class="keyword">for</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">l</span> <span class="special">=</span> <span class="number">1</span><span class="special">;</span> <span class="identifier">l</span> <span class="special">&lt;</span> <span class="number">10</span><span class="special">;</span> <span class="special">++</span><span class="identifier">l</span><span class="special">)</span>
+   <span class="identifier">v</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">hermite_next</span><span class="special">(</span><span class="identifier">l</span><span class="special">,</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">v</span><span class="special">[</span><span class="identifier">l</span><span class="special">],</span> <span class="identifier">v</span><span class="special">[</span><span class="identifier">l</span><span class="special">-</span><span class="number">1</span><span class="special">]));</span>
+</pre>
+<p>
+        Formally the arguments are:
+      </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">n</span></dt>
+<dd><p>
+              The degree <span class="emphasis"><em>n</em></span> of the last polynomial calculated.
+            </p></dd>
+<dt><span class="term">x</span></dt>
+<dd><p>
+              The abscissa value
+            </p></dd>
+<dt><span class="term">Hn</span></dt>
+<dd><p>
+              The value of the polynomial evaluated at degree <span class="emphasis"><em>n</em></span>.
+            </p></dd>
+<dt><span class="term">Hnm1</span></dt>
+<dd><p>
+              The value of the polynomial evaluated at degree <span class="emphasis"><em>n-1</em></span>.
+            </p></dd>
+</dl>
+</div>
+<h5>
+<a name="math_toolkit.sf_poly.hermite.h2"></a>
+        <span class="phrase"><a name="math_toolkit.sf_poly.hermite.accuracy"></a></span><a class="link" href="hermite.html#math_toolkit.sf_poly.hermite.accuracy">Accuracy</a>
+      </h5>
+<p>
+        The following table shows peak errors (in units of epsilon) for various domains
+        of input arguments. Note that only results for the widest floating point
+        type on the system are given as narrower types have <a class="link" href="../relative_error.html#math_toolkit.relative_error.zero_error">effectively
+        zero error</a>.
+      </p>
+<div class="table">
+<a name="math_toolkit.sf_poly.hermite.table_hermite"></a><p class="title"><b>Table 8.37. Error rates for hermite</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for hermite">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> double
+                </p>
+              </th>
+<th>
+                <p>
+                  GNU C++ version 7.1.0<br> linux<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                </p>
+              </th>
+<th>
+                <p>
+                  Microsoft Visual C++ version 14.1<br> Win32<br> double
+                </p>
+              </th>
+</tr></thead>
+<tbody><tr>
+<td>
+                <p>
+                  Hermite Polynomials
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 0ε (Mean = 0ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 6.24ε (Mean = 2.07ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 6.24ε (Mean = 2.07ε)</span>
+                </p>
+              </td>
+<td>
+                <p>
+                  <span class="blue">Max = 4.46ε (Mean = 1.41ε)</span>
+                </p>
+              </td>
+</tr></tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+        Note that the worst errors occur when the degree increases, values greater
+        than ~120 are very unlikely to produce sensible results, especially in the
+        associated polynomial case when the order is also large. Further the relative
+        errors are likely to grow arbitrarily large when the function is very close
+        to a root.
+      </p>
+<h5>
+<a name="math_toolkit.sf_poly.hermite.h3"></a>
+        <span class="phrase"><a name="math_toolkit.sf_poly.hermite.testing"></a></span><a class="link" href="hermite.html#math_toolkit.sf_poly.hermite.testing">Testing</a>
+      </h5>
+<p>
+        A mixture of spot tests of values calculated using functions.wolfram.com,
+        and randomly generated test data are used: the test data was computed using
+        <a href="http://shoup.net/ntl/doc/RR.txt" target="_top">NTL::RR</a> at 1000-bit
+        precision.
+      </p>
+<h5>
+<a name="math_toolkit.sf_poly.hermite.h4"></a>
+        <span class="phrase"><a name="math_toolkit.sf_poly.hermite.implementation"></a></span><a class="link" href="hermite.html#math_toolkit.sf_poly.hermite.implementation">Implementation</a>
+      </h5>
+<p>
+        These functions are implemented using the stable three term recurrence relations.
+        These relations guarantee low absolute error but cannot guarantee low relative
+        error near one of the roots of the polynomials.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="laguerre.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../sf_poly.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="chebyshev.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

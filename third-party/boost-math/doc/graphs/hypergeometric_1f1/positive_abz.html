@@ -1,0 +1,39 @@
+﻿<div>
+   <script type="text/javascript" src="../../../graphs/hypergeometric_1f1/positive_abz.js"></script>
+
+   <div id="87d8c26d-c743-4b69-8576-64f861bb7262" style="width: 800px; height: 600px;" class="plotly-graph-div"></div>
+   <script type="text/javascript">
+      (function () {
+         window.PLOTLYENV = { 'BASE_URL': 'https://plot.ly' };
+
+         var gd = document.getElementById('87d8c26d-c743-4b69-8576-64f861bb7262')
+         var resizeDebounce = null;
+
+         function resizePlot() {
+            var bb = gd.getBoundingClientRect();
+            Plotly.relayout(gd, {
+               width: bb.width,
+               height: bb.height
+            });
+         }
+
+
+         window.addEventListener('resize', function () {
+            if (resizeDebounce) {
+               window.clearTimeout(resizeDebounce);
+            }
+            resizeDebounce = window.setTimeout(resizePlot, 100);
+         });
+
+
+
+         Plotly.plot(gd, {
+            data: positive_abz.data,
+            layout: positive_abz.layout,
+            frames: positive_abz.frames,
+            config: { "showLink": true, "linkText": "Export to plot.ly", "mapboxAccessToken": "pk.eyJ1IjoiY2hyaWRkeXAiLCJhIjoiY2lxMnVvdm5iMDA4dnhsbTQ5aHJzcGs0MyJ9.X9o_rzNLNesDxdra4neC_A" }
+         });
+
+      }());
+   </script>
+</div>

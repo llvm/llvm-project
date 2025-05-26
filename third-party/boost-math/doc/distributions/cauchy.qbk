@@ -1,0 +1,151 @@
+[section:cauchy_dist Cauchy-Lorentz Distribution]
+
+``#include <boost/math/distributions/cauchy.hpp>``
+
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class cauchy_distribution;
+   
+   typedef cauchy_distribution<> cauchy;
+   
+   template <class RealType, class ``__Policy``>
+   class cauchy_distribution
+   {
+   public:
+      typedef RealType  value_type;
+      typedef Policy    policy_type;
+
+      BOOST_MATH_GPU_ENABLED cauchy_distribution(RealType location = 0, RealType scale = 1);
+      
+      BOOST_MATH_GPU_ENABLED RealType location()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+   };
+   
+The [@http://en.wikipedia.org/wiki/Cauchy_distribution Cauchy-Lorentz distribution]
+is named after Augustin Cauchy and Hendrik Lorentz.
+It is a [@http://en.wikipedia.org/wiki/Probability_distribution continuous probability distribution]
+with [@http://en.wikipedia.org/wiki/Probability_distribution probability distribution function PDF]
+given by:
+
+[equation cauchy_ref1]
+
+The location parameter ['x[sub 0]] is the location of the 
+peak of the distribution (the mode of the distribution),
+while the scale parameter [gamma] specifies half the width
+of the PDF at half the maximum height.  If the location is 
+zero, and the scale 1, then the result is a standard Cauchy
+distribution.
+
+The distribution is important in physics as it is the solution
+to the differential equation describing forced resonance,
+while in spectroscopy it is the description of the line shape 
+of spectral lines.
+
+The following graph shows how the distributions moves as the
+location parameter changes:
+
+[graph cauchy_pdf1]
+
+While the following graph shows how the shape (scale) parameter alters
+the distribution:
+
+[graph cauchy_pdf2]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED cauchy_distribution(RealType location = 0, RealType scale = 1);
+   
+Constructs a Cauchy distribution, with location parameter /location/
+and scale parameter /scale/.  When these parameters take their default
+values (location = 0, scale = 1) 
+then the result is a Standard Cauchy Distribution.
+
+Requires scale > 0, otherwise calls __domain_error.
+   
+   BOOST_MATH_GPU_ENABLED RealType location()const;
+   
+Returns the location parameter of the distribution.
+   
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+   
+Returns the scale parameter of the distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+Note however that the Cauchy distribution does not have a mean,
+standard deviation, etc. See __math_undefined
+[/link math_toolkit.pol_ref.assert_undefined mathematically undefined function] 
+to control whether these should fail to compile with a BOOST_STATIC_ASSERTION_FAILURE,
+which is the default.
+
+Alternately, the functions __mean, __sd, 
+__variance, __skewness, __kurtosis and __kurtosis_excess will all
+return a __domain_error if called.
+
+The domain of the random variable is \[-[max_value], +[min_value]\].
+
+[h4 Accuracy]
+
+The Cauchy distribution is implemented in terms of the
+standard library `tan` and `atan` functions, 
+and as such should have very low error rates.
+
+[h4 Implementation]
+
+[def __x0 x[sub 0 ]]
+
+In the following table __x0 is the location parameter of the distribution, 
+[gamma] is its scale parameter,
+/x/ is the random variate, /p/ is the probability and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: ['pdf = 1 / ([pi] * [gamma] * (1 + ((x - __x0) / [gamma])[super 2])) ]]]
+[[cdf and its complement][
+The cdf is normally given by:
+
+[expression p = 0.5 + atan(x)/[pi]]
+
+But that suffers from cancellation error as x -> -[infin].
+
+Instead, the mathematically equivalent expression based on the function atan2
+is used:
+
+[expression p = atan2(1, -x)/[pi]]
+
+By symmetry, the complement is
+
+[expression q = atan2(1, x)/[pi]]
+
+]]
+[[quantile][The same procedure is used irrespective of whether we're starting
+            from the probability or its complement.  First the argument /p/ is
+            reduced to the range \[-0.5, 0.5\], then the relation
+            
+[expression x = __x0 [plusminus] [gamma] / tan([pi] * p)]
+
+is used to obtain the result.  Whether we're adding
+            or subtracting from __x0 is determined by whether we're
+            starting from the complement or not.]]
+[[mode][The location parameter.]]
+]
+
+[h4 References]
+
+* [@http://en.wikipedia.org/wiki/Cauchy_distribution Cauchy-Lorentz distribution]
+* [@http://www.itl.nist.gov/div898/handbook/eda/section3/eda3663.htm NIST Exploratory Data Analysis]
+* [@http://mathworld.wolfram.com/CauchyDistribution.html Weisstein, Eric W. "Cauchy Distribution." From MathWorld--A Wolfram Web Resource.]
+
+[endsect][/section:cauchy_dist Cauchy]
+
+[/ cauchy.qbk
+  Copyright 2006, 2007 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

@@ -1,0 +1,95 @@
+<?xml version='1.0'?>
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN'
+  'http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd'
+  [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head><title>polygamma3</title>
+<!-- MathML created with MathCast Equation Editor version 0.89 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mfrac>
+      <mrow>
+        <msup>
+          <mo>&#x2202;</mo>
+          <mi>n</mi>
+        </msup>
+        <mi>cot</mi>
+        <mfenced>
+          <mrow>
+            <mi>&#x03C0;</mi>
+            <mi>x</mi>
+          </mrow>
+        </mfenced>
+      </mrow>
+      <mrow>
+        <mo>&#x2202;</mo>
+        <msup>
+          <mi>x</mi>
+          <mi>n</mi>
+        </msup>
+      </mrow>
+    </mfrac>
+    <mo>=</mo>
+    <mfrac>
+      <mrow>
+        <msup>
+          <mi>&#x03C0;</mi>
+          <mi>n</mi>
+        </msup>
+      </mrow>
+      <mrow>
+        <msup>
+          <mi>sin</mi>
+          <mrow>
+            <mi>n</mi>
+            <mo>+</mo>
+            <mn>1</mn>
+          </mrow>
+        </msup>
+        <mfenced>
+          <mrow>
+            <mi>&#x03C0;</mi>
+            <mi>x</mi>
+          </mrow>
+        </mfenced>
+      </mrow>
+    </mfrac>
+    <mspace width="1em"/>
+    <munderover>
+      <mo>&#x2211;</mo>
+      <mrow>
+        <mi>k</mi>
+        <mo>=</mo>
+        <mn>0</mn>
+      </mrow>
+      <mrow>
+        <mi>n</mi>
+        <mo>&#x2212;</mo>
+        <mn>1</mn>
+      </mrow>
+    </munderover>
+    <msub>
+      <mi>C</mi>
+      <mrow>
+        <mi>k</mi>
+        <mo>,</mo>
+        <mi>n</mi>
+      </mrow>
+    </msub>
+    <mi>cos</mi>
+    <msup>
+      <mi/>
+      <mi>k</mi>
+    </msup>
+    <mfenced>
+      <mrow>
+        <mi>&#x03C0;</mi>
+        <mi>n</mi>
+      </mrow>
+    </mfenced>
+  </mrow>
+</math>
+</body>
+</html>

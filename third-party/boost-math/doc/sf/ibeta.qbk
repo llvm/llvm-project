@@ -1,0 +1,202 @@
+[section:ibeta_function Incomplete Beta Functions]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/beta.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibeta(T1 a, T2 b, T3 x);
+   
+   template <class T1, class T2, class T3, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibeta(T1 a, T2 b, T3 x, const ``__Policy``&);
+   
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibetac(T1 a, T2 b, T3 x);
+   
+   template <class T1, class T2, class T3, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibetac(T1 a, T2 b, T3 x, const ``__Policy``&);
+   
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` beta(T1 a, T2 b, T3 x);
+   
+   template <class T1, class T2, class T3, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` beta(T1 a, T2 b, T3 x, const ``__Policy``&);
+   
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` betac(T1 a, T2 b, T3 x);
+   
+   template <class T1, class T2, class T3, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` betac(T1 a, T2 b, T3 x, const ``__Policy``&);
+   
+   }} // namespaces
+   
+[h4 Description]
+
+There are four [@http://en.wikipedia.org/wiki/Incomplete_beta_function incomplete beta functions]
+: two are normalised versions (also known as ['regularized] beta functions)
+that return values in the range [0, 1], and two are non-normalised and
+return values in the range [0, __beta(a, b)].  Users interested in statistical
+applications should use the normalised (or
+[@http://mathworld.wolfram.com/RegularizedBetaFunction.html regularized]
+) versions (ibeta and ibetac).
+
+All of these functions require /0 <= x <= 1/.
+
+The normalized functions __ibeta and __ibetac require /a,b >= 0/, and in addition that
+not both /a/ and /b/ are zero.
+
+The functions __beta and __betac require /a,b > 0/.
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1, T2 and T3 are different types.
+
+[optional_policy]
+
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibeta(T1 a, T2 b, T3 x);
+
+   template <class T1, class T2, class T3, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibeta(T1 a, T2 b, T3 x, const ``__Policy``&);
+
+Returns the normalised incomplete beta function of a, b and x:
+
+[equation ibeta3]
+
+[graph ibeta]
+
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibetac(T1 a, T2 b, T3 x);
+   
+   template <class T1, class T2, class T3, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibetac(T1 a, T2 b, T3 x, const ``__Policy``&);
+   
+Returns the normalised complement of the incomplete beta function of a, b and x:
+
+[equation ibeta4]
+
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` beta(T1 a, T2 b, T3 x);
+
+   template <class T1, class T2, class T3, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` beta(T1 a, T2 b, T3 x, const ``__Policy``&);
+
+Returns the full (non-normalised) incomplete beta function of a, b and x:
+
+[equation ibeta1]
+
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` betac(T1 a, T2 b, T3 x);
+
+   template <class T1, class T2, class T3, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` betac(T1 a, T2 b, T3 x, const ``__Policy``&);
+
+Returns the full (non-normalised) complement of the incomplete beta function of a, b and x:
+
+[equation ibeta2]
+
+[h4 Accuracy]
+
+The following tables give peak and mean relative errors in over various domains of
+a, b and x, along with comparisons to the __gsl and __cephes libraries.  
+Note that only results for the widest floating-point type on the system are given as
+narrower types have __zero_error.
+
+Note that the results for 80 and 128-bit long doubles are noticeably higher than
+for doubles: this is because the wider exponent range of these types allow
+more extreme test cases to be tested.  For example expected results that
+are zero at double precision, may be finite but exceptionally small with
+the wider exponent range of the long double types.
+
+[table_ibeta]
+
+[table_ibetac]
+
+[table_beta_incomplete_]
+
+[table_betac]
+
+[h4 Testing]
+
+There are two sets of tests: spot tests compare values taken from 
+[@http://functions.wolfram.com/webMathematica/FunctionEvaluation.jsp?name=BetaRegularized Mathworld's online function evaluator]
+with this implementation: they provide a basic "sanity check"
+for the implementation, with one spot-test in each implementation-domain 
+(see implementation notes below). 
+ 
+Accuracy tests use data generated at very high precision
+(with [@http://shoup.net/ntl/doc/RR.txt NTL RR class] set at 1000-bit precision),
+using the "textbook" continued fraction representation (refer to the first continued
+fraction in the implementation discussion below).
+Note that this continued fraction is /not/ used in the implementation,
+and therefore we have test data that is fully independent of the code.  
+
+[h4 Implementation]
+
+This implementation is closely based upon 
+[@http://portal.acm.org/citation.cfm?doid=131766.131776 "Algorithm 708; Significant digit computation of the incomplete beta function ratios", DiDonato and Morris, ACM, 1992.]
+
+All four of these functions share a common implementation: this is passed both
+x and y, and can return either p or q where these are related by:
+
+[equation ibeta_inv5]
+
+so at any point we can swap a for b, x for y and p for q if this results in
+a more favourable position.  Generally such swaps are performed so that we always
+compute a value less than 0.9: when required this can then be subtracted from 1
+without undue cancellation error.
+
+The following continued fraction representation is found in many textbooks
+but is not used in this implementation - it's both slower and less accurate than
+the alternatives - however it is used to generate test data:
+
+[equation ibeta5]
+
+The following continued fraction is due to [@http://portal.acm.org/citation.cfm?doid=131766.131776 Didonato and Morris],
+and is used in this implementation when a and b are both greater than 1:
+
+[equation ibeta6]
+
+For smallish b and x then a series representation can be used:
+
+[equation ibeta7]
+
+When b << a then the transition from 0 to 1 occurs very close to x = 1
+and some care has to be taken over the method of computation, in that case
+the following series representation is used:
+
+[equation ibeta8]
+[/[equation ibeta9]]
+
+Where Q(a,x) is an [@http://functions.wolfram.com/GammaBetaErf/Gamma2/ incomplete gamma function].
+Note that this method relies
+on keeping a table of all the p[sub n ] previously computed, which does limit
+the precision of the method, depending upon the size of the table used.
+
+When /a/ and /b/ are both small integers, then we can relate the incomplete
+beta to the binomial distribution and use the following finite sum:
+
+[equation ibeta12]
+
+Finally we can sidestep difficult areas, or move to an area with a more
+efficient means of computation, by using the duplication formulae:
+
+[equation ibeta10]
+
+[equation ibeta11]
+
+The domains of a, b and x for which the various methods are used are identical
+to those described in the
+[@http://portal.acm.org/citation.cfm?doid=131766.131776 Didonato and Morris TOMS 708 paper].
+
+[endsect][/section:ibeta_function The Incomplete Beta Function]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

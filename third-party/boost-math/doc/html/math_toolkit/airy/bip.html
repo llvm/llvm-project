@@ -1,0 +1,125 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Airy Bi' Function</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../airy.html" title="Airy Functions">
+<link rel="prev" href="aip.html" title="Airy Ai' Function">
+<link rel="next" href="airy_root.html" title="Finding Zeros of Airy Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="aip.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../airy.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="airy_root.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.airy.bip"></a><a class="link" href="bip.html" title="Airy Bi' Function">Airy Bi' Function</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.airy.bip.h0"></a>
+        <span class="phrase"><a name="math_toolkit.airy.bip.synopsis"></a></span><a class="link" href="bip.html#math_toolkit.airy.bip.synopsis">Synopsis</a>
+      </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">airy</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span>
+
+ <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+ <a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">airy_bi_prime</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">x</span><span class="special">);</span>
+
+ <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">Policy</span><span class="special">&gt;</span>
+ <a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">airy_bi_prime</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">Policy</span><span class="special">&amp;);</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<h5>
+<a name="math_toolkit.airy.bip.h1"></a>
+        <span class="phrase"><a name="math_toolkit.airy.bip.description"></a></span><a class="link" href="bip.html#math_toolkit.airy.bip.description">Description</a>
+      </h5>
+<p>
+        The function <a class="link" href="bip.html" title="Airy Bi' Function">airy_bi_prime</a> calculates
+        the Airy function Bi' which is the derivative of the second solution to the
+        differential equation:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/airy.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        The final <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+        be used to control the behaviour of the function: how it handles errors,
+        what level of precision to use etc. Refer to the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy
+        documentation for more details</a>.
+      </p>
+<p>
+        The following graph illustrates how this function changes as <span class="emphasis"><em>x</em></span>
+        changes: for negative <span class="emphasis"><em>x</em></span> the function is cyclic, while
+        for positive <span class="emphasis"><em>x</em></span> the value tends to infinity:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/airy_bi.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.airy.bip.h2"></a>
+        <span class="phrase"><a name="math_toolkit.airy.bip.accuracy"></a></span><a class="link" href="bip.html#math_toolkit.airy.bip.accuracy">Accuracy</a>
+      </h5>
+<p>
+        This function is implemented entirely in terms of the Bessel functions <a class="link" href="../bessel/mbessel.html" title="Modified Bessel Functions of the First and Second Kinds">cyl_bessel_i</a> and <a class="link" href="../bessel/bessel_first.html" title="Bessel Functions of the First and Second Kinds">cyl_bessel_j</a>
+        - refer to those functions for detailed accuracy information.
+      </p>
+<p>
+        In general though, the relative error is low (less than 100 ε) for <span class="emphasis"><em>x
+        &gt; 0</em></span> while only the absolute error is low for <span class="emphasis"><em>x &lt;
+        0</em></span> as the following error plot illustrates:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/bi_prime__double.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.airy.bip.h3"></a>
+        <span class="phrase"><a name="math_toolkit.airy.bip.testing"></a></span><a class="link" href="bip.html#math_toolkit.airy.bip.testing">Testing</a>
+      </h5>
+<p>
+        Since this function is implemented in terms of other special functions, there
+        are only a few basic sanity checks, using test values from <a href="http://functions.wolfram.com" target="_top">functions.wolfram.com</a>.
+      </p>
+<h5>
+<a name="math_toolkit.airy.bip.h4"></a>
+        <span class="phrase"><a name="math_toolkit.airy.bip.implementation"></a></span><a class="link" href="bip.html#math_toolkit.airy.bip.implementation">Implementation</a>
+      </h5>
+<p>
+        This function is implemented in terms of the Bessel functions using the relations:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/airy_bip.svg"></span>
+
+        </p></blockquote></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="aip.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../airy.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="airy_root.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

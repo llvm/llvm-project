@@ -1,0 +1,195 @@
+[section:nc_f_dist Noncentral F Distribution]
+
+``#include <boost/math/distributions/non_central_f.hpp>``
+
+   namespace boost{ namespace math{ 
+
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class non_central_f_distribution;
+
+   typedef non_central_f_distribution<> non_central_f;
+
+   template <class RealType, class ``__Policy``>
+   class non_central_f_distribution
+   {
+   public:
+      typedef RealType  value_type;
+      typedef Policy    policy_type;
+
+      // Constructor:
+      BOOST_MATH_GPU_ENABLED non_central_f_distribution(RealType v1, RealType v2, RealType lambda);
+
+      // Accessor to degrees_of_freedom parameters v1 & v2:
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom1()const;
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom2()const;
+
+      // Accessor to non-centrality parameter lambda:
+      BOOST_MATH_GPU_ENABLED RealType non_centrality()const;
+   };
+   
+   }} // namespaces
+   
+The noncentral F distribution is a generalization of the __F_distrib.
+It is defined as the ratio 
+
+[expression F = (X/v1) / (Y/v2)]
+   
+where X is a noncentral [chi][super 2]
+random variable with /v1/ degrees of freedom and non-centrality parameter [lambda], 
+and Y is a central [chi][super 2] random variable with /v2/ degrees of freedom.
+
+This gives the following PDF:
+
+[equation nc_f_ref1]
+
+where ['L[sub a][super b](c)] is a generalised Laguerre polynomial and ['B(a,b)] is the 
+__beta function, or
+
+[equation nc_f_ref2]
+
+The following graph illustrates how the distribution changes
+for different values of [lambda]:
+
+[graph nc_f_pdf]
+
+[h4 Member Functions]
+
+      BOOST_MATH_GPU_ENABLED non_central_f_distribution(RealType v1, RealType v2, RealType lambda);
+      
+Constructs a non-central beta distribution with parameters /v1/ and /v2/
+and non-centrality parameter /lambda/.
+
+Requires /v1/ > 0, /v2/ > 0 and lambda >= 0, otherwise calls __domain_error.
+
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom1()const;
+      
+Returns the parameter /v1/ from which this object was constructed.
+
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom2()const;
+      
+Returns the parameter /v2/ from which this object was constructed.
+
+      BOOST_MATH_GPU_ENABLED RealType non_centrality()const;
+      
+Returns the non-centrality parameter /lambda/ from which this object was constructed.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[0, +[infin]\].
+
+[h4 Accuracy]
+
+This distribution is implemented in terms of the
+__non_central_beta_distrib: refer to that distribution for accuracy data.
+
+[h4 Tests]
+
+Since this distribution is implemented by adapting another distribution, 
+the tests consist of basic sanity checks computed by the
+[@http://www.r-project.org/ R-2.5.1 Math library statistical
+package] and its pbeta and dbeta functions.
+
+[h4 Implementation]
+
+In the following table /v1/ and /v2/ are the first and second
+degrees of freedom parameters of the distribution, [lambda]
+is the non-centrality parameter,
+/x/ is the random variate, /p/ is the probability, and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Implemented in terms of the non-central beta PDF using the relation:
+
+[role serif_italic f(x;v1,v2;[lambda]) = (v1\/v2) / ((1+y)*(1+y)) * g(y\/(1+y);v1\/2,v2\/2;[lambda])]
+
+where [role serif_italic g(x; a, b; [lambda])] is the non central beta PDF, and:
+ 
+[role serif_italic y = x * v1 \/ v2]
+]]
+[[cdf][Using the relation:
+
+[role serif_italic p = B[sub y](v1\/2, v2\/2; [lambda])]
+
+where [role serif_italic B[sub x](a, b; [lambda])] is the noncentral beta distribution CDF and
+
+[role serif_italic y = x * v1 \/ v2]
+
+]]
+
+[[cdf complement][Using the relation:
+
+[role serif_italic q = 1 - B[sub y](v1\/2, v2\/2; [lambda])]
+
+where [role serif_italic 1 - B[sub x](a, b; [lambda])] is the complement of the 
+noncentral beta distribution CDF and
+
+[role serif_italic y = x * v1 \/ v2]
+
+]]
+[[quantile][Using the relation:
+
+[role serif_italic x = (bx \/ (1-bx)) * (v1 \/ v2)]
+
+where
+
+[role serif_italic bx = Q[sub p][super -1](v1\/2, v2\/2; [lambda])]
+
+and 
+
+[role serif_italic Q[sub p][super -1](v1\/2, v2\/2; [lambda])]
+
+is the noncentral beta quantile.
+
+]]
+[[quantile
+
+from the complement][
+Using the relation:
+
+[role serif_italic x = (bx \/ (1-bx)) * (v1 \/ v2)]
+
+where
+
+[role serif_italic bx = QC[sub q][super -1](v1\/2, v2\/2; [lambda])]
+
+and 
+
+[role serif_italic QC[sub q][super -1](v1\/2, v2\/2; [lambda])]
+
+is the noncentral beta quantile from the complement.]]
+[[mean][[role serif_italic v2 * (v1 + l) \/ (v1 * (v2 - 2))]]]
+[[mode][By numeric maximalisation of the PDF.]]
+[[variance][Refer to, [@http://mathworld.wolfram.com/NoncentralF-Distribution.html
+    Weisstein, Eric W. "Noncentral F-Distribution." From MathWorld--A Wolfram Web Resource.]  ]]
+[[skewness][Refer to, [@http://mathworld.wolfram.com/NoncentralF-Distribution.html
+    Weisstein, Eric W. "Noncentral F-Distribution." From MathWorld--A Wolfram Web Resource.],
+    and to the [@http://reference.wolfram.com/mathematica/ref/NoncentralFRatioDistribution.html
+    Mathematica documentation]  ]]
+[[kurtosis and kurtosis excess]
+    [Refer to, [@http://mathworld.wolfram.com/NoncentralF-Distribution.html
+    Weisstein, Eric W. "Noncentral F-Distribution." From MathWorld--A Wolfram Web Resource.],
+    and to the [@http://reference.wolfram.com/mathematica/ref/NoncentralFRatioDistribution.html
+    Mathematica documentation]  ]]
+]
+
+Some analytic properties of noncentral distributions
+(particularly unimodality, and monotonicity of their modes)
+are surveyed and summarized by:
+
+Andrea van Aubel & Wolfgang Gawronski, Applied Mathematics and Computation, 141 (2003) 3-12.
+
+[endsect] [/section:nc_f_dist]
+
+[/ nc_f.qbk
+  Copyright 2008 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

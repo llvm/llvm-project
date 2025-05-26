@@ -1,0 +1,32 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mi>&#x03C2;</mi>
+    <mfenced>
+      <mrow>
+        <mi>s</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <mfrac>
+      <mrow>
+        <mi>C</mi>
+        <mo>+</mo>
+        <mi>R</mi>
+        <mfenced>
+          <mrow>
+            <mn>1</mn>
+            <mo>&#x2212;</mo>
+            <mi>s</mi>
+          </mrow>
+        </mfenced>
+        <mo>&#x2212;</mo>
+        <mi>s</mi>
+      </mrow>
+      <mrow>
+        <mn>1</mn>
+        <mo>&#x2212;</mo>
+        <mi>s</mi>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>

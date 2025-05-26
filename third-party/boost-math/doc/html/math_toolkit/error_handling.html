@@ -1,0 +1,1121 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Error Handling</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../overview.html" title="Chapter 1. Overview">
+<link rel="prev" href="result_type.html" title="Calculation of the Type of the Result">
+<link rel="next" href="compilers_overview.html" title="Compilers">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="result_type.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../overview.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="compilers_overview.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.error_handling"></a><a class="link" href="error_handling.html" title="Error Handling">Error Handling</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.error_handling.h0"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.quick_reference"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.quick_reference">Quick
+      Reference</a>
+    </h4>
+<p>
+      Handling of errors by this library is split into two orthogonal parts:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          What kind of error has been raised?
+        </li>
+<li class="listitem">
+          What should be done when the error is raised?
+        </li>
+</ul></div>
+<div class="warning"><table border="0" summary="Warning">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../../../doc/src/images/warning.png"></td>
+<th align="left">Warning</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        The default error actions are to throw an exception with an informative error
+        message. <span class="red">If you do not try to catch the exception, you
+        will not see the message!</span>
+      </p></td></tr>
+</table></div>
+<p>
+      The default behavior is for exceptions to be thrown using boost::throw_exception.
+      This facility has special handling for exception free environments. If BOOST_MATH_STANDALONE
+      is defined standard library facilities (e.g. throw) are used for exception
+      handling.
+    </p>
+<p>
+      The kinds of errors that can be raised are:
+    </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">Domain Error</span></dt>
+<dd><p>
+            Occurs when one or more arguments to a function are out of range.
+          </p></dd>
+<dt><span class="term">Pole Error</span></dt>
+<dd><p>
+            Occurs when the particular arguments cause the function to be evaluated
+            at a pole with no well defined residual value. For example if <a class="link" href="sf_gamma/tgamma.html" title="Gamma">tgamma</a>
+            is evaluated at exactly -2, the function approaches different limiting
+            values depending upon whether you approach from just above or just below
+            -2. Hence the function has no well defined value at this point and a
+            Pole Error will be raised.
+          </p></dd>
+<dt><span class="term">Overflow Error</span></dt>
+<dd><p>
+            Occurs when the result is either infinite, or too large to represent
+            in the numeric type being returned by the function.
+          </p></dd>
+<dt><span class="term">Underflow Error</span></dt>
+<dd><p>
+            Occurs when the result is not zero, but is too small to be represented
+            by any other value in the type being returned by the function.
+          </p></dd>
+<dt><span class="term">Denormalisation Error</span></dt>
+<dd><p>
+            Occurs when the returned result would be a denormalised value.
+          </p></dd>
+<dt><span class="term">Rounding Error</span></dt>
+<dd><p>
+            Occurs when the argument to one of the rounding functions <a class="link" href="rounding/trunc.html" title="Truncation Functions">trunc</a>,
+            <a class="link" href="rounding/round.html" title="Rounding Functions">round</a> and <a class="link" href="rounding/modf.html" title="Integer and Fractional Part Splitting (modf)">modf</a>
+            can not be represented as an integer type, is outside the range of the
+            result type.
+          </p></dd>
+<dt><span class="term">Evaluation Error</span></dt>
+<dd><p>
+            Occurs if no method of evaluation is known, or when an internal error
+            occurred that prevented the result from being evaluated: this should
+            never occur, but if it does, then it's likely to be due to an iterative
+            method not converging fast enough.
+          </p></dd>
+<dt><span class="term">Indeterminate Result Error</span></dt>
+<dd><p>
+            Occurs when the result of a function is not defined for the values that
+            were passed to it.
+          </p></dd>
+</dl>
+</div>
+<p>
+      The action undertaken by each error condition is determined by the current
+      <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> in effect. This can be changed program-wide
+      by setting some configuration macros, or at namespace scope, or at the call
+      site (by specifying a specific policy in the function call).
+    </p>
+<p>
+      The available actions are:
+    </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">throw_on_error</span></dt>
+<dd><p>
+            Throws the exception most appropriate to the error condition.
+          </p></dd>
+<dt><span class="term">errno_on_error</span></dt>
+<dd><p>
+            Sets ::errno to an appropriate value, and then returns the most appropriate
+            result
+          </p></dd>
+<dt><span class="term">ignore_error</span></dt>
+<dd><p>
+            Ignores the error and simply the returns the most appropriate result.
+          </p></dd>
+<dt><span class="term">user_error</span></dt>
+<dd><p>
+            Calls a <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">user-supplied
+            error handler</a>.
+          </p></dd>
+</dl>
+</div>
+<p>
+      The following tables show all the permutations of errors and actions, with
+      the <span class="bold"><strong>default action for each error shown in bold</strong></span>:
+    </p>
+<div class="table">
+<a name="math_toolkit.error_handling.possible_actions_for_domain_erro"></a><p class="title"><b>Table 1.1. Possible Actions for Domain Errors</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Domain Errors">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Action
+              </p>
+            </th>
+<th>
+              <p>
+                Behaviour
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                throw_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="bold"><strong>Throws <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">domain_error</span></code></strong></span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                errno_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Sets <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+                to <code class="computeroutput"><span class="identifier">EDOM</span></code> and returns
+                <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">()</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ignore_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">()</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                user_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns the result of <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_domain_error</span></code>:
+                <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">this function
+                must be defined by the user</a>.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.error_handling.possible_actions_for_pole_errors"></a><p class="title"><b>Table 1.2. Possible Actions for Pole Errors</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Pole Errors">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Action
+              </p>
+            </th>
+<th>
+              <p>
+                Behaviour
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                throw_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="bold"><strong>Throws <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">domain_error</span></code></strong></span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                errno_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Sets <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+                to <code class="computeroutput"><span class="identifier">EDOM</span></code> and returns
+                <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">()</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ignore_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">()</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                user_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns the result of <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_pole_error</span></code>:
+                <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">this function
+                must be defined by the user</a>.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.error_handling.possible_actions_for_overflow_er"></a><p class="title"><b>Table 1.3. Possible Actions for Overflow Errors</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Overflow Errors">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Action
+              </p>
+            </th>
+<th>
+              <p>
+                Behaviour
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                throw_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="bold"><strong>Throws <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">overflow_error</span></code></strong></span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                errno_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Sets <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+                to <code class="computeroutput"><span class="identifier">ERANGE</span></code> and returns
+                <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">()</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ignore_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">()</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                user_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns the result of <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_overflow_error</span></code>:
+                <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">this function
+                must be defined by the user</a>.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.error_handling.possible_actions_for_underflow_e"></a><p class="title"><b>Table 1.4. Possible Actions for Underflow Errors</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Underflow Errors">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Action
+              </p>
+            </th>
+<th>
+              <p>
+                Behaviour
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                throw_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Throws <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">underflow_error</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                errno_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Sets <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+                to <code class="computeroutput"><span class="identifier">ERANGE</span></code> and returns
+                0.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ignore_error
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="bold"><strong>Returns 0</strong></span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                user_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns the result of <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_underflow_error</span></code>:
+                <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">this function
+                must be defined by the user</a>.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.error_handling.possible_actions_for_denorm_erro"></a><p class="title"><b>Table 1.5. Possible Actions for Denorm Errors</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Denorm Errors">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Action
+              </p>
+            </th>
+<th>
+              <p>
+                Behaviour
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                throw_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Throws <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">underflow_error</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                errno_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Sets <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+                to <code class="computeroutput"><span class="identifier">ERANGE</span></code> and returns
+                the denormalised value.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ignore_error
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="bold"><strong>Returns the denormalised value.</strong></span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                user_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns the result of <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_denorm_error</span></code>:
+                <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">this function
+                must be defined by the user</a>.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.error_handling.possible_actions_for_rounding_er"></a><p class="title"><b>Table 1.6. Possible Actions for Rounding Errors</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Rounding Errors">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Action
+              </p>
+            </th>
+<th>
+              <p>
+                Behaviour
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                throw_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Throws <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">rounding_error</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                errno_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Sets <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+                to <code class="computeroutput"><span class="identifier">ERANGE</span></code> and returns
+                the largest representable value of the target integer type (or the
+                most negative value if the argument to the function was less than
+                zero).
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ignore_error
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="bold"><strong>Returns the largest representable value of
+                the target integer type (or the most negative value if the argument
+                to the function was less than zero).</strong></span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                user_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns the result of <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_rounding_error</span></code>:
+                <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">this function
+                must be defined by the user</a>.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.error_handling.possible_actions_for_internal_ev"></a><p class="title"><b>Table 1.7. Possible Actions for Internal Evaluation Errors</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Internal Evaluation Errors">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Action
+              </p>
+            </th>
+<th>
+              <p>
+                Behaviour
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                throw_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="bold"><strong>Throws <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">evaluation_error</span></code></strong></span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                errno_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Sets <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+                to <code class="computeroutput"><span class="identifier">EDOM</span></code> and returns
+                the closest approximation found.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ignore_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns the closest approximation found.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                user_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns the result of <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_evaluation_error</span></code>:
+                <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">this function
+                must be defined by the user</a>.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.error_handling.possible_actions_for_indetermina"></a><p class="title"><b>Table 1.8. Possible Actions for Indeterminate Result Errors</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Indeterminate Result Errors">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                Action
+              </p>
+            </th>
+<th>
+              <p>
+                Behaviour
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                throw_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Throws <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">domain_error</span></code>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                errno_on_error
+              </p>
+            </td>
+<td>
+              <p>
+                Sets <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+                to <code class="computeroutput"><span class="identifier">EDOM</span></code> and returns
+                the same value as <code class="computeroutput"><span class="identifier">ignore_error</span></code>.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                ignore_error
+              </p>
+            </td>
+<td>
+              <p>
+                <span class="bold"><strong>Returns a default result that depends on the
+                function where the error occurred.</strong></span>
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                user_error
+              </p>
+            </td>
+<td>
+              <p>
+                Returns the result of <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_indeterminate_result_error</span></code>:
+                <a class="link" href="pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">this function
+                must be defined by the user</a>.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+      All these error conditions are in namespace boost::math::policies, made available,
+      for example, a by namespace declaration using <code class="computeroutput"><span class="keyword">namespace</span>
+      <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">;</span></code> or individual using declarations <code class="computeroutput"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">overflow_error</span><span class="special">;</span></code>.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h1"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.rationale"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.rationale">Rationale</a>
+    </h4>
+<p>
+      The flexibility of the current implementation should be reasonably obvious:
+      the default behaviours were chosen based on feedback during the formal review
+      of this library. It was felt that:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Genuine errors should be flagged with exceptions rather than following
+          C-compatible behaviour and setting <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>.
+        </li>
+<li class="listitem">
+          Numeric underflow and denormalised results were not considered to be fatal
+          errors in most cases, so it was felt that these should be ignored.
+        </li>
+<li class="listitem">
+          If there is more than one error, only the first detected will be reported
+          in the throw message.
+        </li>
+</ul></div>
+<h4>
+<a name="math_toolkit.error_handling.h2"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.finding_more_information"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.finding_more_information">Finding
+      More Information</a>
+    </h4>
+<p>
+      There are some pre-processor macro defines that can be used to <a class="link" href="pol_ref/policy_defaults.html" title="Using Macros to Change the Policy Defaults">change
+      the policy defaults</a>. See also the <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy section</a>.
+    </p>
+<p>
+      An example is at the Policy tutorial in <a class="link" href="pol_tutorial/changing_policy_defaults.html" title="Changing the Policy Defaults">Changing
+      the Policy Defaults</a>.
+    </p>
+<p>
+      Full source code of this typical example of passing a 'bad' argument (negative
+      degrees of freedom) to Student's t distribution is <a class="link" href="stat_tut/weg/error_eg.html" title="Error Handling Example">in
+      the error handling example</a>.
+    </p>
+<p>
+      The various kind of errors are described in more detail below.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h3"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.domain_error"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.domain_error">Domain
+      Errors</a>
+    </h4>
+<p>
+      When a special function is passed an argument that is outside the range of
+      values for which that function is defined, then the function returns the result
+      of:
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_domain_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">);</span>
+</pre>
+<p>
+      Where <code class="computeroutput"><span class="identifier">T</span></code> is the floating-point
+      type passed to the function, <code class="computeroutput"><span class="identifier">FunctionName</span></code>
+      is the name of the function, <code class="computeroutput"><span class="identifier">Message</span></code>
+      is an error message describing the problem, Val is the value that was out of
+      range, and <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> is the current policy in use
+      for the function that was called.
+    </p>
+<p>
+      The default policy behaviour of this function is to throw a std::domain_error
+      C++ exception. But if the <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> is to ignore
+      the error, or set global <code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>,
+      then a NaN will be returned.
+    </p>
+<p>
+      This behaviour is chosen to assist compatibility with the behaviour of <span class="emphasis"><em>ISO/IEC
+      9899:1999 Programming languages - C</em></span> and with the <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf" target="_top">Draft
+      Technical Report on C++ Library Extensions, 2005-06-24, section 5.2.1, paragraph
+      6</a>:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="emphasis"><em>"Each of the functions declared above shall return a NaN (Not
+        a Number) if any argument value is a NaN, but it shall not report a domain
+        error. Otherwise, each of the functions declared above shall report a domain
+        error for just those argument values for which:<br> the function description's
+        Returns clause explicitly specifies a domain, and those arguments fall outside
+        the specified domain; or <br> the corresponding mathematical function value
+        has a non-zero imaginary component; or <br> the corresponding mathematical
+        function is not mathematically defined. <br> Note 2: A mathematical function
+        is mathematically defined for a given set of argument values if it is explicitly
+        defined for that set of argument values or if its limiting value exists and
+        does not depend on the direction of approach."</em></span>
+      </p></blockquote></div>
+<p>
+      Note that in order to support information-rich error messages when throwing
+      exceptions, <code class="computeroutput"><span class="identifier">Message</span></code> must contain
+      a <a href="../../../../format/index.html" target="_top">Boost.Format</a> recognised format
+      specifier: the argument <code class="computeroutput"><span class="identifier">Val</span></code>
+      is inserted into the error message according to the specifier used.
+    </p>
+<p>
+      For example if <code class="computeroutput"><span class="identifier">Message</span></code> contains
+      a "%1%" then it is replaced by the value of <code class="computeroutput"><span class="identifier">Val</span></code>
+      to the full precision of T, where as "%.3g" would contain the value
+      of <code class="computeroutput"><span class="identifier">Val</span></code> to 3 digits. See the
+      <a href="../../../../format/index.html" target="_top">Boost.Format</a> documentation
+      for more details.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h4"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.pole_error"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.pole_error">Evaluation
+      at a pole</a>
+    </h4>
+<p>
+      When a special function is passed an argument that is at a pole without a well
+      defined residual value, then the function returns the result of:
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_pole_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">);</span>
+</pre>
+<p>
+      Where <code class="computeroutput"><span class="identifier">T</span></code> is the floating point
+      type passed to the function, <code class="computeroutput"><span class="identifier">FunctionName</span></code>
+      is the name of the function, <code class="computeroutput"><span class="identifier">Message</span></code>
+      is an error message describing the problem, <code class="computeroutput"><span class="identifier">Val</span></code>
+      is the value of the argument that is at a pole, and <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a>
+      is the current policy in use for the function that was called.
+    </p>
+<p>
+      The default behaviour of this function is to throw a std::domain_error exception.
+      But <a class="link" href="pol_ref/error_handling_policies.html" title="Error Handling Policies">error handling
+      policies</a> can be used to change this, for example to <code class="computeroutput"><span class="identifier">ignore_error</span></code>
+      and return NaN.
+    </p>
+<p>
+      Note that in order to support information-rich error messages when throwing
+      exceptions, <code class="computeroutput"><span class="identifier">Message</span></code> must contain
+      a <a href="../../../../format/index.html" target="_top">Boost.Format</a> recognised format
+      specifier: the argument <code class="computeroutput"><span class="identifier">val</span></code>
+      is inserted into the error message according to the specifier used.
+    </p>
+<p>
+      For example if <code class="computeroutput"><span class="identifier">Message</span></code> contains
+      a "%1%" then it is replaced by the value of <code class="computeroutput"><span class="identifier">val</span></code>
+      to the full precision of T, where as "%.3g" would contain the value
+      of <code class="computeroutput"><span class="identifier">val</span></code> to 3 digits. See the
+      <a href="../../../../format/index.html" target="_top">Boost.Format</a> documentation
+      for more details.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h5"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.overflow_error"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.overflow_error">Numeric
+      Overflow</a>
+    </h4>
+<p>
+      When the result of a special function is too large to fit in the argument floating-point
+      type, then the function returns the result of:
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_overflow_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">);</span>
+</pre>
+<p>
+      Where <code class="computeroutput"><span class="identifier">T</span></code> is the floating-point
+      type passed to the function, <code class="computeroutput"><span class="identifier">FunctionName</span></code>
+      is the name of the function, <code class="computeroutput"><span class="identifier">Message</span></code>
+      is an error message describing the problem, and <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a>
+      is the current policy in use for the function that was called.
+    </p>
+<p>
+      The default policy for this function is that <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">overflow_error</span></code>
+      C++ exception is thrown. But if, for example, an <code class="computeroutput"><span class="identifier">ignore_error</span></code>
+      policy is used, then returns <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">()</span></code>.
+      In this situation if the type <code class="computeroutput"><span class="identifier">T</span></code>
+      doesn't support infinities, the maximum value for the type is returned.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h6"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.underflow_error"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.underflow_error">Numeric
+      Underflow</a>
+    </h4>
+<p>
+      If the result of a special function is known to be non-zero, but the calculated
+      result underflows to zero, then the function returns the result of:
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_underflow_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">);</span>
+</pre>
+<p>
+      Where <code class="computeroutput"><span class="identifier">T</span></code> is the floating point
+      type passed to the function, <code class="computeroutput"><span class="identifier">FunctionName</span></code>
+      is the name of the function, <code class="computeroutput"><span class="identifier">Message</span></code>
+      is an error message describing the problem, and <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a>
+      is the current policy in use for the called function.
+    </p>
+<p>
+      The default version of this function returns zero. But with another policy,
+      like <code class="computeroutput"><span class="identifier">throw_on_error</span></code>, throws
+      an <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">underflow_error</span></code> C++ exception.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h7"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.denorm_error"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.denorm_error">Denormalisation
+      Errors</a>
+    </h4>
+<p>
+      If the result of a special function is a denormalised value <span class="emphasis"><em>z</em></span>
+      then the function returns the result of:
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_denorm_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">z</span><span class="special">,</span> <span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">);</span>
+</pre>
+<p>
+      Where <code class="computeroutput"><span class="identifier">T</span></code> is the floating point
+      type passed to the function, <code class="computeroutput"><span class="identifier">FunctionName</span></code>
+      is the name of the function, <code class="computeroutput"><span class="identifier">Message</span></code>
+      is an error message describing the problem, and <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a>
+      is the current policy in use for the called function.
+    </p>
+<p>
+      The default version of this function returns <span class="emphasis"><em>z</em></span>. But with
+      another policy, like <code class="computeroutput"><span class="identifier">throw_on_error</span></code>
+      throws an <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">underflow_error</span></code> C++ exception.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h8"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.evaluation_error"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.evaluation_error">Evaluation
+      Errors</a>
+    </h4>
+<p>
+      When a special function calculates a result that is known to be erroneous,
+      or where the result is incalculable then it calls:
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_evaluation_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">);</span>
+</pre>
+<p>
+      Where <code class="computeroutput"><span class="identifier">T</span></code> is the floating point
+      type passed to the function, <code class="computeroutput"><span class="identifier">FunctionName</span></code>
+      is the name of the function, <code class="computeroutput"><span class="identifier">Message</span></code>
+      is an error message describing the problem, <code class="computeroutput"><span class="identifier">Val</span></code>
+      is the erroneous value, and <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> is the current
+      policy in use for the called function.
+    </p>
+<p>
+      The default behaviour of this function is to throw a <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">evaluation_error</span></code>.
+    </p>
+<p>
+      Note that in order to support information rich error messages when throwing
+      exceptions, <code class="computeroutput"><span class="identifier">Message</span></code> must contain
+      a <a href="../../../../format/index.html" target="_top">Boost.Format</a> recognised format
+      specifier: the argument <code class="computeroutput"><span class="identifier">val</span></code>
+      is inserted into the error message according to the specifier used.
+    </p>
+<p>
+      For example if <code class="computeroutput"><span class="identifier">Message</span></code> contains
+      a "%1%" then it is replaced by the value of <code class="computeroutput"><span class="identifier">val</span></code>
+      to the full precision of T, where as "%.3g" would contain the value
+      of <code class="computeroutput"><span class="identifier">val</span></code> to 3 digits. See the
+      <a href="../../../../format/index.html" target="_top">Boost.Format</a> documentation
+      for more details.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h9"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.indeterminate_result_error"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.indeterminate_result_error">Indeterminate
+      Result Errors</a>
+    </h4>
+<p>
+      When the result of a special function is indeterminate for the value that was
+      passed to it, then the function returns the result of:
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_overflow_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <span class="identifier">Default</span><span class="special">,</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">);</span>
+</pre>
+<p>
+      Where <code class="computeroutput"><span class="identifier">T</span></code> is the floating-point
+      type passed to the function, <code class="computeroutput"><span class="identifier">FunctionName</span></code>
+      is the name of the function, <code class="computeroutput"><span class="identifier">Message</span></code>
+      is an error message describing the problem, Val is the value for which the
+      result is indeterminate, Default is an alternative default result that must
+      be returned for <code class="computeroutput"><span class="identifier">ignore_error</span></code>
+      and <code class="computeroutput"><span class="identifier">errno_on_erro</span></code> policies,
+      and <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> is the current policy in use for the
+      function that was called.
+    </p>
+<p>
+      The default policy for this function is <code class="computeroutput"><span class="identifier">ignore_error</span></code>:
+      note that this error type is reserved for situations where the result is mathematically
+      undefined or indeterminate, but there is none the less a convention for what
+      the result should be: for example the C99 standard specifies that the result
+      of 0<sup>0</sup> is 1, even though the result is actually mathematically indeterminate.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h10"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.rounding_error"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.rounding_error">Rounding
+      Errors</a>
+    </h4>
+<p>
+      When one of the rounding functions <a class="link" href="rounding/round.html" title="Rounding Functions">round</a>,
+      <a class="link" href="rounding/trunc.html" title="Truncation Functions">trunc</a> or <a class="link" href="rounding/modf.html" title="Integer and Fractional Part Splitting (modf)">modf</a>
+      is called with an argument that has no integer representation, or is too large
+      to be represented in the result type then the value returned is the result
+      of a call to:
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_rounding_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">);</span>
+</pre>
+<p>
+      Where <code class="computeroutput"><span class="identifier">T</span></code> is the floating point
+      type passed to the function, <code class="computeroutput"><span class="identifier">FunctionName</span></code>
+      is the name of the function, <code class="computeroutput"><span class="identifier">Message</span></code>
+      is an error message describing the problem, <code class="computeroutput"><span class="identifier">Val</span></code>
+      is the erroneous argument, and <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> is the
+      current policy in use for the called function.
+    </p>
+<p>
+      The default behaviour of this function is to throw a <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">rounding_error</span></code>.
+    </p>
+<p>
+      Note that in order to support information rich error messages when throwing
+      exceptions, <code class="computeroutput"><span class="identifier">Message</span></code> must contain
+      a <a href="../../../../format/index.html" target="_top">Boost.Format</a> recognised format
+      specifier: the argument <code class="computeroutput"><span class="identifier">val</span></code>
+      is inserted into the error message according to the specifier used.
+    </p>
+<p>
+      For example if <code class="computeroutput"><span class="identifier">Message</span></code> contains
+      a "%1%" then it is replaced by the value of <code class="computeroutput"><span class="identifier">val</span></code>
+      to the full precision of T, where as "%.3g" would contain the value
+      of <code class="computeroutput"><span class="identifier">val</span></code> to 3 digits. See the
+      <a href="../../../../format/index.html" target="_top">Boost.Format</a> documentation
+      for more details.
+    </p>
+<h4>
+<a name="math_toolkit.error_handling.h11"></a>
+      <span class="phrase"><a name="math_toolkit.error_handling.checked_narrowing_cast"></a></span><a class="link" href="error_handling.html#math_toolkit.error_handling.checked_narrowing_cast">Errors
+      from typecasts</a>
+    </h4>
+<p>
+      Many special functions evaluate their results at a higher precision than their
+      arguments in order to ensure full machine precision in the result: for example,
+      a function passed a float argument may evaluate its result using double precision
+      internally. Many of the errors listed above may therefore occur not during
+      evaluation, but when converting the result to the narrower result type. The
+      function:
+    </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">U</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">checked_narrowing_cast</span><span class="special">(</span><span class="identifier">U</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">val</span><span class="special">,</span> <span class="keyword">const</span> <span class="keyword">char</span><span class="special">*</span> <span class="identifier">function</span><span class="special">);</span>
+</pre>
+<p>
+      Is used to perform these conversions, and will call the error handlers listed
+      above on <a class="link" href="error_handling.html#math_toolkit.error_handling.overflow_error">overflow</a>,
+      <a class="link" href="error_handling.html#math_toolkit.error_handling.underflow_error">underflow</a>
+      or <a class="link" href="error_handling.html#math_toolkit.error_handling.denorm_error">denormalisation</a>.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="result_type.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../overview.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="compilers_overview.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

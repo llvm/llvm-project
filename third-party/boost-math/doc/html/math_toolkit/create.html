@@ -1,0 +1,120 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Quaternion Creation Functions</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../quaternions.html" title="Chapter 17. Quaternions">
+<link rel="prev" href="value_op.html" title="Quaternion Value Operations">
+<link rel="next" href="trans.html" title="Quaternion Transcendentals">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="value_op.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../quaternions.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="trans.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.create"></a><a class="link" href="create.html" title="Quaternion Creation Functions">Quaternion Creation Functions</a>
+</h2></div></div></div>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">spherical</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">rho</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">theta</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">phi1</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">phi2</span><span class="special">);</span>
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">semipolar</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">rho</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">alpha</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">theta1</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">theta2</span><span class="special">);</span>
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">multipolar</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">rho1</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">theta1</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">rho2</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">theta2</span><span class="special">);</span>
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">cylindrospherical</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">t</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">radius</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">longitude</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">latitude</span><span class="special">);</span>
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">quaternion</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">cylindrical</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">r</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">angle</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">h1</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">h2</span><span class="special">);</span>
+</pre>
+<p>
+      These build quaternions in a way similar to the way polar builds complex numbers,
+      as there is no strict equivalent to polar coordinates for quaternions.
+    </p>
+<p>
+      <a name="math_quaternions.creation_spherical"></a><code class="computeroutput"><span class="identifier">spherical</span></code>
+      is a simple transposition of <code class="computeroutput"><span class="identifier">polar</span></code>,
+      it takes as inputs a (positive) magnitude and a point on the hypersphere, given
+      by three angles. The first of these, <code class="computeroutput"><span class="identifier">theta</span></code>
+      has a natural range of <code class="computeroutput"><span class="special">-</span><span class="identifier">pi</span></code>
+      to <code class="computeroutput"><span class="special">+</span><span class="identifier">pi</span></code>,
+      and the other two have natural ranges of <code class="computeroutput"><span class="special">-</span><span class="identifier">pi</span><span class="special">/</span><span class="number">2</span></code>
+      to <code class="computeroutput"><span class="special">+</span><span class="identifier">pi</span><span class="special">/</span><span class="number">2</span></code> (as is the
+      case with the usual spherical coordinates in <span class="emphasis"><em><span class="bold"><strong>R<sup>3</sup></strong></span></em></span>).
+      Due to the many symmetries and periodicities, nothing untoward happens if the
+      magnitude is negative or the angles are outside their natural ranges. The expected
+      degeneracies (a magnitude of zero ignores the angles settings...) do happen
+      however.
+    </p>
+<p>
+      <a name="math_quaternions.creation_cylindrical"></a><code class="computeroutput"><span class="identifier">cylindrical</span></code>
+      is likewise a simple transposition of the usual cylindrical coordinates in
+      <span class="emphasis"><em><span class="bold"><strong>R<sup>3</sup></strong></span></em></span>, which in turn is another
+      derivative of planar polar coordinates. The first two inputs are the polar
+      coordinates of the first <span class="emphasis"><em><span class="bold"><strong>C</strong></span></em></span>
+      component of the quaternion. The third and fourth inputs are placed into the
+      third and fourth <span class="emphasis"><em><span class="bold"><strong>R</strong></span></em></span> components
+      of the quaternion, respectively.
+    </p>
+<p>
+      <a name="math_quaternions.creation_multipolar"></a><code class="computeroutput"><span class="identifier">multipolar</span></code>
+      is yet another simple generalization of polar coordinates. This time, both
+      <span class="emphasis"><em><span class="bold"><strong>C</strong></span></em></span> components of the quaternion
+      are given in polar coordinates.
+    </p>
+<p>
+      <a name="math_quaternions.creation_cylindrospherical"></a><code class="computeroutput"><span class="identifier">cylindrospherical</span></code>
+      is specific to quaternions. It is often interesting to consider <span class="emphasis"><em><span class="bold"><strong>H</strong></span></em></span> as the cartesian product of <span class="emphasis"><em><span class="bold"><strong>R</strong></span></em></span> by <span class="emphasis"><em><span class="bold"><strong>R<sup>3</sup></strong></span></em></span>
+      (the quaternionic multiplication as then a special form, as given here). This
+      function therefore builds a quaternion from this representation, with the
+      <span class="emphasis"><em><span class="bold"><strong>R<sup>3</sup></strong></span></em></span> component given in usual
+      <span class="emphasis"><em><span class="bold"><strong>R<sup>3</sup></strong></span></em></span> spherical coordinates.
+    </p>
+<p>
+      <a name="math_quaternions.creation_semipolar"></a><code class="computeroutput"><span class="identifier">semipolar</span></code>
+      is another generator which is specific to quaternions. It takes as a first
+      input the magnitude of the quaternion, as a second input an angle in the range
+      <code class="computeroutput"><span class="number">0</span></code> to <code class="computeroutput"><span class="special">+</span><span class="identifier">pi</span><span class="special">/</span><span class="number">2</span></code>
+      such that magnitudes of the first two <span class="emphasis"><em><span class="bold"><strong>C</strong></span></em></span>
+      components of the quaternion are the product of the first input and the sine
+      and cosine of this angle, respectively, and finally as third and fourth inputs
+      angles in the range <code class="computeroutput"><span class="special">-</span><span class="identifier">pi</span><span class="special">/</span><span class="number">2</span></code> to <code class="computeroutput"><span class="special">+</span><span class="identifier">pi</span><span class="special">/</span><span class="number">2</span></code> which represent the arguments of the first
+      and second <span class="emphasis"><em><span class="bold"><strong>C</strong></span></em></span> components
+      of the quaternion, respectively. As usual, nothing untoward happens if what
+      should be magnitudes are negative numbers or angles are out of their natural
+      ranges, as symmetries and periodicities kick in.
+    </p>
+<p>
+      In this version of our implementation of quaternions, there is no analogue
+      of the complex value operation <code class="computeroutput"><span class="identifier">arg</span></code>
+      as the situation is somewhat more complicated. Unit quaternions are linked
+      both to rotations in <span class="emphasis"><em><span class="bold"><strong>R<sup>3</sup></strong></span></em></span>
+      and in <span class="emphasis"><em><span class="bold"><strong>R<sup>4</sup></strong></span></em></span>, and the correspondences
+      are not too complicated, but there is currently a lack of standard (de facto
+      or de jure) matrix library with which the conversions could work. This should
+      be remedied in a further revision. In the mean time, an example of how this
+      could be done is presented here for <a href="../../../example/HSO3.hpp" target="_top"><span class="emphasis"><em><span class="bold"><strong>R<sup>3</sup></strong></span></em></span></a>, and here for <a href="../../../example/HSO4.hpp" target="_top"><span class="emphasis"><em><span class="bold"><strong>R<sup>4</sup></strong></span></em></span></a> (<a href="../../../example/HSO3SO4.cpp" target="_top">example
+      test file</a>).
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="value_op.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../quaternions.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="trans.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

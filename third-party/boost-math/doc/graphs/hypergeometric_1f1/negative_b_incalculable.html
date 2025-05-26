@@ -1,0 +1,40 @@
+﻿
+    <div>
+        <script type="text/javascript" src="../../../graphs/hypergeometric_1f1/negative_b_incalculable.js"></script>
+        
+        <div id="fce5fa05-942c-4973-941f-2f3d25bcecb3" style="width: 800px; height: 600px;" class="plotly-graph-div"></div>
+        <script type="text/javascript">
+            (function(){
+                window.PLOTLYENV={'BASE_URL': 'https://plot.ly'};
+
+                var gd = document.getElementById('fce5fa05-942c-4973-941f-2f3d25bcecb3')
+                var resizeDebounce = null;
+
+                function resizePlot() {
+                    var bb = gd.getBoundingClientRect();
+                    Plotly.relayout(gd, {
+                        width: bb.width,
+                        height: bb.height
+                    });
+                }
+
+                
+                window.addEventListener('resize', function() {
+                    if (resizeDebounce) {
+                        window.clearTimeout(resizeDebounce);
+                    }
+                    resizeDebounce = window.setTimeout(resizePlot, 100);
+                });
+                
+
+                
+                Plotly.plot(gd,  {
+                   data: negative_b_incalculable.data,
+                   layout: negative_b_incalculable.layout,
+                   frames: negative_b_incalculable.frames,
+                    config: {"showLink": true, "linkText": "Export to plot.ly", "mapboxAccessToken": "pk.eyJ1IjoiY2hyaWRkeXAiLCJhIjoiY2lxMnVvdm5iMDA4dnhsbTQ5aHJzcGs0MyJ9.X9o_rzNLNesDxdra4neC_A"}
+                });
+                
+           }());
+        </script>
+    </div>

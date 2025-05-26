@@ -1,0 +1,279 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Binomial Coin-Flipping Example</title>
+<link rel="stylesheet" href="../../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../binom_eg.html" title="Binomial Distribution Examples">
+<link rel="prev" href="../binom_eg.html" title="Binomial Distribution Examples">
+<link rel="next" href="binomial_quiz_example.html" title="Binomial Quiz Example">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../binom_eg.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../binom_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="binomial_quiz_example.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="math_toolkit.stat_tut.weg.binom_eg.binomial_coinflip_example"></a><a class="link" href="binomial_coinflip_example.html" title="Binomial Coin-Flipping Example">Binomial
+          Coin-Flipping Example</a>
+</h5></div></div></div>
+<p>
+            An example of a <a href="http://en.wikipedia.org/wiki/Bernoulli_process" target="_top">Bernoulli
+            process</a> is coin flipping. A variable in such a sequence may be
+            called a Bernoulli variable.
+          </p>
+<p>
+            This example shows using the Binomial distribution to predict the probability
+            of heads and tails when throwing a coin.
+          </p>
+<p>
+            The number of correct answers (say heads), X, is distributed as a binomial
+            random variable with binomial distribution parameters number of trials
+            (flips) n = 10 and probability (success_fraction) of getting a head p
+            = 0.5 (a 'fair' coin).
+          </p>
+<p>
+            (Our coin is assumed fair, but we could easily change the success_fraction
+            parameter p from 0.5 to some other value to simulate an unfair coin,
+            say 0.6 for one with chewing gum on the tail, so it is more likely to
+            fall tails down and heads up).
+          </p>
+<p>
+            First we need some includes and using statements to be able to use the
+            binomial distribution, some std input and output, and get started:
+          </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">binomial</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">binomial</span><span class="special">;</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">;</span>  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">left</span><span class="special">;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iomanip</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+  <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Using Binomial distribution to predict how many heads and tails."</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+  <span class="keyword">try</span>
+  <span class="special">{</span>
+</pre>
+<p>
+            See note <a class="link" href="binomial_coinflip_example.html#coinflip_eg_catch">with the catch block</a>
+            about why a try and catch block is always a good idea.
+          </p>
+<p>
+            First, construct a binomial distribution with parameters success_fraction
+            1/2, and how many flips.
+          </p>
+<pre class="programlisting"><span class="keyword">const</span> <span class="keyword">double</span> <span class="identifier">success_fraction</span> <span class="special">=</span> <span class="number">0.5</span><span class="special">;</span> <span class="comment">// = 50% = 1/2 for a 'fair' coin.</span>
+<span class="keyword">int</span> <span class="identifier">flips</span> <span class="special">=</span> <span class="number">10</span><span class="special">;</span>
+<span class="identifier">binomial</span> <span class="identifier">flip</span><span class="special">(</span><span class="identifier">flips</span><span class="special">,</span> <span class="identifier">success_fraction</span><span class="special">);</span>
+
+<span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="number">4</span><span class="special">);</span>
+</pre>
+<p>
+            Then some examples of using Binomial moments (and echoing the parameters).
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"From "</span> <span class="special">&lt;&lt;</span> <span class="identifier">flips</span> <span class="special">&lt;&lt;</span> <span class="string">" one can expect to get on average "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">mean</span><span class="special">(</span><span class="identifier">flip</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">" heads (or tails)."</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Mode is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">mode</span><span class="special">(</span><span class="identifier">flip</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Standard deviation is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">standard_deviation</span><span class="special">(</span><span class="identifier">flip</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"So about 2/3 will lie within 1 standard deviation and get between "</span>
+  <span class="special">&lt;&lt;</span>  <span class="identifier">ceil</span><span class="special">(</span><span class="identifier">mean</span><span class="special">(</span><span class="identifier">flip</span><span class="special">)</span> <span class="special">-</span> <span class="identifier">standard_deviation</span><span class="special">(</span><span class="identifier">flip</span><span class="special">))</span>  <span class="special">&lt;&lt;</span> <span class="string">" and "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">floor</span><span class="special">(</span><span class="identifier">mean</span><span class="special">(</span><span class="identifier">flip</span><span class="special">)</span> <span class="special">+</span> <span class="identifier">standard_deviation</span><span class="special">(</span><span class="identifier">flip</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="string">" correct."</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Skewness is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">skewness</span><span class="special">(</span><span class="identifier">flip</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Skewness of binomial distributions is only zero (symmetrical)</span>
+<span class="comment">// if success_fraction is exactly one half,</span>
+<span class="comment">// for example, when flipping 'fair' coins.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Skewness if success_fraction is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">flip</span><span class="special">.</span><span class="identifier">success_fraction</span><span class="special">()</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">skewness</span><span class="special">(</span><span class="identifier">flip</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// Expect zero for a 'fair' coin.</span>
+</pre>
+<p>
+            Now we show a variety of predictions on the probability of heads:
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"For "</span> <span class="special">&lt;&lt;</span> <span class="identifier">flip</span><span class="special">.</span><span class="identifier">trials</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="string">" coin flips: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of getting no heads is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of getting at least one head is "</span> <span class="special">&lt;&lt;</span> <span class="number">1.</span> <span class="special">-</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            When we want to calculate the probability for a range or values we can
+            sum the PDF's:
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of getting 0 or 1 heads is "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">0</span><span class="special">)</span> <span class="special">+</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// sum of exactly == probabilities</span>
+</pre>
+<p>
+            Or we can use the cdf.
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of getting 0 or 1 (&lt;= 1) heads is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of getting 9 or 10 heads is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">9</span><span class="special">)</span> <span class="special">+</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">10</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            Note that using
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of getting 9 or 10 heads is "</span> <span class="special">&lt;&lt;</span> <span class="number">1.</span> <span class="special">-</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">8</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            is less accurate than using the complement
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of getting 9 or 10 heads is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">8</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            Since the subtraction may involve <a href="http://docs.sun.com/source/806-3568/ncg_goldberg.html" target="_top">cancellation
+            error</a>, where as <code class="computeroutput"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">8</span><span class="special">))</span></code>
+            does not use such a subtraction internally, and so does not exhibit the
+            problem.
+          </p>
+<p>
+            To get the probability for a range of heads, we can either add the pdfs
+            for each number of heads
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of between 4 and 6 heads (4 or 5 or 6) is "</span>
+  <span class="comment">//  P(X == 4) + P(X == 5) + P(X == 6)</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">4</span><span class="special">)</span> <span class="special">+</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">5</span><span class="special">)</span> <span class="special">+</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">6</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            But this is probably less efficient than using the cdf
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of between 4 and 6 heads (4 or 5 or 6) is "</span>
+  <span class="comment">// P(X &lt;= 6) - P(X &lt;= 3) == P(X &lt; 4)</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">6</span><span class="special">)</span> <span class="special">-</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            Certainly for a bigger range like, 3 to 7
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of between 3 and 7 heads (3, 4, 5, 6 or 7) is "</span>
+  <span class="comment">// P(X &lt;= 7) - P(X &lt;= 2) == P(X &lt; 3)</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">7</span><span class="special">)</span> <span class="special">-</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="number">2</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            Finally, print two tables of probability for the <span class="emphasis"><em>exactly</em></span>
+            and <span class="emphasis"><em>at least</em></span> a number of heads.
+          </p>
+<pre class="programlisting"><span class="comment">// Print a table of probability for the exactly a number of heads.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of getting exactly (==) heads"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="keyword">for</span> <span class="special">(</span><span class="keyword">int</span> <span class="identifier">successes</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">successes</span> <span class="special">&lt;=</span> <span class="identifier">flips</span><span class="special">;</span> <span class="identifier">successes</span><span class="special">++)</span>
+<span class="special">{</span> <span class="comment">// Say success means getting a head (or equally success means getting a tail).</span>
+  <span class="keyword">double</span> <span class="identifier">probability</span> <span class="special">=</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">);</span>
+  <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">2</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">successes</span> <span class="special">&lt;&lt;</span> <span class="string">"     "</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">10</span><span class="special">)</span>
+    <span class="special">&lt;&lt;</span> <span class="identifier">probability</span> <span class="special">&lt;&lt;</span> <span class="string">" or 1 in "</span> <span class="special">&lt;&lt;</span> <span class="number">1.</span> <span class="special">/</span> <span class="identifier">probability</span>
+    <span class="special">&lt;&lt;</span> <span class="string">", or "</span> <span class="special">&lt;&lt;</span> <span class="identifier">probability</span> <span class="special">*</span> <span class="number">100.</span> <span class="special">&lt;&lt;</span> <span class="string">"%"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span> <span class="comment">// for i</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+
+<span class="comment">// Tabulate the probability of getting between zero heads and 0 up to 10 heads.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of getting up to (&lt;=) heads"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="keyword">for</span> <span class="special">(</span><span class="keyword">int</span> <span class="identifier">successes</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">successes</span> <span class="special">&lt;=</span> <span class="identifier">flips</span><span class="special">;</span> <span class="identifier">successes</span><span class="special">++)</span>
+<span class="special">{</span> <span class="comment">// Say success means getting a head</span>
+  <span class="comment">// (equally success could mean getting a tail).</span>
+  <span class="keyword">double</span> <span class="identifier">probability</span> <span class="special">=</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">);</span> <span class="comment">// P(X &lt;= heads)</span>
+  <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">2</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">successes</span> <span class="special">&lt;&lt;</span> <span class="string">"        "</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">10</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span>
+    <span class="special">&lt;&lt;</span> <span class="identifier">probability</span> <span class="special">&lt;&lt;</span> <span class="string">" or 1 in "</span> <span class="special">&lt;&lt;</span> <span class="number">1.</span> <span class="special">/</span> <span class="identifier">probability</span> <span class="special">&lt;&lt;</span> <span class="string">", or "</span>
+    <span class="special">&lt;&lt;</span> <span class="identifier">probability</span> <span class="special">*</span> <span class="number">100.</span> <span class="special">&lt;&lt;</span> <span class="string">"%"</span><span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span> <span class="comment">// for i</span>
+</pre>
+<p>
+            The last (0 to 10 heads) must, of course, be 100% probability.
+          </p>
+<pre class="programlisting">  <span class="keyword">double</span> <span class="identifier">probability</span> <span class="special">=</span> <span class="number">0.3</span><span class="special">;</span>
+  <span class="keyword">double</span> <span class="identifier">q</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="identifier">probability</span><span class="special">);</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Quantile (flip, "</span> <span class="special">&lt;&lt;</span> <span class="identifier">probability</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">q</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// Quantile (flip, 0.3) = 3</span>
+  <span class="identifier">probability</span> <span class="special">=</span> <span class="number">0.6</span><span class="special">;</span>
+  <span class="identifier">q</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">flip</span><span class="special">,</span> <span class="identifier">probability</span><span class="special">);</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Quantile (flip, "</span> <span class="special">&lt;&lt;</span> <span class="identifier">probability</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">q</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// Quantile (flip, 0.6) = 5</span>
+<span class="special">}</span>
+<span class="keyword">catch</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">exception</span><span class="special">&amp;</span> <span class="identifier">e</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="comment">//</span>
+</pre>
+<p>
+            <a name="coinflip_eg_catch"></a>It is always essential to include try
+            &amp; catch blocks because default policies are to throw exceptions on
+            arguments that are out of domain or cause errors like numeric-overflow.
+          </p>
+<p>
+            Lacking try &amp; catch blocks, the program will abort, whereas the message
+            below from the thrown exception will give some helpful clues as to the
+            cause of the problem.
+          </p>
+<pre class="programlisting">  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span>
+    <span class="string">"\n"</span><span class="string">"Message from thrown exception was:\n   "</span> <span class="special">&lt;&lt;</span> <span class="identifier">e</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+            See <a href="../../../../../../example/binomial_coinflip_example.cpp" target="_top">binomial_coinflip_example.cpp</a>
+            for full source code, the program output looks like this:
+          </p>
+<pre class="programlisting">Using Binomial distribution to predict how many heads and tails.
+From 10 one can expect to get on average 5 heads (or tails).
+Mode is 5
+Standard deviation is 1.581
+So about 2/3 will lie within 1 standard deviation and get between 4 and 6 correct.
+Skewness is 0
+Skewness if success_fraction is 0.5 is 0
+
+For 10 coin flips:
+Probability of getting no heads is 0.0009766
+Probability of getting at least one head is 0.999
+Probability of getting 0 or 1 heads is 0.01074
+Probability of getting 0 or 1 (&lt;= 1) heads is 0.01074
+Probability of getting 9 or 10 heads is 0.01074
+Probability of getting 9 or 10 heads is 0.01074
+Probability of getting 9 or 10 heads is 0.01074
+Probability of between 4 and 6 heads (4 or 5 or 6) is 0.6562
+Probability of between 4 and 6 heads (4 or 5 or 6) is 0.6563
+Probability of between 3 and 7 heads (3, 4, 5, 6 or 7) is 0.8906
+
+Probability of getting exactly (==) heads
+0      0.0009766  or 1 in 1024, or 0.09766%
+1      0.009766   or 1 in 102.4, or 0.9766%
+2      0.04395    or 1 in 22.76, or 4.395%
+3      0.1172     or 1 in 8.533, or 11.72%
+4      0.2051     or 1 in 4.876, or 20.51%
+5      0.2461     or 1 in 4.063, or 24.61%
+6      0.2051     or 1 in 4.876, or 20.51%
+7      0.1172     or 1 in 8.533, or 11.72%
+8      0.04395    or 1 in 22.76, or 4.395%
+9      0.009766   or 1 in 102.4, or 0.9766%
+10     0.0009766  or 1 in 1024, or 0.09766%
+
+Probability of getting up to (&lt;=) heads
+0         0.0009766  or 1 in 1024, or 0.09766%
+1         0.01074    or 1 in 93.09, or 1.074%
+2         0.05469    or 1 in 18.29, or 5.469%
+3         0.1719     or 1 in 5.818, or 17.19%
+4         0.377      or 1 in 2.653, or 37.7%
+5         0.623      or 1 in 1.605, or 62.3%
+6         0.8281     or 1 in 1.208, or 82.81%
+7         0.9453     or 1 in 1.058, or 94.53%
+8         0.9893     or 1 in 1.011, or 98.93%
+9         0.999      or 1 in 1.001, or 99.9%
+10        1          or 1 in 1, or 100%
+</pre>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../binom_eg.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../binom_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="binomial_quiz_example.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

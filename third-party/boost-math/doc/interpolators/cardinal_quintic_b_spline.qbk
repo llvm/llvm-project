@@ -1,0 +1,83 @@
+[/
+Copyright (c) 2019 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:cardinal_quintic_b Cardinal Quintic B-spline interpolation]
+
+[heading Synopsis]
+``
+  #include <boost/math/interpolators/cardinal_quintic_b_spline.hpp>
+``
+
+    namespace boost{ namespace math{ namespace interpolators {
+
+    template <class Real>
+    class cardinal_quintic_b_spline
+    {
+    public:
+        // If you don't know the value of the derivative at the endpoints, leave them as NaNs and the routine will estimate them.
+        // y[0] = y(a), y[n - 1] = y(b), step_size = (b - a)/(n -1).
+        cardinal_quintic_b_spline(const Real* const y,
+                                  size_t n,
+                                  Real t0 /* initial time, left endpoint */,
+                                  Real h  /*spacing, stepsize*/,
+                                  std::pair<Real, Real> left_endpoint_derivatives = {std::numeric_limits<Real>::quiet_NaN(), std::numeric_limit<Real>::quiet_NaN()},
+                                  std::pair<Real, Real> right_endpoint_derivatives = {std::numeric_limits<Real>::quiet_NaN(), std::numeric_limit<Real>::quiet_NaN()})
+
+        cardinal_quintic_b_spline(std::vector<Real> const & y,
+                                  Real t0 /* initial time, left endpoint */,
+                                  Real h  /*spacing, stepsize*/,
+                                  std::pair<Real, Real> left_endpoint_derivatives = {std::numeric_limits<Real>::quiet_NaN(), std::numeric_limit<Real>::quiet_NaN()},
+                                  std::pair<Real, Real> right_endpoint_derivatives = {std::numeric_limits<Real>::quiet_NaN(), std::numeric_limit<Real>::quiet_NaN()})
+
+        Real operator()(Real t) const;
+
+        Real prime(Real t) const;
+
+        Real double_prime(Real t) const;
+
+    };
+    }}}
+
+[heading Cardinal Quintic B-Spline Interpolation]
+
+The cardinal quintic B-spline interpolator is very nearly the same as the cubic B-spline interpolator,
+with the modification that the basis functions are constructed by convolving a box function with itself five times,
+rather than three times as is done with the cubic B-spline.
+
+The basis functions of the quintic B-spline interpolator are more smooth than the cubic /B/-spline interpolator, and hence this is very useful for computing second derivatives.
+For example, the second derivative of the cubic spline interpolator is a piecewise linear function, whereas the second derivative of the quintic /B/-spline is a cubic spline.
+The graph of the second derivative of the quintic /B/-spline is therefore more visually appealing, though whether it is in fact more accurate depends on the smoothness of your data.
+
+And example usage is as follows:
+
+    #include <boost/math/interpolators/cardinal_quintic_b_spline.hpp>
+    using boost::math::interpolators::cardinal_quintic_b_spline;
+    std::vector<double> v(512);
+    // fill v with data . . .
+    double t0 = 0; // initial time
+    double h = 0.125; // spacing
+    std::pair<double, double> left_endpoint_derivatives{first_derivative_at_t0, second_derivative_at_t0};
+    std::pair<double, double> right_endpoint_derivatives{first_derivative_at_tf, second_derivative_at_tf};
+    auto qs = cardinal_quintic_b_spline<double>(v, t0, h, left_endpoint_derivatives, right_endpoint_derivatives);
+
+    // Evaluate the interpolant at a point:
+    double y = qs(0.1);
+    // Evaluate the derivative of the interpolant:
+    double yp = qs.prime(0.1);
+    // Evaluate the second derivative of the interpolant:
+    double ypp = qs.double_prime(0.1);
+
+This routine will estimate the endpoint derivatives if they are not provided.
+/Try to avoid this if possible./
+The endpoint derivatives must be evaluated by finite differences and this is not robust again perturbations in the data.
+So if you have some way of knowing the endpoint derivatives, make sure to provide them.
+
+[heading References]
+
+Cox, Maurice G. ['Numerical methods for the interpolation and approximation of data by spline functions.] Diss. City, University of London, 1975.
+
+[endsect] [/section:cardinal_quintic_b]

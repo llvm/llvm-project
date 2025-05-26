@@ -1,0 +1,154 @@
+[section:laplace_dist Laplace Distribution]
+
+``#include <boost/math/distributions/laplace.hpp>``
+
+   namespace boost{ namespace math{
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class laplace_distribution;
+
+   typedef laplace_distribution<> laplace;
+
+   template <class RealType, class ``__Policy``>
+   class laplace_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+      // Construct:
+      BOOST_MATH_GPU_ENABLED laplace_distribution(RealType location = 0, RealType scale = 1);
+      // Accessors:
+      BOOST_MATH_GPU_ENABLED RealType location()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+   };
+
+   }} // namespaces
+
+Laplace distribution is the distribution of differences between two independent variates
+with identical exponential distributions (Abramowitz and Stegun 1972, p. 930).
+It is also called the double exponential distribution.
+
+[/ Wikipedia definition is The difference between two independent identically distributed
+exponential random variables is governed by a Laplace distribution.]
+
+For location parameter ['[mu]] and scale parameter ['[sigma]], it is defined by the
+probability density function:
+
+[equation laplace_pdf]
+
+The location and scale parameters are equivalent to the mean and
+standard deviation of the normal or Gaussian distribution.
+
+The following graph illustrates the effect of the
+parameters [mu] and [sigma] on the PDF.
+Note that the domain of the random variable remains
+\[-[infin],+[infin]\] irrespective of the value of the location parameter:
+
+[graph laplace_pdf]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED laplace_distribution(RealType location = 0, RealType scale = 1);
+
+Constructs a laplace distribution with location /location/ and
+scale /scale/.
+
+The location parameter is the same as the mean of the random variate.
+
+The scale parameter is proportional to the standard deviation of the random variate.
+
+Requires that the scale parameter is greater than zero, otherwise calls
+__domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType location()const;
+
+Returns the /location/ parameter of this distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+
+Returns the /scale/ parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[-[infin],+[infin]\].
+
+In this distribution the implementation of both `logcdf`, and `logpdf` are specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The laplace distribution is implemented in terms of the
+standard library log and exp functions and as such should have very small errors.
+
+[h4 Implementation]
+
+In the following table [mu] is the location parameter of the distribution,
+[sigma] is its scale parameter, /x/ is the random variate, /p/ is the probability
+and its complement /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = e[super -abs(x-[mu]) \/ [sigma]] \/ (2 * [sigma]) ]]
+[[logpdf][log(pdf) = -abs(x-[mu])/[sigma] - log([sigma]) - log(2) ]]
+[[cdf][Using the relations:
+
+x <  [mu] : p =  e[super (x-[mu])/[sigma] ] \/ [sigma]
+
+x >= [mu] : p =  1 - e[super ([mu]-x)/[sigma] ] \/ [sigma]
+]]
+[[logcdf][log(cdf) = 
+
+x <  [mu] : p = ((x - [mu]) / [sigma]) - ln(2)
+
+x >= [mu] : p = log1p(-exp(([mu]-x) / [sigma]) / 2)
+
+]]
+[[cdf complement][Using the relation:
+
+-x <  [mu] : q =  e[super (-x-[mu])/[sigma] ] \/ [sigma]
+
+-x >= [mu] : q =  1 - e[super ([mu]+x)/[sigma] ] \/ [sigma]
+]]
+[[quantile][Using the relations:
+
+p <  0.5 : x = [mu] + [sigma] * log(2*p)
+
+p >= 0.5 : x = [mu] - [sigma] * log(2-2*p)
+]]
+[[quantile from the complement][Using the relation:
+
+q > 0.5: x = [mu] + [sigma]*log(2-2*q)
+
+q <=0.5: x = [mu] - [sigma]*log( 2*q )
+]]
+[[mean][[mu]]]
+[[variance][2 * [sigma][super 2] ]]
+[[mode][[mu]]]
+[[skewness][0]]
+[[kurtosis][6]]
+[[kurtosis excess][3]]
+]
+
+[h4 References]
+
+* [@http://mathworld.wolfram.com/LaplaceDistribution.html Weisstein, Eric W. "Laplace Distribution."] From MathWorld--A Wolfram Web Resource.
+
+* [@http://en.wikipedia.org/wiki/Laplace_distribution Laplace Distribution]
+
+* M. Abramowitz and I. A. Stegun, Handbook of Mathematical Functions, 1972, p. 930.
+
+[endsect] [/section:laplace_dist laplace]
+
+[/
+  Copyright 2008, 2009 John Maddock, Paul A. Bristow and M.A. (Thijs) van den Berg.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

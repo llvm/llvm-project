@@ -1,0 +1,62 @@
+[/
+  Copyright 2019, Nick Thompson
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:jacobi Jacobi Polynomials]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/jacobi.hpp>
+``
+
+   namespace boost{ namespace math{
+
+   template<typename Real>
+   Real jacobi(unsigned n, Real alpha, Real beta, Real x);
+
+   template<typename Real>
+   Real jacobi_derivative(unsigned n, Real alpha, Real beta, Real x, unsigned k);
+
+   template<typename Real>
+   Real jacobi_prime(unsigned n, Real alpha, Real beta, Real x);
+
+   template<typename Real>
+   Real jacobi_double_prime(unsigned n, Real alpha, Real beta, Real x);
+
+   }} // namespaces
+
+Jacobi polynomials are a family of orthogonal polynomials.
+
+A basic usage is as follows:
+
+    using boost::math::jacobi;
+    double x = 0.5;
+    double alpha = 0.3;
+    double beta = 7.2;
+    unsigned n = 3;
+    double y = jacobi(n, alpha, beta, x);
+
+All derivatives of the Jacobi polynomials are available.
+The /k/-th derivative of the /n/-th Gegenbauer polynomial is given by
+
+    using boost::math::jacobi_derivative;
+    double x = 0.5;
+    double alpha = 0.3;
+    double beta = 7.2;
+    unsigned n = 3;
+    double y = jacobi_derivative(n, alpha, beta, x, k);
+
+For consistency with the rest of the library, `jacobi_prime` is provided which simply returns `jacobi_derivative(n, lambda, x,1)`.
+
+[$../graphs/jacobi.svg]
+
+[h3 Implementation]
+
+The implementation uses the 3-term recurrence for the Jacobi polynomials, rising.
+
+
+[endsect]

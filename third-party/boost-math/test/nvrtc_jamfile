@@ -1,0 +1,388 @@
+# Copyright 2024 Matt Borland
+# Distributed under the Boost Software License, Version 1.0.
+# https://www.boost.org/LICENSE_1_0.txt
+
+import testing ;
+import ../../config/checks/config : requires ;
+
+project : requirements
+    [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ]
+    ;
+
+# Quad
+run test_exp_sinh_quad_nvrtc_float.cpp ;
+run test_exp_sinh_quad_nvrtc_double.cpp ;
+run test_sinh_sinh_quad_nvrtc_float.cpp ;
+run test_sinh_sinh_quad_nvrtc_double.cpp ;
+
+# Distributions
+run test_arcsine_cdf_nvrtc_double.cpp ;
+run test_arcsine_cdf_nvrtc_float.cpp ;
+run test_arcsine_pdf_nvrtc_double.cpp ;
+run test_arcsine_pdf_nvrtc_float.cpp ;
+run test_arcsine_quantile_nvrtc_double.cpp ;
+run test_arcsine_quantile_nvrtc_float.cpp ;
+
+run test_bernoulli_cdf_nvrtc_double.cpp ;
+run test_bernoulli_cdf_nvrtc_float.cpp ;
+run test_bernoulli_pdf_nvrtc_double.cpp ;
+run test_bernoulli_pdf_nvrtc_float.cpp ;
+run test_bernoulli_quan_nvrtc_double.cpp ;
+run test_bernoulli_quan_nvrtc_float.cpp ;
+
+run test_beta_dist_cdf_nvrtc_double.cpp ;
+run test_beta_dist_cdf_nvrtc_float.cpp ;
+run test_beta_dist_pdf_nvrtc_double.cpp ;
+run test_beta_dist_pdf_nvrtc_float.cpp ;
+run test_beta_dist_quan_nvrtc_double.cpp ;
+run test_beta_dist_quan_nvrtc_float.cpp ;
+
+run test_cauchy_cdf_nvrtc_double.cpp ;
+run test_cauchy_cdf_nvrtc_float.cpp ;
+run test_cauchy_pdf_nvrtc_double.cpp ;
+run test_cauchy_pdf_nvrtc_float.cpp ;
+run test_cauchy_quan_nvrtc_double.cpp ;
+run test_cauchy_quan_nvrtc_float.cpp ;
+
+run test_chi_squared_cdf_nvrtc_double.cpp ;
+run test_chi_squared_cdf_nvrtc_float.cpp ;
+run test_chi_squared_pdf_nvrtc_double.cpp ;
+run test_chi_squared_pdf_nvrtc_float.cpp ;
+run test_chi_squared_quan_nvrtc_double.cpp ;
+run test_chi_squared_quan_nvrtc_float.cpp ;
+
+run test_exponential_cdf_nvrtc_double.cpp ;
+run test_exponential_cdf_nvrtc_float.cpp ;
+run test_exponential_pdf_nvrtc_double.cpp ;
+run test_exponential_pdf_nvrtc_float.cpp ;
+run test_exponential_quan_nvrtc_double.cpp ;
+run test_exponential_quan_nvrtc_float.cpp ;
+
+run test_extreme_value_cdf_nvrtc_double.cpp ;
+run test_extreme_value_cdf_nvrtc_float.cpp ;
+run test_extreme_value_pdf_nvrtc_double.cpp ;
+run test_extreme_value_pdf_nvrtc_float.cpp ;
+run test_extreme_value_quan_nvrtc_double.cpp ;
+run test_extreme_value_quan_nvrtc_float.cpp ;
+
+run test_fisher_f_cdf_nvrtc_double.cpp ;
+run test_fisher_f_cdf_nvrtc_float.cpp ;
+run test_fisher_f_pdf_nvrtc_double.cpp ;
+run test_fisher_f_pdf_nvrtc_float.cpp ;
+run test_fisher_f_quan_nvrtc_double.cpp ;
+run test_fisher_f_quan_nvrtc_float.cpp ;
+
+run test_gamma_dist_cdf_nvrtc_double.cpp ;
+run test_gamma_dist_cdf_nvrtc_float.cpp ;
+run test_gamma_dist_pdf_nvrtc_double.cpp ;
+run test_gamma_dist_pdf_nvrtc_float.cpp ;
+run test_gamma_dist_quan_nvrtc_double.cpp ;
+run test_gamma_dist_quan_nvrtc_float.cpp ;
+
+run test_geometric_dist_cdf_nvrtc_double.cpp ;
+run test_geometric_dist_cdf_nvrtc_float.cpp ;
+run test_geometric_dist_pdf_nvrtc_double.cpp ;
+run test_geometric_dist_pdf_nvrtc_float.cpp ;
+run test_geometric_dist_quan_nvrtc_double.cpp ;
+run test_geometric_dist_quan_nvrtc_float.cpp ;
+
+run test_holtsmark_cdf_nvrtc_double.cpp ;
+run test_holtsmark_cdf_nvrtc_float.cpp ;
+run test_holtsmark_pdf_nvrtc_double.cpp ;
+run test_holtsmark_pdf_nvrtc_float.cpp ;
+run test_holtsmark_quan_nvrtc_double.cpp ;
+run test_holtsmark_quan_nvrtc_float.cpp ;
+
+run test_inverse_chi_squared_cdf_nvrtc_double.cpp ; 
+run test_inverse_chi_squared_cdf_nvrtc_float.cpp ;
+run test_inverse_chi_squared_pdf_nvrtc_double.cpp ; 
+run test_inverse_chi_squared_pdf_nvrtc_float.cpp ;
+run test_inverse_chi_squared_quan_nvrtc_double.cpp ; 
+run test_inverse_chi_squared_quan_nvrtc_float.cpp ;
+
+run test_inverse_gamma_cdf_nvrtc_double.cpp ;
+run test_inverse_gamma_cdf_nvrtc_float.cpp ;
+run test_inverse_gamma_pdf_nvrtc_double.cpp ;
+run test_inverse_gamma_pdf_nvrtc_float.cpp ;
+run test_inverse_gamma_quan_nvrtc_double.cpp ;
+run test_inverse_gamma_quan_nvrtc_float.cpp ;
+
+run test_inverse_gaussian_cdf_nvrtc_double.cpp ;
+run test_inverse_gaussian_cdf_nvrtc_float.cpp ;
+run test_inverse_gaussian_pdf_nvrtc_double.cpp ;
+run test_inverse_gaussian_pdf_nvrtc_float.cpp ;
+run test_inverse_gaussian_quan_nvrtc_double.cpp ;
+run test_inverse_gaussian_quan_nvrtc_float.cpp ;
+
+run test_landau_cdf_nvrtc_double.cpp ;
+run test_landau_cdf_nvrtc_float.cpp ;
+run test_landau_pdf_nvrtc_double.cpp ;
+run test_landau_pdf_nvrtc_float.cpp ;
+run test_landau_quan_nvrtc_double.cpp ;
+run test_landau_quan_nvrtc_float.cpp ;
+
+run test_laplace_cdf_nvrtc_double.cpp ;
+run test_laplace_cdf_nvrtc_float.cpp ;
+run test_laplace_pdf_nvrtc_double.cpp ;
+run test_laplace_pdf_nvrtc_float.cpp ;
+run test_laplace_quan_nvrtc_double.cpp ;
+run test_laplace_quan_nvrtc_float.cpp ;
+
+run test_logistic_cdf_nvrtc_double.cpp ;
+run test_logistic_cdf_nvrtc_float.cpp ;
+run test_logistic_pdf_nvrtc_double.cpp ;
+run test_logistic_pdf_nvrtc_float.cpp ;
+run test_logistic_quan_nvrtc_double.cpp ;
+run test_logistic_quan_nvrtc_float.cpp ;
+
+run test_lognormal_cdf_nvrtc_double.cpp ;
+run test_lognormal_cdf_nvrtc_float.cpp ;
+run test_lognormal_pdf_nvrtc_double.cpp ;
+run test_lognormal_pdf_nvrtc_float.cpp ;
+run test_lognormal_quan_nvrtc_double.cpp ;
+run test_lognormal_quan_nvrtc_float.cpp ;
+
+run test_mapairy_cdf_nvrtc_double.cpp ;
+run test_mapairy_cdf_nvrtc_float.cpp ;
+run test_mapairy_pdf_nvrtc_double.cpp ;
+run test_mapairy_pdf_nvrtc_float.cpp ;
+run test_mapairy_quan_nvrtc_double.cpp ;
+run test_mapairy_quan_nvrtc_float.cpp ;
+
+run test_nc_beta_cdf_nvrtc_double.cpp ;
+run test_nc_beta_cdf_nvrtc_float.cpp ;
+run test_nc_beta_pdf_nvrtc_double.cpp ;
+run test_nc_beta_pdf_nvrtc_float.cpp ;
+run test_nc_beta_quan_nvrtc_double.cpp ;
+run test_nc_beta_quan_nvrtc_float.cpp ;
+
+run test_nc_chi_squared_cdf_nvrtc_double.cpp ;
+run test_nc_chi_squared_cdf_nvrtc_float.cpp ;
+run test_nc_chi_squared_pdf_nvrtc_double.cpp ;
+run test_nc_chi_squared_pdf_nvrtc_float.cpp ;
+run test_nc_chi_squared_quan_nvrtc_double.cpp ;
+run test_nc_chi_squared_quan_nvrtc_float.cpp ;
+
+run test_nc_f_cdf_nvrtc_double.cpp ; 
+run test_nc_f_cdf_nvrtc_float.cpp ;
+run test_nc_f_pdf_nvrtc_double.cpp ;
+run test_nc_f_pdf_nvrtc_float.cpp ;
+run test_nc_f_quan_nvrtc_double.cpp ;
+run test_nc_f_quan_nvrtc_float.cpp ;
+
+run test_negative_binomial_cdf_nvrtc_double.cpp ;
+run test_negative_binomial_cdf_nvrtc_float.cpp ;
+run test_negative_binomial_pdf_nvrtc_double.cpp ;
+run test_negative_binomial_pdf_nvrtc_float.cpp ;
+run test_negative_binomial_quan_nvrtc_double.cpp ;
+run test_negative_binomial_quan_nvrtc_float.cpp ;
+
+run test_normal_cdf_nvrtc_double.cpp ;
+run test_normal_cdf_nvrtc_float.cpp ;
+run test_normal_pdf_nvrtc_double.cpp ;
+run test_normal_pdf_nvrtc_float.cpp ;
+run test_normal_quan_nvrtc_double.cpp ;
+run test_normal_quan_nvrtc_float.cpp ;
+
+run test_pareto_cdf_nvrtc_double.cpp ;
+run test_pareto_cdf_nvrtc_float.cpp ;
+run test_pareto_pdf_nvrtc_double.cpp ;
+run test_pareto_pdf_nvrtc_float.cpp ;
+run test_pareto_quan_nvrtc_double.cpp ;
+run test_pareto_quan_nvrtc_float.cpp ;
+
+run test_poisson_cdf_nvrtc_double.cpp ;
+run test_poisson_cdf_nvrtc_float.cpp ;
+run test_poisson_pdf_nvrtc_double.cpp ;
+run test_poisson_pdf_nvrtc_float.cpp ;
+run test_poisson_quan_nvrtc_double.cpp ;
+run test_poisson_quan_nvrtc_float.cpp ;
+
+run test_rayleigh_cdf_nvrtc_double.cpp ;
+run test_rayleigh_cdf_nvrtc_float.cpp ;
+run test_rayleigh_pdf_nvrtc_double.cpp ;
+run test_rayleigh_pdf_nvrtc_float.cpp ;
+run test_rayleigh_quan_nvrtc_double.cpp ;
+run test_rayleigh_quan_nvrtc_float.cpp ;
+
+run test_saspoint5_cdf_nvrtc_double.cpp ;
+run test_saspoint5_cdf_nvrtc_float.cpp ;
+run test_saspoint5_pdf_nvrtc_double.cpp ;
+run test_saspoint5_pdf_nvrtc_float.cpp ;
+run test_saspoint5_quan_nvrtc_double.cpp ;
+run test_saspoint5_quan_nvrtc_float.cpp ;
+
+run test_students_t_cdf_nvrtc_double.cpp ;
+run test_students_t_cdf_nvrtc_float.cpp ;
+run test_students_t_pdf_nvrtc_double.cpp ;
+run test_students_t_pdf_nvrtc_float.cpp ;
+run test_students_t_quan_nvrtc_double.cpp ;
+run test_students_t_quan_nvrtc_float.cpp ;
+
+run test_triangular_cdf_nvrtc_double.cpp ;
+run test_triangular_cdf_nvrtc_float.cpp ;
+run test_triangular_pdf_nvrtc_double.cpp ;
+run test_triangular_pdf_nvrtc_float.cpp ;
+run test_triangular_quan_nvrtc_double.cpp ;
+run test_triangular_quan_nvrtc_float.cpp ;
+
+run test_uniform_cdf_nvrtc_double.cpp ;
+run test_uniform_cdf_nvrtc_float.cpp ;
+run test_uniform_pdf_nvrtc_double.cpp ;
+run test_uniform_pdf_nvrtc_float.cpp ;
+run test_uniform_quan_nvrtc_double.cpp ;
+run test_uniform_quan_nvrtc_float.cpp ;
+
+run test_weibull_cdf_nvrtc_double.cpp ;
+run test_weibull_cdf_nvrtc_float.cpp ;
+run test_weibull_pdf_nvrtc_double.cpp ;
+run test_weibull_pdf_nvrtc_float.cpp ;
+run test_weibull_quan_nvrtc_double.cpp ;
+run test_weibull_quan_nvrtc_float.cpp ;
+
+# Special Functions
+run test_airy_ai_nvrtc_double.cpp ;
+run test_airy_ai_nvrtc_float.cpp ;
+run test_airy_ai_prime_nvrtc_double.cpp ;
+run test_airy_ai_prime_nvrtc_float.cpp ;
+run test_airy_bi_nvrtc_double.cpp ;
+run test_airy_bi_nvrtc_float.cpp ;
+run test_airy_bi_prime_nvrtc_double.cpp ;
+run test_airy_bi_prime_nvrtc_float.cpp ;
+
+run test_beta_nvrtc_double.cpp ;
+run test_beta_nvrtc_float.cpp ;
+run test_betac_nvrtc_double.cpp ;
+run test_betac_nvrtc_float.cpp ;
+run test_ibeta_nvrtc_double.cpp ;
+run test_ibeta_nvrtc_float.cpp ;
+run test_ibetac_nvrtc_double.cpp ;
+run test_ibetac_nvrtc_float.cpp ;
+run test_ibeta_derivative_nvrtc_double.cpp ;
+run test_ibeta_derivative_nvrtc_float.cpp ;
+run test_ibeta_inv_nvrtc_double.cpp ;
+run test_ibeta_inv_nvrtc_float.cpp ;
+run test_ibeta_inva_nvrtc_double.cpp ;
+run test_ibeta_inva_nvrtc_float.cpp ;
+run test_ibeta_invb_nvrtc_double.cpp ;
+run test_ibeta_invb_nvrtc_float.cpp ;
+run test_ibetac_inv_nvrtc_double.cpp ;
+run test_ibetac_inv_nvrtc_float.cpp ;
+run test_ibetac_inva_nvrtc_double.cpp ;
+run test_ibetac_inva_nvrtc_float.cpp ;
+run test_ibetac_invb_nvrtc_double.cpp ;
+run test_ibetac_invb_nvrtc_float.cpp ;
+
+run test_bessel_i0_nvrtc_double.cpp ;
+run test_bessel_i0_nvrtc_float.cpp ;
+run test_bessel_i1_nvrtc_double.cpp ;
+run test_bessel_i1_nvrtc_float.cpp ;
+run test_bessel_j0_nvrtc_double.cpp ;
+run test_bessel_j0_nvrtc_float.cpp ;
+run test_bessel_j1_nvrtc_double.cpp ;
+run test_bessel_j1_nvrtc_float.cpp ;
+run test_bessel_k0_nvrtc_double.cpp ;
+run test_bessel_k0_nvrtc_float.cpp ;
+run test_bessel_k1_nvrtc_double.cpp ;
+run test_bessel_k1_nvrtc_float.cpp ;
+run test_bessel_kn_nvrtc_double.cpp ;
+run test_bessel_kn_nvrtc_float.cpp ;
+run test_bessel_y0_nvrtc_double.cpp ;
+run test_bessel_y0_nvrtc_float.cpp ;
+run test_bessel_y1_nvrtc_double.cpp ;
+run test_bessel_y1_nvrtc_float.cpp ;
+run test_cyl_bessel_i_nvrtc_double.cpp ;
+run test_cyl_bessel_i_nvrtc_float.cpp ;
+run test_cyl_bessel_j_nvrtc_double.cpp ;
+run test_cyl_bessel_j_nvrtc_float.cpp ;
+run test_cyl_bessel_k_nvrtc_double.cpp ;
+run test_cyl_bessel_k_nvrtc_float.cpp ;
+run test_sph_bessel_nvrtc_double.cpp ;
+run test_sph_bessel_nvrtc_float.cpp ;
+run test_cyl_neumann_nvrtc_double.cpp ;
+run test_cyl_neumann_nvrtc_float.cpp ;
+run test_sph_neumann_nvrtc_double.cpp ;
+run test_sph_neumann_nvrtc_float.cpp ;
+run test_cyl_hankel_1_nvrtc_double.cpp ;
+run test_cyl_hankel_1_nvrtc_float.cpp ;
+run test_cyl_hankel_2_nvrtc_double.cpp ;
+run test_cyl_hankel_2_nvrtc_float.cpp ;
+run test_sph_hankel_1_nvrtc_double.cpp ;
+run test_sph_hankel_1_nvrtc_float.cpp ;
+run test_sph_hankel_2_nvrtc_double.cpp ;
+run test_sph_hankel_2_nvrtc_float.cpp ;
+
+run test_cbrt_nvrtc_double.cpp ;
+run test_cbrt_nvrtc_float.cpp ;
+
+run test_cos_pi_nvrtc_double.cpp ;
+run test_cos_pi_nvrtc_float.cpp ;
+
+run test_digamma_nvrtc_double.cpp ;
+run test_digamma_nvrtc_float.cpp ;
+
+run test_erf_nvrtc_double.cpp ;
+run test_erf_nvrtc_float.cpp ;
+run test_erfc_nvrtc_double.cpp ;
+run test_erfc_nvrtc_float.cpp ;
+run test_erf_inv_nvrtc_double.cpp ;
+run test_erf_inv_nvrtc_float.cpp ;
+run test_erfc_inv_nvrtc_double.cpp ;
+run test_erfc_inv_nvrtc_float.cpp ;
+
+run test_ellint_1_nvrtc_double.cpp ;
+run test_ellint_1_nvrtc_float.cpp ;
+run test_ellint_2_nvrtc_double.cpp ;
+run test_ellint_2_nvrtc_float.cpp ;
+run test_ellint_3_nvrtc_double.cpp ;
+run test_ellint_3_nvrtc_float.cpp ;
+run test_ellint_d_nvrtc_double.cpp ;
+run test_ellint_d_nvrtc_float.cpp ;
+run test_jacobi_zeta_nvrtc_double.cpp ;
+run test_jacobi_zeta_nvrtc_float.cpp ;
+run test_heumann_lambda_nvrtc_double.cpp ;
+run test_heumann_lambda_nvrtc_float.cpp ;
+
+run test_expint_nvrtc_double.cpp ;
+run test_expint_nvrtc_float.cpp ;
+
+run test_expm1_nvrtc_double.cpp ;
+run test_expm1_nvrtc_float.cpp ;
+
+run test_fpclassify_nvrtc_double.cpp ;
+run test_fpclassify_nvrtc_float.cpp ;
+
+run test_gamma_nvrtc_double.cpp ;
+run test_gamma_nvrtc_float.cpp ;
+run test_gamma_p_derivative_nvrtc_double.cpp ;
+run test_gamma_p_derivative_nvrtc_float.cpp ;
+run test_gamma_p_inv_nvrtc_double.cpp ;
+run test_gamma_p_inv_nvrtc_float.cpp ;
+run test_tgamma_ratio_nvrtc_double.cpp ;
+run test_tgamma_ratio_nvrtc_float.cpp ;
+
+run test_gegenbauer_nvrtc_double.cpp ;
+run test_gegenbauer_nvrtc_float.cpp ;
+
+run test_hermite_nvrtc_double.cpp ;
+run test_hermite_nvrtc_float.cpp ;
+
+run test_log1p_nvrtc_double.cpp ;
+run test_log1p_nvrtc_float.cpp ;
+
+run test_modf_nvrtc_double.cpp ;
+run test_modf_nvrtc_float.cpp ;
+
+run test_round_nvrtc_double.cpp ;
+run test_round_nvrtc_float.cpp ;
+
+run test_sign_nvrtc_double.cpp ;
+run test_sign_nvrtc_float.cpp ;
+
+run test_sin_pi_nvrtc_double.cpp ;
+run test_sin_pi_nvrtc_float.cpp ;
+
+run test_trigamma_nvrtc_double.cpp ;
+run test_trigamma_nvrtc_float.cpp ;
+
+run test_trunc_nvrtc_double.cpp ;

@@ -1,0 +1,125 @@
+[section:pareto Pareto Distribution]
+
+
+``#include <boost/math/distributions/pareto.hpp>``
+
+   namespace boost{ namespace math{
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class pareto_distribution;
+
+   typedef pareto_distribution<> pareto;
+
+   template <class RealType, class ``__Policy``>
+   class pareto_distribution
+   {
+   public:
+      typedef RealType value_type;
+      // Constructor:
+      BOOST_MATH_GPU_ENABLED pareto_distribution(RealType scale = 1, RealType shape = 1)
+      // Accessors:
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+      BOOST_MATH_GPU_ENABLED RealType shape()const;
+   };
+
+   }} // namespaces
+
+The [@http://en.wikipedia.org/wiki/pareto_distribution Pareto distribution]
+is a continuous distribution with the
+[@http://en.wikipedia.org/wiki/Probability_density_function probability density function (pdf)]:
+
+[expression f(x; [alpha], [beta]) = [alpha][beta][super [alpha]] / x[super [alpha]+ 1]]
+
+For shape parameter [alpha] > 0, and scale parameter [beta] > 0.
+If x < [beta], the pdf is zero.
+
+The [@http://mathworld.wolfram.com/ParetoDistribution.html Pareto distribution]
+often describes the larger compared to the smaller.
+A classic example is that 80% of the wealth is owned by 20% of the population.
+
+The following graph illustrates how the PDF varies with the scale parameter [beta]:
+
+[graph pareto_pdf1]
+
+And this graph illustrates how the PDF varies with the shape parameter [alpha]:
+
+[graph pareto_pdf2]
+
+[h4 Related distributions]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED pareto_distribution(RealType scale = 1, RealType shape = 1);
+
+Constructs a [@http://en.wikipedia.org/wiki/pareto_distribution
+pareto distribution] with shape /shape/ and scale /scale/.
+
+Requires that the /shape/ and /scale/ parameters are both greater than zero,
+otherwise calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+
+Returns the /scale/ parameter of this distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType shape()const;
+
+Returns the /shape/ parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The supported domain of the random variable is \[scale, [infin]\].
+
+In this distribution the implementation of `logcdf` is specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The Pareto distribution is implemented in terms of the
+standard library `exp` functions plus __expm1
+and so should have very small errors, usually only a few epsilon.
+
+If probability is near to unity (or the complement of a probability near zero) see also __why_complements.
+
+[h4 Implementation]
+
+In the following table [alpha] is the shape parameter of the distribution, and
+[beta] is its scale parameter, /x/ is the random variate, /p/ is the probability
+and its complement /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf p = [alpha][beta][super [alpha]]/x[super [alpha] +1] ]]
+[[cdf][Using the relation: cdf p = 1 - ([beta] / x)[super [alpha]] ]]
+[[logcdf][log(cdf) = log1p(-pow([beta]/x, [alpha])) ]]
+[[cdf complement][Using the relation: q = 1 - p = -([beta] / x)[super [alpha]] ]]
+[[quantile][Using the relation: x = [beta] / (1 - p)[super 1/[alpha]] ]]
+[[quantile from the complement][Using the relation: x =  [beta] / (q)[super 1/[alpha]] ]]
+[[mean][[alpha][beta] / ([beta] - 1) ]]
+[[variance][[beta][alpha][super 2] / ([beta] - 1)[super 2] ([beta] - 2) ]]
+[[mode][[alpha]]]
+[[skewness][Refer to [@http://mathworld.wolfram.com/ParetoDistribution.html Weisstein, Eric W. "Pareto Distribution." From MathWorld--A Wolfram Web Resource.] ]]
+[[kurtosis][Refer to [@http://mathworld.wolfram.com/ParetoDistribution.html Weisstein, Eric W. "Pareto Distribution." From MathWorld--A Wolfram Web Resource.] ]]
+[[kurtosis excess][Refer to [@http://mathworld.wolfram.com/ParetoDistribution.html Weisstein, Eric W. "pareto Distribution." From MathWorld--A Wolfram Web Resource.] ]]
+]
+
+[h4 References]
+* [@http://en.wikipedia.org/wiki/pareto_distribution Pareto Distribution]
+* [@http://mathworld.wolfram.com/paretoDistribution.html Weisstein, Eric W. "Pareto Distribution." From MathWorld--A Wolfram Web Resource.]
+* Handbook of Statistical Distributions with Applications, K Krishnamoorthy, ISBN 1-58488-635-8, Chapter 23, pp 257 - 267.
+(Note the meaning of a and b is reversed in Wolfram and Krishnamoorthy).
+
+[endsect] [/section:pareto pareto]
+
+[/
+  Copyright 2006, 2009 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

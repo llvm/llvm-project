@@ -1,0 +1,91 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Facets for Floating-Point Infinities and NaNs</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../utils.html" title="Chapter 2. Floating Point Utilities">
+<link rel="prev" href="sign_functions.html" title="Sign Manipulation Functions">
+<link rel="next" href="fp_facets/facets_intro.html" title="Introduction">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="sign_functions.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../utils.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="fp_facets/facets_intro.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.fp_facets"></a><a class="link" href="fp_facets.html" title="Facets for Floating-Point Infinities and NaNs">Facets for Floating-Point Infinities
+    and NaNs</a>
+</h2></div></div></div>
+<div class="toc"><dl class="toc">
+<dt><span class="section"><a href="fp_facets/facets_intro.html">Introduction</a></span></dt>
+<dt><span class="section"><a href="fp_facets/reference.html">Reference</a></span></dt>
+<dt><span class="section"><a href="fp_facets/examples.html">Examples</a></span></dt>
+<dt><span class="section"><a href="fp_facets/portability.html">Portability</a></span></dt>
+<dt><span class="section"><a href="fp_facets/rationale.html">Design Rationale</a></span></dt>
+</dl></div>
+<h5>
+<a name="math_toolkit.fp_facets.h0"></a>
+      <span class="phrase"><a name="math_toolkit.fp_facets.synopsis"></a></span><a class="link" href="fp_facets.html#math_toolkit.fp_facets.synopsis">Synopsis</a>
+    </h5>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span>
+<span class="special">{</span>
+  <span class="comment">// Values for flags.</span>
+  <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">legacy</span><span class="special">;</span>
+  <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">signed_zero</span><span class="special">;</span>
+  <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">trap_infinity</span><span class="special">;</span>
+  <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">trap_nan</span><span class="special">;</span>
+
+  <span class="keyword">template</span><span class="special">&lt;</span>
+      <span class="keyword">class</span> <span class="identifier">CharType</span><span class="special">,</span>
+      <span class="keyword">class</span> <span class="identifier">OutputIterator</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">ostreambuf_iterator</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+  <span class="keyword">class</span> <span class="identifier">nonfinite_num_put</span> <span class="special">:</span> <span class="keyword">public</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">num_put</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">OutputIterator</span><span class="special">&gt;</span>
+  <span class="special">{</span>
+  <span class="keyword">public</span><span class="special">:</span>
+      <span class="keyword">explicit</span> <span class="identifier">nonfinite_num_put</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">flags</span> <span class="special">=</span> <span class="number">0</span><span class="special">);</span>
+  <span class="special">};</span>
+
+  <span class="keyword">template</span><span class="special">&lt;</span>
+      <span class="keyword">class</span> <span class="identifier">CharType</span><span class="special">,</span>
+      <span class="keyword">class</span> <span class="identifier">InputIterator</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">istreambuf_iterator</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+  <span class="keyword">class</span> <span class="identifier">nonfinite_num_get</span> <span class="special">:</span> <span class="keyword">public</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">num_get</span><span class="special">&lt;</span><span class="identifier">CharType</span><span class="special">,</span> <span class="identifier">InputIterator</span><span class="special">&gt;</span>
+  <span class="special">{</span>
+  <span class="keyword">public</span><span class="special">:</span>
+      <span class="keyword">explicit</span> <span class="identifier">nonfinite_num_get</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">flags</span> <span class="special">=</span> <span class="number">0</span><span class="special">);</span>  <span class="comment">// legacy, sign_zero ...</span>
+  <span class="special">};</span>
+<span class="special">}}</span> <span class="comment">// namespace boost namespace math</span>
+</pre>
+<p>
+      To use these facets
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">\</span><span class="identifier">math</span><span class="special">\</span><span class="identifier">special_functions</span><span class="special">\</span><span class="identifier">nonfinite_num_facets</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="sign_functions.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../utils.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="fp_facets/facets_intro.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

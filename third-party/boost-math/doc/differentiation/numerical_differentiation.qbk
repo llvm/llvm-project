@@ -1,0 +1,108 @@
+[/
+Copyright (c) 2018 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:diff Numerical Differentiation]
+
+[heading Synopsis]
+
+``
+#include <boost/math/differentiation/finite_difference.hpp>
+
+
+namespace boost { namespace math { namespace differentiation {
+
+    template <class F, class Real>
+    Real complex_step_derivative(const F f, Real x);
+
+    template <class F, class Real, size_t order = 6>
+    Real finite_difference_derivative(const F f, Real x, Real* error = nullptr);
+
+}}} // namespaces
+``
+
+[heading Description]
+
+The function `finite_difference_derivative` calculates a finite-difference approximation to the derivative of a function /f/ at point /x/.
+A basic usage is
+
+    auto f = [](double x) { return std::exp(x); };
+    double x = 1.7;
+    double dfdx = finite_difference_derivative(f, x);
+
+Finite differencing is complicated, as differentiation is /infinitely/ ill-conditioned.
+In addition, for any function implemented in finite-precision arithmetic, the "true" derivative is /zero/ almost everywhere, and undefined at representables.
+However, some tricks allow for reasonable results to be obtained in many cases.
+
+There are two sources of error from finite differences: One, the truncation error arising from using a finite number of samples to cancel out higher order terms in the Taylor series.
+The second is the roundoff error involved in evaluating the function.
+The truncation error goes to zero as /h/ \u2192 0, but the roundoff error becomes unbounded.
+By balancing these two sources of error, we can choose a value of /h/ that minimizes the maximum total error.
+For this reason boost's `finite_difference_derivative` does not require the user to input a stepsize.
+For more details about the theoretical error analysis involved in finite-difference approximations to the derivative, see [@http://web.archive.org/web/20150420195907/http://www.uio.no/studier/emner/matnat/math/MAT-INF1100/h08/kompendiet/diffint.pdf here].
+
+Despite the effort that has went into choosing a reasonable value of /h/, the problem is still fundamentally ill-conditioned, and hence an error estimate is essential.
+It can be queried as follows
+
+    double error_estimate;
+    double d = finite_difference_derivative(f, x, &error_estimate);
+
+N.B.: Producing an error estimate requires additional function evaluations and as such is slower than simple evaluation of the derivative.
+It also expands the domain over which the function must be differentiable and requires the function to have two more continuous derivatives.
+The error estimate is computed under the assumption that /f/ is evaluated to 1ULP.
+This might seem an extreme assumption, but it is the only sensible one, as the routine cannot know the functions rounding error.
+If the function cannot be evaluated with very great accuracy, Lanczos's smoothing differentiation is recommended as an alternative.
+
+The default order of accuracy is 6, which reflects that fact that people tend to be interested in functions with many continuous derivatives.
+If your function does not have 7 continuous derivatives, is may be of interest to use a lower order method, which can be achieved via (say)
+
+    double d = finite_difference_derivative<decltype(f), Real, 2>(f, x);
+
+This requests a second-order accurate derivative be computed.
+
+It is emphatically /not/ the case that higher order methods always give higher accuracy for smooth functions.
+Higher order methods require more addition of positive and negative terms, which can lead to catastrophic cancellation.
+A function which is very good at making a mockery of finite-difference differentiation is exp(x)/(cos(x)[super 3] + sin(x)[super 3]).
+Differentiating this function by `finite_difference_derivative` in double precision at /x=5.5/ gives zero correct digits at order 4, 6, and 8, but recovers 5 correct digits at order 2.
+These are dangerous waters; use the error estimates to tread carefully.
+
+For a finite-difference method of order /k/, the error is /C/ \u03B5[super k/k+1].
+In the limit /k/ \u2192 \u221E, we see that the error tends to \u03B5, recovering the full precision for the type.
+However, this ignores the fact that higher-order methods require subtracting more nearly-equal (perhaps noisy) terms, so the constant /C/ grows with /k/.
+Since /C/ grows quickly and \u03B5[super k/k+1] approaches \u03B5 slowly, we can see there is a compromise between high-order accuracy and conditioning of the difference quotient.
+In practice we have found that /k=6/ seems to be a good compromise between the two (and have made this the default), but users are encouraged to examine the error estimates to choose an optimal order of accuracy for the given problem.
+
+[table:id Cost of Finite-Difference Numerical Differentiation
+    [[Order of Accuracy] [Function Evaluations] [Error]            [Continuous Derivatives Required for Error Estimate to Hold] [Additional Function Evaluations to Produce Error Estimates]]
+    [[1]                 [2]                    [\u03B5[super 1/2]]  [2]                                                     [1]]
+    [[2]                 [2]                    [\u03B5[super 2/3]]  [3]                                                     [2]]
+    [[4]                 [4]                    [\u03B5[super 4/5]]  [5]                                                     [2]]
+    [[6]                 [6]                    [\u03B5[super 6/7]]  [7]                                                     [2]]
+    [[8]                 [8]                    [\u03B5[super 8/9]]  [9]                                                     [2]]
+]
+
+
+Given all the caveats which must be kept in mind for successful use of finite-difference differentiation, it is reasonable to try to avoid it if possible.
+Boost provides two possibilities: The Chebyshev transform (see [link math_toolkit.sf_poly.chebyshev here]) and the complex step derivative.
+If your function is the restriction to the real line of a holomorphic function which takes real values at real argument, then the *complex step derivative* can be used.
+The idea is very simple: Since /f/ is complex-differentiable, ['f(x+\u2148 h) = f(x) + \u2148 hf'(x) - h[super 2]f''(x) + [bigo](h[super 3])].
+As long as /f(x)/ \u2208 \u211D, then ['f'(x) = \u2111 f(x+\u2148 h)/h + [bigo](h[super 2])].
+This method requires a single complex function evaluation and is not subject to the catastrophic subtractive cancellation that plagues finite-difference calculations.
+
+An example usage:
+
+    double x = 7.2;
+    double e_prime = complex_step_derivative(std::exp<std::complex<double>>, x);
+
+References:
+
+* Squire, William, and George Trapp. ['Using complex variables to estimate derivatives of real functions.] Siam Review 40.1 (1998): 110-112.
+
+* Fornberg, Bengt. ['Generation of finite difference formulas on arbitrarily spaced grids.] Mathematics of computation 51.184 (1988): 699-706.
+
+* Corless, Robert M., and Nicolas Fillion. ['A graduate introduction to numerical methods.] AMC 10 (2013): 12.
+
+[endsect]

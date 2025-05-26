@@ -1,0 +1,60 @@
+[section:nag_library Comparison with C, R, FORTRAN-style Free Functions]
+
+You are probably familiar with a statistics library that has free functions,
+for example the classic [@http://nag.com/numeric/CL/CLdescription.asp NAG C library]
+and matching [@http://nag.com/numeric/FL/FLdescription.asp NAG FORTRAN Library],
+[@http://office.microsoft.com/en-us/excel/HP052090051033.aspx Microsoft Excel BINOMDIST(number_s,trials,probability_s,cumulative)],
+[@http://www.r-project.org/ R], [@http://www.ptc.com/products/mathcad/mathcad14/mathcad_func_chart.htm MathCAD pbinom]
+and many others.
+
+If so, you may find 'Distributions as Objects' unfamiliar, if not alien.
+
+However, *do not panic*, both definition and usage are not really very different.
+
+A very simple example of generating the same values as the 
+[@http://nag.com/numeric/CL/CLdescription.asp NAG C library] 
+for the binomial distribution follows.
+(If you find slightly different values, the Boost C++ version, using double or better,
+is very likely to be the more accurate.
+Of course, accuracy is not usually a concern for most applications of this function).
+
+The [@http://www.nag.co.uk/numeric/cl/manual/pdf/G01/g01bjc.pdf NAG function specification] is
+
+  void nag_binomial_dist(Integer n, double p, Integer k,
+  double *plek, double *pgtk, double *peqk, NagError *fail)
+
+and is called
+
+  g01bjc(n, p, k, &plek, &pgtk, &peqk, NAGERR_DEFAULT);
+  
+The equivalent using this Boost C++ library is:
+
+  using namespace boost::math;  // Using declaration avoids very long names.
+  binomial my_dist(4, 0.5); // c.f. NAG n = 4, p = 0.5
+  
+and values can be output thus:
+
+  cout
+    << my_dist.trials() << " "             // Echo the NAG input n = 4 trials.
+    << my_dist.success_fraction() << " "   // Echo the NAG input p = 0.5
+    << cdf(my_dist, 2) << "  "             // NAG plek with k = 2
+    << cdf(complement(my_dist, 2)) << "  " // NAG pgtk with k = 2
+    << pdf(my_dist, 2) << endl;            // NAG peqk with k = 2
+
+`cdf(dist, k)` is equivalent to NAG library `plek`, lower tail probability of <= k
+
+`cdf(complement(dist, k))` is equivalent to NAG library `pgtk`, upper tail probability of > k
+
+`pdf(dist, k)` is equivalent to NAG library `peqk`, point probability of == k
+
+See [@../../example/binomial_example_nag.cpp binomial_example_nag.cpp] for details.
+
+[endsect] [/section:nag_library Comparison with C, R, FORTRAN-style Free Functions]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

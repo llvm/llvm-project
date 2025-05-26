@@ -1,0 +1,1286 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Tables of the power function of the chi2 test.</title>
+<link rel="stylesheet" href="../../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../nccs_eg.html" title="Non Central Chi Squared Example">
+<link rel="prev" href="../nccs_eg.html" title="Non Central Chi Squared Example">
+<link rel="next" href="../error_eg.html" title="Error Handling Example">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../nccs_eg.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../nccs_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../error_eg.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="math_toolkit.stat_tut.weg.nccs_eg.nccs_power_eg"></a><a class="link" href="nccs_power_eg.html" title="Tables of the power function of the chi2 test.">Tables
+          of the power function of the chi<sup>2</sup> test.</a>
+</h5></div></div></div>
+<p>
+            This example computes a table of the power of the χ<sup>2</sup>
+test at the 5% significance
+            level, for various degrees of freedom and non-centrality parameters.
+            The table is deliberately the same as Table 6 from "The Non-Central
+            χ<sup>2</sup> and F-Distributions and their applications.", P. B. Patnaik, Biometrika,
+            Vol. 36, No. 1/2 (June 1949), 202-232.
+          </p>
+<p>
+            First we need some includes to access the non-central chi squared distribution
+            (and some basic std output of course).
+          </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">non_central_chi_squared</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">chi_squared</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">non_central_chi_squared</span><span class="special">;</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setprecision</span><span class="special">;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+</pre>
+<p>
+            Create a table of the power of the χ<sup>2</sup> test at 5% significance level, start
+            with a table header:
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"[table\n[[[nu]]"</span><span class="special">;</span>
+<span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">lam</span> <span class="special">=</span> <span class="number">2</span><span class="special">;</span> <span class="identifier">lam</span> <span class="special">&lt;=</span> <span class="number">20</span><span class="special">;</span> <span class="identifier">lam</span> <span class="special">+=</span> <span class="number">2</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"[[lambda]="</span> <span class="special">&lt;&lt;</span> <span class="identifier">lam</span> <span class="special">&lt;&lt;</span> <span class="string">"]"</span><span class="special">;</span>
+<span class="special">}</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"]\n"</span><span class="special">;</span>
+</pre>
+<p>
+            (Note: the enclosing [] brackets are to format as a table in Boost.Quickbook).
+          </p>
+<p>
+            Enumerate the rows and columns and print the power of the test for each
+            table cell:
+          </p>
+<pre class="programlisting"><span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">n</span> <span class="special">=</span> <span class="number">2</span><span class="special">;</span> <span class="identifier">n</span> <span class="special">&lt;=</span> <span class="number">20</span><span class="special">;</span> <span class="special">++</span><span class="identifier">n</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"[["</span> <span class="special">&lt;&lt;</span> <span class="identifier">n</span> <span class="special">&lt;&lt;</span> <span class="string">"]"</span><span class="special">;</span>
+   <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">lam</span> <span class="special">=</span> <span class="number">2</span><span class="special">;</span> <span class="identifier">lam</span> <span class="special">&lt;=</span> <span class="number">20</span><span class="special">;</span> <span class="identifier">lam</span> <span class="special">+=</span> <span class="number">2</span><span class="special">)</span>
+   <span class="special">{</span>
+</pre>
+<p>
+            Calculate the χ<sup>2</sup> statistic for a 5% significance:
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">cs</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">chi_squared</span><span class="special">(</span><span class="identifier">n</span><span class="special">),</span> <span class="number">0.05</span><span class="special">));</span>
+</pre>
+<p>
+            The power of the test is given by the complement of the CDF of the non-central
+            χ<sup>2</sup> distribution:
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">beta</span> <span class="special">=</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">non_central_chi_squared</span><span class="special">(</span><span class="identifier">n</span><span class="special">,</span> <span class="identifier">lam</span><span class="special">),</span> <span class="identifier">cs</span><span class="special">));</span>
+</pre>
+<p>
+            Then output the cell value:
+          </p>
+<pre class="programlisting">         <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"["</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">beta</span> <span class="special">&lt;&lt;</span> <span class="string">"]"</span><span class="special">;</span>
+      <span class="special">}</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"]"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+   <span class="special">}</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"]"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+            The output from this program is a table in Boost.Quickbook format as
+            shown below.
+          </p>
+<p>
+            We can interpret this as follows - for example if ν=10 and λ=10 then the
+            power of the test is 0.542 - so we have only a 54% chance of correctly
+            detecting that our null hypothesis is false, and a 46% chance of incurring
+            a type II error (failing to reject the null hypothesis when it is in
+            fact false):
+          </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                    <p>
+                      ν
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=2
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=4
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=6
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=8
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=10
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=12
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=14
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=16
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=18
+                    </p>
+                  </th>
+<th>
+                    <p>
+                      λ=20
+                    </p>
+                  </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                    <p>
+                      2
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.226
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.415
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.584
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.718
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.815
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.883
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.928
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.957
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.974
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.985
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      3
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.192
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.359
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.518
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.654
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.761
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.84
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.896
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.934
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.959
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.975
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      4
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.171
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.32
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.47
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.605
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.716
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.802
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.866
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.912
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.943
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.964
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      5
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.157
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.292
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.433
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.564
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.677
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.769
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.839
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.89
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.927
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.952
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      6
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.146
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.27
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.403
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.531
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.644
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.738
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.813
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.869
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.911
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.94
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      7
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.138
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.252
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.378
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.502
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.614
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.71
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.788
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.849
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.895
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.928
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      8
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.131
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.238
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.357
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.477
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.588
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.685
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.765
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.829
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.879
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.915
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      9
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.125
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.225
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.339
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.454
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.564
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.661
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.744
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.811
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.863
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.903
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      10
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.121
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.215
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.323
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.435
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.542
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.64
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.723
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.793
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.848
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.891
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      11
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.117
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.206
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.309
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.417
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.523
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.62
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.704
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.775
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.833
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.878
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      12
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.113
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.198
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.297
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.402
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.505
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.601
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.686
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.759
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.818
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.866
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      13
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.11
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.191
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.286
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.387
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.488
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.584
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.669
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.743
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.804
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.854
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      14
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.108
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.185
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.276
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.374
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.473
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.567
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.653
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.728
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.791
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.842
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      15
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.105
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.179
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.267
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.362
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.459
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.552
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.638
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.713
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.777
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.83
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      16
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.103
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.174
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.259
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.351
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.446
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.538
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.623
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.699
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.764
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.819
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      17
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.101
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.169
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.251
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.341
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.434
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.525
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.609
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.686
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.752
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.807
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      18
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.0992
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.165
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.244
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.332
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.423
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.512
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.596
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.673
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.74
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.796
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      19
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.0976
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.161
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.238
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.323
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.412
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.5
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.584
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.66
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.728
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.786
+                    </p>
+                  </td>
+</tr>
+<tr>
+<td>
+                    <p>
+                      20
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.0961
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.158
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.232
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.315
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.402
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.489
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.572
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.648
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.716
+                    </p>
+                  </td>
+<td>
+                    <p>
+                      0.775
+                    </p>
+                  </td>
+</tr>
+</tbody>
+</table></div>
+<p>
+            See <a href="../../../../../../example/nc_chi_sq_example.cpp" target="_top">nc_chi_sq_example.cpp</a>
+            for the full C++ source code.
+          </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../nccs_eg.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../nccs_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../error_eg.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

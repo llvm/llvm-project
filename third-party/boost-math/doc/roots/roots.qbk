@@ -1,0 +1,213 @@
+[section:roots_deriv Root Finding With Derivatives: Newton-Raphson, Halley & Schroeder]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/tools/roots.hpp>
+``
+
+   namespace boost { namespace math {
+   namespace tools { // Note namespace boost::math::tools.
+   // Newton-Raphson
+   template <class F, class T>
+   BOOST_MATH_GPU_ENABLED T newton_raphson_iterate(F f, T guess, T min, T max, int digits);
+
+   template <class F, class T>
+   BOOST_MATH_GPU_ENABLED T newton_raphson_iterate(F f, T guess, T min, T max, int digits, std::uintmax_t& max_iter);
+
+   // Halley
+   template <class F, class T>
+   T halley_iterate(F f, T guess, T min, T max, int digits);
+
+   template <class F, class T>
+   T halley_iterate(F f, T guess, T min, T max, int digits, std::uintmax_t& max_iter);
+
+   // Schroeder
+   template <class F, class T>
+   T schroder_iterate(F f, T guess, T min, T max, int digits);
+
+   template <class F, class T>
+   T schroder_iterate(F f, T guess, T min, T max, int digits, std::uintmax_t& max_iter);
+
+   template <class F, class ComplexType>
+   Complex complex_newton(F f, Complex guess, int max_iterations = std::numeric_limits<typename ComplexType::value_type>::digits);
+
+   template<class T>
+   auto quadratic_roots(T const & a, T const & b, T const & c);
+
+   }}} // namespaces boost::math::tools.
+
+[h4 Description]
+
+These functions all perform iterative root-finding [*using derivatives]:
+
+* `newton_raphson_iterate` performs second-order __newton.
+
+* `halley_iterate` and `schroder_iterate` perform third-order
+__halley and __schroder iteration.
+
+* `complex_newton` performs Newton's method on complex-analytic functions.
+
+* `solve_quadratic` solves quadratic equations using various tricks to keep catastrophic cancellation from occurring in computation of the discriminant.
+
+
+[variablelist Parameters of the real-valued root finding functions
+[[F f] [Type F must be a callable function object (or C++ lambda) that accepts one parameter and
+        returns a __tuple_type:
+
+For second-order iterative method ([@http://en.wikipedia.org/wiki/Newton_Raphson Newton Raphson])
+        the `tuple` should have [*two] elements containing the evaluation
+        of the function and its first derivative.
+
+For the third-order methods
+([@http://en.wikipedia.org/wiki/Halley%27s_method Halley] and
+Schroeder)
+        the `tuple` should have [*three] elements containing the evaluation of
+        the function and its first and second derivatives.]]
+[[T guess] [The initial starting value. A good guess is crucial to quick convergence!]]
+[[T min] [The minimum possible value for the result, this is used as an initial lower bracket.]]
+[[T max] [The maximum possible value for the result, this is used as an initial upper bracket.]]
+[[int digits] [The desired number of binary digits precision.]]
+[[uintmax_t& max_iter] [An optional maximum number of iterations to perform.  On exit, this is updated to the actual number of iterations performed.]]
+]
+
+When using these functions you should note that:
+
+* Default `max_iter = (std::numeric_limits<std::uintmax_t>::max)()` is effectively 'iterate for ever'.
+* They may be very sensitive to the initial guess, typically they converge very rapidly
+if the initial guess has two or three decimal digits correct.  However convergence
+can be no better than __bisect, or in some rare cases, even worse than __bisect if the
+initial guess is a long way from the correct value and the derivatives are close to zero.
+* These functions include special cases to handle zero first (and second where appropriate)
+derivatives, and fall back to __bisect in this case.  However, it is helpful
+if functor F is defined to return an arbitrarily small value ['of the correct sign] rather
+than zero.
+* The functions will raise an __evaluation_error if arguments `min` and `max` are the wrong way around
+or if they converge to a local minima.
+* If the derivative at the current best guess for the result is infinite (or
+very close to being infinite) then these functions may terminate prematurely.
+A large first derivative leads to a very small next step, triggering the termination
+condition.  Derivative based iteration may not be appropriate in such cases.
+* If the function is 'Really Well Behaved' (is monotonic and has only one root)
+the bracket bounds ['min] and ['max] may as well be set to the widest limits
+like zero and `numeric_limits<T>::max()`.
+*But if the function more complex and may have more than one root or a pole,
+the choice of bounds is protection against jumping out to seek the 'wrong' root.
+* These functions fall back to __bisect if the next computed step would take the
+next value out of bounds.  The bounds are updated after each step to ensure this leads
+to convergence.  However, a good initial guess backed up by asymptotically-tight
+bounds will improve performance no end - rather than relying on __bisection.
+* The value of ['digits] is crucial to good performance of these functions,
+if it is set too high then at best you will get one extra (unnecessary)
+iteration, and at worst the last few steps will proceed by __bisection.
+Remember that the returned value can never be more accurate than ['f(x)] can be
+evaluated, and that if ['f(x)] suffers from cancellation errors as it
+tends to zero then the computed steps will be effectively random.  The
+value of ['digits] should be set so that iteration terminates before this point:
+remember that for second and third order methods the number of correct
+digits in the result is increasing quite
+substantially with each iteration, ['digits] should be set by experiment so that the final
+iteration just takes the next value into the zone where ['f(x)] becomes inaccurate.
+A good starting point for ['digits] would be 0.6*D for Newton and 0.4*D for Halley or Shr'''&#xf6;'''der
+iteration, where D is `std::numeric_limits<T>::digits`.
+* If you need some diagnostic output to see what is going on, you can
+`#define BOOST_MATH_INSTRUMENT` before the `#include <boost/math/tools/roots.hpp>`,
+and also ensure that display of all the significant digits with
+` cout.precision(std::numeric_limits<double>::digits10)`:
+or even possibly significant digits with
+` cout.precision(std::numeric_limits<double>::max_digits10)`:
+but be warned, this may produce copious output!
+* Finally: you may well be able to do better than these functions by hand-coding
+the heuristics used so that they are tailored to a specific function.  You may also
+be able to compute the ratio of derivatives used by these methods more efficiently
+than computing the derivatives themselves.  As ever, algebraic simplification can
+be a big win.
+
+[h4:newton Newton Raphson Method]
+
+Given an initial guess ['x0] the subsequent values are computed using:
+
+[equation roots1]
+
+Out-of-bounds steps revert to __bisection of the current bounds.
+
+Under ideal conditions, the number of correct digits doubles with each iteration.
+
+[h4:halley Halley's Method]
+
+Given an initial guess ['x0] the subsequent values are computed using:
+
+[equation roots2]
+
+Over-compensation by the second derivative (one which would proceed
+in the wrong direction) causes the method to
+revert to a Newton-Raphson step.
+
+Out of bounds steps revert to bisection of the current bounds.
+
+Under ideal conditions, the number of correct digits trebles with each iteration.
+
+[h4:schroder Schroeder's Method]
+
+Given an initial guess x0 the subsequent values are computed using:
+
+[equation roots3]
+
+Over-compensation by the second derivative (one which would proceed
+in the wrong direction) causes the method to
+revert to a Newton-Raphson step.  Likewise a Newton step is used
+whenever that Newton step would change the next value by more than 10%.
+
+Out of bounds steps revert to __bisection_wikipedia of the current bounds.
+
+Under ideal conditions, the number of correct digits trebles with each iteration.
+
+This is Schroeder's general result (equation 18 from [@http://drum.lib.umd.edu/handle/1903/577 Stewart, G. W.
+"On Infinitely Many Algorithms for Solving Equations." English translation of Schroeder's original paper.
+College Park, MD: University of Maryland, Institute for Advanced Computer Studies, Department of Computer Science, 1993].)
+
+This method guarantees at least quadratic convergence (the same as Newton's method), and is known to work well in the presence of multiple roots:
+something that neither Newton nor Halley can do.
+
+The complex Newton method works slightly differently than the rest of the methods:
+Since there is no way to bracket roots in the complex plane,
+the `min` and `max` arguments are not accepted.
+Failure to reach a root is communicated by returning `nan`s.
+Remember that if a function has many roots,
+then which root the complex Newton's method converges to is essentially impossible to predict a priori; see the Newton's fractal for more information.
+
+Finally, the derivative of /f/ must be continuous at the root or else non-roots can be found; see [@https://math.stackexchange.com/questions/3017766/constructing-newton-iteration-converging-to-non-root here] for an example.
+
+An example usage of `complex_newton` is given in `examples/daubechies_coefficients.cpp`.
+
+[h4 Quadratics]
+
+To solve a quadratic /ax/[super 2] + /bx/ + /c/ = 0, we may use
+
+    auto [x0, x1] = boost::math::tools::quadratic_roots(a, b, c);
+
+If the roots are real, they are arranged so that `x0` \u2264 `x1`.
+If the roots are complex and the inputs are real, `x0` and `x1` are both `std::numeric_limits<Real>::quiet_NaN()`.
+In this case we must cast `a`, `b` and `c` to a complex type to extract the complex roots.
+If `a`, `b` and `c` are integral, then the roots are of type double.
+The routine is much faster if the fused-multiply-add instruction is available on your architecture.
+If the fma is not available, the function resorts to slow emulation.
+Finally, speed is improved if you compile for your particular architecture.
+For instance, if you compile without any architecture flags, then the `std::fma` call compiles down to `call _fma`,
+which dynamically chooses to emulate or execute the `vfmadd132sd` instruction based on the capabilities of the architecture.
+If instead, you compile with (say) `-march=native` then no dynamic choice is made:
+The `vfmadd132sd` instruction is always executed if available and emulation is used if not.
+
+
+[h4 Examples]
+
+See __root_finding_examples.
+
+[endsect] [/section:roots_deriv Root Finding With Derivatives]
+
+[/
+  Copyright 2006, 2010, 2012 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

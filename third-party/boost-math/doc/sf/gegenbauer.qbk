@@ -1,0 +1,111 @@
+[/
+  Copyright 2019, Nick Thompson
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:gegenbauer Gegenbauer Polynomials]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/gegenbauer.hpp>
+``
+
+   namespace boost{ namespace math{
+
+   template<typename Real>
+   BOOST_MATH_GPU_ENABLED Real gegenbauer(unsigned n, Real lambda, Real x);
+
+   template<typename Real>
+   BOOST_MATH_GPU_ENABLED Real gegenbauer_prime(unsigned n, Real lambda, Real x);
+
+   template<typename Real>
+   BOOST_MATH_GPU_ENABLED Real gegenbauer_derivative(unsigned n, Real lambda, Real x, unsigned k);
+
+   }} // namespaces
+
+Gegenbauer polynomials are a family of orthogonal polynomials.
+
+A basic usage is as follows:
+
+    using boost::math::gegenbauer;
+    double x = 0.5;
+    double lambda = 0.5;
+    unsigned n = 3;
+    double y = gegenbauer(n, lambda, x);
+
+All derivatives of the Gegenbauer polynomials are available.
+The /k/-th derivative of the /n/-th Gegenbauer polynomial is given by
+
+    using boost::math::gegenbauer_derivative;
+    double x = 0.5;
+    double lambda = 0.5;
+    unsigned n = 3;
+    unsigned k = 2;
+    double y = gegenbauer_derivative(n, lambda, x, k);
+
+For consistency with the rest of the library, `gegenbauer_prime` is provided which simply returns `gegenbauer_derivative(n, lambda, x,1 )`.
+
+[$../graphs/gegenbauer.svg]
+
+[h3 Implementation]
+
+The implementation uses the 3-term recurrence for the Gegenbauer polynomials, rising.
+
+[h3 Performance]
+
+Double precision timing on a consumer x86 laptop is shown below.
+Included is the time to generate a random number argument in the interval \[-1, 1\] (which takes 11.5ns).
+
+``
+Run on (16 X 4300 MHz CPU s)
+CPU Caches:
+  L1 Data 32K (x8)
+  L1 Instruction 32K (x8)
+  L2 Unified 1024K (x8)
+  L3 Unified 11264K (x1)
+Load Average: 0.21, 0.33, 0.29
+-----------------------------------------
+Benchmark                            Time
+-----------------------------------------
+Gegenbauer<double>/1              12.5 ns
+Gegenbauer<double>/2              13.5 ns
+Gegenbauer<double>/3              14.6 ns
+Gegenbauer<double>/4              16.0 ns
+Gegenbauer<double>/5              17.5 ns
+Gegenbauer<double>/6              19.2 ns
+Gegenbauer<double>/7              20.7 ns
+Gegenbauer<double>/8              22.2 ns
+Gegenbauer<double>/9              23.6 ns
+Gegenbauer<double>/10             25.2 ns
+Gegenbauer<double>/11             26.9 ns
+Gegenbauer<double>/12             28.7 ns
+Gegenbauer<double>/13             30.5 ns
+Gegenbauer<double>/14             32.5 ns
+Gegenbauer<double>/15             34.3 ns
+Gegenbauer<double>/16             36.3 ns
+Gegenbauer<double>/17             38.0 ns
+Gegenbauer<double>/18             39.9 ns
+Gegenbauer<double>/19             41.8 ns
+Gegenbauer<double>/20             43.8 ns
+UniformReal<double>               11.5 ns
+``
+
+[h3 Accuracy]
+
+Some representative ULP plots are shown below.
+The relative accuracy cannot be controlled at the roots of the polynomial, as is to be expected.
+
+[$../graphs/gegenbauer_ulp_3.svg]
+[$../graphs/gegenbauer_ulp_5.svg]
+[$../graphs/gegenbauer_ulp_9.svg]
+
+[h3 Caveats]
+
+Some programs define the Gegenbauer polynomial with \u03BB = 0 via renormalization (which makes them Chebyshev polynomials).
+We do not follow this convention: In this case, only the zeroth Gegenbauer polynomial is nonzero.
+
+
+[endsect]

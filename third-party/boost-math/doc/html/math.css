@@ -1,0 +1,175 @@
+@import url('../../../../doc/src/boostbook.css');
+/* Contains the basic settings for BoostBook and used by Quickbook to docbook conversion. */
+
+/*=============================================================================
+Copyright (c) 2004 Joel de Guzman    http://spirit.sourceforge.net/
+Copyright (c) 2014 John Maddock
+Copyright 2013 Niall Douglas additions for colors and alignment.
+Copyright 2013 Paul A. Bristow additions for more colors and alignments.
+Copyright 2019 Paul A. Bristow additions for more control of serif-italic font etc.
+
+Distributed under the Boost Software License, Version 1.0. (See accompany-
+ing file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    This Cascading Style Sheet is used to override and add to the standard Boost
+    CSS BoostBook for a particular library, for example Boost.Math and Boost.Multiprecision.
+
+    Visual Studio is recommended for editing this file 
+    because it checks syntax, does layout and provides help on options.
+
+IMPORTANT: there are two versions of this file - 
+
+one in libs/math/doc and one in libs/math/doc/html
+
+ONLY EVER EDIT THE FIRST OF THESE  !!!!
+
+boost-no-inspect
+
+=============================================================================*/
+
+/*=============================================================================
+Program listings
+=============================================================================*/
+
+    /* Code on paragraphs */
+    p tt.computeroutput
+    {
+        font-size: 10pt;
+    }
+
+    pre.synopsis
+    {
+        font-size: 10pt;
+        margin: 1pc 4% 0pc 4%;
+        padding: 0.5pc 0.5pc 0.5pc 0.5pc;
+    }
+
+    .programlisting,
+    .screen
+    {
+        font-size: 10pt;
+        display: block;
+        /* was margin: 1pc 4% 0pc 4%; */
+        margin: 1pc 2% 0pc 2%;
+        padding: 0.5pc 0.5pc 0.5pc 0.5pc;
+    }
+		@media screen
+    {
+       /* Syntax Highlighting */
+				.comment { color: green; }
+				/* .comment { color: #008000; }	*/
+		}						
+    /* Program listings in tables don't get borders */
+    td .programlisting,
+    td .screen
+    {
+        margin: 0pc 0pc 0pc 0pc;
+        padding: 0pc 0pc 0pc 0pc;
+    }
+
+/*=============================================================================
+Table of contents
+=============================================================================*/
+
+    div.toc
+    {
+       margin: 1pc 4% 0pc 4%;
+       padding: 0.1pc 1pc 0.1pc 1pc;
+       font-size: 100%;
+       line-height: 1.15;
+    }
+
+    .boost-toc
+    {
+       float: right;
+       padding: 0.5pc;
+    }
+
+    /* Code on toc */
+    .toc .computeroutput { font-size: 120% }
+
+    /* No margin on nested menus */
+
+    .toc dl dl { margin: 0; }
+
+
+/*==============================================================================
+Alignment and coloring use 'role' feature, available from Quickbook 1.6 up.
+Added from Niall Douglas for role color and alignment.
+http://article.gmane.org/gmane.comp.lib.boost.devel/243318
+*/
+
+/* Add text alignment (see http://www.w3schools.com/cssref/pr_text_text-align.asp) */
+span.aligncenter
+{
+  display: inline-block; width: 100%; text-align: center;
+}
+span.alignright
+{
+  display: inline-block; width: 100%; text-align: right;
+}
+/* alignleft is the default. */
+span.alignleft
+{
+  display: inline-block; width: 100%; text-align: left;
+}
+
+/* alignjustify stretches the word spacing so that each line has equal width
+within a chosen fraction of page width (here arbitrarily 20%).
+*Not* useful inside table items as the column width remains the total string width.
+Nor very useful, except to temporarily restrict the width.
+*/
+span.alignjustify
+{
+  display: inline-block; width: 20%; text-align: justify;
+}
+
+/* Text colors.
+Names at http://www.w3.org/TR/2002/WD-css3-color-20020219/ 4.3. X11 color keywords.
+Quickbook Usage: [role red Some red text]
+
+inline-block - Flows a element inline with the text, but allows width and height to be specified.
+
+https://stackoverflow.com/questions/3043021/is-there-any-guide-on-when-to-use-displayblock-when-inline-and-when-inline-b#:~:text=The%20use%20cases%20for%20block,it%27s%20used%20naturally%20for%20images
+
+*/
+span.red { display:inline-block; color: red; }
+span.green { display:inline-block; color: green; }
+span.lime { display:inline-block; color: #00FF00; }
+span.blue { display:inline-block; color: blue; }
+span.navy { display:inline-block; color: navy; }
+span.yellow { display:inline-block; color: yellow; }
+span.magenta { display:inline-block; color: magenta; }
+span.indigo { display:inline-block; color: #4B0082; }
+span.cyan { display:inline-block; color: cyan; }
+span.purple { display:inline-block; color: purple; }
+span.gold { display:inline-block; color: gold; }
+span.silver { display:inline-block; color: silver; } /* lighter gray */
+span.gray { display:inline-block; color: #808080; } /* light gray */
+
+/* role for inline Unicode mathematical equations,
+    making font an italic (as is conventional for equations)
+    and a serif version of font (to match those generated using .mml to SVG or PNG)
+    and a little bigger (* 125%) because the serif font appears smaller than the default sans serif fonts.
+    Used, for example: [role serif_italic This is in serif font and italic].
+    Used in turn by template for inline expressions to match equations as SVG or PNG images.
+    Can be combined with colors and bold.
+*/
+span.serif_italic {
+    font-family: serif;
+    font-style: italic;
+    font-size: 125%;
+    font-stretch: expanded;
+}
+
+/* Custom indent of paragraphs to make equations look nicer.
+https://www.w3schools.com/tags/tag_blockquote.asp says 
+  "Most browsers will display the <blockquote> element with left and right margin 40px values: "
+*/
+blockquote {
+    display: block;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    margin-left: 2%;
+    margin-right: 2%;
+}

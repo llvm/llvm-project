@@ -1,0 +1,61 @@
+[section:config_macros Configuration Macros]
+
+Almost all configuration details are set up automatically by
+`<boost\math\tools\config.hpp>`.
+
+In normal use, only policy configuration macros are likely to be used. See __policy_ref.
+
+For reference, information on Boost.Math macros used internally are described briefly below.
+
+[table Boost.Math Macros
+[[MACRO][Notes]]
+[[`BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS`] [Do not produce or use long double functions: this macro gets set when the platform's
+long double or standard library long double support is absent or buggy.]]
+[[`BOOST_MATH_USE_FLOAT128`][When set the numeric constants support the `__float128` data type with constants having the `Q` suffix.]]
+[[`BOOST_MATH_DISABLE_FLOAT128`][When set the numeric constants do not use the `__float128` data type even if the compiler appears to support it.]]
+[[`BOOST_MATH_NO_REAL_CONCEPT_TESTS`] [Do not try to use real concept tests (hardware or software does not support real_concept type).]]
+[[`BOOST_MATH_CONTROL_FP`] [Controls FP hardware exceptions - our tests don't support hardware exceptions on MSVC.
+May get set to something like: ` _control87(MCW_EM,MCW_EM)`.]]
+[[`BOOST_MATH_NO_DEDUCED_FUNCTION_POINTERS`] [This macro is used by our test cases, it is set when an assignment of a function template
+to a function pointer requires explicit template arguments to be provided on the function name.]]
+[[`BOOST_MATH_USE_C99` ] [Use C99 math functions.]] 
+[[`BOOST_NO_NATIVE_LONG_DOUBLE_FP_CLASSIFY`] [define if no native (or buggy) `fpclassify(long double)` 
+even though the other C99 functions are present.]]
+[[`BOOST_MATH_SMALL_CONSTANT(x)`] [Helper macro used in our test cases to set underflowing constants set to zero
+if this would cause compiler issues.]]
+[[`BOOST_MATH_BUGGY_LARGE_FLOAT_CONSTANTS`] [Set if constants too large for a float, will cause "bad" values to be stored in the data, 
+rather than infinity or a suitably large value.]]
+[[`BOOST_MATH_STD_USING`] [Provides `using` statements for many std:: (abs to sqrt) and boost::math (rounds, modf) functions. 
+This allows these functions to be called unqualified so that if
+[@http://en.wikipedia.org/wiki/Argument-dependent_name_lookup argument-dependent Argument Dependent Lookup]
+fails to find a suitable overload, then the std:: versions will also be considered.]]
+[[`BOOST_FPU_EXCEPTION_GUARD`] [Used at the entrypoint to each special function to reset all FPU exception flags prior
+to internal calculations, and then merge the old and new exception flags on function exit.  Used as a workaround
+on platforms or hardware that behave strangely if any FPU exception flags are set when calling standard library
+functions.]]
+[[`BOOST_MATH_INSTRUMENT`] [Define to output diagnostics for math functions. This is rather 'global' to Boost.Math and so 
+coarse-grained that it will probably produce copious output! (Especially because full precision values are output).
+Designed primarily for internal use and development.]]
+[[`BOOST_MATH_INSTRUMENT_CODE(x)`] [Output selected named variable, for example `BOOST_MATH_INSTRUMENT_CODE("guess = " << guess)`; Used by `BOOST_MATH_INSTRUMENT`]]
+[[`BOOST_MATH_INSTRUMENT_VARIABLE(name)`] [Output selected variable, for example `BOOST_MATH_INSTRUMENT_VARIABLE(result);` Used by `BOOST_MATH_INSTRUMENT`]]
+[[`BOOST_MATH_INSTRUMENT_FPU`] [Output the state of the FPU's control flags.]]
+] [/table]
+
+[table Boost.Math Tuning 
+[[ Macros for Tuning performance options for specific compilers] [Notes]] 
+[[`BOOST_MATH_POLY_METHOD`] [See the [link math_toolkit.tuning performance tuning section].]]
+[[`BOOST_MATH_RATIONAL_METHOD`] [See the [link math_toolkit.tuning performance tuning section].]]
+[[`BOOST_MATH_MAX_POLY_ORDER`] [See the [link math_toolkit.tuning performance tuning section].]]
+[[`BOOST_MATH_INT_TABLE_TYPE`] [See the [link math_toolkit.tuning performance tuning section].]]
+[[`BOOST_MATH_INT_VALUE_SUFFIX`] [Helper macro for appending the correct suffix to integer constants
+which may actually be stored as reals depending on the value of BOOST_MATH_INT_TABLE_TYPE.]]
+] [/table]
+
+[endsect] [/section:config_macros Configuration Macros]
+
+[/ 
+  Copyright 2010 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

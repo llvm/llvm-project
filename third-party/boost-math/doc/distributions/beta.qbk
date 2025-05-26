@@ -1,0 +1,276 @@
+[section:beta_dist Beta Distribution]
+
+``#include <boost/math/distributions/beta.hpp>``
+
+   namespace boost{ namespace math{ 
+   
+    template <class RealType = double, 
+              class ``__Policy``   = ``__policy_class`` >
+   class beta_distribution;
+   
+   // typedef beta_distribution<double> beta;
+   // Note that this is deliberately NOT provided,
+   // to avoid a clash with the function name beta.
+   
+   template <class RealType, class ``__Policy``>
+   class beta_distribution
+   {
+   public:
+      typedef RealType  value_type;
+      typedef Policy    policy_type;
+      // Constructor from two shape parameters, alpha & beta:
+      BOOST_MATH_GPU_ENABLED beta_distribution(RealType a, RealType b);
+      
+      // Parameter accessors:
+      BOOST_MATH_GPU_ENABLED RealType alpha() const;
+      BOOST_MATH_GPU_ENABLED RealType beta() const;
+      
+      // Parameter estimators of alpha or beta from mean and variance.
+      BOOST_MATH_GPU_ENABLED static RealType find_alpha(
+        RealType mean, // Expected value of mean.
+        RealType variance); // Expected value of variance.
+      
+      BOOST_MATH_GPU_ENABLED static RealType find_beta(
+        RealType mean, // Expected value of mean.
+        RealType variance); // Expected value of variance.
+  
+      // Parameter estimators from
+      // either alpha or beta, and x and probability.
+      
+      BOOST_MATH_GPU_ENABLED static RealType find_alpha(
+        RealType beta, // from beta.
+        RealType x, //  x.
+        RealType probability); // cdf
+      
+      BOOST_MATH_GPU_ENABLED static RealType find_beta(
+        RealType alpha, // alpha.
+        RealType x, // probability x.
+        RealType probability); // probability cdf.
+   };
+   
+   }} // namespaces
+   
+The class type `beta_distribution` represents a 
+[@http://en.wikipedia.org/wiki/Beta_distribution beta ] 
+[@http://en.wikipedia.org/wiki/Probability_distribution probability distribution function].
+
+The [@http://mathworld.wolfram.com/BetaDistribution.htm beta distribution ]
+is used as a [@http://en.wikipedia.org/wiki/Prior_distribution prior distribution]
+for binomial proportions in
+[@http://mathworld.wolfram.com/BayesianAnalysis.html Bayesian analysis].
+
+See also: 
+[@http://documents.wolfram.com/calculationcenter/v2/Functions/ListsMatrices/Statistics/BetaDistribution.html beta distribution]
+and [@http://en.wikipedia.org/wiki/Bayesian_statistics Bayesian statistics].
+
+How the beta distribution is used for
+[@http://home.uchicago.edu/~grynav/bayes/ABSLec5.ppt 
+Bayesian analysis of one parameter models]
+is discussed by Jeff Grynaviski.
+
+The [@http://en.wikipedia.org/wiki/Probability_density_function probability density function PDF]
+for the [@http://en.wikipedia.org/wiki/Beta_distribution beta distribution]
+defined on the interval \[0,1\] is given by:
+
+[expression f(x;[alpha],[beta]) = x[super[alpha] - 1] (1 - x)[super[beta] -1] / B([alpha], [beta])]
+
+where [role serif_italic B([alpha], [beta])] is the
+[@http://en.wikipedia.org/wiki/Beta_function beta function],
+implemented in this library as __beta.  Division by the beta function
+ensures that the pdf is normalized to the range zero to unity.
+
+The following graph illustrates examples of the pdf for various values 
+of the shape parameters.  Note the ['[alpha] = [beta] = 2] (blue line) 
+is dome-shaped, and might be approximated by a symmetrical triangular 
+distribution.
+
+[graph beta_pdf]
+
+If [alpha] = [beta] = 1, then it is a[emspace]
+[@http://en.wikipedia.org/wiki/Uniform_distribution_%28continuous%29 uniform distribution],
+equal to unity in the entire interval x = 0 to 1.
+If [alpha] and [beta] are < 1, then the pdf is U-shaped.
+If [alpha] != [beta], then the shape is asymmetric
+and could be approximated by a triangle
+whose apex is away from the centre (where x = half).
+
+[h4 Member Functions]
+
+[h5 Constructor]
+
+   BOOST_MATH_GPU_ENABLED beta_distribution(RealType alpha, RealType beta);
+
+Constructs a beta distribution with shape parameters /alpha/ and /beta/.
+
+Requires alpha,beta > 0,otherwise __domain_error is called.  Note that 
+technically the beta distribution is defined for alpha,beta >= 0, but
+it's not clear whether any program can actually make use of that latitude
+or how many of the non-member functions can be usefully defined in that case.
+Therefore for now, we regard it as an error if alpha or beta is zero.
+
+For example: 
+   
+   beta_distribution<> mybeta(2, 5);
+   
+Constructs a the beta distribution with alpha=2 and beta=5 (shown in yellow
+in the graph above).
+
+[h5 Parameter Accessors]
+
+   BOOST_MATH_GPU_ENABLED RealType alpha() const;
+   
+Returns the parameter /alpha/ from which this distribution was constructed.
+   
+   BOOST_MATH_GPU_ENABLED RealType beta() const;
+   
+Returns the parameter /beta/ from which this distribution was constructed.
+
+So for example:
+
+   beta_distribution<> mybeta(2, 5);
+   assert(mybeta.alpha() == 2.);  // mybeta.alpha() returns 2
+   assert(mybeta.beta() == 5.);   // mybeta.beta()  returns 5
+
+[h4 Parameter Estimators]
+
+Two pairs of parameter estimators are provided.
+
+One estimates either [alpha]  or [beta] 
+from presumed-known mean and variance.
+
+The other pair estimates either [alpha] or [beta] from 
+the cdf and x.
+
+It is also possible to estimate [alpha] and  [beta]  from 
+'known' mode & quantile.  For example, calculators are provided by the
+[@http://www.ausvet.com.au/pprev/content.php?page=PPscript 
+Pooled Prevalence Calculator] and
+[@http://www.epi.ucdavis.edu/diagnostictests/betabuster.html Beta Buster]
+but this is not yet implemented here.
+
+      static RealType find_alpha(
+        RealType mean, // Expected value of mean.
+        RealType variance); // Expected value of variance.
+        
+Returns the unique value of [alpha] that corresponds to a 
+beta distribution with mean /mean/ and variance /variance/.
+      
+      static RealType find_beta(
+        RealType mean, // Expected value of mean.
+        RealType variance); // Expected value of variance.
+  
+Returns the unique value of [beta] that corresponds to a 
+beta distribution with mean /mean/ and variance /variance/.
+      
+      static RealType find_alpha(
+        RealType beta, // from beta.
+        RealType x, //  x.
+        RealType probability); // probability cdf
+        
+Returns the value of [alpha] that gives:
+`cdf(beta_distribution<RealType>(alpha, beta), x) == probability`.
+      
+      static RealType find_beta(
+        RealType alpha, // alpha.
+        RealType x, // probability x.
+        RealType probability); // probability cdf.
+
+Returns the value of [beta] that gives:
+`cdf(beta_distribution<RealType>(alpha, beta), x) == probability`.
+      
+[h4 Non-member Accessor Functions]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The formulae for calculating these are shown in the table below, and at
+[@http://mathworld.wolfram.com/BetaDistribution.html Wolfram Mathworld].
+
+[h4 Applications]
+
+The beta distribution can be used to model events constrained
+to take place within an interval defined by a minimum and maximum value:
+so it is used in project management systems. 
+
+It is also widely used in [@http://en.wikipedia.org/wiki/Bayesian_inference Bayesian statistical inference].
+
+[h4 Related distributions]
+
+The beta distribution with both [alpha] and [beta] = 1 follows a
+[@http://en.wikipedia.org/wiki/Uniform_distribution_%28continuous%29 uniform distribution].
+
+The [@http://en.wikipedia.org/wiki/Triangular_distribution triangular]
+is used when less precise information is available.
+
+The [@http://en.wikipedia.org/wiki/Binomial_distribution binomial distribution]
+is closely related when [alpha] and [beta]  are integers.
+
+With integer values of [alpha]  and [beta] the distribution B(i, j) is
+that of the j-th highest of a sample of i + j + 1 independent random variables
+uniformly distributed between 0 and 1.
+The cumulative probability from 0 to x is thus
+the probability that the j-th highest value is less than x.
+Or it is the probability that at least i of the random variables are less than x, 
+a probability given by summing over the __binomial_distrib
+with its p parameter set to x.
+
+[h4 Accuracy]
+
+This distribution is implemented using the 
+[link math_toolkit.sf_beta.beta_function beta functions] __beta and 
+[link math_toolkit.sf_beta.ibeta_function incomplete beta functions] __ibeta and __ibetac;
+please refer to these functions for information on accuracy.
+
+[h4 Implementation]
+
+In the following table /a/ and /b/ are the parameters [alpha] and [beta],
+/x/ is the random variable, /p/ is the probability and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][[role serif_italic f(x;[alpha],[beta]) = x[super[alpha] - 1] (1 - x)[super[beta] -1] / B([alpha], [beta])]
+   
+    Implemented using __ibeta_derivative(a, b, x).]]
+[[cdf][Using the incomplete beta function __ibeta(a, b, x)]]
+[[cdf complement][__ibetac(a, b, x)]]
+[[quantile][Using the inverse incomplete beta function __ibeta_inv(a, b, p)]]
+[[quantile from the complement][__ibetac_inv(a, b, q)]]
+[[mean][`a/(a+b)`]]
+[[variance][`a * b / (a+b)^2 * (a + b + 1)`]]
+[[mode][`(a-1) / (a + b - 2)`]]
+[[skewness][`2 (b-a) sqrt(a+b+1)/(a+b+2) * sqrt(a * b)`]]
+[[kurtosis excess][ [equation beta_dist_kurtosis]  ]]
+[[kurtosis][`kurtosis + 3`]]
+[[parameter estimation][ ]]
+[[alpha (from mean and variance)][`mean * (( (mean * (1 - mean)) / variance)- 1)`]]
+[[beta (from mean and variance)][`(1 - mean) * (((mean * (1 - mean)) /variance)-1)`]]
+[[The member functions `find_alpha` and `find_beta`
+
+  from cdf and probability x
+  
+  and *either* `alpha` or `beta`]
+      [Implemented in terms of the inverse incomplete beta functions
+      
+__ibeta_inva, and __ibeta_invb respectively.]]
+[[`find_alpha`][`ibeta_inva(beta, x, probability)`]]
+[[`find_beta`][`ibeta_invb(alpha, x, probability)`]]
+] [/table]
+
+[h4 References]
+
+[@http://en.wikipedia.org/wiki/Beta_distribution Wikipedia Beta distribution]
+
+[@http://www.itl.nist.gov/div898/handbook/eda/section3/eda366h.htm NIST Exploratory Data Analysis]
+
+[@http://mathworld.wolfram.com/BetaDistribution.html Wolfram MathWorld]
+
+[endsect] [/section:beta_dist beta]
+
+[/ beta.qbk
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

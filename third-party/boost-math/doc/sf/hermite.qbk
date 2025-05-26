@@ -1,0 +1,107 @@
+[section:hermite Hermite Polynomials]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/hermite.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` hermite(unsigned n, T x);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` hermite(unsigned n, T x, const ``__Policy``&);
+   
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` hermite_next(unsigned n, T1 x, T2 Hn, T3 Hnm1);
+      
+   }} // namespaces
+
+[h4 Description]
+
+The return type of these functions is computed using the __arg_promotion_rules:
+note than when there is a single template argument the result is the same type 
+as that argument or `double` if the template argument is an integer type.
+
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` hermite(unsigned n, T x);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` hermite(unsigned n, T x, const ``__Policy``&);
+   
+Returns the value of the Hermite Polynomial of order /n/ at point /x/:
+
+[equation hermite_0]
+
+[optional_policy]
+
+The following graph illustrates the behaviour of the first few 
+Hermite Polynomials:
+
+[graph hermite]
+   
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` hermite_next(unsigned n, T1 x, T2 Hn, T3 Hnm1);
+   
+Implements the three term recurrence relation for the Hermite
+polynomials, this function can be used to create a sequence of
+values evaluated at the same /x/, and for rising /n/.
+
+[equation hermite_1]
+
+For example we could produce a vector of the first 10 polynomial
+values using:
+
+   double x = 0.5;  // Abscissa value
+   vector<double> v;
+   v.push_back(hermite(0, x)).push_back(hermite(1, x));
+   for(unsigned l = 1; l < 10; ++l)
+      v.push_back(hermite_next(l, x, v[l], v[l-1]));
+      
+Formally the arguments are:
+
+[variablelist
+[[n][The degree /n/ of the last polynomial calculated.]]
+[[x][The abscissa value]]
+[[Hn][The value of the polynomial evaluated at degree /n/.]]
+[[Hnm1][The value of the polynomial evaluated at degree /n-1/.]]
+]
+   
+[h4 Accuracy]
+
+The following table shows peak errors (in units of epsilon) 
+for various domains of input arguments.  
+Note that only results for the widest floating point type on the system are 
+given as narrower types have __zero_error.
+
+[table_hermite]
+
+Note that the worst errors occur when the degree increases, values greater than
+~120 are very unlikely to produce sensible results, especially in the associated
+polynomial case when the order is also large.  Further the relative errors
+are likely to grow arbitrarily large when the function is very close to a root.
+
+[h4 Testing]
+
+A mixture of spot tests of values calculated using functions.wolfram.com, 
+and randomly generated test data are
+used: the test data was computed using
+[@http://shoup.net/ntl/doc/RR.txt NTL::RR] at 1000-bit precision.
+
+[h4 Implementation]
+
+These functions are implemented using the stable three term
+recurrence relations.  These relations guarantee low absolute error
+but cannot guarantee low relative error near one of the roots of the
+polynomials.
+
+[endsect][/section:beta_function The Beta Function]
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

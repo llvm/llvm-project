@@ -1,0 +1,866 @@
+[book Math Toolkit
+    [quickbook 1.7]
+    [copyright 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland, Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde, Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle Walker and Xiaogang Zhang]
+    [/purpose ISBN 0-9504833-2-X  978-0-9504833-2-0, Classification 519.2-dc22]
+    [license
+        Distributed under the Boost Software License, Version 1.0.
+        (See accompanying file LICENSE_1_0.txt or copy at
+        [@http://www.boost.org/LICENSE_1_0.txt])
+    ]
+    [authors [Agrawal, Nikhar], [Bikineev, Anton], [Borland, Matthew], [Bristow, Paul A.], [Holin, Hubert], [Guazzone, Marco], [Kormanyos, Christopher], [Lalande, Bruno], [Maddock, John], [Miller, Evan], [Murphy, Jeremy W.], [Pulver, Matthew], [Råde, Johan], [Sobotta, Benjamin], [Sewani, Gautam], [Thompson, Nicholas], [van den Berg, Thijs], [Walker, Daryle], [Zhang, Xiaogang]]
+    [/last-revision $Date$]
+    [version 4.2.1]
+]
+
+[template mathpart[id title]
+[block '''<chapter id="'''[id]'''"><title>'''[title]'''</title>''']]
+[template endmathpart[]
+[block '''</chapter>''']]
+
+[/insert Equation as an image, previous generated with an external tool like Latex.]
+[template equation[name]
+[:
+'''<inlinemediaobject>
+<imageobject role="html">
+<imagedata fileref="../equations/'''[name]'''.svg"></imagedata>
+</imageobject>
+<imageobject role="print">
+<imagedata fileref="../equations/'''[name]'''.svg"></imagedata>
+</imageobject>
+</inlinemediaobject>'''
+]
+]
+
+[/Used thus [equation ellint6] ]
+
+[/insert Graph as an SVG or PNG image, previous generated with an external tool like SVG_plot.]
+
+[template graph[name]
+[:
+'''<inlinemediaobject>
+<imageobject role="html">
+<imagedata align="center" fileref="../graphs/'''[name]'''.svg"></imagedata>
+</imageobject>
+<imageobject role="print">
+<imagedata align="center" fileref="../graphs/'''[name]'''.svg"></imagedata>
+</imageobject>
+</inlinemediaobject>'''
+]
+]
+
+[/insert Indented one-line expression italic and serif font probably using Unicode symbols for Greek and symbols.]
+[/Example: [expression [sub 1]F[sub 0](a, z) = (1-z)[super -a]]]
+[template expression[equation]
+[:
+[role serif_italic [equation]]
+]
+[/ Hint you may need to enclose equation in brackets if it contains comma(s) to avoid "error invalid number of arguments"]
+]
+
+[import ../../../tools/auto_index/include/auto_index_helpers.qbk]
+[/ Must be first included file!]
+
+[import ../reporting/accuracy/doc/accuracy_tables.qbk]
+[import ../reporting/performance/doc/performance_tables.qbk]
+
+[import html4_symbols.qbk]
+
+[import overview/common_overviews.qbk] [/ overviews that appear in more than one place!]
+[import overview/tr1.qbk] [/tr1 docs also appear in more than one place!]
+[import overview/roadmap.qbk] [/ for history]
+
+[def __build_html]
+
+[def __effects [*Effects: ]]
+[def __formula [*Formula: ]]
+[def __exm1 '''<code>e<superscript>x</superscript> - 1</code>'''] [/e^x -1]
+[def __ex '''<code>e<superscript>x</superscript></code>'''] [/e^x]
+[def __te '''2&#x025B;''']  [/small Latin letter open e]
+
+[/These should be in html4_symbols.qbk]
+[def __ceilR '''&#x2309;''']
+[def __ceilL '''&#2308;''']
+[def __floorR '''&#x230B;''']
+[def __floorL '''&#x230A;''']
+[def __infin '''&#8734;''']
+[def __integral '''&#8747;''']
+[def __aacute '''&#225;''']
+[def __eacute '''&#233;''']
+[def __quarter '''&#x00BC;''']
+[def __nearequal '''&#x224A;''']
+[def __spaces '''&#x2000;&#x2000;'''] [/ two spaces - useful for an indent.]
+
+[def __tick [role aligncenter [role green \u2714]]] [/ u2714 is a HEAVY CHECK MARK tick (2713 check mark)]
+[def __cross [role aligncenter [role red \u2718]]] [/ u2718 is a heavy cross]
+[def __star [role aligncenter [role red \u2736]]] [/ 6-point star]
+
+[def __caution This is now an official Boost library, but remains a library under
+               development, the code is fully functional and robust, but
+               interfaces, library structure, and function and distribution names
+               may still be changed without notice.]
+
+[template tr1[] [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf Technical Report on C++ Library Extensions]]
+[template C99[] [@http://www.open-std.org/JTC1/SC22/WG14/www/docs/n1256.pdf C99 Standard ISO/IEC 9899:1999]]
+[template jm_rationals[] [link math_toolkit.sf_implementation.rational_approximations_used devised by JM]]
+
+[def __domain_error [link math_toolkit.error_handling.domain_error domain_error]]
+[def __pole_error [link math_toolkit.error_handling.pole_error pole_error]]
+[def __overflow_error [link math_toolkit.error_handling.overflow_error overflow_error]]
+[def __underflow_error [link math_toolkit.error_handling.underflow_error underflow_error]]
+[def __denorm_error [link math_toolkit.error_handling.denorm_error denorm_error]]
+[def __evaluation_error [link math_toolkit.error_handling.evaluation_error evaluation_error]]
+[def __rounding_error [link math_toolkit.error_handling.rounding_error rounding_error]]
+[def __indeterminate_result_error [link math_toolkit.error_handling.indeterminate_result_error indeterminate_result_error]]
+[def __checked_narrowing_cast [link math_toolkit.error_handling.checked_narrowing_cast checked_narrowing_cast]]
+[def __arg_promotion_rules [link math_toolkit.result_type ['result type calculation rules]]]
+[def __sf_result [link math_toolkit.result_type ['calculated-result-type]]]
+
+[/ The following macros expand to links to the various special functions
+and use the function's name as the link text.]
+
+[/Misc]
+[def __lanczos [link math_toolkit.lanczos Lanczos approximation]]
+[def __zero_error [link math_toolkit.relative_error.zero_error effectively zero error]]
+[def __relative_error [link math_toolkit.relative_error relative zero error]]
+
+[/ links to roots]
+
+[def __root_finding_with_derivatives [link math_toolkit.roots_deriv root-finding with derivatives]] [/Newton, Halley & Schoeder]
+[def __root_finding_without_derivatives [link math_toolkit.roots_noderiv root-finding without derivatives]]
+[def __root_finding_TOMS748 [link math_toolkit.roots_noderiv.TOMS748 TOMS 748 algorithm]]
+[def __bracket_solve [link math_toolkit.roots_noderiv.bracket_solve bracket and solve]]
+[def __root_termination [link math_toolkit.roots_noderiv.root_termination predefined termination functors]]
+[def __root_finding_examples [link math_toolkit.root_finding_examples root-finding examples]]
+[def __brent_minima [link math_toolkit.brent_minima Brent's method]]
+[def __brent_minima_example [link math_toolkit.brent_minima.example Brent's method example]]
+[def __newton[link math_toolkit.roots_deriv.newton Newton-Raphson iteration]]
+[def __halley [link math_toolkit.roots_deriv.halley Halley]]
+[def __schroder [link math_toolkit.roots_deriv.schroder Schr'''&#xf6;'''der]]
+[def __brent_minima_example [link math_toolkit.brent_minima.example Brent minima finding example]]
+[def __bisection [link math_toolkit.roots_noderiv.bisect bisection]]
+[def __bisect [link math_toolkit.roots_noderiv.bisect bisect]]
+[def __bisection_wikipedia [@https://en.wikipedia.org/wiki/Bisection bisection]]
+[def __root_finding_example_without_derivatives [link math_toolkit.root_finding_examples.no_derivatives root-finding without derivatives]]
+[def __root_finding_example_cbrt_without_derivatives [link math_toolkit.root_finding_examples.cbrt_eg.cbrt_no_derivatives root-finding without derivatives]]
+[def __root_finding_example_cbrt_with_1_derivative [link math_toolkit.root_finding_examples.cbrt_eg.cbrt_1st_derivative root-finding with 1st derivatives]]
+[def __root_finding_example_cbrt_with_2_derivatives [link math_toolkit.root_finding_examples.cbrt_eg.cbrt_2_derivatives root-finding with 1st and 2nd derivatives]]
+[def __root_finding_examples [link math_toolkit.root_finding_examples root-finding examples]]
+[def __no_derivatives   [link math_toolkit.root_finding_examples.no_derivatives no derivatives]]
+[def __cbrt_no_derivatives  [link math_toolkit.root_finding_examples.cbrt_no_derivatives cbrt no derivatives]]
+[def __cbrt_no_derivatives [link math_toolkit.root_finding_examples.cbrt_eg.cbrt_no_derivatives without derivatives]]
+[def __cbrt_1st_derivative [link math_toolkit.root_finding_examples.cbrt_eg.cbrt_1st_derivative cube-root with 1st derivative]]
+[def __cbrt_2_derivatives [link math_toolkit..root_finding_examples.cbrt_eg.cbrt_2_derivatives cube-root with 1st  & 2nd derivative]]
+[def __fifth_root [link math_toolkit.root_finding_examples.5th_root_eg fifth root]]
+[def __nth_root [link math_toolkit.root_finding_examples.nth_root nth root]]
+[def __multiprecision_root [link math_toolkit.root_finding_examples.multiprecision_root multiprecision root]]
+[def __polynomial_arithmetic [link math_toolkit.polynomial_arithmetic polynomial arithmetic]]
+[def __evaluation [link math_toolkit.rational.polynomial_evaluation polynomial \& rational evaluation]]
+
+[/gammas]
+[def __lgamma [link math_toolkit.sf_gamma.lgamma lgamma]]
+[def __digamma [link math_toolkit.sf_gamma.digamma digamma]]
+[def __trigamma [link math_toolkit.sf_gamma.trigamma trigamma]]
+[def __polygamma [link math_toolkit.sf_gamma.polygamma polygamma]]
+[def __tgamma_ratio [link math_toolkit.sf_gamma.gamma_ratios tgamma_ratio]]
+[def __tgamma_delta_ratio [link math_toolkit.sf_gamma.gamma_ratios tgamma_delta_ratio]]
+[def __tgamma [link math_toolkit.sf_gamma.tgamma tgamma]]
+[def __tgamma1pm1 [link math_toolkit.sf_gamma.tgamma tgamma1pm1]]
+[def __tgamma_lower [link math_toolkit.sf_gamma.igamma tgamma_lower]]
+[def __gamma_p [link math_toolkit.sf_gamma.igamma gamma_p]]
+[def __gamma_q [link math_toolkit.sf_gamma.igamma gamma_q]]
+[def __gamma_q_inv [link math_toolkit.sf_gamma.igamma_inv gamma_q_inv]]
+[def __gamma_p_inv [link math_toolkit.sf_gamma.igamma_inv gamma_p_inv]]
+[def __gamma_q_inva [link math_toolkit.sf_gamma.igamma_inv gamma_q_inva]]
+[def __gamma_p_inva [link math_toolkit.sf_gamma.igamma_inv gamma_p_inva]]
+[def __gamma_p_derivative [link math_toolkit.sf_gamma.gamma_derivatives gamma_p_derivative]]
+
+[/factorials]
+[def __factorial [link math_toolkit.factorials.sf_factorial factorial]]
+[def __unchecked_factorial [link math_toolkit.factorials.sf_factorial unchecked_factorial]]
+[def __max_factorial [link math_toolkit.factorials.sf_factorial max_factorial]]
+[def __double_factorial [link math_toolkit.factorials.sf_double_factorial double_factorial]]
+[def __rising_factorial [link math_toolkit.factorials.sf_rising_factorial rising_factorial]]
+[def __falling_factorial [link math_toolkit.factorials.sf_falling_factorial falling_factorial]]
+
+[/error functions]
+[def __erf [link math_toolkit.sf_erf.error_function erf]]
+[def __erfc [link math_toolkit.sf_erf.error_function erfc]]
+[def __erf_inv [link math_toolkit.sf_erf.error_inv erf_inv]]
+[def __erfc_inv [link math_toolkit.sf_erf.error_inv erfc_inv]]
+
+[/beta functions]
+[def __beta  [link math_toolkit.sf_beta.beta_function beta]]
+[def __beta3 [link math_toolkit.sf_beta.ibeta_function beta]]
+[def __betac [link math_toolkit.sf_beta.ibeta_function betac]]
+[def __ibeta [link math_toolkit.sf_beta.ibeta_function ibeta]]
+[def __ibetac [link math_toolkit.sf_beta.ibeta_function ibetac]]
+[def __ibeta_inv [link math_toolkit.sf_beta.ibeta_inv_function ibeta_inv]]
+[def __ibetac_inv [link math_toolkit.sf_beta.ibeta_inv_function ibetac_inv]]
+[def __ibeta_inva [link math_toolkit.sf_beta.ibeta_inv_function ibeta_inva]]
+[def __ibetac_inva [link math_toolkit.sf_beta.ibeta_inv_function ibetac_inva]]
+[def __ibeta_invb [link math_toolkit.sf_beta.ibeta_inv_function ibeta_invb]]
+[def __ibetac_invb [link math_toolkit.sf_beta.ibeta_inv_function ibetac_invb]]
+[def __ibeta_derivative [link math_toolkit.sf_beta.beta_derivative ibeta_derivative]]
+
+[/elliptic integrals]
+[def __ellint_rj  [link math_toolkit.ellint.ellint_carlson ellint_rj]]
+[def __ellint_rf  [link math_toolkit.ellint.ellint_carlson ellint_rf]]
+[def __ellint_rc  [link math_toolkit.ellint.ellint_carlson ellint_rc]]
+[def __ellint_rd  [link math_toolkit.ellint.ellint_carlson ellint_rd]]
+[def __ellint_1  [link math_toolkit.ellint.ellint_1 ellint_1]]
+[def __ellint_2  [link math_toolkit.ellint.ellint_2 ellint_2]]
+[def __ellint_3  [link math_toolkit.ellint.ellint_3 ellint_3]]
+[def __ellint_d  [link math_toolkit.ellint.ellint_d ellint_d]]
+[def __jacobi_zeta  [link math_toolkit.ellint.jacobi_zeta jacobi_zeta]]
+[def __heuman_lambda  [link math_toolkit.ellint.heuman_lambda heuman_lambda]]
+
+[/ Bernoulli functions and numbers]
+[def __bernoulli_numbers  [link math_toolkit.number_series.bernoulli_numbers Bernoulli numbers]]
+
+[/Bessel functions]
+[def __cyl_bessel_j  [link math_toolkit.bessel.bessel_first cyl_bessel_j]]
+[def __cyl_neumann  [link math_toolkit.bessel.bessel_first cyl_neumann]]
+[def __cyl_bessel_i  [link math_toolkit.bessel.mbessel cyl_bessel_i]]
+[def __cyl_bessel_k  [link math_toolkit.bessel.mbessel cyl_bessel_k]]
+[def __sph_bessel  [link math_toolkit.bessel.sph_bessel sph_bessel]]
+[def __sph_neumann  [link math_toolkit.bessel.sph_bessel sph_neumann]]
+
+[def __cyl_bessel_j_prime  [link math_toolkit.bessel.bessel_derivatives cyl_bessel_j_prime]]
+[def __cyl_neumann_prime  [link math_toolkit.bessel.bessel_derivatives cyl_neumann_prime]]
+[def __cyl_bessel_i_prime  [link math_toolkit.bessel.bessel_derivatives cyl_bessel_i_prime]]
+[def __cyl_bessel_k_prime  [link math_toolkit.bessel.bessel_derivatives cyl_bessel_k_prime]]
+[def __sph_bessel_prime  [link math_toolkit.bessel.bessel_derivatives sph_bessel_prime]]
+[def __sph_neumann_prime  [link math_toolkit.bessel.bessel_derivatives sph_neumann_prime]]
+
+[/Hankel Functions]
+[def __cyl_hankel_1  [link math_toolkit.hankel.cyl_hankel cyl_hankel_1]]
+[def __cyl_hankel_2  [link math_toolkit.hankel.cyl_hankel cyl_hankel_2]]
+[def __sph_hankel_1  [link math_toolkit.hankel.sph_hankel sph_hankel_1]]
+[def __sph_hankel_2  [link math_toolkit.hankel.sph_hankel sph_hankel_2]]
+
+[/Lambert W function]
+[def __lambert_w [link math_toolkit.sf_lambert_w.lambert_w_function lambert_w]]
+[def __lambert_w_implementation [link math_toolkit.lambert_w.implementation implementation]]
+[def __lambert_w_precision[link math_toolkit.lambert_w.precision precision]]
+[def __lambert_w_examples [link math_toolkit.lambert_w.examples examples]]
+[def __lambert_w_wm1_near_zero [link math_toolkit.lambert_w.wm1_near_zero wm1_near_zero]]
+[def __lambert_w_references [link math_toolkit.lambert_w.references references]]
+
+
+[/Airy Functions]
+[def __airy_ai [link math_toolkit.airy.ai airy_ai]]
+[def __airy_bi [link math_toolkit.airy.bi airy_bi]]
+[def __airy_bi_prime [link math_toolkit.airy.bip airy_bi_prime]]
+[def __airy_ai_prime [link math_toolkit.airy.aip airy_ai_prime]]
+
+[/Jacobi Elliptic Functions]
+[def __jacobi_elliptic [link math_toolkit.jacobi.jacobi_elliptic jacobi_elliptic]]
+[def __jacobi_cd [link math_toolkit.jacobi.jacobi_cd jacobi_cd]]
+[def __jacobi_cn [link math_toolkit.jacobi.jacobi_cn jacobi_cn]]
+[def __jacobi_cs [link math_toolkit.jacobi.jacobi_cs jacobi_cs]]
+[def __jacobi_dc [link math_toolkit.jacobi.jacobi_dc jacobi_dc]]
+[def __jacobi_dn [link math_toolkit.jacobi.jacobi_dn jacobi_dn]]
+[def __jacobi_ds [link math_toolkit.jacobi.jacobi_ds jacobi_ds]]
+[def __jacobi_nd [link math_toolkit.jacobi.jacobi_nd jacobi_nd]]
+[def __jacobi_nc [link math_toolkit.jacobi.jacobi_nc jacobi_nc]]
+[def __jacobi_ns [link math_toolkit.jacobi.jacobi_ns jacobi_ns]]
+[def __jacobi_sd [link math_toolkit.jacobi.jacobi_sd jacobi_sd]]
+[def __jacobi_sn [link math_toolkit.jacobi.jacobi_sn jacobi_sn]]
+[def __jacobi_sc [link math_toolkit.jacobi.jacobi_sc jacobi_sc]]
+
+[/Jacobi Theta Functions]
+[def __jacobi_theta1 [link math_toolkit.jacobi_theta.jacobi_theta1 jacobi_theta1]]
+[def __jacobi_theta1tau [link math_toolkit.jacobi_theta.jacobi_theta1 jacobi_theta1tau]]
+[def __jacobi_theta2 [link math_toolkit.jacobi_theta.jacobi_theta2 jacobi_theta2]]
+[def __jacobi_theta2tau [link math_toolkit.jacobi_theta.jacobi_theta2 jacobi_theta2tau]]
+[def __jacobi_theta3 [link math_toolkit.jacobi_theta.jacobi_theta3 jacobi_theta3]]
+[def __jacobi_theta3tau [link math_toolkit.jacobi_theta.jacobi_theta3 jacobi_theta3tau]]
+[def __jacobi_theta3m1 [link math_toolkit.jacobi_theta.jacobi_theta3 jacobi_theta3m1]]
+[def __jacobi_theta3m1tau [link math_toolkit.jacobi_theta.jacobi_theta3 jacobi_theta3m1tau]]
+[def __jacobi_theta4 [link math_toolkit.jacobi_theta.jacobi_theta4 jacobi_theta4]]
+[def __jacobi_theta4tau [link math_toolkit.jacobi_theta.jacobi_theta4 jacobi_theta4tau]]
+[def __jacobi_theta4m1 [link math_toolkit.jacobi_theta.jacobi_theta4 jacobi_theta4m1]]
+[def __jacobi_theta4m1tau [link math_toolkit.jacobi_theta.jacobi_theta4 jacobi_theta4m1tau]]
+
+[/sinus cardinals]
+[def __sinc_pi  [link math_toolkit.sinc.sinc_pi sinc_pi]]
+[def __sinhc_pi  [link math_toolkit.sinc.sinhc_pi sinhc_pi]]
+
+[/Inverse hyperbolics]
+[def __acosh  [link math_toolkit.inv_hyper.acosh acosh]]
+[def __asinh  [link math_toolkit.inv_hyper.asinh asinh]]
+[def __atanh  [link math_toolkit.inv_hyper.atanh atanh]]
+
+[/classify]
+[def __fpclassify [link math_toolkit.fpclass fpclassify]]
+[def __isfinite [link math_toolkit.fpclass isfinite]]
+[def __isnan [link math_toolkit.fpclass isnan]]
+[def __isinf [link math_toolkit.fpclass isinf]]
+[def __isnormal [link math_toolkit.fpclass isnormal]]
+[def __fp_facets [link math_toolkit.fp_facets nonfinite fp_facets]]
+
+[/utils]
+[def __float_next [link math_toolkit.next_float.float_next float_next]]
+[def __float_prior [link math_toolkit.next_float.float_prior float_prior]]
+[def __nextafter [link math_toolkit.next_float.nextafter nextafter]]
+[def __float_advance [link math_toolkit.next_float.float_advance float_advance]]
+[def __ulp [link math_toolkit.next_float.ulp ulp]]
+
+[/powers etc]
+[def __expm1 [link math_toolkit.powers.expm1 expm1]]
+[def __log1p [link math_toolkit.powers.log1p log1p]]
+[def __cbrt [link math_toolkit.powers.cbrt cbrt]]
+[def __sqrt1pm1 [link math_toolkit.powers.sqrt1pm1 sqrt1pm1]]
+[def __rsqrt [link math_toolkit.powers.rsqrt rsqrt]]
+[def __powm1 [link math_toolkit.powers.powm1 powm1]]
+[def __hypot [link math_toolkit.powers.hypot hypot]]
+[def __pow [link math_toolkit.powers.ct_pow pow]]
+
+[/zeta]
+[def __zeta [link math_toolkit.zetas.zeta zeta]]
+
+[/expint]
+[def __expint_i [link math_toolkit.expint.expint_i zeta]]
+[def __expint_n [link math_toolkit.expint.expint_n zeta]]
+
+[/rounding]
+[def __round [link math_toolkit.rounding.round round]]
+[def __lround [link math_toolkit.rounding.round round]]
+[def __llround [link math_toolkit.rounding.round round]]
+[def __trunc [link math_toolkit.rounding.trunc trunc]]
+[def __modf [link math_toolkit.rounding.modf modf]]
+
+[/polynomials]
+[def __laguerre [link math_toolkit.sf_poly.laguerre laguerre]]
+[def __legendre [link math_toolkit.sf_poly.legendre legendre_p]]
+[def __legendre_p [link math_toolkit.sf_poly.legendre legendre_p]]
+[def __legendre_q [link math_toolkit.sf_poly.legendre legendre_q]]
+[def __legendre_next [link math_toolkit.sf_poly.legendre legendre_next]]
+[def __hermite [link math_toolkit.sf_poly.hermite hermite]]
+[def __cardinal_b_splines [link math_toolkit.sf_poly.cardinal_b_splines cardinal_b_splines]]
+
+[/Misc]
+[def __expint [link math_toolkit.expint.expint_i expint]]
+[def __spherical_harmonic [link math_toolkit.sf_poly.sph_harm spherical_harmonic]]
+[def __owens_t [link math_toolkit.owens_t Owens T]]
+[def __constants_intro [link math_toolkit.constants_intro  constants]]
+[def __constants[link math_toolkit.constants  constants]]
+[def __math_constants[link math_toolkit.constants  constants]]
+
+[/tools]
+[def __tuple [link math_toolkit.internals.tuples boost::math::tuple]]
+[def __tuple_type [link math_toolkit.internals.tuples std::pair, std::tuple, boost::tuple or boost::fusion::tuple]]
+
+[/ distribution non-members]
+[def __cdf [link math_toolkit.dist_ref.nmp.cdf Cumulative Distribution Function]]
+[def __pdf [link math_toolkit.dist_ref.nmp.pdf Probability Density Function]]
+[def __ccdf [link math_toolkit.dist_ref.nmp.ccdf Complement of the Cumulative Distribution Function]]
+[def __quantile [link math_toolkit.dist_ref.nmp.quantile Quantile]]
+[def __quantile_c [link math_toolkit.dist_ref.nmp.quantile_c Quantile from the complement of the probability]]
+[def __mean [link math_toolkit.dist_ref.nmp.mean mean]]
+[def __median [link math_toolkit.dist_ref.nmp.median median]]
+[def __mode [link math_toolkit.dist_ref.nmp.mode mode]]
+[def __skewness [link math_toolkit.dist_ref.nmp.skewness skewness]]
+[def __kurtosis [link math_toolkit.dist_ref.nmp.kurtosis kurtosis]]
+[def __kurtosis_excess [link math_toolkit.dist_ref.nmp.kurtosis_excess kurtosis_excess]]
+[def __variance [link math_toolkit.dist_ref.nmp.variance variance]]
+[def __sd [link math_toolkit.dist_ref.nmp.sd standard deviation]]
+[def __hazard [link math_toolkit.dist_ref.nmp.hazard Hazard Function]]
+[def __chf [link math_toolkit.dist_ref.nmp.chf Cumulative Hazard Function]]
+[def __range [link math_toolkit.dist_ref.nmp.range range]]
+[def __support [link math_toolkit.dist_ref.nmp.support support]]
+[def __algorithms [link math_toolkit.dist_ref.dist_algorithms algorithms]]
+
+[/ distribution def names end in distrib to avoid clashes]
+[def __arcsine_distrib [link math_toolkit.dist_ref.dists.arcsine_dist Arcsine Distribution]]
+[def __beta_distrib [link math_toolkit.dist_ref.dists.beta_dist Beta Distribution]]
+[def __binomial_distrib [link math_toolkit.dist_ref.dists.binomial_dist Binomial Distribution]]
+[def __cauchy_distrib [link math_toolkit.dist_ref.dists.cauchy_dist Cauchy Distribution]]
+[def __chi_squared_distrib [link math_toolkit.dist_ref.dists.chi_squared_dist Chi Squared Distribution]]
+[def __extreme_distrib [link math_toolkit.dist_ref.dists.extreme_dist Extreme Distributions]]
+[def __exp_distrib [link math_toolkit.dist_ref.dists.exp_dist Exponential Distribution]]
+[def __F_distrib [link math_toolkit.dist_ref.dists.f_dist Fisher F Distribution]]
+[def __gamma_distrib [link math_toolkit.dist_ref.dists.gamma_dist Gamma Distribution]]
+[def __geometric_distrib [link math_toolkit.dist_ref.dists.geometric_dist Geometric Distribution]]
+[def __hyperexponential_distrib [link math_toolkit.dist_ref.dists.hyperexponential_dist Hyperexponential Distribution]]
+[def __hypergeometric_distrib [link math_toolkit.dist_ref.dists.hypergeometric_dist hypergeometric Distribution]]
+[def __inverse_gamma_distrib [link math_toolkit.dist_ref.dists.inverse_gamma_dist Inverse Gamma Distribution]]
+[def __inverse_gaussian_distrib [link math_toolkit.dist_ref.dists.inverse_gaussian_dist Inverse Gaussian Distribution]]
+[def __inverse_chi_squared_distrib [link math_toolkit.dist_ref.dists.inverse_chi_squared_dist Inverse chi squared Distribution]]
+[def __kolmogorov_smirnov_distrib [link math_toolkit.dist_ref.dists.kolmogorov_smirnov Kolmogorov-Smirnov Distribution]]
+[def __laplace_distrib [link math_toolkit.dist_ref.dists.laplace_dist Laplace Distribution]]
+[def __logistic_distrib [link math_toolkit.dist_ref.dists.logistic_dist Logistic Distribution]]
+[def __lognormal_distrib [link math_toolkit.dist_ref.dists.lognormal_dist Log-normal Distribution]]
+[def __negative_binomial_distrib [link math_toolkit.dist_ref.dists.negative_binomial_dist Negative Binomial Distribution]]
+[def __non_central_chi_squared_distrib [link math_toolkit.dist_ref.dists.nc_chi_squared_dist Noncentral Chi Squared Distribution]]
+[def __non_central_beta_distrib [link math_toolkit.dist_ref.dists.nc_beta_dist Noncentral Beta Distribution]]
+[def __non_central_F_distrib [link math_toolkit.dist_ref.dists.nc_f_dist Noncentral F Distribution]]
+[def __non_central_T_distrib [link math_toolkit.dist_ref.dists.nc_t_dist Noncentral T Distribution]]
+[def __non_central_t_distrib [link math_toolkit.dist_ref.dists.nc_t_dist noncentral T distribution]]
+[def __normal_distrib [link math_toolkit.dist_ref.dists.normal_dist Normal Distribution]]
+[def __poisson_distrib [link math_toolkit.dist_ref.dists.poisson_dist Poisson Distribution]]
+[def __pareto_distrib [link math_toolkit.dist_ref.dists.pareto Pareto Distribution]]
+[def __students_t_distrib [link math_toolkit.dist_ref.dists.students_t_dist Students t Distribution]]
+[def __skew_normal_distrib [link math_toolkit.dist_ref.dists.skew_normal_dist Skew Normal Distribution]]
+[def __weibull_distrib [link math_toolkit.dist_ref.dists.weibull_dist Weibull Distribution]]
+
+[/links to policy]
+[def __Policy [link policy Policy]] [/ Used in distribution template specifications]
+[def __policy_section [link policy Policies]] [/ Used in text to refer to.]
+[def __policy_class [link math_toolkit.pol_ref.pol_ref_ref policies::policy<>]]
+[def __math_undefined [link math_toolkit.pol_ref.assert_undefined mathematically undefined function]]
+[def __policy_ref [link math_toolkit.pol_ref policy reference]]
+[def __policy_tutorial [link math_toolkit.pol_tutorial policy tutorial]]
+[def __policy_defaults [link math_toolkit.pol_tutorial.policy_tut_defaults policy defaults]]
+[def __error_policy [link math_toolkit.pol_ref.error_handling_policies error handling policies]]
+[def __changing_policy_defaults [link math_toolkit.pol_ref.policy_defaults changing policies defaults]]
+[def __math_discrete [link math_toolkit.pol_ref.discrete_quant_ref discrete functions]]
+[def __understand_dis_quant [link math_toolkit.pol_tutorial.understand_dis_quant understanding discrete quantiles]]
+[def __user_error_handling [link math_toolkit.pol_tutorial.user_def_err_pol user error handling]]
+[def __promotion_policy [link math_toolkit.pol_ref.internal_promotion internal promotion policy]]
+[def __precision_policy [link math_toolkit.pol_ref.precision_pol precision policy]]
+[def __policy_macros [link math_toolkit.pol_ref.policy_defaults Using Macros to Change the Policy Defaults]]
+
+
+
+[def __usual_accessors __cdf, __pdf, __quantile, __hazard,
+   __chf, __logcdf, __logpdf, __mean, __median, __mode, __variance, __sd, __skewness,
+   __kurtosis, __kurtosis_excess, __range and __support]
+
+[def __real_concept [link math_toolkit.real_concepts  real concept]]
+[def __next_float [link math_toolkit.next_float Adjacent Floating-Point Values]]
+[def __remez_practical [link math_toolkit.remez.practical remez_practical]]
+
+
+[/ External links]
+[def __gsl [@http://www.gnu.org/software/gsl/ GSL-1.9]]
+[def __glibc [@http://www.gnu.org/software/libc/ GNU C Lib]]
+[def __hpc [@http://docs.hp.com/en/B9106-90010/index.html HP-UX C Library]]
+[def __cephes [@http://www.netlib.org/cephes/ Cephes]]
+[def __NTL [@http://www.shoup.net/ntl/ NTL A Library for doing Number Theory]]
+[def __NTL_RR [@http://shoup.net/ntl/doc/RR.txt NTL::RR]]
+[def __NTL_quad_float [@http://shoup.net/ntl/doc/quad_float.txt NTL::quad_float]]
+[def __MPFR [@http://www.mpfr.org/ GNU MPFR library]]
+[def __GMP [@http://gmplib.org/ GNU Multiple Precision Arithmetic Library]]
+[def __multiprecision [@boost:/libs/multiprecision/doc/html/index.html Boost.Multiprecision]]
+
+[def __gcc_quad_type [@https://gcc.gnu.org/onlinedocs/gcc-9.1.0/libquadmath/index.html GCC 128-bit floating-point type]]
+[def __float128_literals [@boost:/libs/multiprecision/doc/html/boost_multiprecision/tut/lits.html Boost.Multiprecision 128-bit Q floating-point literals]]
+[def __cpp_dec_float [@boost:/libs/multiprecision/doc/html/boost_multiprecision/tut/floats/cpp_dec_float.html cpp_dec_float]]
+[def __cpp_bin_float [@boost:/libs/multiprecision/doc/html/boost_multiprecision/tut/floats/cpp_bin_float.html cpp_bin_float]]
+[/ @boost:/libs/test/doc/index.html  doesn't work for Boost.Test non-quickbook, so use instead]
+[def __boost_test [@https://www.boost.org/doc/libs/release/libs/test/doc/html/index.html  Boost.Test]]
+[def __boost_timer [@boost:/libs/timer/doc/index.html Boost.Timer]]
+[def __boost_test_fp [@boost:/libs/test/doc/html/boost_test/users_guide/testing_tools/testing_floating_points.html Boost.Test floating-point comparison]]
+[def __boost_math_fp [link math_toolkit.float_comparison Boost.Math floating-point utilities]]
+[def __float_distance [@boost:/libs/math/doc/html/math_toolkit/next_float/float_distance.html Boost.Math float_distance]]
+[def __ulp [@http://en.wikipedia.org/wiki/Unit_in_the_last_place  Unit in the last place (ULP)]]
+[def __R [@http://www.r-project.org/ The R Project for Statistical Computing]]
+[def __godfrey [link godfrey Godfrey]]
+[def __pugh [link pugh Pugh]]
+[def __NaN [@http://en.wikipedia.org/wiki/NaN NaN]]
+[def __errno [@http://en.wikipedia.org/wiki/Errno `::errno`]]
+[def __Mathworld [@http://mathworld.wolfram.com Wolfram MathWorld]]
+[def __Mathematica [@http://www.wolfram.com/products/mathematica/index.html Wolfram Mathematica]]
+[def __Maple [@https://www.maplesoft.com Maple]]
+[def __WolframAlpha [@http://www.wolframalpha.com/ Wolfram Alpha]]
+[def __Wolfram_functions [@https://functions.wolfram.com functions.wolfram.com]]
+[def __TOMS748 [@http://portal.acm.org/citation.cfm?id=210111 TOMS Algorithm 748: enclosing zeros of continuous functions]]
+[def __TOMS910 [@http://portal.acm.org/citation.cfm?id=1916469 TOMS Algorithm 910: A Portable C++ Multiple-Precision System for Special-Function Calculations]]
+[def __why_complements [link why_complements why complements?]]
+[def __complements [link math_toolkit.stat_tut.overview.complements complements]]
+[def __performance [link perf performance]]
+[def __building [link math_toolkit.building building libraries]]
+[def __e_float [@http://calgo.acm.org/910.zip e_float (TOMS Algorithm 910)]]
+[def __Abramowitz_Stegun M. Abramowitz and I. A. Stegun, Handbook of Mathematical Functions, NBS  (1964)]
+[def __DMLF [@http://dlmf.nist.gov/ NIST Digital Library of Mathematical Functions (DMLF)]]
+[def __floating_point  [@http://en.wikipedia.org/wiki/Floating_point Floating point]]
+[def __epsilon [@http://en.wikipedia.org/wiki/Machine_epsilon machine epsilon]]
+[def __ADL [@http://en.cppreference.com/w/cpp/language/adl Argument Dependent Lookup (ADL)]]
+[def __function_template_instantiation [@http://en.cppreference.com/w/cpp/language/function_template Function template instantiation]]
+[def __fundamental_types [@http://en.cppreference.com/w/cpp/language/types fundamental (built-in) types]]
+[def __guard_digits [@http://en.wikipedia.org/wiki/Guard_digit guard digits]]
+[def __SSE2 [@http://en.wikipedia.org/wiki/SSE2 SSE2 instructions]]
+[def __representable [@http://en.wikipedia.org/wiki/Floating_point#Representable_numbers.2C_conversion_and_rounding representable]]
+[def __short_float [@http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2016.pdf N2016 short float type]]
+[def __random_variate [@http://en.wikipedia.org/wiki/Random_variate random variate]]
+[def __random_variable [@http://en.wikipedia.org/wiki/Random_variable random variable]]
+[def __probability_distribution [@http://en.wikipedia.org/wiki/Probability_distribution probability_distribution]]
+[def __C_math [@http://www.cplusplus.com/reference/cmath/ C math functions]]
+[def __Lambert_W [@http://en.wikipedia.org/wiki/Lambert_W_function Lambert W function]]
+[def __CUDA [@https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#c-cplusplus-language-support CUDA NVidia GPU C/C++ language support]]
+[def __Luu_thesis [@http://discovery.ucl.ac.uk/1482128/1/Luu_thesis.pdf Thomas Luu, Thesis, University College London (2015)]]
+[def __rational_function [@https://en.wikipedia.org/wiki/Rational_function rational function]]
+[def __remez [@http://en.wikipedia.org/wiki/Remez_algorithm Remez algorithm]]
+[def __ULP [@https://en.wikipedia.org/wiki/Unit_in_the_last_place Unit in the Last Place]]
+[def __github [@github.com GitHub]]
+[def __github_boost [@https://github.com/boostorg Boost GitHub]]
+[def __github_math [@https://github.com/boostorg/math Boost.Math GitHub]]
+[def __github_multiprecision [@https://github.com/boostorg/math Boost.Multiprecision GitHub]]
+
+
+[/ Some composite templates]
+[template super[x]'''<superscript>'''[x]'''</superscript>''']
+[template sub[x]'''<subscript>'''[x]'''</subscript>''']
+[template floor[x]'''&#x230A;'''[x]'''&#x230B;''']
+[template floorlr[x][lfloor][x][rfloor]]
+[template ceil[x] '''&#x2308;'''[x]'''&#x2309;''']
+
+[template header_file[file] [@../../../../[file] [file]]]
+
+[template optional_policy[]
+The final __Policy argument is optional and can be used to
+control the behaviour of the function: how it handles errors,
+what level of precision to use etc.  Refer to the
+[link policy policy documentation for more details].]
+
+[template discrete_quantile_warning[NAME]
+[caution
+The [NAME] distribution is a discrete distribution: internally,
+functions like the `cdf` and `pdf` are treated "as if" they are continuous
+functions, but in reality the results returned from these functions
+only have meaning if an integer value is provided for the random variate
+argument.
+
+The quantile function will by default return an integer result that has been
+/rounded outwards/.  That is to say lower quantiles (where the probability is
+less than 0.5) are rounded downward, and upper quantiles (where the probability
+is greater than 0.5) are rounded upwards.  This behaviour
+ensures that if an X% quantile is requested, then /at least/ the requested
+coverage will be present in the central region, and /no more than/
+the requested coverage will be present in the tails.
+
+This behaviour can be changed so that the quantile functions are rounded
+differently, or even return a real-valued result using
+[link math_toolkit.pol_overview Policies].  It is strongly
+recommended that you read the tutorial
+[link math_toolkit.pol_tutorial.understand_dis_quant
+Understanding Quantiles of Discrete Distributions] before
+using the quantile function on the [NAME] distribution.  The
+[link math_toolkit.pol_ref.discrete_quant_ref reference docs]
+describe how to change the rounding policy
+for these distributions.
+] [/ caution]
+
+] [/ template discrete_quantile_warning]
+
+[block '''<bookinfo><releaseinfo>'''
+This manual is also available in
+[@http://sourceforge.net/projects/boost/files/boost-docs/
+printer friendly PDF format],
+and as a CD ISBN 0-9504833-2-X  978-0-9504833-2-0, Classification 519.2-dc22.
+'''</releaseinfo></bookinfo>''']
+
+[mathpart overview Overview]
+[include overview/overview.qbk]
+[include overview/structure.qbk] [/getting about, directory and file structure.]
+[include overview/standalone.qbk]
+[include overview/result_type_calc.qbk]
+[include overview/error_handling.qbk]
+[include overview/gpu.qbk]
+
+[section:compilers_overview Compilers]
+[compilers_overview]
+[endsect]
+[include overview/config_macros.qbk]
+[section:intro_pol_overview Policies]
+[policy_overview]
+[endsect]
+
+[include overview/thread_safety.qbk]
+
+[section:perf_over1 Performance]
+[performance_overview]
+[endsect]
+[include overview/building.qbk]
+[section:history1 History and What's New]
+[history]
+[endsect]
+[section:overview_tr1 C99 and C++ TR1 C-style Functions]
+[tr1_overview]
+[endsect]
+[include overview/faq.qbk]
+[include overview/contact_info.qbk]
+
+[endmathpart] [/section:main_overview Overview]
+
+[mathpart utils Floating Point Utilities]
+[include fp_utilities/rounding_func.qbk]
+[include fp_utilities/fpclassify.qbk]
+[include fp_utilities/sign.qbk]
+[include fp_utilities/fp_facets.qbk]
+[include fp_utilities/float_next.qbk]
+[include fp_utilities/float_comparison.qbk]
+[include fp_utilities/condition_numbers.qbk]
+[include fp_utilities/ulps_plots.qbk]
+[endmathpart]
+
+[mathpart cstdfloat..Specified-width floating-point typedefs]
+[include cstdfloat/cstdfloat.qbk]
+[endmathpart] [/mathpart cstdfloat..Fixed-width floating-point types]
+
+[include constants/constants.qbk]
+
+[mathpart dist Statistical Distributions and Functions]
+[include distributions/dist_tutorial.qbk]
+[include distributions/dist_reference.qbk] [/includes all individual distribution.qbk files]
+[endmathpart] [/section:dist Statistical Distributions and Functions]
+
+[mathpart statistics Statistics ]
+[include statistics/univariate_statistics.qbk]
+[include statistics/bivariate_statistics.qbk]
+[include statistics/signal_statistics.qbk]
+[include statistics/anderson_darling.qbk]
+[include statistics/t_test.qbk]
+[include statistics/z_test.qbk]
+[include statistics/runs_test.qbk]
+[include statistics/ljung_box.qbk]
+[include statistics/linear_regression.qbk]
+[include statistics/chatterjee_correlation.qbk]
+[endmathpart] [/section:statistics Statistics]
+
+[mathpart vector_functionals Vector Functionals -  Norms]
+[include vector_functionals/norms.qbk]
+[endmathpart] [/section:vector_functionals Vector Functionals]
+
+
+[mathpart special Special Functions]
+
+[include sf/number_series.qbk]
+
+[section:sf_gamma Gamma Functions]
+[include sf/tgamma.qbk]
+[include sf/lgamma.qbk]
+[include sf/digamma.qbk]
+[include sf/trigamma.qbk]
+[include sf/polygamma.qbk]
+[include sf/gamma_ratios.qbk]
+[include sf/igamma.qbk]
+[include sf/igamma_inv.qbk]
+[include sf/gamma_derivatives.qbk]
+[endsect] [/section:sf_gamma Gamma Functions]
+
+[include sf/factorials.qbk]
+
+[section:sf_beta Beta Functions]
+[include sf/beta.qbk]
+[include sf/ibeta.qbk]
+[include sf/ibeta_inv.qbk]
+[include sf/beta_derivative.qbk]
+[endsect] [/section:sf_beta Beta Functions]
+
+[section:sf_erf Error Functions]
+[include sf/erf.qbk]
+[include sf/erf_inv.qbk]
+[endsect] [/section:sf_erf Error Functions]
+
+[section:sf_poly Polynomials]
+[include sf/legendre.qbk]
+[include sf/legendre_stieltjes.qbk]
+[include sf/laguerre.qbk]
+[include sf/hermite.qbk]
+[include sf/chebyshev.qbk]
+[include sf/spherical_harmonic.qbk]
+[include sf/cardinal_b_splines.qbk]
+[include sf/gegenbauer.qbk]
+[include sf/jacobi.qbk]
+[endsect] [/section:sf_poly Polynomials]
+
+[section:bessel Bessel Functions]
+[include sf/bessel_introduction.qbk]
+[include sf/bessel_jy.qbk]
+[include sf/bessel_ik.qbk]
+[include sf/bessel_spherical.qbk]
+[include sf/bessel_prime.qbk]
+[endsect] [/section:bessel Bessel Functions]
+
+[/Hankel functions]
+[include sf/hankel.qbk]
+
+[/Airy Functions]
+[include sf/airy.qbk]
+
+[section:ellint Elliptic Integrals]
+[include sf/ellint_introduction.qbk]
+[include sf/ellint_carlson.qbk]
+[include sf/ellint_legendre.qbk]
+[endsect] [/section:ellint Elliptic Integrals]
+
+[/Jacobi Elliptic Functions]
+[include sf/jacobi_elliptic.qbk]
+
+[/Jacobi Theta Functions]
+[include sf/jacobi_theta.qbk]
+
+[/ Lambert W function]
+[include sf/lambert_w.qbk]
+
+[section:zetas Zeta Functions]
+[include sf/zeta.qbk]
+[endsect]
+
+[include sf/expint.qbk]
+
+[include sf/hypergeometric.qbk]
+
+[include sf/powers.qbk]
+[include sf/sinc.qbk]
+[include sf/inv_hyper.qbk]
+
+[include sf/owens_t.qbk]
+[include sf/daubechies.qbk]
+
+[include sf/ccmath.qbk]
+
+[endmathpart] [/section:special Special Functions]
+
+[mathpart extern_c TR1 and C99 external "C" Functions]
+[section:main_tr1 C99 and TR1 C Functions Overview]
+[tr1_overview]
+[endsect]
+[include tr1/c99_ref.qbk]
+[include tr1/tr1_ref.qbk]
+[endmathpart]
+
+[mathpart root_finding Root Finding \& Minimization Algorithms]
+[include roots/roots_overview.qbk]
+[endmathpart] [/mathpart roots Root Finding Algorithms]
+[mathpart optimization Optimization]
+[include optimization/differential_evolution.qbk]
+[include optimization/jso.qbk]
+[include optimization/random_search.qbk]
+[include optimization/cma_es.qbk]
+[endmathpart] [/mathpart optimization Optimization]
+
+[mathpart poly Polynomials and Rational Functions]
+[include internals/polynomial.qbk]
+[include internals/estrin.qbk]
+[include internals/rational.qbk]
+[endmathpart]
+
+[mathpart interpolation Interpolation]
+[include interpolators/cardinal_cubic_b_spline.qbk]
+[include interpolators/cardinal_quadratic_b_spline.qbk]
+[include interpolators/cardinal_quintic_b_spline.qbk]
+[include interpolators/whittaker_shannon.qbk]
+[include interpolators/barycentric_rational_interpolation.qbk]
+[include interpolators/vector_barycentric_rational.qbk]
+[include interpolators/catmull_rom.qbk]
+[include interpolators/bezier_polynomial.qbk]
+[include interpolators/cardinal_trigonometric.qbk]
+[include interpolators/cubic_hermite.qbk]
+[include interpolators/makima.qbk]
+[include interpolators/pchip.qbk]
+[include interpolators/quintic_hermite.qbk]
+[include interpolators/bilinear_uniform.qbk]
+[endmathpart]
+
+[mathpart quadrature Quadrature and Differentiation]
+[include quadrature/trapezoidal.qbk]
+[include quadrature/gauss.qbk]
+[include quadrature/gauss_kronrod.qbk]
+[include quadrature/double_exponential.qbk]
+[include quadrature/ooura_fourier_integrals.qbk]
+[include quadrature/naive_monte_carlo.qbk]
+[include quadrature/wavelet_transforms.qbk]
+[include differentiation/numerical_differentiation.qbk]
+[include differentiation/autodiff.qbk]
+[include differentiation/lanczos_smoothing.qbk]
+[endmathpart]
+
+[mathpart filters Filters]
+[include filters/daubechies.qbk]
+[endmathpart]
+
+[include complex/complex-tr1.qbk]
+[include quaternion/math-quaternion.qbk]
+[include octonion/math-octonion.qbk]
+[include gcd/math-gcd.qbk]
+
+[mathpart internals Internal Details: Series, Rationals and Continued Fractions, Testing, and Development Tools]
+
+[include internals/internals_overview.qbk]
+[section:internals Internal tools]
+[include internals/series.qbk]
+[include internals/agm.qbk]
+[include internals/fraction.qbk]
+[include internals/simple_continued_fraction.qbk]
+[include internals/centered_continued_fraction.qbk]
+[include internals/luroth_expansion.qbk]
+[include internals/engel_expansion.qbk]
+[include internals/recurrence.qbk]
+[include internals/cohen_acceleration.qbk]
+[/include internals/rational.qbk] [/moved to tools]
+[include internals/tuple.qbk]
+[/include internals/polynomial.qbk] [/moved to tools]
+[include internals/minimax.qbk]
+[include internals/relative_error.qbk] [/ uncertainty of floating-point calculations.]
+[include internals/test_data.qbk]
+[include internals/color_maps.qbk]
+[endsect] [/section:internals]
+
+[endmathpart] [/mathpart internals Internal Details: Series, Rationals and Continued Fractions, Testing, and Development Tools]
+
+[mathpart using_udt Use with User-Defined Floating-Point Types - Boost.Multiprecision and others]
+[include concepts/concepts.qbk]
+[endmathpart] [/section:using_udt Use with User Defined Floating-Point Types]
+
+[include policies/policy.qbk]
+
+[include performance/performance.qbk]
+
+[mathpart backgrounders Backgrounders]
+[include background/implementation.qbk]
+[include background/special_tut.qbk]
+[include background/error.qbk] [/relative error NOT handling]
+[include background/lanczos.qbk]
+[include background/remez.qbk]
+[include background/references.qbk]
+
+
+[section:logs_and_tables Error logs and tables]
+
+[section:all_table Tables of Error Rates for all Functions]
+
+[all_tables]
+
+[endsect]
+
+[section:logs Error Logs For Error Rate Tables]
+
+[all_errors]
+
+[endsect]
+
+[endsect]
+
+[endmathpart] [/section:backgrounders Backgrounders]
+
+[mathpart status Library Status]
+[section:history2 History and What's New]
+[history]
+[endsect]
+
+[include overview/issues.qbk]
+[include overview/credits.qbk]
+[/include test_HTML4_symbols.qbk]
+[/include test_Latin1_symbols.qbk]
+
+[endmathpart] [/section:status Status and Roadmap]
+
+[mathpart indexes Indexes]
+
+[named_index function_name Function Index]
+[named_index class_name Class Index]
+[named_index typedef_name Typedef Index]
+[named_index macro_name Macro Index]
+[index]
+
+[endmathpart]
+
+[/ math.qbk
+  Copyright 2008, 2010, 2012, 2013, 2014, 2015 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

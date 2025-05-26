@@ -1,0 +1,329 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Cardinal Cubic B-spline interpolation</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../interpolation.html" title="Chapter 13. Interpolation">
+<link rel="prev" href="../interpolation.html" title="Chapter 13. Interpolation">
+<link rel="next" href="cardinal_quadratic_b.html" title="Cardinal Quadratic B-spline interpolation">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../interpolation.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="cardinal_quadratic_b.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.cardinal_cubic_b"></a><a class="link" href="cardinal_cubic_b.html" title="Cardinal Cubic B-spline interpolation">Cardinal Cubic B-spline
+    interpolation</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.cardinal_cubic_b.h0"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_cubic_b.synopsis"></a></span><a class="link" href="cardinal_cubic_b.html#math_toolkit.cardinal_cubic_b.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">interpolators</span><span class="special">/</span><span class="identifier">cardinal_cubic_b_spline</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">interpolators</span> <span class="special">{</span>
+
+  <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+  <span class="keyword">class</span> <span class="identifier">cardinal_cubic_b_spline</span>
+  <span class="special">{</span>
+  <span class="keyword">public</span><span class="special">:</span>
+
+    <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">BidiIterator</span><span class="special">&gt;</span>
+      <span class="identifier">cardinal_cubic_b_spline</span><span class="special">(</span><span class="identifier">BidiIterator</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">BidiIterator</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">left_endpoint</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">step_size</span><span class="special">,</span>
+                     <span class="identifier">Real</span> <span class="identifier">left_endpoint_derivative</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">(),</span>
+                     <span class="identifier">Real</span> <span class="identifier">right_endpoint_derivative</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">());</span>
+      <span class="identifier">cardinal_cubic_b_spline</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">Real</span><span class="special">*</span> <span class="keyword">const</span> <span class="identifier">f</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">length</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">left_endpoint</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">step_size</span><span class="special">,</span>
+                     <span class="identifier">Real</span> <span class="identifier">left_endpoint_derivative</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">(),</span>
+                     <span class="identifier">Real</span> <span class="identifier">right_endpoint_derivative</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">());</span>
+
+      <span class="identifier">Real</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+      <span class="identifier">Real</span> <span class="identifier">prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+      <span class="identifier">Real</span> <span class="identifier">double_prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+  <span class="special">};</span>
+
+<span class="special">}}}</span> <span class="comment">// namespaces</span>
+</pre>
+<h4>
+<a name="math_toolkit.cardinal_cubic_b.h1"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_cubic_b.cardinal_cubic_b_spline_interpol"></a></span><a class="link" href="cardinal_cubic_b.html#math_toolkit.cardinal_cubic_b.cardinal_cubic_b_spline_interpol">Cardinal
+      Cubic B-Spline Interpolation</a>
+    </h4>
+<p>
+      The cardinal cubic <span class="emphasis"><em>B</em></span>-spline class provided by Boost allows
+      fast and accurate interpolation of a function which is known at equally spaced
+      points. The cubic <span class="emphasis"><em>B</em></span>-spline interpolation is numerically
+      stable as it uses compactly supported basis functions constructed via iterative
+      convolution. This is to be contrasted to one-sided power function cubic spline
+      interpolation which is ill-conditioned as the global support of cubic polynomials
+      causes small changes far from the evaluation point to exert a large influence
+      on the calculated value.
+    </p>
+<p>
+      There are many use cases for interpolating a function at equally spaced points.
+      One particularly important example is solving ODEs whose coefficients depend
+      on data determined from experiment or numerical simulation. Since most ODE
+      steppers are adaptive, they must be able to sample the coefficients at arbitrary
+      points; not just at the points we know the values of our function.
+    </p>
+<p>
+      The first two arguments to the constructor are either:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          A pair of bidirectional iterators into the data, or
+        </li>
+<li class="listitem">
+          A pointer to the data, and a length of the data array.
+        </li>
+</ul></div>
+<p>
+      These are then followed by:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          The start of the functions domain,
+        </li>
+<li class="listitem">
+          The step size.
+        </li>
+</ul></div>
+<p>
+      Optionally, you may provide two additional arguments to the constructor, namely
+      the derivative of the function at the left endpoint, and the derivative at
+      the right endpoint. If you do not provide these arguments, they will be estimated
+      using one-sided finite-difference formulas. An example of a valid call to the
+      constructor is
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">f</span><span class="special">{</span><span class="number">0.01</span><span class="special">,</span> <span class="special">-</span><span class="number">0.02</span><span class="special">,</span> <span class="number">0.3</span><span class="special">,</span> <span class="number">0.8</span><span class="special">,</span> <span class="number">1.9</span><span class="special">,</span> <span class="special">-</span><span class="number">8.78</span><span class="special">,</span> <span class="special">-</span><span class="number">22.6</span><span class="special">};</span>
+<span class="keyword">double</span> <span class="identifier">t0</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">h</span> <span class="special">=</span> <span class="number">0.01</span><span class="special">;</span>
+<span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">cardinal_cubic_b_spline</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">spline</span><span class="special">(</span><span class="identifier">f</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">f</span><span class="special">.</span><span class="identifier">end</span><span class="special">(),</span> <span class="identifier">t0</span><span class="special">,</span> <span class="identifier">h</span><span class="special">);</span>
+</pre>
+<p>
+      The endpoints are estimated using a one-sided finite-difference formula. If
+      you know the derivative at the endpoint, you may pass it to the constructor
+      via
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">cardinal_cubic_b_spline</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">spline</span><span class="special">(</span><span class="identifier">f</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">f</span><span class="special">.</span><span class="identifier">end</span><span class="special">(),</span> <span class="identifier">t0</span><span class="special">,</span> <span class="identifier">h</span><span class="special">,</span> <span class="identifier">a_prime</span><span class="special">,</span> <span class="identifier">b_prime</span><span class="special">);</span>
+</pre>
+<p>
+      To evaluate the interpolant at a point, we simply use
+    </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">spline</span><span class="special">(</span><span class="identifier">x</span><span class="special">);</span>
+</pre>
+<p>
+      and to evaluate the derivative of the interpolant we use
+    </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">yp</span> <span class="special">=</span> <span class="identifier">spline</span><span class="special">.</span><span class="identifier">prime</span><span class="special">(</span><span class="identifier">x</span><span class="special">);</span>
+</pre>
+<p>
+      Be aware that the accuracy guarantees on the derivative of the spline are an
+      order lower than the guarantees on the original function, see <a href="http://www.springer.com/us/book/9780387984087" target="_top">Numerical
+      Analysis, Graduate Texts in Mathematics, 181, Rainer Kress</a> for details.
+    </p>
+<p>
+      The last interesting member is the second derivative, evaluated via
+    </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">ypp</span> <span class="special">=</span> <span class="identifier">spline</span><span class="special">.</span><span class="identifier">double_prime</span><span class="special">(</span><span class="identifier">x</span><span class="special">);</span>
+</pre>
+<p>
+      The basis functions of the spline are cubic polynomials, so the second derivative
+      is simply linear interpolation. But the interpolation is not constrained by
+      data (you don't pass in the second derivatives), and hence is less accurate
+      than would be naively expected from a linear interpolator. The problem is especially
+      pronounced at the boundaries, where the second derivative is totally unconstrained.
+      Use the second derivative of the cubic B-spline interpolator only in desperation.
+      The quintic <span class="emphasis"><em>B</em></span>-spline interpolator is recommended for cases
+      where second derivatives are needed.
+    </p>
+<h4>
+<a name="math_toolkit.cardinal_cubic_b.h2"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_cubic_b.complexity_and_performance"></a></span><a class="link" href="cardinal_cubic_b.html#math_toolkit.cardinal_cubic_b.complexity_and_performance">Complexity
+      and Performance</a>
+    </h4>
+<p>
+      The call to the constructor requires 𝑶(<span class="emphasis"><em>n</em></span>) operations, where
+      <span class="emphasis"><em>n</em></span> is the number of points to interpolate. Each call the
+      the interpolant is 𝑶(1) (constant time). On the author's Intel Xeon E3-1230,
+      this takes 21ns as long as the vector is small enough to fit in cache.
+    </p>
+<h4>
+<a name="math_toolkit.cardinal_cubic_b.h3"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_cubic_b.accuracy"></a></span><a class="link" href="cardinal_cubic_b.html#math_toolkit.cardinal_cubic_b.accuracy">Accuracy</a>
+    </h4>
+<p>
+      Let <span class="emphasis"><em>h</em></span> be the stepsize. If <span class="emphasis"><em>f</em></span> is four-times
+      continuously differentiable, then the interpolant is <span class="emphasis"><em>𝑶(h<sup>4</sup>)</em></span>
+      accurate and the derivative is <span class="emphasis"><em>𝑶(h<sup>3</sup>)</em></span> accurate.
+    </p>
+<h4>
+<a name="math_toolkit.cardinal_cubic_b.h4"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_cubic_b.testing"></a></span><a class="link" href="cardinal_cubic_b.html#math_toolkit.cardinal_cubic_b.testing">Testing</a>
+    </h4>
+<p>
+      Since the interpolant obeys <span class="serif_italic">s(x<sub>j</sub>) = f(x<sub>j</sub>)</span>
+      at all interpolation points, the tests generate random data and evaluate the
+      interpolant at the interpolation points, validating that equality with the
+      data holds.
+    </p>
+<p>
+      In addition, constant, linear, and quadratic functions are interpolated to
+      ensure that the interpolant behaves as expected.
+    </p>
+<h4>
+<a name="math_toolkit.cardinal_cubic_b.h5"></a>
+      <span class="phrase"><a name="math_toolkit.cardinal_cubic_b.example"></a></span><a class="link" href="cardinal_cubic_b.html#math_toolkit.cardinal_cubic_b.example">Example</a>
+    </h4>
+<p>
+      This example demonstrates how to use the cubic b spline interpolator for regularly
+      spaced data.
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">interpolators</span><span class="special">/</span><span class="identifier">cardinal_cubic_b_spline</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+    <span class="comment">// We begin with an array of samples:</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+    <span class="comment">// And decide on a stepsize:</span>
+    <span class="keyword">double</span> <span class="identifier">step</span> <span class="special">=</span> <span class="number">0.01</span><span class="special">;</span>
+
+    <span class="comment">// Initialize the vector with a function we'd like to interpolate:</span>
+    <span class="keyword">for</span> <span class="special">(</span><span class="identifier">size_t</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="identifier">v</span><span class="special">.</span><span class="identifier">size</span><span class="special">();</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="identifier">v</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">sin</span><span class="special">(</span><span class="identifier">i</span><span class="special">*</span><span class="identifier">step</span><span class="special">);</span>
+    <span class="special">}</span>
+    <span class="comment">// We could define an arbitrary start time, but for now we'll just use 0:</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">cardinal_cubic_b_spline</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">spline</span><span class="special">(</span><span class="identifier">v</span><span class="special">.</span><span class="identifier">data</span><span class="special">(),</span> <span class="identifier">v</span><span class="special">.</span><span class="identifier">size</span><span class="special">(),</span> <span class="number">0</span> <span class="comment">/* start time */</span><span class="special">,</span> <span class="identifier">step</span><span class="special">);</span>
+
+    <span class="comment">// Now we can evaluate the spline wherever we please.</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">mt19937</span> <span class="identifier">gen</span><span class="special">;</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">random</span><span class="special">::</span><span class="identifier">uniform_real_distribution</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">abscissa</span><span class="special">(</span><span class="number">0</span><span class="special">,</span> <span class="identifier">v</span><span class="special">.</span><span class="identifier">size</span><span class="special">()*</span><span class="identifier">step</span><span class="special">);</span>
+    <span class="keyword">for</span> <span class="special">(</span><span class="identifier">size_t</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">10</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">abscissa</span><span class="special">(</span><span class="identifier">gen</span><span class="special">);</span>
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"sin("</span> <span class="special">&lt;&lt;</span> <span class="identifier">x</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">sin</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">", spline interpolation gives "</span> <span class="special">&lt;&lt;</span> <span class="identifier">spline</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"cos("</span> <span class="special">&lt;&lt;</span> <span class="identifier">x</span> <span class="special">&lt;&lt;</span> <span class="string">") = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cos</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">", spline derivative interpolation gives "</span> <span class="special">&lt;&lt;</span> <span class="identifier">spline</span><span class="special">.</span><span class="identifier">prime</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+    <span class="special">}</span>
+
+    <span class="comment">// The next example is less trivial:</span>
+    <span class="comment">// We will try to figure out when the population of the United States crossed 100 million.</span>
+    <span class="comment">// Since the census is taken every 10 years, the data is equally spaced, so we can use the cubic b spline.</span>
+    <span class="comment">// Data taken from https://en.wikipedia.org/wiki/United_States_Census</span>
+    <span class="comment">// We'll start at the year 1860:</span>
+    <span class="keyword">double</span> <span class="identifier">t0</span> <span class="special">=</span> <span class="number">1860</span><span class="special">;</span>
+    <span class="keyword">double</span> <span class="identifier">time_step</span> <span class="special">=</span> <span class="number">10</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">population</span><span class="special">{</span><span class="number">31443321</span><span class="special">,</span>  <span class="comment">/* 1860 */</span>
+                                   <span class="number">39818449</span><span class="special">,</span>  <span class="comment">/* 1870 */</span>
+                                   <span class="number">50189209</span><span class="special">,</span>  <span class="comment">/* 1880 */</span>
+                                   <span class="number">62947714</span><span class="special">,</span>  <span class="comment">/* 1890 */</span>
+                                   <span class="number">76212168</span><span class="special">,</span>  <span class="comment">/* 1900 */</span>
+                                   <span class="number">92228496</span><span class="special">,</span>  <span class="comment">/* 1910 */</span>
+                                   <span class="number">106021537</span><span class="special">,</span> <span class="comment">/* 1920 */</span>
+                                   <span class="number">122775046</span><span class="special">,</span> <span class="comment">/* 1930 */</span>
+                                   <span class="number">132164569</span><span class="special">,</span> <span class="comment">/* 1940 */</span>
+                                   <span class="number">150697361</span><span class="special">,</span> <span class="comment">/* 1950 */</span>
+                                   <span class="number">179323175</span><span class="special">};/*</span> <span class="number">1960</span> <span class="special">*/</span>
+
+    <span class="comment">// An eyeball estimate indicates that the population crossed 100 million around 1915.</span>
+    <span class="comment">// Let's see what interpolation says:</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">cardinal_cubic_b_spline</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">p</span><span class="special">(</span><span class="identifier">population</span><span class="special">.</span><span class="identifier">data</span><span class="special">(),</span> <span class="identifier">population</span><span class="special">.</span><span class="identifier">size</span><span class="special">(),</span> <span class="identifier">t0</span><span class="special">,</span> <span class="identifier">time_step</span><span class="special">);</span>
+
+    <span class="comment">// Now create a function which has a zero at p = 100,000,000:</span>
+    <span class="keyword">auto</span> <span class="identifier">f</span> <span class="special">=</span> <span class="special">[=](</span><span class="keyword">double</span> <span class="identifier">t</span><span class="special">){</span> <span class="keyword">return</span> <span class="identifier">p</span><span class="special">(</span><span class="identifier">t</span><span class="special">)</span> <span class="special">-</span> <span class="number">100000000</span><span class="special">;</span> <span class="special">};</span>
+
+    <span class="comment">// Boost includes a bisection algorithm, which is robust, though not as fast as some others</span>
+    <span class="comment">// we provide, but let's try that first.  We need a termination condition for it, which</span>
+    <span class="comment">// takes the two endpoints of the range and returns either true (stop) or false (keep going),</span>
+    <span class="comment">// we could use a predefined one such as boost::math::tools::eps_tolerance&lt;double&gt;, but that</span>
+    <span class="comment">// won't stop until we have full double precision which is overkill, since we just need the</span>
+    <span class="comment">// endpoint to yield the same month.  While we're at it, we'll keep track of the number of</span>
+    <span class="comment">// iterations required too, though this is strictly optional:</span>
+
+    <span class="keyword">auto</span> <span class="identifier">termination</span> <span class="special">=</span> <span class="special">[](</span><span class="keyword">double</span> <span class="identifier">left</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">right</span><span class="special">)</span>
+    <span class="special">{</span>
+       <span class="keyword">double</span> <span class="identifier">left_month</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">round</span><span class="special">((</span><span class="identifier">left</span> <span class="special">-</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">floor</span><span class="special">(</span><span class="identifier">left</span><span class="special">))</span> <span class="special">*</span> <span class="number">12</span> <span class="special">+</span> <span class="number">1</span><span class="special">);</span>
+       <span class="keyword">double</span> <span class="identifier">right_month</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">round</span><span class="special">((</span><span class="identifier">right</span> <span class="special">-</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">floor</span><span class="special">(</span><span class="identifier">right</span><span class="special">))</span> <span class="special">*</span> <span class="number">12</span> <span class="special">+</span> <span class="number">1</span><span class="special">);</span>
+       <span class="keyword">return</span> <span class="special">(</span><span class="identifier">left_month</span> <span class="special">==</span> <span class="identifier">right_month</span><span class="special">)</span> <span class="special">&amp;&amp;</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">floor</span><span class="special">(</span><span class="identifier">left</span><span class="special">)</span> <span class="special">==</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">floor</span><span class="special">(</span><span class="identifier">right</span><span class="special">));</span>
+    <span class="special">};</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">iterations</span> <span class="special">=</span> <span class="number">1000</span><span class="special">;</span>
+    <span class="keyword">auto</span> <span class="identifier">result</span> <span class="special">=</span>  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">bisect</span><span class="special">(</span><span class="identifier">f</span><span class="special">,</span> <span class="number">1910.0</span><span class="special">,</span> <span class="number">1920.0</span><span class="special">,</span> <span class="identifier">termination</span><span class="special">,</span> <span class="identifier">iterations</span><span class="special">);</span>
+    <span class="keyword">auto</span> <span class="identifier">time</span> <span class="special">=</span> <span class="identifier">result</span><span class="special">.</span><span class="identifier">first</span><span class="special">;</span>  <span class="comment">// termination condition ensures that both endpoints yield the same result</span>
+    <span class="keyword">auto</span> <span class="identifier">month</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">round</span><span class="special">((</span><span class="identifier">time</span> <span class="special">-</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">floor</span><span class="special">(</span><span class="identifier">time</span><span class="special">))*</span><span class="number">12</span>  <span class="special">+</span> <span class="number">1</span><span class="special">);</span>
+    <span class="keyword">auto</span> <span class="identifier">year</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">floor</span><span class="special">(</span><span class="identifier">time</span><span class="special">);</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"The population of the United States surpassed 100 million on the "</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">month</span> <span class="special">&lt;&lt;</span> <span class="string">"th month of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">year</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Found in "</span> <span class="special">&lt;&lt;</span> <span class="identifier">iterations</span> <span class="special">&lt;&lt;</span> <span class="string">" iterations"</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+    <span class="comment">// Since the cubic B spline offers the first derivative, we could equally have used Newton iterations,</span>
+    <span class="comment">// this takes "number of bits correct" as a termination condition - 20 should be plenty for what we need,</span>
+    <span class="comment">// and once again, we track how many iterations are taken:</span>
+
+    <span class="keyword">auto</span> <span class="identifier">f_n</span> <span class="special">=</span> <span class="special">[=](</span><span class="keyword">double</span> <span class="identifier">t</span><span class="special">)</span> <span class="special">{</span> <span class="keyword">return</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">make_pair</span><span class="special">(</span><span class="identifier">p</span><span class="special">(</span><span class="identifier">t</span><span class="special">)</span> <span class="special">-</span> <span class="number">100000000</span><span class="special">,</span> <span class="identifier">p</span><span class="special">.</span><span class="identifier">prime</span><span class="special">(</span><span class="identifier">t</span><span class="special">));</span> <span class="special">};</span>
+    <span class="identifier">iterations</span> <span class="special">=</span> <span class="number">1000</span><span class="special">;</span>
+    <span class="identifier">time</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">newton_raphson_iterate</span><span class="special">(</span><span class="identifier">f_n</span><span class="special">,</span> <span class="number">1910.0</span><span class="special">,</span> <span class="number">1900.0</span><span class="special">,</span> <span class="number">2000.0</span><span class="special">,</span> <span class="number">20</span><span class="special">,</span> <span class="identifier">iterations</span><span class="special">);</span>
+    <span class="identifier">month</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">round</span><span class="special">((</span><span class="identifier">time</span> <span class="special">-</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">floor</span><span class="special">(</span><span class="identifier">time</span><span class="special">))*</span><span class="number">12</span>  <span class="special">+</span> <span class="number">1</span><span class="special">);</span>
+    <span class="identifier">year</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">floor</span><span class="special">(</span><span class="identifier">time</span><span class="special">);</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"The population of the United States surpassed 100 million on the "</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">month</span> <span class="special">&lt;&lt;</span> <span class="string">"th month of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">year</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Found in "</span> <span class="special">&lt;&lt;</span> <span class="identifier">iterations</span> <span class="special">&lt;&lt;</span> <span class="string">" iterations"</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="special">}</span>
+</pre>
+<pre class="programlisting"><span class="identifier">Program</span> <span class="identifier">output</span> <span class="identifier">is</span><span class="special">:</span>
+</pre>
+<pre class="programlisting">sin(4.07362) = -0.802829, spline interpolation gives - 0.802829
+cos(4.07362) = -0.596209, spline derivative interpolation gives - 0.596209
+sin(0.677385) = 0.626758, spline interpolation gives 0.626758
+cos(0.677385) = 0.779214, spline derivative interpolation gives 0.779214
+sin(4.52896) = -0.983224, spline interpolation gives - 0.983224
+cos(4.52896) = -0.182402, spline derivative interpolation gives - 0.182402
+sin(4.17504) = -0.85907, spline interpolation gives - 0.85907
+cos(4.17504) = -0.511858, spline derivative interpolation gives - 0.511858
+sin(0.634934) = 0.593124, spline interpolation gives 0.593124
+cos(0.634934) = 0.805111, spline derivative interpolation gives 0.805111
+sin(4.84434) = -0.991307, spline interpolation gives - 0.991307
+cos(4.84434) = 0.131567, spline derivative interpolation gives 0.131567
+sin(4.56688) = -0.989432, spline interpolation gives - 0.989432
+cos(4.56688) = -0.144997, spline derivative interpolation gives - 0.144997
+sin(1.10517) = 0.893541, spline interpolation gives 0.893541
+cos(1.10517) = 0.448982, spline derivative interpolation gives 0.448982
+sin(3.1618) = -0.0202022, spline interpolation gives - 0.0202022
+cos(3.1618) = -0.999796, spline derivative interpolation gives - 0.999796
+sin(1.54084) = 0.999551, spline interpolation gives 0.999551
+cos(1.54084) = 0.0299566, spline derivative interpolation gives 0.0299566
+The population of the United States surpassed 100 million on the 11th month of 1915
+Found in 12 iterations
+The population of the United States surpassed 100 million on the 11th month of 1915
+Found in 3 iterations
+</pre>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../interpolation.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="cardinal_quadratic_b.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

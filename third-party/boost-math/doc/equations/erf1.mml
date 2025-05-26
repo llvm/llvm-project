@@ -1,0 +1,41 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mtext>erf</mtext>
+    <mfenced>
+      <mrow>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mfrac>
+      <mn>2</mn>
+      <mrow>
+        <msqrt>
+          <mi>&#x03C0;</mi>
+        </msqrt>
+      </mrow>
+    </mfrac>
+    <munderover>
+      <mo>&#x222B;</mo>
+      <mrow>
+        <mn>0</mn>
+      </mrow>
+      <mi>z</mi>
+    </munderover>
+    <msup>
+      <mi>e</mi>
+      <mrow>
+        <mo>&#x2212;</mo>
+        <msup>
+          <mi>t</mi>
+          <mn>2</mn>
+        </msup>
+      </mrow>
+    </msup>
+    <mi>d</mi>
+    <mi>t</mi>
+  </mrow>
+</math>
+

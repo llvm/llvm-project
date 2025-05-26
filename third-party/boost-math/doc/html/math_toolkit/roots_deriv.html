@@ -1,0 +1,377 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Root Finding With Derivatives: Newton-Raphson, Halley &amp; Schröder</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../root_finding.html" title="Chapter 10. Root Finding &amp; Minimization Algorithms">
+<link rel="prev" href="roots_noderiv/implementation.html" title="Implementation">
+<link rel="next" href="cubic_roots.html" title="Roots of Cubic Polynomials">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="roots_noderiv/implementation.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="cubic_roots.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.roots_deriv"></a><a class="link" href="roots_deriv.html" title="Root Finding With Derivatives: Newton-Raphson, Halley &amp; Schröder">Root Finding With Derivatives:
+    Newton-Raphson, Halley &amp; Schröder</a>
+</h2></div></div></div>
+<h5>
+<a name="math_toolkit.roots_deriv.h0"></a>
+      <span class="phrase"><a name="math_toolkit.roots_deriv.synopsis"></a></span><a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.synopsis">Synopsis</a>
+    </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">roots</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span>
+<span class="keyword">namespace</span> <span class="identifier">tools</span> <span class="special">{</span> <span class="comment">// Note namespace boost::math::tools.</span>
+<span class="comment">// Newton-Raphson</span>
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">newton_raphson_iterate</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">f</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">max</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">digits</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">newton_raphson_iterate</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">f</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">max</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">digits</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span><span class="special">&amp;</span> <span class="identifier">max_iter</span><span class="special">);</span>
+
+<span class="comment">// Halley</span>
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">halley_iterate</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">f</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">max</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">digits</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">halley_iterate</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">f</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">max</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">digits</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span><span class="special">&amp;</span> <span class="identifier">max_iter</span><span class="special">);</span>
+
+<span class="comment">// Schr'''&amp;#xf6;'''der</span>
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">schroder_iterate</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">f</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">max</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">digits</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">schroder_iterate</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">f</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">max</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">digits</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span><span class="special">&amp;</span> <span class="identifier">max_iter</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">ComplexType</span><span class="special">&gt;</span>
+<span class="identifier">Complex</span> <span class="identifier">complex_newton</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">f</span><span class="special">,</span> <span class="identifier">Complex</span> <span class="identifier">guess</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">max_iterations</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ComplexType</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">&gt;::</span><span class="identifier">digits</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">auto</span> <span class="identifier">quadratic_roots</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">T</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">c</span><span class="special">);</span>
+
+<span class="special">}}}</span> <span class="comment">// namespaces boost::math::tools.</span>
+</pre>
+<h5>
+<a name="math_toolkit.roots_deriv.h1"></a>
+      <span class="phrase"><a name="math_toolkit.roots_deriv.description"></a></span><a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.description">Description</a>
+    </h5>
+<p>
+      These functions all perform iterative root-finding <span class="bold"><strong>using
+      derivatives</strong></span>:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">newton_raphson_iterate</span></code>
+          performs second-order <a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.newton">Newton-Raphson
+          iteration</a>.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">halley_iterate</span></code> and <code class="computeroutput"><span class="identifier">schroder_iterate</span></code> perform third-order
+          <a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.halley">Halley</a> and <a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.schroder">Schröder</a> iteration.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">complex_newton</span></code> performs
+          Newton's method on complex-analytic functions.
+        </li>
+<li class="listitem">
+          <code class="computeroutput"><span class="identifier">solve_quadratic</span></code> solves
+          quadratic equations using various tricks to keep catastrophic cancellation
+          from occurring in computation of the discriminant.
+        </li>
+</ul></div>
+<div class="variablelist">
+<p class="title"><b>Parameters of the real-valued root finding functions</b></p>
+<dl class="variablelist">
+<dt><span class="term">F f</span></dt>
+<dd>
+<p>
+            Type F must be a callable function object (or C++ lambda) that accepts
+            one parameter and returns a <a class="link" href="internals/tuples.html" title="Tuples">std::pair,
+            std::tuple, boost::tuple or boost::fusion::tuple</a>:
+          </p>
+<p>
+            For second-order iterative method (<a href="http://en.wikipedia.org/wiki/Newton_Raphson" target="_top">Newton
+            Raphson</a>) the <code class="computeroutput"><span class="identifier">tuple</span></code>
+            should have <span class="bold"><strong>two</strong></span> elements containing
+            the evaluation of the function and its first derivative.
+          </p>
+<p>
+            For the third-order methods (<a href="http://en.wikipedia.org/wiki/Halley%27s_method" target="_top">Halley</a>
+            and Schröder) the <code class="computeroutput"><span class="identifier">tuple</span></code>
+            should have <span class="bold"><strong>three</strong></span> elements containing
+            the evaluation of the function and its first and second derivatives.
+          </p>
+</dd>
+<dt><span class="term">T guess</span></dt>
+<dd><p>
+            The initial starting value. A good guess is crucial to quick convergence!
+          </p></dd>
+<dt><span class="term">T min</span></dt>
+<dd><p>
+            The minimum possible value for the result, this is used as an initial
+            lower bracket.
+          </p></dd>
+<dt><span class="term">T max</span></dt>
+<dd><p>
+            The maximum possible value for the result, this is used as an initial
+            upper bracket.
+          </p></dd>
+<dt><span class="term">int digits</span></dt>
+<dd><p>
+            The desired number of binary digits precision.
+          </p></dd>
+<dt><span class="term">uintmax_t&amp; max_iter</span></dt>
+<dd><p>
+            An optional maximum number of iterations to perform. On exit, this is
+            updated to the actual number of iterations performed.
+          </p></dd>
+</dl>
+</div>
+<p>
+      When using these functions you should note that:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Default <code class="computeroutput"><span class="identifier">max_iter</span> <span class="special">=</span>
+          <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span><span class="special">&gt;::</span><span class="identifier">max</span><span class="special">)()</span></code> is effectively 'iterate for ever'.
+        </li>
+<li class="listitem">
+          They may be very sensitive to the initial guess, typically they converge
+          very rapidly if the initial guess has two or three decimal digits correct.
+          However convergence can be no better than <a class="link" href="roots_noderiv/bisect.html" title="Bisection">bisect</a>,
+          or in some rare cases, even worse than <a class="link" href="roots_noderiv/bisect.html" title="Bisection">bisect</a>
+          if the initial guess is a long way from the correct value and the derivatives
+          are close to zero.
+        </li>
+<li class="listitem">
+          These functions include special cases to handle zero first (and second
+          where appropriate) derivatives, and fall back to <a class="link" href="roots_noderiv/bisect.html" title="Bisection">bisect</a>
+          in this case. However, it is helpful if functor F is defined to return
+          an arbitrarily small value <span class="emphasis"><em>of the correct sign</em></span> rather
+          than zero.
+        </li>
+<li class="listitem">
+          The functions will raise an <a class="link" href="error_handling.html#math_toolkit.error_handling.evaluation_error">evaluation_error</a>
+          if arguments <code class="computeroutput"><span class="identifier">min</span></code> and <code class="computeroutput"><span class="identifier">max</span></code> are the wrong way around or if they
+          converge to a local minima.
+        </li>
+<li class="listitem">
+          If the derivative at the current best guess for the result is infinite
+          (or very close to being infinite) then these functions may terminate prematurely.
+          A large first derivative leads to a very small next step, triggering the
+          termination condition. Derivative based iteration may not be appropriate
+          in such cases.
+        </li>
+<li class="listitem">
+          If the function is 'Really Well Behaved' (is monotonic and has only one
+          root) the bracket bounds <span class="emphasis"><em>min</em></span> and <span class="emphasis"><em>max</em></span>
+          may as well be set to the widest limits like zero and <code class="computeroutput"><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">max</span><span class="special">()</span></code>.
+        </li>
+<li class="listitem">
+          But if the function more complex and may have more than one root or a pole,
+          the choice of bounds is protection against jumping out to seek the 'wrong'
+          root.
+        </li>
+<li class="listitem">
+          These functions fall back to <a class="link" href="roots_noderiv/bisect.html" title="Bisection">bisect</a>
+          if the next computed step would take the next value out of bounds. The
+          bounds are updated after each step to ensure this leads to convergence.
+          However, a good initial guess backed up by asymptotically-tight bounds
+          will improve performance no end - rather than relying on <a class="link" href="roots_noderiv/bisect.html" title="Bisection">bisection</a>.
+        </li>
+<li class="listitem">
+          The value of <span class="emphasis"><em>digits</em></span> is crucial to good performance
+          of these functions, if it is set too high then at best you will get one
+          extra (unnecessary) iteration, and at worst the last few steps will proceed
+          by <a class="link" href="roots_noderiv/bisect.html" title="Bisection">bisection</a>.
+          Remember that the returned value can never be more accurate than <span class="emphasis"><em>f(x)</em></span>
+          can be evaluated, and that if <span class="emphasis"><em>f(x)</em></span> suffers from cancellation
+          errors as it tends to zero then the computed steps will be effectively
+          random. The value of <span class="emphasis"><em>digits</em></span> should be set so that
+          iteration terminates before this point: remember that for second and third
+          order methods the number of correct digits in the result is increasing
+          quite substantially with each iteration, <span class="emphasis"><em>digits</em></span> should
+          be set by experiment so that the final iteration just takes the next value
+          into the zone where <span class="emphasis"><em>f(x)</em></span> becomes inaccurate. A good
+          starting point for <span class="emphasis"><em>digits</em></span> would be 0.6*D for Newton
+          and 0.4*D for Halley or Shröder iteration, where D is <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">digits</span></code>.
+        </li>
+<li class="listitem">
+          If you need some diagnostic output to see what is going on, you can <code class="computeroutput"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_INSTRUMENT</span></code>
+          before the <code class="computeroutput"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">roots</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>, and also ensure that display of all
+          the significant digits with <code class="computeroutput"> <span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">digits10</span><span class="special">)</span></code>: or even possibly significant digits with
+          <code class="computeroutput"> <span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">)</span></code>:
+          but be warned, this may produce copious output!
+        </li>
+<li class="listitem">
+          Finally: you may well be able to do better than these functions by hand-coding
+          the heuristics used so that they are tailored to a specific function. You
+          may also be able to compute the ratio of derivatives used by these methods
+          more efficiently than computing the derivatives themselves. As ever, algebraic
+          simplification can be a big win.
+        </li>
+</ul></div>
+<h5>
+<a name="math_toolkit.roots_deriv.h2"></a>
+      <span class="phrase"><a name="math_toolkit.roots_deriv.newton"></a></span><a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.newton">Newton
+      Raphson Method</a>
+    </h5>
+<p>
+      Given an initial guess <span class="emphasis"><em>x0</em></span> the subsequent values are computed
+      using:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../equations/roots1.svg"></span>
+
+      </p></blockquote></div>
+<p>
+      Out-of-bounds steps revert to <a class="link" href="roots_noderiv/bisect.html" title="Bisection">bisection</a>
+      of the current bounds.
+    </p>
+<p>
+      Under ideal conditions, the number of correct digits doubles with each iteration.
+    </p>
+<h5>
+<a name="math_toolkit.roots_deriv.h3"></a>
+      <span class="phrase"><a name="math_toolkit.roots_deriv.halley"></a></span><a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.halley">Halley's
+      Method</a>
+    </h5>
+<p>
+      Given an initial guess <span class="emphasis"><em>x0</em></span> the subsequent values are computed
+      using:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../equations/roots2.svg"></span>
+
+      </p></blockquote></div>
+<p>
+      Over-compensation by the second derivative (one which would proceed in the
+      wrong direction) causes the method to revert to a Newton-Raphson step.
+    </p>
+<p>
+      Out of bounds steps revert to bisection of the current bounds.
+    </p>
+<p>
+      Under ideal conditions, the number of correct digits trebles with each iteration.
+    </p>
+<h5>
+<a name="math_toolkit.roots_deriv.h4"></a>
+      <span class="phrase"><a name="math_toolkit.roots_deriv.schroder"></a></span><a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.schroder">Schröder's
+      Method</a>
+    </h5>
+<p>
+      Given an initial guess x0 the subsequent values are computed using:
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../equations/roots3.svg"></span>
+
+      </p></blockquote></div>
+<p>
+      Over-compensation by the second derivative (one which would proceed in the
+      wrong direction) causes the method to revert to a Newton-Raphson step. Likewise
+      a Newton step is used whenever that Newton step would change the next value
+      by more than 10%.
+    </p>
+<p>
+      Out of bounds steps revert to <a href="https://en.wikipedia.org/wiki/Bisection" target="_top">bisection</a>
+      of the current bounds.
+    </p>
+<p>
+      Under ideal conditions, the number of correct digits trebles with each iteration.
+    </p>
+<p>
+      This is Schröder's general result (equation 18 from <a href="http://drum.lib.umd.edu/handle/1903/577" target="_top">Stewart,
+      G. W. "On Infinitely Many Algorithms for Solving Equations." English
+      translation of Schröder's original paper. College Park, MD: University of Maryland,
+      Institute for Advanced Computer Studies, Department of Computer Science, 1993</a>.)
+    </p>
+<p>
+      This method guarantees at least quadratic convergence (the same as Newton's
+      method), and is known to work well in the presence of multiple roots: something
+      that neither Newton nor Halley can do.
+    </p>
+<p>
+      The complex Newton method works slightly differently than the rest of the methods:
+      Since there is no way to bracket roots in the complex plane, the <code class="computeroutput"><span class="identifier">min</span></code> and <code class="computeroutput"><span class="identifier">max</span></code>
+      arguments are not accepted. Failure to reach a root is communicated by returning
+      <code class="computeroutput"><span class="identifier">nan</span></code>s. Remember that if a function
+      has many roots, then which root the complex Newton's method converges to is
+      essentially impossible to predict a priori; see the Newton's fractal for more
+      information.
+    </p>
+<p>
+      Finally, the derivative of <span class="emphasis"><em>f</em></span> must be continuous at the
+      root or else non-roots can be found; see <a href="https://math.stackexchange.com/questions/3017766/constructing-newton-iteration-converging-to-non-root" target="_top">here</a>
+      for an example.
+    </p>
+<p>
+      An example usage of <code class="computeroutput"><span class="identifier">complex_newton</span></code>
+      is given in <code class="computeroutput"><span class="identifier">examples</span><span class="special">/</span><span class="identifier">daubechies_coefficients</span><span class="special">.</span><span class="identifier">cpp</span></code>.
+    </p>
+<h5>
+<a name="math_toolkit.roots_deriv.h5"></a>
+      <span class="phrase"><a name="math_toolkit.roots_deriv.quadratics"></a></span><a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.quadratics">Quadratics</a>
+    </h5>
+<p>
+      To solve a quadratic <span class="emphasis"><em>ax</em></span><sup>2</sup> + <span class="emphasis"><em>bx</em></span> + <span class="emphasis"><em>c</em></span>
+      = 0, we may use
+    </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="special">[</span><span class="identifier">x0</span><span class="special">,</span> <span class="identifier">x1</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">quadratic_roots</span><span class="special">(</span><span class="identifier">a</span><span class="special">,</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">c</span><span class="special">);</span>
+</pre>
+<p>
+      If the roots are real, they are arranged so that <code class="computeroutput"><span class="identifier">x0</span></code>
+      ≤ <code class="computeroutput"><span class="identifier">x1</span></code>. If the roots are
+      complex and the inputs are real, <code class="computeroutput"><span class="identifier">x0</span></code>
+      and <code class="computeroutput"><span class="identifier">x1</span></code> are both <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">()</span></code>. In this case we must cast <code class="computeroutput"><span class="identifier">a</span></code>, <code class="computeroutput"><span class="identifier">b</span></code>
+      and <code class="computeroutput"><span class="identifier">c</span></code> to a complex type to
+      extract the complex roots. If <code class="computeroutput"><span class="identifier">a</span></code>,
+      <code class="computeroutput"><span class="identifier">b</span></code> and <code class="computeroutput"><span class="identifier">c</span></code>
+      are integral, then the roots are of type double. The routine is much faster
+      if the fused-multiply-add instruction is available on your architecture. If
+      the fma is not available, the function resorts to slow emulation. Finally,
+      speed is improved if you compile for your particular architecture. For instance,
+      if you compile without any architecture flags, then the <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">fma</span></code> call
+      compiles down to <code class="computeroutput"><span class="identifier">call</span> <span class="identifier">_fma</span></code>,
+      which dynamically chooses to emulate or execute the <code class="computeroutput"><span class="identifier">vfmadd132sd</span></code>
+      instruction based on the capabilities of the architecture. If instead, you
+      compile with (say) <code class="computeroutput"><span class="special">-</span><span class="identifier">march</span><span class="special">=</span><span class="identifier">native</span></code> then
+      no dynamic choice is made: The <code class="computeroutput"><span class="identifier">vfmadd132sd</span></code>
+      instruction is always executed if available and emulation is used if not.
+    </p>
+<h5>
+<a name="math_toolkit.roots_deriv.h6"></a>
+      <span class="phrase"><a name="math_toolkit.roots_deriv.examples"></a></span><a class="link" href="roots_deriv.html#math_toolkit.roots_deriv.examples">Examples</a>
+    </h5>
+<p>
+      See <a class="link" href="root_finding_examples.html" title="Examples of Root-Finding (with and without derivatives)">root-finding examples</a>.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="roots_noderiv/implementation.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="cubic_roots.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

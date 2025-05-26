@@ -1,0 +1,171 @@
+[section:hankel Hankel Functions]
+[section:cyl_hankel Cyclic Hankel Functions]
+
+[h4 Synopsis]
+
+   #if !defined(__CUDACC__) && !defined(__CUDACC_RTC__)
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED std::complex<``__sf_result``> cyl_hankel_1(T1 v, T2 x);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED std::complex<``__sf_result``> cyl_hankel_1(T1 v, T2 x, const ``__Policy``&);
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED std::complex<``__sf_result``> cyl_hankel_2(T1 v, T2 x);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED std::complex<``__sf_result``> cyl_hankel_2(T1 v, T2 x, const ``__Policy``&);
+   
+   #else // When using cuda we use namespace cuda::std:: instead of std::
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED cuda::std::complex<``__sf_result``> cyl_hankel_1(T1 v, T2 x);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED cuda::std::complex<``__sf_result``> cyl_hankel_1(T1 v, T2 x, const ``__Policy``&);
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED cuda::std::complex<``__sf_result``> cyl_hankel_2(T1 v, T2 x);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED cuda::std::complex<``__sf_result``> cyl_hankel_2(T1 v, T2 x, const ``__Policy``&);
+
+   #endif
+
+   
+[h4 Description]
+
+The functions __cyl_hankel_1 and __cyl_hankel_2 return the result of the
+[@http://dlmf.nist.gov/10.2#P3 Hankel functions] of the first and second kind respectively:
+
+[expression ['cyl_hankel_1(v, x) = H[sub v][super (1)](x) = J[sub v](x) + i Y[sub v](x)]]
+
+[expression ['cyl_hankel_2(v, x) = H[sub v][super (2)](x) = J[sub v](x) - i Y[sub v](x)]]
+
+where:
+
+['J[sub v](x)] is the Bessel function of the first kind, and ['Y[sub v](x)] is the Bessel function of the second kind.
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types.  The functions are also optimised for the
+relatively common case that T1 is an integer.
+
+[optional_policy]
+
+Note that while the arguments to these functions are real values, the results are complex.
+That means that the functions can only be instantiated on types `float`, `double` and `long double`.
+The functions have also been extended to operate over the whole range of ['v] and ['x] 
+(unlike __cyl_bessel_j and __cyl_neumann).
+
+[h4 Performance]
+
+These functions are generally more efficient than two separate calls to the underlying Bessel
+functions as internally Bessel J and Y can be computed simultaneously.
+
+[h4 Testing]
+
+There are just a few spot tests to exercise all the special case handling - the bulk of the testing is done
+on the Bessel functions upon which these are based.
+
+[h4 Accuracy]
+
+Refer to __cyl_bessel_j and __cyl_neumann.
+
+[h4 Implementation]
+
+For ['x < 0] the following reflection formulae are used:
+
+[@http://functions.wolfram.com/Bessel-TypeFunctions/BesselJ/16/01/01/ [equation hankel1]]
+
+[@http://functions.wolfram.com/Bessel-TypeFunctions/BesselY/16/01/01/ [equation hankel2]]
+
+[@http://functions.wolfram.com/Bessel-TypeFunctions/BesselY/16/01/01/ [equation hankel3]]
+
+Otherwise the implementation is trivially in terms of the Bessel J and Y functions.
+
+Note however, that the Hankel functions compute the Bessel J and Y functions simultaneously,
+and therefore a single Hankel function call is more efficient than two Bessel function calls.
+The one exception is when ['v] is a small positive integer, in which case the usual Bessel function
+routines for integer order are used.
+
+[endsect] [/section:cyl_hankel Cyclic Hankel Functions]
+
+[section:sph_hankel Spherical Hankel Functions]
+
+[h4 Synopsis]
+
+   #if !defined(__CUDACC__) && !defined(__CUDACC_RTC__)
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED std::complex<``__sf_result``> sph_hankel_1(T1 v, T2 x);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED std::complex<``__sf_result``> sph_hankel_1(T1 v, T2 x, const ``__Policy``&);
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED std::complex<``__sf_result``> sph_hankel_2(T1 v, T2 x);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED std::complex<``__sf_result``> sph_hankel_2(T1 v, T2 x, const ``__Policy``&);
+   
+   #else // When using cuda we use namespace cuda::std:: instead of std::
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED cuda::std::complex<``__sf_result``> sph_hankel_1(T1 v, T2 x);
+
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED cuda::std::complex<``__sf_result``> sph_hankel_1(T1 v, T2 x, const ``__Policy``&);
+
+   template <class T1, class T2>
+   BOOST_MATH_GPU_ENABLED cuda::std::complex<``__sf_result``> sph_hankel_2(T1 v, T2 x);
+   
+   template <class T1, class T2, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED cuda::std::complex<``__sf_result``> sph_hankel_2(T1 v, T2 x, const ``__Policy``&);
+
+   #endif
+   
+[h4 Description]
+
+The functions __sph_hankel_1 and __sph_hankel_2 return the result of the
+[@http://dlmf.nist.gov/10.47#P1 spherical Hankel functions] of the first and second kind respectively:
+
+[equation hankel4]
+
+[equation hankel5]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types.  The functions are also optimised for the
+relatively common case that T1 is an integer.
+
+[optional_policy]
+
+Note that while the arguments to these functions are real values, the results are complex.
+That means that the functions can only be instantiated on types `float`, `double` and `long double`.
+The functions have also been extended to operate over the whole range of ['v] and ['x] 
+(unlike __cyl_bessel_j and __cyl_neumann).
+
+[h4 Testing]
+
+There are just a few spot tests to exercise all the special case handling - the bulk of the testing is done
+on the Bessel functions upon which these are based.
+
+[h4 Accuracy]
+
+Refer to __cyl_bessel_j and __cyl_neumann.
+
+[h4 Implementation]
+
+These functions are trivially implemented in terms of __cyl_hankel_1 and __cyl_hankel_2.
+
+[endsect] [/section:sph_hankel Spherical Hankel Functions]
+
+[endsect] [/section:hankel Hankel Functions]
+
+
+[/ 
+  Copyright 2012 John Maddock.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

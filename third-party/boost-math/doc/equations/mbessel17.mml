@@ -1,0 +1,69 @@
+<?xml version='1.0'?>
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN'
+  'http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd'
+  [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head><title>mbessel17</title>
+<!-- MathML created with MathCast Equation Editor version 0.89 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <msub>
+      <mi>I</mi>
+      <mi>v</mi>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <munderover>
+      <mo>&#x2211;</mo>
+      <mrow>
+        <mi>k</mi>
+        <mo>=</mo>
+        <mn>0</mn>
+      </mrow>
+      <mi>&#x221E;</mi>
+    </munderover>
+    <mfrac>
+      <mn>1</mn>
+      <mrow>
+        <mi>&#x0393;</mi>
+        <mfenced>
+          <mrow>
+            <mi>k</mi>
+            <mo>+</mo>
+            <mi>v</mi>
+            <mo>+</mo>
+            <mn>1</mn>
+          </mrow>
+        </mfenced>
+        <mi>k</mi>
+        <mo>!</mo>
+      </mrow>
+    </mfrac>
+    <msup>
+      <mfenced>
+        <mrow>
+          <mfrac>
+            <mi>x</mi>
+            <mn>2</mn>
+          </mfrac>
+        </mrow>
+      </mfenced>
+      <mrow>
+        <mn>2</mn>
+        <mi>k</mi>
+        <mo>+</mo>
+        <mi>v</mi>
+      </mrow>
+    </msup>
+  </mrow>
+</math>
+</body>
+</html>

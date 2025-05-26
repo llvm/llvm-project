@@ -1,0 +1,178 @@
+[section:inverse_chi_squared_dist Inverse Chi Squared Distribution]
+
+``#include <boost/math/distributions/inverse_chi_squared.hpp>``
+
+   namespace boost{ namespace math{ 
+      
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class inverse_chi_squared_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+
+      BOOST_MATH_GPU_ENABLED inverse_chi_squared_distribution(RealType df = 1); // Not explicitly scaled, default 1/df.
+      BOOST_MATH_GPU_ENABLED inverse_chi_squared_distribution(RealType df, RealType scale = 1/df);  // Scaled.
+
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom()const; // Default 1.
+      BOOST_MATH_GPU_ENABLED RealType scale()const; // Optional scale [xi] (variance), default 1/degrees_of_freedom.
+   };
+   
+   }} // namespace boost // namespace math
+   
+The inverse chi squared distribution is a continuous probability distribution
+of the *reciprocal* of a variable distributed according to the chi squared distribution.
+
+The sources below give confusingly different formulae
+using different symbols for the distribution pdf,
+but they are all the same, or related by a change of variable, or choice of scale.
+
+Two constructors are available to implement both the scaled and (implicitly) unscaled versions.
+
+The main version has an explicit scale parameter which implements the
+[@http://en.wikipedia.org/wiki/Scaled-inverse-chi-square_distribution scaled inverse chi_squared distribution].
+
+A second version has an implicit scale = 1/degrees of freedom and gives the 1st definition in the
+[@http://en.wikipedia.org/wiki/Inverse-chi-square_distribution Wikipedia inverse chi_squared distribution].
+The 2nd Wikipedia inverse chi_squared distribution definition can be implemented
+by  explicitly specifying a scale = 1.
+
+Both definitions are also available in __Mathematica and in __R (geoR) with default scale = 1/degrees of freedom.
+
+See 
+
+* Inverse chi_squared distribution [@http://en.wikipedia.org/wiki/Inverse-chi-square_distribution]
+* Scaled inverse chi_squared distribution[@http://en.wikipedia.org/wiki/Scaled-inverse-chi-square_distribution] 
+* R inverse chi_squared distribution functions [@http://hosho.ees.hokudai.ac.jp/~kubo/Rdoc/library/geoR/html/InvChisquare.html R ]
+* Inverse chi_squared distribution functions [@http://mathworld.wolfram.com/InverseChi-SquaredDistribution.html Weisstein, Eric W. "Inverse Chi-Squared Distribution." From MathWorld--A Wolfram Web Resource.] 
+* Inverse chi_squared distribution reference [@http://reference.wolfram.com/mathematica/ref/InverseChiSquareDistribution.html Weisstein, Eric W. "Inverse Chi-Squared Distribution reference." From Wolfram Mathematica.]
+
+The inverse_chi_squared distribution is used in
+[@http://en.wikipedia.org/wiki/Bayesian_statistics Bayesian statistics]:
+the scaled inverse chi-square is conjugate prior for the normal distribution
+with known mean, model parameter [sigma][pow2] (variance).
+
+See [@http://en.wikipedia.org/wiki/Conjugate_prior conjugate priors including a table of distributions and their priors.]
+
+See also __inverse_gamma_distrib and __chi_squared_distrib.
+
+The inverse_chi_squared distribution is a special case of a inverse_gamma distribution
+with [nu] (degrees_of_freedom) shape ([alpha]) and scale ([beta]) where
+
+[expression [alpha]= [nu] /2 and [beta] = [frac12]]
+
+[note This distribution *does* provide the typedef:
+
+``typedef inverse_chi_squared_distribution<double> inverse_chi_squared;`` 
+
+If you want a `double` precision inverse_chi_squared distribution you can use 
+
+``boost::math::inverse_chi_squared_distribution<>``
+
+or you can write `inverse_chi_squared my_invchisqr(2, 3);`]
+
+For degrees of freedom parameter [nu],
+the (*unscaled*) inverse chi_squared distribution is defined by the probability density function (PDF):
+
+[expression f(x;[nu]) = 2[super -[nu]/2] x[super -[nu]/2-1] e[super -1/2x] / [Gamma]([nu]/2)]
+
+and Cumulative Density Function (CDF)
+
+[expression F(x;[nu]) = [Gamma]([nu]/2, 1/2x) / [Gamma]([nu]/2)]
+
+For degrees of freedom parameter [nu] and scale parameter [xi],
+the *scaled* inverse chi_squared distribution is defined by the probability density function (PDF):
+
+[expression f(x;[nu], [xi]) = ([xi][nu]/2)[super [nu]/2] e[super -[nu][xi]/2x] x[super -1-[nu]/2] / [Gamma]([nu]/2)]
+
+and Cumulative Density Function (CDF)
+
+[expression  F(x;[nu], [xi]) = [Gamma]([nu]/2, [nu][xi]/2x) / [Gamma]([nu]/2)]
+
+The following graphs illustrate how the PDF and CDF of the inverse chi_squared distribution
+varies for a few values of parameters [nu] and [xi]:
+
+[graph inverse_chi_squared_pdf]  [/.png or .svg]
+
+[graph inverse_chi_squared_cdf]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED inverse_chi_squared_distribution(RealType df = 1); // Implicitly scaled 1/df.
+   BOOST_MATH_GPU_ENABLED inverse_chi_squared_distribution(RealType df = 1, RealType scale); // Explicitly scaled.
+
+Constructs an inverse chi_squared distribution with [nu] degrees of freedom ['df],
+and scale ['scale] with default value 1\/df.
+
+Requires that the degrees of freedom [nu] parameter is greater than zero, otherwise calls
+__domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom()const; 
+   
+Returns the degrees_of_freedom [nu] parameter of this distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType scale()const; 
+   
+Returns the scale [xi] parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variate is \[0,+[infin]\].
+[note Unlike some definitions, this implementation supports a random variate 
+equal to zero as a special case, returning zero for both pdf and cdf.]
+
+[h4 Accuracy]
+
+The inverse gamma distribution is implemented in terms of the 
+incomplete gamma functions like the __inverse_gamma_distrib that use 
+__gamma_p and __gamma_q and their inverses __gamma_p_inv and __gamma_q_inv:
+refer to the accuracy data for those functions for more information.
+But in general, gamma (and thus inverse gamma) results are often accurate to a few epsilon,
+>14 decimal digits accuracy for 64-bit double.
+unless iteration is involved, as for the estimation of degrees of freedom.
+
+[h4 Implementation]
+
+In the following table [nu] is the degrees of freedom parameter and 
+[xi] is the scale parameter of the distribution,
+/x/ is the random variate, /p/ is the probability and /q = 1-p/ its complement.
+Parameters [alpha] for shape and [beta] for scale
+are used for the inverse gamma function: [alpha] = [nu]/2 and [beta] = [nu] * [xi]/2.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = __gamma_p_derivative([alpha], [beta]/ x, [beta]) / x * x ]]
+[[cdf][Using the relation: p = __gamma_q([alpha], [beta] / x) ]]
+[[cdf complement][Using the relation: q = __gamma_p([alpha], [beta] / x) ]]
+[[quantile][Using the relation: x = [beta]/ __gamma_q_inv([alpha], p) ]]
+[[quantile from the complement][Using the relation: x = [alpha]/ __gamma_p_inv([alpha], q) ]]
+[[mode][[nu] * [xi] / ([nu] + 2) ]]
+[[median][no closed form analytic equation is known, but is evaluated as quantile(0.5)]]
+[[mean][[nu][xi] / ([nu] - 2) for [nu] > 2, else a __domain_error]]
+[[variance][2 [nu][pow2] [xi][pow2] / (([nu] -2)[pow2] ([nu] -4)) for [nu] >4, else a __domain_error]]
+[[skewness][4 [sqrt]2 [sqrt]([nu]-4) /([nu]-6) for [nu] >6, else a __domain_error ]]
+[[kurtosis_excess][12 * (5[nu] - 22) / (([nu] - 6) * ([nu] - 8)) for [nu] >8, else a __domain_error]]
+[[kurtosis][3 + 12 * (5[nu] - 22) / (([nu] - 6) * ([nu]-8)) for [nu] >8, else a __domain_error]]
+] [/table]
+
+[h4 References]
+
+# Bayesian Data Analysis, Andrew Gelman, John B. Carlin, Hal S. Stern, Donald B. Rubin,
+ISBN-13: 978-1584883883, Chapman & Hall; 2 edition (29 July 2003).
+
+# Bayesian Computation with R, Jim Albert, ISBN-13: 978-0387922973, Springer; 2nd ed. edition (10 Jun 2009)
+
+[endsect] [/section:inverse_chi_squared_dist Inverse chi_squared Distribution]
+
+[/ 
+  Copyright 2010 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

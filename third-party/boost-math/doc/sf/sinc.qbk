@@ -1,0 +1,111 @@
+[/ math.qbk
+  Copyright 2006 Hubert Holin and John Maddock.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:sinc Sinus Cardinal and Hyperbolic Sinus Cardinal Functions]
+
+[section:sinc_overview Sinus Cardinal and Hyperbolic Sinus Cardinal Functions Overview]
+
+The [@http://mathworld.wolfram.com/SincFunction.html Sinus Cardinal family of functions]
+(indexed by the family of indices [^a > 0]) 
+is defined by 
+
+[equation special_functions_blurb20]
+
+it sees heavy use in signal processing tasks.
+
+By analogy, the 
+[@http://mathworld.wolfram.com/SinhcFunction.htm Hyperbolic Sinus Cardinal]
+family of functions 
+(also indexed by the family of indices [^a > 0]) is defined by 
+
+[equation special_functions_blurb22]
+
+These two families of functions are composed of entire functions.
+
+These functions (__sinc_pi and __sinhc_pi) are needed by
+[@http://www.boost.org/libs/math/quaternion/quaternion.html our implementation]
+of [@http://mathworld.wolfram.com/Quaternion.html quaternions]
+and [@http://mathworld.wolfram.com/Octonion.html octonions].
+
+[: ['[*Sinus Cardinal of index pi (purple) and Hyperbolic Sinus Cardinal of index pi (red) on R]]]
+[: [$../graphs/sinc_pi_and_sinhc_pi_on_r.png]]
+
+[endsect] [/section:sinc_overview Sinus Cardinal and Hyperbolic Sinus Cardinal Functions Overview]
+
+[section sinc_pi]
+
+``
+#include <boost/math/special_functions/sinc.hpp>
+``
+
+   template<class T> 
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` sinc_pi(const T x);
+
+   template<class T, class ``__Policy``> 
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` sinc_pi(const T x, const ``__Policy``&);
+
+   template<class T, template<typename> class U> 
+   BOOST_MATH_GPU_ENABLED U<T> sinc_pi(const U<T> x);
+
+   template<class T, template<typename> class U, class ``__Policy``> 
+   BOOST_MATH_GPU_ENABLED U<T> sinc_pi(const U<T> x, const ``__Policy``&);
+
+Computes 
+[link math_toolkit.sinc.sinc_overview 
+the Sinus Cardinal] of x:
+
+[expression sinc_pi(x) = sin(x) / x]
+
+The second form is for complex numbers, 
+quaternions, octonions etc. Taylor series are used at the origin 
+to ensure accuracy.
+
+[graph sinc_pi]
+
+[optional_policy]
+
+[endsect] [/section sinc_pi]
+
+
+[section sinhc_pi]
+
+``
+#include <boost/math/special_functions/sinhc.hpp>
+``
+
+   template<class T> 
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` sinhc_pi(const T x);
+
+   template<class T, class ``__Policy``> 
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` sinhc_pi(const T x, const ``__Policy``&);
+
+   template<typename T, template<typename> class U> 
+   U<T> sinhc_pi(const U<T> x);
+
+   template<class T, template<typename> class U, class ``__Policy``> 
+   U<T> sinhc_pi(const U<T> x, const ``__Policy``&);
+
+Computes [@http://mathworld.wolfram.com/SinhcFunction.html sinhc function],
+the [link math_toolkit.sinc.sinc_overview  Hyperbolic Sinus Cardinal] of x:
+
+[expression sinhc_pi(x) = sinh(x) / x]
+
+The second form is for 
+complex numbers, quaternions, octonions etc. Taylor series are used at the origin 
+to ensure accuracy.
+
+The return type of the first form is computed using the __arg_promotion_rules
+when T is an integer type.
+
+[optional_policy]
+
+[graph sinhc_pi]
+
+[endsect] [/section sinhc_pi]
+
+[endsect] [/section:sinc Sinus Cardinal and Hyperbolic Sinus Cardinal Functions]
+

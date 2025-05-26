@@ -1,0 +1,124 @@
+[section:fpclass Floating-Point Classification: Infinities and NaNs]
+
+[h4 Synopsis]
+
+   #define FP_ZERO        /* implementation specific value */
+   #define FP_NORMAL      /* implementation specific value */
+   #define FP_INFINITE    /* implementation specific value */
+   #define FP_NAN         /* implementation specific value */
+   #define FP_SUBNORMAL   /* implementation specific value */
+
+   template <class T>
+   int fpclassify(T t);
+
+   template <class T>
+   bool isfinite(T z); // Neither infinity nor NaN.
+
+   template <class T>
+   bool isinf(T t); // Infinity (+ or -).
+
+   template <class T>
+   bool isnan(T t); // NaN.
+
+   template <class T>
+   bool isnormal(T t); // isfinite and not denormalised.
+
+   #include <boost\math\special_functions\fpclassify.hpp>
+
+to use these functions.
+
+[h4 Description]
+
+These functions provide the same functionality as the macros with the same
+name in C99, indeed if the C99 macros are available, then these functions
+are implemented in terms of them, otherwise they rely on `std::numeric_limits<>`
+to function.
+
+Note that the definition of these functions
+['does not suppress the definition of these names as macros by math.h]
+on those platforms that already provide
+these as macros. That mean that the following have differing meanings:
+
+   using namespace boost::math;
+
+   // This might call a global macro if defined,
+   // but might not work if the type of z is unsupported
+   // by the std lib macro:
+   isnan(z);
+   //
+   // This calls the Boost version
+   // (found via the "using namespace boost::math" declaration)
+   // it works for any type that has numeric_limits support for type z:
+   (isnan)(z);
+   //
+   // As above but with explicit namespace qualification.
+   (boost::math::isnan)(z);
+   //
+   // This will cause a compiler error if isnan is a native macro:
+   boost::math::isnan(z);
+   // So always use instead:
+   (boost::math::isnan)(z);
+   //
+   // You can also add a using statement,
+   // globally to a .cpp file, or to a local function in a .hpp file.
+   using boost::math::isnan;
+   // so you can write the shorter and less cluttered
+   (isnan)(z)
+   // But, as above, if isnan is a native macro, this causes a compiler error,
+   // because the macro always 'gets' the name first, unless enclosed in () brackets.
+
+Detailed descriptions for each of these functions follows:
+
+   template <class T>
+   int fpclassify(T t);
+
+Returns an integer value that classifies the value /t/:
+
+[table
+[[fpclassify value] [class of t.]]
+[[FP_ZERO] [If /t/ is zero.]]
+[[FP_NORMAL] [If /t/ is a non-zero, non-denormalised finite value.]]
+[[FP_INFINITE] [If /t/ is plus or minus infinity.]]
+[[FP_NAN] [If /t/ is a NaN.]]
+[[FP_SUBNORMAL] [If /t/ is a denormalised number.]]
+]
+
+   template <class T>
+   bool isfinite(T z);
+
+Returns true only if /z/ is not an infinity or a NaN.
+
+   template <class T>
+   bool isinf(T t);
+
+Returns true only if /z/ is plus or minus infinity.
+
+   template <class T>
+   bool isnan(T t);
+
+Returns true only if /z/ is a [@http://en.wikipedia.org/wiki/NaN NaN].
+
+   template <class T>
+   bool isnormal(T t);
+
+Returns true only if /z/ is a normal number (not zero, infinite, NaN, or denormalised).
+
+[h5 Floating-point format]
+
+If you wish to find details of the floating-point format for any particular processor,
+there is a program
+
+[@../../example/inspect_fp.cpp inspect_fp.cpp]
+
+by Johan Rade which can be used to print out the processor type,
+endianness, and detailed bit layout of a selection of floating-point values,
+including infinity and NaNs.
+
+[endsect] [/section:fpclass Floating Point Classification: Infinities and NaNs]
+
+[/
+  Copyright 2006, 2008, 2011 John Maddock, Johan Rade and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

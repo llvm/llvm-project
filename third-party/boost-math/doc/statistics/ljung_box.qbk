@@ -1,0 +1,87 @@
+[/
+Copyright (c) 2019 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:ljung_box The Ljung-Box Test]
+
+[heading Synopsis]
+
+```
+#include <boost/math/statistics/ljung_box.hpp>
+
+namespace boost::math::statistics {
+
+template<class RandomAccessIterator>
+std::pair<Real, Real> ljung_box(RandomAccessIterator begin, RandomAccessIterator end, int64_t lags = -1, int64_t fit_dof = 0);
+
+
+template<class RandomAccessContainer>
+auto ljung_box(RandomAccessContainer const & v, int64_t lags = -1, int64_t fit_dof = 0);
+
+}
+```
+
+[heading Background]
+
+The Ljung-Box test is used to test if residuals from a fitted model have unwanted autocorrelation.
+If autocorrelation exists in the residuals, then presumably a model with more parameters can be fitted to the original data and explain more of the structure it contains.
+
+The test statistic is
+
+[$../graphs/ljung_box_definition.svg]
+
+where /n/ is the length of /v/ and \u2113 is the number of lags.
+
+The variance of the statistic slightly exceeds the variance of the chi squared distribution, but nonetheless it still is a fairly good test with reasonable computational cost.
+
+An example use is given below:
+
+
+```
+#include <vector>
+#include <random>
+#include <iostream>
+#include <boost/math/statistics/ljung_box.hpp>
+using boost::math::statistics::ljung_box;
+std::random_device rd;
+std::normal_distribution<double> dis(0, 1);
+std::vector<double> v(8192);
+for (auto & x : v) { x = dis(rd); }
+auto [Q, p] = ljung_box(v);
+// Possible output: Q = 5.94734, p = 0.819668
+```
+
+Now if the result is clearly autocorrelated:
+
+```
+for (size_t i = 0; i < v.size(); ++i) { v[i] = i; }
+auto [Q, p] = ljung_box(v);
+// Possible output: Q = 81665.1, p = 0
+```
+
+By default, the number of lags is taken to be the logarithm of the number of samples, so that the default complexity is [bigO](/n/ ln /n/).
+If you want to calculate a given number of lags, use the second argument:
+
+```
+int64_t lags = 10;
+auto [Q, p] = ljung_box(v,10);
+```
+
+Finally, it is sometimes relevant to specify how many degrees of freedom were used in creating the model from which the residuals were computed.
+This does not affect the test statistic /Q/, but only the /p/-value.
+If you need to specify the number of degrees of freedom, use
+
+```
+int64_t fit_dof = 2;
+auto [Q, p] = ljung_box(v, -1, fit_dof);
+```
+
+For example, if you fit your data with an ARIMA(/p/, /q/) model, then `fit_dof = p + q`.
+
+
+
+[endsect]
+[/section:ljung_box]

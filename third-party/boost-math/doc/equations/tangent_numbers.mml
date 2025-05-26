@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+  <mrow>
+    <msub>
+      <mi>T</mi>
+      <mi>j</mi>
+    </msub>
+    <mo>=</mo>
+    <msup>
+      <mfenced>
+        <mrow>
+          <mo>−</mo>
+          <mn>1</mn>
+        </mrow>
+      </mfenced>
+      <mrow>
+        <mi>j</mi>
+        <mo>−</mo>
+        <mn>1</mn>
+      </mrow>
+    </msup>
+    <msup>
+      <mn>2</mn>
+      <mrow>
+        <mn>2</mn>
+        <mi>j</mi>
+      </mrow>
+    </msup>
+    <mfenced>
+      <mrow>
+        <msup>
+          <mn>2</mn>
+          <mrow>
+            <mn>2</mn>
+            <mi>n</mi>
+          </mrow>
+        </msup>
+        <mo>−</mo>
+        <mn>1</mn>
+      </mrow>
+    </mfenced>
+    <mfrac>
+      <msub>
+        <mi>B</mi>
+        <mrow>
+          <mn>2</mn>
+          <mi>n</mi>
+        </mrow>
+      </msub>
+      <mrow>
+        <mn>2</mn>
+        <mi>n</mi>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>

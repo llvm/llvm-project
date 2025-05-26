@@ -1,0 +1,195 @@
+[section:polynomials Polynomials]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/tools/polynomial.hpp>
+``
+
+   namespace boost { namespace math {
+   namespace tools {
+
+   template <class T>
+   class polynomial
+   {
+   public:
+      // typedefs:
+      typedef typename std::vector<T>::value_type value_type;
+      typedef typename std::vector<T>::size_type  size_type;
+
+      // construct:
+      polynomial(){}
+      template <class U>
+      polynomial(const U* data, unsigned order);
+      template <class Iterator>
+      polynomial(Iterator first, Iterator last);
+      template <class U>
+      explicit polynomial(const U& point, 
+            typename std::enable_if<std::is_convertible<U, T> >::type* = nullptr);
+      template <class Range>
+      explicit polynomial(const Range& r, 
+            typename std::enable_if<boost::math::tools::detail::is_const_iterable<Range> >::type* = nullptr); // C++14
+      polynomial(std::initializer_list<T> l); // C++11
+
+      polynomial(std::vector<T>&& p);
+
+      // access:
+      size_type size()const;
+      size_type degree()const;
+      value_type& operator[](size_type i);
+      const value_type& operator[](size_type i)const;
+      std::vector<T> const& data() const;
+      std::vector<T>& data();
+      explicit operator bool() const;
+
+      polynomial<T> prime() const;
+
+      polynomial<T> integrate() const;
+
+      T operator()(T z) const;
+
+
+
+      // modify:
+      void set_zero();
+
+      // operators:
+      template <class U>
+      polynomial& operator +=(const U& value);
+      template <class U>
+      polynomial& operator -=(const U& value);
+      template <class U>
+      polynomial& operator *=(const U& value);
+      template <class U>
+      polynomial& operator /=(const U& value);
+      template <class U>
+      polynomial& operator %=(const U& value);
+      template <class U>
+      polynomial& operator +=(const polynomial<U>& value);
+      template <class U>
+      polynomial& operator -=(const polynomial<U>& value);
+      template <class U>
+      polynomial& operator *=(const polynomial<U>& value);
+      template <class U>
+      polynomial& operator /=(const polynomial<U>& value);
+      template <class U>
+      polynomial& operator %=(const polynomial<U>& value);
+   };
+
+   template <class T>
+   polynomial<T> operator + (const polynomial<T>& a, const polynomial<T>& b);
+   template <class T>
+   polynomial<T> operator - (const polynomial<T>& a, const polynomial<T>& b);
+   template <class T>
+   polynomial<T> operator * (const polynomial<T>& a, const polynomial<T>& b);
+   template <class T>
+   polynomial<T> operator / (const polynomial<T>& a, const polynomial<T>& b);
+   template <class T>
+   polynomial<T> operator % (const polynomial<T>& a, const polynomial<T>& b);
+
+   template <class T, class U>
+   polynomial<T> operator + (const polynomial<T>& a, const U& b);
+   template <class T, class U>
+   polynomial<T> operator - (const polynomial<T>& a, const U& b);
+   template <class T, class U>
+   polynomial<T> operator * (const polynomial<T>& a, const U& b);
+   template <class T, class U>
+   polynomial<T> operator / (const polynomial<T>& a, const U& b);
+   template <class T, class U>
+   polynomial<T> operator % (const polynomial<T>& a, const U& b);
+
+   template <class U, class T>
+   polynomial<T> operator + (const U& a, const polynomial<T>& b);
+   template <class U, class T>
+   polynomial<T> operator - (const U& a, const polynomial<T>& b);
+   template <class U, class T>
+   polynomial<T> operator * (const U& a, const polynomial<T>& b);
+
+   template <class T>
+   polynomial<T> operator - (const polynomial<T>& a);
+
+   template <class T>
+   polynomial<T> operator >>= (const U& a);
+   template <class T>
+   polynomial<T> operator >> (polynomial<T> const &a, const U& b);
+   template <class T>
+   polynomial<T> operator <<= (const U& a);
+   template <class T>
+   polynomial<T> operator << (polynomial<T> const &a, const U& b);
+
+   template <class T>
+   bool operator == (const polynomial<T> &a, const polynomial<T> &b);
+   template <class T>
+   bool operator != (const polynomial<T> &a, const polynomial<T> &b);
+
+   template <class T>
+   polynomial<T> pow(polynomial<T> base, int exp);
+
+   template <class charT, class traits, class T>
+   std::basic_ostream<charT, traits>& operator <<
+      (std::basic_ostream<charT, traits>& os, const polynomial<T>& poly);
+
+   template <typename T>
+   std::pair< polynomial<T>, polynomial<T> >
+   quotient_remainder(const polynomial<T>& a, const polynomial<T>& b);
+
+   } //    namespace tools
+   }} //    namespace boost { namespace math
+
+[h4 Description]
+
+This is a somewhat trivial class for polynomial manipulation.
+
+See
+
+* [@https://en.wikipedia.org/wiki/Polynomial Polynomial] and
+* Donald E. Knuth, The Art of Computer Programming: Volume 2, Third edition, (1998)
+Chapter 4.6.1, Algorithm D: Division of polynomials over a field.
+
+Implementation is currently of the "naive" variety, with [bigo](N[super 2])
+multiplication, for example.  This class should not be used in
+high-performance computing environments: it is intended for the
+simple manipulation of small polynomials, typically generated
+for special function approximation.
+
+It does has division for polynomials over a [@https://en.wikipedia.org/wiki/Field_%28mathematics%29 field]
+(here floating point, complex, etc)
+and over a unique factorization domain (integers).
+Division of polynomials over a field is compatible with
+[@https://en.wikipedia.org/wiki/Euclidean_algorithm Euclidean GCD].
+
+Division of polynomials over a UFD is compatible with the subresultant algorithm for GCD (implemented as subresultant_gcd), but a serious word of warning is required: the intermediate value swell of that algorithm will cause single-precision integral types to overflow very easily. So although the algorithm will work on single-precision integral types, an overload of the gcd function is only provided for polynomials with multi-precision integral types, to prevent nasty surprises. This is done somewhat crudely by disabling the overload for non-POD integral types.
+
+Advanced manipulations: the FFT, factorisation etc are
+not currently provided.  Submissions for these are of course welcome :-)
+
+[h4:polynomial_examples  Polynomial Arithmetic Examples]
+
+[import ../../example/polynomial_arithmetic.cpp]
+
+[polynomial_arithmetic_0]
+[polynomial_arithmetic_1]
+
+[polynomial_arithmetic_2]
+for output:
+[polynomial_output_1]
+
+[polynomial_arithmetic_3]
+for output
+[polynomial_output_2]
+
+[h5 Division, Quotient and Remainder]
+[polynomial_arithmetic_4]
+
+The source code is at [@../../example/polynomial_arithmetic.cpp polynomial_arithmetic.cpp]
+
+[endsect] [/section:polynomials Polynomials]
+
+[/
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Copyright 2015 Jeremy William Murphy.
+
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

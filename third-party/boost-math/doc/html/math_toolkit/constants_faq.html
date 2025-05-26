@@ -1,0 +1,469 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Math Constants FAQs</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../constants.html" title="Chapter 4. Mathematical Constants">
+<link rel="prev" href="new_const.html" title="Defining New Constants">
+<link rel="next" href="../dist.html" title="Chapter 5. Statistical Distributions and Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="new_const.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../constants.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../dist.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.constants_faq"></a><a class="link" href="constants_faq.html" title="Math Constants FAQs">Math Constants FAQs</a>
+</h2></div></div></div>
+<h5>
+<a name="math_toolkit.constants_faq.h0"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.why_are_these_constants_chosen"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.why_are_these_constants_chosen">Why are
+      <span class="emphasis"><em>these</em></span> Constants Chosen?</a>
+    </h5>
+<p>
+      It is, of course, impossible to please everyone with a list like this.
+    </p>
+<p>
+      Some of the criteria we have used are:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Used in Boost.Math.
+        </li>
+<li class="listitem">
+          Commonly used.
+        </li>
+<li class="listitem">
+          Expensive to compute.
+        </li>
+<li class="listitem">
+          Requested by users.
+        </li>
+<li class="listitem">
+          <a href="http://en.wikipedia.org/wiki/Mathematical_constant" target="_top">Used in
+          science and mathematics.</a>
+        </li>
+<li class="listitem">
+          No integer values (because so cheap to construct).
+        </li>
+</ul></div>
+<p>
+      (You can easily define your own if found convenient, for example: <code class="computeroutput"><span class="identifier">FPT</span> <span class="identifier">one</span> <span class="special">=</span><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">FPT</span><span class="special">&gt;(</span><span class="number">42</span><span class="special">);</span></code>).
+    </p>
+<h5>
+<a name="math_toolkit.constants_faq.h1"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.how_are_constants_named"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.how_are_constants_named">How
+      are constants named?</a>
+    </h5>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Not macros, so no upper case.
+        </li>
+<li class="listitem">
+          All lower case (following C++ standard names).
+        </li>
+<li class="listitem">
+          No CamelCase.
+        </li>
+<li class="listitem">
+          Underscore as _ delimiter between words.
+        </li>
+<li class="listitem">
+          Numbers spelt as words rather than decimal digits (except following pow).
+        </li>
+<li class="listitem">
+          Abbreviation conventions:
+          <div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: circle; ">
+<li class="listitem">
+                root for square root.
+              </li>
+<li class="listitem">
+                cbrt for cube root.
+              </li>
+<li class="listitem">
+                pow for pow function using decimal digits like pow23 for n<sup>2/3</sup>.
+              </li>
+<li class="listitem">
+                div for divided by or operator /.
+              </li>
+<li class="listitem">
+                minus for operator -, plus for operator +.
+              </li>
+<li class="listitem">
+                sqr for squared.
+              </li>
+<li class="listitem">
+                cubed for cubed n<sup>3</sup>.
+              </li>
+<li class="listitem">
+                words for greek, like π, ζ and Γ.
+              </li>
+<li class="listitem">
+                words like half, third, three_quarters, sixth for fractions. (Digit(s)
+                can get muddled).
+              </li>
+<li class="listitem">
+                log10 for log<sub>10</sub>
+              </li>
+<li class="listitem">
+                ln for log<sub>e</sub>
+              </li>
+</ul></div>
+        </li>
+</ul></div>
+<h5>
+<a name="math_toolkit.constants_faq.h2"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.how_are_the_constants_derived"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.how_are_the_constants_derived">How are
+      the constants derived?</a>
+    </h5>
+<p>
+      The constants have all been calculated using high-precision software working
+      with up to 300-bit precision giving about 100 decimal digits. (The precision
+      can be arbitrarily chosen and is limited only by compute time).
+    </p>
+<h5>
+<a name="math_toolkit.constants_faq.h3"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.how_accurate_are_the_constants"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.how_accurate_are_the_constants">How Accurate
+      are the constants?</a>
+    </h5>
+<p>
+      The minimum accuracy chosen (100 decimal digits) exceeds the accuracy of reasonably-foreseeable
+      floating-point hardware (256-bit) and should meet most high-precision computations.
+    </p>
+<h5>
+<a name="math_toolkit.constants_faq.h4"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.how_are_the_constants_tested"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.how_are_the_constants_tested">How are the
+      constants tested?</a>
+    </h5>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+          Comparison using Boost.Test BOOST_CHECK_CLOSE_FRACTION using long double
+          literals, with at least 35 decimal digits, enough to be accurate for all
+          long double implementations. The tolerance is usually twice <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span> <span class="identifier">epsilon</span></code>.
+        </li>
+<li class="listitem">
+          Comparison with calculation at long double precision. This often requires
+          a slightly higher tolerance than two epsilon because of computational noise
+          from round-off etc, especially when trig and other functions are called.
+        </li>
+<li class="listitem">
+          Comparison with independent published values, for example, using <a href="http://oeis.org/" target="_top">The On-Line Encyclopedia of Integer Sequences (OEIS)</a>
+          again using at least 35 decimal digits strings.
+        </li>
+<li class="listitem">
+          Comparison with independently calculated values using arbitrary precision
+          tools like <a href="http://www.wolfram.com/mathematica/" target="_top">Mathematica</a>,
+          again using at least 35 decimal digits literal strings.
+        </li>
+</ol></div>
+<div class="warning"><table border="0" summary="Warning">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../../../doc/src/images/warning.png"></td>
+<th align="left">Warning</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        We have not yet been able to <span class="bold"><strong>check</strong></span> that
+        <span class="bold"><strong>all</strong></span> constants are accurate at the full arbitrary
+        precision, at present 100 decimal digits. But certain key values like <code class="computeroutput"><span class="identifier">e</span></code> and <code class="computeroutput"><span class="identifier">pi</span></code>
+        appear to be accurate and internal consistencies suggest that others are
+        this accurate too.
+      </p></td></tr>
+</table></div>
+<h5>
+<a name="math_toolkit.constants_faq.h5"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.why_is_portability_important"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.why_is_portability_important">Why is Portability
+      important?</a>
+    </h5>
+<p>
+      Code written using math constants is easily portable even when using different
+      floating-point types with differing precision.
+    </p>
+<p>
+      It is a mistake to expect that results of computations will be <span class="bold"><strong>identical</strong></span>,
+      but you can achieve the <span class="bold"><strong>best accuracy possible for the
+      floating-point type in use</strong></span>.
+    </p>
+<p>
+      This has no extra cost to the user, but reduces irritating, and often confusing
+      and very hard-to-trace effects, caused by the intrinsically limited precision
+      of floating-point calculations.
+    </p>
+<p>
+      A harmless symptom of this limit is a spurious least-significant digit; at
+      worst, slightly inaccurate constants sometimes cause iterating algorithms to
+      diverge wildly because internal comparisons just fail.
+    </p>
+<h5>
+<a name="math_toolkit.constants_faq.h6"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.what_is_the_internal_format_of_t"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.what_is_the_internal_format_of_t">What
+      is the Internal Format of the constants, and why?</a>
+    </h5>
+<p>
+      See <a class="link" href="tutorial.html" title="Tutorial">tutorial</a> above for normal
+      use, but this FAQ explains the internal details used for the constants.
+    </p>
+<p>
+      Constants are stored as 100 decimal digit values. However, some compilers do
+      not accept decimal digits strings as long as this. So the constant is split
+      into two parts, with the first containing at least 128-bit long double precision
+      (35 decimal digits), and for consistency should be in scientific format with
+      a signed exponent.
+    </p>
+<p>
+      The second part is the value of the constant expressed as a string literal,
+      accurate to at least 100 decimal digits (in practice that means at least 102
+      digits). Again for consistency use scientific format with a signed exponent.
+    </p>
+<p>
+      For types with precision greater than a long double, then if T is constructible
+      <code class="computeroutput"><span class="identifier">T</span> </code>is constructible from a
+      <code class="computeroutput"><span class="keyword">const</span> <span class="keyword">char</span><span class="special">*</span></code> then it's directly constructed from the string,
+      otherwise we fall back on lexical_cast to convert to type <code class="computeroutput"><span class="identifier">T</span></code>.
+      (Using a string is necessary because you can't use a numeric constant since
+      even a <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+      might not have enough digits).
+    </p>
+<p>
+      So, for example, a constant like pi is internally defined as
+    </p>
+<pre class="programlisting"><span class="identifier">BOOST_DEFINE_MATH_CONSTANT</span><span class="special">(</span><span class="identifier">pi</span><span class="special">,</span> <span class="number">3.141592653589793238462643383279502884e+00</span><span class="special">,</span> <span class="string">"3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651e+00"</span><span class="special">);</span>
+</pre>
+<p>
+      In this case the significand is 109 decimal digits, ensuring 100 decimal digits
+      are exact, and exponent is zero.
+    </p>
+<p>
+      See <a class="link" href="new_const.html" title="Defining New Constants">defining new constants</a> to
+      calculate new constants.
+    </p>
+<p>
+      A macro definition like this can be pasted into user code where convenient,
+      or into <code class="computeroutput"><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">constants</span><span class="special">.</span><span class="identifier">hpp</span></code> if it
+      is to be added to the Boost.Math library.
+    </p>
+<h5>
+<a name="math_toolkit.constants_faq.h7"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.what_floating_point_types_could_"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.what_floating_point_types_could_">What
+      Floating-point Types could I use?</a>
+    </h5>
+<p>
+      Apart from the built-in floating-point types <code class="computeroutput"><span class="keyword">float</span></code>,
+      <code class="computeroutput"><span class="keyword">double</span></code>, <code class="computeroutput"><span class="keyword">long</span>
+      <span class="keyword">double</span></code>, there are several arbitrary
+      precision floating-point classes available, but most are not licensed for commercial
+      use.
+    </p>
+<h6>
+<a name="math_toolkit.constants_faq.h8"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.boost_multiprecision_by_christop"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.boost_multiprecision_by_christop">Boost.Multiprecision
+      by Christopher Kormanyos and John Maddock</a>
+    </h6>
+<p>
+      This is a well-maintained and fully featured library which provides numerous
+      high-precision types, as well as wrappers to other popular libraries like MPFR.
+    </p>
+<h6>
+<a name="math_toolkit.constants_faq.h9"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.ntl_class_quad_float"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.ntl_class_quad_float">NTL
+      class quad_float</a>
+    </h6>
+<p>
+      <a href="http://shoup.net/ntl/" target="_top">NTL</a> by Victor Shoup has fixed and
+      arbitrary high precision fixed and floating-point types. However none of these
+      are licenced for commercial use.
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">NTL</span><span class="special">/</span><span class="identifier">quad_float</span><span class="special">.</span><span class="identifier">h</span><span class="special">&gt;</span> <span class="comment">// quad precision 106-bit, about 32 decimal digits.</span>
+<span class="keyword">using</span> <span class="identifier">NTL</span><span class="special">::</span><span class="identifier">to_quad_float</span><span class="special">;</span> <span class="comment">// Less precise than arbitrary precision NTL::RR.</span>
+</pre>
+<p>
+      NTL class <code class="computeroutput"><span class="identifier">quad_float</span></code>, which
+      gives a form of quadruple precision, 106-bit significand (but without an extended
+      exponent range.) With an IEC559/IEEE 754 compatible processor, for example
+      Intel X86 family, with 64-bit double, and 53-bit significand, using the significands
+      of <span class="bold"><strong>two</strong></span> 64-bit doubles, if <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">digits10</span></code> is 16, then we get about twice the
+      precision, so <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">quad_float</span><span class="special">&gt;::</span><span class="identifier">digits10</span><span class="special">()</span></code>
+      should be 32. (the default <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">RR</span><span class="special">&gt;::</span><span class="identifier">digits10</span><span class="special">()</span></code>
+      should be about 40). (which seems to agree with experiments). We output constants
+      (including some noisy bits, an approximation to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">RR</span><span class="special">&gt;::</span><span class="identifier">max_digits10</span><span class="special">()</span></code>)
+      by adding 2 or 3 extra decimal digits, so using <code class="computeroutput"><span class="identifier">quad_float</span><span class="special">::</span><span class="identifier">SetOutputPrecision</span><span class="special">(</span><span class="number">32</span> <span class="special">+</span>
+      <span class="number">3</span><span class="special">);</span></code>
+    </p>
+<p>
+      Apple Mac/Darwin uses a similar <span class="emphasis"><em>doubledouble</em></span> 106-bit for
+      its built-in <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+      type.
+    </p>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        The precision of all <code class="computeroutput"><span class="identifier">doubledouble</span></code>
+        floating-point types is rather odd and values given are only approximate.
+      </p></td></tr>
+</table></div>
+<p>
+      <span class="bold"><strong>New projects should use <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>.</strong></span>
+    </p>
+<h6>
+<a name="math_toolkit.constants_faq.h10"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.ntl_class_rr"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.ntl_class_rr">NTL
+      class RR</a>
+    </h6>
+<p>
+      Arbitrary precision floating point with NTL class RR, default is 150 bit (about
+      50 decimal digits) used here with 300 bit to output 100 decimal digits, enough
+      for many practical non-'number-theoretic' C++ applications.
+    </p>
+<p>
+      <a href="http://www.shoup.net/ntl/" target="_top">NTL A Library for doing Number Theory</a>
+      is <span class="bold"><strong>not licenced for commercial use</strong></span>.
+    </p>
+<p>
+      This class is used in Boost.Math and is an option when using big_number projects
+      to calculate new math constants.
+    </p>
+<p>
+      <span class="bold"><strong>New projects should use <a href="../../../../../libs/multiprecision/doc/html/index.html" target="_top">Boost.Multiprecision</a>.</strong></span>
+    </p>
+<h6>
+<a name="math_toolkit.constants_faq.h11"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.gmp_and_mpfr"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.gmp_and_mpfr">GMP
+      and MPFR</a>
+    </h6>
+<p>
+      <a href="http://gmplib.org" target="_top">GMP</a> and <a href="http://www.mpfr.org/" target="_top">MPFR</a>
+      have also been used to compute constants, but are licensed under the <a href="http://www.gnu.org/copyleft/lesser.html" target="_top">Lesser GPL license</a> and
+      are <span class="bold"><strong>not licensed for commercial use</strong></span>.
+    </p>
+<h5>
+<a name="math_toolkit.constants_faq.h12"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.what_happened_to_a_previous_coll"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.what_happened_to_a_previous_coll">What
+      happened to a previous collection of constants proposed for Boost?</a>
+    </h5>
+<p>
+      A review concluded that the way in which the constants were presented did not
+      meet many peoples needs. None of the methods proposed met many users' essential
+      requirement to allow writing simply <code class="computeroutput"><span class="identifier">pi</span></code>
+      rather than <code class="computeroutput"><span class="identifier">pi</span><span class="special">()</span></code>.
+      Many science and engineering equations look difficult to read because function
+      call brackets can be confused with the many other brackets often needed. All
+      the methods then proposed of avoiding the brackets failed to meet all needs,
+      often on grounds of complexity and lack of applicability to various realistic
+      scenarios.
+    </p>
+<p>
+      So the simple namespace method, proposed on its own, but rejected at the first
+      review, has been added to allow users to have convenient access to <code class="computeroutput"><span class="keyword">float</span></code>, <code class="computeroutput"><span class="keyword">double</span></code>
+      and <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>
+      values, but combined with template struct and functions to allow simultaneous
+      use with other non-built-in floating-point types.
+    </p>
+<h5>
+<a name="math_toolkit.constants_faq.h13"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.why_do_the_constants_internally_"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.why_do_the_constants_internally_">Why do
+      the constants (internally) have a struct rather than a simple function?</a>
+    </h5>
+<p>
+      A function mechanism was provided by in previous versions of Boost.Math.
+    </p>
+<p>
+      The new mechanism is to permit partial specialization. See Custom Specializing
+      a constant above. It should also allow use with other packages like <a href="http://www.ttmath.org/" target="_top">ttmath Bignum C++ library.</a>
+    </p>
+<h5>
+<a name="math_toolkit.constants_faq.h14"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.where_can_i_find_other_high_prec"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.where_can_i_find_other_high_prec">Where
+      can I find other high precision constants?</a>
+    </h5>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+          Constants with very high precision and good accuracy (&gt;40 decimal digits)
+          from Simon Plouffe's web based collection <a href="http://pi.lacim.uqam.ca/eng/" target="_top">http://pi.lacim.uqam.ca/eng/</a>.
+        </li>
+<li class="listitem">
+          <a href="https://oeis.org/" target="_top">The On-Line Encyclopedia of Integer Sequences
+          (OEIS)</a>
+        </li>
+<li class="listitem">
+          Checks using printed text optically scanned values and converted from:
+          D. E. Knuth, Art of Computer Programming, Appendix A, Table 1, Vol 1, ISBN
+          0 201 89683 4 (1997)
+        </li>
+<li class="listitem">
+          M. Abrahamovitz &amp; I. E. Stegun, National Bureau of Standards, Handbook
+          of Mathematical Functions, a reference source for formulae now superseded
+          by
+        </li>
+<li class="listitem">
+          Frank W. Olver, Daniel W. Lozier, Ronald F. Boisvert, Charles W. Clark,
+          NIST Handbook of Mathematical Functions, Cambridge University Press, ISBN
+          978-0-521-14063-8, 2010.
+        </li>
+<li class="listitem">
+          John F Hart, Computer Approximations, Kreiger (1978) ISBN 0 88275 642 7.
+        </li>
+<li class="listitem">
+          Some values from Cephes Mathematical Library, Stephen L. Moshier and CALC100
+          100 decimal digit Complex Variable Calculator Program, a DOS utility.
+        </li>
+<li class="listitem">
+          Xavier Gourdon, Pascal Sebah, 50 decimal digits constants at <a href="http://numbers.computation.free.fr/Constants/constants.html" target="_top">Number,
+          constants and computation</a>.
+        </li>
+</ol></div>
+<h5>
+<a name="math_toolkit.constants_faq.h15"></a>
+      <span class="phrase"><a name="math_toolkit.constants_faq.where_are_physical_constants"></a></span><a class="link" href="constants_faq.html#math_toolkit.constants_faq.where_are_physical_constants">Where are
+      Physical Constants?</a>
+    </h5>
+<p>
+      Not here, because physical constants:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Are measurements, not truly constants.
+        </li>
+<li class="listitem">
+          Are not truly constant and keeping changing as metrology improves.
+        </li>
+<li class="listitem">
+          Have intrinsic uncertainty.
+        </li>
+<li class="listitem">
+          Mathematical constants are stored and represented at varying precision,
+          but should never be inaccurate.
+        </li>
+</ul></div>
+<p>
+      Some physical constants may be available in Boost.Units.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="new_const.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../constants.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../dist.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

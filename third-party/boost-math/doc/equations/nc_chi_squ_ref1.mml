@@ -1,0 +1,35 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <munderover>
+      <mo>&#x2211;</mo>
+      <mrow>
+        <mi>i</mi>
+        <mo>=</mo>
+        <mn>1</mn>
+      </mrow>
+      <mi>k</mi>
+    </munderover>
+    <msup>
+      <mfenced>
+        <mrow>
+          <mfrac>
+            <mrow>
+              <msub>
+                <mi>&#x03C7;</mi>
+                <mi>i</mi>
+              </msub>
+            </mrow>
+            <mrow>
+              <msub>
+                <mi>&#x03C3;</mi>
+                <mi>i</mi>
+              </msub>
+            </mrow>
+          </mfrac>
+        </mrow>
+      </mfenced>
+      <mn>2</mn>
+    </msup>
+  </mrow>
+</math>
+

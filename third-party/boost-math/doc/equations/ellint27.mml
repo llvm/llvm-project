@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd" [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>ellint27</title>
+<!-- MathML created with MathCast Equation Editor version 0.92 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <msub>
+      <mi>R</mi>
+      <mi>G</mi>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+        <mo>,</mo>
+        <mi>y</mi>
+        <mo>,</mo>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <mfrac>
+      <mn>1</mn>
+      <mrow>
+        <mn>4</mn>
+        <mi>&#x3c0;</mi>
+      </mrow>
+    </mfrac>
+    <msubsup>
+      <mo>&#x222b;</mo>
+      <mrow>
+        <mn>0</mn>
+      </mrow>
+      <mrow>
+        <mn>2</mn>
+        <mi>&#x3c0;</mi>
+      </mrow>
+    </msubsup>
+    <msubsup>
+      <mo>&#x222b;</mo>
+      <mrow>
+        <mn>0</mn>
+      </mrow>
+      <mi>&#x3c0;</mi>
+    </msubsup>
+    <msqrt>
+      <mfenced>
+        <mrow>
+          <mi>x</mi>
+          <msup>
+            <mi>sin</mi>
+            <mn>2</mn>
+          </msup>
+          <mi>&#x3b8;</mi>
+          <msup>
+            <mi>cos</mi>
+            <mn>2</mn>
+          </msup>
+          <mi>&#x3c6;</mi>
+          <mo>+</mo>
+          <mi>y</mi>
+          <msup>
+            <mi>sin</mi>
+            <mn>2</mn>
+          </msup>
+          <mi>&#x3b8;</mi>
+          <msup>
+            <mi>sin</mi>
+            <mn>2</mn>
+          </msup>
+          <mi>&#x3c6;</mi>
+          <mo>+</mo>
+          <mi>z</mi>
+          <msup>
+            <mi>cos</mi>
+            <mn>2</mn>
+          </msup>
+          <mi>&#x3b8;</mi>
+        </mrow>
+      </mfenced>
+    </msqrt>
+    <mrow>
+      <mi>sin</mi>
+      <mi>&#x3b8;</mi>
+    </mrow>
+    <mrow>
+      <mo>&#x2146;</mo>
+      <mi>&#x3b8;</mi>
+    </mrow>
+    <mrow>
+      <mo>&#x2146;</mo>
+      <mi>&#x3c6;</mi>
+    </mrow>
+  </mrow>
+</math></body>
+</html>

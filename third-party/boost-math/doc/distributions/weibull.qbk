@@ -1,0 +1,138 @@
+[section:weibull_dist Weibull Distribution]
+
+``#include <boost/math/distributions/weibull.hpp>``
+
+   namespace boost{ namespace math{ 
+      
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class weibull_distribution;
+   
+   typedef weibull_distribution<> weibull;
+   
+   template <class RealType, class ``__Policy``>
+   class weibull_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+      // Construct:
+      BOOST_MATH_GPU_ENABLED weibull_distribution(RealType shape, RealType scale = 1)
+      // Accessors:
+      BOOST_MATH_GPU_ENABLED RealType shape()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+   };
+   
+   }} // namespaces
+   
+The [@http://en.wikipedia.org/wiki/Weibull_distribution Weibull distribution]
+is a continuous distribution
+with the 
+[@http://en.wikipedia.org/wiki/Probability_density_function probability density function]:
+
+[expression f(x; [alpha], [beta]) = ([alpha]\/[beta]) * (x \/ [beta])[super [alpha] - 1] * e[super -(x\/[beta])[super [alpha]]]]
+
+For shape parameter ['[alpha]] > 0, and scale parameter ['[beta]] > 0, and /x/ > 0.
+
+The Weibull distribution is often used in the field of failure analysis;
+in particular it can mimic distributions where the failure rate varies over time.
+If the failure rate is:
+
+* constant over time, then ['[alpha]] = 1, suggests that items are failing from random events.
+* decreases over time, then ['[alpha]] < 1, suggesting "infant mortality".
+* increases over time, then ['[alpha]] > 1, suggesting "wear out" - more likely to fail as time goes by.
+
+The following graph illustrates how the PDF varies with the shape parameter ['[alpha]]:
+
+[graph weibull_pdf1]
+
+While this graph illustrates how the PDF varies with the scale parameter ['[beta]]:
+
+[graph weibull_pdf2]
+
+[h4 Related distributions]
+
+When ['[alpha]] = 3, the
+[@http://en.wikipedia.org/wiki/Weibull_distribution Weibull distribution] appears similar to the
+[@http://en.wikipedia.org/wiki/Normal_distribution normal distribution].
+When ['[alpha]] = 1, the Weibull distribution reduces to the
+[@http://en.wikipedia.org/wiki/Exponential_distribution exponential distribution].
+The relationship of the types of extreme value distributions, of which the Weibull is but one, is
+discussed by
+[@https://www.google.com/books/edition/Extreme_Value_Distributions/GwBqDQAAQBAJ?hl=en&gbpv=0 Extreme Value Distributions, Theory and Applications
+Samuel Kotz & Saralees Nadarajah].
+
+   
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED weibull_distribution(RealType shape, RealType scale = 1);
+   
+Constructs a [@http://en.wikipedia.org/wiki/Weibull_distribution 
+Weibull distribution] with shape /shape/ and scale /scale/.
+
+Requires that the /shape/ and /scale/ parameters are both greater than zero, 
+otherwise calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType shape()const;
+   
+Returns the /shape/ parameter of this distribution.
+   
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+      
+Returns the /scale/ parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[0, [infin]\].
+
+In this distribution the implementation of both `logcdf`, and `logpdf` are specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The Weibull distribution is implemented in terms of the 
+standard library `log` and `exp` functions plus __expm1 and __log1p
+and as such should have very low error rates.
+
+[h4 Implementation]
+
+
+In the following table ['[alpha]] is the shape parameter of the distribution, 
+['[beta]] is its scale parameter, /x/ is the random variate, /p/ is the probability
+and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = [alpha][beta][super -[alpha] ]x[super [alpha] - 1] e[super -(x/beta)[super alpha]] ]]
+[[logpdf][log(pdf) = log([alpha]) - [alpha] * log([beta]) + log(x) * ([alpha]-1) - pow(x/[beta], [alpha]) ]]
+[[cdf][Using the relation: p = -__expm1(-(x\/[beta])[super [alpha]]) ]]
+[[logcdf][log(cdf) = log1p(-exp(-pow(x / [beta], [alpha]))) ]]
+[[cdf complement][Using the relation: q = e[super -(x\/[beta])[super [alpha]]] ]]
+[[quantile][Using the relation: x = [beta] * (-__log1p(-p))[super 1\/[alpha]] ]]
+[[quantile from the complement][Using the relation: x = [beta] * (-log(q))[super 1\/[alpha]] ]]
+[[mean][[beta] * [Gamma](1 + 1\/[alpha]) ]]
+[[variance][[beta][super 2]([Gamma](1 + 2\/[alpha]) - [Gamma][super 2](1 + 1\/[alpha])) ]]
+[[mode][[beta](([alpha] - 1) \/ [alpha])[super 1\/[alpha]] ]]
+[[skewness][Refer to [@http://mathworld.wolfram.com/WeibullDistribution.html Weisstein, Eric W. "Weibull Distribution." From MathWorld--A Wolfram Web Resource.] ]]
+[[kurtosis][Refer to [@http://mathworld.wolfram.com/WeibullDistribution.html Weisstein, Eric W. "Weibull Distribution." From MathWorld--A Wolfram Web Resource.] ]]
+[[kurtosis excess][Refer to [@http://mathworld.wolfram.com/WeibullDistribution.html Weisstein, Eric W. "Weibull Distribution." From MathWorld--A Wolfram Web Resource.] ]]
+]
+
+[h4 References]
+* [@http://en.wikipedia.org/wiki/Weibull_distribution ]
+* [@http://mathworld.wolfram.com/WeibullDistribution.html Weisstein, Eric W. "Weibull Distribution." From MathWorld--A Wolfram Web Resource.]
+* [@http://www.itl.nist.gov/div898/handbook/eda/section3/eda3668.htm Weibull in NIST Exploratory Data Analysis]
+
+[endsect] [/section:weibull Weibull]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

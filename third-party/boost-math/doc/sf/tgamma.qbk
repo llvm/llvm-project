@@ -1,0 +1,140 @@
+[section:tgamma Gamma]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/gamma.hpp>
+``
+
+  namespace boost{ namespace math{
+  
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma(T z);
+  
+  template <class T, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma(T z, const ``__Policy``&);
+  
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma1pm1(T dz);
+  
+  template <class T, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma1pm1(T dz, const ``__Policy``&);
+  
+  }} // namespaces
+  
+[h4 Description]
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma(T z);
+  
+  template <class T, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma(T z, const ``__Policy``&);
+  
+Returns the "true gamma" (hence name tgamma) of value z:
+
+[equation gamm1]
+
+[graph tgamma]
+
+[optional_policy]
+
+The return type of this function is computed using the __arg_promotion_rules:
+the result is `double` when T is an integer type, and T otherwise.
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma1pm1(T dz);
+  
+  template <class T, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` tgamma1pm1(T dz, const ``__Policy``&);
+  
+Returns `tgamma(dz + 1) - 1`.  Internally the implementation does not make
+use of the addition and subtraction implied by the definition, leading to
+accurate results even for very small `dz`.
+  
+The return type of this function is computed using the __arg_promotion_rules:
+the result is `double` when T is an integer type, and T otherwise.
+
+[optional_policy]
+
+[h4 Accuracy]
+
+The following table shows the peak errors (in units of epsilon) 
+found on various platforms with various floating point types, 
+along with comparisons to other common libraries.
+Unless otherwise specified any floating point type that is narrower
+than the one shown will have __zero_error.
+
+[table_tgamma]
+
+[table_tgamma1pm1]
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph tgamma__double]
+
+[graph tgamma__80_bit_long_double]
+
+[graph tgamma____float128]
+
+
+[h4 Testing]
+
+The gamma is relatively easy to test: factorials and half-integer factorials
+can be calculated exactly by other means and compared with the gamma function.
+In addition, some accuracy tests in known tricky areas were computed at high precision
+using the generic version of this function.
+
+The function `tgamma1pm1` is tested against values calculated very naively
+using the formula `tgamma(1+dz)-1` with a lanczos approximation accurate
+to around 100 decimal digits.
+
+[h4 Implementation]
+
+The generic version of the `tgamma` function is implemented Sterling's approximation
+for `lgamma` for large z:
+
+[equation gamma6]
+
+Following exponentiation, downward recursion is then used for small values of z.
+
+For types of known precision the __lanczos is used, a traits class 
+`boost::math::lanczos::lanczos_traits` maps type T to an appropriate
+approximation.  
+
+For z in the range -20 < z < 1 then recursion is used to shift to z > 1 via:
+
+[equation gamm3]
+
+For very small z, this helps to preserve the identity:
+
+[equation gamm4]
+
+For z < -20 the reflection formula:
+
+[equation gamm5]
+
+is used.  Particular care has to be taken to evaluate the [^ z * sin([pi] * z)] part: 
+a special routine is used to reduce z prior to multiplying by [pi] to ensure that the
+result in is the range [0, [pi]/2]. Without this an excessive amount of error occurs
+in this region (which is hard enough already, as the rate of change near a negative pole
+is /exceptionally/ high).
+
+Finally if the argument is a small integer then table lookup of the factorial
+is used.
+
+The function `tgamma1pm1` is implemented using rational approximations [jm_rationals] in the
+region `-0.5 < dz < 2`.  These are the same approximations (and internal routines)
+that are used for __lgamma, and so aren't detailed further here.  The result of
+the approximation is `log(tgamma(dz+1))` which can fed into __expm1 to give
+the desired result.  Outside the range `-0.5 < dz < 2` then the naive formula
+`tgamma1pm1(dz) = tgamma(dz+1)-1` can be used directly.
+
+[endsect] [/section:tgamma The Gamma Function]
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

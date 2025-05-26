@@ -1,0 +1,135 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>acosh</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../inv_hyper.html" title="Inverse Hyperbolic Functions">
+<link rel="prev" href="inv_hyper_over.html" title="Inverse Hyperbolic Functions Overview">
+<link rel="next" href="asinh.html" title="asinh">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="inv_hyper_over.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../inv_hyper.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="asinh.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.inv_hyper.acosh"></a><a class="link" href="acosh.html" title="acosh">acosh</a>
+</h3></div></div></div>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">acosh</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">acosh</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>calculated-result-type</em></span></a> <span class="identifier">acosh</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">const</span> <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&amp;);</span>
+</pre>
+<p>
+        Computes the reciprocal of (the restriction to the range of <code class="literal">[0;+∞[</code>)
+        <a class="link" href="inv_hyper_over.html" title="Inverse Hyperbolic Functions Overview">the hyperbolic cosine
+        function</a>, at x. Values returned are positive.
+      </p>
+<p>
+        If x is in the range <code class="literal">]-∞;+1[</code> then returns the result of
+        <a class="link" href="../error_handling.html#math_toolkit.error_handling.domain_error">domain_error</a>.
+      </p>
+<p>
+        The return type of this function is computed using the <a class="link" href="../result_type.html" title="Calculation of the Type of the Result"><span class="emphasis"><em>result
+        type calculation rules</em></span></a>: the return type is <code class="computeroutput"><span class="keyword">double</span></code> when T is an integer type, and T otherwise.
+      </p>
+<p>
+        The final <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a> argument is optional and can
+        be used to control the behaviour of the function: how it handles errors,
+        what level of precision to use etc. Refer to the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">policy
+        documentation for more details</a>.
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/acosh.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.inv_hyper.acosh.h0"></a>
+        <span class="phrase"><a name="math_toolkit.inv_hyper.acosh.accuracy"></a></span><a class="link" href="acosh.html#math_toolkit.inv_hyper.acosh.accuracy">Accuracy</a>
+      </h5>
+<p>
+        Generally accuracy is to within 1 or 2 <a href="http://en.wikipedia.org/wiki/Machine_epsilon" target="_top">machine
+        epsilon</a> across all supported platforms.
+      </p>
+<h5>
+<a name="math_toolkit.inv_hyper.acosh.h1"></a>
+        <span class="phrase"><a name="math_toolkit.inv_hyper.acosh.testing"></a></span><a class="link" href="acosh.html#math_toolkit.inv_hyper.acosh.testing">Testing</a>
+      </h5>
+<p>
+        This function is tested using a combination of random test values designed
+        to give full function coverage computed at high precision using the "naive"
+        formula:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/acosh1.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        along with a selection of sanity check values computed using functions.wolfram.com
+        to at least 50 decimal digits.
+      </p>
+<h5>
+<a name="math_toolkit.inv_hyper.acosh.h2"></a>
+        <span class="phrase"><a name="math_toolkit.inv_hyper.acosh.implementation"></a></span><a class="link" href="acosh.html#math_toolkit.inv_hyper.acosh.implementation">Implementation</a>
+      </h5>
+<p>
+        For sufficiently large x, we can use the <a href="http://functions.wolfram.com/ElementaryFunctions/ArcCosh/06/01/06/01/0001/" target="_top">approximation</a>:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/acosh2.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        For x sufficiently close to 1 we can use the <a href="http://functions.wolfram.com/ElementaryFunctions/ArcCosh/06/01/04/01/0001/" target="_top">approximation</a>:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/acosh4.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Otherwise for x close to 1 we can use the following rearrangement of the
+        primary definition to preserve accuracy:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/acosh3.svg"></span>
+
+        </p></blockquote></div>
+<p>
+        Otherwise the <a href="http://functions.wolfram.com/ElementaryFunctions/ArcCosh/02/" target="_top">primary
+        definition</a> is used:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../equations/acosh1.svg"></span>
+
+        </p></blockquote></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="inv_hyper_over.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../inv_hyper.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="asinh.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

@@ -1,0 +1,159 @@
+[section:laguerre Laguerre (and Associated) Polynomials]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/laguerre.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T>
+   ``__sf_result`` laguerre(unsigned n, T x);
+   
+   template <class T, class ``__Policy``>
+   ``__sf_result`` laguerre(unsigned n, T x, const ``__Policy``&);
+   
+   template <class T>
+   ``__sf_result`` laguerre(unsigned n, unsigned m, T x);
+   
+   template <class T, class ``__Policy``>
+   ``__sf_result`` laguerre(unsigned n, unsigned m, T x, const ``__Policy``&);
+   
+   template <class T1, class T2, class T3>
+   ``__sf_result`` laguerre_next(unsigned n, T1 x, T2 Ln, T3 Lnm1);
+   
+   template <class T1, class T2, class T3>
+   ``__sf_result`` laguerre_next(unsigned n, unsigned m, T1 x, T2 Ln, T3 Lnm1);
+
+   
+   }} // namespaces
+   
+[h4 Description]
+
+The return type of these functions is computed using the __arg_promotion_rules:
+note than when there is a single template argument the result is the same type 
+as that argument or `double` if the template argument is an integer type.
+
+[optional_policy]
+
+   template <class T>
+   ``__sf_result`` laguerre(unsigned n, T x);
+   
+   template <class T, class ``__Policy``>
+   ``__sf_result`` laguerre(unsigned n, T x, const ``__Policy``&);
+   
+Returns the value of the Laguerre Polynomial of order /n/ at point /x/:
+
+[equation laguerre_0]
+
+The following graph illustrates the behaviour of the first few 
+Laguerre Polynomials:
+
+[graph laguerre]
+   
+   template <class T>
+   ``__sf_result`` laguerre(unsigned n, unsigned m, T x);
+   
+   template <class T, class ``__Policy``>
+   ``__sf_result`` laguerre(unsigned n, unsigned m, T x, const ``__Policy``&);
+   
+Returns the Associated Laguerre polynomial of degree /n/ 
+and order /m/ at point /x/:
+
+[equation laguerre_1]
+   
+   template <class T1, class T2, class T3>
+   ``__sf_result`` laguerre_next(unsigned n, T1 x, T2 Ln, T3 Lnm1);
+   
+Implements the three term recurrence relation for the Laguerre
+polynomials, this function can be used to create a sequence of
+values evaluated at the same /x/, and for rising /n/.
+
+[equation laguerre_2]
+
+For example we could produce a vector of the first 10 polynomial
+values using:
+
+   double x = 0.5;  // Abscissa value
+   vector<double> v;
+   v.push_back(laguerre(0, x)).push_back(laguerre(1, x));
+   for(unsigned l = 1; l < 10; ++l)
+      v.push_back(laguerre_next(l, x, v[l], v[l-1]));
+      
+Formally the arguments are:
+
+[variablelist
+[[n][The degree /n/ of the last polynomial calculated.]]
+[[x][The abscissa value]]
+[[Ln][The value of the polynomial evaluated at degree /n/.]]
+[[Lnm1][The value of the polynomial evaluated at degree /n-1/.]]
+]
+   
+   template <class T1, class T2, class T3>
+   ``__sf_result`` laguerre_next(unsigned n, unsigned m, T1 x, T2 Ln, T3 Lnm1);
+
+Implements the three term recurrence relation for the Associated Laguerre
+polynomials, this function can be used to create a sequence of
+values evaluated at the same /x/, and for rising degree /n/.
+
+[equation laguerre_3]
+
+For example we could produce a vector of the first 10 polynomial
+values using:
+
+   double x = 0.5;  // Abscissa value
+   int m = 10;      // order
+   vector<double> v;
+   v.push_back(laguerre(0, m, x)).push_back(laguerre(1, m, x));
+   for(unsigned l = 1; l < 10; ++l)
+      v.push_back(laguerre_next(l, m, x, v[l], v[l-1]));
+      
+Formally the arguments are:
+
+[variablelist
+[[n][The degree of the last polynomial calculated.]]
+[[m][The order of the Associated Polynomial.]]
+[[x][The abscissa value.]]
+[[Ln][The value of the polynomial evaluated at degree /n/.]]
+[[Lnm1][The value of the polynomial evaluated at degree /n-1/.]]
+]
+   
+[h4 Accuracy]
+
+The following table shows peak errors (in units of epsilon) 
+for various domains of input arguments.  
+Note that only results for the widest floating point type on the system are 
+given as narrower types have __zero_error.
+
+[table_laguerre_n_x_]
+
+[table_laguerre_n_m_x_]
+
+Note that the worst errors occur when the degree increases, values greater than
+~120 are very unlikely to produce sensible results, especially in the associated
+polynomial case when the order is also large.  Further the relative errors
+are likely to grow arbitrarily large when the function is very close to a root.
+
+[h4 Testing]
+
+A mixture of spot tests of values calculated using functions.wolfram.com, 
+and randomly generated test data are
+used: the test data was computed using
+[@http://shoup.net/ntl/doc/RR.txt NTL::RR] at 1000-bit precision.
+
+[h4 Implementation]
+
+These functions are implemented using the stable three term
+recurrence relations.  These relations guarantee low absolute error
+but cannot guarantee low relative error near one of the roots of the
+polynomials.
+
+[endsect][/section:beta_function The Beta Function]
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

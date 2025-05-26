@@ -1,0 +1,50 @@
+[section:beta_derivative Derivative of the Incomplete Beta Function]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/beta.hpp>
+``
+
+   namespace boost{ namespace math{ 
+   
+   template <class T1, class T2, class T3>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibeta_derivative(T1 a, T2 b, T3 x);
+   
+   template <class T1, class T2, class T3, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` ibeta_derivative(T1 a, T2 b, T3 x, const ``__Policy``&);
+   
+   }} // namespaces
+   
+[h4 Description]
+
+This function finds some uses in statistical distributions: it 
+computes the partial derivative with respect to /x/ of the incomplete
+beta function __ibeta.
+
+[equation derivative2]
+
+The return type of this function is computed using the __arg_promotion_rules
+when T1, T2 and T3 are different types.
+
+[optional_policy]
+
+[h4 Accuracy]
+
+Almost identical to the incomplete beta function __ibeta.
+
+[h4 Implementation]
+
+This function just expose some of the internals of the incomplete
+beta function __ibeta: refer to the documentation for that function
+for more information.
+
+[endsect] [/section Derivatives of the Incomplete Beta and Gamma Functions]
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+

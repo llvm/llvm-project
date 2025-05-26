@@ -1,0 +1,186 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Generalizing to Compute the nth root</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../root_finding_examples.html" title="Examples of Root-Finding (with and without derivatives)">
+<link rel="prev" href="multiprecision_root.html" title="Root-finding using Boost.Multiprecision">
+<link rel="next" href="elliptic_eg.html" title="A More complex example - Inverting the Elliptic Integrals">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="multiprecision_root.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding_examples.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="elliptic_eg.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.root_finding_examples.nth_root"></a><a class="link" href="nth_root.html" title="Generalizing to Compute the nth root">Generalizing
+      to Compute the nth root</a>
+</h3></div></div></div>
+<p>
+        If desired, we can now further generalize to compute the <span class="emphasis"><em>n</em></span>th
+        root by computing the derivatives <span class="bold"><strong>at compile-time</strong></span>
+        using the rules for differentiation and <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">pow</span><span class="special">&lt;</span><span class="identifier">N</span><span class="special">&gt;</span></code> where
+        template parameter <code class="computeroutput"><span class="identifier">N</span></code> is an
+        integer and a compile time constant. Our functor and function now have an
+        additional template parameter <code class="computeroutput"><span class="identifier">N</span></code>,
+        for the root required.
+      </p>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          Since the powers and derivatives are fixed at compile time, the resulting
+          code is as efficient as as if hand-coded as the cube and fifth-root examples
+          above. A good compiler should also optimise any repeated multiplications.
+        </p></td></tr>
+</table></div>
+<p>
+        Our <span class="emphasis"><em>n</em></span>th root functor is
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">int</span> <span class="identifier">N</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">nth_functor_2deriv</span>
+<span class="special">{</span> <span class="comment">// Functor returning both 1st and 2nd derivatives.</span>
+  <span class="keyword">static_assert</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">is_integral</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span> <span class="special">==</span> <span class="keyword">false</span><span class="special">,</span> <span class="string">"Only floating-point type types can be used!"</span><span class="special">);</span>
+  <span class="keyword">static_assert</span><span class="special">((</span><span class="identifier">N</span> <span class="special">&gt;</span> <span class="number">0</span><span class="special">)</span> <span class="special">==</span> <span class="keyword">true</span><span class="special">,</span> <span class="string">"root N must be &gt; 0!"</span><span class="special">);</span>
+
+  <span class="identifier">nth_functor_2deriv</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">to_find_root_of</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">a</span><span class="special">(</span><span class="identifier">to_find_root_of</span><span class="special">)</span>
+  <span class="special">{</span> <span class="comment">/* Constructor stores value a to find root of, for example: */</span> <span class="special">}</span>
+
+  <span class="comment">// using boost::math::tuple; // to return three values.</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">T</span><span class="special">,</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">)</span>
+  <span class="special">{</span>
+    <span class="comment">// Return f(x), f'(x) and f''(x).</span>
+    <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">pow</span><span class="special">;</span>
+    <span class="identifier">T</span> <span class="identifier">fx</span> <span class="special">=</span> <span class="identifier">pow</span><span class="special">&lt;</span><span class="identifier">N</span><span class="special">&gt;(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">-</span> <span class="identifier">a</span><span class="special">;</span>                  <span class="comment">// Difference (estimate x^n - a).</span>
+    <span class="identifier">T</span> <span class="identifier">dx</span> <span class="special">=</span> <span class="identifier">N</span> <span class="special">*</span> <span class="identifier">pow</span><span class="special">&lt;</span><span class="identifier">N</span> <span class="special">-</span> <span class="number">1</span><span class="special">&gt;(</span><span class="identifier">x</span><span class="special">);</span>              <span class="comment">// 1st derivative f'(x).</span>
+    <span class="identifier">T</span> <span class="identifier">d2x</span> <span class="special">=</span> <span class="identifier">N</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">N</span> <span class="special">-</span> <span class="number">1</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">pow</span><span class="special">&lt;</span><span class="identifier">N</span> <span class="special">-</span> <span class="number">2</span> <span class="special">&gt;(</span><span class="identifier">x</span><span class="special">);</span>  <span class="comment">// 2nd derivative f''(x).</span>
+
+    <span class="keyword">return</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="identifier">fx</span><span class="special">,</span> <span class="identifier">dx</span><span class="special">,</span> <span class="identifier">d2x</span><span class="special">);</span>   <span class="comment">// 'return' fx, dx and d2x.</span>
+  <span class="special">}</span>
+<span class="keyword">private</span><span class="special">:</span>
+  <span class="identifier">T</span> <span class="identifier">a</span><span class="special">;</span>                                     <span class="comment">// to be 'nth_rooted'.</span>
+<span class="special">};</span>
+</pre>
+<p>
+        and our <span class="emphasis"><em>n</em></span>th root function is
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">int</span> <span class="identifier">N</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">nth_2deriv</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">x</span><span class="special">)</span>
+<span class="special">{</span> <span class="comment">// return nth root of x using 1st and 2nd derivatives and Halley.</span>
+
+  <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>  <span class="comment">// Help ADL of std functions.</span>
+  <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">;</span> <span class="comment">// For halley_iterate.</span>
+
+  <span class="keyword">static_assert</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">is_integral</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span> <span class="special">==</span> <span class="keyword">false</span><span class="special">,</span> <span class="string">"Only floating-point type types can be used!"</span><span class="special">);</span>
+  <span class="keyword">static_assert</span><span class="special">((</span><span class="identifier">N</span> <span class="special">&gt;</span> <span class="number">0</span><span class="special">)</span> <span class="special">==</span> <span class="keyword">true</span><span class="special">,</span> <span class="string">"root N must be &gt; 0!"</span><span class="special">);</span>
+  <span class="keyword">static_assert</span><span class="special">((</span><span class="identifier">N</span> <span class="special">&gt;</span> <span class="number">1000</span><span class="special">)</span> <span class="special">==</span> <span class="keyword">false</span><span class="special">,</span> <span class="string">"root N is too big!"</span><span class="special">);</span>
+
+  <span class="keyword">typedef</span> <span class="keyword">double</span> <span class="identifier">guess_type</span><span class="special">;</span> <span class="comment">// double may restrict (exponent) range for a multiprecision T?</span>
+
+  <span class="keyword">int</span> <span class="identifier">exponent</span><span class="special">;</span>
+  <span class="identifier">frexp</span><span class="special">(</span><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">guess_type</span><span class="special">&gt;(</span><span class="identifier">x</span><span class="special">),</span> <span class="special">&amp;</span><span class="identifier">exponent</span><span class="special">);</span>                 <span class="comment">// Get exponent of z (ignore mantissa).</span>
+  <span class="identifier">T</span> <span class="identifier">guess</span> <span class="special">=</span> <span class="identifier">ldexp</span><span class="special">(</span><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">guess_type</span><span class="special">&gt;(</span><span class="number">1.</span><span class="special">),</span> <span class="identifier">exponent</span> <span class="special">/</span> <span class="identifier">N</span><span class="special">);</span>   <span class="comment">// Rough guess is to divide the exponent by n.</span>
+  <span class="identifier">T</span> <span class="identifier">min</span> <span class="special">=</span> <span class="identifier">ldexp</span><span class="special">(</span><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">guess_type</span><span class="special">&gt;(</span><span class="number">1.</span><span class="special">)</span> <span class="special">/</span> <span class="number">2</span><span class="special">,</span> <span class="identifier">exponent</span> <span class="special">/</span> <span class="identifier">N</span><span class="special">);</span> <span class="comment">// Minimum possible value is half our guess.</span>
+  <span class="identifier">T</span> <span class="identifier">max</span> <span class="special">=</span> <span class="identifier">ldexp</span><span class="special">(</span><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">guess_type</span><span class="special">&gt;(</span><span class="number">2.</span><span class="special">),</span> <span class="identifier">exponent</span> <span class="special">/</span> <span class="identifier">N</span><span class="special">);</span>     <span class="comment">// Maximum possible value is twice our guess.</span>
+
+  <span class="keyword">int</span> <span class="identifier">digits</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">digits</span> <span class="special">*</span> <span class="number">0.4</span><span class="special">;</span>            <span class="comment">// Accuracy triples with each step, so stop when</span>
+                                                                <span class="comment">// slightly more than one third of the digits are correct.</span>
+  <span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">maxit</span> <span class="special">=</span> <span class="number">20</span><span class="special">;</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">it</span> <span class="special">=</span> <span class="identifier">maxit</span><span class="special">;</span>
+  <span class="identifier">T</span> <span class="identifier">result</span> <span class="special">=</span> <span class="identifier">halley_iterate</span><span class="special">(</span><span class="identifier">nth_functor_2deriv</span><span class="special">&lt;</span><span class="identifier">N</span><span class="special">,</span> <span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">x</span><span class="special">),</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">max</span><span class="special">,</span> <span class="identifier">digits</span><span class="special">,</span> <span class="identifier">it</span><span class="special">);</span>
+  <span class="keyword">return</span> <span class="identifier">result</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<pre class="programlisting">    <span class="identifier">show_nth_root</span><span class="special">&lt;</span><span class="number">5</span><span class="special">,</span> <span class="keyword">double</span><span class="special">&gt;(</span><span class="number">2.</span><span class="special">);</span>
+    <span class="identifier">show_nth_root</span><span class="special">&lt;</span><span class="number">5</span><span class="special">,</span> <span class="keyword">long</span> <span class="keyword">double</span><span class="special">&gt;(</span><span class="number">2.</span><span class="special">);</span>
+<span class="preprocessor">#ifndef</span> <span class="identifier">_MSC_VER</span>  <span class="comment">// float128 is not supported by Microsoft compiler 2013.</span>
+    <span class="identifier">show_nth_root</span><span class="special">&lt;</span><span class="number">5</span><span class="special">,</span> <span class="identifier">float128</span><span class="special">&gt;(</span><span class="number">2</span><span class="special">);</span>
+<span class="preprocessor">#endif</span>
+    <span class="identifier">show_nth_root</span><span class="special">&lt;</span><span class="number">5</span><span class="special">,</span> <span class="identifier">cpp_dec_float_50</span><span class="special">&gt;(</span><span class="number">2</span><span class="special">);</span> <span class="comment">// dec</span>
+    <span class="identifier">show_nth_root</span><span class="special">&lt;</span><span class="number">5</span><span class="special">,</span> <span class="identifier">cpp_bin_float_50</span><span class="special">&gt;(</span><span class="number">2</span><span class="special">);</span> <span class="comment">// bin</span>
+</pre>
+<p>
+        produces an output similar to this
+      </p>
+<pre class="programlisting"> <span class="identifier">Using</span> <span class="identifier">MSVC</span> <span class="number">2013</span>
+
+<span class="identifier">nth</span> <span class="identifier">Root</span> <span class="identifier">finding</span> <span class="identifier">Example</span><span class="special">.</span>
+<span class="identifier">Type</span> <span class="keyword">double</span> <span class="identifier">value</span> <span class="special">=</span> <span class="number">2</span><span class="special">,</span> <span class="number">5</span><span class="identifier">th</span> <span class="identifier">root</span> <span class="special">=</span> <span class="number">1.14869835499704</span>
+<span class="identifier">Type</span> <span class="keyword">long</span> <span class="keyword">double</span> <span class="identifier">value</span> <span class="special">=</span> <span class="number">2</span><span class="special">,</span> <span class="number">5</span><span class="identifier">th</span> <span class="identifier">root</span> <span class="special">=</span> <span class="number">1.14869835499704</span>
+<span class="identifier">Type</span> <span class="keyword">class</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">number</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">backends</span><span class="special">::</span><span class="identifier">cpp_dec_float</span><span class="special">&lt;</span><span class="number">50</span><span class="special">,</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">void</span><span class="special">&gt;,</span><span class="number">1</span><span class="special">&gt;</span> <span class="identifier">value</span> <span class="special">=</span> <span class="number">2</span><span class="special">,</span>
+  <span class="number">5</span><span class="identifier">th</span> <span class="identifier">root</span> <span class="special">=</span> <span class="number">1.1486983549970350067986269467779275894438508890978</span>
+<span class="identifier">Type</span> <span class="keyword">class</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">number</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">backends</span><span class="special">::</span><span class="identifier">cpp_bin_float</span><span class="special">&lt;</span><span class="number">50</span><span class="special">,</span><span class="number">10</span><span class="special">,</span><span class="keyword">void</span><span class="special">,</span><span class="keyword">int</span><span class="special">,</span><span class="number">0</span><span class="special">,</span><span class="number">0</span><span class="special">&gt;,</span><span class="number">0</span><span class="special">&gt;</span> <span class="identifier">value</span> <span class="special">=</span> <span class="number">2</span><span class="special">,</span>
+  <span class="number">5</span><span class="identifier">th</span> <span class="identifier">root</span> <span class="special">=</span> <span class="number">1.1486983549970350067986269467779275894438508890978</span>
+</pre>
+<div class="tip"><table border="0" summary="Tip">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../../doc/src/images/tip.png"></td>
+<th align="left">Tip</th>
+</tr>
+<tr><td align="left" valign="top">
+<p>
+          Take care with the type passed to the function. It is best to pass a <code class="computeroutput"><span class="keyword">double</span></code> or greater-precision floating-point
+          type.
+        </p>
+<p>
+          Passing an integer value, for example, <code class="computeroutput"><span class="identifier">nth_2deriv</span><span class="special">&lt;</span><span class="number">5</span><span class="special">&gt;(</span><span class="number">2</span><span class="special">)</span></code> will be
+          rejected, while <code class="computeroutput"><span class="identifier">nth_2deriv</span><span class="special">&lt;</span><span class="number">5</span><span class="special">,</span>
+          <span class="keyword">double</span><span class="special">&gt;(</span><span class="number">2</span><span class="special">)</span></code> converts
+          the integer to <code class="computeroutput"><span class="keyword">double</span></code>.
+        </p>
+<p>
+          Avoid passing a <code class="computeroutput"><span class="keyword">float</span></code> value
+          that will provoke warnings (actually spurious) from the compiler about
+          potential loss of data, as noted above.
+        </p>
+</td></tr>
+</table></div>
+<div class="warning"><table border="0" summary="Warning">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../../../../doc/src/images/warning.png"></td>
+<th align="left">Warning</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          Asking for unreasonable roots, for example, <code class="computeroutput"><span class="identifier">show_nth_root</span><span class="special">&lt;</span><span class="number">1000000</span><span class="special">&gt;(</span><span class="number">2.</span><span class="special">);</span></code>
+          may lead to <a href="http://en.wikipedia.org/wiki/Loss_of_significance" target="_top">Loss
+          of significance</a> like <code class="computeroutput"><span class="identifier">Type</span>
+          <span class="keyword">double</span> <span class="identifier">value</span>
+          <span class="special">=</span> <span class="number">2</span><span class="special">,</span> <span class="number">1000000</span><span class="identifier">th</span> <span class="identifier">root</span>
+          <span class="special">=</span> <span class="number">1.00000069314783</span></code>.
+          Use of the the <code class="computeroutput"><span class="identifier">pow</span></code> function
+          is more sensible for this unusual need.
+        </p></td></tr>
+</table></div>
+<p>
+        Full code of this example is at <a href="../../../../example/root_finding_n_example.cpp" target="_top">root_finding_n_example.cpp</a>.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="multiprecision_root.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding_examples.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="elliptic_eg.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

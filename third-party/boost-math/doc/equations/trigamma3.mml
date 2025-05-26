@@ -1,0 +1,54 @@
+<?xml version='1.0'?>
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN'
+  'http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd'
+  [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head><title>trigamma3</title>
+<!-- MathML created with MathCast Equation Editor version 0.89 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <msup>
+      <mi>&#x03C8;</mi>
+      <mfenced>
+        <mrow>
+          <mn>1</mn>
+        </mrow>
+      </mfenced>
+    </msup>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <msup>
+      <mi>&#x03C8;</mi>
+      <mfenced>
+        <mrow>
+          <mn>1</mn>
+        </mrow>
+      </mfenced>
+    </msup>
+    <mfenced>
+      <mrow>
+        <mn>1</mn>
+        <mo>+</mo>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mo>+</mo>
+    <mfrac>
+      <mn>1</mn>
+      <mrow>
+        <msup>
+          <mi>x</mi>
+          <mn>2</mn>
+        </msup>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+</body>
+</html>

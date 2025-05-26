@@ -1,0 +1,598 @@
+[/
+Copyright (c) 2006 Xiaogang Zhang
+Copyright (c) 2006 John Maddock
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:ellint_1 Elliptic Integrals of the First Kind - Legendre Form]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/ellint_1.hpp>
+``
+
+  namespace boost { namespace math {
+
+  template <class T1, class T2>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_1(T1 k, T2 phi);
+
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_1(T1 k, T2 phi, const ``__Policy``&);
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_1(T k);
+
+  template <class T, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_1(T k, const ``__Policy``&);
+
+  }} // namespaces
+  
+[heading Description]
+
+These two functions evaluate the incomplete elliptic integral of the first kind
+['F([phi], k)] and its complete counterpart ['K(k) = F([pi]/2, k)].
+
+[graph ellint_1]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types: when they are the same type then the result
+is the same type as the arguments.
+
+  template <class T1, class T2>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_1(T1 k, T2 phi);
+  
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_1(T1 k, T2 phi, const ``__Policy``&);
+  
+Returns the incomplete elliptic integral of the first kind ['F([phi], k)]:
+
+[equation ellint2]
+
+Requires k[super 2]sin[super 2](phi) < 1, otherwise returns the result of __domain_error.
+
+[optional_policy]
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_1(T k);
+  
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_1(T k, const ``__Policy``&);
+  
+Returns the complete elliptic integral of the first kind ['K(k)]:
+
+[equation ellint6]
+
+Requires |k| < 1, otherwise returns the result of __domain_error.
+
+[optional_policy]
+
+[heading Accuracy]
+
+These functions are computed using only basic arithmetic operations, so
+there isn't much variation in accuracy over differing platforms.
+Note that only results for the widest floating point type on the 
+system are given as narrower types have __zero_error.  All values
+are relative errors in units of epsilon.
+
+[table_ellint_1]
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph elliptic_integral_k__double]
+
+[graph elliptic_integral_k__80_bit_long_double]
+
+[graph elliptic_integral_k____float128]
+
+[heading Testing]
+
+The tests use a mixture of spot test values calculated using the online
+calculator at [@http://functions.wolfram.com/ functions.wolfram.com],
+and random test data generated using
+NTL::RR at 1000-bit precision and this implementation.
+
+[heading Implementation]
+
+For up to 80-bit long double precision the complete versions of these functions
+are implemented as Taylor series expansions as in: 
+"Fast computation of complete elliptic integrals and Jacobian elliptic functions",
+Celestial Mechanics and Dynamical Astronomy, April 2012.
+
+Otherwise these functions are implemented in terms of Carlson's integrals using the relations:
+
+[equation ellint19]
+
+and
+
+[equation ellint20]
+
+[endsect] [/section:ellint_1 Elliptic Integrals of the First Kind - Legendre Form]
+
+[section:ellint_2 Elliptic Integrals of the Second Kind - Legendre Form]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/ellint_2.hpp>
+``
+
+  namespace boost { namespace math {
+
+  template <class T1, class T2>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_2(T1 k, T2 phi);
+
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_2(T1 k, T2 phi, const ``__Policy``&);
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_2(T k);
+
+  template <class T, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_2(T k, const ``__Policy``&);
+
+  }} // namespaces
+  
+[heading Description]
+
+These two functions evaluate the incomplete elliptic integral of the second kind
+['E([phi], k)] and its complete counterpart ['E(k) = E([pi]/2, k)].
+
+[graph ellint_2]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when T1 and T2 are different types: when they are the same type then the result
+is the same type as the arguments.
+
+  template <class T1, class T2>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_2(T1 k, T2 phi);
+  
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_2(T1 k, T2 phi, const ``__Policy``&);
+  
+Returns the incomplete elliptic integral of the second kind ['E([phi], k)]:
+
+[equation ellint3]
+
+Requires k[super 2]sin[super 2](phi) < 1, otherwise returns the result of __domain_error.
+
+[optional_policy]
+
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_2(T k);
+  
+  template <class T>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_2(T k, const ``__Policy``&);
+  
+Returns the complete elliptic integral of the second kind ['E(k)]:
+
+[equation ellint7]
+
+Requires |k| < 1, otherwise returns the result of __domain_error.
+
+[optional_policy]
+
+[heading Accuracy]
+
+These functions are computed using only basic arithmetic operations, so
+there isn't much variation in accuracy over differing platforms.
+Note that only results for the widest floating point type on the 
+system are given as narrower types have __zero_error.  All values
+are relative errors in units of epsilon.
+
+[table_ellint_2]
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph elliptic_integral_e__double]
+
+[graph elliptic_integral_e__80_bit_long_double]
+
+[graph elliptic_integral_e____float128]
+
+[heading Testing]
+
+The tests use a mixture of spot test values calculated using the online
+calculator at [@http://functions.wolfram.com
+functions.wolfram.com], and random test data generated using
+NTL::RR at 1000-bit precision and this implementation.
+
+[heading Implementation]
+
+For up to 80-bit long double precision the complete versions of these functions
+are implemented as Taylor series expansions as in: 
+"Fast computation of complete elliptic integrals and Jacobian elliptic functions",
+Celestial Mechanics and Dynamical Astronomy, April 2012.
+
+Otherwise these functions are implemented in terms of Carlson's integrals
+using the relations:
+
+[equation ellint21]
+
+and
+
+[equation ellint22]
+
+[endsect] [/section:ellint_2 Elliptic Integrals of the Second Kind - Legendre Form]
+
+[section:ellint_3 Elliptic Integrals of the Third Kind - Legendre Form]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/ellint_3.hpp>
+``
+
+  namespace boost { namespace math {
+
+  template <class T1, class T2, class T3>
+  BOOST_MATH_CUDA_ENABLED ``__sf_result`` ellint_3(T1 k, T2 n, T3 phi);
+
+  template <class T1, class T2, class T3, class ``__Policy``>
+  BOOST_MATH_CUDA_ENABLED ``__sf_result`` ellint_3(T1 k, T2 n, T3 phi, const ``__Policy``&);
+
+  template <class T1, class T2>
+  BOOST_MATH_CUDA_ENABLED ``__sf_result`` ellint_3(T1 k, T2 n);
+
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_CUDA_ENABLED ``__sf_result`` ellint_3(T1 k, T2 n, const ``__Policy``&);
+
+  }} // namespaces
+  
+[heading Description]
+
+These two functions evaluate the incomplete elliptic integral of the third kind
+['[Pi](n, [phi], k)] and its complete counterpart ['[Pi](n, k) = E(n, [pi]/2, k)].
+
+[graph ellint_3]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when the arguments are of different types: when they are the same type then the result
+is the same type as the arguments.
+
+  template <class T1, class T2, class T3>
+  BOOST_MATH_CUDA_ENABLED ``__sf_result`` ellint_3(T1 k, T2 n, T3 phi);
+  
+  template <class T1, class T2, class T3, class ``__Policy``>
+  BOOST_MATH_CUDA_ENABLED ``__sf_result`` ellint_3(T1 k, T2 n, T3 phi, const ``__Policy``&);
+  
+Returns the incomplete elliptic integral of the third kind ['[Pi](n, [phi], k)]:
+
+[equation ellint4]
+
+Requires ['k[super 2]sin[super 2](phi) < 1] and ['n < 1/sin[super 2]([phi])], otherwise 
+returns the result of __domain_error (outside this range the result 
+would be complex).
+
+[optional_policy]
+
+  template <class T1, class T2>
+  BOOST_MATH_CUDA_ENABLED ``__sf_result`` ellint_3(T1 k, T2 n);
+  
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_CUDA_ENABLED ``__sf_result`` ellint_3(T1 k, T2 n, const ``__Policy``&);
+  
+Returns the complete elliptic integral of the first kind ['[Pi](n, k)]:
+
+[equation ellint8]
+
+Requires ['|k| < 1] and ['n < 1], otherwise returns the 
+result of __domain_error (outside this range the result would be complex).
+
+[optional_policy]
+
+[heading Accuracy]
+
+These functions are computed using only basic arithmetic operations, so
+there isn't much variation in accuracy over differing platforms.
+Note that only results for the widest floating point type on the 
+system are given as narrower types have __zero_error.  All values
+are relative errors in units of epsilon.
+
+[table_ellint_3]
+
+[heading Testing]
+
+The tests use a mixture of spot test values calculated using the online
+calculator at [@http://functions.wolfram.com
+functions.wolfram.com], and random test data generated using
+NTL::RR at 1000-bit precision and this implementation.
+
+[heading Implementation]
+
+The implementation for [Pi](n, [phi], k) first siphons off the special cases:
+
+[expression ['[Pi](0, [phi], k) = F([phi], k)]]
+
+[expression ['[Pi](n, [pi]/2, k) = [Pi](n, k)]]
+
+and
+
+[equation ellint23]
+
+Then if n < 0 the relations (A&S 17.7.15/16):
+
+[equation ellint24]
+
+are used to shift /n/ to the range \[0, 1\].
+
+Then the relations:
+
+[expression ['[Pi](n, -[phi], k) = -[Pi](n, [phi], k)]]
+
+[expression ['[Pi](n, [phi]+m[pi], k) = [Pi](n, [phi], k) + 2m[Pi](n, k) ; n <= 1]]
+
+[expression ['[Pi](n, [phi]+m[pi], k) = [Pi](n, [phi], k) ; n > 1] [indent] [indent]
+[footnote I haven't been able to find a literature reference for this
+relation, but it appears to be the convention used by Mathematica.
+Intuitively the first ['2 * m * [Pi](n, k)] terms cancel out as the
+derivative alternates between +[infin] and -[infin].]]
+
+are used to move [phi] to the range \[0, [pi]\/2\].
+
+The functions are then implemented in terms of Carlson's integrals using the relations:
+
+[equation ellint25]
+
+and
+
+[equation ellint26]
+
+[endsect] [/section:ellint_3 Elliptic Integrals of the Third Kind - Legendre Form]
+
+[section:ellint_d Elliptic Integral D - Legendre Form]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/ellint_d.hpp>
+``
+
+  namespace boost { namespace math {
+
+  template <class T1, class T2>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_d(T1 k, T2 phi);
+
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_d(T1 k, T2 phi, const ``__Policy``&);
+
+  template <class T1>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_d(T1 k);
+
+  template <class T1, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_d(T1 k, const ``__Policy``&);
+
+  }} // namespaces
+  
+[heading Description]
+
+These two functions evaluate the incomplete elliptic integral 
+['D([phi], k)] and its complete counterpart ['D(k) = D([pi]/2, k)].
+
+The return type of these functions is computed using the __arg_promotion_rules
+when the arguments are of different types: when they are the same type then the result
+is the same type as the arguments.
+
+  template <class T1, class T2>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_d(T1 k, T2 phi);
+  
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_3(T1 k, T2 phi, const ``__Policy``&);
+  
+Returns the incomplete elliptic integral:
+
+[equation ellint_d]
+
+Requires ['k[super 2]sin[super 2](phi) < 1], otherwise 
+returns the result of __domain_error (outside this range the result 
+would be complex).
+
+[optional_policy]
+
+  template <class T1>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_d(T1 k);
+  
+  template <class T1, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` ellint_d(T1 k, const ``__Policy``&);
+  
+Returns the complete elliptic integral ['D(k) = D([pi]/2, k)]
+
+Requires ['-1 <= k <= 1] otherwise returns the 
+result of __domain_error (outside this range the result would be complex).
+
+[optional_policy]
+
+[heading Accuracy]
+
+These functions are trivially computed in terms of other elliptic integrals
+and generally have very low error rates (a few epsilon) unless parameter [phi]
+is very large, in which case the usual trigonometric function argument-reduction issues apply.
+
+[table_ellint_d_complete_]
+
+[table_ellint_d]
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph elliptic_integral_d__double]
+
+[graph elliptic_integral_d__80_bit_long_double]
+
+[graph elliptic_integral_d____float128]
+
+
+[heading Testing]
+
+The tests use a mixture of spot test values calculated using 
+values calculated at __WolframAlpha, and random test data generated using
+MPFR at 1000-bit precision and a deliberately naive implementation in terms of
+the Legendre integrals.
+
+[heading Implementation]
+
+The implementation for D([phi], k) first performs argument reduction using the relations:
+
+[expression ['D(-[phi], k) = -D([phi], k)]]
+
+and
+
+[expression ['D(n[pi]+[phi], k) = 2nD(k) + D([phi], k)]]
+
+to move [phi] to the range \[0, [pi]\/2\].
+
+The functions are then implemented in terms of Carlson's integral R[sub D]
+using the relation:
+
+[equation ellint_d]
+
+[endsect] [/section:ellint_d Elliptic Integral D - Legendre Form]
+
+[section:jacobi_zeta Jacobi Zeta Function]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/jacobi_zeta.hpp>
+``
+
+  namespace boost { namespace math {
+
+  template <class T1, class T2>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` jacobi_zeta(T1 k, T2 phi);
+
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` jacobi_zeta(T1 k, T2 phi, const ``__Policy``&);
+
+  }} // namespaces
+  
+[heading Description]
+
+This function evaluates the Jacobi Zeta Function ['Z([phi], k)]
+
+[equation jacobi_zeta]
+
+Please note the use of [phi], and /k/ as the parameters, the function is often defined as ['Z([phi], m)]
+with ['m = k[super 2]], see for example  [@http://mathworld.wolfram.com/JacobiZetaFunction.html Weisstein, Eric W. "Jacobi Zeta Function." From MathWorld--A Wolfram Web Resource.]
+Or else as [@https://dlmf.nist.gov/22.16#E32 ['Z(x, k)]] with ['[phi] = am(x, k)], 
+where ['am] is the [@https://dlmf.nist.gov/22.16#E1 Jacobi amplitude function] 
+which is equivalent to ['asin(jacobi_elliptic(k, x))].
+
+The return type of this function is computed using the __arg_promotion_rules
+when the arguments are of different types: when they are the same type then the result
+is the same type as the arguments.
+
+Requires ['-1 <= k <= 1], otherwise 
+returns the result of __domain_error (outside this range the result would be complex).
+
+[optional_policy]
+
+Note that there is no complete analogue of this function (where [phi] = [pi] / 2)
+as this takes the value 0 for all ['k].
+
+[heading Accuracy]
+
+These functions are trivially computed in terms of other elliptic integrals
+and generally have very low error rates (a few epsilon) unless parameter [phi]
+is very large, in which case the usual trigonometric function argument-reduction issues apply.
+
+[table_jacobi_zeta]
+
+[heading Testing]
+
+The tests use a mixture of spot test values calculated using 
+values calculated at __WolframAlpha, and random test data generated using
+MPFR at 1000-bit precision and a deliberately naive implementation in terms of
+the Legendre integrals.
+
+[heading Implementation]
+
+The implementation for Z([phi], k) first makes the argument [phi] positive using:
+
+[expression ['Z(-[phi], k) = -Z([phi], k)]]
+
+The function is then implemented in terms of Carlson's integral R[sub J]
+using the relation:
+
+[equation jacobi_zeta]
+
+There is one special case where the above relation fails: when ['k = 1], in that case
+the function simplifies to
+
+[expression ['Z([phi], 1) = sign(cos([phi])) sin([phi])]]
+
+[h5:jacobi_zeta_example Example]
+
+A simple example comparing use of __WolframAlpha with Boost.Math (including much higher precision using Boost.Multiprecision)
+is [@../../example/jacobi_zeta_example.cpp jacobi_zeta_example.cpp].
+
+[endsect] [/section:jacobi_zeta Jacobi Zeta Function]
+
+[section:heuman_lambda Heuman Lambda Function]
+
+[heading Synopsis]
+
+``
+  #include <boost/math/special_functions/heuman_lambda.hpp>
+``
+
+  namespace boost { namespace math {
+
+  template <class T1, class T2>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` heuman_lambda(T1 k, T2 phi);
+
+  template <class T1, class T2, class ``__Policy``>
+  BOOST_MATH_GPU_ENABLED ``__sf_result`` heuman_lambda(T1 k, T2 phi, const ``__Policy``&);
+
+  }} // namespaces
+  
+[heading Description]
+
+This function evaluates the Heuman Lambda Function ['[Lambda][sub 0]([phi], k)]
+
+[equation heuman_lambda]
+
+The return type of this function is computed using the __arg_promotion_rules
+when the arguments are of different types: when they are the same type then the result
+is the same type as the arguments.
+
+Requires ['-1 <= k <= 1], otherwise 
+returns the result of __domain_error (outside this range the result would be complex).
+
+[optional_policy]
+
+Note that there is no complete analogue of this function (where [phi] = [pi] / 2)
+as this takes the value 1 for all ['k].
+
+[heading Accuracy]
+
+These functions are trivially computed in terms of other elliptic integrals
+and generally have very low error rates (a few epsilon) unless parameter [phi]
+is very large, in which case the usual trigonometric function argument-reduction issues apply.
+
+[table_heuman_lambda]
+
+[heading Testing]
+
+The tests use a mixture of spot test values calculated using 
+values calculated at __WolframAlpha, and random test data generated using
+MPFR at 1000-bit precision and a deliberately naive implementation in terms of
+the Legendre integrals.
+
+[heading Implementation]
+
+The function is then implemented in terms of Carlson's integrals R[sub J] and R[sub F]
+using the relation:
+
+[equation heuman_lambda]
+
+This relation fails for ['|[phi]| >= [pi]/2] in which case the definition in terms of the
+Jacobi Zeta is used.
+
+[endsect] [/section:heuman_lambda Heuman Lambda Function]
+
+

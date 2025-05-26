@@ -1,0 +1,183 @@
+[/
+Copyright (c) 2019 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:linear_regression Linear Regression]
+
+[heading Synopsis]
+
+```
+#include <boost/math/statistics/linear_regression.hpp>
+
+namespace boost::math::statistics {
+
+template<typename RandomAccessContainer>
+std::pair<Real, Real> simple_ordinary_least_squares(RandomAccessContainer const & x,
+                                                    RandomAccessContainer const & y);
+
+template<typename RandomAccessContainer>
+std::tuple<Real, Real, Real> simple_ordinary_least_squares_with_R_squared(RandomAccessContainer const & x,
+                                                                          RandomAccessContainer const & y);
+
+}}}
+```
+
+[heading Background]
+
+A simple ordinary least squares finds the numbers /c/[sub 0] and /c/[sub 1] which minimizes the merit function
+
+[$../graphs/simple_ordinary_least_squares_merit.svg]
+
+The predictive model generated from the minima of this functional is /f/(/x/) = /c/[sub 0] + /c/[sub 1] /x/.
+
+It turns out that numerically, computing the numbers /c/[sub 0] and /c/[sub 1] is not /quite/ trivial.
+See [@https://www.johndcook.com/blog/2008/10/20/comparing-two-ways-to-fit-a-line-to-data/ here] for an explanation of some ways linear regression can go wrong.
+A better method of computing the model parameters uses one-pass, numerically stable methods to compute means, variances, and covariances, and then assembles the parameters from these.
+
+An example usage of the simple linear regression is given below:
+
+```
+#include <vector>
+#include <iostream>
+#include <boost/math/statistics/linear_regression.hpp>
+
+int main() {
+    using boost::math::statistics::simple_ordinary_least_squares;
+    std::vector<double> x{1, 3, 7, 12};
+    std::vector<double> y{8,13, 26, 35};
+
+    auto [c0, c1] = simple_ordinary_least_squares(x, y);
+    std::cout << "f(x) = " << c0 << " + " << c1 << "*x" << "\n";
+    std::cout << "f(2) = " << c0 + c1*2 << "\n";
+}
+// Output:
+f(x) = 6.0742 + 2.50883*x
+f(2) = 11.0919
+```
+
+If, in addition, you wish to assess how appropriate linear regression is for your data, you can calculate /R/[super 2] as well, via
+
+```
+auto [c0, c1, R2] = simple_ordinary_least_squares_with_R_squared(x, y);
+```
+
+It seems a number of definitions exist for /R/[super 2]; we use
+
+[$../graphs/r_squared_definition.svg]
+
+The fit is good if /R/[super 2] is close to 1.
+
+
+[heading Performance]
+
+There are two cases: When you want to compute /R/[super 2], and when you don't want to simultaneously compute /R/[super 2], although the cost of computing /R/[super 2] is not high:
+
+```
+-----------------------------------------------------------------------------------------------------------------
+Benchmark                                                       Time  Bytes/second
+-----------------------------------------------------------------------------------------------------------------
+BMSimpleOrdinaryLeastSquares<float>/8                        51.9 ns  588.476M/s
+BMSimpleOrdinaryLeastSquares<float>/16                        112 ns  546.087M/s
+BMSimpleOrdinaryLeastSquares<float>/32                        277 ns  440.823M/s
+BMSimpleOrdinaryLeastSquares<float>/64                        608 ns  401.659M/s
+BMSimpleOrdinaryLeastSquares<float>/128                      1276 ns  382.622M/s
+BMSimpleOrdinaryLeastSquares<float>/256                      2606 ns  374.748M/s
+BMSimpleOrdinaryLeastSquares<float>/512                      5266 ns  370.868M/s
+BMSimpleOrdinaryLeastSquares<float>/1024                    10601 ns  368.466M/s
+BMSimpleOrdinaryLeastSquares<float>/2048                    21243 ns  367.775M/s
+BMSimpleOrdinaryLeastSquares<float>/4096                    42502 ns  367.631M/s
+BMSimpleOrdinaryLeastSquares<float>/8192                    85239 ns  366.618M/s
+BMSimpleOrdinaryLeastSquares<float>/16384                  169736 ns  368.22M/s
+BMSimpleOrdinaryLeastSquares<float>/32768                  340220 ns  367.409M/s
+BMSimpleOrdinaryLeastSquares<float>/65536                  678907 ns  368.247M/s
+BMSimpleOrdinaryLeastSquares<float>/131072                1357145 ns  368.422M/s
+BMSimpleOrdinaryLeastSquares<float>/262144                2720207 ns  367.635M/s
+BMSimpleOrdinaryLeastSquares<float>/524288                5430141 ns  368.332M/s
+BMSimpleOrdinaryLeastSquares<float>/1048576              10896708 ns  367.095M/s
+BMSimpleOrdinaryLeastSquares<float>/2097152              21797935 ns  367.047M/s
+BMSimpleOrdinaryLeastSquares<float>/4194304              43723059 ns  365.944M/s
+BMSimpleOrdinaryLeastSquares<float>/8388608              87229180 ns  366.864M/s
+BMSimpleOrdinaryLeastSquares<float>/16777216            174988864 ns  365.74M/s
+BMSimpleOrdinaryLeastSquares<float>_BigO                    10.42 N
+BMSimpleOrdinaryLeastSquares<double>/8                       52.4 ns 1.13779G/s
+BMSimpleOrdinaryLeastSquares<double>/16                       122 ns 1002.14M/s
+BMSimpleOrdinaryLeastSquares<double>/32                       307 ns 795.253M/s
+BMSimpleOrdinaryLeastSquares<double>/64                       685 ns 712.628M/s
+BMSimpleOrdinaryLeastSquares<double>/128                     1445 ns 675.805M/s
+BMSimpleOrdinaryLeastSquares<double>/256                     2966 ns 658.488M/s
+BMSimpleOrdinaryLeastSquares<double>/512                     6062 ns 644.35M/s
+BMSimpleOrdinaryLeastSquares<double>/1024                   12166 ns 642.173M/s
+BMSimpleOrdinaryLeastSquares<double>/2048                   24336 ns 642.064M/s
+BMSimpleOrdinaryLeastSquares<double>/4096                   48862 ns 639.567M/s
+BMSimpleOrdinaryLeastSquares<double>/8192                   98008 ns 637.708M/s
+BMSimpleOrdinaryLeastSquares<double>/16384                 196394 ns 636.481M/s
+BMSimpleOrdinaryLeastSquares<double>/32768                 392810 ns 636.434M/s
+BMSimpleOrdinaryLeastSquares<double>/65536                 783903 ns 637.859M/s
+BMSimpleOrdinaryLeastSquares<double>/131072               1556741 ns 642.378M/s
+BMSimpleOrdinaryLeastSquares<double>/262144               3121184 ns 640.792M/s
+BMSimpleOrdinaryLeastSquares<double>/524288               6265681 ns 638.404M/s
+BMSimpleOrdinaryLeastSquares<double>/1048576             12421627 ns 644.076M/s
+BMSimpleOrdinaryLeastSquares<double>/2097152             24907611 ns 642.417M/s
+BMSimpleOrdinaryLeastSquares<double>/4194304             49773317 ns 642.934M/s
+BMSimpleOrdinaryLeastSquares<double>/8388608            100034750 ns 639.79M/s
+BMSimpleOrdinaryLeastSquares<double>/16777216           199477349 ns 641.685M/s
+BMSimpleOrdinaryLeastSquares<double>_BigO                   11.90 N
+BMSimpleOrdinaryLeastSquares<double>_RMS                        0 %
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/8               69.2 ns 441.314M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/16               147 ns 415.939M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/32               356 ns 342.815M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/64               736 ns 331.749M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/128             1494 ns 326.765M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/256             3161 ns 308.909M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/512             6343 ns 307.94M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/1024           12707 ns 307.409M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/2048           25390 ns 307.699M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/4096           50820 ns 307.455M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/8192          101738 ns 307.161M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/16384         203033 ns 307.835M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/32768         403366 ns 309.894M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/65536         767080 ns 325.911M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/131072       1515010 ns 330.034M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/262144       2965539 ns 337.21M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/524288       5774329 ns 346.372M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/1048576     11384267 ns 351.371M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/2097152     22899097 ns 349.406M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/4194304     45923903 ns 348.423M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/8388608     92138186 ns 347.306M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>/16777216   183263471 ns 349.226M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<float>_BigO           10.94 N
+BMSimpleOrdinaryLeastSquaresWRSquared<float>_RMS                1 %
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/8              68.7 ns 887.806M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/16              166 ns 734.816M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/32              385 ns 633.918M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/64              812 ns 601.394M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/128            1774 ns 550.424M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/256            3554 ns 549.562M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/512            7151 ns 546.25M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/1024          14335 ns 545.006M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/2048          28608 ns 546.163M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/4096          57228 ns 546.067M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/8192         113732 ns 549.537M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/16384        227686 ns 549.004M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/32768        453989 ns 550.668M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/65536        901696 ns 554.517M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/131072      1771910 ns 564.365M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/262144      3430961 ns 582.933M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/524288      6751237 ns 592.511M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/1048576    13544819 ns 590.639M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/2097152    27331142 ns 585.422M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/4194304    54944987 ns 582.425M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/8388608   109574257 ns 584.087M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>/16777216  221449209 ns 578.003M/s
+BMSimpleOrdinaryLeastSquaresWRSquared<double>_BigO          13.17 N
+BMSimpleOrdinaryLeastSquaresWRSquared<double>_RMS               1 %
+```
+
+
+
+
+[endsect]
+[/section:linear_regression]

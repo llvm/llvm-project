@@ -1,0 +1,141 @@
+[/
+Copyright (c) 2019 Nick Thompson
+Copyright (c) 2019 Paul A. Bristow
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:fourier_integrals Fourier Integrals]
+
+[import ../../example/ooura_fourier_integrals_example.cpp]
+[import ../../example/ooura_fourier_integrals_cosine_example.cpp]
+[import ../../example/ooura_fourier_integrals_multiprecision_example.cpp]
+
+[heading Synopsis]
+
+``
+    #include <boost/math/quadrature/ooura_fourier_integrals.hpp>
+    
+    namespace boost { namespace math { namespace quadrature {
+
+    template<class Real>
+    class ooura_fourier_sin {
+    public:
+        ooura_fourier_sin(const Real relative_error_tolerance = tools::root_epsilon<Real>(), size_t levels = sizeof(Real));
+
+        template<class F>
+        std::pair<Real, Real> integrate(F const & f, Real omega);
+
+    };
+
+
+    template<class Real>
+    class ooura_fourier_cos {
+    public:
+        ooura_fourier_cos(const Real relative_error_tolerance = tools::root_epsilon<Real>(), size_t levels = sizeof(Real))
+
+        template<class F>
+        std::pair<Real, Real> integrate(F const & f, Real omega);
+    };
+
+    }}} // namespaces
+``
+
+Ooura's method for Fourier integrals computes
+
+[expression [int][sub 0][super [infin]] f(t)sin([omega] t) dt]
+
+and
+
+[expression [int][sub 0][super [infin]] f(t)cos([omega] t) dt]
+
+by a double exponentially decaying transformation.
+These integrals arise when computing continuous Fourier transform of odd and even functions, respectively.
+Oscillatory integrals are known to cause trouble for standard quadrature methods, so these routines are provided to cope with the most common oscillatory use case.
+
+The basic usage is shown below:
+
+[ooura_fourier_integrals_example_1]
+
+and compare with the expected value [pi]/2 of the integral.
+
+[ooura_fourier_integrals_example_2]
+
+The output is
+
+[ooura_fourier_integrals_example_output_1]
+
+[note This integrator is more insistent about examining the error estimate, than (say) tanh-sinh, which just returns the value of the integral.]
+
+With the macro BOOST_MATH_INSTRUMENT_OOURA defined, we can follow the progress:
+
+[ooura_fourier_integrals_example_diagnostic_output_1]
+
+Working code of this example is at [@../../example/ooura_fourier_integrals_example.cpp ooura_fourier_integrals_example.cpp]
+ 
+A classical cosine transform is presented below:
+
+[ooura_fourier_integrals_cosine_example_1]
+
+The value of this integral should be [pi]/(2e) and can be shown :
+
+[ooura_fourier_integrals_cosine_example_2]
+
+or with the macro BOOST_MATH_INSTRUMENT_OOURA defined, we can follow the progress:
+
+[ooura_fourier_integrals_example_cosine_diagnostic_output_1]
+
+Working code of this example is at [@../../example/ooura_fourier_integrals_cosine_example.cpp ooura_fourier_integrals_consine_example.cpp]
+
+[h5:performance Performance]
+The integrator precomputes nodes and weights, and hence can be reused for many different frequencies with good efficiency.
+The integrator is pimpl'd and hence can be shared between threads without a `memcpy` of the nodes and weights.
+
+Ooura and Mori's paper identifies criteria for rapid convergence based on the position of the poles of the integrand in the complex plane.
+If these poles are too close to the real axis the convergence is slow.
+It is not trivial to predict the convergence rate a priori, so if you are interested in figuring out if the convergence is rapid, compile with `-DBOOST_MATH_INSTRUMENT_OOURA`
+and some amount of printing will give you a good idea of how well this method is performing.
+
+[h5:multi_precision Higher precision]
+
+It is simple to extend to higher precision using __multiprecision.
+
+[ooura_fourier_integrals_multiprecision_example_1]
+
+[ooura_fourier_integrals_multiprecision_example_2]
+
+with output:
+[ooura_fourier_integrals_example_multiprecision_output_1]
+
+And with diagnostics on:
+
+[ooura_fourier_integrals_example_multiprecision_diagnostic_output_1]
+
+Working code of this example is at [@../../example/ooura_fourier_integrals_multiprecision_example.cpp ooura_fourier_integrals_multiprecision_example.cpp]
+
+For more examples of other functions and tests, see the full test suite at
+[@../../test/ooura_fourier_integral_test.cpp ooura_fourier_integral_test.cpp]. 
+
+Ngyen and Nuyens make use of __multiprecision in their extension to multiple dimensions, showing relative errors reducing to [cong] 10[super -2000]!
+
+[h5:rationale Rationale]
+
+This implementation is base on Ooura's 1999 paper rather than the later 2005 paper.
+It does not preclude a second future implementation based on the later work.
+
+Some of the features of the Ooura's 2005 paper that were less appealing were:
+
+* The advance of that paper is that one can compute ['both] the Fourier sine transform and Fourier cosine transform in a single shot. 
+But there are examples, like sinc integral, where the Fourier sine would converge, but the Fourier cosine would diverge.
+* It would force users to live in the complex plane, when many potential applications only need real.
+
+[h4:references References]
+
+* Ooura, Takuya, and Masatake Mori, ['A robust double exponential formula for Fourier-type integrals.] Journal of computational and applied mathematics, 112.1-2 (1999): 229-241.
+* Ooura, Takuya, ['A Double Exponential Formula for the Fourier Transforms.] Publ. RIMS, Kyoto Univ., 41 (2005), 971-977. [@https://pdfs.semanticscholar.org/16ec/a5d76fd6b3d7acaaff0b2a6e8a70caa70190.pdf ]
+* Khatibi, Arezoo and Khatibi, Omid,[' Criteria for the Application of Double Exponential Transformation.] (2017) [@https://arxiv.org/pdf/1704.05752.pdf 1704.05752.pdf].
+* Nguyen, Dong T.P. and Nuyens, Dirk, ['Multivariate integration over Reals with exponential rate of convergence.] (2016) [@https://core.ac.uk/download/pdf/80799199.pdf].
+
+[endsect] [/section:fourier_integrals Fourier Integrals]
+

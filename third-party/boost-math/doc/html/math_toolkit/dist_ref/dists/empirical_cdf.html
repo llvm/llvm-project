@@ -1,0 +1,203 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Empirical Cumulative Distribution Function</title>
+<link rel="stylesheet" href="../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../dists.html" title="Distributions">
+<link rel="prev" href="chi_squared_dist.html" title="Chi Squared Distribution">
+<link rel="next" href="exp_dist.html" title="Exponential Distribution">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="chi_squared_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="exp_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="math_toolkit.dist_ref.dists.empirical_cdf"></a><a class="link" href="empirical_cdf.html" title="Empirical Cumulative Distribution Function">Empirical
+        Cumulative Distribution Function</a>
+</h4></div></div></div>
+<h6>
+<a name="math_toolkit.dist_ref.dists.empirical_cdf.h0"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.empirical_cdf.synopsis"></a></span><a class="link" href="empirical_cdf.html#math_toolkit.dist_ref.dists.empirical_cdf.synopsis">Synopsis</a>
+        </h6>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">empirical_cumulative_distribution_function</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RandomAccessContainer</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">empirical_cumulative_distribution_function</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+    <span class="keyword">using</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">RandomAccessContainer</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">;</span>
+    <span class="identifier">empirical_cumulative_distribution_function</span><span class="special">(</span><span class="identifier">RandomAccessContainer</span> <span class="special">&amp;&amp;</span> <span class="identifier">v</span><span class="special">,</span> <span class="keyword">bool</span> <span class="identifier">sorted</span> <span class="special">=</span> <span class="keyword">false</span><span class="special">);</span>
+
+    <span class="keyword">auto</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">Real</span> <span class="identifier">t</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">RandomAccessContainer</span><span class="special">&amp;&amp;</span> <span class="identifier">return_data</span><span class="special">();</span>
+<span class="special">};</span>
+
+<span class="special">}}</span>
+</pre>
+<h6>
+<a name="math_toolkit.dist_ref.dists.empirical_cdf.h1"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.empirical_cdf.empirical_cumulative_distributio"></a></span><a class="link" href="empirical_cdf.html#math_toolkit.dist_ref.dists.empirical_cdf.empirical_cumulative_distributio">Empirical
+          Cumulative Distribution Function</a>
+        </h6>
+<p>
+          The empirical cumulative distribution function is a step function constructed
+          from observed data which converges to the true cumulative distribution
+          function in the limit of infinite data. This function is a basic building
+          block of hypothesis testing workflows that attempt to answer the question
+          "does my data come from a given distribution?" These tests require
+          computing quadratures over some function of the empirical CDF and the supposed
+          CDF to create a distance measurement, and hence it is occasionally useful
+          to construct a continuous callable from the data.
+        </p>
+<p>
+          An example usage is demonstrated below:
+        </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">random</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">empirical_cumulative_distribution_function</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">empirical_cumulative_distribution_function</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">random_device</span> <span class="identifier">rd</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">mt19937</span> <span class="identifier">gen</span><span class="special">{</span><span class="identifier">rd</span><span class="special">()};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">normal_distribution</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">dis</span><span class="special">(</span><span class="number">0</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span>
+<span class="identifier">size_t</span> <span class="identifier">n</span> <span class="special">=</span> <span class="number">128</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="identifier">n</span><span class="special">);</span>
+<span class="keyword">for</span> <span class="special">(</span><span class="identifier">size_t</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="identifier">n</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span> <span class="special">{</span>
+  <span class="identifier">v</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">dis</span><span class="special">(</span><span class="identifier">gen</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="keyword">auto</span> <span class="identifier">ecdf</span> <span class="special">=</span> <span class="identifier">empirical_cumulative_distribution_function</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">v</span><span class="special">));</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"ecdf(0.0) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ecdf</span><span class="special">(</span><span class="number">0.0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+<span class="comment">// should print approximately 0.5 . . .</span>
+</pre>
+<p>
+          The empirical distribution function requires sorted data. By default, the
+          constructor sorts it for you at O(Nlog(N)) cost.
+        </p>
+<p>
+          If your data is already sorted, you can specify this and the constructor
+          simply moves your data into the class:
+        </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">sort</span><span class="special">(</span><span class="identifier">v</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">v</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span>
+<span class="keyword">auto</span> <span class="identifier">ecdf</span> <span class="special">=</span> <span class="identifier">empirical_cumulative_distribution_function</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">v</span><span class="special">),</span> <span class="comment">/* already sorted = */</span> <span class="keyword">true</span><span class="special">);</span>
+</pre>
+<p>
+          If you want your data back after being done with the object, use
+        </p>
+<pre class="programlisting"><span class="identifier">v</span> <span class="special">=</span> <span class="identifier">ecdf</span><span class="special">.</span><span class="identifier">return_data</span><span class="special">();</span>
+</pre>
+<p>
+          This operation invalidates <code class="computeroutput"><span class="identifier">ecdf</span></code>;
+          it can no longer be used.
+        </p>
+<p>
+          The call operator complexity is O(log(N)), as it requires a call to <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">upper_bound</span></code>.
+        </p>
+<p>
+          Works with both integer and floating point types. If the input data consists
+          of integers, the output of the call operator is a double. Requires C++17.
+        </p>
+<p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../../graphs/empiricial_cumulative_distribution_gauss.svg"></object></span>
+        </p>
+<p>
+          <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../../graphs/empiricial_cumulative_distribution_uniform.svg"></object></span>
+        </p>
+<h6>
+<a name="math_toolkit.dist_ref.dists.empirical_cdf.h2"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.empirical_cdf.performance"></a></span><a class="link" href="empirical_cdf.html#math_toolkit.dist_ref.dists.empirical_cdf.performance">Performance</a>
+        </h6>
+<pre class="programlisting"><span class="special">------------------------------------------------------</span>
+<span class="identifier">Benchmark</span>                                         <span class="identifier">Time</span>
+<span class="special">------------------------------------------------------</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8</span>                <span class="number">4.52</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16</span>               <span class="number">5.20</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">32</span>               <span class="number">5.22</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">64</span>               <span class="number">7.37</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">128</span>              <span class="number">7.16</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">256</span>              <span class="number">8.97</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">512</span>              <span class="number">8.44</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">1024</span>             <span class="number">9.07</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">2048</span>             <span class="number">11.4</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">4096</span>             <span class="number">12.6</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8192</span>             <span class="number">11.4</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16384</span>            <span class="number">16.0</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">32768</span>            <span class="number">17.0</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">65536</span>            <span class="number">19.5</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">131072</span>           <span class="number">15.8</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">262144</span>           <span class="number">17.9</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">524288</span>           <span class="number">26.7</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">1048576</span>          <span class="number">29.5</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">2097152</span>          <span class="number">31.8</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">4194304</span>          <span class="number">32.8</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8388608</span>          <span class="number">35.4</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16777216</span>         <span class="number">30.4</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_BigO</span>             <span class="number">1.27</span> <span class="identifier">lgN</span>
+<span class="identifier">ECDFConstructorSorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_RMS</span>                <span class="number">20</span> <span class="special">%</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8</span>               <span class="number">155</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">64</span>             <span class="number">2095</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">512</span>           <span class="number">22212</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">4096</span>         <span class="number">220821</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">32768</span>       <span class="number">1996380</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">262144</span>     <span class="number">18916039</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">2097152</span>   <span class="number">194250013</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16777216</span> <span class="number">2281469424</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_BigO</span>           <span class="number">5.65</span> <span class="identifier">NlgN</span>
+<span class="identifier">ECDFConstructorUnsorted</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_RMS</span>               <span class="number">6</span> <span class="special">%</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8</span>                              <span class="number">82.4</span> <span class="identifier">ns</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">64</span>                              <span class="number">731</span> <span class="identifier">ns</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">512</span>                            <span class="number">5876</span> <span class="identifier">ns</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">4096</span>                          <span class="number">46864</span> <span class="identifier">ns</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">32768</span>                        <span class="number">385265</span> <span class="identifier">ns</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">262144</span>                      <span class="number">4663866</span> <span class="identifier">ns</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">2097152</span>                    <span class="number">54686332</span> <span class="identifier">ns</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16777216</span>                  <span class="number">875309099</span> <span class="identifier">ns</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_BigO</span>                           <span class="number">2.16</span> <span class="identifier">NlgN</span>
+<span class="identifier">Shuffle</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_RMS</span>                              <span class="number">12</span> <span class="special">%</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8</span>                       <span class="number">48.6</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">64</span>                      <span class="number">61.3</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">512</span>                     <span class="number">85.1</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">4096</span>                     <span class="number">105</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">32768</span>                    <span class="number">131</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">262144</span>                   <span class="number">196</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">2097152</span>                  <span class="number">391</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16777216</span>                 <span class="number">715</span> <span class="identifier">ns</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_BigO</span>                   <span class="number">18.19</span> <span class="identifier">lgN</span>
+<span class="identifier">ECDFEvaluation</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_RMS</span>                       <span class="number">60</span> <span class="special">%</span>
+</pre>
+<p>
+          The call to the unsorted constructor is in fact a little faster than indicated,
+          as the data must be shuffled after being sorted in the benchmark. This
+          is itself a fairly expensive operation.
+        </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="chi_squared_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="exp_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

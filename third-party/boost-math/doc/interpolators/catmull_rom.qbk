@@ -1,0 +1,251 @@
+[/
+  Copyright 2017 Nick Thompson
+
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:catmull_rom Catmull-Rom Splines]
+
+[heading Synopsis]
+
+``
+#include <boost/math/interpolators/catmull_rom.hpp>
+
+namespace boost{ namespace math{
+
+    template<class Point, class RandomAccessContainer = std::vector<Point> >
+    class catmull_rom
+    {
+    public:
+
+        catmull_rom(RandomAccessContainer&& points, bool closed = false, Real alpha = (Real) 1/ (Real) 2)
+
+        catmull_rom(std::initializer_list<Point> l, bool closed = false, typename Point::value_type alpha = (typename Point::value_type) 1/ (typename Point::value_type) 2);
+
+        Real operator()(Real s) const;
+
+        Real max_parameter() const;
+
+        Real parameter_at_point(size_t i) const;
+
+        Point prime(Real s) const;
+    };
+
+}}
+``
+
+[heading Description]
+
+Catmull-Rom splines are a family of interpolating curves which are commonly used in computer graphics and animation.
+Catmull-Rom splines enjoy the following properties:
+
+* Affine invariance: The interpolant commutes with affine transformations.
+* Local support of the basis functions: This gives stability and fast evaluation.
+* /C/[super 2]-smoothness
+* Interpolation of control points-this means the curve passes through the control points.
+Many curves (such as B[eacute]zier) are /approximating/ - they do not pass through their control points.
+This makes them more difficult to use than interpolating splines.
+
+The `catmull_rom` class provided by Boost.Math creates a cubic Catmull-Rom spline from an array of points in any dimension.
+Since there are numerous ways to represent a point in /n/-dimensional space,
+the class attempts to be flexible by templating on the point type.
+The requirements on the point type are discussing in more detail below, but roughly, it must have a dereference operator defined (e.g., `p[0]` is not a syntax error),
+it must be able to be dereferenced up to `dimension -1`, and `p[i]` is of type `Real`, define `value_type`, and the free function `size()`.
+These requirements are met by `std::vector` and `std::array`.
+The basic usage is shown here:
+
+    std::vector<std::array<Real, 3>> points(4);
+    points[0] = {0,0,0};
+    points[1] = {1,0,0};
+    points[2] = {0,1,0};
+    points[3] = {0,0,1};
+    catmull_rom<std::array<Real, 3>> cr(std::move(points));
+    // Interpolate at s = 0.1:
+    auto point = cr(0.1);
+
+Here, /s/ varies between 0 and /cr.max_parameter()/. The latter's value depends on the choice of /alpha/. In order to interpolate the curve between /points[i]/ and /points[i+1]/, /s/ should go from  /cr.parameter_at_point(i)/ and /cr.parameter_at_point(i+1)/.
+
+The spline can be either open or /closed/, closed meaning that there is some /s > 0/ such that /P(s) = P(0)/.
+The default is open, but this can be easily changed:
+
+    // closed = true
+    catmull_rom<std::array<Real, 3>> cr(std::move(points), true);
+
+In either case, evaluating the interpolator at /s=0/ returns the first point in the list.
+
+If the curve is open, then the first and last segments may have strange behavior.
+The traditional solution is to prepend a carefully selected control point to the data so that the first data segment (second interpolator segment) has reasonable tangent vectors, and simply ignore the first interpolator segment.
+A control point is appended to the data using similar criteria.
+However, we recommend not going through this effort until it proves to be necessary: For most use-cases, the curve is good enough without prepending and appending control points, and responsible selection of non-data control points is difficult.
+
+Inside `catmull_rom`, the curve is represented as closed.
+This is because an open Catmull-Rom curve is /implicitly closed/, but the closing point is the zero vector.
+There is no reason to suppose that the zero vector is a better closing point than the endpoint (or any other point, for that matter),
+so traditionally Catmull-Rom splines leave the segment between the first and second point undefined,
+as well as the segment between the second-to-last and last point.
+We find this property of the traditional implementation of Catmull-Rom splines annoying and confusing to the user.
+Hence internally, we close the curve so that the first and last segments are defined.
+Of course, this causes the /tangent/ vectors to the first and last points to be bizarre.
+This is a "pick your poison" design decision-either the curve cannot interpolate in its first and last segments,
+or the tangents along the first and last segments are meaningless.
+In the vast majority of cases, this will be no problem to the user.
+However, if it becomes a problem, then the user should add one extra point in a position they believe is reasonable and close the curve.
+
+Since the routine internally represents the curve as closed,
+a question arises: Why does the user have to specify if the curve is open or closed?
+The answer is that the parameterization is chosen by the routine,
+so it is of interest to the user to understand the values where a meaningful result is returned.
+
+    Real max_s = cr.max_parameter();
+
+If you attempt to interpolate for `s > max_s`, an exception is thrown.
+If the curve is closed, then `cr(max_s) = p0`, where `p0` is the first point on the curve.
+If the curve is open, then `cr(max_s) = pf`, where `pf` is the final point on the curve.
+
+
+The Catmull-Rom curve admits an infinite number of parameterizations.
+The default parameterization of the `catmull_rom` class is the so-called /centripedal/ parameterization.
+This parameterization has been shown to be the only parameterization that does not form cusps or self-intersections within segments.
+However, for advanced users, other parameterizations can be chosen using the /alpha/ parameter:
+
+   // alpha = 1 is the "chordal" parameterization.
+   catmull_rom<std::array<double, 3>> cr(std::move(points), false, 1.0);
+
+The alpha parameter must always be in the range `[0,1]`.
+
+Finally, the tangent vector to any point of the curve can be computed via
+
+    double s = 0.1;
+    Point tangent = cr.prime(s);
+
+Since the magnitude of the tangent vector is dependent on the parameterization,
+it is not meaningful (unless the user chooses the chordal parameterization /alpha = 1/ which parameterizes by Euclidean distance between points.)
+However, its direction is meaningful no matter the parameterization, so the user may wish to normalize this result.
+
+[heading Examples]
+
+[import ../../example/catmull_rom_example.cpp]
+
+[heading Performance]
+
+The following performance numbers were generated for a call to the Catmull-Rom interpolation method.
+The number that follows the slash is the number of points passed to the interpolant.
+We see that evaluation of the interpolant is [bigo](/log/(/N/)).
+
+
+    Run on 2700 MHz CPU
+    CPU Caches:
+      L1 Data 32K (x2)
+      L1 Instruction 32K (x2)
+      L2 Unified 262K (x2)
+      L3 Unified 3145K (x1)
+    ---------------------------------------------------------
+    Benchmark                              Time           CPU
+    ---------------------------------------------------------
+    BM_CatmullRom<double>/4               20 ns         20 ns
+    BM_CatmullRom<double>/8               21 ns         21 ns
+    BM_CatmullRom<double>/16              23 ns         23 ns
+    BM_CatmullRom<double>/32              24 ns         24 ns
+    BM_CatmullRom<double>/64              27 ns         27 ns
+    BM_CatmullRom<double>/128             27 ns         27 ns
+    BM_CatmullRom<double>/256             30 ns         30 ns
+    BM_CatmullRom<double>/512             32 ns         31 ns
+    BM_CatmullRom<double>/1024            33 ns         33 ns
+    BM_CatmullRom<double>/2048            34 ns         34 ns
+    BM_CatmullRom<double>/4096            36 ns         36 ns
+    BM_CatmullRom<double>/8192            38 ns         38 ns
+    BM_CatmullRom<double>/16384           39 ns         39 ns
+    BM_CatmullRom<double>/32768           40 ns         40 ns
+    BM_CatmullRom<double>/65536           45 ns         44 ns
+    BM_CatmullRom<double>/131072          46 ns         46 ns
+    BM_CatmullRom<double>/262144          50 ns         50 ns
+    BM_CatmullRom<double>/524288          53 ns         52 ns
+    BM_CatmullRom<double>/1048576         58 ns         57 ns
+    BM_CatmullRom<double>_BigO          2.97 lgN       2.97 lgN
+    BM_CatmullRom<double>_RMS             19 %         19 %
+
+
+[heading Point types]
+
+We have already discussed that certain conditions on the `Point` type template argument must be obeyed.
+The following shows a custom point type in 3D which can be used as a template argument to Catmull-Rom:
+
+    template<class Real>
+    class mypoint3d
+    {
+    public:
+        // Must define a value_type:
+        typedef Real value_type;
+
+        // Regular constructor--need not be of this form.
+        mypoint3d(Real x, Real y, Real z) {m_vec[0] = x; m_vec[1] = y; m_vec[2] = z; }
+
+        // Must define a default constructor:
+        mypoint3d() {}
+
+        // Must define array access:
+        Real operator[](size_t i) const
+        {
+            return m_vec[i];
+        }
+
+        // Must define array element assignment:
+        Real& operator[](size_t i)
+        {
+            return m_vec[i];
+        }
+
+    private:
+        std::array<Real, 3> m_vec;
+    };
+
+
+    // Must define the free function "size()":
+    template<class Real>
+    constexpr size_t size(const mypoint3d<Real>& c)
+    {
+        return 3;
+    }
+
+These conditions are satisfied by both `std::array` and `std::vector`, but it may nonetheless be useful to define your own point class so that (say) you can define geometric distance between them.
+
+
+[heading Caveats]
+
+The Catmull-Rom interpolator requires memory for three more points than is provided by the user.
+This causes the class to call a `resize()` on the input vector.
+If `v.capacity() >= v.size() + 3`, then no problems arise; there are no reallocs, and in practice this condition is almost always satisfied.
+However, if `v.capacity() < v.size() + 3`, the `realloc` causes a performance penalty of roughly 20%.
+
+[heading Generic Containers]
+
+The `Point` type may be stored in a different container than `std::vector`.
+For example, here is how to store the points in a Boost.uBLAS vector:
+
+    mypoint3d<Real> p0(0.1, 0.2, 0.3);
+    mypoint3d<Real> p1(0.2, 0.3, 0.4);
+    mypoint3d<Real> p2(0.3, 0.4, 0.5);
+    mypoint3d<Real> p3(0.4, 0.5, 0.6);
+    mypoint3d<Real> p4(0.5, 0.6, 0.7);
+    mypoint3d<Real> p5(0.6, 0.7, 0.8);
+
+    boost::numeric::ublas::vector<mypoint3d<Real>> u(6);
+    u[0] = p0;
+    u[1] = p1;
+    u[2] = p2;
+    u[3] = p3;
+    u[4] = p4;
+    u[5] = p5;
+
+    // Tests initializer_list:
+    catmull_rom<mypoint3d<Real>, decltype(u)> cat(std::move(u));
+
+
+[heading References]
+
+* Cem Yuksel, Scott Schaefer, and John Keyser, ['Parameterization and applications of Catmull–Rom curves], Computer-Aided Design 43 (2011) 747–755.
+* Phillip J. Barry and Ronald N. Goldman, ['A Recursive Evaluation Algorithm for a Class of Catmull-Rom Splines], Computer Graphics, Volume 22, Number 4, August 1988
+
+[endsect] [/section:catmull_rom Catmull-Rom Splines]

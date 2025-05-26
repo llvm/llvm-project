@@ -1,0 +1,773 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Finding Zeros of Bessel Functions of the First and Second Kinds</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../bessel.html" title="Bessel Functions">
+<link rel="prev" href="bessel_first.html" title="Bessel Functions of the First and Second Kinds">
+<link rel="next" href="mbessel.html" title="Modified Bessel Functions of the First and Second Kinds">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bessel_first.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../bessel.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="mbessel.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.bessel.bessel_root"></a><a class="link" href="bessel_root.html" title="Finding Zeros of Bessel Functions of the First and Second Kinds">Finding Zeros of Bessel
+      Functions of the First and Second Kinds</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.bessel.bessel_root.h0"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.bessel_root.synopsis"></a></span><a class="link" href="bessel_root.html#math_toolkit.bessel.bessel_root.synopsis">Synopsis</a>
+      </h5>
+<p>
+        <code class="computeroutput"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">bessel</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>
+      </p>
+<p>
+        Functions for obtaining both a single zero or root of the Bessel function,
+        and placing multiple zeros into a container like <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span></code>
+        by providing an output iterator.
+      </p>
+<p>
+        The signature of the single value functions are:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span>
+         <span class="identifier">T</span> <span class="identifier">v</span><span class="special">,</span>            <span class="comment">// Floating-point value for Jv.</span>
+         <span class="keyword">int</span> <span class="identifier">m</span><span class="special">);</span>         <span class="comment">// 1-based index of zero.</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">cyl_neumann_zero</span><span class="special">(</span>
+         <span class="identifier">T</span> <span class="identifier">v</span><span class="special">,</span>            <span class="comment">// Floating-point value for Jv.</span>
+         <span class="keyword">int</span> <span class="identifier">m</span><span class="special">);</span>         <span class="comment">// 1-based index of zero.</span>
+</pre>
+<p>
+        and for multiple zeros:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">OutputIterator</span><span class="special">&gt;</span>
+<span class="identifier">OutputIterator</span> <span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span>
+                     <span class="identifier">T</span> <span class="identifier">v</span><span class="special">,</span>                       <span class="comment">// Floating-point value for Jv.</span>
+                     <span class="keyword">int</span> <span class="identifier">start_index</span><span class="special">,</span>           <span class="comment">// 1-based index of first zero.</span>
+                     <span class="keyword">unsigned</span> <span class="identifier">number_of_zeros</span><span class="special">,</span>  <span class="comment">// How many zeros to generate.</span>
+                     <span class="identifier">OutputIterator</span> <span class="identifier">out_it</span><span class="special">);</span>    <span class="comment">// Destination for zeros.</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">OutputIterator</span><span class="special">&gt;</span>
+<span class="identifier">OutputIterator</span> <span class="identifier">cyl_neumann_zero</span><span class="special">(</span>
+                     <span class="identifier">T</span> <span class="identifier">v</span><span class="special">,</span>                       <span class="comment">// Floating-point value for Jv.</span>
+                     <span class="keyword">int</span> <span class="identifier">start_index</span><span class="special">,</span>           <span class="comment">// 1-based index of zero.</span>
+                     <span class="keyword">unsigned</span> <span class="identifier">number_of_zeros</span><span class="special">,</span>  <span class="comment">// How many zeros to generate</span>
+                     <span class="identifier">OutputIterator</span> <span class="identifier">out_it</span><span class="special">);</span>    <span class="comment">// Destination for zeros.</span>
+</pre>
+<p>
+        There are also versions which allow control of the <a class="link" href="../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policies</a>
+        for error handling and precision.
+      </p>
+<pre class="programlisting"> <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+ <span class="identifier">T</span> <span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span>
+          <span class="identifier">T</span> <span class="identifier">v</span><span class="special">,</span>            <span class="comment">// Floating-point value for Jv.</span>
+          <span class="keyword">int</span> <span class="identifier">m</span><span class="special">,</span>          <span class="comment">// 1-based index of zero.</span>
+          <span class="keyword">const</span> <span class="identifier">Policy</span><span class="special">&amp;);</span> <span class="comment">// Policy to use.</span>
+
+ <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+ <span class="identifier">T</span> <span class="identifier">cyl_neumann_zero</span><span class="special">(</span>
+          <span class="identifier">T</span> <span class="identifier">v</span><span class="special">,</span>            <span class="comment">// Floating-point value for Jv.</span>
+          <span class="keyword">int</span> <span class="identifier">m</span><span class="special">,</span>          <span class="comment">// 1-based index of zero.</span>
+          <span class="keyword">const</span> <span class="identifier">Policy</span><span class="special">&amp;);</span> <span class="comment">// Policy to use.</span>
+
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">OutputIterator</span><span class="special">&gt;</span>
+<span class="identifier">OutputIterator</span> <span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span>
+                     <span class="identifier">T</span> <span class="identifier">v</span><span class="special">,</span>                       <span class="comment">// Floating-point value for Jv.</span>
+                     <span class="keyword">int</span> <span class="identifier">start_index</span><span class="special">,</span>           <span class="comment">// 1-based index of first zero.</span>
+                     <span class="keyword">unsigned</span> <span class="identifier">number_of_zeros</span><span class="special">,</span>  <span class="comment">// How many zeros to generate.</span>
+                     <span class="identifier">OutputIterator</span> <span class="identifier">out_it</span><span class="special">,</span>     <span class="comment">// Destination for zeros.</span>
+                     <span class="keyword">const</span> <span class="identifier">Policy</span><span class="special">&amp;</span> <span class="identifier">pol</span><span class="special">);</span>        <span class="comment">// Policy to use.</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">OutputIterator</span><span class="special">&gt;</span>
+<span class="identifier">OutputIterator</span> <span class="identifier">cyl_neumann_zero</span><span class="special">(</span>
+                     <span class="identifier">T</span> <span class="identifier">v</span><span class="special">,</span>                       <span class="comment">// Floating-point value for Jv.</span>
+                     <span class="keyword">int</span> <span class="identifier">start_index</span><span class="special">,</span>           <span class="comment">// 1-based index of zero.</span>
+                     <span class="keyword">unsigned</span> <span class="identifier">number_of_zeros</span><span class="special">,</span>  <span class="comment">// How many zeros to generate.</span>
+                     <span class="identifier">OutputIterator</span> <span class="identifier">out_it</span><span class="special">,</span>     <span class="comment">// Destination for zeros.</span>
+                     <span class="keyword">const</span> <span class="identifier">Policy</span><span class="special">&amp;</span> <span class="identifier">pol</span><span class="special">);</span>        <span class="comment">// Policy to use.</span>
+</pre>
+<h5>
+<a name="math_toolkit.bessel.bessel_root.h1"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.bessel_root.description"></a></span><a class="link" href="bessel_root.html#math_toolkit.bessel.bessel_root.description">Description</a>
+      </h5>
+<p>
+        Every real order ν cylindrical Bessel and Neumann functions have an infinite
+        number of zeros on the positive real axis. The real zeros on the positive
+        real axis can be found by solving for the roots of
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="emphasis"><em>J<sub>ν</sub>(j<sub>ν, m</sub>) = 0</em></span>
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="emphasis"><em>Y<sub>ν</sub>(y<sub>ν, m</sub>) = 0</em></span>
+        </p></blockquote></div>
+<p>
+        Here, <span class="emphasis"><em>j<sub>ν, m</sub></em></span> represents the <span class="emphasis"><em>m<sup>th</sup></em></span> root
+        of the cylindrical Bessel function of order <span class="emphasis"><em>ν</em></span>, and <span class="emphasis"><em>y<sub>ν,
+        m</sub></em></span> represents the <span class="emphasis"><em>m<sup>th</sup></em></span> root of the cylindrical
+        Neumann function of order <span class="emphasis"><em>ν</em></span>.
+      </p>
+<p>
+        The zeros or roots (values of <code class="computeroutput"><span class="identifier">x</span></code>
+        where the function crosses the horizontal <code class="computeroutput"><span class="identifier">y</span>
+        <span class="special">=</span> <span class="number">0</span></code>
+        axis) of the Bessel and Neumann functions are computed by two functions,
+        <code class="computeroutput"><span class="identifier">cyl_bessel_j_zero</span></code> and <code class="computeroutput"><span class="identifier">cyl_neumann_zero</span></code>.
+      </p>
+<p>
+        In each case the index or rank of the zero returned is 1-based, which is
+        to say:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          cyl_bessel_j_zero(v, 1);
+        </p></blockquote></div>
+<p>
+        returns the first zero of Bessel J.
+      </p>
+<p>
+        Passing an <code class="computeroutput"><span class="identifier">start_index</span> <span class="special">&lt;=</span>
+        <span class="number">0</span></code> results in a <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">domain_error</span></code>
+        being raised.
+      </p>
+<p>
+        For certain parameters, however, the zero'th root is defined and it has a
+        value of zero. For example, the zero'th root of <code class="computeroutput"><span class="identifier">J</span><span class="special">[</span><span class="identifier">sub</span> <span class="identifier">v</span><span class="special">](</span><span class="identifier">x</span><span class="special">)</span></code>
+        is defined and it has a value of zero for all values of <code class="computeroutput"><span class="identifier">v</span>
+        <span class="special">&gt;</span> <span class="number">0</span></code>
+        and for negative integer values of <code class="computeroutput"><span class="identifier">v</span>
+        <span class="special">=</span> <span class="special">-</span><span class="identifier">n</span></code>. Similar cases are described in the implementation
+        details below.
+      </p>
+<p>
+        The order <code class="computeroutput"><span class="identifier">v</span></code> of <code class="computeroutput"><span class="identifier">J</span></code> can be positive, negative and zero for
+        the <code class="computeroutput"><span class="identifier">cyl_bessel_j</span></code> and <code class="computeroutput"><span class="identifier">cyl_neumann</span></code> functions, but not infinite
+        nor NaN.
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/bessel_j_zeros.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="inlinemediaobject"><img src="../../../graphs/neumann_y_zeros.svg" align="middle"></span>
+
+        </p></blockquote></div>
+<h5>
+<a name="math_toolkit.bessel.bessel_root.h2"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.bessel_root.examples_of_finding_bessel_and_n"></a></span><a class="link" href="bessel_root.html#math_toolkit.bessel.bessel_root.examples_of_finding_bessel_and_n">Examples
+        of finding Bessel and Neumann zeros</a>
+      </h5>
+<p>
+        This example demonstrates calculating zeros of the Bessel and Neumann functions.
+        It also shows how Boost.Math and Boost.Multiprecision can be combined to
+        provide a many decimal digit precision. For 50 decimal digit precision we
+        need to include
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multiprecision</span><span class="special">/</span><span class="identifier">cpp_dec_float</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<p>
+        and a <code class="computeroutput"><span class="keyword">typedef</span></code> for <code class="computeroutput"><span class="identifier">float_type</span></code> may be convenient (allowing
+        a quick switch to re-compute at built-in <code class="computeroutput"><span class="keyword">double</span></code>
+        or other precision)
+      </p>
+<pre class="programlisting"><span class="keyword">typedef</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">cpp_dec_float_50</span> <span class="identifier">float_type</span><span class="special">;</span>
+</pre>
+<p>
+        To use the functions for finding zeros of the functions we need
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">bessel</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<p>
+        This file includes the forward declaration signatures for the zero-finding
+        functions:
+      </p>
+<pre class="programlisting"><span class="comment">//  #include &lt;boost/math/special_functions/math_fwd.hpp&gt;</span>
+</pre>
+<p>
+        but more details are in the full documentation, for example at <a href="http://www.boost.org/doc/libs/1_53_0/libs/math/doc/sf_and_dist/html/math_toolkit/special/bessel/bessel_over.html" target="_top">Boost.Math
+        Bessel functions</a>.
+      </p>
+<p>
+        This example shows obtaining both a single zero of the Bessel function, and
+        then placing multiple zeros into a container like <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span></code>
+        by providing an iterator.
+      </p>
+<div class="tip"><table border="0" summary="Tip">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../../doc/src/images/tip.png"></td>
+<th align="left">Tip</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          It is always wise to place code using Boost.Math inside try'n'catch blocks;
+          this will ensure that helpful error messages are shown when exceptional
+          conditions arise.
+        </p></td></tr>
+</table></div>
+<p>
+        First, evaluate a single Bessel zero.
+      </p>
+<p>
+        The precision is controlled by the float-point type of template parameter
+        <code class="computeroutput"><span class="identifier">T</span></code> of <code class="computeroutput"><span class="identifier">v</span></code>
+        so this example has <code class="computeroutput"><span class="keyword">double</span></code> precision,
+        at least 15 but up to 17 decimal digits (for the common 64-bit double).
+      </p>
+<pre class="programlisting"><span class="comment">//    double root = boost::math::cyl_bessel_j_zero(0.0, 1);</span>
+<span class="comment">//    // Displaying with default precision of 6 decimal digits:</span>
+<span class="comment">//    std::cout &lt;&lt; "boost::math::cyl_bessel_j_zero(0.0, 1) " &lt;&lt; root &lt;&lt; std::endl; // 2.40483</span>
+<span class="comment">//    // And with all the guaranteed (15) digits:</span>
+<span class="comment">//    std::cout.precision(std::numeric_limits&lt;double&gt;::digits10);</span>
+<span class="comment">//    std::cout &lt;&lt; "boost::math::cyl_bessel_j_zero(0.0, 1) " &lt;&lt; root &lt;&lt; std::endl; // 2.40482555769577</span>
+</pre>
+<p>
+        But note that because the parameter <code class="computeroutput"><span class="identifier">v</span></code>
+        controls the precision of the result, <code class="computeroutput"><span class="identifier">v</span></code>
+        <span class="bold"><strong>must be a floating-point type</strong></span>. So if you
+        provide an integer type, say 0, rather than 0.0, then it will fail to compile
+        thus:
+      </p>
+<pre class="programlisting"><span class="identifier">root</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="number">0</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span>
+</pre>
+<p>
+        with this error message
+      </p>
+<pre class="programlisting"><span class="identifier">error</span> <span class="identifier">C2338</span><span class="special">:</span> <span class="identifier">Order</span> <span class="identifier">must</span> <span class="identifier">be</span> <span class="identifier">a</span> <span class="identifier">floating</span><span class="special">-</span><span class="identifier">point</span> <span class="identifier">type</span><span class="special">.</span>
+</pre>
+<p>
+        Optionally, we can use a policy to ignore errors, C-style, returning some
+        value, perhaps infinity or NaN, or the best that can be done. (See <a class="link" href="../pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">user error handling</a>).
+      </p>
+<p>
+        To create a (possibly unwise!) policy <code class="computeroutput"><span class="identifier">ignore_all_policy</span></code>
+        that ignores all errors:
+      </p>
+<pre class="programlisting"><span class="keyword">typedef</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">policy</span><span class="special">&lt;</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">domain_error</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">ignore_error</span><span class="special">&gt;,</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">overflow_error</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">ignore_error</span><span class="special">&gt;,</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">underflow_error</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">ignore_error</span><span class="special">&gt;,</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">denorm_error</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">ignore_error</span><span class="special">&gt;,</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">pole_error</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">ignore_error</span><span class="special">&gt;,</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">evaluation_error</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">ignore_error</span><span class="special">&gt;</span>
+            <span class="special">&gt;</span> <span class="identifier">ignore_all_policy</span><span class="special">;</span>
+</pre>
+<p>
+        Examples of use of this <code class="computeroutput"><span class="identifier">ignore_all_policy</span></code>
+        are
+      </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">inf</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">();</span>
+<span class="keyword">double</span> <span class="identifier">nan</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">();</span>
+
+<span class="keyword">double</span> <span class="identifier">dodgy_root</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(-</span><span class="number">1.0</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="identifier">ignore_all_policy</span><span class="special">());</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"boost::math::cyl_bessel_j_zero(-1.0, 1) "</span> <span class="special">&lt;&lt;</span> <span class="identifier">dodgy_root</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 1.#QNAN</span>
+<span class="keyword">double</span> <span class="identifier">inf_root</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="identifier">inf</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="identifier">ignore_all_policy</span><span class="special">());</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"boost::math::cyl_bessel_j_zero(inf, 1) "</span> <span class="special">&lt;&lt;</span> <span class="identifier">inf_root</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 1.#QNAN</span>
+<span class="keyword">double</span> <span class="identifier">nan_root</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="identifier">nan</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="identifier">ignore_all_policy</span><span class="special">());</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"boost::math::cyl_bessel_j_zero(nan, 1) "</span> <span class="special">&lt;&lt;</span> <span class="identifier">nan_root</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// 1.#QNAN</span>
+</pre>
+<p>
+        Another version of <code class="computeroutput"><span class="identifier">cyl_bessel_j_zero</span></code>
+        allows calculation of multiple zeros with one call, placing the results in
+        a container, often <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span></code>. For example, generate and display
+        the first five <code class="computeroutput"><span class="keyword">double</span></code> roots
+        of J<sub>v</sub> for integral order 2, as column <span class="emphasis"><em>J<sub>2</sub>(x)</em></span> in table
+        1 of <a href="http://mathworld.wolfram.com/BesselFunctionZeros.html" target="_top">Wolfram
+        Bessel Function Zeros</a>.
+      </p>
+<pre class="programlisting"><span class="keyword">unsigned</span> <span class="keyword">int</span> <span class="identifier">n_roots</span> <span class="special">=</span> <span class="number">5U</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">roots</span><span class="special">;</span>
+<span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="number">2.0</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="identifier">n_roots</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">back_inserter</span><span class="special">(</span><span class="identifier">roots</span><span class="special">));</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">copy</span><span class="special">(</span><span class="identifier">roots</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span>
+          <span class="identifier">roots</span><span class="special">.</span><span class="identifier">end</span><span class="special">(),</span>
+          <span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream_iterator</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">,</span> <span class="string">"\n"</span><span class="special">));</span>
+</pre>
+<p>
+        Or we can use Boost.Multiprecision to generate 50 decimal digit roots of
+        <span class="emphasis"><em>J<sub>v</sub></em></span> for non-integral order <code class="computeroutput"><span class="identifier">v</span><span class="special">=</span> <span class="number">71</span><span class="special">/</span><span class="number">19</span> <span class="special">==</span> <span class="number">3.736842</span></code>,
+        expressed as an exact-integer fraction to generate the most accurate value
+        possible for all floating-point types.
+      </p>
+<p>
+        We set the precision of the output stream, and show trailing zeros to display
+        a fixed 50 decimal digits.
+      </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">float_type</span><span class="special">&gt;::</span><span class="identifier">digits10</span><span class="special">);</span> <span class="comment">// 50 decimal digits.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">showpoint</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// Show trailing zeros.</span>
+
+<span class="identifier">float_type</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">float_type</span><span class="special">(</span><span class="number">71</span><span class="special">)</span> <span class="special">/</span> <span class="number">19</span><span class="special">;</span>
+<span class="identifier">float_type</span> <span class="identifier">r</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span> <span class="comment">// 1st root.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"x = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">x</span> <span class="special">&lt;&lt;</span> <span class="string">", r = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">r</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="identifier">r</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span> <span class="number">20U</span><span class="special">);</span> <span class="comment">// 20th root.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"x = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">x</span> <span class="special">&lt;&lt;</span> <span class="string">", r = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">r</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">float_type</span><span class="special">&gt;</span> <span class="identifier">zeros</span><span class="special">;</span>
+<span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="number">3</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">back_inserter</span><span class="special">(</span><span class="identifier">zeros</span><span class="special">));</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"cyl_bessel_j_zeros"</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Print the roots to the output stream.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">copy</span><span class="special">(</span><span class="identifier">zeros</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">zeros</span><span class="special">.</span><span class="identifier">end</span><span class="special">(),</span>
+          <span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream_iterator</span><span class="special">&lt;</span><span class="identifier">float_type</span><span class="special">&gt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">,</span> <span class="string">"\n"</span><span class="special">));</span>
+</pre>
+<h6>
+<a name="math_toolkit.bessel.bessel_root.h3"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.bessel_root.using_output_iterator_to_sum_zer"></a></span><a class="link" href="bessel_root.html#math_toolkit.bessel.bessel_root.using_output_iterator_to_sum_zer">Using
+        Output Iterator to sum zeros of Bessel Functions</a>
+      </h6>
+<p>
+        This example demonstrates summing zeros of the Bessel functions. To use the
+        functions for finding zeros of the functions we need
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">bessel</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<p>
+        We use the <code class="computeroutput"><span class="identifier">cyl_bessel_j_zero</span></code>
+        output iterator parameter <code class="computeroutput"><span class="identifier">out_it</span></code>
+        to create a sum of <span class="emphasis"><em>1/zeros<sup>2</sup></em></span> by defining a custom output
+        iterator:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">output_summation_iterator</span>
+<span class="special">{</span>
+   <span class="identifier">output_summation_iterator</span><span class="special">(</span><span class="identifier">T</span><span class="special">*</span> <span class="identifier">p</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">p_sum</span><span class="special">(</span><span class="identifier">p</span><span class="special">)</span>
+   <span class="special">{}</span>
+   <span class="identifier">output_summation_iterator</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">*()</span>
+   <span class="special">{</span> <span class="keyword">return</span> <span class="special">*</span><span class="keyword">this</span><span class="special">;</span> <span class="special">}</span>
+    <span class="identifier">output_summation_iterator</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">++()</span>
+   <span class="special">{</span> <span class="keyword">return</span> <span class="special">*</span><span class="keyword">this</span><span class="special">;</span> <span class="special">}</span>
+   <span class="identifier">output_summation_iterator</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">++(</span><span class="keyword">int</span><span class="special">)</span>
+   <span class="special">{</span> <span class="keyword">return</span> <span class="special">*</span><span class="keyword">this</span><span class="special">;</span> <span class="special">}</span>
+   <span class="identifier">output_summation_iterator</span><span class="special">&amp;</span> <span class="keyword">operator</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">val</span><span class="special">)</span>
+   <span class="special">{</span>
+     <span class="special">*</span><span class="identifier">p_sum</span> <span class="special">+=</span> <span class="number">1.</span><span class="special">/</span> <span class="special">(</span><span class="identifier">val</span> <span class="special">*</span> <span class="identifier">val</span><span class="special">);</span> <span class="comment">// Summing 1/zero^2.</span>
+     <span class="keyword">return</span> <span class="special">*</span><span class="keyword">this</span><span class="special">;</span>
+   <span class="special">}</span>
+<span class="keyword">private</span><span class="special">:</span>
+   <span class="identifier">T</span><span class="special">*</span> <span class="identifier">p_sum</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        The sum is calculated for many values, converging on the analytical exact
+        value of <code class="computeroutput"><span class="number">1</span><span class="special">/</span><span class="number">8</span></code>.
+      </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">nu</span> <span class="special">=</span> <span class="number">1.</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">sum</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+<span class="identifier">output_summation_iterator</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">it</span><span class="special">(&amp;</span><span class="identifier">sum</span><span class="special">);</span>  <span class="comment">// sum of 1/zeros^2</span>
+<span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="identifier">nu</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="number">10000</span><span class="special">,</span> <span class="identifier">it</span><span class="special">);</span>
+
+<span class="keyword">double</span> <span class="identifier">s</span> <span class="special">=</span> <span class="number">1</span><span class="special">/(</span><span class="number">4</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">nu</span> <span class="special">+</span> <span class="number">1</span><span class="special">));</span> <span class="comment">// 0.125 = 1/8 is exact analytical solution.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setprecision</span><span class="special">(</span><span class="number">6</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="string">"nu = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">nu</span> <span class="special">&lt;&lt;</span> <span class="string">", sum = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">sum</span>
+  <span class="special">&lt;&lt;</span> <span class="string">", exact = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">s</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// nu = 1.00000, sum = 0.124990, exact = 0.125000</span>
+</pre>
+<h6>
+<a name="math_toolkit.bessel.bessel_root.h4"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.bessel_root.calculating_zeros_of_the_neumann"></a></span><a class="link" href="bessel_root.html#math_toolkit.bessel.bessel_root.calculating_zeros_of_the_neumann">Calculating
+        zeros of the Neumann function.</a>
+      </h6>
+<p>
+        This example also shows how Boost.Math and Boost.Multiprecision can be combined
+        to provide a many decimal digit precision. For 50 decimal digit precision
+        we need to include
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multiprecision</span><span class="special">/</span><span class="identifier">cpp_dec_float</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<p>
+        and a <code class="computeroutput"><span class="keyword">typedef</span></code> for <code class="computeroutput"><span class="identifier">float_type</span></code> may be convenient (allowing
+        a quick switch to re-compute at built-in <code class="computeroutput"><span class="keyword">double</span></code>
+        or other precision)
+      </p>
+<pre class="programlisting"><span class="keyword">typedef</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">cpp_dec_float_50</span> <span class="identifier">float_type</span><span class="special">;</span>
+</pre>
+<p>
+        To use the functions for finding zeros of the <code class="computeroutput"><span class="identifier">cyl_neumann</span></code>
+        function we need:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">bessel</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<p>
+        The Neumann (Bessel Y) function zeros are evaluated very similarly:
+      </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_neumann_zero</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">zn</span> <span class="special">=</span> <span class="identifier">cyl_neumann_zero</span><span class="special">(</span><span class="number">2.</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"cyl_neumann_zero(2., 1) = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">zn</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">float</span><span class="special">&gt;</span> <span class="identifier">nzeros</span><span class="special">(</span><span class="number">3</span><span class="special">);</span> <span class="comment">// Space for 3 zeros.</span>
+<span class="identifier">cyl_neumann_zero</span><span class="special">&lt;</span><span class="keyword">float</span><span class="special">&gt;(</span><span class="number">2.F</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="identifier">nzeros</span><span class="special">.</span><span class="identifier">size</span><span class="special">(),</span> <span class="identifier">nzeros</span><span class="special">.</span><span class="identifier">begin</span><span class="special">());</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"cyl_neumann_zero&lt;float&gt;(2.F, 1, "</span><span class="special">;</span>
+<span class="comment">// Print the zeros to the output stream.</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">copy</span><span class="special">(</span><span class="identifier">nzeros</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">nzeros</span><span class="special">.</span><span class="identifier">end</span><span class="special">(),</span>
+          <span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream_iterator</span><span class="special">&lt;</span><span class="keyword">float</span><span class="special">&gt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">,</span> <span class="string">", "</span><span class="special">));</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="string">"cyl_neumann_zero(static_cast&lt;float_type&gt;(220)/100, 1) = "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">cyl_neumann_zero</span><span class="special">(</span><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">float_type</span><span class="special">&gt;(</span><span class="number">220</span><span class="special">)/</span><span class="number">100</span><span class="special">,</span> <span class="number">1</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// 3.6154383428745996706772556069431792744372398748422</span>
+</pre>
+<h6>
+<a name="math_toolkit.bessel.bessel_root.h5"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.bessel_root.error_messages_from_bad_input"></a></span><a class="link" href="bessel_root.html#math_toolkit.bessel.bessel_root.error_messages_from_bad_input">Error
+        messages from 'bad' input</a>
+      </h6>
+<p>
+        Another example demonstrates calculating zeros of the Bessel functions showing
+        the error messages from 'bad' input is handled by throwing exceptions.
+      </p>
+<p>
+        To use the functions for finding zeros of the functions we need:
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">bessel</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">airy</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<div class="tip"><table border="0" summary="Tip">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../../doc/src/images/tip.png"></td>
+<th align="left">Tip</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          It is always wise to place all code using Boost.Math inside try'n'catch
+          blocks; this will ensure that helpful error messages can be shown when
+          exceptional conditions arise.
+        </p></td></tr>
+</table></div>
+<p>
+        Examples below show messages from several 'bad' arguments that throw a <code class="computeroutput"><span class="identifier">domain_error</span></code> exception.
+      </p>
+<pre class="programlisting"><span class="keyword">try</span>
+<span class="special">{</span> <span class="comment">// Try a zero order v.</span>
+  <span class="keyword">float</span> <span class="identifier">dodgy_root</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="number">0.F</span><span class="special">,</span> <span class="number">0</span><span class="special">);</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"boost::math::cyl_bessel_j_zero(0.F, 0) "</span> <span class="special">&lt;&lt;</span> <span class="identifier">dodgy_root</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+  <span class="comment">// Thrown exception Error in function boost::math::cyl_bessel_j_zero&lt;double&gt;(double, int):</span>
+  <span class="comment">// Requested the 0'th zero of J0, but the rank must be &gt; 0 !</span>
+<span class="special">}</span>
+<span class="keyword">catch</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">exception</span><span class="special">&amp;</span> <span class="identifier">ex</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Thrown exception "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<div class="note"><table border="0" summary="Note">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../doc/src/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          The type shown in the error message is the type <span class="bold"><strong>after
+          promotion</strong></span>, using <a class="link" href="../pol_ref/precision_pol.html" title="Precision Policies">precision
+          policy</a> and <a class="link" href="../pol_ref/internal_promotion.html" title="Internal Floating-point Promotion Policies">internal
+          promotion policy</a>, from <code class="computeroutput"><span class="keyword">float</span></code>
+          to <code class="computeroutput"><span class="keyword">double</span></code> in this case.
+        </p></td></tr>
+</table></div>
+<p>
+        In this example the promotion goes:
+      </p>
+<div class="orderedlist"><ol class="orderedlist" type="1">
+<li class="listitem">
+            Arguments are <code class="computeroutput"><span class="keyword">float</span></code> and
+            <code class="computeroutput"><span class="keyword">int</span></code>.
+          </li>
+<li class="listitem">
+            Treat <code class="computeroutput"><span class="keyword">int</span></code> "as if"
+            it were a <code class="computeroutput"><span class="keyword">double</span></code>, so arguments
+            are <code class="computeroutput"><span class="keyword">float</span></code> and <code class="computeroutput"><span class="keyword">double</span></code>.
+          </li>
+<li class="listitem">
+            Common type is <code class="computeroutput"><span class="keyword">double</span></code> -
+            so that's the precision we want (and the type that will be returned).
+          </li>
+<li class="listitem">
+            Evaluate internally as <code class="computeroutput"><span class="keyword">double</span></code>
+            for full <code class="computeroutput"><span class="keyword">float</span></code> precision.
+          </li>
+</ol></div>
+<p>
+        See full code for other examples that promote from <code class="computeroutput"><span class="keyword">double</span></code>
+        to <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>.
+      </p>
+<p>
+        Other examples of 'bad' inputs like infinity and NaN are below. Some compiler
+        warnings indicate that 'bad' values are detected at compile time.
+      </p>
+<pre class="programlisting"><span class="keyword">try</span>
+<span class="special">{</span> <span class="comment">// order v = inf</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"boost::math::cyl_bessel_j_zero(inf, 1) "</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   <span class="keyword">double</span> <span class="identifier">inf</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">();</span>
+   <span class="keyword">double</span> <span class="identifier">inf_root</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="identifier">inf</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"boost::math::cyl_bessel_j_zero(inf, 1) "</span> <span class="special">&lt;&lt;</span> <span class="identifier">inf_root</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   <span class="comment">// Throw exception Error in function boost::math::cyl_bessel_j_zero&lt;long double&gt;(long double, unsigned):</span>
+   <span class="comment">// Order argument is 1.#INF, but must be finite &gt;= 0 !</span>
+<span class="special">}</span>
+<span class="keyword">catch</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">exception</span><span class="special">&amp;</span> <span class="identifier">ex</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Thrown exception "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+
+<span class="keyword">try</span>
+<span class="special">{</span> <span class="comment">// order v = NaN, rank m = 1</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"boost::math::cyl_bessel_j_zero(nan, 1) "</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   <span class="keyword">double</span> <span class="identifier">nan</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">();</span>
+   <span class="keyword">double</span> <span class="identifier">nan_root</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cyl_bessel_j_zero</span><span class="special">(</span><span class="identifier">nan</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"boost::math::cyl_bessel_j_zero(nan, 1) "</span> <span class="special">&lt;&lt;</span> <span class="identifier">nan_root</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   <span class="comment">// Throw exception Error in function boost::math::cyl_bessel_j_zero&lt;long double&gt;(long double, unsigned):</span>
+   <span class="comment">// Order argument is 1.#QNAN, but must be finite &gt;= 0 !</span>
+<span class="special">}</span>
+<span class="keyword">catch</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">exception</span><span class="special">&amp;</span> <span class="identifier">ex</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Thrown exception "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        The output from other examples are shown appended to the full code listing.
+      </p>
+<p>
+        The full code (and output) for these examples is at <a href="../../../../example/bessel_zeros_example_1.cpp" target="_top">Bessel
+        zeros</a>, <a href="../../../../example/bessel_zeros_interator_example.cpp" target="_top">Bessel
+        zeros iterator</a>, <a href="../../../../example/neumann_zeros_example_1.cpp" target="_top">Neumann
+        zeros</a>, <a href="../../../../example/bessel_errors_example.cpp" target="_top">Bessel
+        error messages</a>.
+      </p>
+<h4>
+<a name="math_toolkit.bessel.bessel_root.h6"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.bessel_root.implementation"></a></span><a class="link" href="bessel_root.html#math_toolkit.bessel.bessel_root.implementation">Implementation</a>
+      </h4>
+<p>
+        Various methods are used to compute initial estimates for <span class="emphasis"><em>j<sub>ν, m</sub></em></span>
+        and <span class="emphasis"><em>y<sub>ν, m</sub></em></span> ; these are described in detail below.
+      </p>
+<p>
+        After finding the initial estimate of a given root, its precision is subsequently
+        refined to the desired level using Newton-Raphson iteration from Boost.Math's
+        <a class="link" href="../roots_deriv.html" title="Root Finding With Derivatives: Newton-Raphson, Halley &amp; Schröder">root-finding with derivatives</a>
+        utilities combined with the functions <a class="link" href="bessel_first.html" title="Bessel Functions of the First and Second Kinds">cyl_bessel_j</a>
+        and <a class="link" href="bessel_first.html" title="Bessel Functions of the First and Second Kinds">cyl_neumann</a>.
+      </p>
+<p>
+        Newton iteration requires both <span class="emphasis"><em>J<sub>ν</sub>(x)</em></span> or <span class="emphasis"><em>Y<sub>ν</sub>(x)</em></span>
+        as well as its derivative. The derivatives of <span class="emphasis"><em>J<sub>ν</sub>(x)</em></span> and
+        <span class="emphasis"><em>Y<sub>ν</sub>(x)</em></span> with respect to <span class="emphasis"><em>x</em></span> are given
+        by M. Abramowitz and I. A. Stegun, Handbook of Mathematical Functions, NBS
+        (1964). In particular,
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">d/<sub>dx</sub> <span class="emphasis"><em>J<sub>ν</sub>(x)</em></span> = <span class="emphasis"><em>J<sub>ν-1</sub>(x)</em></span>
+          - ν J<sub>ν</sub>(x) / x</span>
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">d/<sub>dx</sub> <span class="emphasis"><em>Y<sub>ν</sub>(x)</em></span> = <span class="emphasis"><em>Y<sub>ν-1</sub>(x)</em></span>
+          - ν Y<sub>ν</sub>(x) / x</span>
+        </p></blockquote></div>
+<p>
+        Enumeration of the rank of a root (in other words the index of a root) begins
+        with one and counts up, in other words <span class="emphasis"><em>m,=1,2,3,…</em></span> The
+        value of the first root is always greater than zero.
+      </p>
+<p>
+        For certain special parameters, cylindrical Bessel functions and cylindrical
+        Neumann functions have a root at the origin. For example, <span class="emphasis"><em>J<sub>ν</sub>(x)</em></span>
+        has a root at the origin for every positive order <span class="emphasis"><em>ν &gt; 0</em></span>,
+        and for every negative integer order <span class="emphasis"><em>ν = -n</em></span> with <span class="emphasis"><em>n
+        ∈ ℕ <sup>+</sup></em></span> and <span class="emphasis"><em>n ≠ 0</em></span>.
+      </p>
+<p>
+        In addition, <span class="emphasis"><em>Y<sub>ν</sub>(x)</em></span> has a root at the origin for every
+        negative half-integer order <span class="emphasis"><em>ν = -n/2</em></span>, with <span class="emphasis"><em>n
+        ∈ ℕ <sup>+</sup></em></span> and and <span class="emphasis"><em>n ≠ 0</em></span>.
+      </p>
+<p>
+        For these special parameter values, the origin with a value of <span class="emphasis"><em>x
+        = 0</em></span> is provided as the <span class="emphasis"><em>0<sup>th</sup></em></span> root generated
+        by <code class="computeroutput"><span class="identifier">cyl_bessel_j_zero</span><span class="special">()</span></code>
+        and <code class="computeroutput"><span class="identifier">cyl_neumann_zero</span><span class="special">()</span></code>.
+      </p>
+<p>
+        When calculating initial estimates for the roots of Bessel functions, a distinction
+        is made between positive order and negative order, and different methods
+        are used for these. In addition, different algorithms are used for the first
+        root <span class="emphasis"><em>m = 1</em></span> and for subsequent roots with higher rank
+        <span class="emphasis"><em>m ≥ 2</em></span>. Furthermore, estimates of the roots for Bessel
+        functions with order above and below a cutoff at <span class="emphasis"><em>ν = 2.2</em></span>
+        are calculated with different methods.
+      </p>
+<p>
+        Calculations of the estimates of <span class="emphasis"><em>j<sub>ν,1</sub></em></span> and <span class="emphasis"><em>y<sub>ν,1</sub></em></span>
+        with <span class="emphasis"><em>0 ≤ ν &lt; 2.2</em></span> use empirically tabulated values. The
+        coefficients for these have been generated by a computer algebra system.
+      </p>
+<p>
+        Calculations of the estimates of <span class="emphasis"><em>j<sub>ν,1</sub></em></span> and <span class="emphasis"><em>y<sub>ν,1</sub></em></span>
+        with <span class="emphasis"><em>ν≥ 2.2</em></span> use Eqs.9.5.14 and 9.5.15 in M. Abramowitz
+        and I. A. Stegun, Handbook of Mathematical Functions, NBS (1964).
+      </p>
+<p>
+        In particular,
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">j<sub>ν,1</sub> ≅ ν + 1.85575 ν<sup>⅓</sup> + 1.033150 ν<sup>-⅓</sup> - 0.00397 ν<sup>-1</sup> - 0.0908
+          ν<sup>-5/3</sup> + 0.043 ν<sup>-7/3</sup> + …</span>
+        </p></blockquote></div>
+<p>
+        and
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">y<sub>ν,1</sub> ≅ ν + 0.93157 ν<sup>⅓</sup> + 0.26035 ν<sup>-⅓</sup> + 0.01198 ν<sup>-1</sup> - 0.0060
+          ν<sup>-5/3</sup> - 0.001 ν<sup>-7/3</sup> + …</span>
+        </p></blockquote></div>
+<p>
+        Calculations of the estimates of <span class="emphasis"><em>j<sub>ν, m</sub></em></span> and <span class="emphasis"><em>y<sub>ν,
+        m</sub></em></span> with rank <span class="emphasis"><em>m &gt; 2</em></span> and <span class="emphasis"><em>0 ≤ ν &lt;
+        2.2</em></span> use McMahon's approximation, as described in M. Abramowitz
+        and I. A. Stegan, Section 9.5 and 9.5.12. In particular,
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="emphasis"><em>j<sub>ν,m</sub>, y<sub>ν,m</sub> ≅</em></span>
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><div class="blockquote"><blockquote class="blockquote"><p>
+            β - (μ-1) / 8β
+          </p></blockquote></div></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="emphasis"><em>- 4(μ-1)(7μ - 31) / 3(8β)<sup>3</sup></em></span>
+          </p></blockquote></div></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="emphasis"><em>-32(μ-1)(83μ² - 982μ + 3779) / 15(8β)<sup>5</sup></em></span>
+          </p></blockquote></div></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="emphasis"><em>-64(μ-1)(6949μ<sup>3</sup> - 153855μ² + 1585743μ- 6277237) / 105(8a)<sup>7</sup></em></span>
+          </p></blockquote></div></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="emphasis"><em>- …</em></span>   (5)
+          </p></blockquote></div></blockquote></div>
+<p>
+        where <span class="emphasis"><em>μ = 4ν<sup>2</sup></em></span> and <span class="emphasis"><em>β = (m + ½ν - ¼)π</em></span> for
+        <span class="emphasis"><em>j<sub>ν,m</sub></em></span> and <span class="emphasis"><em>β = (m + ½ν -¾)π for <span class="emphasis"><em>y<sub>ν,m</sub></em></span></em></span>.
+      </p>
+<p>
+        Calculations of the estimates of <span class="emphasis"><em>j<sub>ν, m</sub></em></span> and <span class="emphasis"><em>y<sub>ν,
+        m</sub></em></span> with <span class="emphasis"><em>ν ≥ 2.2</em></span> use one term in the asymptotic
+        expansion given in Eq.9.5.22 and top line of Eq.9.5.26 combined with Eq.
+        9.3.39, all in M. Abramowitz and I. A. Stegun, Handbook of Mathematical Functions,
+        NBS (1964) explicit and easy-to-understand treatment for asymptotic expansion
+        of zeros. The latter two equations are expressed for argument <span class="emphasis"><em>(x)</em></span>
+        greater than one. (Olver also gives the series form of the equations in
+        <a href="http://dlmf.nist.gov/10.21#vi" target="_top">§10.21(vi) McMahon's Asymptotic
+        Expansions for Large Zeros</a> - using slightly different variable names).
+      </p>
+<p>
+        In summary,
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">j<sub>ν, m</sub> ∼ νx(-ζ) + f<sub>1</sub>(-ζ/ν)</span>
+        </p></blockquote></div>
+<p>
+        where <span class="emphasis"><em>-ζ = ν<sup>-2/3</sup>a<sub>m</sub></em></span> and <span class="emphasis"><em>a<sub>m</sub></em></span> is the absolute
+        value of the <span class="emphasis"><em>m<sup>th</sup></em></span> root of <span class="emphasis"><em>Ai(x)</em></span>
+        on the negative real axis.
+      </p>
+<p>
+        Here <span class="emphasis"><em>x = x(-ζ)</em></span> is the inverse of the function
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">⅔(-ζ)<sup>3/2</sup> = √(x² - 1) - cos⁻¹(1/x)</span>
+        </p></blockquote></div>
+<p>
+        (7)
+      </p>
+<p>
+        Furthermore,
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">f<sub>1</sub>(-ζ) = ½x(-ζ) {h(-ζ)}² ⋅ b<sub>0</sub>(-ζ)</span>
+        </p></blockquote></div>
+<p>
+        where
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">h(-ζ) = {4(-ζ) / (x² - 1)}<sup>4</sup></span>
+        </p></blockquote></div>
+<p>
+        and
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">b<sub>0</sub>(-ζ) = -5/(48ζ²) + 1/(-ζ)<sup>½</sup> ⋅ { 5/(24(x<sup>2</sup>-1)<sup>3/2</sup>) +
+          1/(8(x<sup>2</sup>-1)<sup>½)</sup>}</span>
+        </p></blockquote></div>
+<p>
+        When solving for <span class="emphasis"><em>x(-ζ)</em></span> in Eq. 7 above, the right-hand-side
+        is expanded to order 2 in a Taylor series for large <span class="emphasis"><em>x</em></span>.
+        This results in
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">⅔(-ζ)<sup>3/2</sup> ≈ x + 1/2x - π/2</span>
+        </p></blockquote></div>
+<p>
+        The positive root of the resulting quadratic equation is used to find an
+        initial estimate <span class="emphasis"><em>x(-ζ)</em></span>. This initial estimate is subsequently
+        refined with several steps of Newton-Raphson iteration in Eq. 7.
+      </p>
+<p>
+        Estimates of the roots of cylindrical Bessel functions of negative order
+        on the positive real axis are found using interlacing relations. For example,
+        the <span class="emphasis"><em>m<sup>th</sup></em></span> root of the cylindrical Bessel function <span class="emphasis"><em>j<sub>-ν,m</sub></em></span>
+        is bracketed by the <span class="emphasis"><em>m<sup>th</sup></em></span> root and the <span class="emphasis"><em>(m+1)<sup>th</sup></em></span>
+        root of the Bessel function of corresponding positive integer order. In other
+        words,
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">j<sub>nν, m</sub> &lt; j<sub>-ν, m</sub> &lt; j<sub>nν, m+1</sub></span>
+        </p></blockquote></div>
+<p>
+        where <span class="emphasis"><em>m &gt; 1</em></span> and <span class="emphasis"><em>n<sub>ν</sub></em></span> represents
+        the integral floor of the absolute value of <span class="emphasis"><em>|-ν|</em></span>.
+      </p>
+<p>
+        Similar bracketing relations are used to find estimates of the roots of Neumann
+        functions of negative order, whereby a discontinuity at every negative half-integer
+        order needs to be handled.
+      </p>
+<p>
+        Bracketing relations do not hold for the first root of cylindrical Bessel
+        functions and cylindrical Neumann functions with negative order. Therefore,
+        iterative algorithms combined with root-finding via bisection are used to
+        localize <span class="emphasis"><em>j<sub>-ν,1</sub></em></span> and <span class="emphasis"><em>y<sub>-ν,1</sub></em></span>.
+      </p>
+<h4>
+<a name="math_toolkit.bessel.bessel_root.h7"></a>
+        <span class="phrase"><a name="math_toolkit.bessel.bessel_root.testing"></a></span><a class="link" href="bessel_root.html#math_toolkit.bessel.bessel_root.testing">Testing</a>
+      </h4>
+<p>
+        The precision of evaluation of zeros was tested at 50 decimal digits using
+        <code class="computeroutput"><span class="identifier">cpp_dec_float_50</span></code> and found
+        identical with spot values computed by <a href="http://www.wolframalpha.com/" target="_top">Wolfram
+        Alpha</a>.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bessel_first.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../bessel.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="mbessel.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

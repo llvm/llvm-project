@@ -1,0 +1,537 @@
+[section:hypergeometric Hypergeometric Functions]
+
+[section:hypergeometric_1f0 Hypergeometric [sub 1]/F/[sub 0] ]
+
+   #include <boost/math/special_functions/hypergeometric_1F0.hpp>
+
+   namespace boost { namespace math {
+
+   template <class T1, class T2>
+   ``__sf_result`` hypergeometric_1F0(T1 a, T2 z);
+
+   template <class T1, class T2, class ``__Policy``>
+   ``__sf_result`` hypergeometric_1F0(T1 a, T2 z, const ``__Policy``&);
+
+   }} // namespaces
+
+[h4 Description]
+
+The function `hypergeometric_1F0` returns the result of:
+
+[equation hyper_1f0]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when `T1` and `T2` are different types.
+
+[optional_policy]
+
+The functions return the result of __domain_error whenever the result is
+undefined or complex.  This occurs for `z == 1` or `1 - z < 0` and `a` not an integer.
+
+[h4 Implementation]
+
+The implementation is trivial:
+
+[expression ['[sub 1]F[sub 0](a, z) = (1-z)[super -a]]]
+
+[endsect] [/section:hyper_geometric_1f0 Hypergeometric [sub 1]/F/[sub 0] ]
+
+[section:hypergeometric_0f1 Hypergeometric [sub 0]/F/[sub 1] ]
+
+   #include <boost/math/special_functions/hypergeometric_0F1.hpp>
+
+   namespace boost { namespace math {
+
+   template <class T1, class T2>
+   ``__sf_result`` hypergeometric_0F1(T1 b, T2 z);
+
+   template <class T1, class T2, class ``__Policy``>
+   ``__sf_result`` hypergeometric_0F1(T1 b, T2 z, const ``__Policy``&);
+
+   }} // namespaces
+
+[h4 Description]
+
+The function `hypergeometric_0F1` returns the result of
+
+[equation hyper_0f1]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when `T1` and `T2` are different types.
+
+[optional_policy]
+
+The functions return the result of __domain_error whenever the result is
+undefined or complex.
+This occurs only when `b` is an integer <= 0.
+
+[h4 Implementation]
+
+The function is implemented via its defining series wherever convergent.
+
+For a divergent series we use the continued fraction as long as the result is not too small:
+
+[equation hyper_0f1_cf]
+
+and one of the Bessel function relations otherwise:
+
+[equation hyper_0f1_bessel_j]
+
+[equation hyper_0f1_bessel_i]
+
+[endsect] [/section:hypergeometric_0f1 Hypergeometric [sub 0]/F/[sub 1] ]
+
+[section:hypergeometric_2f0 Hypergeometric [sub 2]/F/[sub 0]]
+
+   #include <boost/math/special_functions/hypergeometric_2F0.hpp>
+
+   namespace boost { namespace math {
+
+   template <class T1, class T2, class T3>
+   ``__sf_result`` hypergeometric_2F0(T1 a1, T2 a2, T3 z);
+
+   template <class T1, class T2, class T3, class ``__Policy``>
+   ``__sf_result`` hypergeometric_2F0(T1 a1, T2 a2, T3 z, const ``__Policy``&);
+
+   }}
+
+[h4 Description]
+
+The function `hypergeometric_2F0` returns the result of
+
+[equation hyper_2f0]
+
+The return type of these functions is computed using the __arg_promotion_rules
+when `T1` and `T2` are different types.
+
+[optional_policy]
+
+The functions return the result of __domain_error whenever the result is
+undefined or complex.  The valid domain for this function occurs only when one of `a1` or
+`a2` is a negative integer: ie the polynomial case.
+
+[h4 Implementation]
+
+When `a1 == a2 - 0.5` then the function is implemented in terms of the Hermite polynomial:
+
+[equation hyper_2f0_hermite]
+
+When both `a1` and `a2` are integers then the function is implemented in terms of the associated-Laguerre polynomial:
+
+[equation hyper_2f0_laguerre]
+
+If the defining series is divergent, we use the continued fraction
+
+[equation hyper_2f0_cf]
+
+Otherwise we use the defining series.
+
+[endsect] [/section:hyper_geometric_1f0 Hypergeometric [sub 2]/F/[sub 0]]
+
+[section:hypergeometric_1f1 Hypergeometric [sub 1]/F/[sub 1]]
+
+
+   #include <boost/math/special_functions/hypergeometric_1F1.hpp>
+
+   namespace boost { namespace math {
+
+   template <class T1, class T2, class T3>
+   ``__sf_result`` hypergeometric_1F1(T1 a, T2 b, T3 z);
+
+   template <class T1, class T2, class T3, class ``__Policy``>
+   ``__sf_result`` hypergeometric_1F1(T1 a, T2 b, T3 z, const ``__Policy``&);
+
+   template <class T1, class T2, class T3>
+   ``__sf_result`` hypergeometric_1F1_regularized(T1 a, T2 b, T3 z);
+
+   template <class T1, class T2, class T3, class ``__Policy``>
+   ``__sf_result`` hypergeometric_1F1_regularized(T1 a, T2 b, T3 z, const ``__Policy``&);
+
+   template <class T1, class T2, class T3>
+   ``__sf_result`` log_hypergeometric_1F1(T1 a, T2 b, T3 z);
+
+   template <class T1, class T2, class T3, class ``__Policy``>
+   ``__sf_result`` log_hypergeometric_1F1(T1 a, T2 b, T3 z, const ``__Policy``&);
+
+   template <class T1, class T2, class T3>
+   ``__sf_result`` log_hypergeometric_1F1(T1 a, T2 b, T3 z, int* sign);
+
+   template <class T1, class T2, class T3, class ``__Policy``>
+   ``__sf_result`` log_hypergeometric_1F1(T1 a, T2 b, T3 z, int* sign, const ``__Policy``&);
+
+   }} // namespaces
+
+[h4 Description]
+
+[? __build_html '''<?dbhtml-include href="'''__base_path__'''/graphs/hypergeometric_1f1/script_include.html"?>''']
+
+The function `hypergeometric_1F1(a, b, z)` returns the non-singular solution to
+[@https://en.wikipedia.org/wiki/Confluent_hypergeometric_function Kummer's equation]
+
+[:[/\large $$z \frac{d^2 w}{d z^2} + (b-z) \frac{dw}{dz} - aw = 0 $$]
+[$../equations/hypergeometric_1f1_2.svg]]
+
+which for |/z/| < 1 has the hypergeometric series expansion
+
+[:[$../equations/hypergeometric_1f1_1.svg]]
+
+where (/a/)[sub /n/] denotes rising factorial.
+This function has the same definition as Mathematica's `Hypergeometric1F1[a, b, z]` and Maple's `KummerM(a, b, z)`.
+
+The "regularized" versions of the function return:
+
+[:[/ \Large  $$ \textbf{M}(a, b; z) = \frac{{_1F_1}(a, b; z)}{\Gamma(b)} = \sum_{n=0}^{\infty} \frac{(a)_n z^n}{\Gamma(b+n) n!} $$]
+[$../equations/hypergeometric_1f1_17.svg]]
+
+The "log" versions of the function return:
+
+[:[/ \Large  $$ \ln(|_1F_1(a, b, z)|) $$ ]
+[$../equations/hypergeometric_1f1_18.svg]]
+
+When the optional `sign` argument is supplied it is set on exit to either +1 or -1 depending on the sign of [sub 1]/F/[sub 1](/a/, /b/, /z/).
+
+Both the regularized and the logarithmic versions of these functions return results without the spurious
+under/overflow that plague naive implementations.
+
+[h4 Known Issues]
+
+This function is still very much the subject of active research, 
+and a full range of methods capable of calculating the function
+over its entire domain are not yet available.
+We have worked extremely hard to ensure that problem domains result in an exception being thrown
+(an __evaluation_error) rather than return a garbage result.
+Domains that are still unsolved include:
+
+[table
+[[domain][comment][example]]
+[[ [/\large  $$_1F_1(-a, -b; -z)$$] [$../equations/hypergeometric_1f1_13.svg]][ /a, b/ and /z/ all large.][[sub 1]F[sub 1](-814723.75, -13586.87890625, -15.87335205078125)]]
+[[ [/\large  $$_1F_1(-a, -b; z)$$] [$../equations/hypergeometric_1f1_14.svg]][ /a < b/, /b > z/, this is really the same domain as above.][ ]]
+[[ [/\large  $$_1F_1(a, -b; z)$$] [$../equations/hypergeometric_1f1_15.svg]][ There is a gap in between methods where no reliable implementation is possible, the issue becomes much worse for /a/, /b/ and /z/ all large.][[sub 1]F[sub 1](9057.91796875, -1252.51318359375, 15.87335205078125)]]
+[[ [/\large  $$_1F_1(a_{tiny}, b; -z)$$] [$../equations/hypergeometric_1f1_16.svg]  ][This domain is mostly handled by A&S 13.3.6 (see implementation notes below), but there
+      are some values where either that series is non-convergent (most particularly for /b/ < 0)
+      or where the series becomes divergent after a few terms limiting the precision that can be achieved.][[sub 1]F[sub 1](-5.9981750131794866e-15, 0.499999999999994, -240.42092034220695)]]
+]
+
+The following graph illustrates the problem area for /b < 0/ and /a,z > 0/:
+
+[? __build_html '''<?dbhtml-include href="'''__base_path__'''/graphs/hypergeometric_1f1/negative_b_incalculable.html"?>''']
+[?! __build_html [$../graphs/hypergeometric_1f1/negative_b_incalculable.png]]
+
+[h4 Testing]
+
+There are 3 main groups of tests:
+
+* Spot tests for special inputs with known values.
+* Sanity checks which use integrals of hypergeometric functions of known value.  These are particularly useful
+since for fixed ['a] and ['b] they evaluate ['[sub 1]F[sub 1](a,b,z)] for all /z/.
+* Testing against values precomputed using arbitrary precision arithmetic and the /pFq/ series.
+
+We also have a [@../../tools/hypergeometric_1F1_error_plot.cpp small program] for testing random values over a user-specified domain of /a/, /b/ and /z/, this program
+is also used for the error rate plots below and has been extremely useful in fine-tuning the implementation.
+
+It should be noted however, that there are some domains for large negative /a/ and /b/ that have poor test coverage as we were
+simply unable to compute test values in reasonable time: it is not uncommon for the /pFq/ series to cancel many hundreds of digits
+and sometimes into the thousands of digits.
+
+[h4 Errors]
+
+We divide the domain of [sub 1]/F/[sub 1] up into several domains to explain the error rates.
+
+In the following graphs we ran 100000 random test cases over each domain, note that the scatter plots show only the very worst errors
+as otherwise the graphs are both incomprehensible and virtually unplottable (as in sudden browser death).
+
+For 0 < a,b,z the error rates are trivially small unless we are forced to take steps to avoid very-slow convergence and use a method other than direct evaluation of the series
+for performance reasons.  Even so the errors rates are broadly acceptable, while the scatter graph shows where the worst errors are located:
+
+[$../graphs/hypergeometric_1f1/positive_abz_bins.svg]
+[? __build_html '''<?dbhtml-include href="'''__base_path__'''/graphs/hypergeometric_1f1/positive_abz.html"?>''']
+[?! __build_html [$../graphs/hypergeometric_1f1/positive_abz.png]]
+
+For -1000 < a < 0 and 0 < b,z < 1000 the maximum error rates are higher, but most are still low, and the worst errors are fairly evenly distributed:
+
+[$../graphs/hypergeometric_1f1/negative_a_bins.svg]
+[? __build_html '''<?dbhtml-include href="'''__base_path__'''/graphs/hypergeometric_1f1/negative_a.html"?>''']
+[?! __build_html [$../graphs/hypergeometric_1f1/negative_a.png]]
+
+For -1000 < /b/ < 0 and /a/,/z/ > 0 the errors are mostly low at double precision except near the "unimplementable zone".
+Note however, that the some of the methods used here fail to converge to much better than double precision.
+
+[$../graphs/hypergeometric_1f1/negative_b_bins.svg]
+[? __build_html '''<?dbhtml-include href="'''__base_path__'''/graphs/hypergeometric_1f1/negative_b.html"?>''']
+[?! __build_html [$../graphs/hypergeometric_1f1/negative_b.png]]
+
+For both /a/ and /b/ less than zero, the errors the worst errors are clustered in a "difficult zone" with /b < a/ and /z/ [asymp] /a/:
+
+[$../graphs/hypergeometric_1f1/negative_ab_bins.svg]
+[? __build_html '''<?dbhtml-include href="'''__base_path__'''/graphs/hypergeometric_1f1/negative_ab.html"?>''']
+[?! __build_html [$../graphs/hypergeometric_1f1/negative_ab.png]]
+
+
+[h4 Implementation]
+
+The implementation for this function is remarkably complex;
+readers will have to refer to the code for the transitions between methods, as we can only give an overview here.
+
+In almost all cases where /z < 0/ we use [@https://en.wikipedia.org/wiki/Confluent_hypergeometric_function Kummer's relation]
+to make /z/ positive:
+
+[:[/\large  $$_1F_1(a, b; -z) = e^{-z} {_1F_1}(b-a, b; z)$$]
+[/ https://github.com/boostorg/math/issues/638]
+[/See https://dlmf.nist.gov/13.2#E39] 
+[$../equations/hypergeometric_1f1_12.svg]]
+
+The main series representation
+
+[:[$../equations/hypergeometric_1f1_1.svg]]
+
+is used only when
+
+* we are sure that it is convergent and not subject to excessive cancellation, and
+* there is no other better method available.
+
+The implementation of this series is complicated by the fact that for /b/ < 0 then what appears to be a fully converged series can in fact suddenly jump back
+to life again as /b/ crosses the origin.
+
+A&S 13.3.6 gives
+
+[:[/\large $$_1F_1(a, b; z) = e^{ \frac{z}{2} } \Gamma(b-a- \frac{1}{2} ) ( \frac{z}{4})^{a-b+ \frac{1}{2}} \sum_{n=0}^{\infty} \frac{(2b-2a-1)_n(b-2a)_n(b-a-\frac{1}{2}+n)}{n!(b)_n} (-1)^n I_{b-a-\frac{1}{2}+n}(\frac{z}{2})$$]
+[$../equations/hypergeometric_1f1_3.svg]]
+
+which is particularly useful for ['a [cong] b] and ['z > 0], or /a/ \u226a 1, and ['z < 0].
+
+Then we have Tricomi's approximation (given in simplified form in A&S 13.3.7) [link math_toolkit.hypergeometric.hypergeometric_refs (7)]
+
+[:[/\large $$_1F_1(a, b; z) = \Gamma(b) e^{ \frac{1}{2} z} \sum_{n=0}^{\infty} 2^{-n}z^n A_n(a,b) E_{b-1+n}(z(\frac{b}{2}-a)) $$]
+[$../equations/hypergeometric_1f1_4.svg]]
+
+with
+
+[:[/\large $$A_0(a,b) = 1, A_1(a,b) = 0, A_2(a,b) = \frac{b}{2}, A_3(a,b)= - \frac{1}{3}(b-2a)  $$]
+[$../equations/hypergeometric_1f1_5.svg]]
+
+and
+
+[:[/\large $$(n+1)A_{n+1} = (n+b-1)A_{n-1} - (b-2a)A_{n-2} \quad;\quad n \geq 2 $$]
+[$../equations/hypergeometric_1f1_6.svg]]
+
+With ['E[sub v]] defined as:
+
+[:[/
+\begin{equation*}
+\begin{split}
+E_v(z) & = z^{-\frac{1}{2}v} J_v(2 \sqrt{z})\\
+E_v(-z) & = z^{-\frac{1}{2}v} I_v(2 \sqrt{z})\\
+E_v(0) & = \frac{1}{\Gamma(v + 1)}
+\end{split}
+\end{equation*}]
+[$../equations/hypergeometric_1f1_7.svg]]
+
+This approximation is especially effective when ['a < 0].
+
+For /a/ and /b/ both large and positive and somewhat similar in size then an expansion in terms of gamma functions can be used [link math_toolkit.hypergeometric.hypergeometric_refs (6)]:
+
+[:[/\large  $$_1F_1(a, b; x) = \frac{1}{B(a, b-a)} e^x \sum_{k=0}^{\infty} \frac{(1-a)_k}{k!} \frac{\gamma(b-a+k, x)}{x^{b-a+k}} $$]
+[$../equations/hypergeometric_1f1_8.svg]]
+
+For /z/ large we have the asymptotic expansion:
+
+[:[/\large  $$_1F_1(a, b; x) \approx \frac{e^x x^{a-b}}{\Gamma(a)} \sum_{k=0}^{\infty} \frac{(1-a)_k(b-a)_k}{k! x^k} $$]
+[$../equations/hypergeometric_1f1_9.svg]]
+
+which is a special case of the gamma function expansion above.
+
+In the situation where `ab/z` is reasonably small then Luke's rational approximation is used - this is too complex to document
+here, refer either to the code or the original paper [link math_toolkit.hypergeometric.hypergeometric_refs (3)].
+
+The special case [sub 1]/F/[sub 1](1, /b/, -/z/) is treated via Luke's Pade approximation [link math_toolkit.hypergeometric.hypergeometric_refs (3)].
+
+That effectively completes the "direct" methods used, the remaining areas are treated indirectly via recurrence relations.
+These require extreme care in their use, as they often change the direction of stability, or else are not stable at all.
+Sometimes this is a well defined and characterized change in direction: for example with /a,b/ and /z/ all positive recurrence on /a/ via
+
+[:[/\large  $$(b-a) _1F_1(a-1, b; z) + (2a-b+z) _1F_1(a, b; z) -a _1F_1(a+1, b; z) = 0 $$]
+[$../equations/hypergeometric_1f1_10.svg]]
+
+abruptly changes from stable forwards recursion to stable backwards if /2a-b+z/ changes sign.
+Thus recurrence on /a/, even when [sub 1]/F/[sub 1](/a/+/N/, /b/, /z/) is strictly increasing, needs careful handling as /a/ \u2192 0.
+
+The transitory nature of the stable recurrence relations is well documented in the literature,
+for example [link math_toolkit.hypergeometric.hypergeometric_refs (10)]
+gives many examples, including the anomalous behaviour of recurrence on /a/ and /b/ for large /z/ as first documented by
+Gauchi [link math_toolkit.hypergeometric.hypergeometric_refs (12)].
+Gauchi also provides the definitive reference on 3-term recurrence relations
+in general in [link math_toolkit.hypergeometric.hypergeometric_refs (11)].
+
+Unfortunately, not all recurrence stabilities are so well defined.
+For example, when considering [sub 1]F[sub 1](/a/, -/b/, /z/) it would be convenient to use
+the continued fractions associated with the recurrence relations to calculate [sub 1]F[sub 1](/a/, -/b/, /z/) / [sub 1]F[sub 1](/a/, 1-/b/, /z/)
+and then normalize
+either by iterating forwards on /b/ until /b > 0/ and comparison with a reference value, or by using the Wronskian
+
+[:[/\large  $$_1F_1(a, b; z) \frac{d}{dz}z^{1-b}_1F_1(1+a-b, 2-b; z) - z^{1-b}_1F_1(1+a-b, 2-b; z)\frac{d}{dz}{_1F_1}(a, b; z) = (1-b)z^{-b}e^z,$$]
+[$../equations/hypergeometric_1f1_11.svg]]
+
+which is of course the well known Miller's method [link math_toolkit.hypergeometric.hypergeometric_refs (12)].
+
+Unfortunately, stable forwards recursion on /b/ is stable only for /|b| << |z|/, as /|b|/ increases in magnitude it passes through a region
+where recursion is unstable in both directions before eventually becoming stable in the backwards direction (at least for a while!).
+This transition is moderated not by a change of sign in the recurrence coefficients themselves, but by a change in the behaviour of the ['values] of [sub 1]F[sub 1] -
+from alternating in sign when ['|b|] is small to having the same sign when /b/ is larger.  During the actual transition, [sub 1]F[sub 1] will either
+pass through a zero or a minima depending on whether b is even or odd (if there is a minima at [sub 1]F[sub 1](a, b, z) then there is necessarily a zero
+at [sub 1]F[sub 1](a+1, b+1, z) as per the [@https://dlmf.nist.gov/13.3#E15 derivative of the function]).
+As a result the behaviour of the recurrence relations
+is almost impossible to reason about in this area, and we are left to using heuristic based approaches to "guess" which region we are in.
+
+In this implementation we use recurrence relations as follows:
+
+For /a,b,z > 0/ and large we can either:
+
+* Make /0 < a < 1/ and /b > z/ and evaluate the defining series directly, or
+* The gamma function approximation has decent convergence and accuracy for /2b - 1 < a < 2b < z/, so we can move /a/ and /b/ into this region, or
+* We can recurse on /b/ alone so that /b-1 < a < b/ and use A&S 13.3.6 as long as /z/ is not too large.
+
+For ['b < 0] and ['a] tiny we would normally use A&S 13.3.6, but when that is non-convergent for some inputs we can use the forward recurrence relation on ['b] to
+calculate the ratio ['[sub 1]F[sub 1](a, -b, z)/[sub 1]F[sub 1](a, 1-b, z)] and then iterate forwards until ['b > 0] and compute a reference value
+and normalize (Millers Method).
+In the same domain when ['b] is near -1 we can use a single backwards recursion on /b/ to compute ['[sub 1]F[sub 1](a, -b, z)]
+from ['[sub 1]F[sub 1](a, 2-b, z)] and ['[sub 1]F[sub 1](/a/, 1-/b/, /z/)] even though technically we are recursing in the unstable direction.
+
+For ['[sub 1]F[sub 1](-N, b, z)] and integer /N/ then backwards recursion from ['[sub 1]F[sub 1](0, b, z)] and ['[sub 1]F[sub 1](-1, b, z)] works well.
+
+For /a/ or /b/ < 0 and if all the direct methods have failed, then we use various fallbacks:
+
+For ['[sub 1]F[sub 1](-a, b, z)] we can use backwards recursion on /a/ as long as ['b > z], otherwise a more complex scheme is required
+which starts from ['[sub 1]F[sub 1](-a + N, b + M, z)], and recurses backwards in up to 3 stages: first on /a/, then on /a/ and /b/ together,
+and finally on /b/ alone.
+
+For /b < 0/ we have no good methods in some domains (see the unsolved issues above).
+However in some circumstances we can either use:
+
+* 3-stage backwards recursion on both /a/, /a/ and /b/ and then /b/ as above.
+* Calculate the ratio ['[sub 1]F[sub 1](a, b, z) / ['[sub 1]F[sub 1](a-1, b-1, z)]] via backwards recurrence when z is small, and then normalize via the Wronskian above (Miller's method).
+* Calculate the ratio ['[sub 1]F[sub 1](a, b, z) / ['[sub 1]F[sub 1](a+1, b+1, z)]] via forwards recurrence when z is large, and then normalize by iterating until b > 1 and comparing to a reference value.
+
+The latter two methods use a lookup table to determine whether inputs are in either of the domains or neither.  Unfortunately the methods are basically
+limited to double precision: calculation of the ratios require iteration ['towards] the no-mans-land between the two methods where iteration is unstable in
+both directions.  As a result, only low-precision results which require few iterations to calculate the ratio are available.
+
+If all else fails, then we use a checked series summation which will raise an __evaluation_error if more than half the digits
+are destroyed by cancellation.
+
+[endsect]  [/section:hyper_geometric_1f1 Hypergeometric [sub 1]/F/[sub 1]]
+
+[section:hypergeometric_pfq Hypergeometric [sub p]F[sub q]]
+
+   #include <boost/math/special_functions/hypergeometric_pFq.hpp>
+
+   namespace boost { namespace math {
+
+   template <class Seq, class Real>
+   ``__sf_result`` hypergeometric_pFq(const Seq& aj, const Seq& bj, const Real& z, Real* p_abs_error, const Policy& pol);
+
+   template <class Seq, class Real>
+   ``__sf_result`` hypergeometric_pFq(const Seq& aj, const Seq& bj, const Real& z, Real* p_abs_error = 0);
+
+   template <class R, class Real>
+   ``__sf_result`` hypergeometric_pFq(const std::initializer_list<R>& aj, const std::initializer_list<R>& bj, const Real& z, Real* p_abs_error, const Policy& pol);
+
+   template <class R, class Real>
+   ``__sf_result`` hypergeometric_pFq(const std::initializer_list<R>& aj, const std::initializer_list<R>& bj, const Real& z, Real* p_abs_error = 0);
+
+   template <class Seq, class Real, class Policy>
+   Real hypergeometric_pFq_precision(const Seq& aj, const Seq& bj, Real z, unsigned digits10, double timeout, const Policy& pol);
+
+   template <class Seq, class Real>
+   Real hypergeometric_pFq_precision(const Seq& aj, const Seq& bj, const Real& z, unsigned digits10, double timeout = 0.5);
+
+   template <class Real, class Policy>
+   Real hypergeometric_pFq_precision(const std::initializer_list<Real>& aj, const std::initializer_list<Real>& bj, const Real& z, unsigned digits10, double timeout, const Policy& pol);
+
+   template <class Real>
+   Real hypergeometric_pFq_precision(const std::initializer_list<Real>& aj, const std::initializer_list<Real>& bj, const Real& z, unsigned digits10, double timeout = 0.5);
+
+   }} // namespaces
+
+[h4 Description]
+
+The function `hypergeometric_pFq` returns the result of:
+
+[:[/\Large  $$ {}_pF_q\left(\left\{a_1, \ldots, a_p\right\}, \left\{b_1, \ldots, b_q\right\}; z\right)=\sum_{n=0}^{\infty} \frac{\prod_{j=1}^{p}\left(a_j\right)_n}{\prod_{j=1}^{q}\left(b_{j}\right)_n} \frac{z^n}{n!} $$]
+[$../equations/hypergeometric_pfq_1.svg]]
+
+It is most naturally used via initializer lists as in:
+
+   double h = hypergeometric_pFq({2,3,4}, {5,6,7,8}, z);  // Calculate 3F4
+
+The optional ['p_abs_error] argument calculates an estimate of the absolute error in the result from the 
+L1 norm of the sum, plus some other factors (see implementation below).
+
+You should divide this value by the result to get an estimate of ['relative error].
+
+It should be noted that the error estimates are rather crude - the error can be significantly underestimated 
+in some circumstances, and over-estimated in others.
+
+The `hypergeometric_pFq_precision` functions will calculate `pFq` to a specified number of decimal places, and if `timeout`
+is reached then they raise an __evaluation_error.  Note that while these functions are defined as templates, they
+require type `Real` to be a *variable-precision* floating-point type: in practice the only type currently supported
+(as of July 2019) is `boost::multiprecision::mpfr_float`.  Typical usage would be:
+
+
+   typedef boost::multiprecision::mpfr_float mp_type;
+   //
+   // Calculate 2F2 to 20 decimal places using a 10 second timeout:
+   //
+   mp_type result = boost::math::hypergeometric_pFq_precision(
+     { mp_type(a1), mp_type(a2) }, { mp_type(b1), mp_type(b2) }, mp_type(z), 20, 10.0
+     );
+   //
+   // Convert the result back to a double:
+   //
+   double d_result = static_cast<double>(result);
+
+[h4 Implementation]
+
+This function is implemented by direct summation of the series; summation normally starts with the zeroth term,
+but will skip forward and sum outward (ie in both forward and backward directions) from some term /N/ when
+required.  This is particularly important when some of the /b/ arguments are negative, as in this situation
+the sum undergoes "false-convergence", and then diverges again as each b[sub j] passes the origin.  Consequently,
+were you to plot the magnitude of the terms in the sum, you would see them pass through a series of
+minima and maxima before finally converging to zero at infinity.  For some values of /p/ and /q/ we
+can compute where the maxima occur, and therefore sum only the terms that will have an impact on the
+result.  For other /p/ and /q/ values, predicting the exact locations of the maxima is not so easy, and we
+simply restart summation at the point where each b[sub j] passes the origin: this will eventually reach
+all the significant terms of the sum, but the key word may well be "eventually".
+
+The error term /p_abs_error/ is normally simply the sum of the absolute values of each term multiplied
+by machine epsilon for type `Real`.  However,
+if it was necessary for the summation to skip forward, then /p_abs_error/ is adjusted to account for the
+error inherent in calculating the N'th term via logarithms.
+
+[endsect] [/section:pFq Hypergeometric [sub p]F[sub q]]
+
+[section:hypergeometric_refs Hypergeometric References]
+
+# Beals, Richard, and Roderick Wong. ['Special functions: a graduate text.] Vol. 126. Cambridge University Press, 2010.
+# Pearson, John W., Sheehan Olver, and Mason A. Porter. ['Numerical methods for the computation of the confluent and Gauss hypergeometric functions.] Numerical Algorithms 74.3 (2017): 821-866.
+# Luke, Yudell L. ['Algorithms for Rational Approximations for a Confluent Hypergeometric Function  II.] MISSOURI UNIV KANSAS CITY DEPT OF MATHEMATICS, 1976.
+# Derezinski, Jan. ['Hypergeometric type functions and their symmetries.] Annales Henri Poincar[eacute]. Vol. 15. No. 8. Springer Basel, 2014.
+# Keith E. Muller ['Computing the confluent hypergeometric function, M(a, b, x)].  Numer. Math. 90: 179-196 (2001).
+# Carlo Morosi, Livio Pizzocchero. ['On the expansion of the Kummer function in terms of incomplete Gamma functions.]  Arch. Inequal. Appl. 2 (2004), 49-72.
+# Jose Luis Lopez, Nico M. Temme. ['Asymptotics and numerics of polynomials used in Tricomi and Buchholz expansions of Kummer functions]. Numerische Mathematik, August 2010.
+# Javier Sesma.  ['The Temme's sum rule for confluent hypergeometric functions revisited].  Journal of Computational and Applied Mathematics 163 (2004) 429-431.
+# Javier Segura, Nico M. Temme.  ['Numerically satisfactory solutions of Kummer recurrence relations].  Numer. Math. (2008) 111:109-119.
+# Alfredo Deano, Javier Segura. ['Transitory Minimal Solutions Of Hypergeometric Recursions And Pseudoconvergence of Associated Continued Fractions].  Mathematics of Computation, Volume 76, Number 258, April 2007.
+# W. Gautschi. ['Computational aspects of three-term recurrence relations]. SIAM Review 9, no.1 (1967) 24-82.
+# W. Gautschi. ['Anomalous convergence of a continued fraction for ratios of Kummer functions]. Math. Comput., 31, no.140 (1977) 994-999.
+# British Association for the Advancement of Science: ['Bessel functions, Part II, Mathematical Tables vol. X]. Cambridge (1952).
+
+
+[endsect] [/section:hypergeometric_refs Hypergeometric References]
+
+[endsect] [/section:hypergeometric Hypergeometric Functions]
+
+[/  Copyright 2017 John Maddock.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

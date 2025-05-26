@@ -1,0 +1,286 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Barycentric Rational Interpolation</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../interpolation.html" title="Chapter 13. Interpolation">
+<link rel="prev" href="whittaker_shannon.html" title="Whittaker-Shannon interpolation">
+<link rel="next" href="vector_barycentric.html" title="Vector-valued Barycentric Rational Interpolation">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="whittaker_shannon.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="vector_barycentric.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.barycentric"></a><a class="link" href="barycentric.html" title="Barycentric Rational Interpolation">Barycentric Rational Interpolation</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.barycentric.h0"></a>
+      <span class="phrase"><a name="math_toolkit.barycentric.synopsis"></a></span><a class="link" href="barycentric.html#math_toolkit.barycentric.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">interpolators</span><span class="special">/</span><span class="identifier">barycentric_rational</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">interpolators</span><span class="special">{</span>
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+    <span class="keyword">class</span> <span class="identifier">barycentric_rational</span>
+    <span class="special">{</span>
+    <span class="keyword">public</span><span class="special">:</span>
+        <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">InputIterator1</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">InputIterator2</span><span class="special">&gt;</span>
+        <span class="identifier">barycentric_rational</span><span class="special">(</span><span class="identifier">InputIterator1</span> <span class="identifier">start_x</span><span class="special">,</span> <span class="identifier">InputIterator1</span> <span class="identifier">end_x</span><span class="special">,</span> <span class="identifier">InputIterator2</span> <span class="identifier">start_y</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">approximation_order</span> <span class="special">=</span> <span class="number">3</span><span class="special">);</span>
+
+        <span class="identifier">barycentric_rational</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;&amp;&amp;</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;&amp;&amp;</span> <span class="identifier">y</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">order</span> <span class="special">=</span> <span class="number">3</span><span class="special">);</span>
+
+        <span class="identifier">barycentric_rational</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">Real</span><span class="special">*</span> <span class="keyword">const</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">Real</span><span class="special">*</span> <span class="keyword">const</span> <span class="identifier">y</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">approximation_order</span> <span class="special">=</span> <span class="number">3</span><span class="special">);</span>
+
+        <span class="identifier">Real</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+        <span class="identifier">Real</span> <span class="identifier">prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;&amp;&amp;</span> <span class="identifier">return_x</span><span class="special">();</span>
+
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;&amp;&amp;</span> <span class="identifier">return_y</span><span class="special">();</span>
+    <span class="special">};</span>
+
+<span class="special">}}}</span>
+</pre>
+<h4>
+<a name="math_toolkit.barycentric.h1"></a>
+      <span class="phrase"><a name="math_toolkit.barycentric.description"></a></span><a class="link" href="barycentric.html#math_toolkit.barycentric.description">Description</a>
+    </h4>
+<p>
+      Barycentric rational interpolation is a high-accuracy interpolation method
+      for non-uniformly spaced samples. It requires 𝑶(<span class="emphasis"><em>N</em></span>) time
+      for construction, and 𝑶(<span class="emphasis"><em>N</em></span>) time for each evaluation. Linear
+      time evaluation is not optimal; for instance the cubic B-spline can be evaluated
+      in constant time. However, using the cubic B-spline requires uniformly-spaced
+      samples, which are not always available.
+    </p>
+<p>
+      Use of the class requires a vector of independent variables <code class="computeroutput"><span class="identifier">x</span><span class="special">[</span><span class="number">0</span><span class="special">]</span></code>,
+      <code class="computeroutput"><span class="identifier">x</span><span class="special">[</span><span class="number">1</span><span class="special">]</span></code>, .... <code class="computeroutput"><span class="identifier">x</span><span class="special">[</span><span class="identifier">n</span><span class="special">-</span><span class="number">1</span><span class="special">]</span></code>
+      where <code class="computeroutput"><span class="identifier">x</span><span class="special">[</span><span class="identifier">i</span><span class="special">+</span><span class="number">1</span><span class="special">]</span> <span class="special">&gt;</span> <span class="identifier">x</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span></code>,
+      and a vector of dependent variables <code class="computeroutput"><span class="identifier">y</span><span class="special">[</span><span class="number">0</span><span class="special">]</span></code>,
+      <code class="computeroutput"><span class="identifier">y</span><span class="special">[</span><span class="number">1</span><span class="special">]</span></code>, ... , <code class="computeroutput"><span class="identifier">y</span><span class="special">[</span><span class="identifier">n</span><span class="special">-</span><span class="number">1</span><span class="special">]</span></code>.
+      The call is trivial:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">x</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">y</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+<span class="comment">// populate x, y, then:</span>
+<span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">barycentric_rational</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">interpolant</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">x</span><span class="special">),</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">y</span><span class="special">));</span>
+</pre>
+<p>
+      This implicitly calls the constructor with approximation order 3, and hence
+      the accuracy is 𝑶(<span class="emphasis"><em>h</em></span><sup>4</sup>). In general, if you require an approximation
+      order <span class="emphasis"><em>d</em></span>, then the error is 𝑶(<span class="emphasis"><em>h</em></span><sup><span class="emphasis"><em>d</em></span>+1</sup>).
+      A call to the constructor with an explicit approximation order is demonstrated
+      below
+    </p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">barycentric_rational</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">interpolant</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">x</span><span class="special">),</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">y</span><span class="special">),</span> <span class="number">5</span><span class="special">);</span>
+</pre>
+<p>
+      To evaluate the interpolant, simply use
+    </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="number">2.3</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">interpolant</span><span class="special">(</span><span class="identifier">x</span><span class="special">);</span>
+</pre>
+<p>
+      and to evaluate its derivative use
+    </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">interpolant</span><span class="special">.</span><span class="identifier">prime</span><span class="special">(</span><span class="identifier">x</span><span class="special">);</span>
+</pre>
+<p>
+      If you no longer require the interpolant, then you can get your data back:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">xs</span> <span class="special">=</span> <span class="identifier">interpolant</span><span class="special">.</span><span class="identifier">return_x</span><span class="special">();</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">ys</span> <span class="special">=</span> <span class="identifier">interpolant</span><span class="special">.</span><span class="identifier">return_y</span><span class="special">();</span>
+</pre>
+<p>
+      Be aware that once you return your data, the interpolant is <span class="bold"><strong>dead</strong></span>.
+    </p>
+<h4>
+<a name="math_toolkit.barycentric.h2"></a>
+      <span class="phrase"><a name="math_toolkit.barycentric.caveats"></a></span><a class="link" href="barycentric.html#math_toolkit.barycentric.caveats">Caveats</a>
+    </h4>
+<p>
+      Although this algorithm is robust, it can surprise you. The main way this occurs
+      is if the sample spacing at the endpoints is much larger than the spacing in
+      the center. This is to be expected; all interpolants perform better in the
+      opposite regime, where samples are clustered at the endpoints and somewhat
+      uniformly spaced throughout the center.
+    </p>
+<p>
+      A desirable property of any interpolator <span class="emphasis"><em>f</em></span> is that for
+      all <span class="emphasis"><em>x</em></span><sub>min</sub> ≤ <span class="emphasis"><em>x</em></span> ≤ <span class="emphasis"><em>x</em></span><sub>max</sub>,
+      also <span class="emphasis"><em>y</em></span><sub>min</sub> ≤ <span class="emphasis"><em>f</em></span>(<span class="emphasis"><em>x</em></span>)
+      ≤ <span class="emphasis"><em>y</em></span><sub>max</sub>.
+    </p>
+<p>
+      <span class="emphasis"><em>This property does not hold for the barycentric rational interpolator.</em></span>
+      However, unless you deliberately try to antagonize this interpolator (by, for
+      instance, placing the final value far from all the rest), you will probably
+      not fall victim to this problem.
+    </p>
+<p>
+      The reference used for implementation of this algorithm is <a href="https://web.archive.org/save/_embed/http://www.mn.uio.no/math/english/people/aca/michaelf/papers/rational.pdf" target="_top">Barycentric
+      rational interpolation with no poles and a high rate of interpolation</a>,
+      and the evaluation of the derivative is given by <a href="http://www.ams.org/journals/mcom/1986-47-175/S0025-5718-1986-0842136-8/S0025-5718-1986-0842136-8.pdf" target="_top">Some
+      New Aspects of Rational Interpolation</a>.
+    </p>
+<h4>
+<a name="math_toolkit.barycentric.h3"></a>
+      <span class="phrase"><a name="math_toolkit.barycentric.examples"></a></span><a class="link" href="barycentric.html#math_toolkit.barycentric.examples">Examples</a>
+    </h4>
+<p>
+      This example shows how to use barycentric rational interpolation, using Walter
+      Kohn's classic paper "Solution of the Schrodinger Equation in Periodic
+      Lattices with an Application to Metallic Lithium" In this paper, Kohn
+      needs to repeatedly solve an ODE (the radial Schrodinger equation) given a
+      potential which is only known at non-equally samples data.
+    </p>
+<p>
+      If he'd only had the barycentric rational interpolant of Boost.Math!
+    </p>
+<p>
+      References: Kohn, W., and N. Rostoker. "Solution of the Schrodinger equation
+      in periodic lattices with an application to metallic lithium." Physical
+      Review 94.5 (1954): 1111.
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">interpolators</span><span class="special">/</span><span class="identifier">barycentric_rational</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+    <span class="comment">// The lithium potential is given in Kohn's paper, Table I:</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">r</span><span class="special">(</span><span class="number">45</span><span class="special">);</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">mrV</span><span class="special">(</span><span class="number">45</span><span class="special">);</span>
+
+    <span class="comment">// We'll skip the code for filling the above vectors with data for now...</span>
+
+    <span class="comment">// Now we want to interpolate this potential at any r:</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">barycentric_rational</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">b</span><span class="special">(</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">data</span><span class="special">(),</span> <span class="identifier">mrV</span><span class="special">.</span><span class="identifier">data</span><span class="special">(),</span> <span class="identifier">r</span><span class="special">.</span><span class="identifier">size</span><span class="special">());</span>
+
+    <span class="keyword">for</span> <span class="special">(</span><span class="identifier">size_t</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">1</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">8</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">double</span> <span class="identifier">r</span> <span class="special">=</span> <span class="identifier">i</span><span class="special">*</span><span class="number">0.5</span><span class="special">;</span>
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span>  <span class="string">"(r, V) = ("</span> <span class="special">&lt;&lt;</span> <span class="identifier">r</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span> <span class="special">&lt;&lt;</span> <span class="special">-</span><span class="identifier">b</span><span class="special">(</span><span class="identifier">r</span><span class="special">)/</span><span class="identifier">r</span> <span class="special">&lt;&lt;</span> <span class="string">")\n"</span><span class="special">;</span>
+    <span class="special">}</span>
+<span class="special">}</span>
+</pre>
+<p>
+      This further example shows how to use the iterator based constructor, and then
+      uses the function object in our root finding algorithms to locate the points
+      where the potential achieves a specific value.
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">interpolators</span><span class="special">/</span><span class="identifier">barycentric_rational</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">range</span><span class="special">/</span><span class="identifier">adaptors</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">roots</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+    <span class="comment">// The lithium potential is given in Kohn's paper, Table I.</span>
+    <span class="comment">// (We could equally easily use an unordered_map, a list of tuples or pairs, or a 2-dimensional array).</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">map</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">r</span><span class="special">;</span>
+
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.02</span><span class="special">]</span> <span class="special">=</span> <span class="number">5.727</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.04</span><span class="special">]</span> <span class="special">=</span> <span class="number">5.544</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.06</span><span class="special">]</span> <span class="special">=</span> <span class="number">5.450</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.08</span><span class="special">]</span> <span class="special">=</span> <span class="number">5.351</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.10</span><span class="special">]</span> <span class="special">=</span> <span class="number">5.253</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.12</span><span class="special">]</span> <span class="special">=</span> <span class="number">5.157</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.14</span><span class="special">]</span> <span class="special">=</span> <span class="number">5.058</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.16</span><span class="special">]</span> <span class="special">=</span> <span class="number">4.960</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.18</span><span class="special">]</span> <span class="special">=</span> <span class="number">4.862</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.20</span><span class="special">]</span> <span class="special">=</span> <span class="number">4.762</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.24</span><span class="special">]</span> <span class="special">=</span> <span class="number">4.563</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.28</span><span class="special">]</span> <span class="special">=</span> <span class="number">4.360</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.32</span><span class="special">]</span> <span class="special">=</span> <span class="number">4.1584</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.36</span><span class="special">]</span> <span class="special">=</span> <span class="number">3.9463</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.40</span><span class="special">]</span> <span class="special">=</span> <span class="number">3.7360</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.44</span><span class="special">]</span> <span class="special">=</span> <span class="number">3.5429</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.48</span><span class="special">]</span> <span class="special">=</span> <span class="number">3.3797</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.52</span><span class="special">]</span> <span class="special">=</span> <span class="number">3.2417</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.56</span><span class="special">]</span> <span class="special">=</span> <span class="number">3.1209</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.60</span><span class="special">]</span> <span class="special">=</span> <span class="number">3.0138</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.68</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.8342</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.76</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.6881</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.84</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.5662</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">0.92</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.4242</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.00</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.3766</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.08</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.3058</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.16</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.2458</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.24</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.2035</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.32</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.1661</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.40</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.1350</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.48</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.1090</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.64</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0697</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.80</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0466</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">1.96</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0325</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">2.12</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0288</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">2.28</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0292</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">2.44</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0228</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">2.60</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0124</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">2.76</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0065</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">2.92</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0031</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">3.08</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0015</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">3.24</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0008</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">3.40</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0004</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">3.56</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0002</span><span class="special">;</span>
+    <span class="identifier">r</span><span class="special">[</span><span class="number">3.72</span><span class="special">]</span> <span class="special">=</span> <span class="number">2.0001</span><span class="special">;</span>
+
+    <span class="comment">// Let's discover the abscissa that will generate a potential of exactly 3.0,</span>
+    <span class="comment">// start by creating 2 ranges for the x and y values:</span>
+    <span class="keyword">auto</span> <span class="identifier">x_range</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">adaptors</span><span class="special">::</span><span class="identifier">keys</span><span class="special">(</span><span class="identifier">r</span><span class="special">);</span>
+    <span class="keyword">auto</span> <span class="identifier">y_range</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">adaptors</span><span class="special">::</span><span class="identifier">values</span><span class="special">(</span><span class="identifier">r</span><span class="special">);</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">barycentric_rational</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">b</span><span class="special">(</span><span class="identifier">x_range</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">x_range</span><span class="special">.</span><span class="identifier">end</span><span class="special">(),</span> <span class="identifier">y_range</span><span class="special">.</span><span class="identifier">begin</span><span class="special">());</span>
+    <span class="comment">//</span>
+    <span class="comment">// We'll use a lambda expression to provide the functor to our root finder, since we want</span>
+    <span class="comment">// the abscissa value that yields 3, not zero.  We pass the functor b by value to the</span>
+    <span class="comment">// lambda expression since barycentric_rational is trivial to copy.</span>
+    <span class="comment">// Here we're using simple bisection to find the root:</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">iterations</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span><span class="special">&gt;::</span><span class="identifier">max</span><span class="special">)();</span>
+    <span class="keyword">double</span> <span class="identifier">abscissa_3</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">bisect</span><span class="special">([=](</span><span class="keyword">double</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">{</span> <span class="keyword">return</span> <span class="identifier">b</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">-</span> <span class="number">3</span><span class="special">;</span> <span class="special">},</span> <span class="number">0.44</span><span class="special">,</span> <span class="number">1.24</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">eps_tolerance</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(),</span> <span class="identifier">iterations</span><span class="special">).</span><span class="identifier">first</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Abscissa value that yields a potential of 3 = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">abscissa_3</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Root was found in "</span> <span class="special">&lt;&lt;</span> <span class="identifier">iterations</span> <span class="special">&lt;&lt;</span> <span class="string">" iterations."</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+    <span class="comment">//</span>
+    <span class="comment">// However, we have a more efficient root finding algorithm than simple bisection:</span>
+    <span class="identifier">iterations</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span><span class="special">&gt;::</span><span class="identifier">max</span><span class="special">)();</span>
+    <span class="identifier">abscissa_3</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">bracket_and_solve_root</span><span class="special">([=](</span><span class="keyword">double</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">{</span> <span class="keyword">return</span> <span class="identifier">b</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">-</span> <span class="number">3</span><span class="special">;</span> <span class="special">},</span> <span class="number">0.6</span><span class="special">,</span> <span class="number">1.2</span><span class="special">,</span> <span class="keyword">false</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">eps_tolerance</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(),</span> <span class="identifier">iterations</span><span class="special">).</span><span class="identifier">first</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Abscissa value that yields a potential of 3 = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">abscissa_3</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Root was found in "</span> <span class="special">&lt;&lt;</span> <span class="identifier">iterations</span> <span class="special">&lt;&lt;</span> <span class="string">" iterations."</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<pre class="programlisting"><span class="identifier">Program</span> <span class="identifier">output</span> <span class="identifier">is</span><span class="special">:</span>
+</pre>
+<pre class="programlisting">Abscissa value that yields a potential of 3 = 0.604728
+Root was found in 54 iterations.
+Abscissa value that yields a potential of 3 = 0.604728
+Root was found in 10 iterations.
+</pre>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="whittaker_shannon.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="vector_barycentric.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

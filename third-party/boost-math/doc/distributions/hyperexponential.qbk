@@ -1,0 +1,506 @@
+[section:hyperexponential_dist Hyperexponential Distribution]
+
+[import ../../example/hyperexponential_snips.cpp]
+[import ../../example/hyperexponential_more_snips.cpp]
+
+``#include <boost/math/distributions/hyperexponential.hpp>``
+
+   namespace boost{ namespace math{
+
+   template <typename RealType = double,
+             typename ``__Policy``   = ``__policy_class`` >
+   class hyperexponential_distribution;
+
+   typedef hyperexponential_distribution<> hyperexponential;
+
+   template <typename RealType, typename ``__Policy``>
+   class hyperexponential_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+
+      // Constructors:
+      hyperexponential_distribution();  // Default.
+
+      template <typename RateIterT, typename RateIterT2>
+      hyperexponential_distribution(  // Default equal probabilities.
+                                    RateIterT const& rate_first,
+                                    RateIterT2 const& rate_last);  // Rates using Iterators.
+
+      template <typename ProbIterT, typename RateIterT>
+      hyperexponential_distribution(ProbIterT prob_first, ProbIterT prob_last,
+                                    RateIterT rate_first, RateIterT rate_last);   // Iterators.
+
+      template <typename ProbRangeT, typename RateRangeT>
+      hyperexponential_distribution(ProbRangeT const& prob_range,
+                                    RateRangeT const& rate_range);  // Ranges.
+
+      template <typename RateRangeT>
+      hyperexponential_distribution(RateRangeT const& rate_range);
+
+    #if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)     // C++11 initializer lists supported.
+      hyperexponential_distribution(std::initializer_list<RealType> l1, std::initializer_list<RealType> l2);
+      hyperexponential_distribution(std::initializer_list<RealType> l1);
+    #endif
+
+      // Accessors:
+      std::size_t num_phases() const;
+      std::vector<RealType> probabilities() const;
+      std::vector<RealType> rates() const;
+   };
+
+   }} // namespaces
+
+[note An implementation-defined mechanism is provided to avoid
+ambiguity between constructors accepting ranges, iterators and constants as parameters.
+This should be transparent to the user.
+See below and the header file hyperexponential.hpp for details and explanatory comments.]
+
+The class type `hyperexponential_distribution` represents a [@http://en.wikipedia.org/wiki/Hyperexponential_distribution hyperexponential distribution].
+
+A /k/-phase hyperexponential distribution is a [@http://en.wikipedia.org/wiki/Continuous_probability_distribution continuous probability distribution] obtained as a mixture of /k/ [link math_toolkit.dist_ref.dists.exp_dist Exponential Distribution]s.
+It is also referred to as /mixed exponential distribution/ or parallel /k-phase exponential distribution/.
+
+A /k/-phase hyperexponential distribution is characterized by two parameters, namely a /phase probability vector/ ['[*[alpha]]=([alpha][sub 1],...,[alpha][sub k])] and a /rate vector/ ['[*[lambda]]=([lambda][sub 1],...,[lambda][sub k])].
+
+The [@http://en.wikipedia.org/wiki/Probability_density_function probability density function] for random variate /x/ in a hyperexponential distribution is given by:
+
+[equation hyperexponential_pdf]
+
+The following graph illustrates the PDF of the hyperexponential distribution with five different parameters, namely:
+
+# ['[*[alpha]]=(1.0)] and ['[*[lambda]]=(1.0)] (which degenerates to a simple exponential distribution),
+# ['[*[alpha]]=(0.1, 0.9)] and ['[*[lambda]]=(0.5, 1.5)],
+# ['[*[alpha]]=(0.9, 0.1)] and ['[*[lambda]]=(0.5, 1.5)],
+# ['[*[alpha]]=(0.2, 0.3, 0.5)] and ['[*[lambda]]=(0.5, 1.0, 1.5)],
+# ['[*[alpha]]=(0.5, 0.3, 0.2)] and ['[*[lambda]]=(0.5, 1.0, 1.5)].
+
+[graph hyperexponential_pdf]
+
+Also, the following graph illustrates the PDF of the hyperexponential distribution (solid lines) where only the /phase probability vector/ changes together with the PDF of the two limiting exponential distributions (dashed lines):
+
+# ['[*[alpha]]=(0.1, 0.9)] and ['[*[lambda]]=(0.5, 1.5)],
+# ['[*[alpha]]=(0.6, 0.4)] and ['[*[lambda]]=(0.5, 1.5)],
+# ['[*[alpha]]=(0.9, 0.1)] and ['[*[lambda]]=(0.5, 1.5)],
+# Exponential distribution with parameter ['[lambda]=0.5],
+# Exponential distribution with parameter ['[lambda]=1.5].
+
+As expected, as the first element ['[alpha][sub 1]] of the /phase probability vector/ approaches to /1/ (or, equivalently, ['[alpha][sub 2]] approaches to /0/), the resulting hyperexponential distribution nears the exponential distribution with parameter ['[lambda]=0.5].
+Conversely, as the first element ['[alpha][sub 2]] of the /phase probability vector/ approaches to /1/ (or, equivalently, ['[alpha][sub 1]] approaches to /0/), the resulting hyperexponential distribution nears the exponential distribution with parameter ['[lambda]=1.5].
+
+[graph hyperexponential_pdf_samerate]
+
+Finally, the following graph compares the PDF of the hyperexponential distribution with different number of phases but with the same mean value equal to /2/:
+
+# ['[*[alpha]]=(1.0)] and ['[*[lambda]]=(2.0)] (which degenerates to a simple exponential distribution),
+# ['[*[alpha]]=(0.5, 0.5)] and ['[*[lambda]]=(0.3, 1.5)],
+# ['[*[alpha]]=(1.0/3.0, 1.0/3.0, 1.0/3.0)] and ['[*[lambda]]=(0.2, 1.5, 3.0)],
+
+[graph hyperexponential_pdf_samemean]
+
+As can be noted, even if the three distributions have the same mean value, the two hyperexponential distributions have a /longer/ tail with respect to the one of the exponential distribution.
+Indeed, the hyperexponential distribution has a larger variability than the exponential distribution, thus resulting in a [@http://en.wikipedia.org/wiki/Coefficient_of_variation Coefficient of Variation] greater than /1/ (as opposed to the one of the exponential distribution which is exactly /1/).
+
+[h3 Applications]
+
+A /k/-phase hyperexponential distribution is frequently used in [@http://en.wikipedia.org/wiki/Queueing_theory queueing theory] to model the distribution of the superposition of /k/ independent events, like, for instance, the  service time distribution of a queueing station with /k/ servers in parallel where the /i/-th server is chosen with probability ['[alpha][sub i]] and its service time distribution is an exponential distribution with rate ['[lambda][sub i]] (Allen,1990; Papadopolous et al.,1993; Trivedi,2002).
+
+For instance, CPUs service-time distribution in a computing system has often been observed to possess such a distribution (Rosin,1965).
+Also, the arrival of different types of customer to a single queueing station is often modeled as a hyperexponential distribution (Papadopolous et al.,1993).
+Similarly, if a product manufactured in several parallel assembly lines and the outputs are merged, the failure density of the overall product is likely to be hyperexponential (Trivedi,2002).
+
+Finally, since the hyperexponential distribution exhibits a high Coefficient of Variation (CoV), that is a CoV > 1, it is especially suited to fit empirical data with large CoV (Feitelson,2014; Wolski et al.,2013) and to approximate [@http://en.wikipedia.org/wiki/Long_tail long-tail probability distributions] (Feldmann et al.,1998).
+
+[/ Another possible example (work in progress):
+For instance, suppose that at the airport the company Foobar Airlines has a help desk with 3 different windows (servers) such that window A is for regional flights, window B is for international flights and window C is general customer care.
+From previous studies, it has been observed that each window is able to serve requests with the following timings:
+- window W1: 20 minutes, on average,
+- window W2: 30 minutes, on average, and
+- window W3: 10 minutes, on average.
+
+Furthermore, another airline company has a help desk with a single window.
+It has been observed that to the window can arrive three types of customers:
+- customer C1 (e.g., premium customer):
+- customer C2 (e.g., business customer):
+- customer C3 (e.g., regular customer):
+]
+
+[h3 Related distributions]
+
+* When the number of phases /k/ is equal to `1`, the hyperexponential distribution is simply an __exp_distrib.
+* When the /k/ rates are all equal to ['[lambda]], the hyperexponential distribution is simple an __exp_distrib with rate ['[lambda]].
+
+[h3 Examples]
+
+[h4 Lifetime of Appliances]
+
+Suppose a customer is buying an appliance and is choosing at random between an appliance with average lifetime of 10 years and an appliance with average lifetime of 12 years.
+Assuming the lifetime of this appliance follows an exponential distribution, the lifetime distribution of the purchased appliance can be modeled as a hyperexponential distribution with
+phase probability vector ['[*[alpha]]=(1/2,1/2)] and rate vector ['[*[lambda]]=(1/10,1/12)] (Wolfram,2014).
+
+In the rest of this section, we provide an example C++ implementation for computing the average lifetime and the probability that the appliance will work for more than 15 years.
+
+[hyperexponential_snip1]
+
+The resulting output is:
+
+    Average lifetime: 11 years
+    Probability that the appliance will work for more than 15 years: 0.254817
+
+
+[h4 Workloads of Private Cloud Computing Systems]
+
+[@http://en.wikipedia.org/wiki/Cloud_computing Cloud computing] has become a popular metaphor for dynamic and secure self-service access to computational and storage capabilities.
+In (Wolski et al.,2013), the authors analyze and model workloads gathered from enterprise-operated commercial [@http://en.wikipedia.org/wiki/Cloud_computing#Private_cloud private clouds] and show that 3-phase hyperexponential distributions (fitted using the [@http://en.wikipedia.org/wiki/Expectation%E2%80%93maximization_algorithm Expectation Maximization algorithm]) capture workload attributes accurately.
+
+In this type of computing system, user requests consist in demanding the provisioning of one or more [@http://en.wikipedia.org/wiki/Virtual_machine Virtual Machines] (VMs).
+In particular, in (Wolski et al.,2013) the workload experienced by each cloud system is a function of four distributions, one for each of the following workload attributes:
+
+* /Request Interarrival Time/: the amount of time until the next request,
+* /VM Lifetime/: the time duration over which a VM is provisioned to a physical machine,
+* /Request Size/: the number of VMs in the request, and
+* /Core Count/: the CPU core count requested for each VM.
+
+The authors assume that all VMs in a request have the same core count, but request sizes and core counts can vary from request to request.
+Moreover, all VMs within a request are assumed to have the same lifetime.
+Given these assumptions, the authors build a statistical model for the request interarrival time and VM lifetime attributes by fitting their respective data to a 3-phase hyperexponential distribution.
+
+In the following table, we show the sample mean and standard deviation (SD), in seconds, of the request interarrival time and of the VM lifetime distributions of the three datasets collected by authors:
+
+[table
+[[Dataset][Mean Request Interarrival Time (SD)][Mean Multi-core VM Lifetime (SD)][Mean Single-core VM Lifetime (SD)]]
+[[DS1][2202.1 (2.2e+04)][257173 (4.6e+05)][28754.4 (1.6e+05)]]
+[[DS2][41285.7 (1.1e+05)][144669.0 (7.9e+05)][599815.0 (1.7e+06)]]
+[[DS3][11238.8 (3.0e+04)][30739.2 (1.6e+05)][44447.8 (2.2e+05)]]
+]
+
+Whereas in the following table we show the hyperexponential distribution parameters resulting from the fit:
+
+[table
+[[Dataset][Request Interarrival Time][Multi-core VM Lifetime][Single-core VM Lifetime]]
+[[DS1][['[*[alpha]]=(0.34561,0.08648,0.56791), [*[lambda]]=(0.008,0.00005,0.02894)]][['[*[alpha]]=(0.24667,0.37948,0.37385), [*[lambda]]=(0.00004,0.000002,0.00059)]][['[*[alpha]]=(0.09325,0.22251,0.68424), [*[lambda]]=(0.000003,0.00109,0.00109)]]]
+[[DS2][['[*[alpha]]=(0.38881,0.18227,0.42892), [*[lambda]]=(0.000006,0.05228,0.00081)]][['[*[alpha]]=(0.42093,0.43960,0.13947), [*[lambda]]=(0.00186,0.00008,0.0000008)]][['[*[alpha]]=(0.44885,0.30675,0.2444), [*[lambda]]=(0.00143,0.00005,0.0000004)]]]
+[[DS3][['[*[alpha]]=(0.39442,0.24644,0.35914), [*[lambda]]=(0.00030,0.00003,0.00257)]][['[*[alpha]]=(0.37621,0.14838,0.47541), [*[lambda]]=(0.00498,0.000005,0.00022)]][['[*[alpha]]=(0.34131,0.12544,0.53325), [*[lambda]]=(0.000297,0.000003,0.00410)]]]
+]
+
+In the rest of this section, we provide an example  C++ implementation for computing some statistical properties of the fitted distributions for each of the analyzed dataset.
+
+[hyperexponential_more_snip1]
+
+The resulting output (with floating-point precision set to 2) is:
+
+    ### DS1
+    * Fitted Request Interarrival Time
+     - Mean (SD): 2.2e+03 (8.1e+03) seconds.
+     - 99th Percentile: 4.3e+04 seconds.
+     - Probability that a VM will arrive within 30 minutes: 0.84
+     - Probability that a VM will arrive after 1 hour: 0.092
+    * Fitted Multi-core VM Lifetime
+     - Mean (SD): 2e+05 (3.9e+05) seconds.
+     - 99th Percentile: 1.8e+06 seconds.
+     - Probability that a VM will last for less than 1 month: 1
+     - Probability that a VM will last for more than 3 months: 6.7e-08
+    * Fitted Single-core VM Lifetime
+     - Mean (SD): 3.2e+04 (1.4e+05) seconds.
+     - 99th Percentile: 7.4e+05 seconds.
+     - Probability that a VM will last for less than 1 month: 1
+     - Probability that a VM will last for more than 3 months: 6.9e-12
+    ### DS2
+    * Fitted Request Interarrival Time
+     - Mean (SD): 6.5e+04 (1.3e+05) seconds.
+     - 99th Percentile: 6.1e+05 seconds.
+     - Probability that a VM will arrive within 30 minutes: 0.52
+     - Probability that a VM will arrive after 1 hour: 0.4
+    * Fitted Multi-core VM Lifetime
+     - Mean (SD): 1.8e+05 (6.4e+05) seconds.
+     - 99th Percentile: 3.3e+06 seconds.
+     - Probability that a VM will last for less than 1 month: 0.98
+     - Probability that a VM will last for more than 3 months: 0.00028
+    * Fitted Single-core VM Lifetime
+     - Mean (SD): 6.2e+05 (1.6e+06) seconds.
+     - 99th Percentile: 8e+06 seconds.
+     - Probability that a VM will last for less than 1 month: 0.91
+     - Probability that a VM will last for more than 3 months: 0.011
+    ### DS3
+    * Fitted Request Interarrival Time
+     - Mean (SD): 9.7e+03 (2.2e+04) seconds.
+     - 99th Percentile: 1.1e+05 seconds.
+     - Probability that a VM will arrive within 30 minutes: 0.53
+     - Probability that a VM will arrive after 1 hour: 0.36
+    * Fitted Multi-core VM Lifetime
+     - Mean (SD): 3.2e+04 (1e+05) seconds.
+     - 99th Percentile: 5.4e+05 seconds.
+     - Probability that a VM will last for less than 1 month: 1
+     - Probability that a VM will last for more than 3 months: 1.9e-18
+    * Fitted Single-core VM Lifetime
+     - Mean (SD): 4.3e+04 (1.6e+05) seconds.
+     - 99th Percentile: 8.4e+05 seconds.
+     - Probability that a VM will last for less than 1 month: 1
+     - Probability that a VM will last for more than 3 months: 9.3e-12
+
+[note The above results differ from the ones shown in Tables III, V, and VII of (Wolski et al.,2013).
+We carefully double-checked them with Wolfram Mathematica 10, which confirmed our results.]
+
+
+[h3 Member Functions]
+
+[h4 Default Constructor]
+
+      hyperexponential_distribution();
+
+Constructs a /1/-phase hyperexponential distribution (i.e., an exponential distribution) with rate `1`.
+
+
+[h4 Constructor from Iterators]
+
+      template <typename ProbIterT, typename RateIterT>
+      hyperexponential_distribution(ProbIterT prob_first, ProbIterT prob_last,
+                                    RateIterT rate_first, RateIterT rate_last);
+
+Constructs a hyperexponential distribution with /phase probability vector/ parameter given
+by the range defined by \[`prob_first`, `prob_last`) iterator pair, and /rate vector/ parameter
+given by the range defined by the \[`rate_first`, `rate_last`) iterator pair.
+
+[h5 Parameters]
+
+* `prob_first`, `prob_last`: the range of non-negative real elements representing the phase probabilities; elements are normalized to sum to unity.
+* `rate_first`, `rate_last`: the range of positive elements representing the rates.
+
+[h5 Type Requirements]
+
+[itemized_list [`ProbIterT`, `RateIterT`: must meet the requirements of the [@http://en.cppreference.com/w/cpp/concept/InputIterator InputIterator] concept.]]
+
+[h5 Example]
+
+[hyperexponential_snip2]
+
+[h4 Construction from Ranges/Containers]
+
+   template <typename ProbRangeT, typename RateRangeT>
+   hyperexponential_distribution(ProbRangeT const& prob_range,
+                                 RateRangeT const& rate_range);
+
+Constructs a hyperexponential distribution with /phase probability vector/ parameter
+given by the range defined by `prob_range`, and /rate vector/ parameter given by the range defined by `rate_range`.
+
+[note As an implementation detail, this constructor uses Boost's 
+[@http://www.boost.org/doc/libs/release/libs/core/doc/html/core/enable_if.html enable_if/disable_if mechanism] to 
+disambiguate between this and other 2-argument constructors.  Refer to the source code for more details.]
+
+[h5 Parameters]
+
+* `prob_range`: the range of non-negative real elements representing the phase probabilities; elements are normalized to sum to unity.
+* `rate_range`: the range of positive real elements representing the rates.
+
+[h5 Type Requirements]
+
+[itemized_list [`ProbRangeT`, `RateRangeT`: must meet the requirements of the [@http://www.boost.org/doc/libs/release/libs/range/doc/html/range/concepts.html Range] concept:
+that includes native C++ arrays, standard library containers, or a std::pair or iterators.]]
+
+[h5 Examples]
+
+[hyperexponential_snip3]
+
+[h4 Construction with rates-iterators (and all phase probabilities equal)]
+
+      template <typename RateIterT, typename RateIterT2>
+      hyperexponential_distribution(RateIterT const& rate_first,
+                                    RateIterT2 const& rate_last);
+
+Constructs a hyperexponential distribution with /rate vector/ parameter given by the range defined by the
+\[`rate_first`, `rate_last`) iterator pair, and /phase probability vector/ set to the equal phase
+probabilities (i.e., to a vector of the same length `n` of the /rate vector/ and with each element set to `1.0/n`).
+
+[note As an implementation detail, this constructor uses Boost's 
+[@http://www.boost.org/doc/libs/release/libs/core/doc/html/core/enable_if.html enable_if/disable_if mechanism] to 
+disambiguate between this and other 2-argument constructors.  Refer to the source code for more details.]
+
+[h5 Parameters]
+
+* `rate_first`, `rate_last`: the range of positive elements representing the rates.
+
+[h5 Type Requirements]
+
+[itemized_list [`RateIterT`, `RateIterT2`: must meet the requirements of the [@http://en.cppreference.com/w/cpp/concept/InputIterator InputIterator] concept.]]
+
+[h5 Example]
+
+[hyperexponential_snip4]
+
+[h4 Construction from a single range of rates (all phase probabilities will be equal)]
+
+      template <typename RateRangeT>
+      hyperexponential_distribution(RateRangeT const& rate_range);
+
+Constructs a hyperexponential distribution with /rate vector/ parameter given by the range defined by `rate_range`,
+and /phase probability vector/ set to the equal phase probabilities (i.e., to a vector of the same length
+`n` of the /rate vector/ and with each element set to `1.0/n`).
+
+[h5 Parameters]
+
+* `rate_range`: the range of positive real elements representing the rates.
+
+[h5 Type Requirements]
+
+[itemized_list [`RateRangeT`: must meet the requirements of the [@http://www.boost.org/doc/libs/release/libs/range/doc/html/range/concepts.html Range] concept: this includes
+native C++ array, standard library containers, and a `std::pair` of iterators.]]
+
+[h5 Examples]
+
+[hyperexponential_snip5]
+
+[h4 Construction from Initializer lists]
+
+      hyperexponential_distribution(std::initializer_list<RealType> l1, std::initializer_list<RealType> l2);
+
+Constructs a hyperexponential distribution with /phase probability vector/ parameter
+given by the [@http://en.cppreference.com/w/cpp/language/list_initialization brace-init-list] defined by `l1`,
+and /rate vector/ parameter given by the [@http://en.cppreference.com/w/cpp/language/list_initialization brace-init-list]
+defined by `l2`.
+
+[h5 Parameters]
+
+* `l1`: the brace-init-list of non-negative real elements representing the phase probabilities;
+elements are normalized to sum to unity.
+* `l2`: the brace-init-list of positive real elements representing the rates.
+
+The number of elements of the phase probabilities list and the rates list must be the same.
+
+[h5 Example]
+
+[hyperexponential_snip6]
+
+[h4 Construction from a single initializer list (all phase probabilities will be equal)]
+
+      hyperexponential_distribution(std::initializer_list<RealType> l1);
+
+Constructs a hyperexponential distribution with /rate vector/ parameter given by the
+[@http://en.cppreference.com/w/cpp/language/list_initialization brace-init-list] defined by `l1`, and
+/phase probability vector/ set to the equal phase probabilities (i.e., to a vector of the same length
+`n` of the /rate vector/ and with each element set to `1.0/n`).
+
+[h5 Parameters]
+
+* `l1`: the brace-init-list of non-negative real elements representing the phase probabilities; they are normalized to ensure that they sum to unity.
+
+[h5 Example]
+
+[hyperexponential_snip7]
+
+[h4 Accessors]
+
+      std::size_t num_phases() const;
+
+Gets the number of phases of this distribution (the size of both the rate and probability vectors).
+
+[h5 Return Value] An non-negative integer number representing the number of phases of this distribution.
+
+
+      std::vector<RealType> probabilities() const;
+
+Gets the /phase probability vector/ parameter of this distribution.
+
+[note The returned probabilities are the [*normalized] versions of the probability parameter values passed at construction time.]
+
+[h5 Return Value] A vector of non-negative real numbers representing the /phase probability vector/ parameter of this distribution.
+
+
+      std::vector<RealType> rates() const;
+
+Gets the /rate vector/ parameter of this distribution.
+
+[h5 Return Value] A vector of positive real numbers representing the /rate vector/ parameter of this distribution.
+
+[warning The return type of these functions is a vector-by-value.  This is deliberate as we wish to hide the actual container
+used internally which may be subject to future changes (for example to facilitate vectorization of the cdf code etc).
+Users should note that some code that might otherwise have been expected to work does not.
+For example, an attempt to output the (normalized) probabilities:
+
+``
+std::copy(he.probabilities().begin(), he.probabilities().end(), std::ostream_iterator<double>(std::cout, " "));
+``
+
+fails at compile or runtime because iterator types are incompatible, but, for example,
+
+``
+std::cout << he.probabilities()[0] << ' ' << he.probabilities()[1] << std::endl;
+``
+
+outputs the expected values.
+
+In general if you want to access a member of the returned container, then assign to a variable first, and then access those 
+members:
+
+``
+std::vector<double> t = he.probabilities();
+std::copy(t.begin(), t.end(), std::ostream_iterator<double>(std::cout, " "));
+``
+]
+
+[h3 Non-member Accessor Functions]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all distributions are supported: __usual_accessors.
+
+The formulae for calculating these are shown in the table below.
+
+
+[h3 Accuracy]
+
+The hyperexponential distribution is implemented in terms of the __exp_distrib and as such should have very small errors, usually an
+[@http://en.wikipedia.org/wiki/Machine_epsilon epsilon] or few.
+
+
+[h3 Implementation]
+
+In the following table:
+
+* ['[*[alpha]]=([alpha][sub 1],...,[alpha][sub k])] is the /phase probability vector/ parameter of the /k/-phase hyperexponential distribution,
+* ['[*[lambda]]=([lambda][sub 1],...,[lambda][sub k])] is the /rate vector/ parameter of the /k/-phase hyperexponential distribution,
+* /x/ is the random variate.
+
+[table
+[[Function][Implementation Notes]]
+[[support][['x] [isin] \[0,[infin])]]
+[[pdf][[equation hyperexponential_pdf]]]
+[[cdf][[equation hyperexponential_cdf]]]
+[[cdf complement][[equation hyperexponential_ccdf]]]
+[[quantile][No closed form available. Computed numerically.]]
+[[quantile from the complement][No closed form available. Computed numerically.]]
+[[mean][[equation hyperexponential_mean]]]
+[[variance][[equation hyperexponential_variance]]]
+[[mode][`0`]]
+[[skewness][[equation hyperexponential_skewness]]]
+[[kurtosis][[equation hyperexponential_kurtosis]]]
+[[kurtosis excess][kurtosis `- 3`]]
+]
+
+
+[h3 References]
+
+* A.O. Allen, /Probability, Statistics, and Queuing Theory with Computer Science Applications, Second Edition/, Academic Press, 1990.
+
+* D.G. Feitelson, /Workload Modeling for Computer Systems Performance Evaluation/, Cambridge University Press, 2014
+
+*  A. Feldmann and W. Whitt, /Fitting mixtures of exponentials to long-tail distributions to analyze network performance models/, Performance Evaluation 31(3-4):245, doi:10.1016/S0166-5316(97)00003-5, 1998.
+
+* H.T. Papadopolous, C. Heavey and J. Browne, /Queueing Theory in Manufacturing Systems Analysis and Design/, Chapman & Hall/CRC, 1993, p. 35.
+
+* R.F. Rosin, /Determining a computing center environment/, Communications of the ACM 8(7):463-468, 1965.
+
+* K.S. Trivedi, /Probability and Statistics with Reliability, Queueing, and Computer Science Applications/, John Wiley & Sons, Inc., 2002.
+
+* Wikipedia, /Hyperexponential Distribution/, Online: [@http://en.wikipedia.org/wiki/Hyperexponential_distribution], 2014
+
+* R. Wolski and J. Brevik, /Using Parametric Models to Represent Private Cloud Workloads/, IEEE TSC, PrePrint, DOI: [@http://doi.ieeecomputersociety.org/10.1109/TSC.2013.48 10.1109/TSC.2013.48], 2013.
+
+* Wolfram Mathematica, /Hyperexponential Distribution/, Online: [@http://reference.wolfram.com/language/ref/HyperexponentialDistribution.html], 2014.
+
+[endsect][/section:hyperexponential_dist hyperexponential]
+
+[/ hyperexponential.qbk
+  Copyright 2014 Marco Guazzone (marco.guazzone@gmail.com)
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

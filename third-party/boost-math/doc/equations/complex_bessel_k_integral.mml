@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd" [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>complex_bessel_k_integral</title>
+<!-- MathML created with MathCast Equation Editor version 0.92 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <msub>
+      <mi>K</mi>
+      <mi>&#x3b1;</mi>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <msubsup>
+      <mo>&#x222b;</mo>
+      <mrow>
+        <mi>o</mi>
+      </mrow>
+      <mi>&#x221e;</mi>
+    </msubsup>
+    <msup>
+      <mi>e</mi>
+      <mrow>
+        <mo>&#x2212;</mo>
+        <mi>x</mi>
+        <mtext>cosh</mtext>
+        <mfenced>
+          <mrow>
+            <mi>t</mi>
+          </mrow>
+        </mfenced>
+      </mrow>
+    </msup>
+    <mtext>cosh</mtext>
+    <mfenced>
+      <mrow>
+        <mi>&#x3b1;</mi>
+        <mi>t</mi>
+      </mrow>
+    </mfenced>
+    <mi>d</mi>
+    <mi>t</mi>
+  </mrow>
+</math></body>
+</html>

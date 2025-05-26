@@ -1,0 +1,165 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Computing the Fifth Root</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../root_finding_examples.html" title="Examples of Root-Finding (with and without derivatives)">
+<link rel="prev" href="lambda.html" title="Using C++11 Lambda's">
+<link rel="next" href="multiprecision_root.html" title="Root-finding using Boost.Multiprecision">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="lambda.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding_examples.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="multiprecision_root.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.root_finding_examples.5th_root_eg"></a><a class="link" href="5th_root_eg.html" title="Computing the Fifth Root">Computing
+      the Fifth Root</a>
+</h3></div></div></div>
+<p>
+        Let's now suppose we want to find the <span class="bold"><strong>fifth root</strong></span>
+        of a number <span class="emphasis"><em>a</em></span>.
+      </p>
+<p>
+        The equation we want to solve is :
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic"><span class="emphasis"><em>f</em></span>(x) = <span class="emphasis"><em>x<sup>5</sup> -a</em></span></span>
+        </p></blockquote></div>
+<p>
+        If your differentiation is a little rusty (or you are faced with an function
+        whose complexity makes differentiation daunting), then you can get help,
+        for example, from the invaluable <a href="http://www.wolframalpha.com/" target="_top">WolframAlpha
+        site.</a>
+      </p>
+<p>
+        For example, entering the command: <code class="computeroutput"><span class="identifier">differentiate</span>
+        <span class="identifier">x</span> <span class="special">^</span> <span class="number">5</span></code>
+      </p>
+<p>
+        or the Wolfram Language command: <code class="computeroutput"> <span class="identifier">D</span><span class="special">[</span><span class="identifier">x</span> <span class="special">^</span>
+        <span class="number">5</span><span class="special">,</span> <span class="identifier">x</span><span class="special">]</span></code>
+      </p>
+<p>
+        gives the output: <code class="computeroutput"><span class="identifier">d</span><span class="special">/</span><span class="identifier">dx</span><span class="special">(</span><span class="identifier">x</span>
+        <span class="special">^</span> <span class="number">5</span><span class="special">)</span> <span class="special">=</span> <span class="number">5</span>
+        <span class="identifier">x</span> <span class="special">^</span> <span class="number">4</span></code>
+      </p>
+<p>
+        and to get the second differential, enter: <code class="computeroutput"><span class="identifier">second</span>
+        <span class="identifier">differentiate</span> <span class="identifier">x</span>
+        <span class="special">^</span> <span class="number">5</span></code>
+      </p>
+<p>
+        or the Wolfram Language command: <code class="computeroutput"><span class="identifier">D</span><span class="special">[</span><span class="identifier">x</span> <span class="special">^</span>
+        <span class="number">5</span><span class="special">,</span> <span class="special">{</span> <span class="identifier">x</span><span class="special">,</span>
+        <span class="number">2</span> <span class="special">}]</span></code>
+      </p>
+<p>
+        to get the output: <code class="computeroutput"><span class="identifier">d</span> <span class="special">^</span>
+        <span class="number">2</span> <span class="special">/</span> <span class="identifier">dx</span> <span class="special">^</span> <span class="number">2</span><span class="special">(</span><span class="identifier">x</span> <span class="special">^</span>
+        <span class="number">5</span><span class="special">)</span> <span class="special">=</span> <span class="number">20</span> <span class="identifier">x</span>
+        <span class="special">^</span> <span class="number">3</span></code>
+      </p>
+<p>
+        To get a reference value, we can enter: <code class="literal">fifth root 3126</code>
+      </p>
+<p>
+        or: <code class="computeroutput"><span class="identifier">N</span><span class="special">[</span><span class="number">3126</span> <span class="special">^</span> <span class="special">(</span><span class="number">1</span> <span class="special">/</span> <span class="number">5</span><span class="special">),</span> <span class="number">50</span><span class="special">]</span></code>
+      </p>
+<p>
+        to get a result with a precision of 50 decimal digits:
+      </p>
+<p>
+        5.0003199590478625588206333405631053401128722314376
+      </p>
+<p>
+        (We could also get a reference value using <a class="link" href="multiprecision_root.html" title="Root-finding using Boost.Multiprecision">multiprecision
+        root</a>).
+      </p>
+<p>
+        The 1st and 2nd derivatives of <span class="emphasis"><em>x<sup>5</sup></em></span> are:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic"><span class="emphasis"><em>f'(x) = 5x<sup>4</sup></em></span></span>
+        </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic"><span class="emphasis"><em>f''(x) = 20x<sup>3</sup></em></span></span>
+        </p></blockquote></div>
+<p>
+        Using these expressions for the derivatives, the functor is:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">fifth_functor_2deriv</span>
+<span class="special">{</span>
+  <span class="comment">// Functor returning both 1st and 2nd derivatives.</span>
+  <span class="identifier">fifth_functor_2deriv</span><span class="special">(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">to_find_root_of</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">a</span><span class="special">(</span><span class="identifier">to_find_root_of</span><span class="special">)</span>
+  <span class="special">{</span> <span class="comment">/* Constructor stores value a to find root of, for example: */</span> <span class="special">}</span>
+
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">T</span><span class="special">,</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">T</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">)</span>
+  <span class="special">{</span>
+    <span class="comment">// Return both f(x) and f'(x) and f''(x).</span>
+    <span class="identifier">T</span> <span class="identifier">fx</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">pow</span><span class="special">&lt;</span><span class="number">5</span><span class="special">&gt;(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">-</span> <span class="identifier">a</span><span class="special">;</span>    <span class="comment">// Difference (estimate x^3 - value).</span>
+    <span class="identifier">T</span> <span class="identifier">dx</span> <span class="special">=</span> <span class="number">5</span> <span class="special">*</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">pow</span><span class="special">&lt;</span><span class="number">4</span><span class="special">&gt;(</span><span class="identifier">x</span><span class="special">);</span>    <span class="comment">// 1st derivative = 5x^4.</span>
+    <span class="identifier">T</span> <span class="identifier">d2x</span> <span class="special">=</span> <span class="number">20</span> <span class="special">*</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">pow</span><span class="special">&lt;</span><span class="number">3</span><span class="special">&gt;(</span><span class="identifier">x</span><span class="special">);</span>  <span class="comment">// 2nd derivative = 20 x^3</span>
+    <span class="keyword">return</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="identifier">fx</span><span class="special">,</span> <span class="identifier">dx</span><span class="special">,</span> <span class="identifier">d2x</span><span class="special">);</span>  <span class="comment">// 'return' fx, dx and d2x.</span>
+  <span class="special">}</span>
+<span class="keyword">private</span><span class="special">:</span>
+  <span class="identifier">T</span> <span class="identifier">a</span><span class="special">;</span>                                    <span class="comment">// to be 'fifth_rooted'.</span>
+<span class="special">};</span> <span class="comment">// struct fifth_functor_2deriv</span>
+</pre>
+<p>
+        Our fifth-root function is now:
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">fifth_2deriv</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">x</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="comment">// return fifth root of x using 1st and 2nd derivatives and Halley.</span>
+  <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>                  <span class="comment">// Help ADL of std functions.</span>
+  <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">;</span>   <span class="comment">// for halley_iterate.</span>
+
+  <span class="keyword">int</span> <span class="identifier">exponent</span><span class="special">;</span>
+  <span class="identifier">frexp</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">exponent</span><span class="special">);</span>                  <span class="comment">// Get exponent of z (ignore mantissa).</span>
+  <span class="identifier">T</span> <span class="identifier">guess</span> <span class="special">=</span> <span class="identifier">ldexp</span><span class="special">(</span><span class="number">1.</span><span class="special">,</span> <span class="identifier">exponent</span> <span class="special">/</span> <span class="number">5</span><span class="special">);</span>    <span class="comment">// Rough guess is to divide the exponent by five.</span>
+  <span class="identifier">T</span> <span class="identifier">min</span> <span class="special">=</span> <span class="identifier">ldexp</span><span class="special">(</span><span class="number">0.5</span><span class="special">,</span> <span class="identifier">exponent</span> <span class="special">/</span> <span class="number">5</span><span class="special">);</span>     <span class="comment">// Minimum possible value is half our guess.</span>
+  <span class="identifier">T</span> <span class="identifier">max</span> <span class="special">=</span> <span class="identifier">ldexp</span><span class="special">(</span><span class="number">2.</span><span class="special">,</span> <span class="identifier">exponent</span> <span class="special">/</span> <span class="number">5</span><span class="special">);</span>      <span class="comment">// Maximum possible value is twice our guess.</span>
+  <span class="comment">// Stop when slightly more than one of the digits are correct:</span>
+  <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">digits</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">digits</span> <span class="special">*</span> <span class="number">0.4</span><span class="special">);</span>
+  <span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">maxit</span> <span class="special">=</span> <span class="number">50</span><span class="special">;</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">it</span> <span class="special">=</span> <span class="identifier">maxit</span><span class="special">;</span>
+  <span class="identifier">T</span> <span class="identifier">result</span> <span class="special">=</span> <span class="identifier">halley_iterate</span><span class="special">(</span><span class="identifier">fifth_functor_2deriv</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">x</span><span class="special">),</span> <span class="identifier">guess</span><span class="special">,</span> <span class="identifier">min</span><span class="special">,</span> <span class="identifier">max</span><span class="special">,</span> <span class="identifier">digits</span><span class="special">,</span> <span class="identifier">it</span><span class="special">);</span>
+  <span class="keyword">return</span> <span class="identifier">result</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        Full code of this example is at <a href="../../../../example/root_finding_example.cpp" target="_top">root_finding_example.cpp</a>
+        and <a href="../../../../example/root_finding_n_example.cpp" target="_top">root_finding_n_example.cpp</a>.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="lambda.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding_examples.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="multiprecision_root.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

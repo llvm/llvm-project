@@ -1,0 +1,133 @@
+[section:uniform_dist Uniform Distribution]
+
+
+``#include <boost/math/distributions/uniform.hpp>``
+
+   namespace boost{ namespace math{
+    template <class RealType = double, 
+              class ``__Policy``   = ``__policy_class`` >
+    class uniform_distribution;
+      
+    typedef uniform_distribution<> uniform;
+
+    template <class RealType, class ``__Policy``>
+    class uniform_distribution
+    {
+    public:
+       typedef RealType value_type;
+
+       BOOST_MATH_GPU_ENABLED uniform_distribution(RealType lower = 0, RealType upper = 1); // Constructor.
+          : m_lower(lower), m_upper(upper) // Default is standard uniform distribution.
+       // Accessor functions.
+       BOOST_MATH_GPU_ENABLED RealType lower()const;
+       BOOST_MATH_GPU_ENABLED RealType upper()const;
+    }; // class uniform_distribution
+   
+   }} // namespaces
+   
+The uniform distribution, also known as a rectangular distribution,
+is a probability distribution that has constant probability.
+
+The [@http://en.wikipedia.org/wiki/Uniform_distribution_%28continuous%29 continuous uniform distribution]
+is a distribution with the 
+[@http://en.wikipedia.org/wiki/Probability_density_function probability density function]:
+
+[expression f(x) =1 / (upper - lower) [sixemspace] for lower < x < upper]
+[expression f(x) =zero [sixemspace] for x < lower or x > upper]
+        
+and in this implementation:
+        
+[expression 1 / (upper - lower) [sixemspace] for x = lower or x = upper]
+
+The choice of /x = lower/ or /x = upper/ is made because statistical use of this distribution judged is most likely:
+the method of maximum likelihood uses this definition.
+
+There is also a [@http://en.wikipedia.org/wiki/Discrete_uniform_distribution *discrete* uniform distribution].
+
+Parameters lower and upper can be any finite value.
+
+The [@http://en.wikipedia.org/wiki/Random_variate random variate]
+/x/ must also be finite, and is supported /lower <= x <= upper/.
+
+The lower parameter is also called the
+[@http://www.itl.nist.gov/div898/handbook/eda/section3/eda364.htm location parameter],
+[@http://en.wikipedia.org/wiki/Location_parameter that is where the origin of a plot will lie],
+and (upper - lower) is also called the [@http://en.wikipedia.org/wiki/Scale_parameter scale parameter].
+
+The following graph illustrates how the
+[@http://en.wikipedia.org/wiki/Probability_density_function probability density function PDF]
+varies with the shape parameter:
+
+[graph uniform_pdf]
+
+Likewise for the CDF:
+
+[graph uniform_cdf]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED uniform_distribution(RealType lower = 0, RealType upper = 1);
+   
+Constructs a [@http://en.wikipedia.org/wiki/uniform_distribution 
+uniform distribution] with lower  /lower/ (a) and upper /upper/ (b).
+
+Requires that the /lower/ and /upper/ parameters are both finite;
+otherwise if infinity or NaN then calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType lower()const;
+   
+Returns the /lower/ parameter of this distribution.
+   
+   BOOST_MATH_GPU_ENABLED RealType upper()const;
+      
+Returns the /upper/ parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is any finite value,
+but the supported range is only /lower/ <= x <= /upper/.
+
+[h4 Accuracy]
+
+The uniform distribution is implemented with simple arithmetic operators and so should have errors within an epsilon or two.
+
+[h4 Implementation]
+
+In the following table a is the /lower/ parameter of the distribution, 
+b is the /upper/ parameter,
+/x/ is the random variate, /p/ is the probability and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = 0 for x < a, 1 / (b - a) for a <= x <= b, 0 for x > b ]]
+[[cdf][Using the relation: cdf = 0 for x < a, (x - a) / (b - a) for a <= x <= b, 1 for x > b]]
+[[cdf complement][Using the relation: q = 1 - p, (b - x) / (b - a) ]]
+[[quantile][Using the relation: x = p * (b - a) + a; ]]
+[[quantile from the complement][x = -q * (b - a) + b ]]
+[[mean][(a + b) / 2 ]]
+[[variance][(b - a) [super 2] / 12 ]]
+[[mode][any value in \[a, b\] but a is chosen.  (Would NaN be better?) ]]
+[[skewness][0]]
+[[kurtosis excess][-6/5 = -1.2 exactly. (kurtosis - 3)]]
+[[kurtosis][9/5]]
+]
+
+[h4 References]
+* [@http://en.wikipedia.org/wiki/Uniform_distribution_%28continuous%29 Wikipedia continuous uniform distribution]
+* [@http://mathworld.wolfram.com/UniformDistribution.html Weisstein, Weisstein, Eric W. "Uniform Distribution." From MathWorld--A Wolfram Web Resource.]
+* [@http://www.itl.nist.gov/div898/handbook/eda/section3/eda3662.htm]
+
+[endsect] [/section:uniform_dist Uniform]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

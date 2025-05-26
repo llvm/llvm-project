@@ -1,0 +1,115 @@
+[section:exp_dist Exponential Distribution]
+
+``#include <boost/math/distributions/exponential.hpp>``
+
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class exponential_distribution;
+
+   typedef exponential_distribution<> exponential;
+
+   template <class RealType, class ``__Policy``>
+   class exponential_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+
+      BOOST_MATH_GPU_ENABLED exponential_distribution(RealType lambda = 1);
+
+      BOOST_MATH_GPU_ENABLED RealType lambda()const;
+   };
+
+
+The [@http://en.wikipedia.org/wiki/Exponential_distribution exponential distribution]
+is a [@http://en.wikipedia.org/wiki/Probability_distribution continuous probability distribution]
+with PDF:
+
+[equation exponential_dist_ref1]
+
+It is often used to model the time between independent 
+events that happen at a constant average rate.
+
+The following graph shows how the distribution changes for different
+values of the rate parameter lambda:
+
+[graph exponential_pdf]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED exponential_distribution(RealType lambda = 1);
+   
+Constructs an
+[@http://en.wikipedia.org/wiki/Exponential_distribution Exponential distribution]
+with parameter /lambda/.
+Lambda is defined as the reciprocal of the scale parameter.
+
+Requires lambda > 0, otherwise calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType lambda()const;
+   
+Accessor function returns the lambda parameter of the distribution.
+   
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[0, +[infin]\].
+
+In this distribution the implementation of both `logcdf`, and `logpdf` are specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The exponential distribution is implemented in terms of the 
+standard library functions `exp`, `log`, `log1p` and `expm1`
+and as such should have very low error rates.
+
+[h4 Implementation]
+
+In the following table [lambda] is the parameter lambda of the distribution, 
+/x/ is the random variate, /p/ is the probability and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = [lambda] * exp(-[lambda] * x) ]]
+[[logpdf][log(pdf) = -expm1(-x * [lambda]) ]]
+[[cdf][Using the relation: p = 1 - exp(-x * [lambda]) = -expm1(-x * [lambda]) ]]
+[[logcdf][log(cdf) = log1p(-exp(-x * [lambda])) ]]
+[[cdf complement][Using the relation: q = exp(-x * [lambda]) ]]
+[[quantile][Using the relation: x = -log(1-p) / [lambda] = -log1p(-p) / [lambda]]]
+[[quantile from the complement][Using the relation: x = -log(q) / [lambda]]]
+[[mean][1/[lambda]]]
+[[standard deviation][1/[lambda]]]
+[[mode][0]]
+[[skewness][2]]
+[[kurtosis][9]]
+[[kurtosis excess][6]]
+]
+
+[h4 references]
+
+* [@http://mathworld.wolfram.com/ExponentialDistribution.html Weisstein, Eric W. "Exponential Distribution." From MathWorld--A Wolfram Web Resource]
+* [@http://documents.wolfram.com/calccenter/Functions/ListsMatrices/Statistics/ExponentialDistribution.html Wolfram Mathematica calculator]
+* [@http://www.itl.nist.gov/div898/handbook/eda/section3/eda3667.htm NIST Exploratory Data Analysis]
+* [@http://en.wikipedia.org/wiki/Exponential_distribution Wikipedia Exponential distribution]
+
+(See also the reference documentation for the related __extreme_distrib.)
+
+* 
+[@https://www.google.com/books/edition/Extreme_Value_Distributions/GwBqDQAAQBAJ?hl=en&gbpv=0 Extreme Value Distributions, Theory and Applications
+Samuel Kotz & Saralees Nadarajah]
+discuss the relationship of the types of extreme value distributions.
+
+[endsect] [/section:exp_dist Exponential]
+
+[/ exponential.qbk
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

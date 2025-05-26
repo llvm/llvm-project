@@ -1,0 +1,20 @@
+[/./../../../libs/math/doc/roots/elliptic_table_100_msvc_X64_AVX.qbk
+Copyright 2015 Paul A. Bristow.
+Copyright 2015 John Maddock.
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt).
+]
+
+
+[h6 Program [@../../example/root_elliptic_finding.cpp root_elliptic_finding.cpp],
+ Microsoft Visual C++ version 12.0, Dinkumware standard library version 610, Win32
+Compiled in optimise mode., _X64_AVX]
+[table:elliptic root with radius 28 and arc length 300) for float, double, long double and cpp_bin_float_50 types, using _X64_AVX
+[[][float][][][] [][double][][][] [][long d][][][] [][cpp50][][]]
+[[Algo     ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ]]
+[[TOMS748  ][  5][  500][1.33][ -1][ ][  9][ 1046][1.72][  1][ ][  9][ 1062][1.70][  1][ ][ 11][698437][1.54][ -3][ ]]
+[[Newton   ][  3][  484][1.29][ -1][ ][  4][  734][1.21][  1][ ][  4][  687][1.10][  1][ ][  5][545312][1.20][  0][ ]]
+[[Halley   ][  2][  375][[role blue 1.00]][  0][ ][  3][  609][[role blue 1.00]][  3][ ][  3][  625][[role blue 1.00]][  3][ ][  4][453125][[role blue 1.00]][  0][ ]]
+[[Schr'''&#xf6;'''der][  3][  546][1.46][ -1][ ][  6][ 1109][1.82][  1][ ][  6][ 1187][1.90][  1][ ][  5][564062][1.24][ -2][ ]]
+] [/end of table root]

@@ -1,0 +1,18 @@
+[/i:/modular-boost/libs/math/doc/roots/type_info_table_75_msvc.qbk
+Copyright 2015 Paul A. Bristow.
+Copyright 2015 John Maddock.
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[h6 Fraction of maximum possible bits of accuracy required is 0.75.]
+
+[table:type_info_75_msvc Digits for float, double, long double and cpp_bin_float_50
+[[type name] [max_digits10] [binary digits] [required digits]]
+[[float][9][24][18]]
+[[float][17][53][39]]
+[[long double][17][53][39]]
+[[cpp_bin_float_50][52][168][126]]
+] [/table table_id_msvc] 
+

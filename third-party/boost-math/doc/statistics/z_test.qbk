@@ -1,0 +1,115 @@
+[/
+Copyright (c) 2021 Matt Borland
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:z_test /z/-tests]
+
+[heading Synopsis]
+
+```
+#include <boost/math/statistics/z_test.hpp>
+
+namespace boost { namespace math { namespace statistics {
+
+template<typename Real>
+std::pair<Real, Real> one_sample_z_test(Real sample_mean, Real sample_variance, Real num_samples, Real assumed_mean);
+
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type>
+std::pair<Real, Real> one_sample_z_test(ForwardIterator begin, ForwardIterator end, Real assumed_mean);
+
+template<typename Container>
+std::pair<Real, Real> one_sample_z_test(Container const & v, typename Container::value_type assumed_mean);
+
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type>
+std::pair<Real, Real> two_sample_z_test(ForwardIterator begin_1, ForwardIterator end_1, ForwardIterator begin_2, ForwardIterator begin_2);
+
+template<typename Container, typename Real = typename Container::value_type>
+std::pair<Real, Real> two_sample_z_test(Container const & u, Container const & v);
+
+template<typename ForwardIterator, typename Real = typename std::iterator_traits<ForwardIterator>::value_type>
+std::pair<Real, Real> paired_samples_z_test(ForwardIterator begin_1, ForwardIterator end_1, ForwardIterator begin_2, ForwardIterator begin_2);
+
+template<typename Container, typename Real = typename Container::value_type>
+std::pair<Real, Real> paired_samples_z_test(Container const & u, Container const & v);
+
+}}}
+```
+
+[heading Background]
+
+A set of C++11 compatible functions for various one sample and independent sample /z/-tests. 
+The input can be any real number or set of real numbers.
+In the event that the input is an integer or a set of integers typename Real will be deduced as a double precision type.
+
+[heading One-sample /z/-test]
+
+A one-sample /z/-test is used to determine whether two population means are different when the variances are known and the sample sizes are large.
+The /z/-test is closely related to the /t/-test but can be performed using a large sample size.
+
+[$../graphs/one_sample_z_test_statistic.svg]
+
+where
+
+[$../graphs/one_sample_z_s_value.svg]
+
+with /X/ being the test-statistic and µ[sub 0] being the assumed mean
+
+the test statistic /X/ can be assumed to come from a uniform real distribution.
+Since we wish to know if the sample mean deviates from the true mean in either direction, the test is two-tailed.
+Hence the /p/-value is straightforward to calculate from the uniform real distribution on /n/ - 1 degrees of freedom, but nonetheless it is convenient to have it computed here.
+
+An example usage is as follows:
+
+```
+#include <vector>
+#include <random>
+#include <boost/math/statistics/z_test.hpp>
+
+std::random_device rd;
+std::mt19937 gen{rd()};
+std::normal_distribution<double> dis{0,1};
+std::vector<double> v(1024);
+for (auto & x : v) {
+  x = dis(gen);
+}
+
+auto [t, p] = boost::math::statistics::one_sample_z_test(v, 0.0);
+```
+
+The test statistic is the first element of the pair, and the /p/-value is the second element.
+
+[heading Independent two-sample /z/-test]
+
+A two-sample /z/-test determines if the means of two sets of data have a statistically significant difference from each other.
+
+[$../graphs/two_sample_z_statistic.svg]
+[/Z=\frac{(\bar{X_1}-\bar{X_2})-(\mu_1-\mu_2)}{\sqrt{\sigma_{\bar{X_1}}^2+\sigma_{\bar{X_2}}^2}} = 
+\frac{(\bar{X_1}-\bar{X_2})-(\mu_1-\mu_2)}{\sqrt{\frac{\sigma_1^2}{n_1}+\frac{\sigma_1^2}{n_2}}}]
+An example of usage is as follows:
+
+```
+#include <vector>
+#include <random>
+#include <boost/math/statistics/z_test.hpp>
+
+std::random_device rd;
+std::mt19937 gen{rd()};
+std::normal_distribution<double> dis{0,1};
+std::vector<double> u(1024);
+std::vector<double> v(1024);
+for(std::size_t i = 0; i < u.size(); ++i)
+{
+  u[i] = dis(gen);
+  v[i] = dis(gen);
+}
+
+auto [t, p] = boost::math::statistics::two_sample_z_test(u, v);
+```
+
+/Nota bene:/ The sample sizes for the two sets of data do not need to be equal.
+
+[endsect]
+[/section:z_test]

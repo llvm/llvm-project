@@ -1,0 +1,131 @@
+﻿[section:landau_dist Landau Distribution]
+
+``#include <boost/math/distributions/landau.hpp>``
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class landau_distribution;
+
+   typedef landau_distribution<> landau;
+
+   template <class RealType, class ``__Policy``>
+   class landau_distribution
+   {
+   public:
+      typedef RealType  value_type;
+      typedef Policy    policy_type;
+
+      BOOST_MATH_GPU_ENABLED landau_distribution(RealType location = 0, RealType scale = 1);
+
+      BOOST_MATH_GPU_ENABLED RealType location()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+      BOOST_MATH_GPU_ENABLED RealType bias()const;
+   };
+
+The [@http://en.wikipedia.org/wiki/landau_distribution Landau distribution]
+is named after Lev Landau.
+It is special case of a [@http://en.wikipedia.org/wiki/Stable_distribution stable distribution]
+with shape parameter [alpha]=1, [beta]=1.
+
+[@http://en.wikipedia.org/wiki/Probability_distribution probability distribution function PDF]
+given by:
+
+[equation landau_ref1]  [/f(x; \mu, c)=\frac{1}{\pi c} \int_{0}^{\infty} \exp(-t) \cos \left( t \left( \frac{x-\mu}{c}\right) + \frac{2t}{\pi} \log \left( \frac{t}{c} \right)  \right) dt]
+
+The location parameter [mu] is the location of the distribution,
+while the scale parameter [c] determines the width of the distribution,
+but unlike other scalable distributions,
+it has a peculiarity that changes the location of the distribution.  If the location is
+zero, and the scale 1, then the result is a standard landau
+distribution.
+
+The distribution describe the statistical property of the energy loss by
+charged particles as they traversing a thin layer of matter.
+
+The following graph shows how the distributions moves as the
+location parameter changes:
+
+[graph landau_pdf1]
+
+While the following graph shows how the shape (scale) parameter alters
+the distribution:
+
+[graph landau_pdf2]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED landau_distribution(RealType location = 0, RealType scale = 1);
+
+Constructs a landau distribution, with location parameter /location/
+and scale parameter /scale/.  When these parameters take their default
+values (location = 0, scale = 1)
+then the result is a Standard landau Distribution.
+
+Requires scale > 0, otherwise calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType location()const;
+
+Returns the location parameter of the distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+
+Returns the scale parameter of the distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType bias()const;
+
+Returns the amount of translation by the scale parameter.
+[expression bias = - 2 / [pi] log(c)]
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+Note however that the landau distribution does not have a mean,
+standard deviation, etc. See __math_undefined
+[/link math_toolkit.pol_ref.assert_undefined mathematically undefined function]
+to control whether these should fail to compile with a BOOST_STATIC_ASSERTION_FAILURE,
+which is the default.
+
+Alternately, the functions __mean, __sd,
+__variance, __skewness, __kurtosis and __kurtosis_excess will all
+return a __domain_error if called.
+
+The domain of the random variable is \[-[max_value], +[min_value]\].
+
+[h4 Accuracy]
+
+The error is within 4 epsilon except for the rapidly decaying left tail.
+
+Errors in the PDF at 64-bit double precision:
+
+[$../graphs/landau_pdf_accuracy_64.png]
+
+Errors in the CDF at 64-bit double precision:
+
+[$../graphs/landau_cdf_accuracy_64.png]
+
+Errors in the CDF-complement at 64-bit double precision:
+
+[$../graphs/landau_ccdf_accuracy_64.png]
+
+[h4 Implementation]
+
+See references.
+
+[h4 References]
+
+* [@http://en.wikipedia.org/wiki/landau_distribution landau distribution]
+* T. Yoshimura, Numerical Evaluation and High Precision Approximation Formula for Landau Distribution,
+DOI: 10.36227/techrxiv.171822215.53612870/v2, 2024.
+
+[endsect][/section:landau_dist landau]
+
+[/ landau.qbk
+  Copyright Takuma Yoshimura 2024.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

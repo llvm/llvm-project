@@ -1,0 +1,179 @@
+[/
+  Copyright Nick Thompson, John Maddock, 2020
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:daubechies Daubechies Wavelets and Scaling Functions]
+
+[h4 Synopsis]
+
+    #include <boost/math/special_functions/daubechies_scaling.hpp>
+
+    namespace boost::math {
+
+    template<class Real, int p>
+    class daubechies_scaling {
+    public:
+        daubechies_scaling(int grid_refinements = -1);
+
+        inline Real operator()(Real x) const;
+
+        inline Real prime(Real x) const;
+
+        inline Real double_prime(Real x) const;
+
+        std::pair<Real, Real> support() const;
+
+        int64_t bytes() const;
+    };
+
+    template<class Real, int p, int order>
+    std::vector<Real> dyadic_grid(int64_t j_max);
+
+
+    #include <boost/math/special_functions/daubechies_wavelet.hpp>
+    template<class Real, int p>
+    class daubechies_wavelet {
+    public:
+        daubechies_wavelet(int grid_refinements = -1);
+
+        inline Real operator()(Real x) const;
+
+        inline Real prime(Real x) const;
+
+        inline Real double_prime(Real x) const;
+
+        std::pair<Real, Real> support() const;
+
+        int64_t bytes() const;
+    };
+
+ 
+    } // namespaces
+
+
+Daubechies wavelets and scaling functions are a family of compactly supported functions indexed by an integer /p/ which have /p/ vanishing moments and an associated filter of length /2p/.
+They are used in signal denoising, Galerkin methods for PDEs, and compression.
+
+The canonical reference on these functions is Daubechies' monograph /Ten Lectures on Wavelets/,
+whose notational conventions we attempt to follow here.
+
+A basic usage is as follows:
+
+    auto phi = boost::math::daubechies_scaling<double, 8>();
+    double y = phi(0.38);
+    double dydx = phi.prime(0.38);
+
+    auto psi = boost::math::daubechies_wavelet<double, 8>();
+    y = psi(0.38);
+
+Note that the constructor call is expensive, as it must assemble a /dyadic grid/--values of [sub /p/]\u03C6 at dyadic rationals,
+i.e., numbers of the form n/2[super /j/].
+You should only instantiate this class once in the duration of a program.
+The class is pimpl'd and all its member functions are threadsafe, so it can be copied cheaply and shared between threads.
+The default number of grid refinements is chosen so that the relative error is controlled to ~2-3 ULPs away from the right-hand side of the support,
+where superexponential growth of the condition number of function evaluation makes this impossible.
+However, controlling relative error of Daubechies wavelets and scaling functions is much more difficult than controlling absolute error,
+and the memory consumption is much higher in relative mode.
+The memory consumption of the class can be queried via
+
+    int64_t mem = phi.bytes();
+
+and if this is deemed unacceptably large, the user may choose to control absolute error via calling the constructor with the `grid_refinements` parameter set to -2,
+so
+
+    auto phi = boost::math::daubechies_scaling<double, 8>(-2);
+    
+gives a scaling function which keeps the absolute error bounded by roughly the double precision unit roundoff.
+
+If context precludes the ability to reuse the class throughout the program, it makes sense to reduce the accuracy even further.
+This can be done by specifying the grid refinements, for example,
+
+    auto phi = boost::math::daubechies_scaling<double, 8>(12);
+
+creates a Daubechies scaling function interpolated from a dyadic grid computed down to depth /j/ = 12.
+The call to the constructor is exponential time in the number of grid refinements, and the call operator, `.prime`, and `.double_prime` are constant time.
+
+Note that the only reason that this is a class, rather than a free function is that the dyadic grids would make the Boost source download extremely large.
+Hence, it may make sense to precompute the dyadic grid and dump it in a `.cpp` file; this can be achieved via
+
+    using boost::multiprecision::float128;
+    int grid_refinements = 12;
+    constexpr const derivative = 0;
+    constexpr const p = 8;
+    std::vector<float128> v = boost::math::dyadic_grid<float128, p, derivative>(grid_refinements);
+
+Note that quad precision is the most accurate precision provided, for both the dyadic grid and for the scaling function.
+1ULP accuracy can only be achieved for float and double precision, in well-conditioned regions.
+
+Derivatives are only available if the wavelet and scaling function has sufficient smoothness.
+The compiler will gladly inform you of your error if you try to call `.prime` on [sub 2]\u03C6, which is not differentiable,
+but be aware that smoothness increases with the number of vanishing moments.
+
+The axioms of a multiresolution analysis ensure that integer shifts of the scaling functions are elements of the multiresolution analysis;
+a side effect is that the supports of the (unshifted) wavelet and scaling functions are arbitrary.
+For this reason, we have provided `.support()` so that you can check our conventions:
+
+    auto [a, b] = phi.support();
+
+For definiteness though, for the scaling function, the support is always [0, /2p/ - 1], and the support of the wavelet is [ -/p/ + 1, /p/].
+
+
+[$../graphs/daubechies_2_scaling.svg]
+The 2 vanishing moment scaling function.
+
+[$../graphs/daubechies_8_scaling.svg]
+The 8 vanishing moment scaling function.
+
+Boost.Math also provides numerical evaluation of the Fourier transform of these functions.
+This is useful in sparse recovery problems where the measurements are taken in the Fourier basis.
+The usage is exhibited below:
+
+    #include <boost/math/special_functions/fourier_transform_daubechies_scaling.hpp>
+    using boost::math::fourier_transform_daubechies_scaling;
+    // Evaluate the Fourier transform of the 4-vanishing moment Daubechies scaling function at ω=1.8:
+    std::complex<float> hat_phi = fourier_transform_daubechies_scaling<float, 4>(1.8f);
+
+The Fourier transform convention is unitary with the sign of the imaginary unit being given in Daubechies Ten Lectures.
+In particular, this means that `fourier_transform_daubechies_scaling<float, p>(0.0)` returns 1/sqrt(2π).
+
+The implementation computes an infinite product of trigonometric polynomials as can be found from recursive application of the identity 𝓕[φ](ω) = m(ω/2)𝓕[φ](ω/2).
+This is neither particularly fast nor accurate, but there appears to be no literature on this extremely useful topic, and hence the naive method must suffice.
+
+[$../graphs/fourier_transform_daubechies.png]
+
+A benchmark can be found in `reporting/performance/fourier_transform_daubechies_performance.cpp`; the results on a ~2021 M1 Macbook pro are presented below:
+
+
+Run on (10 X 24.1212 MHz CPU s)
+CPU Caches:
+  L1 Data 64 KiB (x10)
+  L1 Instruction 128 KiB (x10)
+  L2 Unified 4096 KiB (x5)
+Load Average: 1.33, 1.52, 1.62
+-----------------------------------------------------------
+Benchmark                                              Time 
+-----------------------------------------------------------
+FourierTransformDaubechiesScaling<double, 1>        70.3 ns
+FourierTransformDaubechiesScaling<double, 2>         330 ns
+FourierTransformDaubechiesScaling<double, 3>         335 ns
+FourierTransformDaubechiesScaling<double, 4>         364 ns
+FourierTransformDaubechiesScaling<double, 5>         386 ns
+FourierTransformDaubechiesScaling<double, 6>         436 ns
+FourierTransformDaubechiesScaling<double, 7>         447 ns
+FourierTransformDaubechiesScaling<double, 8>         473 ns
+FourierTransformDaubechiesScaling<double, 9>         503 ns
+FourierTransformDaubechiesScaling<double, 10>        554 ns
+
+Due to the low accuracy of this method, `float` precision is arg-promoted to `double`, and hence takes just as long as `double` precision to execute.
+
+[heading References]
+
+* Daubechies, Ingrid. ['Ten Lectures on Wavelets.] Vol. 61. Siam, 1992.
+* Mallat, Stephane. ['A Wavelet Tour of Signal Processing: the sparse way] Academic press, 2008.
+* Thompson, Nicholas, Maddock, John et al. ['Towards 1ULP Evaluation of Daubechies Wavelets] https://arxiv.org/ftp/arxiv/papers/2005/2005.05424.pdf
+
+
+[endsect]

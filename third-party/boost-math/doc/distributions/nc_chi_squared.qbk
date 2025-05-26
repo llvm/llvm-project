@@ -1,0 +1,274 @@
+[section:nc_chi_squared_dist Noncentral Chi-Squared Distribution]
+
+``#include <boost/math/distributions/non_central_chi_squared.hpp>``
+
+   namespace boost{ namespace math{
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class non_central_chi_squared_distribution;
+
+   typedef non_central_chi_squared_distribution<> non_central_chi_squared;
+
+   template <class RealType, class ``__Policy``>
+   class non_central_chi_squared_distribution
+   {
+   public:
+      typedef RealType  value_type;
+      typedef Policy    policy_type;
+
+      // Constructor:
+      BOOST_MATH_GPU_ENABLED non_central_chi_squared_distribution(RealType v, RealType lambda);
+
+      // Accessor to degrees of freedom parameter v:
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom()const;
+
+      // Accessor to non centrality parameter lambda:
+      BOOST_MATH_GPU_ENABLED RealType non_centrality()const;
+
+      // Parameter finders:
+      BOOST_MATH_GPU_ENABLED static RealType find_degrees_of_freedom(RealType lambda, RealType x, RealType p);
+      template <class A, class B, class C>
+      BOOST_MATH_GPU_ENABLED static RealType find_degrees_of_freedom(const complemented3_type<A,B,C>& c);
+
+      BOOST_MATH_GPU_ENABLED static RealType find_non_centrality(RealType v, RealType x, RealType p);
+      template <class A, class B, class C>
+      BOOST_MATH_GPU_ENABLED static RealType find_non_centrality(const complemented3_type<A,B,C>& c);
+   };
+
+   }} // namespaces
+
+The noncentral chi-squared distribution is a generalization of the
+__chi_squared_distrib. If ['X[sub i]] are [nu] independent, normally
+distributed random variables with means [mu][sub i] and variances
+['[sigma][sub i][super 2]], then the random variable
+
+[equation nc_chi_squ_ref1]
+
+is distributed according to the noncentral chi-squared distribution.
+
+The noncentral chi-squared distribution has two parameters:
+[nu] which specifies the number of degrees of freedom
+(i.e. the number of ['X[sub i])], and [lambda] which is related to the
+mean of the random variables ['X[sub i]] by:
+
+[equation nc_chi_squ_ref2]
+
+(Note that some references define [lambda] as one half of the above sum).
+
+This leads to a PDF of:
+
+[equation nc_chi_squ_ref3]
+
+where ['f(x;[nu])] is the central chi-squared distribution PDF, and
+['I[sub v](x)] is a modified Bessel function of the first kind.
+
+The following graph illustrates how the distribution changes
+for different values of [lambda]:
+
+[graph nccs_pdf]
+
+[h4 Member Functions]
+
+      BOOST_MATH_GPU_ENABLED non_central_chi_squared_distribution(RealType v, RealType lambda);
+
+Constructs a Chi-Squared distribution with [nu] degrees of freedom
+and non-centrality parameter /lambda/.
+
+Requires [nu] > 0 and lambda >= 0, otherwise calls __domain_error.
+
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom()const;
+
+Returns the parameter [nu] from which this object was constructed.
+
+      BOOST_MATH_GPU_ENABLED RealType non_centrality()const;
+
+Returns the parameter /lambda/ from which this object was constructed.
+
+      BOOST_MATH_GPU_ENABLED static RealType find_degrees_of_freedom(RealType lambda, RealType x, RealType p);
+
+This function returns the number of degrees of freedom [nu] such that:
+`cdf(non_central_chi_squared<RealType, Policy>(v, lambda), x) == p`
+
+      template <class A, class B, class C>
+      BOOST_MATH_GPU_ENABLED static RealType find_degrees_of_freedom(const complemented3_type<A,B,C>& c);
+
+When called with argument `boost::math::complement(lambda, x, q)`
+this function returns the number of degrees of freedom [nu] such that:
+
+`cdf(complement(non_central_chi_squared<RealType, Policy>(v, lambda), x)) == q`.
+
+      BOOST_MATH_GPU_ENABLED static RealType find_non_centrality(RealType v, RealType x, RealType p);
+
+This function returns the non centrality parameter /lambda/ such that:
+
+`cdf(non_central_chi_squared<RealType, Policy>(v, lambda), x) == p`
+
+      template <class A, class B, class C>
+      BOOST_MATH_GPU_ENABLED static RealType find_non_centrality(const complemented3_type<A,B,C>& c);
+
+When called with argument `boost::math::complement(v, x, q)`
+this function returns the non centrality parameter /lambda/ such that:
+
+`cdf(complement(non_central_chi_squared<RealType, Policy>(v, lambda), x)) == q`.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[0, +[infin]\].
+
+[h4 Examples]
+
+There is a
+[link math_toolkit.stat_tut.weg.nccs_eg worked example]
+for the noncentral chi-squared distribution.
+
+[h4 Accuracy]
+
+The following table shows the peak errors
+(in units of [@http://en.wikipedia.org/wiki/Machine_epsilon epsilon])
+found on various platforms with various floating point types.
+The failures in the comparison to the [@http://www.r-project.org/ R Math library],
+seem to be mostly in the corner cases when the probability would be very small.
+Unless otherwise specified any floating-point type that is narrower
+than the one shown will have __zero_error.
+
+[table_non_central_chi_squared_CDF]
+
+[table_non_central_chi_squared_CDF_complement]
+
+Error rates for the quantile
+functions are broadly similar.  Special mention should go to
+the `mode` function: there is no closed form for this function,
+so it is evaluated numerically by finding the maxima of the PDF:
+in principal this can not produce an accuracy greater than the
+square root of the machine epsilon.
+
+[h4 Tests]
+
+There are two sets of test data used to verify this implementation:
+firstly we can compare with published data, for example with
+Table 6 of "Self-Validating Computations of Probabilities for
+Selected Central and Noncentral Univariate Probability Functions",
+Morgan C. Wang and William J. Kennedy,
+Journal of the American Statistical Association,
+Vol. 89, No. 427. (Sep., 1994), pp. 878-887.
+Secondly, we have tables of test data, computed with this
+implementation and using interval arithmetic - this data should
+be accurate to at least 50 decimal digits - and is the used for
+our accuracy tests.
+
+[h4 Implementation]
+
+The CDF and its complement are evaluated as follows:
+
+First we determine which of the two values (the CDF or its
+complement) is likely to be the smaller: for this we can use the
+relation due to Temme (see "Asymptotic and Numerical Aspects of the
+Noncentral Chi-Square Distribution", N. M. Temme, Computers Math. Applic.
+Vol 25, No. 5, 55-63, 1993) that:
+
+F([nu],[lambda];[nu]+[lambda]) [asymp] 0.5
+
+and so compute the CDF when the random variable is less than
+[nu]+[lambda], and its complement when the random variable is
+greater than [nu]+[lambda].  If necessary the computed result
+is then subtracted from 1 to give the desired result (the CDF or its
+complement).
+
+For small values of the non centrality parameter, the CDF is computed
+using the method of Ding (see "Algorithm AS 275: Computing the Non-Central
+#2 Distribution Function", Cherng G. Ding, Applied Statistics, Vol. 41,
+No. 2. (1992), pp. 478-482).  This uses the following series representation:
+
+[equation nc_chi_squ_ref4]
+
+which requires just one call to __gamma_p_derivative with the subsequent
+terms being computed by recursion as shown above.
+
+For larger values of the non-centrality parameter, Ding's method can take
+an unreasonable number of terms before convergence is achieved.  Furthermore,
+the largest term is not the first term, so in extreme cases the first term may
+be zero, leading to a zero result, even though the true value may be non-zero.
+
+Therefore, when the non-centrality parameter is greater than 200, the method due
+to Krishnamoorthy (see "Computing discrete mixtures of continuous distributions:
+noncentral chisquare, noncentral t and the distribution of the
+square of the sample multiple correlation coefficient",
+Denise Benton and K. Krishnamoorthy, Computational Statistics &
+Data Analysis, 43, (2003), 249-267) is used.
+
+This method uses the well known sum:
+
+[equation nc_chi_squ_ref5]
+
+Where ['P[sub a](x)] is the incomplete gamma function.
+
+The method starts at the [lambda]th term, which is where the Poisson weighting
+function achieves its maximum value, although this is not necessarily
+the largest overall term.  Subsequent terms are calculated via the normal
+recurrence relations for the incomplete gamma function, and iteration proceeds
+both forwards and backwards until sufficient precision has been achieved.  It
+should be noted that recurrence in the forwards direction of P[sub a](x) is
+numerically unstable.  However, since we always start /after/ the largest
+term in the series, numeric instability is introduced more slowly than the
+series converges.
+
+Computation of the complement of the CDF uses an extension of Krishnamoorthy's
+method, given that:
+
+[equation nc_chi_squ_ref6]
+
+we can again start at the [lambda]'th term and proceed in both directions from
+there until the required precision is achieved.  This time it is backwards
+recursion on the incomplete gamma function Q[sub a](x) which is unstable.
+However, as long as we start well /before/ the largest term, this is not an
+issue in practice.
+
+The PDF is computed directly using the relation:
+
+[equation nc_chi_squ_ref3]
+
+Where ['f(x;[nu])] is the PDF of the central __chi_squared_distrib and
+['I[sub v](x)] is a modified Bessel function, see __cyl_bessel_i.
+For small values of the
+non-centrality parameter the relation in terms of __cyl_bessel_i
+is used.  However, this method fails for large values of the
+non-centrality parameter, so in that case the infinite sum is
+evaluated using the method of Benton and Krishnamoorthy, and
+the usual recurrence relations for successive terms.
+
+The quantile functions are computed by numeric inversion of the CDF.
+An improve starting guess is from
+Thomas Luu,
+[@http://discovery.ucl.ac.uk/1482128/, Fast and accurate parallel computation of quantile functions for random number generation, Doctoral Thesis, 2016].
+
+There is no [@http://en.wikipedia.org/wiki/Closed_form closed form]
+for the mode of the noncentral chi-squared
+distribution: it is computed numerically by finding the maximum
+of the PDF.  Likewise, the median is computed numerically via
+the quantile.
+
+The remaining non-member functions use the following formulas:
+
+[equation nc_chi_squ_ref7]
+
+Some analytic properties of noncentral distributions
+(particularly unimodality, and monotonicity of their modes)
+are surveyed and summarized by:
+
+Andrea van Aubel & Wolfgang Gawronski, Applied Mathematics and Computation, 141 (2003) 3-12.
+
+[endsect] [/section:nc_chi_squared_dist]
+
+[/ nc_chi_squared.qbk
+  Copyright 2008 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

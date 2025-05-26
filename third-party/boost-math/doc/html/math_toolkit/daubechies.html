@@ -1,0 +1,268 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Daubechies Wavelets and Scaling Functions</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../special.html" title="Chapter 8. Special Functions">
+<link rel="prev" href="owens_t.html" title="Owen's T function">
+<link rel="next" href="ccmath.html" title="Constexpr CMath">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="owens_t.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../special.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="ccmath.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.daubechies"></a><a class="link" href="daubechies.html" title="Daubechies Wavelets and Scaling Functions">Daubechies Wavelets and Scaling
+    Functions</a>
+</h2></div></div></div>
+<h5>
+<a name="math_toolkit.daubechies.h0"></a>
+      <span class="phrase"><a name="math_toolkit.daubechies.synopsis"></a></span><a class="link" href="daubechies.html#math_toolkit.daubechies.synopsis">Synopsis</a>
+    </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">daubechies_scaling</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span> <span class="special">{</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Real</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">p</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">daubechies_scaling</span> <span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+    <span class="identifier">daubechies_scaling</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">grid_refinements</span> <span class="special">=</span> <span class="special">-</span><span class="number">1</span><span class="special">);</span>
+
+    <span class="keyword">inline</span> <span class="identifier">Real</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="keyword">inline</span> <span class="identifier">Real</span> <span class="identifier">prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="keyword">inline</span> <span class="identifier">Real</span> <span class="identifier">double_prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">support</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">int64_t</span> <span class="identifier">bytes</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Real</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">p</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">order</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">dyadic_grid</span><span class="special">(</span><span class="identifier">int64_t</span> <span class="identifier">j_max</span><span class="special">);</span>
+
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">daubechies_wavelet</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Real</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">p</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">daubechies_wavelet</span> <span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+    <span class="identifier">daubechies_wavelet</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">grid_refinements</span> <span class="special">=</span> <span class="special">-</span><span class="number">1</span><span class="special">);</span>
+
+    <span class="keyword">inline</span> <span class="identifier">Real</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="keyword">inline</span> <span class="identifier">Real</span> <span class="identifier">prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="keyword">inline</span> <span class="identifier">Real</span> <span class="identifier">double_prime</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">support</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="identifier">int64_t</span> <span class="identifier">bytes</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+
+
+<span class="special">}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+      Daubechies wavelets and scaling functions are a family of compactly supported
+      functions indexed by an integer <span class="emphasis"><em>p</em></span> which have <span class="emphasis"><em>p</em></span>
+      vanishing moments and an associated filter of length <span class="emphasis"><em>2p</em></span>.
+      They are used in signal denoising, Galerkin methods for PDEs, and compression.
+    </p>
+<p>
+      The canonical reference on these functions is Daubechies' monograph <span class="emphasis"><em>Ten
+      Lectures on Wavelets</em></span>, whose notational conventions we attempt to
+      follow here.
+    </p>
+<p>
+      A basic usage is as follows:
+    </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="identifier">phi</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">daubechies_scaling</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">8</span><span class="special">&gt;();</span>
+<span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">phi</span><span class="special">(</span><span class="number">0.38</span><span class="special">);</span>
+<span class="keyword">double</span> <span class="identifier">dydx</span> <span class="special">=</span> <span class="identifier">phi</span><span class="special">.</span><span class="identifier">prime</span><span class="special">(</span><span class="number">0.38</span><span class="special">);</span>
+
+<span class="keyword">auto</span> <span class="identifier">psi</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">daubechies_wavelet</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">8</span><span class="special">&gt;();</span>
+<span class="identifier">y</span> <span class="special">=</span> <span class="identifier">psi</span><span class="special">(</span><span class="number">0.38</span><span class="special">);</span>
+</pre>
+<p>
+      Note that the constructor call is expensive, as it must assemble a <span class="emphasis"><em>dyadic
+      grid</em></span>--values of <sub><span class="emphasis"><em>p</em></span></sub>φ at dyadic rationals,
+      i.e., numbers of the form n/2<sup><span class="emphasis"><em>j</em></span></sup>. You should only instantiate
+      this class once in the duration of a program. The class is pimpl'd and all
+      its member functions are threadsafe, so it can be copied cheaply and shared
+      between threads. The default number of grid refinements is chosen so that the
+      relative error is controlled to ~2-3 ULPs away from the right-hand side of
+      the support, where superexponential growth of the condition number of function
+      evaluation makes this impossible. However, controlling relative error of Daubechies
+      wavelets and scaling functions is much more difficult than controlling absolute
+      error, and the memory consumption is much higher in relative mode. The memory
+      consumption of the class can be queried via
+    </p>
+<pre class="programlisting"><span class="identifier">int64_t</span> <span class="identifier">mem</span> <span class="special">=</span> <span class="identifier">phi</span><span class="special">.</span><span class="identifier">bytes</span><span class="special">();</span>
+</pre>
+<p>
+      and if this is deemed unacceptably large, the user may choose to control absolute
+      error via calling the constructor with the <code class="computeroutput"><span class="identifier">grid_refinements</span></code>
+      parameter set to -2, so
+    </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="identifier">phi</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">daubechies_scaling</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">8</span><span class="special">&gt;(-</span><span class="number">2</span><span class="special">);</span>
+</pre>
+<p>
+      gives a scaling function which keeps the absolute error bounded by roughly
+      the double precision unit roundoff.
+    </p>
+<p>
+      If context precludes the ability to reuse the class throughout the program,
+      it makes sense to reduce the accuracy even further. This can be done by specifying
+      the grid refinements, for example,
+    </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="identifier">phi</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">daubechies_scaling</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">8</span><span class="special">&gt;(</span><span class="number">12</span><span class="special">);</span>
+</pre>
+<p>
+      creates a Daubechies scaling function interpolated from a dyadic grid computed
+      down to depth <span class="emphasis"><em>j</em></span> = 12. The call to the constructor is exponential
+      time in the number of grid refinements, and the call operator, <code class="computeroutput"><span class="special">.</span><span class="identifier">prime</span></code>, and
+      <code class="computeroutput"><span class="special">.</span><span class="identifier">double_prime</span></code>
+      are constant time.
+    </p>
+<p>
+      Note that the only reason that this is a class, rather than a free function
+      is that the dyadic grids would make the Boost source download extremely large.
+      Hence, it may make sense to precompute the dyadic grid and dump it in a <code class="computeroutput"><span class="special">.</span><span class="identifier">cpp</span></code> file;
+      this can be achieved via
+    </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multiprecision</span><span class="special">::</span><span class="identifier">float128</span><span class="special">;</span>
+<span class="keyword">int</span> <span class="identifier">grid_refinements</span> <span class="special">=</span> <span class="number">12</span><span class="special">;</span>
+<span class="keyword">constexpr</span> <span class="keyword">const</span> <span class="identifier">derivative</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+<span class="keyword">constexpr</span> <span class="keyword">const</span> <span class="identifier">p</span> <span class="special">=</span> <span class="number">8</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">float128</span><span class="special">&gt;</span> <span class="identifier">v</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">dyadic_grid</span><span class="special">&lt;</span><span class="identifier">float128</span><span class="special">,</span> <span class="identifier">p</span><span class="special">,</span> <span class="identifier">derivative</span><span class="special">&gt;(</span><span class="identifier">grid_refinements</span><span class="special">);</span>
+</pre>
+<p>
+      Note that quad precision is the most accurate precision provided, for both
+      the dyadic grid and for the scaling function. 1ULP accuracy can only be achieved
+      for float and double precision, in well-conditioned regions.
+    </p>
+<p>
+      Derivatives are only available if the wavelet and scaling function has sufficient
+      smoothness. The compiler will gladly inform you of your error if you try to
+      call <code class="computeroutput"><span class="special">.</span><span class="identifier">prime</span></code>
+      on <sub>2</sub>φ, which is not differentiable, but be aware that smoothness increases
+      with the number of vanishing moments.
+    </p>
+<p>
+      The axioms of a multiresolution analysis ensure that integer shifts of the
+      scaling functions are elements of the multiresolution analysis; a side effect
+      is that the supports of the (unshifted) wavelet and scaling functions are arbitrary.
+      For this reason, we have provided <code class="computeroutput"><span class="special">.</span><span class="identifier">support</span><span class="special">()</span></code>
+      so that you can check our conventions:
+    </p>
+<pre class="programlisting"><span class="keyword">auto</span> <span class="special">[</span><span class="identifier">a</span><span class="special">,</span> <span class="identifier">b</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">phi</span><span class="special">.</span><span class="identifier">support</span><span class="special">();</span>
+</pre>
+<p>
+      For definiteness though, for the scaling function, the support is always [0,
+      <span class="emphasis"><em>2p</em></span> - 1], and the support of the wavelet is [ -<span class="emphasis"><em>p</em></span>
+      + 1, <span class="emphasis"><em>p</em></span>].
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/daubechies_2_scaling.svg"></object></span> The 2 vanishing
+      moment scaling function.
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/daubechies_8_scaling.svg"></object></span> The 8 vanishing
+      moment scaling function.
+    </p>
+<p>
+      Boost.Math also provides numerical evaluation of the Fourier transform of these
+      functions. This is useful in sparse recovery problems where the measurements
+      are taken in the Fourier basis. The usage is exhibited below:
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">fourier_transform_daubechies_scaling</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">fourier_transform_daubechies_scaling</span><span class="special">;</span>
+<span class="comment">// Evaluate the Fourier transform of the 4-vanishing moment Daubechies scaling function at ω=1.8:</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">complex</span><span class="special">&lt;</span><span class="keyword">float</span><span class="special">&gt;</span> <span class="identifier">hat_phi</span> <span class="special">=</span> <span class="identifier">fourier_transform_daubechies_scaling</span><span class="special">&lt;</span><span class="keyword">float</span><span class="special">,</span> <span class="number">4</span><span class="special">&gt;(</span><span class="number">1.8f</span><span class="special">);</span>
+</pre>
+<p>
+      The Fourier transform convention is unitary with the sign of the imaginary
+      unit being given in Daubechies Ten Lectures. In particular, this means that
+      <code class="computeroutput"><span class="identifier">fourier_transform_daubechies_scaling</span><span class="special">&lt;</span><span class="keyword">float</span><span class="special">,</span>
+      <span class="identifier">p</span><span class="special">&gt;(</span><span class="number">0.0</span><span class="special">)</span></code> returns
+      1/sqrt(2π).
+    </p>
+<p>
+      The implementation computes an infinite product of trigonometric polynomials
+      as can be found from recursive application of the identity 𝓕[φ](ω) = m(ω/2)𝓕[φ](ω/2).
+      This is neither particularly fast nor accurate, but there appears to be no
+      literature on this extremely useful topic, and hence the naive method must
+      suffice.
+    </p>
+<p>
+      <span class="inlinemediaobject"><img src="../../graphs/fourier_transform_daubechies.png"></span>
+    </p>
+<p>
+      A benchmark can be found in <code class="computeroutput"><span class="identifier">reporting</span><span class="special">/</span><span class="identifier">performance</span><span class="special">/</span><span class="identifier">fourier_transform_daubechies_performance</span><span class="special">.</span><span class="identifier">cpp</span></code>; the
+      results on a ~2021 M1 Macbook pro are presented below:
+    </p>
+<p>
+      Run on (10 X 24.1212 MHz CPU s) CPU Caches: L1 Data 64 KiB (x10) L1 Instruction
+      128 KiB (x10) L2 Unified 4096 KiB (x5) Load Average: 1.33, 1.52, 1.62 -----------------------------------------------------------
+      Benchmark Time -----------------------------------------------------------
+      FourierTransformDaubechiesScaling&lt;double, 1&gt; 70.3 ns FourierTransformDaubechiesScaling&lt;double,
+      2&gt; 330 ns FourierTransformDaubechiesScaling&lt;double, 3&gt; 335 ns FourierTransformDaubechiesScaling&lt;double,
+      4&gt; 364 ns FourierTransformDaubechiesScaling&lt;double, 5&gt; 386 ns FourierTransformDaubechiesScaling&lt;double,
+      6&gt; 436 ns FourierTransformDaubechiesScaling&lt;double, 7&gt; 447 ns FourierTransformDaubechiesScaling&lt;double,
+      8&gt; 473 ns FourierTransformDaubechiesScaling&lt;double, 9&gt; 503 ns FourierTransformDaubechiesScaling&lt;double,
+      10&gt; 554 ns
+    </p>
+<p>
+      Due to the low accuracy of this method, <code class="computeroutput"><span class="keyword">float</span></code>
+      precision is arg-promoted to <code class="computeroutput"><span class="keyword">double</span></code>,
+      and hence takes just as long as <code class="computeroutput"><span class="keyword">double</span></code>
+      precision to execute.
+    </p>
+<h4>
+<a name="math_toolkit.daubechies.h1"></a>
+      <span class="phrase"><a name="math_toolkit.daubechies.references"></a></span><a class="link" href="daubechies.html#math_toolkit.daubechies.references">References</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Daubechies, Ingrid. <span class="emphasis"><em>Ten Lectures on Wavelets.</em></span> Vol.
+          61. Siam, 1992.
+        </li>
+<li class="listitem">
+          Mallat, Stephane. <span class="emphasis"><em>A Wavelet Tour of Signal Processing: the sparse
+          way</em></span> Academic press, 2008.
+        </li>
+<li class="listitem">
+          Thompson, Nicholas, Maddock, John et al. <span class="emphasis"><em>Towards 1ULP Evaluation
+          of Daubechies Wavelets</em></span> https://arxiv.org/ftp/arxiv/papers/2005/2005.05424.pdf
+        </li>
+</ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="owens_t.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../special.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="ccmath.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

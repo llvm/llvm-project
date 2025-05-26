@@ -1,0 +1,124 @@
+[/
+  Copyright Matt Borland 2022
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:logaddexp logaddexp and logsumexp]
+
+[h4 Synopsis]
+
+    #include <boost/math/special_functions/logaddexp.hpp>
+
+    namespace boost { namespace math {
+
+    template <typename Real>
+    Real logaddexp (Real x1, Real x2);
+
+    }} // namespaces
+
+    #include <boost/math/special_functions/logsumexp.hpp>
+
+    namespace boost { namespace math {
+
+    template <typename ForwardIterator, typename Real = std::iterator_traits<ForwardIterator>::value_type>
+    Real logsumexp (ForwardIterator first, ForwardIterator last);
+
+    template <typename ForwardContainer, typename Real = ForwardContainer::value_type>
+    Real logsumexp (const ForwardContainer& c);
+
+    template <typename... Args, typename Real = typename std::common_type<Args...>::type>
+    Real logsumexp(Args&& ...args)
+
+    }} // namespace
+
+
+The function `logaddexp(x1, x2)` computes log(exp(x1) + exp(x2)).
+The function `logsumexp(x1, x2, ...)` is generalized to compute log(exp(x1) + exp(x2) + ...).
+This function is useful in statistics where the calculated probabilities of events may be so small as to exceed the range of normal floating point numbers. 
+In such cases the logarithm of the calculated probability is stored.
+
+
+The use is
+
+    using std::log;
+    
+    double x1 = log(1e-50);
+    double x2 = log(2.5e-50);
+    double x3 = log(3e-50);
+    std::vector<double> x = {x1, x2, x3};
+
+    double probability1 = boost::math::logaddexp(x1, x2);
+    double probability2 = boost::math::logsumexp(x1, x2, x3);
+    double probability3 = boost::math::logsumexp(x);
+    double probability4 = boost::math::logsumexp(x.begin(), x.end());
+
+Performance Data:
+
+```
+Running ./logaddexp_performance
+Run on Apple M1 Pro
+CPU Caches:
+  L1 Data 64 KiB (x10)
+  L1 Instruction 128 KiB (x10)
+  L2 Unified 4096 KiB (x5)
+Load Average: 2.23, 1.89, 1.88
+-----------------------------------------------------------------------------
+Benchmark                                   Time             CPU   Iterations
+-----------------------------------------------------------------------------
+logaddexp_performance<float>             1.05 ns         1.05 ns    597983940
+logaddexp_performance<double>            1.03 ns         1.03 ns    672682369
+```
+
+```
+Running ./logsumexp_performance
+Run on Apple M1 Pro
+CPU Caches:
+  L1 Data 64 KiB (x10)
+  L1 Instruction 128 KiB (x10)
+  L2 Unified 4096 KiB (x5)
+Load Average: 1.56, 1.67, 1.81
+-----------------------------------------------------------------------------------------------
+Benchmark                                                     Time             CPU   Iterations
+-----------------------------------------------------------------------------------------------
+logsumexp_performance<float>/64/real_time                   388 ns          388 ns      1797191
+logsumexp_performance<float>/128/real_time                  761 ns          761 ns       890017
+logsumexp_performance<float>/256/real_time                 1513 ns         1513 ns       460217
+logsumexp_performance<float>/512/real_time                 3026 ns         3026 ns       231454
+logsumexp_performance<float>/1024/real_time                6043 ns         6043 ns       113901
+logsumexp_performance<float>/2048/real_time               12084 ns        12084 ns        57590
+logsumexp_performance<float>/4096/real_time               24240 ns        24240 ns        28835
+logsumexp_performance<float>/8192/real_time               48326 ns        48323 ns        14478
+logsumexp_performance<float>/16384/real_time              96645 ns        96642 ns         7181
+logsumexp_performance<float>/32768/real_time             193351 ns       193351 ns         3607
+logsumexp_performance<float>/65536/real_time             386537 ns       386538 ns         1810
+logsumexp_performance<float>/131072/real_time            774055 ns       774056 ns          894
+logsumexp_performance<float>/262144/real_time           1548913 ns      1548847 ns          451
+logsumexp_performance<float>/524288/real_time           3092771 ns      3092770 ns          226
+logsumexp_performance<float>/1048576/real_time          6188087 ns      6188089 ns          112
+logsumexp_performance<float>/real_time_BigO                5.90 N          5.90 N
+logsumexp_performance<float>/real_time_RMS                    0 %             0 %
+logsumexp_performance<double>/64/real_time                  388 ns          388 ns      1806669
+logsumexp_performance<double>/128/real_time                 770 ns          770 ns       898340
+logsumexp_performance<double>/256/real_time                1534 ns         1534 ns       454768
+logsumexp_performance<double>/512/real_time                3063 ns         3063 ns       228057
+logsumexp_performance<double>/1024/real_time               6126 ns         6126 ns       112667
+logsumexp_performance<double>/2048/real_time              12243 ns        12243 ns        56963
+logsumexp_performance<double>/4096/real_time              24476 ns        24476 ns        28485
+logsumexp_performance<double>/8192/real_time              48979 ns        48978 ns        14215
+logsumexp_performance<double>/16384/real_time             97929 ns        97929 ns         7070
+logsumexp_performance<double>/32768/real_time            195826 ns       195826 ns         3560
+logsumexp_performance<double>/65536/real_time            391855 ns       391835 ns         1787
+logsumexp_performance<double>/131072/real_time           784119 ns       784110 ns          882
+logsumexp_performance<double>/262144/real_time          1566408 ns      1566386 ns          446
+logsumexp_performance<double>/524288/real_time          3151649 ns      3150955 ns          223
+logsumexp_performance<double>/1048576/real_time         6300578 ns      6299027 ns          110
+logsumexp_performance<double>/real_time_BigO               6.01 N          6.01 N
+```
+
+[heading References]
+
+* Higham, Nicholas J. [@https://nhigham.com/2021/01/05/what-is-the-log-sum-exp-function/ What is the Log-Sum-Exp Function?]
+
+[endsect]
