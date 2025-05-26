@@ -222,7 +222,7 @@ is an index table, and the third block is the elements themselves, which in turn
 are separeated by input, output and patch constant or primitive elements.
 
 Signature elements capture much of the same data captured in the :ref:`SG1
-<ISG1>` parts. The use of an index table allows de-duplciation of data for a more
+<ISG1>` parts. The use of an index table allows de-duplication of data for a more
 compact final representation.
 
 The string table begins with a 32-bit unsigned integer specifying the table
@@ -430,7 +430,7 @@ Static Samplers          52                                          Many
 Root Signature Header
 ~~~~~~~~~~~~~~~~~~~~~
 
-The root signature header is 24 bytes long, consisting of six 32 bit values 
+The root signature header is 24 bytes long, consisting of six 32-bit values
 representing the version, number and offset of parameters, number and offset 
 of static samplers, and a flags field for global behaviours:
 
@@ -454,7 +454,7 @@ type having different size and fields.
 
 The slot of root parameters is preceded by a variable size section containing 
 the header information for such parameters. Such structure is 12 bytes long, 
-composed of three 32 bit values, representing the parameter type, a flag 
+composed of three 32-bit values, representing the parameter type, a flag
 encoding the pipeline stages where the data is visible, and an offset 
 calculated from the start of RTS0 section.
 
@@ -467,7 +467,7 @@ calculated from the start of RTS0 section.
    };
 
 After the header information has been serialized, the actual data for each of the
-root parameters is layout in a single continous blob. The parameters can be fetch 
+root parameters is layout in a single continuous blob. The parameters can be fetch 
 from such using the offset information, present in the header.
 
 The following sections will describe each of the root parameters types and their 
@@ -477,7 +477,7 @@ Root Constants
 ''''''''''''''
 
 The root constants are inline 32-bit values that show up in the shader 
-as a constant buffer. It is a 12 bytes long structure, two 32 bit values 
+as a constant buffer. It is a 12 bytes long structure, two 32-bit values
 encoding the register and space the constant is assigned to, and 
 the last 32 bits encode the number of constants being defined in the buffer.
 
@@ -520,7 +520,7 @@ Descriptor tables let shaders access multiple resources through a single pointer
 to a descriptor heap. 
 
 The tables are made of a collection of descriptor ranges. In Version 1.0, the 
-descriptor range is 20 bytes, containing five 32 bit values. It encodes a range 
+descriptor range is 20 bytes, containing five 32-bit values. It encodes a range
 of registers, including the register type, range length, register numbers and 
 space within range and the offset locating each range inside the table.
 

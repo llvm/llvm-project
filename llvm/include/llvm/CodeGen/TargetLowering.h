@@ -51,6 +51,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -1228,6 +1229,9 @@ public:
     MaybeAlign align = Align(1);   // alignment
 
     MachineMemOperand::Flags flags = MachineMemOperand::MONone;
+    SyncScope::ID ssid = SyncScope::System;
+    AtomicOrdering order = AtomicOrdering::NotAtomic;
+    AtomicOrdering failureOrder = AtomicOrdering::NotAtomic;
     IntrinsicInfo() = default;
   };
 
@@ -3216,8 +3220,7 @@ public:
   /// \p Load is a vp.load instruction.
   /// \p Mask is a mask value
   /// \p DeinterleaveRes is a list of deinterleaved results.
-  virtual bool
-  lowerDeinterleavedIntrinsicToVPLoad(VPIntrinsic *Load, Value *Mask,
+  virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
                                       ArrayRef<Value *> DeinterleaveRes) const {
     return false;
   }
@@ -3228,15 +3231,14 @@ public:
   /// \p Store is the vp.store instruction.
   /// \p Mask is a mask value
   /// \p InterleaveOps is a list of values being interleaved.
-  virtual bool
-  lowerInterleavedIntrinsicToVPStore(VPIntrinsic *Store, Value *Mask,
-                                     ArrayRef<Value *> InterleaveOps) const {
+  virtual bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
+                                       ArrayRef<Value *> InterleaveOps) const {
     return false;
   }
 
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.vector.deinterleave2
+  /// llvm.vector.deinterleave{2,3,5,7}
   ///
   /// \p LI is the accompanying load instruction.
   /// \p DeinterleaveValues contains the deinterleaved values.
@@ -3248,7 +3250,7 @@ public:
 
   /// Lower an interleave intrinsic to a target specific store intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.vector.interleave2
+  /// llvm.vector.interleave{2,3,5,7}
   ///
   /// \p SI is the accompanying store instruction
   /// \p InterleaveValues contains the interleaved values.
@@ -4231,6 +4233,13 @@ public:
                                               const APInt &DemandedElts,
                                               const MachineRegisterInfo &MRI,
                                               unsigned Depth = 0) const;
+
+  virtual void computeKnownFPClassForTargetInstr(GISelValueTracking &Analysis,
+                                                 Register R,
+                                                 KnownFPClass &Known,
+                                                 const APInt &DemandedElts,
+                                                 const MachineRegisterInfo &MRI,
+                                                 unsigned Depth = 0) const;
 
   /// Determine the known alignment for the pointer value \p R. This is can
   /// typically be inferred from the number of low known 0 bits. However, for a

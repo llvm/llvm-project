@@ -42,6 +42,7 @@
 #include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/InlineAdvisor.h"
@@ -99,6 +100,7 @@
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
@@ -133,6 +135,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
+#include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PEI.h"
@@ -157,6 +160,7 @@
 #include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
+#include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/SpillPlacement.h"
@@ -368,6 +372,7 @@
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
+#include "llvm/Transforms/Vectorize/EVLIndVarSimplify.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
@@ -443,7 +448,7 @@ public:
     // Intentionally create a virtual register and set NoVRegs property.
     auto &MRI = MF.getRegInfo();
     MRI.createGenericVirtualRegister(LLT::scalar(8));
-    MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+    MF.getProperties().setNoVRegs();
     return PreservedAnalyses::all();
   }
 
@@ -461,19 +466,18 @@ public:
   }
 
   static MachineFunctionProperties getRequiredProperties() {
-    MachineFunctionProperties MFProps;
-    MFProps.set(MachineFunctionProperties::Property::FailedISel);
-    MFProps.set(MachineFunctionProperties::Property::FailsVerification);
-    MFProps.set(MachineFunctionProperties::Property::IsSSA);
-    MFProps.set(MachineFunctionProperties::Property::Legalized);
-    MFProps.set(MachineFunctionProperties::Property::NoPHIs);
-    MFProps.set(MachineFunctionProperties::Property::NoVRegs);
-    MFProps.set(MachineFunctionProperties::Property::RegBankSelected);
-    MFProps.set(MachineFunctionProperties::Property::Selected);
-    MFProps.set(MachineFunctionProperties::Property::TiedOpsRewritten);
-    MFProps.set(MachineFunctionProperties::Property::TracksDebugUserValues);
-    MFProps.set(MachineFunctionProperties::Property::TracksLiveness);
-    return MFProps;
+    return MachineFunctionProperties()
+        .setFailedISel()
+        .setFailsVerification()
+        .setIsSSA()
+        .setLegalized()
+        .setNoPHIs()
+        .setNoVRegs()
+        .setRegBankSelected()
+        .setSelected()
+        .setTiedOpsRewritten()
+        .setTracksDebugUserValues()
+        .setTracksLiveness();
   }
   static StringRef name() { return "RequireAllMachineFunctionPropertiesPass"; }
 };
@@ -1503,6 +1507,19 @@ Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params) {
           inconvertibleErrorCode());
   }
   return AllowTailMerge;
+}
+
+Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params) {
+  bool ClearVirtRegs = true;
+  if (!Params.empty()) {
+    ClearVirtRegs = !Params.consume_front("no-");
+    if (Params != "clear-vregs")
+      return make_error<StringError>(
+          formatv("invalid VirtRegRewriter pass parameter '{0}' ", Params)
+              .str(),
+          inconvertibleErrorCode());
+  }
+  return ClearVirtRegs;
 }
 
 } // namespace

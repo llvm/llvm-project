@@ -2,7 +2,6 @@ set(PLUGINS_TEST_COMMON LLVMOffload)
 set(PLUGINS_TEST_INCLUDE ${LIBOMPTARGET_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/common)
 
 add_subdirectory(device_code)
-message(${OFFLOAD_TEST_DEVICE_CODE_PATH})
 
 add_offload_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/common/Environment.cpp
@@ -21,6 +20,8 @@ add_offload_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/program/olDestroyProgram.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olGetKernel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olLaunchKernel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/event/olDestroyEvent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/event/olWaitEvent.cpp
     )
 add_dependencies("offload.unittests" ${PLUGINS_TEST_COMMON} OffloadUnitTestsDeviceBins)
 target_compile_definitions("offload.unittests" PRIVATE DEVICE_CODE_PATH="${OFFLOAD_TEST_DEVICE_CODE_PATH}")

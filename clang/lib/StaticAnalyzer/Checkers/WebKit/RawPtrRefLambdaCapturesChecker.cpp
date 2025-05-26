@@ -127,13 +127,22 @@ public:
         return true;
       }
 
-      // WTF::switchOn(T, F... f) is a variadic template function and couldn't
-      // be annotated with NOESCAPE. We hard code it here to workaround that.
       bool shouldTreatAllArgAsNoEscape(FunctionDecl *Decl) {
         auto *NsDecl = Decl->getParent();
         if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
           return false;
-        return safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn";
+        // WTF::switchOn(T, F... f) is a variadic template function and couldn't
+        // be annotated with NOESCAPE. We hard code it here to workaround that.
+        if (safeGetName(NsDecl) == "WTF" && safeGetName(Decl) == "switchOn")
+          return true;
+        // Treat every argument of functions in std::ranges as noescape.
+        if (safeGetName(NsDecl) == "ranges") {
+          if (auto *OuterDecl = NsDecl->getParent();
+              OuterDecl && isa<NamespaceDecl>(OuterDecl) &&
+              safeGetName(OuterDecl) == "std")
+            return true;
+        }
+        return false;
       }
 
       bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
@@ -381,6 +390,9 @@ public:
         }
         QualType CapturedVarQualType = CapturedVar->getType();
         auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType());
+        if (C.getCaptureKind() == LCK_ByCopy &&
+            CapturedVarQualType->isReferenceType())
+          continue;
         if (IsUncountedPtr && *IsUncountedPtr)
           reportBug(C, CapturedVar, CapturedVarQualType, L);
       } else if (C.capturesThis() && shouldCheckThis) {

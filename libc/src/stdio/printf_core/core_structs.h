@@ -58,7 +58,7 @@ struct FormatSection {
   // Needs to be large enough to hold a long double. Special case handling for
   // the PowerPC double double type because it has no FPBits interface.
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  Uint128 conv_val_raw;
+  UInt128 conv_val_raw;
 #else
   fputil::FPBits<long double>::StorageType conv_val_raw;
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
