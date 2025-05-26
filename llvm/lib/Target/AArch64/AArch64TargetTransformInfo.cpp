@@ -4575,6 +4575,12 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   if (VecTy->isScalableTy() && !ST->hasSVE())
     return InstructionCost::getInvalid();
 
+  // Currently factors 2 and 4 can be de[interleaved] with scalable vectors.
+  // TODO: Add lowering for vector.[de]interleave3 intrinsics and
+  // support in InterleavedAccessPass for ld3/st3
+  if (VecTy->isScalableTy() && Factor != 2 && Factor != 4)
+    return InstructionCost::getInvalid();
+
   // Vectorization for masked interleaved accesses is only enabled for scalable
   // VF.
   if (!VecTy->isScalableTy() && (UseMaskForCond || UseMaskForGaps))

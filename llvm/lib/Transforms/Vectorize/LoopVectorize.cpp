@@ -3193,10 +3193,10 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
-  // For scalable vectors, the only interleave factor currently supported
-  // must be power of 2 since we require the (de)interleave2 intrinsics
-  // instead of shufflevectors.
-  if (VF.isScalable() && !isPowerOf2_32(InterleaveFactor))
+  // For scalable vectors, the interleave factors must be <= 8 or a power of 2
+  // since we require the (de)interleaveN intrinsics instead of shufflevectors.
+  if (VF.isScalable() &&
+      !(InterleaveFactor <= 8 || isPowerOf2_32(InterleaveFactor)))
     return false;
 
   // If the group involves a non-integral pointer, we may not be able to
@@ -9058,10 +9058,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       bool Result = (VF.isVector() && // Query is illegal for VF == 1
                      CM.getWideningDecision(IG->getInsertPos(), VF) ==
                          LoopVectorizationCostModel::CM_Interleave);
-      // For scalable vectors, the only interleave factor currently supported
-      // must be power of 2 since we require the (de)interleave2 intrinsics
-      // instead of shufflevectors.
-      assert((!Result || !VF.isScalable() || isPowerOf2_32(IG->getFactor())) &&
+      // For scalable vectors, the interleave factors must be <= 8 or a power of
+      // 2 since we require the (de)interleaveN intrinsics instead of
+      // shufflevectors.
+      assert((!Result || !VF.isScalable() ||
+              (IG->getFactor() <= 8 || isPowerOf2_32(IG->getFactor()))) &&
              "Unsupported interleave factor for scalable vectors");
       return Result;
     };
