@@ -372,10 +372,11 @@ public:
     return result;
   }
 
-  /// Vectorize the operations in the graph
-  LogicalResult vectorize(IRRewriter &rewriter) {
+  /// Vectorize the operations in the graph.
+  /// Returns number of nodes vectorized or failure if failed.
+  FailureOr<size_t> vectorize(IRRewriter &rewriter) {
     if (nodes.empty())
-      return success();
+      return 0;
 
     LLVM_DEBUG(llvm::dbgs()
                << "Vectorizing SLP graph with " << nodes.size() << " nodes\n");
@@ -515,7 +516,7 @@ public:
     }
 
     LLVM_DEBUG(llvm::dbgs() << "Vectorization completed successfully\n");
-    return success();
+    return sortedNodes.size();
   }
 
   /// Print the graph structure
@@ -720,7 +721,7 @@ static bool isEquivalent(Operation *op1, Operation *op2) {
   if (op1->getName() != op2->getName())
     return false;
 
-  if (op1->getRawDictionaryAttrs() != op2->getRawDictionaryAttrs())
+  if (op1->getAttrs() != op2->getAttrs())
     return false;
 
   if (op1->getBlock() != op2->getBlock())
@@ -859,48 +860,66 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
   return graph;
 }
 
+/// Try to vectorize ops in a block.
+/// Returns number of nodes vectorized or error flag if failed.
+static FailureOr<size_t> tryToVectorizeInBlock(Block &block) {
+  LLVM_DEBUG(llvm::dbgs() << "Processing block in operation: "
+                          << block.getParentOp()->getName() << "\n");
+
+  // Collect memory operation groups
+  SmallVector<MemoryOpGroup> groups = collectMemoryOpGroups(block);
+
+  // Process each group to find contiguous sequences
+  SmallVector<MemoryOpGroup> rootGroups;
+  for (const auto &group : groups) {
+    SmallVector<MemoryOpGroup> contiguousGroups =
+        extractContiguousGroups(group);
+    LLVM_DEBUG({
+      llvm::dbgs() << "Found " << contiguousGroups.size()
+                   << " contiguous groups in "
+                   << (group.isLoadGroup() ? "load" : "store") << " group\n";
+      for (const auto &contigGroup : contiguousGroups) {
+        llvm::dbgs() << "  Contiguous group with " << contigGroup.size()
+                     << " operations\n";
+      }
+    });
+    rootGroups.append(contiguousGroups.begin(), contiguousGroups.end());
+  }
+
+  // Build the SLP graph from root groups
+  SLPGraph graph = buildSLPGraph(rootGroups);
+  LLVM_DEBUG(graph.print());
+
+  // Vectorize the graph
+  IRRewriter rewriter(block.getParentOp()->getContext());
+  FailureOr<size_t> numNodesVectorized = graph.vectorize(rewriter);
+  if (failed(numNodesVectorized))
+    LLVM_DEBUG(llvm::dbgs() << "Failed to vectorize graph\n");
+
+  return numNodesVectorized;
+}
+
 void GreedySLPVectorizerPass::runOnOperation() {
   Operation *op = getOperation();
 
-  // Walk all blocks recursively
-  op->walk([&](Block *block) -> WalkResult {
-    LLVM_DEBUG(llvm::dbgs() << "Processing block in operation: "
-                            << block->getParentOp()->getName() << "\n");
+  // Run until fixed point is reached.
+  bool changed;
+  do {
+    changed = false;
+    // Walk all blocks recursively
+    if (op->walk([&](Block *block) -> WalkResult {
+            FailureOr<size_t> numNodesVectorized =
+                tryToVectorizeInBlock(*block);
+            if (failed(numNodesVectorized))
+              return WalkResult::interrupt();
 
-    // Collect memory operation groups
-    SmallVector<MemoryOpGroup> groups = collectMemoryOpGroups(*block);
+            changed = changed || *numNodesVectorized > 0;
 
-    // Process each group to find contiguous sequences
-    SmallVector<MemoryOpGroup> rootGroups;
-    for (const auto &group : groups) {
-      SmallVector<MemoryOpGroup> contiguousGroups =
-          extractContiguousGroups(group);
-      LLVM_DEBUG({
-        llvm::dbgs() << "Found " << contiguousGroups.size()
-                     << " contiguous groups in "
-                     << (group.isLoadGroup() ? "load" : "store") << " group\n";
-        for (const auto &contigGroup : contiguousGroups) {
-          llvm::dbgs() << "  Contiguous group with " << contigGroup.size()
-                       << " operations\n";
-        }
-      });
-      rootGroups.append(contiguousGroups.begin(), contiguousGroups.end());
-    }
+            return WalkResult::advance();
+          }).wasInterrupted())
+      return signalPassFailure();
 
-    // Build the SLP graph from root groups
-    SLPGraph graph = buildSLPGraph(rootGroups);
-    LLVM_DEBUG(graph.print());
-
-    // Vectorize the graph
-    IRRewriter rewriter(&getContext());
-    if (failed(graph.vectorize(rewriter))) {
-      LLVM_DEBUG(llvm::dbgs() << "Failed to vectorize graph\n");
-      signalPassFailure();
-      return WalkResult::interrupt();
-    }
-
-    return WalkResult::advance();
-  });
+  } while (changed);
 }
 
 } // namespace
