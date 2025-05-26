@@ -220,13 +220,13 @@ TEST(IncludeCleaner, ComputeMissingHeaders) {
 TEST(IncludeCleaner, GenerateMissingHeaderDiags) {
   Annotations MainFile(R"cpp(
 #include "a.h"
-#include "a_angled.h"
+#include "angled_wrapper.h"
 #include "all.h"
 $insert_b[[]]#include "baz.h"
 #include "dir/c.h"
 $insert_d[[]]$insert_foo[[]]#include "fuzz.h"
 #include "header.h"
-$insert_foobar[[]]$insert_b_angled[[]]#include <e.h>
+$insert_foobar[[]]$insert_angled[[]]#include <e.h>
 $insert_f[[]]$insert_vector[[]]
 
 #define DEF(X) const Foo *X;
@@ -238,7 +238,7 @@ $insert_f[[]]$insert_vector[[]]
 
   void foo() {
     $b[[b]]();
-    $b_angled[[b_angled]]();
+    $angled[[angled]]();
 
     ns::$bar[[Bar]] bar;
     bar.d();
@@ -264,8 +264,10 @@ $insert_f[[]]$insert_vector[[]]
   TU.Filename = "main.cpp";
   TU.AdditionalFiles["a.h"] = guard("#include \"b.h\"");
   TU.AdditionalFiles["b.h"] = guard("void b();");
-  TU.AdditionalFiles["a_angled.h"] = guard("#include \"b_angled.h\"");
-  TU.AdditionalFiles["b_angled.h"] = guard("void b_angled();");
+
+  TU.AdditionalFiles["angled_wrapper.h"] = guard("#include <angled.h>");
+  TU.AdditionalFiles["angled.h"] = guard("void angled();");
+  TU.ExtraArgs.push_back("-I" + testPath("."));
 
   TU.AdditionalFiles["dir/c.h"] = guard("#include \"d.h\"");
   TU.AdditionalFiles["dir/d.h"] =
@@ -305,7 +307,7 @@ $insert_f[[]]$insert_vector[[]]
         return Header.ends_with("buzz.h");
       }},
       /*AngledHeaders=*/{[](llvm::StringRef Header) {
-        return Header.contains("b_angled.h");
+        return Header.contains("angled.h");
       }});
   EXPECT_THAT(
       Diags,
@@ -315,12 +317,11 @@ $insert_f[[]]$insert_vector[[]]
                 withFix({Fix(MainFile.range("insert_b"), "#include \"b.h\"\n",
                              "#include \"b.h\""),
                          FixMessage("add all missing includes")})),
-          AllOf(
-              Diag(MainFile.range("b_angled"),
-                   "No header providing \"b_angled\" is directly included"),
-              withFix({Fix(MainFile.range("insert_b_angled"),
-                           "#include <b_angled.h>\n", "#include <b_angled.h>"),
-                       FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("angled"),
+                     "No header providing \"angled\" is directly included"),
+                withFix({Fix(MainFile.range("insert_angled"),
+                             "#include <angled.h>\n", "#include <angled.h>"),
+                         FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("bar"),
                      "No header providing \"ns::Bar\" is directly included"),
                 withFix({Fix(MainFile.range("insert_d"),
