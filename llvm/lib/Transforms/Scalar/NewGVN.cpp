@@ -3847,7 +3847,10 @@ Value *NewGVN::findPHIOfOpsLeader(const Expression *E,
     // Anything that isn't an instruction is always available.
     if (!MemberInst)
       return Member;
-    if (DT->dominates(getBlockForValue(MemberInst), BB))
+    // Cannot use something that appears later in the iteration,
+    // as it may introduce a cyclic dependency.
+    if (DT->dominates(getBlockForValue(MemberInst), BB) &&
+        InstrToDFSNum(MemberInst) <= InstrToDFSNum(OrigInst))
       return Member;
   }
   return nullptr;
