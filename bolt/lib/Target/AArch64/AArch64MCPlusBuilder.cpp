@@ -250,6 +250,25 @@ public:
     }
   }
 
+  bool isPSignOnLR(const MCInst &Inst) const override {
+    MCPhysReg SignReg = getSignedReg(Inst);
+    return SignReg != getNoRegister() && SignReg == AArch64::LR;
+  }
+
+  bool isPAuthOnLR(const MCInst &Inst) const override {
+    ErrorOr<MCPhysReg> AutReg = getAuthenticatedReg(Inst);
+    return AutReg && *AutReg != getNoRegister() && *AutReg == AArch64::LR;
+  }
+
+  bool isPAuthAndRet(const MCInst &Inst) const override {
+    return Inst.getOpcode() == AArch64::RETAA ||
+           Inst.getOpcode() == AArch64::RETAB ||
+           Inst.getOpcode() == AArch64::RETAASPPCi ||
+           Inst.getOpcode() == AArch64::RETABSPPCi ||
+           Inst.getOpcode() == AArch64::RETAASPPCr ||
+           Inst.getOpcode() == AArch64::RETABSPPCr;
+  }
+
   bool isAuthenticationOfReg(const MCInst &Inst, MCPhysReg Reg) const override {
     if (Reg == getNoRegister())
       return false;
