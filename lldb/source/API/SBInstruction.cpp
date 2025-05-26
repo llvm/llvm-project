@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBInstruction.h"
+
 #include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBFile.h"
 
-#include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/Core/Disassembler.h"

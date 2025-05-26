@@ -13,10 +13,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
-
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/Target.h"
 
 #include "HexagonDYLDRendezvous.h"
 

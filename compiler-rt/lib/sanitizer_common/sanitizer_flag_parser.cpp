@@ -13,7 +13,6 @@
 #include "sanitizer_flag_parser.h"
 
 #include "sanitizer_common.h"
-#include "sanitizer_flag_parser.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_libc.h"
 
