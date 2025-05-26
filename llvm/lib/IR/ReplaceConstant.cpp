@@ -19,7 +19,7 @@
 namespace llvm {
 
 static bool isExpandableUser(User *U) {
-  return isa<ConstantExpr>(U) || isa<ConstantAggregate>(U);
+  return isa<ConstantExpr, ConstantAggregate>(U);
 }
 
 static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
@@ -29,7 +29,7 @@ static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
     Instruction *ConstInst = CE->getAsInstruction();
     ConstInst->insertBefore(*InsertPt->getParent(), InsertPt);
     NewInsts.push_back(ConstInst);
-  } else if (isa<ConstantStruct>(C) || isa<ConstantArray>(C)) {
+  } else if (isa<ConstantStruct, ConstantArray>(C)) {
     Value *V = PoisonValue::get(C->getType());
     for (auto [Idx, Op] : enumerate(C->operands())) {
       V = InsertValueInst::Create(V, Op, Idx, "", InsertPt);
