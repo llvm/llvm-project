@@ -195,6 +195,45 @@ define void @vector_interleave_store_factor3(<4 x i32> %a, <4 x i32> %b, <4 x i3
 define void @vector_interleave_store_factor4(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_factor4:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    add a3, a1, a2
+; CHECK-NEXT:    add a4, a3, a2
+; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg4e32.v v8, (a1)
+; CHECK-NEXT:    add a2, a4, a2
+; CHECK-NEXT:    vl1re32.v v8, (a4)
+; CHECK-NEXT:    vl1re32.v v10, (a2)
+; CHECK-NEXT:    vl1re32.v v12, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vl1re32.v v10, (a3)
+; CHECK-NEXT:    vslideup.vi v12, v10, 4
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vslideup.vi v12, v8, 8
+; CHECK-NEXT:    vse32.v v12, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %v = call <16 x i32> @llvm.vector.interleave4(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d)
+  store <16 x i32> %v, ptr %p
+  ret void
+}
+
+; TODO: Remove once recursive interleaving support is removed
+define void @vector_interleave_store_factor4_recursive(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, ptr %p) {
+; CHECK-LABEL: vector_interleave_store_factor4_recursive:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -216,6 +255,60 @@ define void @vector_interleave_store_factor5(<4 x i32> %a, <4 x i32> %b, <4 x i3
   ret void
 }
 
+define void @vector_interleave_store_factor6(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f, ptr %p) {
+; CHECK-LABEL: vector_interleave_store_factor6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x06, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 6 * vlenb
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    li a3, 32
+; CHECK-NEXT:    add a4, a1, a2
+; CHECK-NEXT:    add a5, a4, a2
+; CHECK-NEXT:    vsetvli a6, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg6e32.v v8, (a1)
+; CHECK-NEXT:    vl1re32.v v12, (a5)
+; CHECK-NEXT:    add a5, a5, a2
+; CHECK-NEXT:    vl1re32.v v10, (a5)
+; CHECK-NEXT:    add a5, a5, a2
+; CHECK-NEXT:    vl1re32.v v14, (a4)
+; CHECK-NEXT:    vl1re32.v v8, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v12, v10, 4
+; CHECK-NEXT:    vslideup.vi v8, v14, 4
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v12, 8
+; CHECK-NEXT:    vl1re32.v v16, (a5)
+; CHECK-NEXT:    add a2, a5, a2
+; CHECK-NEXT:    vl1re32.v v12, (a2)
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v16, v12, 4
+; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v16, 16
+; CHECK-NEXT:    vsetivli zero, 24, e32, m8, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %v = call <24 x i32> @llvm.vector.interleave6(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f)
+  store <24 x i32> %v, ptr %p
+  ret void
+}
+
 define void @vector_interleave_store_factor7(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f, <4 x i32> %g, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_factor7:
 ; CHECK:       # %bb.0:
@@ -229,6 +322,61 @@ define void @vector_interleave_store_factor7(<4 x i32> %a, <4 x i32> %b, <4 x i3
 
 define void @vector_interleave_store_factor8(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f, <4 x i32> %g, <4 x i32> %h, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_factor8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    add a2, a1, a3
+; CHECK-NEXT:    add a4, a2, a3
+; CHECK-NEXT:    add a5, a4, a3
+; CHECK-NEXT:    add a6, a5, a3
+; CHECK-NEXT:    add a7, a6, a3
+; CHECK-NEXT:    add t0, a7, a3
+; CHECK-NEXT:    vsetvli t1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg8e32.v v8, (a1)
+; CHECK-NEXT:    add a3, t0, a3
+; CHECK-NEXT:    vl1re32.v v10, (a3)
+; CHECK-NEXT:    vl1re32.v v12, (t0)
+; CHECK-NEXT:    vl1re32.v v14, (a7)
+; CHECK-NEXT:    vl1re32.v v8, (a6)
+; CHECK-NEXT:    vl1re32.v v18, (a5)
+; CHECK-NEXT:    vl1re32.v v20, (a4)
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v12, v10, 4
+; CHECK-NEXT:    vslideup.vi v8, v14, 4
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v12, 8
+; CHECK-NEXT:    vl1re32.v v16, (a1)
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v20, v18, 4
+; CHECK-NEXT:    vl1re32.v v12, (a2)
+; CHECK-NEXT:    vslideup.vi v16, v12, 4
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vslideup.vi v16, v20, 8
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vslideup.vi v16, v8, 16
+; CHECK-NEXT:    vse32.v v16, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %v = call <32 x i32> @llvm.vector.interleave8(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f, <4 x i32> %g, <4 x i32> %h)
+  store <32 x i32> %v, ptr %p
+  ret void
+}
+
+; TODO: Remove once recursive interleaving support is removed
+define void @vector_interleave_store_factor8_recursive(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, <4 x i32> %e, <4 x i32> %f, <4 x i32> %g, <4 x i32> %h, ptr %p) {
+; CHECK-LABEL: vector_interleave_store_factor8_recursive:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0)
