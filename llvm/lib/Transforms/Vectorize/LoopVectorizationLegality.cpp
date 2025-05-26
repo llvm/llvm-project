@@ -795,6 +795,10 @@ static bool canWidenCallReturnType(Type *Ty) {
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   BasicBlock *Header = TheLoop->getHeader();
 
+  // Tracks the operation chain for each min/max recurrence phi that is
+  // considered vectorizable.
+  SmallDenseMap<PHINode *, SmallVector<Instruction *>> MinMaxRecurrenceChains;
+
   // For each block in the loop.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for hazards.
@@ -837,6 +841,18 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
           AllowedExit.insert(RedDes.getLoopExitInstr());
           Reductions[Phi] = RedDes;
+          continue;
+        }
+
+        RecurrenceDescriptor MinMaxRecurDes;
+        if (auto Chain = RecurrenceDescriptor::tryToGetMinMaxRecurrenceChain(
+                Phi, TheLoop, MinMaxRecurDes);
+            !Chain.empty()) {
+          if (MinMaxRecurDes.getLoopExitInstr())
+            AllowedExit.insert(MinMaxRecurDes.getLoopExitInstr());
+          Reductions[Phi] = MinMaxRecurDes;
+          MinMaxRecurrences.insert(Phi);
+          MinMaxRecurrenceChains[Phi] = std::move(Chain);
           continue;
         }
 
@@ -1069,7 +1085,72 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   if (PrimaryInduction && WidestIndTy != PrimaryInduction->getType())
     PrimaryInduction = nullptr;
 
+  // The second stage check for reduction. Confirm if the min/max with index
+  // reduction, involving two PHIs, is legal to vectorize.
+  for (auto &Entry : MinMaxRecurrenceChains) {
+    PHINode *Phi = Entry.first;
+    ArrayRef<Instruction *> Chain = Entry.second;
+    if (!canVectorizeMinMaxRecurrence(Phi, Chain))
+      return false;
+  }
+  // FIXME: Remove this after the IR generation of min/max with index is
+  // supported.
+  if (!MinMaxRecurrences.empty())
+    return false;
+
   return true;
+}
+
+bool LoopVectorizationLegality::canVectorizeMinMaxRecurrence(
+    PHINode *Phi, ArrayRef<Instruction *> Chain) {
+  assert(!Chain.empty() && "Unexpected empty recurrence chain");
+  assert(isMinMaxRecurrence(Phi) && "The PHI is not a min/max recurrence phi");
+
+  auto IsMinMaxIdxReductionPhi = [this, Phi, &Chain](Value *Candidate) -> bool {
+    auto *IdxPhi = dyn_cast<PHINode>(Candidate);
+    if (!IdxPhi || !isReductionVariable(IdxPhi))
+      return false;
+
+    RecurrenceDescriptor &IdxRdxDesc = Reductions.find(IdxPhi)->second;
+    const RecurrenceDescriptor &MinMaxDesc = Reductions.find(Phi)->second;
+    return IdxRdxDesc.isMinMaxIdxReduction(IdxPhi, Phi, MinMaxDesc, Chain);
+  };
+
+  // Find the potential index recurrence chain head.
+  // Note: Only one chain head can be found since 2-D indexes are not yet
+  // supported.
+  SelectInst *IdxChainHead = nullptr;
+  // TODO: support min/max with 2-D indexes.
+  if (!Phi->hasNUses(2))
+    return false;
+
+  for (User *U : Phi->users()) {
+    if (auto *Cmp = dyn_cast<CmpInst>(U)) {
+      if (!Cmp->hasOneUse())
+        return false;
+      if (!match(Cmp->user_back(),
+                 m_Select(m_Specific(Cmp), m_Value(), m_Value())))
+        return false;
+      assert(!IdxChainHead &&
+             "Unexpected multiple index recurrence chain head");
+      IdxChainHead = cast<SelectInst>(Cmp->user_back());
+      continue;
+    }
+
+    // Skip the user in the min/max recurrence chain
+    if (llvm::is_contained(Chain, cast<Instruction>(U)))
+      continue;
+
+    // Unexpected user
+    return false;
+  }
+
+  if (!IdxChainHead)
+    return false;
+
+  auto *TrueVal = IdxChainHead->getTrueValue();
+  auto *FalseVal = IdxChainHead->getFalseValue();
+  return IsMinMaxIdxReductionPhi(TrueVal) || IsMinMaxIdxReductionPhi(FalseVal);
 }
 
 /// Find histogram operations that match high-level code in loops:
@@ -1392,6 +1473,10 @@ bool LoopVectorizationLegality::isInductionVariable(const Value *V) const {
 bool LoopVectorizationLegality::isFixedOrderRecurrence(
     const PHINode *Phi) const {
   return FixedOrderRecurrences.count(Phi);
+}
+
+bool LoopVectorizationLegality::isMinMaxRecurrence(const PHINode *Phi) const {
+  return MinMaxRecurrences.contains(Phi);
 }
 
 bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
