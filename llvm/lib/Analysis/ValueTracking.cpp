@@ -9165,15 +9165,13 @@ isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
 /// is true.  Return false if LHS implies RHS is false. Otherwise, return
 /// std::nullopt if we can't infer anything.
 static std::optional<bool>
-isImpliedCondICmps(const ICmpInst *LHS, CmpPredicate RPred, const Value *R0,
-                   const Value *R1, const DataLayout &DL, bool LHSIsTrue) {
-  Value *L0 = LHS->getOperand(0);
-  Value *L1 = LHS->getOperand(1);
-
+isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
+                   CmpPredicate RPred, const Value *R0, const Value *R1,
+                   const DataLayout &DL, bool LHSIsTrue) {
   // The rest of the logic assumes the LHS condition is true.  If that's not the
   // case, invert the predicate to make it so.
-  CmpPredicate LPred =
-      LHSIsTrue ? LHS->getCmpPredicate() : LHS->getInverseCmpPredicate();
+  if (!LHSIsTrue)
+    LPred = ICmpInst::getInverseCmpPredicate(LPred);
 
   // We can have non-canonical operands, so try to normalize any common operand
   // to L0/R0.
@@ -9314,9 +9312,10 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
     LHSIsTrue = !LHSIsTrue;
 
   // Both LHS and RHS are icmps.
-  const ICmpInst *LHSCmp = dyn_cast<ICmpInst>(LHS);
-  if (LHSCmp)
-    return isImpliedCondICmps(LHSCmp, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue);
+  if (const auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
+    return isImpliedCondICmps(LHSCmp->getCmpPredicate(), LHSCmp->getOperand(0),
+                              LHSCmp->getOperand(1), RHSPred, RHSOp0, RHSOp1,
+                              DL, LHSIsTrue);
 
   /// The LHS should be an 'or', 'and', or a 'select' instruction.  We expect
   /// the RHS to be an icmp.
