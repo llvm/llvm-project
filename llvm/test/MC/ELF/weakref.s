@@ -1,4 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s | llvm-readelf -s - | FileCheck %s
+# RUN: not llvm-mc -filetype=obj -triple=x86_64 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 // This is a long test that checks that the aliases created by weakref are
 // never in the symbol table and that the only case it causes a symbol to
@@ -12,17 +13,18 @@
 # CHECK-NEXT:   3: 0000000000000018     0 NOTYPE  LOCAL  DEFAULT     2 bar7
 # CHECK-NEXT:   4: 000000000000001c     0 NOTYPE  LOCAL  DEFAULT     2 bar8
 # CHECK-NEXT:   5: 0000000000000020     0 NOTYPE  LOCAL  DEFAULT     2 bar9
-# CHECK-NEXT:   6: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar1
-# CHECK-NEXT:   7: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar2
-# CHECK-NEXT:   8: 0000000000000000     0 NOTYPE  WEAK   DEFAULT   UND bar3
-# CHECK-NEXT:   9: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar4
-# CHECK-NEXT:  10: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar5
-# CHECK-NEXT:  11: 0000000000000028     0 NOTYPE  GLOBAL DEFAULT     2 bar10
-# CHECK-NEXT:  12: 0000000000000030     0 NOTYPE  GLOBAL DEFAULT     2 bar11
-# CHECK-NEXT:  13: 0000000000000030     0 NOTYPE  GLOBAL DEFAULT     2 bar12
-# CHECK-NEXT:  14: 0000000000000034     0 NOTYPE  GLOBAL DEFAULT     2 bar13
-# CHECK-NEXT:  15: 0000000000000038     0 NOTYPE  GLOBAL DEFAULT     2 bar14
-# CHECK-NEXT:  16: 0000000000000040     0 NOTYPE  GLOBAL DEFAULT     2 bar15
+# CHECK-NEXT:      0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar2
+# CHECK-NEXT:      0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar4
+# CHECK-NEXT:      0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar5
+# CHECK-NEXT:      0000000000000028     0 NOTYPE  GLOBAL DEFAULT     2 bar10
+# CHECK-NEXT:      0000000000000030     0 NOTYPE  GLOBAL DEFAULT     2 bar11
+# CHECK-NEXT:      0000000000000030     0 NOTYPE  GLOBAL DEFAULT     2 bar12
+# CHECK-NEXT:      0000000000000034     0 NOTYPE  GLOBAL DEFAULT     2 bar13
+# CHECK-NEXT:      0000000000000038     0 NOTYPE  GLOBAL DEFAULT     2 bar14
+# CHECK-NEXT:      0000000000000040     0 NOTYPE  GLOBAL DEFAULT     2 bar15
+# CHECK-NEXT:      0000000000000000     0 NOTYPE  WEAK   DEFAULT   UND bar3
+# CHECK-NEXT:      0000000000000000     0 NOTYPE  WEAK   DEFAULT   UND bar16
+# CHECK-EMPTY:
 
         .weakref foo1, bar1
 
@@ -87,3 +89,20 @@ bar15:
         .weakref foo15, bar15
         .long bar15
         .long foo15
+
+.long foo16
+.weakref foo16, bar16
+
+.ifdef ERR
+alias:
+.weakref alias, target
+# ERR: [[#@LINE-1]]:1: error: symbol 'alias' is already defined
+
+.set alias1, 1
+.weakref alias1, target
+# ERR: [[#@LINE-1]]:1: error: symbol 'alias1' is already defined
+
+.weakref alias2, target
+.set alias2, 1
+
+.endif

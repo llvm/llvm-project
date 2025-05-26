@@ -112,11 +112,16 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
-void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
-  getAssembler().registerSymbol(*Symbol);
-  const MCExpr *Value = MCSymbolRefExpr::create(
-      Symbol, MCSymbolRefExpr::VK_WEAKREF, getContext());
-  Alias->setVariableValue(Value);
+void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) {
+  auto *A = cast<MCSymbolELF>(Alias);
+  if (A->isDefined()) {
+    getContext().reportError(getStartTokLoc(), "symbol '" + A->getName() +
+                                                   "' is already defined");
+    return;
+  }
+  A->setVariableValue(MCSymbolRefExpr::create(Target, getContext()));
+  A->setIsWeakref();
+  getWriter().Weakrefs.push_back(A);
 }
 
 // When GNU as encounters more than one .type declaration for an object it seems

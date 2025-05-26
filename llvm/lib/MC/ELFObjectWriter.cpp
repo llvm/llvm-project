@@ -476,10 +476,9 @@ bool ELFWriter::isInSymtab(const MCSymbolELF &Symbol, bool Used, bool Renamed) {
     if (const auto *T = dyn_cast<MCTargetExpr>(Expr))
       if (T->inlineAssignedExpr())
         return false;
-    if (const MCSymbolRefExpr *Ref = dyn_cast<MCSymbolRefExpr>(Expr)) {
-      if (Ref->getKind() == MCSymbolRefExpr::VK_WEAKREF)
-        return false;
-    }
+    // The .weakref alias does not appear in the symtab.
+    if (Symbol.isWeakref())
+      return false;
   }
 
   if (Used)
@@ -531,10 +530,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
   for (auto It : llvm::enumerate(Asm.symbols())) {
     const auto &Symbol = cast<MCSymbolELF>(It.value());
     bool Used = Symbol.isUsedInReloc();
-    bool WeakrefUsed = Symbol.isWeakrefUsedInReloc();
     bool isSignature = Symbol.isSignature();
-
-    if (!isInSymtab(Symbol, Used || WeakrefUsed || isSignature,
+    if (!isInSymtab(Symbol, Used || isSignature,
                     OWriter.Renames.count(&Symbol)))
       continue;
 
@@ -1245,6 +1242,21 @@ void ELFObjectWriter::executePostLayoutBinding() {
       Sym = Sym->getSection().getBeginSymbol();
     Sym->setUsedInReloc();
   }
+
+  // For each `.weakref alias, target`, if the variable `alias` is registered
+  // (typically through MCObjectStreamer::visitUsedSymbol), register `target`.
+  // If `target` was unregistered before (not directly referenced or defined),
+  // make it weak.
+  for (const MCSymbol *Alias : Weakrefs) {
+    if (!Alias->isRegistered())
+      continue;
+    auto *Expr = Alias->getVariableValue();
+    if (const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr)) {
+      auto &Sym = cast<MCSymbolELF>(Inner->getSymbol());
+      if (Asm->registerSymbol(Sym))
+        Sym.setBinding(ELF::STB_WEAK);
+    }
+  }
 }
 
 // It is always valid to create a relocation with a symbol. It is preferable
@@ -1323,17 +1335,6 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   MCContext &Ctx = getContext();
 
   const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
-  bool ViaWeakRef = false;
-  if (SymA && SymA->isVariable()) {
-    const MCExpr *Expr = SymA->getVariableValue();
-    if (const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr)) {
-      if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF) {
-        SymA = cast<MCSymbolELF>(&Inner->getSymbol());
-        ViaWeakRef = true;
-      }
-    }
-  }
-
   const MCSectionELF *SecA = (SymA && SymA->isInSection())
                                  ? cast<MCSectionELF>(&SymA->getSection())
                                  : nullptr;
@@ -1393,10 +1394,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
       if (const MCSymbolELF *R = Renames.lookup(SymA))
         SymA = R;
 
-      if (ViaWeakRef)
-        SymA->setIsWeakrefUsedInReloc();
-      else
-        SymA->setUsedInReloc();
+      SymA->setUsedInReloc();
     }
   }
   Relocations[&FixupSection].emplace_back(FixupOffset, SymA, Type, Addend);
