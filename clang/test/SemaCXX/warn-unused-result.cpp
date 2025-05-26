@@ -364,3 +364,28 @@ void id_print_name() {
     ((int(*)())f)();
 }
 } // namespace GH117975
+
+namespace inheritance {
+// Test that [[nodiscard]] is not inherited by derived class types,
+// but is inherited by member functions
+struct [[nodiscard]] E {
+  [[nodiscard]] explicit E(int);
+  explicit E(const char*);
+  [[nodiscard]] int f();
+};
+struct F : E {
+  using E::E;
+};
+E e();
+F f();
+void test() {
+  e();     // expected-warning {{ignoring return value of type 'E' declared with 'nodiscard' attribute}}
+  f();     // no warning: derived class type does not inherit the attribute
+  E(1);    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  E("x");  // expected-warning {{ignoring temporary of type 'E' declared with 'nodiscard' attribute}}
+  F(1);    // no warning: inherited constructor does not inherit the attribute either
+  F("x");  // no warning
+  e().f(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  f().f(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+} // namespace inheritance
