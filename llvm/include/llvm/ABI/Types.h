@@ -1,9 +1,13 @@
 #ifndef LLVM_ABI_TYPES_H
 #define LLVM_ABI_TYPES_H
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/TypeSize.h"
 #include <cstdint>
+#include <llvm/IR/CallingConv.h>
 
 namespace llvm {
 namespace abi {
@@ -17,27 +21,26 @@ enum class TypeKind {
   Vector,
   Struct,
   Union,
-  Function
 };
 
 class Type {
 protected:
   TypeKind Kind;
-  uint64_t SizeInBits;
-  uint64_t AlignInBits;
+  TypeSize SizeInBits;
+  Align AlignInBits;
   bool IsExplicitlyAligned;
 
-  Type(TypeKind K, uint64_t Size, uint64_t Align, bool ExplicitAlign = false)
+  Type(TypeKind K, TypeSize Size, Align Align, bool ExplicitAlign = false)
       : Kind(K), SizeInBits(Size), AlignInBits(Align),
         IsExplicitlyAligned(ExplicitAlign) {}
 
 public:
   TypeKind getKind() const { return Kind; }
-  uint64_t getSizeInBits() const { return SizeInBits; }
-  uint64_t getAlignInBits() const { return AlignInBits; }
+  TypeSize getSizeInBits() const { return SizeInBits; }
+  Align getAlignInBits() const { return AlignInBits; }
   bool hasExplicitAlignment() const { return IsExplicitlyAligned; }
 
-  void setExplicitAlignment(uint64_t Align) {
+  void setExplicitAlignment(Align Align) {
     AlignInBits = Align;
     IsExplicitlyAligned = true;
   }
@@ -50,12 +53,11 @@ public:
   bool isVector() const { return Kind == TypeKind::Vector; }
   bool isStruct() const { return Kind == TypeKind::Struct; }
   bool isUnion() const { return Kind == TypeKind::Union; }
-  bool isFunction() const { return Kind == TypeKind::Function; }
 };
 
 class VoidType : public Type {
 public:
-  VoidType() : Type(TypeKind::Void, 0, 0) {}
+  VoidType() : Type(TypeKind::Void, TypeSize::getFixed(0), Align(1)) {}
 
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Void; }
 };
@@ -65,8 +67,9 @@ private:
   bool IsSigned;
 
 public:
-  IntegerType(uint64_t BitWidth, uint64_t Align, bool Signed)
-      : Type(TypeKind::Integer, BitWidth, Align), IsSigned(Signed) {}
+  IntegerType(uint64_t BitWidth, Align Align, bool Signed)
+      : Type(TypeKind::Integer, TypeSize::getFixed(BitWidth), Align),
+        IsSigned(Signed) {}
 
   bool isSigned() const { return IsSigned; }
 
@@ -76,17 +79,22 @@ public:
 };
 
 class FloatType : public Type {
+private:
+  const fltSemantics *Semantics;
+
 public:
-  FloatType(uint64_t BitWidth, uint64_t Align)
-      : Type(TypeKind::Float, BitWidth, Align) {}
+  FloatType(const fltSemantics &FloatSemantics, Align Align)
+      : Type(TypeKind::Float,
+             TypeSize::getFixed(APFloat::getSizeInBits(FloatSemantics)), Align),
+        Semantics(&FloatSemantics) {}
 
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Float; }
 };
 
 class PointerType : public Type {
 public:
-  PointerType(uint64_t Size, uint64_t Align)
-      : Type(TypeKind::Pointer, Size, Align) {}
+  PointerType(uint64_t Size, Align Align)
+      : Type(TypeKind::Pointer, TypeSize::getFixed(Size), Align) {}
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Pointer;
@@ -116,7 +124,7 @@ private:
   uint64_t NumElements;
 
 public:
-  VectorType(const Type *ElemType, uint64_t NumElems, uint64_t Align)
+  VectorType(const Type *ElemType, uint64_t NumElems, Align Align)
       : Type(TypeKind::Vector, ElemType->getSizeInBits() * NumElems, Align),
         ElementType(ElemType), NumElements(NumElems) {}
 
@@ -149,8 +157,8 @@ private:
   StructPacking Packing;
 
 public:
-  StructType(const FieldInfo *StructFields, uint32_t FieldCount, uint64_t Size,
-             uint64_t Align, StructPacking Pack = StructPacking::Default)
+  StructType(const FieldInfo *StructFields, uint32_t FieldCount, TypeSize Size,
+             Align Align, StructPacking Pack = StructPacking::Default)
       : Type(TypeKind::Struct, Size, Align), Fields(StructFields),
         NumFields(FieldCount), Packing(Pack) {}
 
@@ -170,8 +178,8 @@ private:
   StructPacking Packing;
 
 public:
-  UnionType(const FieldInfo *UnionFields, uint32_t FieldCount, uint64_t Size,
-            uint64_t Align, StructPacking Pack = StructPacking::Default)
+  UnionType(const FieldInfo *UnionFields, uint32_t FieldCount, TypeSize Size,
+            Align Align, StructPacking Pack = StructPacking::Default)
       : Type(TypeKind::Union, Size, Align), Fields(UnionFields),
         NumFields(FieldCount), Packing(Pack) {}
 
@@ -180,41 +188,6 @@ public:
   StructPacking getPacking() const { return Packing; }
 
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Union; }
-};
-
-enum class CallConv {
-  C,
-  // TODO: extend for more CallConvs
-};
-
-class FunctionType : public Type {
-private:
-  const Type *ReturnType;
-  const Type *const *ParameterTypes;
-  uint32_t NumParams;
-  bool IsVarArg;
-  CallConv CC;
-
-public:
-  FunctionType(const Type *RetType, const Type *const *ParamTypes,
-               uint32_t ParamCount, bool VarArgs, CallConv CallConv)
-      : Type(TypeKind::Function, 0, 0), ReturnType(RetType),
-        ParameterTypes(ParamTypes), NumParams(ParamCount), IsVarArg(VarArgs),
-        CC(CallConv) {}
-
-  const Type *getReturnType() const { return ReturnType; }
-  const Type *const *getParameterTypes() const { return ParameterTypes; }
-  uint32_t getNumParameters() const { return NumParams; }
-  const Type *getParameterType(uint32_t Index) const {
-    assert(Index < NumParams && "Parameter index out of bounds");
-    return ParameterTypes[Index];
-  }
-  bool isVarArg() const { return IsVarArg; }
-  CallConv getCallingConv() const { return CC; }
-
-  static bool classof(const Type *T) {
-    return T->getKind() == TypeKind::Function;
-  }
 };
 
 // API for creating ABI Types
@@ -229,17 +202,17 @@ public:
     return new (Allocator.Allocate<VoidType>()) VoidType();
   }
 
-  const IntegerType *getIntegerType(uint64_t BitWidth, uint64_t Align,
+  const IntegerType *getIntegerType(uint64_t BitWidth, Align Align,
                                     bool Signed) {
     return new (Allocator.Allocate<IntegerType>())
         IntegerType(BitWidth, Align, Signed);
   }
 
-  const FloatType *getFloatType(uint64_t BitWidth, uint64_t Align) {
-    return new (Allocator.Allocate<FloatType>()) FloatType(BitWidth, Align);
+  const FloatType *getFloatType(const fltSemantics &Semantics, Align Align) {
+    return new (Allocator.Allocate<FloatType>()) FloatType(Semantics, Align);
   }
 
-  const PointerType *getPointerType(uint64_t Size, uint64_t Align) {
+  const PointerType *getPointerType(uint64_t Size, Align Align) {
     return new (Allocator.Allocate<PointerType>()) PointerType(Size, Align);
   }
 
@@ -249,13 +222,13 @@ public:
   }
 
   const VectorType *getVectorType(const Type *ElementType, uint64_t NumElements,
-                                  uint64_t Align) {
+                                  Align Align) {
     return new (Allocator.Allocate<VectorType>())
         VectorType(ElementType, NumElements, Align);
   }
 
-  const StructType *getStructType(ArrayRef<FieldInfo> Fields, uint64_t Size,
-                                  uint64_t Align,
+  const StructType *getStructType(ArrayRef<FieldInfo> Fields, TypeSize Size,
+                                  Align Align,
                                   StructPacking Pack = StructPacking::Default) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
 
@@ -267,8 +240,8 @@ public:
         FieldArray, static_cast<uint32_t>(Fields.size()), Size, Align, Pack);
   }
 
-  const UnionType *getUnionType(ArrayRef<FieldInfo> Fields, uint64_t Size,
-                                uint64_t Align,
+  const UnionType *getUnionType(ArrayRef<FieldInfo> Fields, TypeSize Size,
+                                Align Align,
                                 StructPacking Pack = StructPacking::Default) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
 
@@ -278,22 +251,6 @@ public:
 
     return new (Allocator.Allocate<UnionType>()) UnionType(
         FieldArray, static_cast<uint32_t>(Fields.size()), Size, Align, Pack);
-  }
-
-  const FunctionType *getFunctionType(const Type *ReturnType,
-                                      ArrayRef<const Type *> ParamTypes,
-                                      bool IsVarArg,
-                                      CallConv CC = CallConv::C) {
-    const Type **ParamArray =
-        Allocator.Allocate<const Type *>(ParamTypes.size());
-
-    for (size_t I = 0; I < ParamTypes.size(); ++I) {
-      ParamArray[I] = ParamTypes[I];
-    }
-
-    return new (Allocator.Allocate<FunctionType>())
-        FunctionType(ReturnType, ParamArray,
-                     static_cast<uint32_t>(ParamTypes.size()), IsVarArg, CC);
   }
 };
 
