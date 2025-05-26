@@ -1273,65 +1273,22 @@ MachineInstr *SIPeepholeSDWA::createSDWAVersion(MachineInstr &MI) {
     }
   }
 
-  // Copy dst_sel if present, initialize otherwise if needed
-  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_sel)) {
-    MachineOperand *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel);
-    if (DstSel) {
-      SDWAInst.add(*DstSel);
-    } else {
-      SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
-    }
-  }
+  // Initialize SDWA specific operands
+  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_sel))
+    SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
 
-  // Copy dst_unused if present, initialize otherwise if needed
-  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_unused)) {
-    MachineOperand *DstUnused = TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
-    if (DstUnused) {
-      SDWAInst.add(*DstUnused);
-    } else {
-      SDWAInst.addImm(AMDGPU::SDWA::DstUnused::UNUSED_PAD);
-    }
-  }
+  if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_unused))
+    SDWAInst.addImm(AMDGPU::SDWA::DstUnused::UNUSED_PAD);
 
-  // Copy src0_sel if present, initialize otherwise
   assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src0_sel));
-  MachineOperand *Src0Sel = TII->getNamedOperand(MI, AMDGPU::OpName::src0_sel);
-  if (Src0Sel) {
-    SDWAInst.add(*Src0Sel);
-  } else {
+  SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
+
+  if (Src1) {
+    assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src1_sel));
     SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
   }
 
-  // Copy src1_sel if present, initialize otherwise if needed
-  if (Src1) {
-    assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src1_sel));
-    MachineOperand *Src1Sel = TII->getNamedOperand(MI, AMDGPU::OpName::src1_sel);
-    if (Src1Sel) {
-      SDWAInst.add(*Src1Sel);
-    } else {
-      SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
-    }
-  }
-
   // Check for a preserved register that needs to be copied.
-  auto *DstUnused = TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
-  if (DstUnused &&
-      DstUnused->getImm() == AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE) {
-    // We expect, if we are here, that the instruction was already in it's SDWA form,
-    // with a tied operand.
-    assert(Dst && Dst->isTied());
-    assert(Opcode == static_cast<unsigned int>(SDWAOpcode));
-    // We also expect a vdst, since sdst can't preserve.
-    auto PreserveDstIdx = AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::vdst);
-    assert(PreserveDstIdx != -1);
-
-    auto TiedIdx = MI.findTiedOperandIdx(PreserveDstIdx);
-    auto Tied = MI.getOperand(TiedIdx);
-
-    SDWAInst.add(Tied);
-    SDWAInst->tieOperands(PreserveDstIdx, SDWAInst->getNumOperands() - 1);
-  }
-
   MachineInstr *Ret = SDWAInst.getInstr();
   TII->fixImplicitOperands(*Ret);
   return Ret;
