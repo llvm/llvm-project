@@ -83,7 +83,7 @@ define void @test_pr25490(i32 %n, ptr noalias nocapture %a, ptr noalias nocaptur
 ; CHECK-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 [[N_VEC5]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP_N11]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -164,8 +164,8 @@ define void @test_shrink_zext_in_preheader(ptr noalias %src, ptr noalias %dst, i
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i16> poison, i16 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <16 x i16> poison, i16 [[B]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <16 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <16 x i16> [[TMP3]], <i16 8, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <16 x i16> [[TMP4]] to <16 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <16 x i16> [[TMP3]], <i16 8, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw <16 x i16> [[TMP4]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i8> [[TMP5]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -187,8 +187,8 @@ define void @test_shrink_zext_in_preheader(ptr noalias %src, ptr noalias %dst, i
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i16> poison, i16 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i16> poison, i16 [[B]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul <8 x i16> [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = lshr <8 x i16> [[TMP14]], <i16 8, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc <8 x i16> [[TMP15]] to <8 x i8>
+; CHECK-NEXT:    [[TMP15:%.*]] = lshr <8 x i16> [[TMP14]], <i16 8, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison>
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc nuw <8 x i16> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i8> [[TMP16]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:

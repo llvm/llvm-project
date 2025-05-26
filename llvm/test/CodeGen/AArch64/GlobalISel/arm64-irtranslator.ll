@@ -431,7 +431,6 @@ end:
 
 ; CHECK-LABEL: name: unreachable
 ; CHECK: G_ADD
-; CHECK-NEXT: {{^$}}
 ; CHECK-NEXT: ...
 define void @unreachable(i32 %a) {
   %sum = add i32 %a, %a
@@ -2262,7 +2261,7 @@ declare ptr @llvm.invariant.start.p0(i64, ptr nocapture) readonly nounwind
 declare void @llvm.invariant.end.p0(ptr, i64, ptr nocapture) nounwind
 define void @test_invariant_intrin() {
 ; CHECK-LABEL: name: test_invariant_intrin
-; CHECK: %{{[0-9]+}}:_(s64) = G_IMPLICIT_DEF
+; CHECK: %{{[0-9]+}}:_(p0) = G_IMPLICIT_DEF
 ; CHECK-NEXT: RET_ReallyLR
   %x = alloca %t
   %inv = call ptr @llvm.invariant.start.p0(i64 8, ptr %x)

@@ -15,7 +15,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 #include <cstring>
@@ -360,22 +359,21 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
   // Symbol themselves might know their versions because symbols
   // can contain versions in the form of <name>@<version>.
   // Let them parse and update their names to exclude version suffix.
-  bool hasDynsym = ctx.hasDynsym;
+  // In addition, compute isExported and isPreemptible.
+  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (sym->hasVersionSuffix)
       sym->parseSymbolVersion(ctx);
-    if (!hasDynsym)
-      continue;
     if (sym->computeBinding(ctx) == STB_LOCAL) {
       sym->isExported = false;
       continue;
     }
     if (!sym->isDefined() && !sym->isCommon()) {
-      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
+      sym->isPreemptible = maybePreemptible && computeIsPreemptible(ctx, *sym);
     } else if (ctx.arg.exportDynamic &&
                (sym->isUsedInRegularObj || !sym->ltoCanOmit)) {
       sym->isExported = true;
-      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
+      sym->isPreemptible = maybePreemptible && computeIsPreemptible(ctx, *sym);
     }
   }
 }

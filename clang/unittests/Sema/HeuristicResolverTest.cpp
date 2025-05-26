@@ -394,6 +394,56 @@ TEST(HeuristicResolver, MemberExpr_DeducedNonTypeTemplateParameter) {
       fieldDecl(hasName("found")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_HangIssue126536) {
+  std::string Code = R"cpp(
+    template <class T>
+    void foo() {
+      T bar;
+      auto baz = (bar, bar);
+      baz.foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "baz.foo()".
+  // Here, we are testing that we do not get into an infinite loop.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
+}
+
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument) {
+  std::string Code = R"cpp(
+    struct Default {
+      void foo();
+    };
+    template <typename T = Default>
+    void bar(T t) {
+      t.foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "t.foo()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_Recursive) {
+  std::string Code = R"cpp(
+    struct Default {
+      void foo();
+    };
+    template <typename D = Default, typename T = D>
+    void bar(T t) {
+      t.foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "t.foo()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
 TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {
   std::string Code = R"cpp(
     template <typename T>
@@ -411,6 +461,23 @@ TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {
       Code, &HeuristicResolver::resolveDeclRefExpr,
       dependentScopeDeclRefExpr(hasDependentName("bar")).bind("input"),
       cxxMethodDecl(hasName("bar")).bind("output"));
+}
+
+TEST(HeuristicResolver, DeclRefExpr_DefaultTemplateArgument) {
+  std::string Code = R"cpp(
+    struct Default {
+      static void foo();
+    };
+    template <typename T = Default>
+    void bar() {
+      T::foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "T::foo()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveDeclRefExpr,
+      dependentScopeDeclRefExpr(hasDependentName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
 }
 
 TEST(HeuristicResolver, DeclRefExpr_StaticOverloads) {

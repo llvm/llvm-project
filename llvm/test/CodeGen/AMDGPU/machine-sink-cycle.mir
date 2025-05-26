@@ -1078,6 +1078,19 @@ body:             |
   ; GFX9-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
   ; GFX9-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
   ; GFX9-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[DEF]].sub2, [[DEF1]].sub4, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.1:
+  ; GFX9-SUNK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_CO_U32_e64_]], implicit [[V_ADD_CO_U32_e64_1]]
+  ; GFX9-SUNK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.3
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.2:
+  ; GFX9-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
   ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub0, 0, implicit $exec
   ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub0, 0, implicit $exec
   ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub0, 0, implicit $exec
@@ -1105,19 +1118,6 @@ body:             |
   ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_24:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub3, 0, implicit $exec
   ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_25:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub3, 0, implicit $exec
   ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_26:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub3, 0, implicit $exec
-  ; GFX9-SUNK-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[DEF]].sub2, [[DEF1]].sub4, 0, implicit $exec
-  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.1
-  ; GFX9-SUNK-NEXT: {{  $}}
-  ; GFX9-SUNK-NEXT: bb.1:
-  ; GFX9-SUNK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GFX9-SUNK-NEXT: {{  $}}
-  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_CO_U32_e64_]], implicit [[V_ADD_CO_U32_e64_1]]
-  ; GFX9-SUNK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
-  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.3
-  ; GFX9-SUNK-NEXT: {{  $}}
-  ; GFX9-SUNK-NEXT: bb.2:
-  ; GFX9-SUNK-NEXT:   successors: %bb.4(0x80000000)
-  ; GFX9-SUNK-NEXT: {{  $}}
   ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]]
   ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_1]], implicit [[V_ADD_U32_e64_2]], implicit [[V_ADD_U32_e64_3]], implicit [[V_ADD_U32_e64_4]], implicit [[V_ADD_U32_e64_5]], implicit [[V_ADD_U32_e64_6]], implicit [[V_ADD_U32_e64_7]], implicit [[V_ADD_U32_e64_8]], implicit [[V_ADD_U32_e64_9]], implicit [[V_ADD_U32_e64_10]], implicit [[V_ADD_U32_e64_11]], implicit [[V_ADD_U32_e64_12]], implicit [[V_ADD_U32_e64_13]], implicit [[V_ADD_U32_e64_14]], implicit [[V_ADD_U32_e64_15]], implicit [[V_ADD_U32_e64_16]], implicit [[V_ADD_U32_e64_17]], implicit [[V_ADD_U32_e64_18]], implicit [[V_ADD_U32_e64_19]], implicit [[V_ADD_U32_e64_20]], implicit [[V_ADD_U32_e64_21]], implicit [[V_ADD_U32_e64_22]], implicit [[V_ADD_U32_e64_23]], implicit [[V_ADD_U32_e64_24]], implicit [[V_ADD_U32_e64_25]], implicit [[V_ADD_U32_e64_26]]
   ; GFX9-SUNK-NEXT:   S_BRANCH %bb.4
@@ -1125,8 +1125,35 @@ body:             |
   ; GFX9-SUNK-NEXT: bb.3:
   ; GFX9-SUNK-NEXT:   successors: %bb.4(0x80000000)
   ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_27:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_28:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_29:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_30:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub3, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_31:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub4, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_32:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub5, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_33:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub6, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_34:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub7, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_35:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_36:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_37:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_38:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub3, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_39:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub4, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_40:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub5, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_41:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub6, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_42:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub7, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_43:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_44:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_45:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_46:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub3, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_47:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub4, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_48:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub5, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_49:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub6, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_50:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub7, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_51:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub3, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_52:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub3, 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_53:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub3, 0, implicit $exec
   ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]]
-  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_1]], implicit [[V_ADD_U32_e64_2]], implicit [[V_ADD_U32_e64_3]], implicit [[V_ADD_U32_e64_4]], implicit [[V_ADD_U32_e64_5]], implicit [[V_ADD_U32_e64_6]], implicit [[V_ADD_U32_e64_7]], implicit [[V_ADD_U32_e64_8]], implicit [[V_ADD_U32_e64_9]], implicit [[V_ADD_U32_e64_10]], implicit [[V_ADD_U32_e64_11]], implicit [[V_ADD_U32_e64_12]], implicit [[V_ADD_U32_e64_13]], implicit [[V_ADD_U32_e64_14]], implicit [[V_ADD_U32_e64_15]], implicit [[V_ADD_U32_e64_16]], implicit [[V_ADD_U32_e64_17]], implicit [[V_ADD_U32_e64_18]], implicit [[V_ADD_U32_e64_19]], implicit [[V_ADD_U32_e64_20]], implicit [[V_ADD_U32_e64_21]], implicit [[V_ADD_U32_e64_22]], implicit [[V_ADD_U32_e64_23]], implicit [[V_ADD_U32_e64_24]], implicit [[V_ADD_U32_e64_25]], implicit [[V_ADD_U32_e64_26]]
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_27]], implicit [[V_ADD_U32_e64_28]], implicit [[V_ADD_U32_e64_29]], implicit [[V_ADD_U32_e64_30]], implicit [[V_ADD_U32_e64_31]], implicit [[V_ADD_U32_e64_32]], implicit [[V_ADD_U32_e64_33]], implicit [[V_ADD_U32_e64_34]], implicit [[V_ADD_U32_e64_35]], implicit [[V_ADD_U32_e64_36]], implicit [[V_ADD_U32_e64_37]], implicit [[V_ADD_U32_e64_38]], implicit [[V_ADD_U32_e64_39]], implicit [[V_ADD_U32_e64_40]], implicit [[V_ADD_U32_e64_41]], implicit [[V_ADD_U32_e64_42]], implicit [[V_ADD_U32_e64_43]], implicit [[V_ADD_U32_e64_44]], implicit [[V_ADD_U32_e64_45]], implicit [[V_ADD_U32_e64_46]], implicit [[V_ADD_U32_e64_47]], implicit [[V_ADD_U32_e64_48]], implicit [[V_ADD_U32_e64_49]], implicit [[V_ADD_U32_e64_50]], implicit [[V_ADD_U32_e64_51]], implicit [[V_ADD_U32_e64_52]], implicit [[V_ADD_U32_e64_53]]
   ; GFX9-SUNK-NEXT:   S_BRANCH %bb.4
   ; GFX9-SUNK-NEXT: {{  $}}
   ; GFX9-SUNK-NEXT: bb.4:
@@ -1149,6 +1176,19 @@ body:             |
   ; GFX10-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
   ; GFX10-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
   ; GFX10-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[DEF]].sub2, [[DEF1]].sub4, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.1:
+  ; GFX10-SUNK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_CO_U32_e64_]], implicit [[V_ADD_CO_U32_e64_1]]
+  ; GFX10-SUNK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.3
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.2:
+  ; GFX10-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
   ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub0, 0, implicit $exec
   ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub0, 0, implicit $exec
   ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub0, 0, implicit $exec
@@ -1176,19 +1216,6 @@ body:             |
   ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_24:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub3, 0, implicit $exec
   ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_25:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub3, 0, implicit $exec
   ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_26:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub3, 0, implicit $exec
-  ; GFX10-SUNK-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[DEF]].sub2, [[DEF1]].sub4, 0, implicit $exec
-  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.1
-  ; GFX10-SUNK-NEXT: {{  $}}
-  ; GFX10-SUNK-NEXT: bb.1:
-  ; GFX10-SUNK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GFX10-SUNK-NEXT: {{  $}}
-  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_CO_U32_e64_]], implicit [[V_ADD_CO_U32_e64_1]]
-  ; GFX10-SUNK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
-  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.3
-  ; GFX10-SUNK-NEXT: {{  $}}
-  ; GFX10-SUNK-NEXT: bb.2:
-  ; GFX10-SUNK-NEXT:   successors: %bb.4(0x80000000)
-  ; GFX10-SUNK-NEXT: {{  $}}
   ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]]
   ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_1]], implicit [[V_ADD_U32_e64_2]], implicit [[V_ADD_U32_e64_3]], implicit [[V_ADD_U32_e64_4]], implicit [[V_ADD_U32_e64_5]], implicit [[V_ADD_U32_e64_6]], implicit [[V_ADD_U32_e64_7]], implicit [[V_ADD_U32_e64_8]], implicit [[V_ADD_U32_e64_9]], implicit [[V_ADD_U32_e64_10]], implicit [[V_ADD_U32_e64_11]], implicit [[V_ADD_U32_e64_12]], implicit [[V_ADD_U32_e64_13]], implicit [[V_ADD_U32_e64_14]], implicit [[V_ADD_U32_e64_15]], implicit [[V_ADD_U32_e64_16]], implicit [[V_ADD_U32_e64_17]], implicit [[V_ADD_U32_e64_18]], implicit [[V_ADD_U32_e64_19]], implicit [[V_ADD_U32_e64_20]], implicit [[V_ADD_U32_e64_21]], implicit [[V_ADD_U32_e64_22]], implicit [[V_ADD_U32_e64_23]], implicit [[V_ADD_U32_e64_24]], implicit [[V_ADD_U32_e64_25]], implicit [[V_ADD_U32_e64_26]]
   ; GFX10-SUNK-NEXT:   S_BRANCH %bb.4
@@ -1196,8 +1223,35 @@ body:             |
   ; GFX10-SUNK-NEXT: bb.3:
   ; GFX10-SUNK-NEXT:   successors: %bb.4(0x80000000)
   ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_27:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_28:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_29:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_30:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub3, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_31:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub4, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_32:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub5, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_33:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub6, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_34:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub7, [[DEF1]].sub0, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_35:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_36:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_37:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_38:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub3, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_39:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub4, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_40:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub5, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_41:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub6, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_42:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub7, [[DEF1]].sub1, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_43:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_44:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_45:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_46:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub3, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_47:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub4, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_48:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub5, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_49:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub6, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_50:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub7, [[DEF1]].sub2, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_51:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub0, [[DEF1]].sub3, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_52:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub1, [[DEF1]].sub3, 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_53:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF]].sub2, [[DEF1]].sub3, 0, implicit $exec
   ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]]
-  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_1]], implicit [[V_ADD_U32_e64_2]], implicit [[V_ADD_U32_e64_3]], implicit [[V_ADD_U32_e64_4]], implicit [[V_ADD_U32_e64_5]], implicit [[V_ADD_U32_e64_6]], implicit [[V_ADD_U32_e64_7]], implicit [[V_ADD_U32_e64_8]], implicit [[V_ADD_U32_e64_9]], implicit [[V_ADD_U32_e64_10]], implicit [[V_ADD_U32_e64_11]], implicit [[V_ADD_U32_e64_12]], implicit [[V_ADD_U32_e64_13]], implicit [[V_ADD_U32_e64_14]], implicit [[V_ADD_U32_e64_15]], implicit [[V_ADD_U32_e64_16]], implicit [[V_ADD_U32_e64_17]], implicit [[V_ADD_U32_e64_18]], implicit [[V_ADD_U32_e64_19]], implicit [[V_ADD_U32_e64_20]], implicit [[V_ADD_U32_e64_21]], implicit [[V_ADD_U32_e64_22]], implicit [[V_ADD_U32_e64_23]], implicit [[V_ADD_U32_e64_24]], implicit [[V_ADD_U32_e64_25]], implicit [[V_ADD_U32_e64_26]]
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_27]], implicit [[V_ADD_U32_e64_28]], implicit [[V_ADD_U32_e64_29]], implicit [[V_ADD_U32_e64_30]], implicit [[V_ADD_U32_e64_31]], implicit [[V_ADD_U32_e64_32]], implicit [[V_ADD_U32_e64_33]], implicit [[V_ADD_U32_e64_34]], implicit [[V_ADD_U32_e64_35]], implicit [[V_ADD_U32_e64_36]], implicit [[V_ADD_U32_e64_37]], implicit [[V_ADD_U32_e64_38]], implicit [[V_ADD_U32_e64_39]], implicit [[V_ADD_U32_e64_40]], implicit [[V_ADD_U32_e64_41]], implicit [[V_ADD_U32_e64_42]], implicit [[V_ADD_U32_e64_43]], implicit [[V_ADD_U32_e64_44]], implicit [[V_ADD_U32_e64_45]], implicit [[V_ADD_U32_e64_46]], implicit [[V_ADD_U32_e64_47]], implicit [[V_ADD_U32_e64_48]], implicit [[V_ADD_U32_e64_49]], implicit [[V_ADD_U32_e64_50]], implicit [[V_ADD_U32_e64_51]], implicit [[V_ADD_U32_e64_52]], implicit [[V_ADD_U32_e64_53]]
   ; GFX10-SUNK-NEXT:   S_BRANCH %bb.4
   ; GFX10-SUNK-NEXT: {{  $}}
   ; GFX10-SUNK-NEXT: bb.4:

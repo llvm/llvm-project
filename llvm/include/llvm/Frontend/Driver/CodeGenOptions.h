@@ -19,6 +19,19 @@ class TargetLibraryInfoImpl;
 } // namespace llvm
 
 namespace llvm::driver {
+// The current supported vector libraries in enum \VectorLibrary are 9(including
+// the NoLibrary). Changing the bitcount from 3 to 4 so that more than 8 values
+// can be supported. Now the maximum number of vector libraries supported
+// increase from 8(2^3) to 16(2^4).
+//
+// ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary,
+// <bitcount>4</bitcount>, llvm::driver::VectorLibrary::NoLibrary) is the
+// currently defined in clang/include/clang/Basic/CodeGenOptions.def
+// bitcount is the number of bits used to represent the enum value.
+//
+// IMPORTANT NOTE: When adding a new vector library support, and if count of
+// supported vector libraries crosses the current max limit. Please increment
+// the bitcount value.
 
 /// Vector library option used with -fveclib=
 enum class VectorLibrary {
@@ -33,7 +46,7 @@ enum class VectorLibrary {
   AMDLIBM             // AMD vector math library.
 };
 
-TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
+TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
                                   VectorLibrary Veclib);
 
 } // end namespace llvm::driver

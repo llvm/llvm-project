@@ -88,8 +88,9 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
   std::string pipe_path = g_pipe_name_prefix.str();
   pipe_path.append(name.str());
 
-  SECURITY_ATTRIBUTES sa{sizeof(SECURITY_ATTRIBUTES), 0,
-                         child_process_inherit ? TRUE : FALSE};
+  // We always create inheritable handles, but we won't pass them to a child
+  // process unless explicitly requested (cf. ProcessLauncherWindows.cpp).
+  SECURITY_ATTRIBUTES sa{sizeof(SECURITY_ATTRIBUTES), 0, TRUE};
 
   // Always open for overlapped i/o.  We implement blocking manually in Read
   // and Write.
@@ -149,14 +150,13 @@ Status PipeWindows::OpenAsReader(llvm::StringRef name,
   return OpenNamedPipe(name, child_process_inherit, true);
 }
 
-Status
-PipeWindows::OpenAsWriterWithTimeout(llvm::StringRef name,
-                                     bool child_process_inherit,
-                                     const std::chrono::microseconds &timeout) {
+llvm::Error PipeWindows::OpenAsWriter(llvm::StringRef name,
+                                      bool child_process_inherit,
+                                      const Timeout<std::micro> &timeout) {
   if (CanWrite())
-    return Status(); // Note the name is ignored.
+    return llvm::Error::success(); // Note the name is ignored.
 
-  return OpenNamedPipe(name, child_process_inherit, false);
+  return OpenNamedPipe(name, child_process_inherit, false).takeError();
 }
 
 Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
@@ -166,8 +166,9 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
 
   assert(is_read ? !CanRead() : !CanWrite());
 
-  SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), 0,
-                                 child_process_inherit ? TRUE : FALSE};
+  // We always create inheritable handles, but we won't pass them to a child
+  // process unless explicitly requested (cf. ProcessLauncherWindows.cpp).
+  SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES), 0, TRUE};
 
   std::string pipe_path = g_pipe_name_prefix.str();
   pipe_path.append(name.str());
@@ -268,29 +269,24 @@ PipeWindows::GetReadNativeHandle() { return m_read; }
 HANDLE
 PipeWindows::GetWriteNativeHandle() { return m_write; }
 
-Status PipeWindows::ReadWithTimeout(void *buf, size_t size,
-                                    const std::chrono::microseconds &duration,
-                                    size_t &bytes_read) {
+llvm::Expected<size_t> PipeWindows::Read(void *buf, size_t size,
+                                         const Timeout<std::micro> &timeout) {
   if (!CanRead())
-    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32).takeError();
 
-  bytes_read = 0;
-  DWORD sys_bytes_read = 0;
-  BOOL result =
-      ::ReadFile(m_read, buf, size, &sys_bytes_read, &m_read_overlapped);
-  if (result) {
-    bytes_read = sys_bytes_read;
-    return Status();
-  }
+  DWORD bytes_read = 0;
+  BOOL result = ::ReadFile(m_read, buf, size, &bytes_read, &m_read_overlapped);
+  if (result)
+    return bytes_read;
 
   DWORD failure_error = ::GetLastError();
   if (failure_error != ERROR_IO_PENDING)
-    return Status(failure_error, eErrorTypeWin32);
+    return Status(failure_error, eErrorTypeWin32).takeError();
 
-  DWORD timeout = (duration == std::chrono::microseconds::zero())
-                      ? INFINITE
-                      : duration.count() / 1000;
-  DWORD wait_result = ::WaitForSingleObject(m_read_overlapped.hEvent, timeout);
+  DWORD timeout_msec =
+      timeout ? ceil<std::chrono::milliseconds>(*timeout).count() : INFINITE;
+  DWORD wait_result =
+      ::WaitForSingleObject(m_read_overlapped.hEvent, timeout_msec);
   if (wait_result != WAIT_OBJECT_0) {
     // The operation probably failed.  However, if it timed out, we need to
     // cancel the I/O. Between the time we returned from WaitForSingleObject
@@ -306,42 +302,36 @@ Status PipeWindows::ReadWithTimeout(void *buf, size_t size,
         failed = false;
     }
     if (failed)
-      return Status(failure_error, eErrorTypeWin32);
+      return Status(failure_error, eErrorTypeWin32).takeError();
   }
 
   // Now we call GetOverlappedResult setting bWait to false, since we've
   // already waited as long as we're willing to.
-  if (!::GetOverlappedResult(m_read, &m_read_overlapped, &sys_bytes_read,
-                             FALSE))
-    return Status(::GetLastError(), eErrorTypeWin32);
+  if (!::GetOverlappedResult(m_read, &m_read_overlapped, &bytes_read, FALSE))
+    return Status(::GetLastError(), eErrorTypeWin32).takeError();
 
-  bytes_read = sys_bytes_read;
-  return Status();
+  return bytes_read;
 }
 
-Status PipeWindows::WriteWithTimeout(const void *buf, size_t size,
-                                     const std::chrono::microseconds &duration,
-                                     size_t &bytes_written) {
+llvm::Expected<size_t> PipeWindows::Write(const void *buf, size_t size,
+                                          const Timeout<std::micro> &timeout) {
   if (!CanWrite())
-    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32).takeError();
 
-  bytes_written = 0;
-  DWORD sys_bytes_write = 0;
+  DWORD bytes_written = 0;
   BOOL result =
-      ::WriteFile(m_write, buf, size, &sys_bytes_write, &m_write_overlapped);
-  if (result) {
-    bytes_written = sys_bytes_write;
-    return Status();
-  }
+      ::WriteFile(m_write, buf, size, &bytes_written, &m_write_overlapped);
+  if (result)
+    return bytes_written;
 
   DWORD failure_error = ::GetLastError();
   if (failure_error != ERROR_IO_PENDING)
-    return Status(failure_error, eErrorTypeWin32);
+    return Status(failure_error, eErrorTypeWin32).takeError();
 
-  DWORD timeout = (duration == std::chrono::microseconds::zero())
-                      ? INFINITE
-                      : duration.count() / 1000;
-  DWORD wait_result = ::WaitForSingleObject(m_write_overlapped.hEvent, timeout);
+  DWORD timeout_msec =
+      timeout ? ceil<std::chrono::milliseconds>(*timeout).count() : INFINITE;
+  DWORD wait_result =
+      ::WaitForSingleObject(m_write_overlapped.hEvent, timeout_msec);
   if (wait_result != WAIT_OBJECT_0) {
     // The operation probably failed.  However, if it timed out, we need to
     // cancel the I/O. Between the time we returned from WaitForSingleObject
@@ -357,15 +347,14 @@ Status PipeWindows::WriteWithTimeout(const void *buf, size_t size,
         failed = false;
     }
     if (failed)
-      return Status(failure_error, eErrorTypeWin32);
+      return Status(failure_error, eErrorTypeWin32).takeError();
   }
 
   // Now we call GetOverlappedResult setting bWait to false, since we've
   // already waited as long as we're willing to.
-  if (!::GetOverlappedResult(m_write, &m_write_overlapped, &sys_bytes_write,
+  if (!::GetOverlappedResult(m_write, &m_write_overlapped, &bytes_written,
                              FALSE))
-    return Status(::GetLastError(), eErrorTypeWin32);
+    return Status(::GetLastError(), eErrorTypeWin32).takeError();
 
-  bytes_written = sys_bytes_write;
-  return Status();
+  return bytes_written;
 }

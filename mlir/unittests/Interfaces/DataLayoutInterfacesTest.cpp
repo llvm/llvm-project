@@ -23,14 +23,20 @@ using namespace mlir;
 namespace {
 constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
 constexpr static llvm::StringLiteral kEndiannesKeyName = "dltest.endianness";
+constexpr static llvm::StringLiteral kDefaultKeyName =
+    "dltest.default_memory_space";
 constexpr static llvm::StringLiteral kAllocaKeyName =
     "dltest.alloca_memory_space";
+constexpr static llvm::StringLiteral kManglingModeKeyName =
+    "dltest.mangling_mode";
 constexpr static llvm::StringLiteral kProgramKeyName =
     "dltest.program_memory_space";
 constexpr static llvm::StringLiteral kGlobalKeyName =
     "dltest.global_memory_space";
 constexpr static llvm::StringLiteral kStackAlignmentKeyName =
     "dltest.stack_alignment";
+constexpr static llvm::StringLiteral kFunctionPointerAlignmentKeyName =
+    "dltest.function_pointer_alignment";
 
 constexpr static llvm::StringLiteral kTargetSystemDescAttrName =
     "dl_target_sys_desc_test.target_system_spec";
@@ -80,8 +86,14 @@ struct CustomDataLayoutSpec
   StringAttr getEndiannessIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kEndiannesKeyName);
   }
+  StringAttr getDefaultMemorySpaceIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kDefaultKeyName);
+  }
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kAllocaKeyName);
+  }
+  StringAttr getManglingModeIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kManglingModeKeyName);
   }
   StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kProgramKeyName);
@@ -91,6 +103,9 @@ struct CustomDataLayoutSpec
   }
   StringAttr getStackAlignmentIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kStackAlignmentKeyName);
+  }
+  StringAttr getFunctionPointerAlignmentIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kFunctionPointerAlignmentKeyName);
   }
   FailureOr<Attribute> query(DataLayoutEntryKey key) const {
     return llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
@@ -192,6 +207,15 @@ struct SingleQueryType
   }
 
   Attribute getEndianness(DataLayoutEntryInterface entry) {
+    static bool executed = false;
+    if (executed)
+      llvm::report_fatal_error("repeated call");
+
+    executed = true;
+    return Attribute();
+  }
+
+  Attribute getDefaultMemorySpace(DataLayoutEntryInterface entry) {
     static bool executed = false;
     if (executed)
       llvm::report_fatal_error("repeated call");
@@ -470,10 +494,13 @@ module {}
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 2u);
 
   EXPECT_EQ(layout.getEndianness(), Attribute());
+  EXPECT_EQ(layout.getDefaultMemorySpace(), Attribute());
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
+  EXPECT_EQ(layout.getFunctionPointerAlignment(), Attribute());
+  EXPECT_EQ(layout.getManglingMode(), Attribute());
 }
 
 TEST(DataLayout, NullSpec) {
@@ -502,10 +529,12 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
 
   EXPECT_EQ(layout.getEndianness(), Attribute());
+  EXPECT_EQ(layout.getDefaultMemorySpace(), Attribute());
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
+  EXPECT_EQ(layout.getManglingMode(), Attribute());
 
   EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
@@ -542,10 +571,13 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
 
   EXPECT_EQ(layout.getEndianness(), Attribute());
+  EXPECT_EQ(layout.getDefaultMemorySpace(), Attribute());
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
+  EXPECT_EQ(layout.getManglingMode(), Attribute());
+  EXPECT_EQ(layout.getFunctionPointerAlignment(), Attribute());
 
   EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
@@ -564,10 +596,14 @@ TEST(DataLayout, SpecWithEntries) {
   #dlti.dl_entry<i16, 6>,
   #dlti.dl_entry<index, 42>,
   #dlti.dl_entry<"dltest.endianness", "little">,
+  #dlti.dl_entry<"dltest.default_memory_space", 1 : i32>,
   #dlti.dl_entry<"dltest.alloca_memory_space", 5 : i32>,
   #dlti.dl_entry<"dltest.program_memory_space", 3 : i32>,
   #dlti.dl_entry<"dltest.global_memory_space", 2 : i32>,
-  #dlti.dl_entry<"dltest.stack_alignment", 128 : i32>
+  #dlti.dl_entry<"dltest.stack_alignment", 128 : i32>,
+  #dlti.dl_entry<"dltest.mangling_mode", "o">,
+  #dlti.dl_entry<"dltest.function_pointer_alignment",
+                 #dlti.function_pointer_alignment<64, function_dependent = true>>
 > } : () -> ()
   )MLIR";
 
@@ -600,10 +636,15 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getTypePreferredAlignment(Float32Type::get(&ctx)), 64u);
 
   EXPECT_EQ(layout.getEndianness(), Builder(&ctx).getStringAttr("little"));
+  EXPECT_EQ(layout.getDefaultMemorySpace(), Builder(&ctx).getI32IntegerAttr(1));
   EXPECT_EQ(layout.getAllocaMemorySpace(), Builder(&ctx).getI32IntegerAttr(5));
   EXPECT_EQ(layout.getProgramMemorySpace(), Builder(&ctx).getI32IntegerAttr(3));
   EXPECT_EQ(layout.getGlobalMemorySpace(), Builder(&ctx).getI32IntegerAttr(2));
   EXPECT_EQ(layout.getStackAlignment(), 128u);
+  EXPECT_EQ(layout.getManglingMode(), Builder(&ctx).getStringAttr("o"));
+  EXPECT_EQ(
+      layout.getFunctionPointerAlignment(),
+      FunctionPointerAlignmentAttr::get(&ctx, 64, /*function_dependent=*/true));
 }
 
 TEST(DataLayout, SpecWithTargetSystemDescEntries) {

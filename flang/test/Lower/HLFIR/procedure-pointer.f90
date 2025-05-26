@@ -80,7 +80,7 @@ use m
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
-! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub2Ep1"} : (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>, !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>)
+! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub2Ep1"} : (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>, !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>)
 ! CHECK: %[[VAL_4:.*]] = fir.zero_bits () -> ()
 ! CHECK: %[[VAL_5:.*]] = fir.emboxproc %[[VAL_4]] : (() -> ()) -> !fir.boxproc<() -> ()>
 ! CHECK: %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
@@ -97,7 +97,7 @@ use m
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
-! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub3Ep1"} : (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>, !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>)
+! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub3Ep1"} : (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>) -> (!fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>, !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>)
 ! CHECK: %[[VAL_4:.*]] = fir.address_of(@_QPreal_func) : (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_5:.*]] = fir.emboxproc %[[VAL_4]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<() -> ()>
 ! CHECK: %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
@@ -106,7 +106,7 @@ use m
   res = p1(r)
 ! CHECK: %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 ! CHECK: %[[VAL_8:.*]] = fir.box_addr %[[VAL_7]] : (!fir.boxproc<(!fir.ref<f32>) -> f32>) -> ((!fir.ref<f32>) -> f32)
-! CHECK: %[[VAL_9:.*]] = fir.call %[[VAL_8]](%5#1) fastmath<contract> : (!fir.ref<f32>) -> f32
+! CHECK: %[[VAL_9:.*]] = fir.call %[[VAL_8]](%{{.*}}) fastmath<contract> : (!fir.ref<f32>) -> f32
 
   nullify(p1)
 ! CHECK: %[[VAL_10:.*]] = fir.zero_bits () -> ()
@@ -141,7 +141,7 @@ use m
   res = p2(i)
 ! CHECK: %[[VAL_12:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
 ! CHECK: %[[VAL_13:.*]] = fir.box_addr %[[VAL_12]] : (!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>) -> ((!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>)
-! CHECK: %[[VAL_14:.*]] = fir.call %[[VAL_13]](%2#1) fastmath<contract> : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
+! CHECK: %[[VAL_14:.*]] = fir.call %[[VAL_13]](%{{.*}}) fastmath<contract> : (!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>
 end subroutine
 
 subroutine  sub5()
@@ -153,7 +153,7 @@ use m
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> f32
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> f32) -> !fir.boxproc<() -> f32>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<() -> f32>>
-! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub5Ep3"} : (!fir.ref<!fir.boxproc<() -> f32>>) -> (!fir.ref<!fir.boxproc<() -> f32>>, !fir.ref<!fir.boxproc<() -> f32>>)
+! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub5Ep3"} : (!fir.ref<!fir.boxproc<() -> f32>>) -> (!fir.ref<!fir.boxproc<() -> f32>>, !fir.ref<!fir.boxproc<() -> f32>>)
 ! CHECK: %[[VAL_4:.*]] = fir.address_of(@_QPreal_func) : (!fir.ref<f32>) -> f32
 ! CHECK: %[[VAL_5:.*]] = fir.emboxproc %[[VAL_4]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<() -> ()>
 ! CHECK: %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.boxproc<() -> ()>) -> !fir.boxproc<() -> f32>
@@ -170,7 +170,7 @@ use m
 ! CHECK: %[[VAL_1:.*]] = fir.zero_bits () -> ()
 ! CHECK: %[[VAL_2:.*]] = fir.emboxproc %[[VAL_1]] : (() -> ()) -> !fir.boxproc<() -> ()>
 ! CHECK: fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.boxproc<() -> ()>>
-! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub6Ep4"} : (!fir.ref<!fir.boxproc<() -> ()>>) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
+! CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFsub6Ep4"} : (!fir.ref<!fir.boxproc<() -> ()>>) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 ! CHECK: %[[VAL_4:.*]] = fir.address_of(@_QPsub) : (!fir.ref<f32>) -> ()
 ! CHECK: %[[VAL_5:.*]] = fir.emboxproc %[[VAL_4]] : ((!fir.ref<f32>) -> ()) -> !fir.boxproc<() -> ()>
 ! CHECK: fir.store %[[VAL_5]] to %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
@@ -178,7 +178,7 @@ use m
   call p4(r)
 ! CHECK: %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<() -> ()>>
 ! CHECK: %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.boxproc<() -> ()>) -> ((!fir.ref<f32>) -> ())
-! CHECK: fir.call %[[VAL_7]](%5#1) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK: fir.call %[[VAL_7]](%{{.*}}) fastmath<contract> : (!fir.ref<f32>) -> ()
 end subroutine
 
 
@@ -258,7 +258,7 @@ use m
   p1 => reffunc(5)
 ! CHECK: %c5_i32 = arith.constant 5 : i32
 ! CHECK: %[[VAL_4:.*]]:3 = hlfir.associate %c5_i32 {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK: %[[VAL_5:.*]] = fir.call @_QFsub10Preffunc(%[[VAL_4]]#1) fastmath<contract> : (!fir.ref<i32>) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
+! CHECK: %[[VAL_5:.*]] = fir.call @_QFsub10Preffunc(%[[VAL_4]]#0) fastmath<contract> : (!fir.ref<i32>) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_5]] to %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 
 contains
@@ -277,7 +277,7 @@ contains
 ! CHECK: %[[VAL_6:.*]] = fir.emboxproc %[[VAL_5]] : ((!fir.ref<f32>) -> f32) -> !fir.boxproc<() -> ()>
 ! CHECK: %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
 ! CHECK: fir.store %[[VAL_7]] to %[[VAL_4]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
-! CHECK: %[[VAL_8:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
+! CHECK: %[[VAL_8:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 ! CHECK: return %[[VAL_8]] : !fir.boxproc<(!fir.ref<f32>) -> f32>
   end
 end
@@ -302,7 +302,7 @@ use m
   p1 => reffunc(5)
 ! CHECK: %c5_i32 = arith.constant 5 : i32
 ! CHECK: %[[VAL_4:.*]]:3 = hlfir.associate %c5_i32 {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK: %[[VAL_5:.*]] = fir.call @_QPreffunc(%4#1) fastmath<contract> : (!fir.ref<i32>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
+! CHECK: %[[VAL_5:.*]] = fir.call @_QPreffunc(%{{.*}}) fastmath<contract> : (!fir.ref<i32>) -> !fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>
 ! CHECK: fir.store %[[VAL_5]] to %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<i32>) -> !fir.box<!fir.ptr<!fir.char<1,?>>>>>
 ! CHECK: return
 end

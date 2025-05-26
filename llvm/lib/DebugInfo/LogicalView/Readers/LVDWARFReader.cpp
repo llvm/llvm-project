@@ -233,6 +233,9 @@ LVElement *LVDWARFReader::createElement(dwarf::Tag Tag) {
   case dwarf::DW_TAG_GNU_template_parameter_pack:
     CurrentScope = createScopeTemplatePack();
     return CurrentScope;
+  case dwarf::DW_TAG_module:
+    CurrentScope = createScopeModule();
+    return CurrentScope;
   default:
     // Collect TAGs not implemented.
     if (options().getInternalTag() && Tag)
@@ -306,6 +309,9 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
     break;
   case dwarf::DW_AT_bit_size:
     CurrentElement->setBitSize(GetAsUnsignedConstant());
+    break;
+  case dwarf::DW_AT_byte_size:
+    CurrentElement->setBitSize(GetAsUnsignedConstant() * DWARF_CHAR_BIT);
     break;
   case dwarf::DW_AT_call_file:
     CurrentElement->setCallFilenameIndex(IncrementFileIndex
@@ -565,12 +571,8 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
     // Insert the newly created element into the element symbol table. If the
     // element is in the list, it means there are previously created elements
     // referencing this element.
-    if (ElementTable.find(Offset) == ElementTable.end()) {
-      // No previous references to this offset.
-      ElementTable.emplace(std::piecewise_construct,
-                           std::forward_as_tuple(Offset),
-                           std::forward_as_tuple(CurrentElement));
-    } else {
+    auto [It, Inserted] = ElementTable.try_emplace(Offset, CurrentElement);
+    if (!Inserted) {
       // There are previous references to this element. We need to update the
       // element and all the references pointing to this element.
       LVElementEntry &Reference = ElementTable[Offset];
@@ -917,7 +919,7 @@ Error LVDWARFReader::createScopes() {
           LT->getFileNameByIndex(
               1, None, DILineInfoSpecifier::FileLineInfoKind::RawValue,
               FileOne);
-          return FileZero.compare(FileOne);
+          return FileZero != FileOne;
         }
       }
 

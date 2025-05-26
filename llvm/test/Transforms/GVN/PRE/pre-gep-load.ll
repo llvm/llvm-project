@@ -4,7 +4,6 @@
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes="gvn<load-pre>" -enable-load-pre=false -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64--linux-gnu"
 
 define double @foo(i32 %stat, i32 %i, ptr %p) {
 ; CHECK-LABEL: @foo(

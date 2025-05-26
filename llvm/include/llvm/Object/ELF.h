@@ -41,10 +41,10 @@ struct VerdAux {
 
 struct VerDef {
   unsigned Offset;
-  unsigned Version;
-  unsigned Flags;
-  unsigned Ndx;
-  unsigned Cnt;
+  uint16_t Version;
+  uint16_t Flags;
+  uint16_t Ndx;
+  uint16_t Cnt;
   unsigned Hash;
   std::string Name;
   std::vector<VerdAux> AuxV;
@@ -1057,8 +1057,8 @@ ELFFile<ELFT>::getVersionDefinitions(const Elf_Shdr &Sec) const {
 
     VerdAux Aux;
     Aux.Offset = VerdauxBuf - Start;
-    if (Verdaux->vda_name <= StrTabOrErr->size())
-      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name));
+    if (Verdaux->vda_name < StrTabOrErr->size())
+      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name).data());
     else
       Aux.Name = ("<invalid vda_name: " + Twine(Verdaux->vda_name) + ">").str();
     return Aux;

@@ -536,6 +536,15 @@ public:
                            EltCnt.divideCoefficientBy(2));
   }
 
+  static VectorType *getOneNthElementsVectorType(VectorType *VTy,
+                                                 unsigned Denominator) {
+    auto EltCnt = VTy->getElementCount();
+    assert(EltCnt.isKnownMultipleOf(Denominator) &&
+           "Cannot take one-nth of a vector");
+    return VectorType::get(VTy->getScalarType(),
+                           EltCnt.divideCoefficientBy(Denominator));
+  }
+
   /// This static method returns a VectorType with twice as many elements as the
   /// input type and the same element type.
   static VectorType *getDoubleElementsVectorType(VectorType *VTy) {
@@ -543,6 +552,23 @@ public:
     assert((EltCnt.getKnownMinValue() * 2ull) <= UINT_MAX &&
            "Too many elements in vector");
     return VectorType::get(VTy->getElementType(), EltCnt * 2);
+  }
+
+  /// This static method attempts to construct a VectorType with the same
+  /// size-in-bits as SizeTy but with an element type that matches the scalar
+  /// type of EltTy. The VectorType is returned on success, nullptr otherwise.
+  static VectorType *getWithSizeAndScalar(VectorType *SizeTy, Type *EltTy) {
+    if (SizeTy->getScalarType() == EltTy->getScalarType())
+      return SizeTy;
+
+    unsigned EltSize = EltTy->getScalarSizeInBits();
+    if (!SizeTy->getPrimitiveSizeInBits().isKnownMultipleOf(EltSize))
+      return nullptr;
+
+    ElementCount EC = SizeTy->getElementCount()
+                          .multiplyCoefficientBy(SizeTy->getScalarSizeInBits())
+                          .divideCoefficientBy(EltSize);
+    return VectorType::get(EltTy->getScalarType(), EC);
   }
 
   /// Return true if the specified type is valid as a element type.
@@ -676,6 +702,8 @@ public:
 
   /// This constructs a pointer to an object of the specified type in a numbered
   /// address space.
+  [[deprecated("PointerType::get with pointee type is pending removal. Use "
+               "Context overload.")]]
   static PointerType *get(Type *ElementType, unsigned AddressSpace);
   /// This constructs an opaque pointer to an object in a numbered address
   /// space.
@@ -683,8 +711,13 @@ public:
 
   /// This constructs a pointer to an object of the specified type in the
   /// default address space (address space zero).
+  [[deprecated("PointerType::getUnqual with pointee type is pending removal. "
+               "Use Context overload.")]]
   static PointerType *getUnqual(Type *ElementType) {
-    return PointerType::get(ElementType, 0);
+    assert(ElementType && "Can't get a pointer to <null> type!");
+    assert(isValidElementType(ElementType) &&
+           "Invalid type for pointer element!");
+    return PointerType::getUnqual(ElementType->getContext());
   }
 
   /// This constructs an opaque pointer to an object in the

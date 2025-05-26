@@ -45,6 +45,8 @@ static const unsigned ARM64AddrSpaceMap[] = {
     static_cast<unsigned>(AArch64AddrSpace::ptr64),
     0, // hlsl_groupshared
     0, // hlsl_constant
+    0, // hlsl_private
+    0, // hlsl_device
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -132,6 +134,7 @@ public:
 
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
+                                const LangOptions &LO,
                                 StringRef &Err) const override;
 
   bool isValidCPUName(StringRef Name) const override;
@@ -181,11 +184,11 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts,
-                 bool IsArmStreamingFunction) const override;
+  getVScaleRange(const LangOptions &LangOpts, bool IsArmStreamingFunction,
+                 llvm::StringMap<bool> *FeatureMap = nullptr) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;
   bool hasFeature(StringRef Feature) const override;

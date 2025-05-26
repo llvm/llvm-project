@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Dominators.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "gtest/gtest.h"
@@ -1617,6 +1619,62 @@ TEST_F(ComputeKnownFPClassTest, FMulNoZero) {
   expectKnownFPClass(fcAllFlags, std::nullopt, A7);
 }
 
+TEST_F(ComputeKnownFPClassTest, MinimumNumSignBit) {
+  parseAssembly(
+      R"(
+      define float @test(
+          float %unknown,
+          float nofpclass(nan) %nnan,
+          float nofpclass(nan pinf pnorm psub pzero) %nnan.nopos,
+          float nofpclass(nan ninf nnorm nsub nzero) %nnan.noneg,
+          float nofpclass(ninf nnorm nsub nzero) %noneg,
+          float nofpclass(pinf pnorm psub pzero) %nopos) {
+        %A = call float @llvm.minimumnum.f32(float %nnan.nopos, float %unknown)
+        %A2 = call float @llvm.minimumnum.f32(float %unknown, float %nnan.nopos)
+        %A3 = call float @llvm.minimumnum.f32(float %nnan.noneg, float %unknown)
+        %A4 = call float @llvm.minimumnum.f32(float %unknown, float %nnan.noneg)
+        %A5 = call float @llvm.minimumnum.f32(float %nnan.nopos, float %nnan.noneg)
+        %A6 = call float @llvm.minimumnum.f32(float %nopos, float %nnan.noneg)
+        %A7 = call float @llvm.minimumnum.f32(float %nnan.nopos, float %noneg)
+        ret float %A
+      })");
+  expectKnownFPClass(fcNegative, true, A);
+  expectKnownFPClass(fcNegative, true, A2);
+  expectKnownFPClass(~fcNan, std::nullopt, A3);
+  expectKnownFPClass(~fcNan, std::nullopt, A4);
+  expectKnownFPClass(fcNegative, true, A5);
+  expectKnownFPClass(~fcNan, std::nullopt, A6);
+  expectKnownFPClass(fcNegative, true, A7);
+}
+
+TEST_F(ComputeKnownFPClassTest, MaximumNumSignBit) {
+  parseAssembly(
+      R"(
+    define float @test(
+        float %unknown,
+        float nofpclass(nan) %nnan,
+        float nofpclass(nan pinf pnorm psub pzero) %nnan.nopos,
+        float nofpclass(nan ninf nnorm nsub nzero) %nnan.noneg,
+        float nofpclass(ninf nnorm nsub nzero) %noneg,
+        float nofpclass(pinf pnorm psub pzero) %nopos) {
+      %A = call float @llvm.maximumnum.f32(float %nnan.noneg, float %unknown)
+      %A2 = call float @llvm.maximumnum.f32(float %unknown, float %nnan.noneg)
+      %A3 = call float @llvm.maximumnum.f32(float %nnan.nopos, float %unknown)
+      %A4 = call float @llvm.maximumnum.f32(float %unknown, float %nnan.nopos)
+      %A5 = call float @llvm.maximumnum.f32(float %nnan.noneg, float %nnan.nopos)
+      %A6 = call float @llvm.maximumnum.f32(float %noneg, float %nnan.nopos)
+      %A7 = call float @llvm.maximumnum.f32(float %nnan.noneg, float %nopos)
+      ret float %A
+    })");
+  expectKnownFPClass(fcPositive, false, A);
+  expectKnownFPClass(fcPositive, false, A2);
+  expectKnownFPClass(~fcNan, std::nullopt, A3);
+  expectKnownFPClass(~fcNan, std::nullopt, A4);
+  expectKnownFPClass(fcPositive, false, A5);
+  expectKnownFPClass(~fcNan, std::nullopt, A6);
+  expectKnownFPClass(fcPositive, false, A7);
+}
+
 TEST_F(ComputeKnownFPClassTest, Phi) {
   parseAssembly(
       "define float @test(i1 %cond, float nofpclass(nan inf) %arg0, float nofpclass(nan) %arg1) {\n"
@@ -2680,7 +2738,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAbsoluteSymbol) {
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPExtendBeforeMul) {
-  // FIXME: The index should be extended before multiplying with the scale.
+  // The index should be extended before multiplying with the scale.
   parseAssembly(R"(
     target datalayout = "p:16:16:16"
 
@@ -2692,12 +2750,12 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPExtendBeforeMul) {
     }
     )");
   KnownBits Known = computeKnownBits(A, M->getDataLayout());
-  EXPECT_EQ(~64 & 0x7fff, Known.Zero);
-  EXPECT_EQ(64, Known.One);
+  EXPECT_EQ(~320 & 0x7fff, Known.Zero);
+  EXPECT_EQ(320, Known.One);
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPOnlyIndexBits) {
-  // FIXME: GEP should only affect the index width.
+  // GEP should only affect the index width.
   parseAssembly(R"(
     target datalayout = "p:16:16:16:8"
 
@@ -2710,8 +2768,8 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPOnlyIndexBits) {
     }
     )");
   KnownBits Known = computeKnownBits(A, M->getDataLayout());
-  EXPECT_EQ(0x7eff, Known.Zero);
-  EXPECT_EQ(0x100, Known.One);
+  EXPECT_EQ(0x7fff, Known.Zero);
+  EXPECT_EQ(0, Known.One);
 }
 
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {

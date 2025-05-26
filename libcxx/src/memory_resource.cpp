@@ -20,6 +20,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace pmr {
 
@@ -48,7 +49,7 @@ class _LIBCPP_HIDDEN __new_delete_memory_resource_imp : public memory_resource {
     std::byte* result = std::__libcpp_allocate<std::byte>(__element_count(bytes), align);
     if (!is_aligned_to(result, align)) {
       std::__libcpp_deallocate<std::byte>(result, __element_count(bytes), align);
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     }
     return result;
 #endif
@@ -64,7 +65,7 @@ class _LIBCPP_HIDDEN __new_delete_memory_resource_imp : public memory_resource {
 // null_memory_resource()
 
 class _LIBCPP_HIDDEN __null_memory_resource_imp : public memory_resource {
-  void* do_allocate(size_t, size_t) override { __throw_bad_alloc(); }
+  void* do_allocate(size_t, size_t) override { std::__throw_bad_alloc(); }
   void do_deallocate(void*, size_t, size_t) override {}
   bool do_is_equal(const memory_resource& other) const noexcept override { return &other == this; }
 };
@@ -497,4 +498,5 @@ void* monotonic_buffer_resource::do_allocate(size_t bytes, size_t align) {
 
 } // namespace pmr
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

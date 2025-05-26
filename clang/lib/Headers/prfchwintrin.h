@@ -14,10 +14,6 @@
 #ifndef __PRFCHWINTRIN_H
 #define __PRFCHWINTRIN_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 /// Loads a memory sequence containing the specified memory address into
 ///    all data cache levels.
 ///
@@ -30,7 +26,11 @@ extern "C" {
 ///
 /// \param __P
 ///    A pointer specifying the memory address to be prefetched.
-void _m_prefetch(void *__P);
+static __inline__ void __attribute__((__always_inline__, __nodebug__))
+_m_prefetch(void *__P)
+{
+  __builtin_prefetch (__P, 0, 3 /* _MM_HINT_T0 */);
+}
 
 /// Loads a memory sequence containing the specified memory address into
 ///    the L1 data cache and sets the cache-coherency state to modified.
@@ -48,10 +48,13 @@ void _m_prefetch(void *__P);
 ///
 /// \param __P
 ///    A pointer specifying the memory address to be prefetched.
-void _m_prefetchw(volatile const void *__P);
-
-#if defined(__cplusplus)
-} // extern "C"
-#endif
+static __inline__ void __attribute__((__always_inline__, __nodebug__))
+_m_prefetchw(volatile const void *__P)
+{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+  __builtin_prefetch ((const void*)__P, 1, 3 /* _MM_HINT_T0 */);
+#pragma clang diagnostic pop
+}
 
 #endif /* __PRFCHWINTRIN_H */

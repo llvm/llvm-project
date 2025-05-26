@@ -587,6 +587,9 @@ public:
     return static_cast<const Block &>(*Base);
   }
 
+  /// Return the Section for this Symbol (Symbol must be defined).
+  Section &getSection() const { return getBlock().getSection(); }
+
   /// Returns the offset for this symbol within the underlying addressable.
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
@@ -1307,11 +1310,11 @@ public:
                             orc::ExecutorAddr Address,
                             orc::ExecutorAddrDiff Size, Linkage L, Scope S,
                             bool IsLive) {
-    assert((S == Scope::Local || llvm::count_if(AbsoluteSymbols,
+    assert((S == Scope::Local || llvm::none_of(AbsoluteSymbols,
                                                [&](const Symbol *Sym) {
                                                  return Sym->getName() == Name;
-                                               }) == 0) &&
-                                    "Duplicate absolute symbol");
+                                               })) &&
+           "Duplicate absolute symbol");
     auto &Sym = Symbol::constructAbsolute(Allocator, createAddressable(Address),
                                           std::move(Name), Size, L, S, IsLive);
     AbsoluteSymbols.insert(&Sym);
@@ -1347,10 +1350,10 @@ public:
                            orc::SymbolStringPtr Name,
                            orc::ExecutorAddrDiff Size, Linkage L, Scope S,
                            bool IsCallable, bool IsLive) {
-    assert((S == Scope::Local || llvm::count_if(defined_symbols(),
-                                                [&](const Symbol *Sym) {
-                                                  return Sym->getName() == Name;
-                                                }) == 0) &&
+    assert((S == Scope::Local || llvm::none_of(defined_symbols(),
+                                               [&](const Symbol *Sym) {
+                                                 return Sym->getName() == Name;
+                                               })) &&
            "Duplicate defined symbol");
     auto &Sym =
         Symbol::constructNamedDef(Allocator, Content, Offset, std::move(Name),
@@ -1460,7 +1463,7 @@ public:
       A.setAddress(orc::ExecutorAddr());
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
-      Section &Sec = Sym.getBlock().getSection();
+      Section &Sec = Sym.getSection();
       Sec.removeSymbol(Sym);
       Sym.makeExternal(createAddressable(orc::ExecutorAddr(), false));
     }
@@ -1488,7 +1491,7 @@ public:
       Sym.setScope(Scope::Local);
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
-      Section &Sec = Sym.getBlock().getSection();
+      Section &Sec = Sym.getSection();
       Sec.removeSymbol(Sym);
       Sym.makeAbsolute(createAddressable(Address));
     }
@@ -1534,7 +1537,7 @@ public:
   transferDefinedSymbol(Symbol &Sym, Block &DestBlock,
                         orc::ExecutorAddrDiff NewOffset,
                         std::optional<orc::ExecutorAddrDiff> ExplicitNewSize) {
-    auto &OldSection = Sym.getBlock().getSection();
+    auto &OldSection = Sym.getSection();
     Sym.setBlock(DestBlock);
     Sym.setOffset(NewOffset);
     if (ExplicitNewSize)
@@ -1622,7 +1625,7 @@ public:
   /// Removes defined symbols. Does not remove the underlying block.
   void removeDefinedSymbol(Symbol &Sym) {
     assert(Sym.isDefined() && "Sym is not a defined symbol");
-    Sym.getBlock().getSection().removeSymbol(Sym);
+    Sym.getSection().removeSymbol(Sym);
     destroySymbol(Sym);
   }
 

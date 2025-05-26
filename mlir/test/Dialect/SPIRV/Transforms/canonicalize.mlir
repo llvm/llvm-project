@@ -593,6 +593,13 @@ func.func @isub_x_x(%arg0: i32) -> i32 {
   return %0: i32
 }
 
+// CHECK-LABEL: @isub_vector_x_x
+func.func @isub_vector_x_x(%arg0: vector<3xi32>) -> vector<3xi32> {
+  // CHECK: spirv.Constant dense<0>
+  %0 = spirv.ISub %arg0, %arg0: vector<3xi32>
+  return %0: vector<3xi32>
+}
+
 // CHECK-LABEL: @const_fold_scalar_isub_normal
 func.func @const_fold_scalar_isub_normal() -> (i32, i32, i32) {
   %c5 = spirv.Constant 5 : i32

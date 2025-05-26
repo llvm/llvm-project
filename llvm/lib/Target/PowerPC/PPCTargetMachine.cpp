@@ -24,7 +24,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
@@ -144,6 +143,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelLegacyPass(PR);
+  initializePPCLinuxAsmPrinterPass(PR);
+  initializePPCAIXAsmPrinterPass(PR);
 }
 
 static bool isLittleEndianTriple(const Triple &T) {
@@ -403,6 +404,16 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+ScheduleDAGInstrs *
+PPCTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  return createPPCMachineScheduler(C);
+}
+
+ScheduleDAGInstrs *
+PPCTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  return createPPCPostMachineScheduler(C);
+}
+
 //===----------------------------------------------------------------------===//
 // Pass Pipeline Configuration
 //===----------------------------------------------------------------------===//
@@ -438,15 +449,6 @@ public:
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    return createPPCMachineScheduler(C);
-  }
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    return createPPCPostMachineScheduler(C);
-  }
 };
 
 } // end anonymous namespace
@@ -560,7 +562,6 @@ void PPCPassConfig::addMachineSSAOptimization() {
 
 void PPCPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    initializePPCVSXFMAMutatePass(*PassRegistry::getPassRegistry());
     insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
                &PPCVSXFMAMutateID);
   }
@@ -604,7 +605,7 @@ void PPCPassConfig::addPreEmitPass2() {
 
 TargetTransformInfo
 PPCTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(PPCTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<PPCTTIImpl>(this, F));
 }
 
 bool PPCTargetMachine::isLittleEndian() const {

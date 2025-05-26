@@ -92,10 +92,9 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX12-NEXT:    image_sample_lz v1, [v2, v2, v1], s[8:15], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_3D
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    v_fma_f32 v1, v1, v0, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_cmp_le_f32_e64 s0, 0, v1
 ; GFX12-NEXT:    s_and_b32 s0, s0, exec_lo
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_or_b32 s2, s2, s0
 ; GFX12-NEXT:    s_branch .LBB0_1
 ; GFX12-NEXT:  .LBB0_4: ; %loop0_merge

@@ -133,10 +133,8 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
       CtorDtor.Func->setVisibility(GlobalValue::HiddenVisibility);
     }
 
-    if (CtorDtor.Data && cast<GlobalValue>(CtorDtor.Data)->isDeclaration()) {
-      dbgs() << "  Skipping because why now?\n";
+    if (CtorDtor.Data && cast<GlobalValue>(CtorDtor.Data)->isDeclaration())
       continue;
-    }
 
     CtorDtorsByPriority[CtorDtor.Priority].push_back(
         Mangle(CtorDtor.Func->getName()));
@@ -398,9 +396,10 @@ Error StaticLibraryDefinitionGenerator::tryToGenerate(
 
   for (const auto &KV : Symbols) {
     const auto &Name = KV.first;
-    if (!ObjectFilesMap.count(Name))
+    auto It = ObjectFilesMap.find(Name);
+    if (It == ObjectFilesMap.end())
       continue;
-    auto ChildBuffer = ObjectFilesMap[Name];
+    auto ChildBuffer = It->second;
     ChildBufferInfos.insert(
         {ChildBuffer.getBuffer(), ChildBuffer.getBufferIdentifier()});
   }
@@ -505,10 +504,9 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
     if (Deinterned.starts_with(getImpPrefix()))
       Deinterned = Deinterned.drop_front(StringRef(getImpPrefix()).size());
     // Don't degrade the required state
-    if (ToLookUpSymbols.count(Deinterned) &&
-        ToLookUpSymbols[Deinterned] == SymbolLookupFlags::RequiredSymbol)
-      continue;
-    ToLookUpSymbols[Deinterned] = KV.second;
+    auto [It, Inserted] = ToLookUpSymbols.try_emplace(Deinterned);
+    if (Inserted || It->second != SymbolLookupFlags::RequiredSymbol)
+      It->second = KV.second;
   }
 
   for (auto &KV : ToLookUpSymbols)

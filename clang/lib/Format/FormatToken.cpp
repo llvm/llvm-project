@@ -44,10 +44,8 @@ static SmallVector<StringRef> CppNonKeywordTypes = {
 bool FormatToken::isTypeName(const LangOptions &LangOpts) const {
   if (is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts))
     return true;
-  const bool IsCpp = LangOpts.CXXOperatorNames;
-  return IsCpp && is(tok::identifier) &&
-         std::binary_search(CppNonKeywordTypes.begin(),
-                            CppNonKeywordTypes.end(), TokenText);
+  return (LangOpts.CXXOperatorNames || LangOpts.C11) && is(tok::identifier) &&
+         llvm::binary_search(CppNonKeywordTypes, TokenText);
 }
 
 bool FormatToken::isTypeOrIdentifier(const LangOptions &LangOpts) const {
@@ -175,7 +173,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // have many items (20 or more) or we allow bin-packing of function call
   // arguments.
   if (Style.Cpp11BracedListStyle && !Style.BinPackArguments &&
-      Commas.size() < 19) {
+      (Commas.size() < 19 || !Style.BinPackLongBracedList)) {
     return;
   }
 

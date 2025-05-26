@@ -21,8 +21,10 @@
 
 static_assert(!std::is_constructible_v<std::queue<int>, int, int, std::allocator<int>>);
 static_assert(!std::is_constructible_v<std::queue<int>, int*, int*, int>);
-static_assert( std::is_constructible_v<std::queue<int, std::deque<int, test_allocator<int>>>, int*, int*, test_allocator<int>>);
-static_assert(!std::is_constructible_v<std::queue<int, std::deque<int, test_allocator<int>>>, int*, int*, std::allocator<int>>);
+static_assert(
+    std::is_constructible_v<std::queue<int, std::deque<int, test_allocator<int>>>, int*, int*, test_allocator<int>>);
+static_assert(
+    !std::is_constructible_v<std::queue<int, std::deque<int, test_allocator<int>>>, int*, int*, std::allocator<int>>);
 
 template <class T>
 struct alloc : test_allocator<T> {

@@ -779,36 +779,6 @@ void is_unbounded_array(int n) {
   (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_unbounded_array'}}
 }
 
-void is_referenceable() {
-  static_assert(__is_referenceable(int));
-  static_assert(__is_referenceable(const int));
-  static_assert(__is_referenceable(volatile int));
-  static_assert(__is_referenceable(const volatile int));
-  static_assert(__is_referenceable(int *));
-  static_assert(__is_referenceable(int &));
-  static_assert(__is_referenceable(int &&));
-  static_assert(__is_referenceable(int (*)()));
-  static_assert(__is_referenceable(int (&)()));
-  static_assert(__is_referenceable(int(&&)()));
-  static_assert(__is_referenceable(IntAr));
-  static_assert(__is_referenceable(IntArNB));
-  static_assert(__is_referenceable(decltype(nullptr)));
-  static_assert(__is_referenceable(Empty));
-  static_assert(__is_referenceable(Union));
-  static_assert(__is_referenceable(Derives));
-  static_assert(__is_referenceable(Enum));
-  static_assert(__is_referenceable(EnumClass));
-  static_assert(__is_referenceable(int Empty::*));
-  static_assert(__is_referenceable(int(Empty::*)()));
-  static_assert(__is_referenceable(AnIncompleteType));
-  static_assert(__is_referenceable(struct AnIncompleteType));
-
-  using function_type = void(int);
-  static_assert(__is_referenceable(function_type));
-
-  static_assert(!__is_referenceable(void));
-}
-
 template <typename T> void tmpl_func(T&) {}
 
 template <typename T> struct type_wrapper {
@@ -2703,6 +2673,9 @@ struct FloatWrapper
   }
 };
 
+template<typename A, typename B, bool result = __is_convertible(A, B)>
+static constexpr bool is_convertible_sfinae() { return result; }
+
 void is_convertible()
 {
   static_assert(__is_convertible(IntWrapper, IntWrapper));
@@ -2727,6 +2700,10 @@ void is_convertible()
   static_assert(__is_convertible(FloatWrapper, const float&));
   static_assert(__is_convertible(float, FloatWrapper&&));
   static_assert(__is_convertible(float, const FloatWrapper&));
+
+  static_assert(!__is_convertible(AllPrivate, AllPrivate));
+  // Make sure we don't emit "calling a private constructor" in SFINAE context.
+  static_assert(!is_convertible_sfinae<AllPrivate, AllPrivate>());
 }
 
 void is_nothrow_convertible()
@@ -2851,6 +2828,9 @@ void is_trivial()
 }
 
 template<typename T> struct TriviallyConstructibleTemplate {};
+
+template<typename A, typename B, bool result = __is_assignable(A, B)>
+static constexpr bool is_assignable_sfinae() { return result; }
 
 void trivial_checks()
 {
@@ -3025,6 +3005,10 @@ void trivial_checks()
   static_assert(!__is_assignable(AnIncompleteType[1], AnIncompleteType[1])); // expected-error {{incomplete type}}
   static_assert(!__is_assignable(void, void));
   static_assert(!__is_assignable(const volatile void, const volatile void));
+
+  static_assert(!__is_assignable(AllPrivate, AllPrivate));
+  // Make sure we don't emit "'operator=' is a private member" in SFINAE context.
+  static_assert(!is_assignable_sfinae<AllPrivate, AllPrivate>());
 }
 
 void constructible_checks() {
@@ -3221,6 +3205,9 @@ void reference_constructs_from_temporary_checks() {
 
 }
 
+template<typename A, typename B, bool result = __reference_converts_from_temporary(A, B)>
+static constexpr bool reference_converts_from_temporary_sfinae() { return result; }
+
 void reference_converts_from_temporary_checks() {
   static_assert(!__reference_converts_from_temporary(int &, int &));
   static_assert(!__reference_converts_from_temporary(int &, int &&));
@@ -3271,6 +3258,9 @@ void reference_converts_from_temporary_checks() {
   static_assert(__reference_converts_from_temporary(const int&, ExplicitConversionRef));
   static_assert(__reference_converts_from_temporary(int&&, ExplicitConversionRvalueRef));
 
+  static_assert(!__reference_converts_from_temporary(AllPrivate, AllPrivate));
+  // Make sure we don't emit "calling a private constructor" in SFINAE context.
+  static_assert(!reference_converts_from_temporary_sfinae<AllPrivate, AllPrivate>());
 }
 
 void array_rank() {
@@ -3412,6 +3402,16 @@ static_assert(!__has_unique_object_representations(decltype(nullptr)), "or nullp
 static_assert(!__has_unique_object_representations(float), "definitely not Floating Point");
 static_assert(!__has_unique_object_representations(double), "definitely not Floating Point");
 static_assert(!__has_unique_object_representations(long double), "definitely not Floating Point");
+
+
+static_assert(!__has_unique_object_representations(AnIncompleteType[]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType[][1]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType[1]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
 
 struct NoPadding {
   int a;
@@ -4105,6 +4105,20 @@ struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
 
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
 
+struct NotTriviallyEqualityComparablePrivateComparison {
+  int i;
+
+private:
+  bool operator==(const NotTriviallyEqualityComparablePrivateComparison&) const = default;
+};
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparablePrivateComparison));
+
+template<typename T, bool result = __is_trivially_equality_comparable(T)>
+static constexpr bool is_trivially_equality_comparable_sfinae() { return result; }
+
+// Make sure we don't emit "'operator==' is a private member" in SFINAE context.
+static_assert(!is_trivially_equality_comparable_sfinae<NotTriviallyEqualityComparablePrivateComparison>());
+
 template<bool B>
 struct MaybeTriviallyEqualityComparable {
     int i;
@@ -4739,8 +4753,6 @@ struct CheckAbominableFunction<M S::*> {
     static_assert(__is_same(remove_cvref_t<M>, M));
     static_assert(__is_same(remove_pointer_t<M>, M));
     static_assert(__is_same(remove_reference_t<M>, M));
-
-    static_assert(!__is_referenceable(M));
   }
 };
 

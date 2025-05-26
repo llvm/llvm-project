@@ -347,13 +347,14 @@ void Tracker::save() {
 
 void Tracker::revert() {
   assert(State == TrackerState::Record && "Forgot to save()!");
-  State = TrackerState::Disabled;
+  State = TrackerState::Reverting;
   for (auto &Change : reverse(Changes))
     Change->revert(*this);
   Changes.clear();
 #if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
   SnapshotChecker.expectNoDiff();
 #endif
+  State = TrackerState::Disabled;
 }
 
 void Tracker::accept() {

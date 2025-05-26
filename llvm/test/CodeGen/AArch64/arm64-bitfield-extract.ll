@@ -1019,7 +1019,7 @@ define i16 @test_ignored_rightbits(i32 %dst, i32 %in) {
 define void @sameOperandBFI(i64 %src, i64 %src2, ptr %ptr) {
 ; LLC-LABEL: sameOperandBFI:
 ; LLC:       // %bb.0: // %entry
-; LLC-NEXT:    cbnz wzr, .LBB30_2
+; LLC-NEXT:    cbnz w8, .LBB30_2
 ; LLC-NEXT:  // %bb.1: // %if.else
 ; LLC-NEXT:    lsr x8, x0, #47
 ; LLC-NEXT:    and w9, w1, #0x3
@@ -1066,4 +1066,19 @@ if.else:
 
 end:
   ret void
+}
+
+define i64 @sign_extend_lsb(i64 %arg) nounwind {
+; LLC-LABEL: sign_extend_lsb:
+; LLC:       // %bb.0:
+; LLC-NEXT:    sbfx x0, x0, #0, #1
+; LLC-NEXT:    ret
+; OPT-LABEL: @sign_extend_lsb(
+; OPT-NEXT:    [[AND:%.*]] = and i64 [[ARG:%.*]], 1
+; OPT-NEXT:    [[NEG:%.*]] = sub i64 0, [[AND]]
+; OPT-NEXT:    ret i64 [[NEG]]
+;
+  %and = and i64 %arg, 1
+  %neg = sub i64 0, %and
+  ret i64 %neg
 }

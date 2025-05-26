@@ -20,149 +20,64 @@
 using namespace clang;
 using namespace clang::interp;
 
-Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
+                                  Function *Func) {
+  assert(FuncDecl);
+  assert(Func);
 
   // Manually created functions that haven't been assigned proper
   // parameters yet.
   if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
-    return nullptr;
+    return;
 
-  bool IsLambdaStaticInvoker = false;
+  if (!FuncDecl->isDefined())
+    return;
+
+  // Set up lambda captures.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
-      MD && MD->isLambdaStaticInvoker()) {
-    // For a lambda static invoker, we might have to pick a specialized
-    // version if the lambda is generic. In that case, the picked function
-    // will *NOT* be a static invoker anymore. However, it will still
-    // be a non-static member function, this (usually) requiring an
-    // instance pointer. We suppress that later in this function.
-    IsLambdaStaticInvoker = true;
-
-    const CXXRecordDecl *ClosureClass = MD->getParent();
-    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
-    if (ClosureClass->isGenericLambda()) {
-      const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
-      assert(MD->isFunctionTemplateSpecialization() &&
-             "A generic lambda's static-invoker function must be a "
-             "template specialization");
-      const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
-      FunctionTemplateDecl *CallOpTemplate =
-          LambdaCallOp->getDescribedFunctionTemplate();
-      void *InsertPos = nullptr;
-      const FunctionDecl *CorrespondingCallOpSpecialization =
-          CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
-      assert(CorrespondingCallOpSpecialization);
-      FuncDecl = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
-    }
-  }
-
-  // Set up argument indices.
-  unsigned ParamOffset = 0;
-  SmallVector<PrimType, 8> ParamTypes;
-  SmallVector<unsigned, 8> ParamOffsets;
-  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
-
-  // If the return is not a primitive, a pointer to the storage where the
-  // value is initialized in is passed as the first argument. See 'RVO'
-  // elsewhere in the code.
-  QualType Ty = FuncDecl->getReturnType();
-  bool HasRVO = false;
-  if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
-    HasRVO = true;
-    ParamTypes.push_back(PT_Ptr);
-    ParamOffsets.push_back(ParamOffset);
-    ParamOffset += align(primSize(PT_Ptr));
-  }
-
-  // If the function decl is a member decl, the next parameter is
-  // the 'this' pointer. This parameter is pop()ed from the
-  // InterpStack when calling the function.
-  bool HasThisPointer = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (!IsLambdaStaticInvoker) {
-      HasThisPointer = MD->isInstance();
-      if (MD->isImplicitObjectMemberFunction()) {
-        ParamTypes.push_back(PT_Ptr);
-        ParamOffsets.push_back(ParamOffset);
-        ParamOffset += align(primSize(PT_Ptr));
-      }
-    }
-
+      MD && isLambdaCallOperator(MD)) {
     // Set up lambda capture to closure record field mapping.
-    if (isLambdaCallOperator(MD)) {
-      // The parent record needs to be complete, we need to know about all
-      // the lambda captures.
-      if (!MD->getParent()->isCompleteDefinition())
-        return nullptr;
+    const Record *R = P.getOrCreateRecord(MD->getParent());
+    assert(R);
+    llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
+    FieldDecl *LTC;
 
-      const Record *R = P.getOrCreateRecord(MD->getParent());
-      llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
-      FieldDecl *LTC;
+    MD->getParent()->getCaptureFields(LC, LTC);
 
-      MD->getParent()->getCaptureFields(LC, LTC);
-
-      for (auto Cap : LC) {
-        // Static lambdas cannot have any captures. If this one does,
-        // it has already been diagnosed and we can only ignore it.
-        if (MD->isStatic())
-          return nullptr;
-
-        unsigned Offset = R->getField(Cap.second)->Offset;
-        this->LambdaCaptures[Cap.first] = {
-            Offset, Cap.second->getType()->isReferenceType()};
-      }
-      if (LTC) {
-        QualType CaptureType = R->getField(LTC)->Decl->getType();
-        this->LambdaThisCapture = {R->getField(LTC)->Offset,
-                                   CaptureType->isReferenceType() ||
-                                       CaptureType->isPointerType()};
-      }
+    for (auto Cap : LC) {
+      unsigned Offset = R->getField(Cap.second)->Offset;
+      this->LambdaCaptures[Cap.first] = {
+          Offset, Cap.second->getType()->isReferenceType()};
+    }
+    if (LTC) {
+      QualType CaptureType = R->getField(LTC)->Decl->getType();
+      this->LambdaThisCapture = {R->getField(LTC)->Offset,
+                                 CaptureType->isPointerOrReferenceType()};
     }
   }
 
-  // Assign descriptors to all parameters.
-  // Composite objects are lowered to pointers.
-  for (const ParmVarDecl *PD : FuncDecl->parameters()) {
+  // Register parameters with their offset.
+  unsigned ParamIndex = 0;
+  unsigned Drop = Func->hasRVO() +
+                  (Func->hasThisPointer() && !Func->isThisPointerExplicit());
+  for (auto ParamOffset : llvm::drop_begin(Func->ParamOffsets, Drop)) {
+    const ParmVarDecl *PD = FuncDecl->parameters()[ParamIndex];
     std::optional<PrimType> T = Ctx.classify(PD->getType());
-    PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P.createDescriptor(PD, PT);
-    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
-    Params.insert({PD, {ParamOffset, T != std::nullopt}});
-    ParamOffsets.push_back(ParamOffset);
-    ParamOffset += align(primSize(PT));
-    ParamTypes.push_back(PT);
-  }
-
-  // Create a handle over the emitted code.
-  Function *Func = P.getFunction(FuncDecl);
-  if (!Func) {
-    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                            std::move(ParamDescriptors),
-                            std::move(ParamOffsets), HasThisPointer, HasRVO);
-  }
-
-  assert(Func);
-  // For not-yet-defined functions, we only create a Function instance and
-  // compile their body later.
-  if (!FuncDecl->isDefined() ||
-      (FuncDecl->willHaveBody() && !FuncDecl->hasBody())) {
-    Func->setDefined(false);
-    return Func;
+    this->Params.insert({PD, {ParamOffset, T != std::nullopt}});
+    ++ParamIndex;
   }
 
   Func->setDefined(true);
 
   // Lambda static invokers are a special case that we emit custom code for.
-  bool IsEligibleForCompilation = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
-    IsEligibleForCompilation = MD->isLambdaStaticInvoker();
-  if (!IsEligibleForCompilation)
-    IsEligibleForCompilation =
-        FuncDecl->isConstexpr() || FuncDecl->hasAttr<MSConstexprAttr>();
+  bool IsEligibleForCompilation = Func->isLambdaStaticInvoker() ||
+                                  FuncDecl->isConstexpr() ||
+                                  FuncDecl->hasAttr<MSConstexprAttr>();
 
   // Compile the function body.
   if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
     Func->setIsFullyCompiled(true);
-    return Func;
+    return;
   }
 
   // Create scopes from descriptors.
@@ -175,48 +90,6 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
                 std::move(Scopes), FuncDecl->hasBody());
   Func->setIsFullyCompiled(true);
-  return Func;
-}
-
-/// Compile an ObjC block, i.e. ^(){}, that thing.
-///
-/// FIXME: We do not support calling the block though, so we create a function
-/// here but do not compile any code for it.
-Function *ByteCodeEmitter::compileObjCBlock(const BlockExpr *BE) {
-  const BlockDecl *BD = BE->getBlockDecl();
-  // Set up argument indices.
-  unsigned ParamOffset = 0;
-  SmallVector<PrimType, 8> ParamTypes;
-  SmallVector<unsigned, 8> ParamOffsets;
-  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
-
-  // Assign descriptors to all parameters.
-  // Composite objects are lowered to pointers.
-  for (const ParmVarDecl *PD : BD->parameters()) {
-    std::optional<PrimType> T = Ctx.classify(PD->getType());
-    PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P.createDescriptor(PD, PT);
-    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
-    Params.insert({PD, {ParamOffset, T != std::nullopt}});
-    ParamOffsets.push_back(ParamOffset);
-    ParamOffset += align(primSize(PT));
-    ParamTypes.push_back(PT);
-  }
-
-  if (BD->hasCaptures())
-    return nullptr;
-
-  // Create a handle over the emitted code.
-  Function *Func =
-      P.createFunction(BE, ParamOffset, std::move(ParamTypes),
-                       std::move(ParamDescriptors), std::move(ParamOffsets),
-                       /*HasThisPointer=*/false, /*HasRVO=*/false);
-
-  assert(Func);
-  Func->setDefined(true);
-  // We don't compile the BlockDecl code at all right now.
-  Func->setIsFullyCompiled(true);
-  return Func;
 }
 
 Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
@@ -364,6 +237,16 @@ bool ByteCodeEmitter::jump(const LabelTy &Label) {
 
 bool ByteCodeEmitter::fallthrough(const LabelTy &Label) {
   emitLabel(Label);
+  return true;
+}
+
+bool ByteCodeEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  const Expr *Arg = E->getArg(0);
+  PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
+  if (!this->emitBCP(getOffset(EndLabel), T, E))
+    return false;
+  if (!this->visit(Arg))
+    return false;
   return true;
 }
 

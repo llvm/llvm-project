@@ -406,4 +406,181 @@ define i32 @simple_byval() {
   ret i32 %l1
 }
 
+declare void @callee_address_only_capture(ptr readonly captures(address) %p)
+
+define i32 @address_only_capture() {
+; CHECK-LABEL: @address_only_capture(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @callee_address_only_capture(ptr [[A]])
+; CHECK-NEXT:    ret i32 0
+;
+  %a = alloca i32
+  store i32 0, ptr %a
+  call void @callee_address_only_capture(ptr %a)
+  %l1 = load i32, ptr %a
+  ret i32 %l1
+}
+
+declare void @callee_read_only_capture(ptr readonly captures(address, read_provenance) %p)
+
+define i32 @read_only_capture() {
+; CHECK-LABEL: @read_only_capture(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @callee_read_only_capture(ptr [[A]])
+; CHECK-NEXT:    ret i32 0
+;
+  %a = alloca i32
+  store i32 0, ptr %a
+  call void @callee_read_only_capture(ptr %a)
+  %l1 = load i32, ptr %a
+  ret i32 %l1
+}
+
+declare void @callee_provenance_only_capture(ptr readonly captures(provenance) %p)
+
+; Should not be transformed, as write-provenance is captured.
+define i32 @provenance_only_capture() {
+; CHECK-LABEL: @provenance_only_capture(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @callee_provenance_only_capture(ptr [[A]])
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[L1]]
+;
+  %a = alloca i32
+  store i32 0, ptr %a
+  call void @callee_provenance_only_capture(ptr %a)
+  %l1 = load i32, ptr %a
+  ret i32 %l1
+}
+
+define i32 @simple_with_lifetimes() {
+; CHECK-LABEL: @simple_with_lifetimes(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @callee(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    ret i32 0
+;
+  %a = alloca i32
+  call void @llvm.lifetime.start(i64 4, ptr %a)
+  store i32 0, ptr %a
+  call void @callee(ptr %a)
+  %l1 = load i32, ptr %a
+  call void @llvm.lifetime.end(i64 4, ptr %a)
+  ret i32 %l1
+}
+
+define i32 @twoalloc_with_lifetimes() {
+; CHECK-LABEL: @twoalloc_with_lifetimes(
+; CHECK-NEXT:    [[A:%.*]] = alloca { i32, i32 }, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A]])
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 1
+; CHECK-NEXT:    store i32 1, ptr [[B]], align 4
+; CHECK-NEXT:    call void @callee(ptr [[A]])
+; CHECK-NEXT:    [[R:%.*]] = add i32 0, 1
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = alloca {i32, i32}
+  call void @llvm.lifetime.start(i64 8, ptr %a)
+  store i32 0, ptr %a
+  %b = getelementptr i32, ptr %a, i32 1
+  store i32 1, ptr %b
+  call void @callee(ptr %a)
+  %l1 = load i32, ptr %a
+  %l2 = load i32, ptr %b
+  %r = add i32 %l1, %l2
+  call void @llvm.lifetime.end(i64 8, ptr %a)
+  ret i32 %r
+}
+
+declare void @use.i32(i32)
+
+; We can promote the %i load, even though there is an unknown offset load
+; in the loop. It is sufficient that we know all stores.
+define void @load_dyn_offset(ptr %ary) {
+; CHECK-LABEL: @load_dyn_offset(
+; CHECK-NEXT:    [[A:%.*]] = alloca { i64, [4 x i32] }, align 8
+; CHECK-NEXT:    store i64 0, ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP]], ptr [[ARY:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    store i64 [[I_NEXT]], ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr i32, ptr [[GEP]], i64 [[I]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_I]], align 4
+; CHECK-NEXT:    call void @use.i32(i32 [[VAL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[I_NEXT]], 6
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %a = alloca {i64, [4 x i32]}
+  store i64 0, ptr %a
+  %gep = getelementptr i8, ptr %a, i64 8
+  call void @llvm.memcpy(ptr %gep, ptr %ary, i64 16, i1 false)
+  br label %loop
+
+loop:
+  %i = load i64, ptr %a
+  %i.next = add i64 %i, 1
+  store i64 %i.next, ptr %a
+  %gep.i = getelementptr i32, ptr %gep, i64 %i
+  %val = load i32, ptr %gep.i
+  call void @use.i32(i32 %val)
+  %cmp = icmp eq i64 %i.next, 6
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same as previous test, but with an unknown-offset store. We can't promote in
+; that case.
+define void @store_dyn_offset(ptr %ary) {
+; CHECK-LABEL: @store_dyn_offset(
+; CHECK-NEXT:    [[A:%.*]] = alloca { i64, [4 x i32] }, align 8
+; CHECK-NEXT:    store i64 0, ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP]], ptr [[ARY:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = load i64, ptr [[A]], align 4
+; CHECK-NEXT:    [[I_NEXT:%.*]] = add i64 [[I]], 1
+; CHECK-NEXT:    store i64 [[I_NEXT]], ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr i32, ptr [[GEP]], i64 [[I]]
+; CHECK-NEXT:    [[I_TRUNC:%.*]] = trunc i64 [[I]] to i32
+; CHECK-NEXT:    store i32 [[I_TRUNC]], ptr [[GEP_I]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[I_NEXT]], 6
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %a = alloca {i64, [4 x i32]}
+  store i64 0, ptr %a
+  %gep = getelementptr i8, ptr %a, i64 8
+  call void @llvm.memcpy(ptr %gep, ptr %ary, i64 16, i1 false)
+  br label %loop
+
+loop:
+  %i = load i64, ptr %a
+  %i.next = add i64 %i, 1
+  store i64 %i.next, ptr %a
+  %gep.i = getelementptr i32, ptr %gep, i64 %i
+  %i.trunc = trunc i64 %i to i32
+  store i32 %i.trunc, ptr %gep.i
+  %cmp = icmp eq i64 %i.next, 6
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

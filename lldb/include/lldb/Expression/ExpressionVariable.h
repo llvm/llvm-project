@@ -33,7 +33,7 @@ public:
 
   virtual ~ExpressionVariable() = default;
 
-  std::optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
+  llvm::Expected<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
 
   ConstString GetName() { return m_frozen_sp->GetName(); }
 

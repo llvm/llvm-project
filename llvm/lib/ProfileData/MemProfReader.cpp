@@ -37,6 +37,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
@@ -444,7 +445,11 @@ Error RawMemProfReader::setupForSymbolization() {
       ProfiledTextSegmentEnd = Entry.End;
     }
   }
-  assert(NumMatched != 0 && "No matching executable segments in segment info.");
+  if (NumMatched == 0)
+    return make_error<StringError>(
+        Twine("No matching executable segments found in binary ") +
+            Binary.getBinary()->getFileName(),
+        inconvertibleErrorCode());
   assert((PreferredTextSegmentAddress == 0 ||
           (PreferredTextSegmentAddress == ProfiledTextSegmentStart)) &&
          "Expect text segment address to be 0 or equal to profiled text "
@@ -521,7 +526,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     // we insert a new entry for callsite data if we need to.
     IndexedMemProfRecord &Record = MemProfData.Records[Id];
     for (LocationPtr Loc : Locs)
-      Record.CallSiteIds.push_back(MemProfData.addCallStack(*Loc));
+      Record.CallSites.emplace_back(MemProfData.addCallStack(*Loc));
   }
 
   return Error::success();
@@ -565,8 +570,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
       for (size_t I = 0, NumFrames = DI.getNumberOfFrames(); I < NumFrames;
            I++) {
         const auto &DIFrame = DI.getFrame(I);
-        const uint64_t Guid =
-            IndexedMemProfRecord::getGUID(DIFrame.FunctionName);
+        const uint64_t Guid = memprof::getGUID(DIFrame.FunctionName);
         const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
@@ -596,9 +600,12 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
-    if (CallstackProfileData[Id].AccessHistogramSize > 0)
-      free((void *)CallstackProfileData[Id].AccessHistogram);
-    CallstackProfileData.erase(Id);
+    if (auto It = CallstackProfileData.find(Id);
+        It != CallstackProfileData.end()) {
+      if (It->second.AccessHistogramSize > 0)
+        free((void *)It->second.AccessHistogram);
+      CallstackProfileData.erase(It);
+    }
   }
 
   if (StackMap.empty())
@@ -808,14 +815,42 @@ void YAMLMemProfReader::parse(StringRef YAMLData) {
       IndexedRecord.AllocSites.emplace_back(CSId, AI.Info);
     }
 
-    // Populate CallSiteIds.
+    // Populate CallSites with CalleeGuids.
     for (const auto &CallSite : Record.CallSites) {
-      CallStackId CSId = AddCallStack(CallSite);
-      IndexedRecord.CallSiteIds.push_back(CSId);
+      CallStackId CSId = AddCallStack(CallSite.Frames);
+      IndexedRecord.CallSites.emplace_back(CSId, CallSite.CalleeGuids);
     }
 
     MemProfData.Records.try_emplace(GUID, std::move(IndexedRecord));
   }
+
+  if (Doc.YamlifiedDataAccessProfiles.isEmpty())
+    return;
+
+  auto ToSymHandleRef =
+      [](const memprof::SymbolHandle &Handle) -> memprof::SymbolHandleRef {
+    if (std::holds_alternative<std::string>(Handle))
+      return StringRef(std::get<std::string>(Handle));
+    return std::get<uint64_t>(Handle);
+  };
+
+  auto DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  for (const auto &Record : Doc.YamlifiedDataAccessProfiles.Records)
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            ToSymHandleRef(Record.SymHandle), Record.AccessCount,
+            Record.Locations))
+      reportFatalInternalError(std::move(E));
+
+  for (const uint64_t Hash : Doc.YamlifiedDataAccessProfiles.KnownColdStrHashes)
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Hash))
+      reportFatalInternalError(std::move(E));
+
+  for (const std::string &Sym :
+       Doc.YamlifiedDataAccessProfiles.KnownColdSymbols)
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Sym))
+      reportFatalInternalError(std::move(E));
+
+  setDataAccessProfileData(std::move(DataAccessProfileData));
 }
 } // namespace memprof
 } // namespace llvm

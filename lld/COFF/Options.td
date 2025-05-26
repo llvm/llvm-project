@@ -342,6 +342,7 @@ def fastfail : F<"fastfail">;
 def kernel : F<"kernel">;
 def pdbcompress : F<"pdbcompress">;
 def emitpogophaseinfo : F<"emitpogophaseinfo">;
+def noexp : F<"noexp">;
 
 def delay : P_priv<"delay">;
 def errorreport : P_priv<"errorreport">;
@@ -355,3 +356,4 @@ def tlbid : P_priv<"tlbid">;
 def tlbout : P_priv<"tlbout">;
 def verbose_all : P_priv<"verbose">;
 def guardsym : P_priv<"guardsym">;
+def arm64xsameaddress : P_priv<"arm64xsameaddress">;

@@ -50,6 +50,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRangeList.h"
@@ -173,7 +174,7 @@ static cl::opt<bool> EnableInitializesImprovement(
 // Helper functions
 //===----------------------------------------------------------------------===//
 using OverlapIntervalsTy = std::map<int64_t, int64_t>;
-using InstOverlapIntervalsTy = DenseMap<Instruction *, OverlapIntervalsTy>;
+using InstOverlapIntervalsTy = MapVector<Instruction *, OverlapIntervalsTy>;
 
 /// Returns true if the end of this instruction can be safely shortened in
 /// length.
@@ -247,28 +248,43 @@ static OverwriteResult isMaskedStoreOverwrite(const Instruction *KillingI,
     return OW_Unknown;
   if (KillingII->getIntrinsicID() != DeadII->getIntrinsicID())
     return OW_Unknown;
-  if (KillingII->getIntrinsicID() == Intrinsic::masked_store) {
-    // Type size.
-    VectorType *KillingTy =
-        cast<VectorType>(KillingII->getArgOperand(0)->getType());
-    VectorType *DeadTy = cast<VectorType>(DeadII->getArgOperand(0)->getType());
-    if (KillingTy->getScalarSizeInBits() != DeadTy->getScalarSizeInBits())
+
+  switch (KillingII->getIntrinsicID()) {
+  case Intrinsic::masked_store:
+  case Intrinsic::vp_store: {
+    const DataLayout &DL = KillingII->getDataLayout();
+    auto *KillingTy = KillingII->getArgOperand(0)->getType();
+    auto *DeadTy = DeadII->getArgOperand(0)->getType();
+    if (DL.getTypeSizeInBits(KillingTy) != DL.getTypeSizeInBits(DeadTy))
       return OW_Unknown;
     // Element count.
-    if (KillingTy->getElementCount() != DeadTy->getElementCount())
+    if (cast<VectorType>(KillingTy)->getElementCount() !=
+        cast<VectorType>(DeadTy)->getElementCount())
       return OW_Unknown;
     // Pointers.
-    Value *KillingPtr = KillingII->getArgOperand(1)->stripPointerCasts();
-    Value *DeadPtr = DeadII->getArgOperand(1)->stripPointerCasts();
+    Value *KillingPtr = KillingII->getArgOperand(1);
+    Value *DeadPtr = DeadII->getArgOperand(1);
     if (KillingPtr != DeadPtr && !AA.isMustAlias(KillingPtr, DeadPtr))
       return OW_Unknown;
-    // Masks.
-    // TODO: check that KillingII's mask is a superset of the DeadII's mask.
-    if (KillingII->getArgOperand(3) != DeadII->getArgOperand(3))
-      return OW_Unknown;
+    if (KillingII->getIntrinsicID() == Intrinsic::masked_store) {
+      // Masks.
+      // TODO: check that KillingII's mask is a superset of the DeadII's mask.
+      if (KillingII->getArgOperand(3) != DeadII->getArgOperand(3))
+        return OW_Unknown;
+    } else if (KillingII->getIntrinsicID() == Intrinsic::vp_store) {
+      // Masks.
+      // TODO: check that KillingII's mask is a superset of the DeadII's mask.
+      if (KillingII->getArgOperand(2) != DeadII->getArgOperand(2))
+        return OW_Unknown;
+      // Lengths.
+      if (KillingII->getArgOperand(3) != DeadII->getArgOperand(3))
+        return OW_Unknown;
+    }
     return OW_Complete;
   }
-  return OW_Unknown;
+  default:
+    return OW_Unknown;
+  }
 }
 
 /// Return 'OW_Complete' if a store to the 'KillingLoc' location completely
@@ -563,6 +579,43 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   for_each(LinkedDVRAssigns, InsertAssignForOverlap);
 }
 
+/// Update the attributes given that a memory access is updated (the
+/// dereferenced pointer could be moved forward when shortening a
+/// mem intrinsic).
+static void adjustArgAttributes(AnyMemIntrinsic *Intrinsic, unsigned ArgNo,
+                                uint64_t PtrOffset) {
+  // Remember old attributes.
+  AttributeSet OldAttrs = Intrinsic->getParamAttributes(ArgNo);
+
+  // Find attributes that should be kept, and remove the rest.
+  AttributeMask AttrsToRemove;
+  for (auto &Attr : OldAttrs) {
+    if (Attr.hasKindAsEnum()) {
+      switch (Attr.getKindAsEnum()) {
+      default:
+        break;
+      case Attribute::Alignment:
+        // Only keep alignment if PtrOffset satisfy the alignment.
+        if (isAligned(Attr.getAlignment().valueOrOne(), PtrOffset))
+          continue;
+        break;
+      case Attribute::Dereferenceable:
+      case Attribute::DereferenceableOrNull:
+        // We could reduce the size of these attributes according to
+        // PtrOffset. But we simply drop these for now.
+        break;
+      case Attribute::NonNull:
+      case Attribute::NoUndef:
+        continue;
+      }
+    }
+    AttrsToRemove.addAttribute(Attr);
+  }
+
+  // Remove the attributes that should be dropped.
+  Intrinsic->removeParamAttrs(ArgNo, AttrsToRemove);
+}
+
 static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
                          uint64_t &DeadSize, int64_t KillingStart,
                          uint64_t KillingSize, bool IsOverwriteEnd) {
@@ -617,10 +670,10 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   assert(DeadSize > ToRemoveSize && "Can't remove more than original size");
 
   uint64_t NewSize = DeadSize - ToRemoveSize;
-  if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(DeadI)) {
+  if (DeadIntrinsic->isAtomic()) {
     // When shortening an atomic memory intrinsic, the newly shortened
     // length must remain an integer multiple of the element size.
-    const uint32_t ElementSize = AMI->getElementSizeInBytes();
+    const uint32_t ElementSize = DeadIntrinsic->getElementSizeInBytes();
     if (0 != NewSize % ElementSize)
       return false;
   }
@@ -644,6 +697,7 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
         DeadI->getIterator());
     NewDestGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
     DeadIntrinsic->setDest(NewDestGEP);
+    adjustArgAttributes(DeadIntrinsic, 0, ToRemoveSize);
   }
 
   // Update attached dbg.assign intrinsics. Assume 8-bit byte.
@@ -1156,14 +1210,11 @@ struct DSEState {
   bool isInvisibleToCallerAfterRet(const Value *V) {
     if (isa<AllocaInst>(V))
       return true;
+
     auto I = InvisibleToCallerAfterRet.insert({V, false});
-    if (I.second) {
-      if (!isInvisibleToCallerOnUnwind(V)) {
-        I.first->second = false;
-      } else if (isNoAliasCall(V)) {
-        I.first->second = !PointerMayBeCaptured(V, true, false);
-      }
-    }
+    if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
+      I.first->second = capturesNothing(PointerMayBeCaptured(
+          V, /*ReturnCaptures=*/true, CaptureComponents::Provenance));
     return I.first->second;
   }
 
@@ -1180,7 +1231,8 @@ struct DSEState {
       // with the killing MemoryDef. But we refrain from doing so for now to
       // limit compile-time and this does not cause any changes to the number
       // of stores removed on a large test set in practice.
-      I.first->second = PointerMayBeCaptured(V, false, true);
+      I.first->second = capturesAnything(PointerMayBeCaptured(
+          V, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
     return !I.first->second;
   }
 
@@ -1785,8 +1837,7 @@ struct DSEState {
         if (!DT.isReachableFromEntry(Current))
           continue;
 
-        for (BasicBlock *Pred : predecessors(Current))
-          WorkList.insert(Pred);
+        WorkList.insert_range(predecessors(Current));
 
         if (WorkList.size() >= MemorySSAPathCheckLimit)
           return std::nullopt;
@@ -2281,12 +2332,17 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
   // Collect aliasing arguments and their initializes ranges.
   SmallMapVector<Value *, SmallVector<ArgumentInitInfo, 2>, 2> Arguments;
   for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx) {
+    Value *CurArg = CB->getArgOperand(Idx);
+    if (!CurArg->getType()->isPointerTy())
+      continue;
+
     ConstantRangeList Inits;
     Attribute InitializesAttr = CB->getParamAttr(Idx, Attribute::Initializes);
-    if (InitializesAttr.isValid())
+    // initializes on byval arguments refers to the callee copy, not the
+    // original memory the caller passed in.
+    if (InitializesAttr.isValid() && !CB->isByValArgument(Idx))
       Inits = InitializesAttr.getValueAsConstantRangeList();
 
-    Value *CurArg = CB->getArgOperand(Idx);
     // Check whether "CurArg" could alias with global variables. We require
     // either it's function local and isn't captured before or the "CB" only
     // accesses arg or inaccessible mem.

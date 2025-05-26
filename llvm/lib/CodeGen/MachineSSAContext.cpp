@@ -67,7 +67,7 @@ bool MachineSSAContext::isConstantOrUndefValuePhi(const MachineInstr &Phi) {
 
   // In later passes PHI may appear with an undef operand, getVRegDef can fail.
   if (Phi.getOpcode() == TargetOpcode::PHI)
-    return Phi.isConstantValuePHI();
+    return Phi.isConstantValuePHI().isValid();
 
   // For G_PHI we do equivalent of PHINode::hasConstantOrUndefValue().
   const MachineRegisterInfo &MRI = Phi.getMF()->getRegInfo();

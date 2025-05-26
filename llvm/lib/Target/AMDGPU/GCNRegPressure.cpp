@@ -692,8 +692,8 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
     if (LastUseMask.none())
       continue;
 
-    LaneBitmask LiveMask =
-        LiveRegs.contains(Reg) ? LiveRegs.at(Reg) : LaneBitmask(0);
+    auto It = LiveRegs.find(Reg);
+    LaneBitmask LiveMask = It != LiveRegs.end() ? It->second : LaneBitmask(0);
     LaneBitmask NewMask = LiveMask & ~LastUseMask;
     TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
   }
@@ -703,8 +703,8 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
     Register Reg = Def.RegUnit;
     if (!Reg.isVirtual())
       continue;
-    LaneBitmask LiveMask =
-        LiveRegs.contains(Reg) ? LiveRegs.at(Reg) : LaneBitmask(0);
+    auto It = LiveRegs.find(Reg);
+    LaneBitmask LiveMask = It != LiveRegs.end() ? It->second : LaneBitmask(0);
     LaneBitmask NewMask = LiveMask | Def.LaneMask;
     TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
   }

@@ -1285,7 +1285,7 @@ public:
   StringRef getSymbolicName() const { return SymbolicName; }
   void setSymbolicName(StringRef Name) {
     assert(SymbolicName.empty() && "Operand already has a symbolic name");
-    SymbolicName = std::string(Name);
+    SymbolicName = Name.str();
   }
 
   /// Construct a new operand predicate and add it to the matcher.
@@ -2321,8 +2321,7 @@ private:
   std::string S;
 
 public:
-  DebugCommentAction(StringRef S)
-      : MatchAction(AK_DebugComment), S(std::string(S)) {}
+  DebugCommentAction(StringRef S) : MatchAction(AK_DebugComment), S(S.str()) {}
 
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_DebugComment;

@@ -16,6 +16,7 @@
 #include <__system_error/throw_system_error.h>
 #include <limits>
 #include <random>
+#include <string>
 
 #include <errno.h>
 #include <stdio.h>
@@ -37,12 +38,13 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if defined(_LIBCPP_USING_GETENTROPY)
 
 random_device::random_device(const string& __token) {
   if (__token != "/dev/urandom")
-    __throw_system_error(ENOENT, ("random device not supported " + __token).c_str());
+    std::__throw_system_error(ENOENT, ("random device not supported " + __token).c_str());
 }
 
 random_device::~random_device() {}
@@ -52,7 +54,7 @@ unsigned random_device::operator()() {
   size_t n = sizeof(r);
   int err  = getentropy(&r, n);
   if (err)
-    __throw_system_error(errno, "random_device getentropy failed");
+    std::__throw_system_error(errno, "random_device getentropy failed");
   return r;
 }
 
@@ -68,7 +70,7 @@ unsigned random_device::operator()() { return arc4random(); }
 
 random_device::random_device(const string& __token) : __f_(open(__token.c_str(), O_RDONLY)) {
   if (__f_ < 0)
-    __throw_system_error(errno, ("random_device failed to open " + __token).c_str());
+    std::__throw_system_error(errno, ("random_device failed to open " + __token).c_str());
 }
 
 random_device::~random_device() { close(__f_); }
@@ -80,10 +82,10 @@ unsigned random_device::operator()() {
   while (n > 0) {
     ssize_t s = read(__f_, p, n);
     if (s == 0)
-      __throw_system_error(ENOMSG, "random_device got EOF");
+      std::__throw_system_error(ENOMSG, "random_device got EOF");
     if (s == -1) {
       if (errno != EINTR)
-        __throw_system_error(errno, "random_device got an unexpected error");
+        std::__throw_system_error(errno, "random_device got an unexpected error");
       continue;
     }
     n -= static_cast<size_t>(s);
@@ -96,10 +98,10 @@ unsigned random_device::operator()() {
 
 random_device::random_device(const string& __token) {
   if (__token != "/dev/urandom")
-    __throw_system_error(ENOENT, ("random device not supported " + __token).c_str());
+    std::__throw_system_error(ENOENT, ("random device not supported " + __token).c_str());
   int error = nacl_secure_random_init();
   if (error)
-    __throw_system_error(error, ("random device failed to open " + __token).c_str());
+    std::__throw_system_error(error, ("random device failed to open " + __token).c_str());
 }
 
 random_device::~random_device() {}
@@ -110,9 +112,9 @@ unsigned random_device::operator()() {
   size_t bytes_written;
   int error = nacl_secure_random(&r, n, &bytes_written);
   if (error != 0)
-    __throw_system_error(error, "random_device failed getting bytes");
+    std::__throw_system_error(error, "random_device failed getting bytes");
   else if (bytes_written != n)
-    __throw_runtime_error("random_device failed to obtain enough bytes");
+    std::__throw_runtime_error("random_device failed to obtain enough bytes");
   return r;
 }
 
@@ -120,7 +122,7 @@ unsigned random_device::operator()() {
 
 random_device::random_device(const string& __token) {
   if (__token != "/dev/urandom")
-    __throw_system_error(ENOENT, ("random device not supported " + __token).c_str());
+    std::__throw_system_error(ENOENT, ("random device not supported " + __token).c_str());
 }
 
 random_device::~random_device() {}
@@ -129,7 +131,7 @@ unsigned random_device::operator()() {
   unsigned r;
   errno_t err = rand_s(&r);
   if (err)
-    __throw_system_error(err, "random_device rand_s failed.");
+    std::__throw_system_error(err, "random_device rand_s failed.");
   return r;
 }
 
@@ -137,7 +139,7 @@ unsigned random_device::operator()() {
 
 random_device::random_device(const string& __token) {
   if (__token != "/dev/urandom")
-    __throw_system_error(ENOENT, ("random device not supported " + __token).c_str());
+    std::__throw_system_error(ENOENT, ("random device not supported " + __token).c_str());
 }
 
 random_device::~random_device() {}
@@ -178,4 +180,5 @@ double random_device::entropy() const noexcept {
 #endif
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

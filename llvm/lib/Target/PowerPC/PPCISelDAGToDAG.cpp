@@ -2975,7 +2975,6 @@ SDNode *IntegerCompareEliminator::tryEXTEND(SDNode *N) {
   if (!WideRes)
     return nullptr;
 
-  SDLoc dl(N);
   bool Input32Bit = WideRes.getValueType() == MVT::i32;
   bool Output32Bit = N->getValueType(0) == MVT::i32;
 
@@ -7236,7 +7235,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7253,7 +7252,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7269,7 +7268,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7287,10 +7286,10 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     if (Op1OK)
-      ToPromote.insert(ToPromote2.begin(), ToPromote2.end());
+      ToPromote.insert_range(ToPromote2);
 
     return true;
   }
@@ -7310,7 +7309,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     return true;
   }
@@ -7859,8 +7858,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         if (!isInt<16>(Offset))
           continue;
 
-        ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
-                                            ImmOpnd.getValueType());
+        ImmOpnd = CurDAG->getSignedTargetConstant(Offset, SDLoc(ImmOpnd),
+                                                  ImmOpnd.getValueType());
       } else if (Offset != 0) {
         // This optimization is performed for non-TOC-based local-[exec|dynamic]
         // accesses.

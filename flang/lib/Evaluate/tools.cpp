@@ -8,6 +8,7 @@
 
 #include "flang/Evaluate/tools.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Parser/message.h"
@@ -929,7 +930,7 @@ bool IsPointer(const Expr<SomeType> &expr) {
 }
 
 bool IsProcedurePointer(const Expr<SomeType> &expr) {
-  if (IsNullProcedurePointer(expr)) {
+  if (IsNullProcedurePointer(&expr)) {
     return true;
   } else if (const auto *funcRef{UnwrapProcedureRef(expr)}) {
     if (const Symbol * proc{funcRef->proc().GetSymbol()}) {
@@ -963,7 +964,7 @@ bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {
 }
 
 bool IsObjectPointer(const Expr<SomeType> &expr) {
-  if (IsNullObjectPointer(expr)) {
+  if (IsNullObjectPointer(&expr)) {
     return true;
   } else if (IsProcedurePointerTarget(expr)) {
     return false;
@@ -1030,20 +1031,44 @@ template <bool IS_PROC_PTR> struct IsNullPointerHelper {
   }
 };
 
-bool IsNullObjectPointer(const Expr<SomeType> &expr) {
-  return IsNullPointerHelper<false>{}(expr);
+bool IsNullObjectPointer(const Expr<SomeType> *expr) {
+  return expr && IsNullPointerHelper<false>{}(*expr);
 }
 
-bool IsNullProcedurePointer(const Expr<SomeType> &expr) {
-  return IsNullPointerHelper<true>{}(expr);
+bool IsNullProcedurePointer(const Expr<SomeType> *expr) {
+  return expr && IsNullPointerHelper<true>{}(*expr);
 }
 
-bool IsNullPointer(const Expr<SomeType> &expr) {
+bool IsNullPointer(const Expr<SomeType> *expr) {
   return IsNullObjectPointer(expr) || IsNullProcedurePointer(expr);
 }
 
 bool IsBareNullPointer(const Expr<SomeType> *expr) {
   return expr && std::holds_alternative<NullPointer>(expr->u);
+}
+
+struct IsNullAllocatableHelper {
+  template <typename A> bool operator()(const A &) const { return false; }
+  template <typename T> bool operator()(const FunctionRef<T> &call) const {
+    const auto *intrinsic{call.proc().GetSpecificIntrinsic()};
+    return intrinsic &&
+        intrinsic->characteristics.value().attrs.test(
+            characteristics::Procedure::Attr::NullAllocatable);
+  }
+  template <typename T> bool operator()(const Parentheses<T> &x) const {
+    return (*this)(x.left());
+  }
+  template <typename T> bool operator()(const Expr<T> &x) const {
+    return common::visit(*this, x.u);
+  }
+};
+
+bool IsNullAllocatable(const Expr<SomeType> *x) {
+  return x && IsNullAllocatableHelper{}(*x);
+}
+
+bool IsNullPointerOrAllocatable(const Expr<SomeType> *x) {
+  return IsNullPointer(x) || IsNullAllocatable(x);
 }
 
 // GetSymbolVector()
@@ -1065,7 +1090,7 @@ auto GetSymbolVectorHelper::operator()(const ArrayRef &x) const -> Result {
   return GetSymbolVector(x.base());
 }
 auto GetSymbolVectorHelper::operator()(const CoarrayRef &x) const -> Result {
-  return x.base();
+  return GetSymbolVector(x.base());
 }
 
 const Symbol *GetLastTarget(const SymbolVector &symbols) {
@@ -1171,16 +1196,6 @@ parser::Message *AttachDeclaration(
       const auto *assoc{unhosted->detailsIf<semantics::HostAssocDetails>()}) {
     unhosted = &assoc->symbol();
   }
-  if (const auto *binding{
-          unhosted->detailsIf<semantics::ProcBindingDetails>()}) {
-    if (binding->symbol().name() != symbol.name()) {
-      message.Attach(binding->symbol().name(),
-          "Procedure '%s' of type '%s' is bound to '%s'"_en_US, symbol.name(),
-          symbol.owner().GetName().value(), binding->symbol().name());
-      return &message;
-    }
-    unhosted = &binding->symbol();
-  }
   if (const auto *use{symbol.detailsIf<semantics::UseDetails>()}) {
     message.Attach(use->location(),
         "'%s' is USE-associated with '%s' in module '%s'"_en_US, symbol.name(),
@@ -1188,6 +1203,14 @@ parser::Message *AttachDeclaration(
   } else {
     message.Attach(
         unhosted->name(), "Declaration of '%s'"_en_US, unhosted->name());
+  }
+  if (const auto *binding{
+          unhosted->detailsIf<semantics::ProcBindingDetails>()}) {
+    if (binding->symbol().name() != symbol.name()) {
+      message.Attach(binding->symbol().name(),
+          "Procedure '%s' of type '%s' is bound to '%s'"_en_US, symbol.name(),
+          symbol.owner().GetName().value(), binding->symbol().name());
+    }
   }
   return &message;
 }
@@ -1295,6 +1318,41 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
   return msg;
 }
 
+const Symbol *UnwrapWholeSymbolDataRef(const DataRef &dataRef) {
+  const SymbolRef *p{std::get_if<SymbolRef>(&dataRef.u)};
+  return p ? &p->get() : nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolDataRef(const std::optional<DataRef> &dataRef) {
+  return dataRef ? UnwrapWholeSymbolDataRef(*dataRef) : nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(const DataRef &dataRef) {
+  if (const Component * c{std::get_if<Component>(&dataRef.u)}) {
+    return c->base().Rank() == 0 ? &c->GetLastSymbol() : nullptr;
+  } else {
+    return UnwrapWholeSymbolDataRef(dataRef);
+  }
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentDataRef(
+    const std::optional<DataRef> &dataRef) {
+  return dataRef ? UnwrapWholeSymbolOrComponentDataRef(*dataRef) : nullptr;
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(const DataRef &dataRef) {
+  if (const CoarrayRef * c{std::get_if<CoarrayRef>(&dataRef.u)}) {
+    return UnwrapWholeSymbolOrComponentOrCoarrayRef(c->base());
+  } else {
+    return UnwrapWholeSymbolOrComponentDataRef(dataRef);
+  }
+}
+
+const Symbol *UnwrapWholeSymbolOrComponentOrCoarrayRef(
+    const std::optional<DataRef> &dataRef) {
+  return dataRef ? UnwrapWholeSymbolOrComponentOrCoarrayRef(*dataRef) : nullptr;
+}
+
 // GetLastPointerSymbol()
 static const Symbol *GetLastPointerSymbol(const Symbol &symbol) {
   return IsPointer(GetAssociationRoot(symbol)) ? &symbol : nullptr;
@@ -1325,7 +1383,7 @@ template <TypeCategory TO, TypeCategory FROM>
 static std::optional<Expr<SomeType>> DataConstantConversionHelper(
     FoldingContext &context, const DynamicType &toType,
     const Expr<SomeType> &expr) {
-  if (!IsValidKindOfIntrinsicType(FROM, toType.kind())) {
+  if (!common::IsValidKindOfIntrinsicType(FROM, toType.kind())) {
     return std::nullopt;
   }
   DynamicType sizedType{FROM, toType.kind()};
@@ -1393,7 +1451,7 @@ bool IsAllocatableOrPointerObject(const Expr<SomeType> &expr) {
   const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
   return (sym &&
              semantics::IsAllocatableOrObjectPointer(&sym->GetUltimate())) ||
-      evaluate::IsObjectPointer(expr);
+      evaluate::IsObjectPointer(expr) || evaluate::IsNullAllocatable(&expr);
 }
 
 bool IsAllocatableDesignator(const Expr<SomeType> &expr) {
@@ -1540,10 +1598,12 @@ bool CheckForCoindexedObject(parser::ContextualMessages &messages,
 
 namespace Fortran::semantics {
 
-const Symbol &ResolveAssociations(const Symbol &original) {
+const Symbol &ResolveAssociations(
+    const Symbol &original, bool stopAtTypeGuard) {
   const Symbol &symbol{original.GetUltimate()};
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
-    if (!details->rank()) { // Not RANK(n) or RANK(*)
+    if (!details->rank() /* not RANK(n) or RANK(*) */ &&
+        !(stopAtTypeGuard && details->isTypeGuard())) {
       if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
         return ResolveAssociations(*nested);
       }
@@ -1567,8 +1627,8 @@ static const Symbol *GetAssociatedVariable(const AssocEntityDetails &details) {
   return nullptr;
 }
 
-const Symbol &GetAssociationRoot(const Symbol &original) {
-  const Symbol &symbol{ResolveAssociations(original)};
+const Symbol &GetAssociationRoot(const Symbol &original, bool stopAtTypeGuard) {
+  const Symbol &symbol{ResolveAssociations(original, stopAtTypeGuard)};
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
     if (const Symbol * root{GetAssociatedVariable(*details)}) {
       return *root;
@@ -1812,7 +1872,11 @@ bool IsSaved(const Symbol &original) {
   } else if (scopeKind == Scope::Kind::DerivedType) {
     return false; // this is a component
   } else if (symbol.attrs().test(Attr::SAVE)) {
-    return true; // explicit SAVE attribute
+    // explicit or implied SAVE attribute
+    // N.B.: semantics sets implied SAVE for main program
+    // local variables whose derived types have coarray
+    // potential subobject components.
+    return true;
   } else if (IsDummy(symbol) || IsFunctionResult(symbol) ||
       IsAutomatic(symbol) || IsNamedConstant(symbol)) {
     return false;

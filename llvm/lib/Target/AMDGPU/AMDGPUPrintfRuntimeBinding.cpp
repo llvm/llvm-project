@@ -42,7 +42,7 @@ class AMDGPUPrintfRuntimeBinding final : public ModulePass {
 public:
   static char ID;
 
-  explicit AMDGPUPrintfRuntimeBinding();
+  explicit AMDGPUPrintfRuntimeBinding() : ModulePass(ID) {}
 
 private:
   bool runOnModule(Module &M) override;
@@ -76,14 +76,8 @@ INITIALIZE_PASS_END(AMDGPUPrintfRuntimeBinding, "amdgpu-printf-runtime-binding",
 
 char &llvm::AMDGPUPrintfRuntimeBindingID = AMDGPUPrintfRuntimeBinding::ID;
 
-namespace llvm {
-ModulePass *createAMDGPUPrintfRuntimeBinding() {
+ModulePass *llvm::createAMDGPUPrintfRuntimeBinding() {
   return new AMDGPUPrintfRuntimeBinding();
-}
-} // namespace llvm
-
-AMDGPUPrintfRuntimeBinding::AMDGPUPrintfRuntimeBinding() : ModulePass(ID) {
-  initializeAMDGPUPrintfRuntimeBindingPass(*PassRegistry::getPassRegistry());
 }
 
 void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(

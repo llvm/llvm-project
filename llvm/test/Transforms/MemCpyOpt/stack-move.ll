@@ -259,8 +259,8 @@ define void @remove_scoped_noalias() {
 ; CHECK-LABEL: define void @remove_scoped_noalias() {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]]), !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
 ; CHECK-NEXT:    ret void
 ;
   %src = alloca %struct.Foo, align 4
@@ -283,8 +283,8 @@ define void @remove_alloca_metadata() {
 ; CHECK-LABEL: define void @remove_alloca_metadata() {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]]), !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
 ; CHECK-NEXT:    ret void
 ;
   %src = alloca %struct.Foo, align 4, !annotation !3
@@ -308,8 +308,8 @@ define void @noalias_on_lifetime() {
 ; CHECK-LABEL: define void @noalias_on_lifetime() {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]]), !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
 ; CHECK-NEXT:    ret void
 ;
   %src = alloca %struct.Foo, align 4
@@ -1714,4 +1714,25 @@ else:                                             ; preds = %then, %entry
   ret void
 
   uselistorder ptr %dest, { 1, 2, 0 }
+}
+
+declare ptr @captures_ret_only(ptr captures(ret: address, provenance))
+
+define i32 @test_ret_only_capture() {
+; CHECK-LABEL: define i32 @test_ret_only_capture() {
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[B]], ptr [[A]], i64 4, i1 false)
+; CHECK-NEXT:    call void @captures_ret_only(ptr [[B]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %a = alloca i32
+  %b = alloca i32
+  store i32 0, ptr %a
+  call void @llvm.memcpy(ptr %b, ptr %a, i64 4, i1 false)
+  call void @captures_ret_only(ptr %b)
+  %v = load i32, ptr %a
+  ret i32 %v
 }

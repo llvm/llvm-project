@@ -31,7 +31,7 @@
 // Ops that do not implement `BufferizableOpInterface` can be analyzed but are
 // treated conservatively. E.g., the analysis has to assume that their tensor
 // OpOperands bufferize to memory writes. While such ops can be analyzed, they
-// are not bufferized and remain in the IR. to_tensor and to_memref ops are
+// are not bufferized and remain in the IR. to_tensor and to_buffer ops are
 // inserted at the bufferization boundary.
 //
 // This analysis caters to high-performance codegen where buffer reuse is deemed
@@ -705,7 +705,8 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         // Note: If ops are executed multiple times (e.g., because they are
         //       inside a loop), mutually exclusive regions may be executed
         //       multiple times.
-        if (insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp)) {
+        if (state.insideMutuallyExclusiveRegions(readingOp,
+                                                 conflictingWritingOp)) {
           LLVM_DEBUG(llvm::dbgs() << "  no conflict: read and write are in "
                                      "mutually exclusive regions\n");
           continue;
@@ -1364,10 +1365,9 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   return success(!failedAnalysis);
 }
 
-LogicalResult
-bufferization::runOneShotBufferize(Operation *op,
-                                   const OneShotBufferizationOptions &options,
-                                   BufferizationStatistics *statistics) {
+LogicalResult bufferization::runOneShotBufferize(
+    Operation *op, const OneShotBufferizationOptions &options,
+    BufferizationState &state, BufferizationStatistics *statistics) {
   // copy-before-write deactivates the analysis. It cannot be used together with
   // test-analysis-only.
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
@@ -1390,5 +1390,5 @@ bufferization::runOneShotBufferize(Operation *op,
 
   // Bufferize the op and its nested ops. If options.copyBeforeWrite is set,
   // a new buffer copy is allocated every time a buffer is written to.
-  return bufferizeOp(op, options, statistics);
+  return bufferizeOp(op, options, state, statistics);
 }

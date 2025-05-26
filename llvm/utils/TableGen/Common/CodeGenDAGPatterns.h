@@ -393,6 +393,9 @@ struct SDTypeConstraint {
                         const SDTypeConstraint &RHS);
 };
 
+bool operator==(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS);
+bool operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS);
+
 /// ScopedName - A name of a node associated with a "scope" that indicates
 /// the context (e.g. instance of Pattern or PatFrag) in which the name was
 /// used. This enables substitution of pattern fragments while keeping track
@@ -403,7 +406,7 @@ class ScopedName {
 
 public:
   ScopedName(unsigned Scope, StringRef Identifier)
-      : Scope(Scope), Identifier(std::string(Identifier)) {
+      : Scope(Scope), Identifier(Identifier.str()) {
     assert(Scope != 0 &&
            "Scope == 0 is used to indicate predicates without arguments");
   }
@@ -630,7 +633,7 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
 
   /// Name - The name given to this node with the :$foo notation.
   ///
-  std::string Name;
+  StringRef Name;
 
   std::vector<ScopedName> NamesAsPredicateArg;
 
@@ -664,8 +667,8 @@ public:
   }
 
   bool hasName() const { return !Name.empty(); }
-  const std::string &getName() const { return Name; }
-  void setName(StringRef N) { Name.assign(N.begin(), N.end()); }
+  StringRef getName() const { return Name; }
+  void setName(StringRef N) { Name = N; }
 
   const std::vector<ScopedName> &getNamesAsPredicateArg() const {
     return NamesAsPredicateArg;
@@ -823,7 +826,7 @@ public: // Higher level manipulation routines.
   /// SubstituteFormalArguments - Replace the formal arguments in this tree
   /// with actual values specified by ArgMap.
   void
-  SubstituteFormalArguments(std::map<std::string, TreePatternNodePtr> &ArgMap);
+  SubstituteFormalArguments(std::map<StringRef, TreePatternNodePtr> &ArgMap);
 
   /// InlinePatternFragments - If \p T pattern refers to any pattern
   /// fragments, return the set of inlined versions (this can be more than
@@ -1258,12 +1261,14 @@ private:
                        ArrayRef<const Record *> InstImpResults,
                        bool ShouldIgnore = false);
   void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
-  void FindPatternInputsAndOutputs(
-      TreePattern &I, TreePatternNodePtr Pat,
-      std::map<std::string, TreePatternNodePtr> &InstInputs,
-      MapVector<std::string, TreePatternNodePtr,
-                std::map<std::string, unsigned>> &InstResults,
-      std::vector<const Record *> &InstImpResults);
+
+  using InstInputsTy = std::map<StringRef, TreePatternNodePtr>;
+  using InstResultsTy =
+      MapVector<StringRef, TreePatternNodePtr, std::map<StringRef, unsigned>>;
+  void FindPatternInputsAndOutputs(TreePattern &I, TreePatternNodePtr Pat,
+                                   InstInputsTy &InstInputs,
+                                   InstResultsTy &InstResults,
+                                   std::vector<const Record *> &InstImpResults);
   unsigned getNewUID();
 };
 

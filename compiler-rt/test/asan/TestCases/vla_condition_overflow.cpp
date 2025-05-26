@@ -2,11 +2,14 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
 // REQUIRES: stable-runtime
+// MSVC doesn't support VLAs
+// UNSUPPORTED: msvc
 
+#include "defines.h"
 #include <assert.h>
 #include <stdint.h>
 
-__attribute__((noinline)) void foo(int index, int len) {
+ATTRIBUTE_NOINLINE void foo(int index, int len) {
   if (index > len) {
     char str[len];
     assert(!(reinterpret_cast<uintptr_t>(str) & 31L));

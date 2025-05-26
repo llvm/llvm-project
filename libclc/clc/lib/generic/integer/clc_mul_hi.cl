@@ -1,31 +1,32 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include <clc/clc_convert.h>
 #include <clc/integer/clc_hadd.h>
 #include <clc/integer/definitions.h>
 #include <clc/internal/clc.h>
 
-// TODO: Replace with __clc_convert_<type> when available
-#define __CLC_CONVERT_TY(X, TY) __builtin_convertvector(X, TY)
-
-#define __CLC_MUL_HI_VEC_IMPL(BGENTYPE, GENTYPE, GENSIZE)                      \
-  _CLC_OVERLOAD _CLC_DEF GENTYPE __clc_mul_hi(GENTYPE x, GENTYPE y) {          \
-    BGENTYPE large_x = __CLC_CONVERT_TY(x, BGENTYPE);                          \
-    BGENTYPE large_y = __CLC_CONVERT_TY(y, BGENTYPE);                          \
-    BGENTYPE large_mul_hi = (large_x * large_y) >> (BGENTYPE)GENSIZE;          \
-    return __CLC_CONVERT_TY(large_mul_hi, GENTYPE);                            \
-  }
-
 // For all types EXCEPT long, which is implemented separately
 #define __CLC_MUL_HI_IMPL(BGENTYPE, GENTYPE, GENSIZE)                          \
   _CLC_OVERLOAD _CLC_DEF GENTYPE __clc_mul_hi(GENTYPE x, GENTYPE y) {          \
-    return (GENTYPE)(((BGENTYPE)x * (BGENTYPE)y) >> GENSIZE);                  \
+    BGENTYPE large_x = __clc_convert_##BGENTYPE(x);                            \
+    BGENTYPE large_y = __clc_convert_##BGENTYPE(y);                            \
+    BGENTYPE large_mul_hi = (large_x * large_y) >> (BGENTYPE)GENSIZE;          \
+    return __clc_convert_##GENTYPE(large_mul_hi);                              \
   }
 
 #define __CLC_MUL_HI_DEC_IMPL(BTYPE, TYPE, BITS)                               \
   __CLC_MUL_HI_IMPL(BTYPE, TYPE, BITS)                                         \
-  __CLC_MUL_HI_VEC_IMPL(BTYPE##2, TYPE##2, BITS)                               \
-  __CLC_MUL_HI_VEC_IMPL(BTYPE##3, TYPE##3, BITS)                               \
-  __CLC_MUL_HI_VEC_IMPL(BTYPE##4, TYPE##4, BITS)                               \
-  __CLC_MUL_HI_VEC_IMPL(BTYPE##8, TYPE##8, BITS)                               \
-  __CLC_MUL_HI_VEC_IMPL(BTYPE##16, TYPE##16, BITS)
+  __CLC_MUL_HI_IMPL(BTYPE##2, TYPE##2, BITS)                                   \
+  __CLC_MUL_HI_IMPL(BTYPE##3, TYPE##3, BITS)                                   \
+  __CLC_MUL_HI_IMPL(BTYPE##4, TYPE##4, BITS)                                   \
+  __CLC_MUL_HI_IMPL(BTYPE##8, TYPE##8, BITS)                                   \
+  __CLC_MUL_HI_IMPL(BTYPE##16, TYPE##16, BITS)
 
 _CLC_OVERLOAD _CLC_DEF long __clc_mul_hi(long x, long y) {
   long f, o, i;
@@ -98,8 +99,8 @@ _CLC_OVERLOAD _CLC_DEF ulong __clc_mul_hi(ulong x, ulong y) {
     f = x_hi * y_hi;                                                           \
     o = x_hi * y_lo;                                                           \
     i = x_lo * y_hi;                                                           \
-    l = __CLC_CONVERT_TY(x_lo * y_lo, UTY);                                    \
-    i += __CLC_CONVERT_TY(l >> (UTY)32, TY);                                   \
+    l = __clc_convert_##UTY(x_lo * y_lo);                                      \
+    i += __clc_convert_##TY(l >> (UTY)32);                                     \
                                                                                \
     return f + (__clc_hadd(o, i) >> (TY)31);                                   \
   }
@@ -128,5 +129,3 @@ __CLC_MUL_HI_TYPES()
 #undef __CLC_MUL_HI_LONG_VEC_IMPL
 #undef __CLC_MUL_HI_DEC_IMPL
 #undef __CLC_MUL_HI_IMPL
-#undef __CLC_MUL_HI_VEC_IMPL
-#undef __CLC_CONVERT_TY

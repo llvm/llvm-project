@@ -10,13 +10,13 @@ template <typename T> struct B0: A0 {
 };
 
 namespace E1 {
-  typedef double A; 
+  typedef double A;
 
   template<class T> class B {
-    typedef int A; 
+    typedef int A;
   };
 
-  template<class T> 
+  template<class T>
   struct X : B<T> {
     A* blarg(double *dp) {
       return dp;
@@ -25,20 +25,20 @@ namespace E1 {
 }
 
 namespace E2 {
-  struct A { 
+  struct A {
     struct B;
     int *a;
     int Y;
   };
-    
+
   int a;
-  template<class T> struct Y : T { 
+  template<class T> struct Y : T {
     struct B { /* ... */ };
-    B b; 
-    void f(int i) { a = i; } 
+    B b;
+    void f(int i) { a = i; }
     Y* p;
-  }; 
-  
+  };
+
   Y<A> ya;
 }
 
@@ -56,7 +56,7 @@ namespace PR14402 {
     };
 
     struct D {
-      using A::n; // expected-error {{using declaration refers into 'A<T>::', which is not a base class of 'D'}}
+      using A::n; // expected-error {{using declaration refers into 'A<T>', which is not a base class of 'D'}}
       int g() { return f(); } // expected-error {{call to non-static member function 'f' of 'A' from nested type 'D'}}
     };
 

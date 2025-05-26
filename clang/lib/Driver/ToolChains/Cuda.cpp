@@ -13,15 +13,12 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
@@ -123,7 +120,7 @@ CudaVersion parseCudaHFile(llvm::StringRef Input) {
 }
 } // namespace
 
-void CudaInstallationDetector::WarnIfUnsupportedVersion() {
+void CudaInstallationDetector::WarnIfUnsupportedVersion() const {
   if (Version > CudaVersion::PARTIALLY_SUPPORTED) {
     std::string VersionString = CudaVersionToString(Version);
     if (!VersionString.empty())
@@ -196,7 +193,8 @@ CudaInstallationDetector::CudaInstallationDetector(
       Candidates.emplace_back(D.SysRoot + "/usr/lib/cuda");
   }
 
-  bool NoCudaLib = Args.hasArg(options::OPT_nogpulib);
+  bool NoCudaLib =
+      !Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true);
 
   for (const auto &Candidate : Candidates) {
     InstallPath = Candidate.Path;
@@ -629,7 +627,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   if (C.getDriver().isUsingLTO())
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
                   C.getDriver().getLTOMode() == LTOK_Thin);
 
   // Forward the PTX features if the nvlink-wrapper needs it.
@@ -638,9 +636,6 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                          Features);
   CmdArgs.push_back(
       Args.MakeArgString("--plugin-opt=-mattr=" + llvm::join(Features, ",")));
-
-  // Enable ctor / dtor lowering for the direct / freestanding NVPTX target.
-  CmdArgs.append({"-mllvm", "--nvptx-lower-global-ctor-dtor"});
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
@@ -726,9 +721,8 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 /// toolchain.
 NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                                const llvm::Triple &HostTriple,
-                               const ArgList &Args, bool Freestanding = false)
-    : ToolChain(D, Triple, Args), CudaInstallation(D, HostTriple, Args),
-      Freestanding(Freestanding) {
+                               const ArgList &Args)
+    : ToolChain(D, Triple, Args), CudaInstallation(D, HostTriple, Args) {
   if (CudaInstallation.isValid())
     getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
   // Lookup binaries into the driver directory, this is used to
@@ -740,8 +734,7 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
 /// system's default triple if not provided.
 NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)
-    : NVPTXToolChain(D, Triple, llvm::Triple(LLVM_HOST_TRIPLE), Args,
-                     /*Freestanding=*/true) {}
+    : NVPTXToolChain(D, Triple, llvm::Triple(LLVM_HOST_TRIPLE), Args) {}
 
 llvm::opt::DerivedArgList *
 NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
@@ -782,13 +775,7 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
 void NVPTXToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  // If we are compiling with a standalone NVPTX toolchain we want to try to
-  // mimic a standard environment as much as possible. So we enable lowering
-  // ctor / dtor functions to global symbols that can be registered.
-  if (Freestanding && !getDriver().isUsingLTO())
-    CC1Args.append({"-mllvm", "--nvptx-lower-global-ctor-dtor"});
-}
+    Action::OffloadKind DeviceOffloadingKind) const {}
 
 bool NVPTXToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {
   const Option &O = A->getOption();
@@ -876,7 +863,8 @@ void CudaToolChain::addClangTargetOptions(
                          options::OPT_fno_cuda_short_ptr, false))
     CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return;
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP &&

@@ -141,12 +141,12 @@ private:
   DenseMap<MachineInstr *, int> InstIds;
 
   MBBReachingDefsInfo MBBReachingDefs;
+
+  /// MBBFrameObjsReachingDefs[{i, j}] is a list of instruction indices
+  /// (relative to begining of MBB i) that define frame index j in MBB i. This
+  /// is used in answering reaching definition queries.
   using MBBFrameObjsReachingDefsInfo =
-      DenseMap<unsigned, DenseMap<int, SmallVector<int>>>;
-  // MBBFrameObjsReachingDefs[i][j] is a list of instruction indices (relative
-  // to begining of MBB) that define frame index (j +
-  // MF->getFrameInfo().getObjectIndexBegin()) in MBB i. This is used in
-  // answering reaching definition queries.
+      DenseMap<std::pair<unsigned, int>, SmallVector<int>>;
   MBBFrameObjsReachingDefsInfo MBBFrameObjsReachingDefs;
 
   /// Default values are 'nothing happened a long time ago'.
@@ -172,9 +172,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs).set(
-          MachineFunctionProperties::Property::TracksLiveness);
+    return MachineFunctionProperties().setNoVRegs().setTracksLiveness();
   }
 
   /// Re-run the analysis.

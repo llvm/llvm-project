@@ -2197,7 +2197,10 @@ _mm_storer_ps(float *__p, __m128 __a)
 #define _MM_HINT_T2  1
 #define _MM_HINT_NTA 0
 
-#if 0
+#ifndef _MSC_VER
+/* FIXME: We have to #define this because "sel" must be a constant integer, and
+   Sema doesn't do any form of constant propagation yet. */
+
 /// Loads one cache line of data from the specified address to a location
 ///    closer to the processor.
 ///
@@ -2222,10 +2225,6 @@ _mm_storer_ps(float *__p, __m128 __a)
 ///    be generated. \n
 ///    _MM_HINT_T2: Move data using the T2 hint. The PREFETCHT2 instruction will
 ///    be generated.
-///
-/// _mm_prefetch is implemented as a "library builtin" directly in Clang,
-/// similar to how it is done in MSVC. Clang will warn if the user doesn't
-/// include xmmintrin.h or immintrin.h.
 #define _mm_prefetch(a, sel) (__builtin_prefetch((const void *)(a), \
                                                  ((sel) >> 2) & 1, (sel) & 0x3))
 #endif

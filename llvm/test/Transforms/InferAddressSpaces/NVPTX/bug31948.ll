@@ -5,7 +5,7 @@ target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 
 %struct.bar = type { float, ptr }
 
-@var1 = local_unnamed_addr addrspace(3) externally_initialized global %struct.bar undef, align 8
+@var1 = local_unnamed_addr addrspace(3) externally_initialized global %struct.bar poison, align 8
 
 define void @bug31948(float %a, ptr nocapture readnone %x, ptr nocapture readnone %y) local_unnamed_addr #0 {
 ; CHECK-LABEL: define void @bug31948(

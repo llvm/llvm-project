@@ -127,6 +127,15 @@ multiclass DS_1A1D_NORET_mc<string opName, RegisterClass rc = VGPR_32> {
   }
 }
 
+multiclass DS_1A1D_NORET_t16<string opName, RegisterClass rc = VGPR_32> 
+: DS_1A1D_NORET_mc<opName, rc> {
+  let has_m0_read = 0 in {
+    let True16Predicate = UseRealTrue16Insts in {
+      def "_t16" : DS_1A1D_NORET<opName#"_t16", VGPR_16>, True16D16Table<NAME#"_D16_HI", NAME>;
+    }
+  }
+}
+
 multiclass DS_1A1D_NORET_mc_gfx9<string opName, RegisterClass rc = VGPR_32> {
   let has_m0_read = 0 in {
     def "" : DS_1A1D_NORET<opName, rc>;
@@ -258,10 +267,13 @@ multiclass DS_1A2D_Off8_RET_mc<string opName,
   }
 }
 
-class DS_BVH_STACK<string opName>
+class DS_BVH_STACK<string opName,
+                   RegisterClass vdst_rc,
+                   RegisterClass data1_rc>
 : DS_Pseudo<opName,
-  (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst, VGPR_32:$addr),
-  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0, VReg_128:$data1, Offset:$offset),
+  (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst, VGPR_32:$addr),
+  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0,
+   data1_rc:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
   let DisableEncoding = "$addr_in";
@@ -291,6 +303,15 @@ multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOu
 
   let has_m0_read = 0 in {
     def _gfx9 : DS_1A_RET<opName, rc, HasTiedOutput, ofs>;
+  }
+}
+
+multiclass DS_1A_RET_t16<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = Offset> 
+: DS_1A_RET_mc<opName, rc, HasTiedOutput, ofs> {
+  let has_m0_read = 0 in {
+    let True16Predicate = UseRealTrue16Insts in {
+      def "_t16" : DS_1A_RET<opName#"_t16", VGPR_16, HasTiedOutput, ofs>, True16D16Table<NAME#"_D16_HI", NAME#"_D16">;
+    }
   }
 }
 
@@ -457,8 +478,6 @@ defm DS_MIN_F32       : DS_1A1D_NORET_mc<"ds_min_f32">;
 defm DS_MAX_F32       : DS_1A1D_NORET_mc<"ds_max_f32">;
 
 let mayLoad = 0 in {
-defm DS_WRITE_B8      : DS_1A1D_NORET_mc<"ds_write_b8">;
-defm DS_WRITE_B16     : DS_1A1D_NORET_mc<"ds_write_b16">;
 defm DS_WRITE_B32     : DS_1A1D_NORET_mc<"ds_write_b32">;
 defm DS_WRITE2_B32    : DS_1A2D_Off8_NORET_mc<"ds_write2_b32">;
 defm DS_WRITE2ST64_B32: DS_1A2D_Off8_NORET_mc<"ds_write2st64_b32">;
@@ -472,6 +491,9 @@ def DS_WRITE_B16_D16_HI : DS_1A1D_NORET<"ds_write_b16_d16_hi">;
 }
 
 } // End has_m0_read = 0
+
+defm DS_WRITE_B8      : DS_1A1D_NORET_t16<"ds_write_b8">;
+defm DS_WRITE_B16     : DS_1A1D_NORET_t16<"ds_write_b16">;
 
 let SubtargetPredicate = HasDSAddTid in {
 def DS_WRITE_ADDTID_B32 : DS_0A1D_NORET<"ds_write_addtid_b32">;
@@ -625,10 +647,7 @@ def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32", VGPR_32, 0, Swizzle>;
 }
 
 let mayStore = 0 in {
-defm DS_READ_I8      : DS_1A_RET_mc<"ds_read_i8">;
-defm DS_READ_U8      : DS_1A_RET_mc<"ds_read_u8">;
 defm DS_READ_I16     : DS_1A_RET_mc<"ds_read_i16">;
-defm DS_READ_U16     : DS_1A_RET_mc<"ds_read_u16">;
 defm DS_READ_B32     : DS_1A_RET_mc<"ds_read_b32">;
 defm DS_READ_B64     : DS_1A_RET_mc<"ds_read_b64", VReg_64>;
 
@@ -648,6 +667,10 @@ def DS_READ_U16_D16    : DS_1A_RET_Tied<"ds_read_u16_d16">;
 def DS_READ_U16_D16_HI : DS_1A_RET_Tied<"ds_read_u16_d16_hi">;
 }
 } // End has_m0_read = 0
+
+defm DS_READ_I8      : DS_1A_RET_t16<"ds_read_i8">;
+defm DS_READ_U8      : DS_1A_RET_t16<"ds_read_u8">;
+defm DS_READ_U16     : DS_1A_RET_t16<"ds_read_u16">;
 
 let SubtargetPredicate = HasDSAddTid in {
 def DS_READ_ADDTID_B32 : DS_0A_RET<"ds_read_addtid_b32">;
@@ -722,7 +745,8 @@ def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
 let SubtargetPredicate = isGFX11Plus in {
 
 let OtherPredicates = [HasImageInsts] in
-def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
+def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32",
+                                        VGPR_32, VReg_128> ;
 
 } // let SubtargetPredicate = isGFX11Plus
 
@@ -731,6 +755,13 @@ def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 //===----------------------------------------------------------------------===//
 
 let SubtargetPredicate = isGFX12Plus in {
+
+let OtherPredicates = [HasImageInsts] in {
+def DS_BVH_STACK_PUSH8_POP1_RTN_B32 : DS_BVH_STACK<
+  "ds_bvh_stack_push8_pop1_rtn_b32", VGPR_32, VReg_256>;
+def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
+  "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
+} // End OtherPredicates = [HasImageInsts].
 
 defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
 defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
@@ -784,39 +815,56 @@ multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   }
 }
 
+multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
+
+  let OtherPredicates = [LDSRequiresM0Init] in {
+    def : DSReadPat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+      let True16Predicate = p in {
+        def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+      }
+    let True16Predicate = UseRealTrue16Insts in {
+      def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+    }
+  }
+}
+
 class DSReadPat_D16 <DS_Pseudo inst, PatFrag frag, ValueType vt> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$in),
   (inst $ptr, Offset:$offset, (i1 0), $in)
 >;
 
 defm : DSReadPat_mc <DS_READ_I8, i32, "sextloadi8_local">;
-defm : DSReadPat_mc <DS_READ_I8,  i16, "sextloadi8_local">;
 defm : DSReadPat_mc <DS_READ_U8,  i32, "extloadi8_local">;
 defm : DSReadPat_mc <DS_READ_U8,  i32, "zextloadi8_local">;
-defm : DSReadPat_mc <DS_READ_U8,  i16, "extloadi8_local">;
-defm : DSReadPat_mc <DS_READ_U8,  i16, "zextloadi8_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "sextloadi16_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "sextloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "extloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "zextloadi16_local">;
-defm : DSReadPat_mc <DS_READ_U16, i16, "load_local">;
+defm : DSReadPat_t16 <DS_READ_I8,  i16, "sextloadi8_local">;
+defm : DSReadPat_t16 <DS_READ_U8,  i16, "extloadi8_local">;
+defm : DSReadPat_t16 <DS_READ_U8,  i16, "zextloadi8_local">;
+defm : DSReadPat_t16 <DS_READ_U16, i16, "load_local">;
 
 foreach vt = Reg32Types.types in {
 defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
 }
 
-defm : DSReadPat_mc <DS_READ_U8, i16, "atomic_load_8_local">;
-defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_8_local">;
-defm : DSReadPat_mc <DS_READ_U8, i16, "atomic_load_zext_8_local">;
+defm : DSReadPat_t16 <DS_READ_U8, i16, "atomic_load_aext_8_local">;
+defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_aext_8_local">;
+defm : DSReadPat_t16 <DS_READ_U8, i16, "atomic_load_zext_8_local">;
 defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_zext_8_local">;
-defm : DSReadPat_mc <DS_READ_I8, i16, "atomic_load_sext_8_local">;
+defm : DSReadPat_t16 <DS_READ_I8, i16, "atomic_load_sext_8_local">;
 defm : DSReadPat_mc <DS_READ_I8, i32, "atomic_load_sext_8_local">;
-defm : DSReadPat_mc <DS_READ_U16, i16, "atomic_load_16_local">;
-defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_16_local">;
+defm : DSReadPat_t16 <DS_READ_U16, i16, "atomic_load_nonext_16_local">;
+defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_aext_16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_zext_16_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "atomic_load_sext_16_local">;
-defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
-defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
+defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_nonext_32_local">;
+defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_nonext_64_local">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 // TODO: Atomic loads
@@ -850,18 +898,34 @@ multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
   }
 }
 
+multiclass DSWritePat_t16 <DS_Pseudo inst, ValueType vt, string frag> {
+  let OtherPredicates = [LDSRequiresM0Init] in {
+    def : DSWritePat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+      let True16Predicate = p in {
+        def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+      }
+    let True16Predicate = UseRealTrue16Insts in {
+      def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+    }
+  }
+}
+
 defm : DSWritePat_mc <DS_WRITE_B8, i32, "truncstorei8_local">;
 defm : DSWritePat_mc <DS_WRITE_B16, i32, "truncstorei16_local">;
-defm : DSWritePat_mc <DS_WRITE_B8, i16, "truncstorei8_local">;
-defm : DSWritePat_mc <DS_WRITE_B16, i16, "store_local">;
+defm : DSWritePat_t16 <DS_WRITE_B8, i16, "truncstorei8_local">;
+defm : DSWritePat_t16 <DS_WRITE_B16, i16, "store_local">;
 
 foreach vt = Reg32Types.types in {
 defm : DSWritePat_mc <DS_WRITE_B32, vt, "store_local">;
 }
 
-defm : DSWritePat_mc <DS_WRITE_B8, i16, "atomic_store_8_local">;
+defm : DSWritePat_t16 <DS_WRITE_B8, i16, "atomic_store_8_local">;
 defm : DSWritePat_mc <DS_WRITE_B8, i32, "atomic_store_8_local">;
-defm : DSWritePat_mc <DS_WRITE_B16, i16, "atomic_store_16_local">;
+defm : DSWritePat_t16 <DS_WRITE_B16, i16, "atomic_store_16_local">;
 defm : DSWritePat_mc <DS_WRITE_B16, i32, "atomic_store_16_local">;
 defm : DSWritePat_mc <DS_WRITE_B32, i32, "atomic_store_32_local">;
 defm : DSWritePat_mc <DS_WRITE_B64, i64, "atomic_store_64_local">;
@@ -1267,6 +1331,11 @@ defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
 defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
 defm DS_BPERMUTE_FI_B32   : DS_Real_gfx12<0x0cd>;
+
+defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
+  "ds_bvh_stack_push4_pop1_rtn_b32", true>;
+defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
+defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {
@@ -1773,7 +1842,7 @@ def DS_READ_B128_vi       : DS_Real_vi<0xff, DS_READ_B128>;
 def DS_ADD_F64_vi     : DS_Real_vi<0x5c, DS_ADD_F64>;
 def DS_ADD_RTN_F64_vi : DS_Real_vi<0x7c, DS_ADD_RTN_F64>;
 
-// GFX940+.
+// GFX942+.
 def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
 def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
 def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;

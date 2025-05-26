@@ -632,6 +632,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("strconcat", tgtok::XStrConcat)
           .Case("initialized", tgtok::XInitialized)
           .Case("interleave", tgtok::XInterleave)
+          .Case("instances", tgtok::XInstances)
           .Case("substr", tgtok::XSubstr)
           .Case("find", tgtok::XFind)
           .Cases("setdagop", "setop", tgtok::XSetDagOp) // !setop is deprecated.
@@ -644,6 +645,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("tolower", tgtok::XToLower)
           .Case("toupper", tgtok::XToUpper)
           .Case("repr", tgtok::XRepr)
+          .Case("match", tgtok::XMatch)
           .Default(tgtok::Error);
 
   return Kind != tgtok::Error ? Kind

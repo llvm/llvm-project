@@ -9,9 +9,9 @@
 ; CHECK-DAG: %[[TyInt:[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[TyBool:[0-9]+]] = OpTypeBool
 ; CHECK-DAG: %[[TyFloat:[0-9]+]] = OpTypeFloat 16
-; CHECK-DAG: %[[Scope:[0-9]+]] = OpConstant %[[TyInt]] 2
-; CHECK-DAG: %[[ConstInt:[0-9]+]] = OpConstant %[[TyInt]] 0
-; CHECK-DAG: %[[ConstFloat:[0-9]+]] = OpConstant %[[TyFloat]] 0
+; CHECK-DAG: %[[Scope:[0-9]+]] = OpConstant %[[TyInt]] 2{{$}}
+; CHECK-DAG: %[[ConstInt:[0-9]+]] = OpConstantNull %[[TyInt]]
+; CHECK-DAG: %[[ConstFloat:[0-9]+]] = OpConstantNull %[[TyFloat]]
 ; CHECK-DAG: %[[ConstBool:[0-9]+]] = OpConstantFalse %[[TyBool]]
 
 ; CHECK: OpGroupBitwiseAndKHR %[[TyInt]]   %[[Scope]] 0 %[[ConstInt]]

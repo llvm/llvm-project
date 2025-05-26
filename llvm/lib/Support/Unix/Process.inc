@@ -31,6 +31,9 @@
 #ifdef HAVE_MALLOC_MALLOC_H
 #include <malloc/malloc.h>
 #endif
+#ifdef HAVE_GETAUXVAL
+#include <sys/auxv.h>
+#endif
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only generic UNIX code that
@@ -63,7 +66,9 @@ Process::Pid Process::getProcessId() {
 // On Cygwin, getpagesize() returns 64k(AllocationGranularity) and
 // offset in mmap(3) should be aligned to the AllocationGranularity.
 Expected<unsigned> Process::getPageSize() {
-#if defined(HAVE_GETPAGESIZE)
+#if defined(HAVE_GETAUXVAL)
+  static const int page_size = ::getauxval(AT_PAGESZ);
+#elif defined(HAVE_GETPAGESIZE)
   static const int page_size = ::getpagesize();
 #elif defined(HAVE_SYSCONF)
   static long page_size = ::sysconf(_SC_PAGE_SIZE);
@@ -73,6 +78,8 @@ Expected<unsigned> Process::getPageSize() {
   if (page_size == -1)
     return errorCodeToError(errnoAsErrorCode());
 
+  assert(page_size > 0 && "Page size cannot be 0");
+  assert((page_size % 1024) == 0 && "Page size must be aligned by 1024");
   return static_cast<unsigned>(page_size);
 }
 

@@ -38,7 +38,7 @@ define double @f64_reciprocal(double %a) nounwind {
 ; LA32F-NEXT:    move $a2, $a0
 ; LA32F-NEXT:    lu12i.w $a1, 261888
 ; LA32F-NEXT:    move $a0, $zero
-; LA32F-NEXT:    bl %plt(__divdf3)
+; LA32F-NEXT:    bl __divdf3
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
@@ -54,7 +54,8 @@ define double @f64_reciprocal(double %a) nounwind {
 ; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64F-NEXT:    move $a1, $a0
 ; LA64F-NEXT:    lu52i.d $a0, $zero, 1023
-; LA64F-NEXT:    bl %plt(__divdf3)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__divdf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret

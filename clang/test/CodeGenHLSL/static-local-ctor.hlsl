@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -disable-llvm-passes %s | FileCheck %s
 
 // Verify that no per variable _Init_thread instructions are emitted for non-trivial static locals
 // These would normally be emitted by the MicrosoftCXXABI, but the DirectX backend should exlude them
@@ -21,7 +21,7 @@ void InitBuf(RWBuffer<int> buf) {
 // CHECK-NEXT: br i1 [[Tmp3]]
 // CHECK-NOT: _Init_thread_header
 // CHECK: init.check:
-// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIiEC1Ev
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIiEC1Ejijj
 // CHECK-NEXT: store i8 1, ptr @_ZGVZ4mainvE5mybuf
 // CHECK-NOT: _Init_thread_footer
 
@@ -34,4 +34,3 @@ void main() {
   mybuf = buf[0];
   InitBuf(mybuf);
 }
-

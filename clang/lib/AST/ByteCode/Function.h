@@ -51,6 +51,11 @@ public:
     return llvm::make_range(Descriptors.begin(), Descriptors.end());
   }
 
+  llvm::iterator_range<LocalVectorTy::const_reverse_iterator>
+  locals_reverse() const {
+    return llvm::reverse(Descriptors);
+  }
+
 private:
   /// Object descriptors in this block.
   LocalVectorTy Descriptors;
@@ -86,6 +91,7 @@ public:
     Dtor,
     LambdaStaticInvoker,
     LambdaCallOperator,
+    CopyOrMoveOperator,
   };
   using ParamDescriptor = std::pair<PrimType, Descriptor *>;
 
@@ -109,7 +115,7 @@ public:
 
   /// Returns the name of the function decl this code
   /// was generated for.
-  const std::string getName() const {
+  std::string getName() const {
     if (!Source || !getDecl())
       return "<<expr>>";
 
@@ -149,11 +155,16 @@ public:
 
   /// Checks if the function is virtual.
   bool isVirtual() const { return Virtual; };
+  bool isImmediate() const { return Immediate; }
 
   /// Checks if the function is a constructor.
   bool isConstructor() const { return Kind == FunctionKind::Ctor; }
   /// Checks if the function is a destructor.
   bool isDestructor() const { return Kind == FunctionKind::Dtor; }
+  /// Checks if the function is copy or move operator.
+  bool isCopyOrMoveOperator() const {
+    return Kind == FunctionKind::CopyOrMoveOperator;
+  }
 
   /// Returns whether this function is a lambda static invoker,
   /// which we generate custom byte code for.
@@ -188,12 +199,6 @@ public:
 
   bool isVariadic() const { return Variadic; }
 
-  unsigned getBuiltinID() const { return BuiltinID; }
-
-  bool isBuiltin() const { return getBuiltinID() != 0; }
-
-  bool isUnevaluatedBuiltin() const;
-
   unsigned getNumParams() const { return ParamTypes.size(); }
 
   /// Returns the number of parameter this function takes when it's called,
@@ -227,7 +232,7 @@ private:
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO);
+           bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -247,6 +252,7 @@ private:
 private:
   friend class Program;
   friend class ByteCodeEmitter;
+  friend class Context;
 
   /// Program reference.
   Program &P;
@@ -271,23 +277,32 @@ private:
   /// List of parameter offsets.
   llvm::SmallVector<unsigned, 8> ParamOffsets;
   /// Flag to indicate if the function is valid.
-  bool IsValid = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsValid : 1;
   /// Flag to indicate if the function is done being
   /// compiled to bytecode.
-  bool IsFullyCompiled = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsFullyCompiled : 1;
   /// Flag indicating if this function takes the this pointer
   /// as the first implicit argument
-  bool HasThisPointer = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasThisPointer : 1;
   /// Whether this function has Return Value Optimization, i.e.
   /// the return value is constructed in the caller's stack frame.
   /// This is done for functions that return non-primive values.
-  bool HasRVO = false;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasRVO : 1;
   /// If we've already compiled the function's body.
-  bool HasBody = false;
-  bool Defined = false;
-  bool Variadic = false;
-  bool Virtual = false;
-  unsigned BuiltinID = 0;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasBody : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Defined : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Variadic : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Virtual : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Immediate : 1;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

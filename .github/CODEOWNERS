@@ -128,10 +128,10 @@
 /mlir/**/Transforms/SROA.* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci @yota9
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9
 
 # Bazel build system.
-/utils/bazel/ @rupprecht @keith
+/utils/bazel/ @rupprecht @keith @aaronmondal
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida

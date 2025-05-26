@@ -17,7 +17,9 @@
 #include <__fwd/functional.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
@@ -40,6 +42,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
@@ -583,7 +586,7 @@ public:
 
   template <class _ECharT, __enable_if_t<__can_convert_char<_ECharT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI path& operator+=(_ECharT __x) {
-    _PathCVT<_ECharT>::__append_source(__pn_, basic_string_view<_ECharT>(&__x, 1));
+    _PathCVT<_ECharT>::__append_source(__pn_, basic_string_view<_ECharT>(std::addressof(__x), 1));
     return *this;
   }
 
@@ -911,6 +914,7 @@ _LIBCPP_EXPORTED_FROM_ABI size_t hash_value(const path& __p) noexcept;
 
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_STD

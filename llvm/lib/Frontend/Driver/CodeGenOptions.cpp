@@ -12,7 +12,7 @@
 
 namespace llvm::driver {
 
-TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
+TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
                                   driver::VectorLibrary Veclib) {
   TargetLibraryInfoImpl *TLII = new TargetLibraryInfoImpl(TargetTriple);
 
@@ -23,7 +23,7 @@ TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
                                              TargetTriple);
     break;
   case VectorLibrary::LIBMVEC:
-    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::LIBMVEC_X86,
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::LIBMVEC,
                                              TargetTriple);
     break;
   case VectorLibrary::MASSV:

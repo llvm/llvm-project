@@ -40,6 +40,7 @@
 #define LLVM_ANALYSIS_DEPENDENCEANALYSIS_H
 
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -49,8 +50,6 @@ namespace llvm {
   template <typename T> class ArrayRef;
   class Loop;
   class LoopInfo;
-  class ScalarEvolution;
-  class SCEV;
   class SCEVConstant;
   class raw_ostream;
 
@@ -74,8 +73,9 @@ namespace llvm {
     Dependence &operator=(Dependence &&) = default;
 
   public:
-    Dependence(Instruction *Source, Instruction *Destination)
-        : Src(Source), Dst(Destination) {}
+    Dependence(Instruction *Source, Instruction *Destination,
+               const SCEVUnionPredicate &A)
+        : Src(Source), Dst(Destination), Assumptions(A) {}
     virtual ~Dependence() = default;
 
     /// Dependence::DVEntry - Each level in the distance/direction vector
@@ -203,6 +203,10 @@ namespace llvm {
     /// field.
     void setNextSuccessor(const Dependence *succ) { NextSuccessor = succ; }
 
+    /// getRuntimeAssumptions - Returns the runtime assumptions under which this
+    /// Dependence relation is valid.
+    SCEVUnionPredicate getRuntimeAssumptions() const { return Assumptions; }
+
     /// dump - For debugging purposes, dumps a dependence to OS.
     ///
     void dump(raw_ostream &OS) const;
@@ -211,6 +215,7 @@ namespace llvm {
     Instruction *Src, *Dst;
 
   private:
+    SCEVUnionPredicate Assumptions;
     const Dependence *NextPredecessor = nullptr, *NextSuccessor = nullptr;
     friend class DependenceInfo;
   };
@@ -225,8 +230,9 @@ namespace llvm {
   /// input dependences are unordered.
   class FullDependence final : public Dependence {
   public:
-    FullDependence(Instruction *Src, Instruction *Dst, bool LoopIndependent,
-                   unsigned Levels);
+    FullDependence(Instruction *Source, Instruction *Destination,
+                   const SCEVUnionPredicate &Assumes,
+                   bool PossiblyLoopIndependent, unsigned Levels);
 
     /// isLoopIndependent - Returns true if this is a loop-independent
     /// dependence.
@@ -302,13 +308,13 @@ namespace llvm {
 
     /// depends - Tests for a dependence between the Src and Dst instructions.
     /// Returns NULL if no dependence; otherwise, returns a Dependence (or a
-    /// FullDependence) with as much information as can be gleaned.
-    /// The flag PossiblyLoopIndependent should be set by the caller
-    /// if it appears that control flow can reach from Src to Dst
-    /// without traversing a loop back edge.
-    std::unique_ptr<Dependence> depends(Instruction *Src,
-                                        Instruction *Dst,
-                                        bool PossiblyLoopIndependent);
+    /// FullDependence) with as much information as can be gleaned. By default,
+    /// the dependence test collects a set of runtime assumptions that cannot be
+    /// solved at compilation time. By default UnderRuntimeAssumptions is false
+    /// for a safe approximation of the dependence relation that does not
+    /// require runtime checks.
+    std::unique_ptr<Dependence> depends(Instruction *Src, Instruction *Dst,
+                                        bool UnderRuntimeAssumptions = false);
 
     /// getSplitIteration - Give a dependence that's splittable at some
     /// particular level, return the iteration that should be used to split
@@ -354,11 +360,16 @@ namespace llvm {
 
     Function *getFunction() const { return F; }
 
+    /// getRuntimeAssumptions - Returns all the runtime assumptions under which
+    /// the dependence test is valid.
+    SCEVUnionPredicate getRuntimeAssumptions() const;
+
   private:
     AAResults *AA;
     ScalarEvolution *SE;
     LoopInfo *LI;
     Function *F;
+    SmallVector<const SCEVPredicate *, 4> Assumptions;
 
     /// Subscript - This private struct represents a pair of subscripts from
     /// a pair of potentially multi-dimensional array references. We use a

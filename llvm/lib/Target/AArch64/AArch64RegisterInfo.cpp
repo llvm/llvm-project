@@ -49,8 +49,8 @@ AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT, unsigned HwMode)
 /// callee-saves required by the base ABI. For the SVE registers z8-z15 only the
 /// lower 64-bits (d8-d15) need to be saved. The lower 64-bits subreg is
 /// returned in \p RegToUseForCFI.
-bool AArch64RegisterInfo::regNeedsCFI(unsigned Reg,
-                                      unsigned &RegToUseForCFI) const {
+bool AArch64RegisterInfo::regNeedsCFI(MCRegister Reg,
+                                      MCRegister &RegToUseForCFI) const {
   if (AArch64::PPRRegClass.contains(Reg))
     return false;
 
@@ -519,6 +519,18 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
 }
 
 BitVector
+AArch64RegisterInfo::getUserReservedRegs(const MachineFunction &MF) const {
+  BitVector Reserved(getNumRegs());
+  for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
+    // ReserveXRegister is set for registers manually reserved
+    // through +reserve-x#i.
+    if (MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(i))
+      markSuperRegs(Reserved, AArch64::GPR32commonRegClass.getRegister(i));
+  }
+  return Reserved;
+}
+
+BitVector
 AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   for (size_t i = 0; i < AArch64::GPR32commonRegClass.getNumRegs(); ++i) {
@@ -532,8 +544,7 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     // the pipeline since it prevents other infrastructure from reasoning about
     // it's liveness. We use the NoVRegs property instead of IsSSA because
     // IsSSA is removed before VirtRegRewriter runs.
-    if (!MF.getProperties().hasProperty(
-            MachineFunctionProperties::Property::NoVRegs))
+    if (!MF.getProperties().hasNoVRegs())
       markSuperRegs(Reserved, AArch64::LR);
   }
 
@@ -549,6 +560,11 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
                                         MCRegister Reg) const {
   return getReservedRegs(MF)[Reg];
+}
+
+bool AArch64RegisterInfo::isUserReservedReg(const MachineFunction &MF,
+                                            MCRegister Reg) const {
+  return getUserReservedRegs(MF)[Reg];
 }
 
 bool AArch64RegisterInfo::isStrictlyReservedReg(const MachineFunction &MF,
@@ -1192,7 +1208,6 @@ bool AArch64RegisterInfo::getRegAllocationHints(
         // operands. Look for a valid starting register for the group.
         for (unsigned I = 0; I < StridedOrder.size(); ++I) {
           MCPhysReg Reg = StridedOrder[I];
-          SmallVector<MCPhysReg> Regs;
 
           // If the FORM_TRANSPOSE nodes use the ZPRMul classes, the starting
           // register of the first load should be a multiple of 2 or 4.

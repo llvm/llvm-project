@@ -274,8 +274,7 @@ define i64 @test_not_vectorize_select_no_min_reduction(ptr %src, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4IC1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4IC1-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-VF4IC1-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-VF4IC1-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i32 0
 ; CHECK-VF4IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 4
 ; CHECK-VF4IC1-NEXT:    [[TMP3]] = add <4 x i64> [[WIDE_LOAD]], splat (i64 1)
@@ -325,13 +324,12 @@ define i64 @test_not_vectorize_select_no_min_reduction(ptr %src, i64 %n) {
 ; CHECK-VF4IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC2:       [[VECTOR_BODY]]:
-; CHECK-VF4IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-VF4IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC2-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC2-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-VF4IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP0]]
 ; CHECK-VF4IC2-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i32 0
 ; CHECK-VF4IC2-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP1]], i32 4
@@ -345,7 +343,7 @@ define i64 @test_not_vectorize_select_no_min_reduction(ptr %src, i64 %n) {
 ; CHECK-VF4IC2-NEXT:    [[TMP9:%.*]] = icmp ugt <4 x i64> [[TMP7]], [[WIDE_LOAD2]]
 ; CHECK-VF4IC2-NEXT:    [[TMP10]] = select <4 x i1> [[TMP8]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-VF4IC2-NEXT:    [[TMP11]] = select <4 x i1> [[TMP9]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
-; CHECK-VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 8
 ; CHECK-VF4IC2-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-VF4IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC2-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -393,9 +391,8 @@ define i64 @test_not_vectorize_select_no_min_reduction(ptr %src, i64 %n) {
 ; CHECK-VF1IC2-NEXT:    [[VEC_PHI:%.*]] = phi i64 [ -9223372036854775808, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF1IC2-NEXT:    [[VEC_PHI1:%.*]] = phi i64 [ -9223372036854775808, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF1IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-VF1IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-VF1IC2-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-VF1IC2-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-VF1IC2-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-VF1IC2-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP2]], align 4
 ; CHECK-VF1IC2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP3]], align 4
@@ -403,7 +400,7 @@ define i64 @test_not_vectorize_select_no_min_reduction(ptr %src, i64 %n) {
 ; CHECK-VF1IC2-NEXT:    [[TMP7]] = add i64 [[TMP5]], 1
 ; CHECK-VF1IC2-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[VECTOR_RECUR]], [[TMP4]]
 ; CHECK-VF1IC2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP6]], [[TMP5]]
-; CHECK-VF1IC2-NEXT:    [[TMP10]] = select i1 [[TMP8]], i64 [[TMP0]], i64 [[VEC_PHI]]
+; CHECK-VF1IC2-NEXT:    [[TMP10]] = select i1 [[TMP8]], i64 [[INDEX]], i64 [[VEC_PHI]]
 ; CHECK-VF1IC2-NEXT:    [[TMP11]] = select i1 [[TMP9]], i64 [[TMP1]], i64 [[VEC_PHI1]]
 ; CHECK-VF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-VF1IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

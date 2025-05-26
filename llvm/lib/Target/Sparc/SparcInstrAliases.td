@@ -286,11 +286,11 @@ multiclass cp_cond_alias<string cond, int condVal> {
 
   // cb<cond> $imm
   def : InstAlias<!strconcat(!strconcat("cb", cond), " $imm"),
-                  (CBCOND brtarget:$imm, condVal), 0>;
+                  (CPBCOND brtarget:$imm, condVal), 0>;
 
   // cb<cond>,a $imm
   def : InstAlias<!strconcat(!strconcat("cb", cond), ",a $imm"),
-                  (CBCONDA brtarget:$imm, condVal), 0>;
+                  (CPBCONDA brtarget:$imm, condVal), 0>;
 }
 
 // Instruction aliases for register conditional branches and moves.
@@ -449,6 +449,10 @@ def : InstAlias<"save", (SAVErr G0, G0, G0)>;
 // (turns into a sequence of sethi+or, depending on the value)
 // def : InstAlias<"set $val, $rd", (ORri IntRegs:$rd, (SETHIi (HI22 imm:$val)), (LO10 imm:$val))>;
 def SET : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "set $val, $rd">;
+
+// setsw value, rd
+// (turns into a sequence of sethi+or+sra, depending on the value)
+def SETSW : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "setsw $val, $rd">, Requires<[HasV9]>;
 
 // setx value, tmp, rd
 // (turns into a sequence of sethi+or+shift, depending on the value)

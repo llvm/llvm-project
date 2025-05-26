@@ -62,11 +62,13 @@ void DataSharingProcessor::processStep1(
 
   privatize(clauseOps);
 
-  insertBarrier();
+  insertBarrier(clauseOps);
 }
 
 void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
   // 'sections' lastprivate is handled by genOMP()
+  if (mlir::isa<mlir::omp::SectionOp>(op))
+    return;
   if (!mlir::isa<mlir::omp::SectionsOp>(op)) {
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     copyLastPrivatize(op);
@@ -166,7 +168,7 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
 
   if (needInitClone()) {
     Fortran::lower::initializeCloneAtRuntime(converter, *sym, symTable);
-    mightHaveReadHostSym = true;
+    mightHaveReadHostSym.insert(sym);
   }
 }
 
@@ -207,27 +209,40 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
     }
   }
 
+  // TODO For common blocks, add the underlying objects within the block. Doing
+  // so, we won't need to explicitely handle block objects (or forget to do
+  // so).
   for (auto *sym : explicitlyPrivatizedSymbols)
-    allPrivatizedSymbols.insert(sym);
+    if (!sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
+      allPrivatizedSymbols.insert(sym);
 }
 
 bool DataSharingProcessor::needBarrier() {
   // Emit implicit barrier to synchronize threads and avoid data races on
   // initialization of firstprivate variables and post-update of lastprivate
   // variables.
-  // Emit implicit barrier for linear clause. Maybe on somewhere else.
+  // Emit implicit barrier for linear clause in the OpenMPIRBuilder.
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
         (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
-         mightHaveReadHostSym))
+         mightHaveReadHostSym.contains(sym)))
       return true;
   }
   return false;
 }
 
-void DataSharingProcessor::insertBarrier() {
-  if (needBarrier())
+void DataSharingProcessor::insertBarrier(
+    mlir::omp::PrivateClauseOps *clauseOps) {
+  if (!needBarrier())
+    return;
+
+  if (useDelayedPrivatization) {
+    if (clauseOps)
+      clauseOps->privateNeedsBarrier =
+          mlir::UnitAttr::get(&converter.getMLIRContext());
+  } else {
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
+  }
 }
 
 void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
@@ -235,82 +250,91 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   if (auto wrapper = mlir::dyn_cast<mlir::omp::LoopWrapperInterface>(op))
     loopOp = mlir::cast<mlir::omp::LoopNestOp>(wrapper.getWrappedLoop());
 
-  bool cmpCreated = false;
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
-  for (const omp::Clause &clause : clauses) {
-    if (clause.id != llvm::omp::OMPC_lastprivate)
-      continue;
-    if (mlir::isa<mlir::omp::WsloopOp>(op) ||
-        mlir::isa<mlir::omp::SimdOp>(op)) {
-      // Update the original variable just before exiting the worksharing
-      // loop. Conversion as follows:
-      //
-      // omp.wsloop / omp.simd {    omp.wsloop / omp.simd {
-      //   omp.loop_nest {            omp.loop_nest {
-      //     ...                        ...
-      //     store          ===>        store
-      //     omp.yield                  %v = arith.addi %iv, %step
-      //   }                            %cmp = %step < 0 ? %v < %ub : %v > %ub
-      // }                              fir.if %cmp {
-      //                                  fir.store %v to %loopIV
-      //                                  ^%lpv_update_blk:
-      //                                }
-      //                                omp.yield
-      //                              }
-      //                            }
-
-      // Only generate the compare once in presence of multiple LastPrivate
-      // clauses.
-      if (cmpCreated)
-        continue;
-      cmpCreated = true;
-
-      mlir::Location loc = loopOp.getLoc();
-      mlir::Operation *lastOper = loopOp.getRegion().back().getTerminator();
-      firOpBuilder.setInsertionPoint(lastOper);
-
-      mlir::Value cmpOp;
-      llvm::SmallVector<mlir::Value> vs;
-      vs.reserve(loopOp.getIVs().size());
-      for (auto [iv, ub, step] :
-           llvm::zip_equal(loopOp.getIVs(), loopOp.getLoopUpperBounds(),
-                           loopOp.getLoopSteps())) {
-        // v = iv + step
-        // cmp = step < 0 ? v < ub : v > ub
-        mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
-        vs.push_back(v);
-        mlir::Value zero =
-            firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
-        mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
-            loc, mlir::arith::CmpIPredicate::slt, step, zero);
-        mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
-            loc, mlir::arith::CmpIPredicate::slt, v, ub);
-        mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
-            loc, mlir::arith::CmpIPredicate::sgt, v, ub);
-        mlir::Value icmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
-            loc, negativeStep, vLT, vGT);
-
-        if (cmpOp) {
-          cmpOp = firOpBuilder.create<mlir::arith::AndIOp>(loc, cmpOp, icmpOp);
-        } else {
-          cmpOp = icmpOp;
-        }
-      }
-
-      auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
-      firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
-        assert(loopIV && "loopIV was not set");
-        firOpBuilder.createStoreWithConvert(loc, v, loopIV);
-      }
-      lastPrivIP = firOpBuilder.saveInsertionPoint();
-    } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
-      // Already handled by genOMP()
-    } else {
-      TODO(converter.getCurrentLocation(),
-           "lastprivate clause in constructs other than "
-           "simd/worksharing-loop");
+  bool hasLastPrivate = [&]() {
+    for (const semantics::Symbol *sym : allPrivatizedSymbols) {
+      if (const auto *commonDet =
+              sym->detailsIf<semantics::CommonBlockDetails>()) {
+        for (const auto &mem : commonDet->objects())
+          if (mem->test(semantics::Symbol::Flag::OmpLastPrivate))
+            return true;
+      } else if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
+        return true;
     }
+
+    return false;
+  }();
+
+  if (!hasLastPrivate)
+    return;
+
+  if (mlir::isa<mlir::omp::WsloopOp>(op) || mlir::isa<mlir::omp::SimdOp>(op)) {
+    mlir::omp::LoopRelatedClauseOps result;
+    llvm::SmallVector<const semantics::Symbol *> iv;
+    collectLoopRelatedInfo(converter, converter.getCurrentLocation(), eval,
+                           clauses, result, iv);
+
+    // Update the original variable just before exiting the worksharing
+    // loop. Conversion as follows:
+    //
+    // omp.wsloop / omp.simd {    omp.wsloop / omp.simd {
+    //   omp.loop_nest {            omp.loop_nest {
+    //     ...                        ...
+    //     store          ===>        store
+    //     omp.yield                  %v = arith.addi %iv, %step
+    //   }                            %cmp = %step < 0 ? %v < %ub : %v > %ub
+    // }                              fir.if %cmp {
+    //                                  fir.store %v to %loopIV
+    //                                  ^%lpv_update_blk:
+    //                                }
+    //                                omp.yield
+    //                              }
+    //                            }
+    mlir::Location loc = loopOp.getLoc();
+    mlir::Operation *lastOper = loopOp.getRegion().back().getTerminator();
+    firOpBuilder.setInsertionPoint(lastOper);
+
+    mlir::Value cmpOp;
+    llvm::SmallVector<mlir::Value> vs;
+    vs.reserve(loopOp.getIVs().size());
+    for (auto [iv, ub, step] : llvm::zip_equal(
+             loopOp.getIVs(), result.loopUpperBounds, result.loopSteps)) {
+      // v = iv + step
+      // cmp = step < 0 ? v < ub : v > ub
+      mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
+      vs.push_back(v);
+      mlir::Value zero =
+          firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
+      mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::slt, step, zero);
+      mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::slt, v, ub);
+      mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::sgt, v, ub);
+      mlir::Value icmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
+          loc, negativeStep, vLT, vGT);
+
+      if (cmpOp)
+        cmpOp = firOpBuilder.create<mlir::arith::AndIOp>(loc, cmpOp, icmpOp);
+      else
+        cmpOp = icmpOp;
+    }
+
+    auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
+    firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
+      hlfir::Entity loopIVEntity{loopIV};
+      loopIVEntity =
+          hlfir::derefPointersAndAllocatables(loc, firOpBuilder, loopIVEntity);
+      firOpBuilder.create<hlfir::AssignOp>(loc, v, loopIVEntity);
+    }
+    lastPrivIP = firOpBuilder.saveInsertionPoint();
+  } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
+    // Already handled by genOMP()
+  } else {
+    TODO(converter.getCurrentLocation(),
+         "lastprivate clause in constructs other than "
+         "simd/worksharing-loop");
   }
 }
 
@@ -502,6 +526,8 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
 
   lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
+  hlfir::Entity entity{hsb.getAddr()};
+  bool cannotHaveNonDefaultLowerBounds = !entity.mayHaveNonDefaultLowerBounds();
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
   std::string privatizerName = sym->name().ToString() + ".privatizer";
@@ -522,7 +548,6 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   // an alloca for a fir.array type there. Get around this by boxing all
   // arrays.
   if (mlir::isa<fir::SequenceType>(allocType)) {
-    hlfir::Entity entity{hsb.getAddr()};
     entity = genVariableBox(symLoc, firOpBuilder, entity);
     privVal = entity.getBase();
     allocType = privVal.getType();
@@ -584,11 +609,11 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
           result.getDeallocRegion(),
           isFirstPrivate ? DeclOperationKind::FirstPrivate
                          : DeclOperationKind::Private,
-          sym);
+          sym, cannotHaveNonDefaultLowerBounds);
       // TODO: currently there are false positives from dead uses of the mold
       // arg
-      if (!result.getInitMoldArg().getUses().empty())
-        mightHaveReadHostSym = true;
+      if (result.initReadsFromMold())
+        mightHaveReadHostSym.insert(sym);
     }
 
     // Populate the `copy` region if this is a `firstprivate`.
