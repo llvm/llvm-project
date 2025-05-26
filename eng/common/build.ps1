@@ -127,7 +127,7 @@ function Build {
     /p:Deploy=$deploy `
     /p:Test=$test `
     /p:Pack=$pack `
-    /p:DotNetBuildRepo=$productBuild `
+    /p:DotNetBuild=$productBuild `
     /p:IntegrationTest=$integrationTest `
     /p:PerformanceTest=$performanceTest `
     /p:Sign=$sign `
