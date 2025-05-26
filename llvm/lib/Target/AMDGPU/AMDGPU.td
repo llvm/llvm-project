@@ -2051,37 +2051,29 @@ def FeatureISAVersion11_0_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
     [])>;
 
-def FeatureISAVersion11_5_0 : FeatureSet<
+def FeatureISAVersion11_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
-     FeaturePointSampleAccel,
      FeatureWMMA256bInsts])>;
+
+def FeatureISAVersion11_5_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_5_Common.Features,
+    [FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts,
-     FeatureDPPSrc1SGPR,
-     Feature1_5xVGPRs,
-     FeatureRequiredExportPriority,
-     FeaturePointSampleAccel,
-     FeatureWMMA256bInsts])>;
+  !listconcat(FeatureISAVersion11_5_Common.Features,
+    [Feature1_5xVGPRs,
+     FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_2 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts,
-     FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority,
-     FeaturePointSampleAccel,
-     FeatureWMMA256bInsts])>;
+  !listconcat(FeatureISAVersion11_5_Common.Features,
+    [FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_3 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts,
-     FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority,
-     FeatureWMMA256bInsts])>;
+  !listconcat(FeatureISAVersion11_5_Common.Features,
+    [])>;
 
 def FeatureISAVersion11_7_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,

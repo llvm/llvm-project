@@ -134,10 +134,9 @@ void CGDebugInfo::addInstSourceAtomMetadata(llvm::Instruction *I,
   // Each instruction can only be attributed to one source atom (a limitation of
   // the implementation). If this instruction is already part of a source atom,
   // pick the group in which it has highest precedence (lowest rank).
-  if (DL.get()->getAtomGroup() && DL.get()->getAtomRank() &&
-      DL.get()->getAtomRank() < Rank) {
-    Group = DL.get()->getAtomGroup();
-    Rank = DL.get()->getAtomRank();
+  if (DL->getAtomGroup() && DL->getAtomRank() && DL->getAtomRank() < Rank) {
+    Group = DL->getAtomGroup();
+    Rank = DL->getAtomRank();
   }
 
   // Update the function-local watermark so we don't reuse this number for
