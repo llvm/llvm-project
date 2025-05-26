@@ -56,6 +56,10 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* It is no longer permitted to inspect the uses of ConstantData. Use
+  count APIs will behave as if they have no uses (i.e. use_empty() is
+  always true).
+
 * The `nocapture` attribute has been replaced by `captures(none)`.
 * The constant expression variants of the following instructions have been
   removed:
@@ -106,6 +110,14 @@ Changes to the AMDGPU Backend
 
 * Bump the default `.amdhsa_code_object_version` to 6. ROCm 6.3 is required to run any program compiled with COV6.
 
+* Add a new `amdgcn.load.to.lds` intrinsic that wraps the existing global.load.lds
+intrinsic and has the same semantics. This intrinsic allows using buffer fat pointers
+(`ptr addrspace(7)`) as arguments, allowing loads to LDS from these pointers to be
+represented in the IR without needing to use buffer resource intrinsics directly.
+This intrinsic is exposed to Clang as `__builtin_amdgcn_load_to_lds`, though
+buffer fat pointers are not yet enabled in Clang. Migration to this intrinsic is
+optional, and there are no plans to deprecate `amdgcn.global.load.lds`.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -126,6 +138,7 @@ Changes to the LoongArch Backend
 --------------------------------
 
 * Changing the default code model from `small` to `medium` for 64-bit.
+* Added inline asm support for the `q` constraint.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -180,6 +193,14 @@ Changes to the RISC-V Backend
 * Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
   interrupt handlers without using inline assembly.
 * Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
+* `-mcpu=sifive-p870` was added.
+* Adds assembler support for the Andes `XAndesvpackfph` (Andes Vector Packed FP16 extension).
+* Adds assembler support for the Andes `XAndesvdot` (Andes Vector Dot Product extension).
+* Adds assembler support for the standard `Q` (Quad-Precision Floating Point) 
+  extension.
+* Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
+  Extensions.
+* `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------

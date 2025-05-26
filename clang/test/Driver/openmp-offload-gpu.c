@@ -388,15 +388,9 @@
 // THINLTO-GFX906: --device-compiler=amdgcn-amd-amdhsa=-flto=thin
 // THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-force-import-all
 // THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-avail-extern-to-local
+// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-amdgpu-internalize-symbols
 //
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     --offload-arch=sm_52 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=THINLTO-SM52 %s
 // THINLTO-SM52: --device-compiler=nvptx64-nvidia-cuda=-flto=thin
-
-// Check that internalization is enabled for OpenMP offloading on AMDGPU.
-//
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
-// RUN:     --offload-arch=gfx906 -nogpulib -nogpuinc %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=INTERNALIZATION-GFX906 %s
-// INTERNALIZATION-GFX906: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-amdgpu-internalize-symbols

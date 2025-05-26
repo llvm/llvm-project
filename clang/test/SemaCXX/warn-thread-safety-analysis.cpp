@@ -2464,6 +2464,7 @@ class Foo {
     // expected-warning {{declaration does not declare anything}}
     exclusive_locks_required(a))); // \
     // expected-warning {{attribute exclusive_locks_required ignored}}
+
 };
 
 } // end namespace WarnNoDecl

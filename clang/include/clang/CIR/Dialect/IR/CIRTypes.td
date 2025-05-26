@@ -197,8 +197,30 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr",
   let skipDefaultBuilders = 1;
 
   let extraClassDeclaration = [{
+    template <typename ...Types>
+    bool isPtrTo() const {
+      return mlir::isa< Types... >(getPointee());
+    }
+
     bool isVoidPtr() const {
-      return mlir::isa<cir::VoidType>(getPointee());
+      return isPtrTo<cir::VoidType>();
+    }
+
+    template <typename ...Types>
+    bool isPtrToPtrTo() const {
+      if (auto ptrType = mlir::dyn_cast<cir::PointerType>(getPointee()))
+        return ptrType.isPtrTo<Types...>();
+      return false;
+    }
+
+    bool isPtrTo(mlir::Type type) const {
+      return getPointee() == type;
+    }
+
+    bool isPtrToPtrTo(mlir::Type type) const {
+      if (auto ptrType = mlir::dyn_cast<cir::PointerType>(getPointee()))
+        return ptrType.isPtrTo(type);
+      return false;
     }
   }];
 }
@@ -366,20 +388,6 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
   let extraClassDeclaration = [{
     std::string getAlias() const { return "void"; };
   }];
-}
-
-// Constraints
-
-// Pointer to void
-def VoidPtr : Type<
-    And<[
-      CPred<"::mlir::isa<::cir::PointerType>($_self)">,
-      CPred<"::mlir::isa<::cir::VoidType>("
-            "::mlir::cast<::cir::PointerType>($_self).getPointee())">,
-    ]>, "void*">,
-    BuildableType<
-      "cir::PointerType::get($_builder.getContext(),"
-      "cir::VoidType::get($_builder.getContext()))"> {
 }
 
 //===----------------------------------------------------------------------===//

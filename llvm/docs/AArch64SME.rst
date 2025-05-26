@@ -213,12 +213,14 @@ Instruction Selection Nodes
 
 .. code-block:: none
 
-  AArch64ISD::SMSTART Chain, [SM|ZA|Both], CurrentState, ExpectedState[, RegMask]
-  AArch64ISD::SMSTOP  Chain, [SM|ZA|Both], CurrentState, ExpectedState[, RegMask]
+  AArch64ISD::SMSTART Chain, [SM|ZA|Both][, RegMask]
+  AArch64ISD::SMSTOP  Chain, [SM|ZA|Both][, RegMask]
+  AArch64ISD::COND_SMSTART Chain, [SM|ZA|Both], CurrentState, ExpectedState[, RegMask]
+  AArch64ISD::COND_SMSTOP  Chain, [SM|ZA|Both], CurrentState, ExpectedState[, RegMask]
 
-The ``SMSTART/SMSTOP`` nodes take ``CurrentState`` and ``ExpectedState`` operand for
-the case of a conditional SMSTART/SMSTOP. The instruction will only be executed
-if CurrentState != ExpectedState.
+The ``COND_SMSTART/COND_SMSTOP`` nodes additionally take ``CurrentState`` and
+``ExpectedState``, in this case the instruction will only be executed if
+``CurrentState != ExpectedState``.
 
 When ``CurrentState`` and ``ExpectedState`` can be evaluated at compile-time
 (i.e. they are both constants) then an unconditional ``smstart/smstop``

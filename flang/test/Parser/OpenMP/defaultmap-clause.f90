@@ -82,3 +82,19 @@ end
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE: | | ImplicitBehavior = Tofrom
 !PARSE-TREE: | | Modifier -> OmpVariableCategory -> Value  = Scalar
+
+subroutine f05
+  !$omp target defaultmap(present: scalar)
+  !$omp end target
+end
+
+!UNPARSE: SUBROUTINE f05
+!UNPARSE: !$OMP TARGET  DEFAULTMAP(PRESENT:SCALAR)
+!UNPARSE: !$OMP END TARGET
+!UNPARSE: END SUBROUTINE
+
+!PARSE-TREE: OmpBeginBlockDirective
+!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
+!PARSE-TREE: | | ImplicitBehavior = Present
+!PARSE-TREE: | | Modifier -> OmpVariableCategory -> Value  = Scalar

@@ -263,8 +263,7 @@ private:
             Previous->setType(TT_SelectorName);
           }
         }
-      }
-      if (Style.isTableGen()) {
+      } else if (Style.isTableGen()) {
         if (CurrentToken->isOneOf(tok::comma, tok::equal)) {
           // They appear as separators. Unless they are not in class definition.
           next();
@@ -1422,8 +1421,9 @@ private:
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
-                 !Line.First->isOneOf(tok::kw_enum, tok::kw_case,
-                                      tok::kw_default)) {
+                 !Line.getFirstNonComment()->isOneOf(tok::kw_enum, tok::kw_case,
+                                                     tok::kw_default) &&
+                 !Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
         FormatToken *Prev = Tok->getPreviousNonComment();
         if (!Prev)
           break;
@@ -1719,22 +1719,12 @@ private:
         break;
       }
       if (Style.isCSharp()) {
-        // `Type?)`, `Type?>`, `Type? name;` and `Type? name =` can only be
+        // `Type?)`, `Type?>`, `Type? name;`, and `Type? name =` can only be
         // nullable types.
-
-        // `Type?)`, `Type?>`, `Type? name;`
-        if (Tok->Next &&
-            (Tok->Next->startsSequence(tok::question, tok::r_paren) ||
-             Tok->Next->startsSequence(tok::question, tok::greater) ||
-             Tok->Next->startsSequence(tok::question, tok::identifier,
-                                       tok::semi))) {
-          Tok->setType(TT_CSharpNullable);
-          break;
-        }
-
-        // `Type? name =`
-        if (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
-            Tok->Next->Next->is(tok::equal)) {
+        if (const auto *Next = Tok->getNextNonComment();
+            Next && (Next->isOneOf(tok::r_paren, tok::greater) ||
+                     Next->startsSequence(tok::identifier, tok::semi) ||
+                     Next->startsSequence(tok::identifier, tok::equal))) {
           Tok->setType(TT_CSharpNullable);
           break;
         }
@@ -3025,12 +3015,13 @@ private:
       return TT_BinaryOperator;
 
     const FormatToken *NextToken = Tok.getNextNonComment();
+    if (!NextToken)
+      return TT_PointerOrReference;
 
-    if (InTemplateArgument && NextToken && NextToken->is(tok::kw_noexcept))
+    if (InTemplateArgument && NextToken->is(tok::kw_noexcept))
       return TT_BinaryOperator;
 
-    if (!NextToken ||
-        NextToken->isOneOf(tok::arrow, tok::equal, tok::comma, tok::r_paren,
+    if (NextToken->isOneOf(tok::arrow, tok::equal, tok::comma, tok::r_paren,
                            TT_RequiresClause) ||
         (NextToken->is(tok::kw_noexcept) && !IsExpression) ||
         NextToken->canBePointerOrReferenceQualifier() ||
@@ -3093,10 +3084,12 @@ private:
     if (InTemplateArgument && NextToken->Tok.isAnyIdentifier())
       return TT_BinaryOperator;
 
-    // "&&" followed by "*" or "&" is quite unlikely to be two successive unary
-    // "&".
-    if (Tok.is(tok::ampamp) && NextToken->isOneOf(tok::star, tok::amp))
+    // "&&" followed by "(", "*", or "&" is quite unlikely to be two successive
+    // unary "&".
+    if (Tok.is(tok::ampamp) &&
+        NextToken->isOneOf(tok::l_paren, tok::star, tok::amp)) {
       return TT_BinaryOperator;
+    }
 
     // This catches some cases where evaluation order is used as control flow:
     //   aaa && aaa->f();
@@ -3107,7 +3100,8 @@ private:
       if (NextNextToken) {
         if (NextNextToken->is(tok::arrow))
           return TT_BinaryOperator;
-        if (NextNextToken->isPointerOrReference()) {
+        if (NextNextToken->isPointerOrReference() &&
+            !NextToken->isObjCLifetimeQualifier(Style)) {
           NextNextToken->setFinalizedType(TT_BinaryOperator);
           return TT_BinaryOperator;
         }
@@ -5039,7 +5033,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     }
 
     if (Left.is(tok::kw_operator))
-      return Right.is(tok::coloncolon);
+      return Right.is(tok::coloncolon) || Style.SpaceAfterOperatorKeyword;
     if (Right.is(tok::l_brace) && Right.is(BK_BracedInit) &&
         !Left.opensScope() && Style.SpaceBeforeCpp11BracedList) {
       return true;
@@ -6525,18 +6519,8 @@ TokenAnnotator::getTokenReferenceAlignment(const FormatToken &Reference) const {
 FormatStyle::PointerAlignmentStyle
 TokenAnnotator::getTokenPointerOrReferenceAlignment(
     const FormatToken &PointerOrReference) const {
-  if (PointerOrReference.isOneOf(tok::amp, tok::ampamp)) {
-    switch (Style.ReferenceAlignment) {
-    case FormatStyle::RAS_Pointer:
-      return Style.PointerAlignment;
-    case FormatStyle::RAS_Left:
-      return FormatStyle::PAS_Left;
-    case FormatStyle::RAS_Right:
-      return FormatStyle::PAS_Right;
-    case FormatStyle::RAS_Middle:
-      return FormatStyle::PAS_Middle;
-    }
-  }
+  if (PointerOrReference.isOneOf(tok::amp, tok::ampamp))
+    return getTokenReferenceAlignment(PointerOrReference);
   assert(PointerOrReference.is(tok::star));
   return Style.PointerAlignment;
 }

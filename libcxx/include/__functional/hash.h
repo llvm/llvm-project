@@ -239,7 +239,9 @@ private:
 };
 
 #if _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 [[__gnu__::__pure__]] _LIBCPP_EXPORTED_FROM_ABI size_t __hash_memory(_LIBCPP_NOESCAPE const void*, size_t) _NOEXCEPT;
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 #else
 _LIBCPP_HIDE_FROM_ABI inline size_t __hash_memory(const void* __ptr, size_t __size) _NOEXCEPT {
   return __murmur2_or_cityhash<size_t>()(__ptr, __size);
