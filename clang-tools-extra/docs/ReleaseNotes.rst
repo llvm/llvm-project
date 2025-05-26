@@ -239,6 +239,10 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability/qualified-auto>` check by adding the option
+  `AllowedTypes`, that excludes specified types from adding qualifiers.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
