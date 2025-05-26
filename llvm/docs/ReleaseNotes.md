@@ -138,6 +138,7 @@ Changes to the LoongArch Backend
 --------------------------------
 
 * Changing the default code model from `small` to `medium` for 64-bit.
+* Added inline asm support for the `q` constraint.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -199,6 +200,7 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
   Extensions.
+* `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------

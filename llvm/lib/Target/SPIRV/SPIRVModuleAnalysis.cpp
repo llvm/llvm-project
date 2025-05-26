@@ -2052,7 +2052,7 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
       }
     }
 
-    MF->getProperties().set(MachineFunctionProperties::Property::NoPHIs);
+    MF->getProperties().setNoPHIs();
   }
 }
 
