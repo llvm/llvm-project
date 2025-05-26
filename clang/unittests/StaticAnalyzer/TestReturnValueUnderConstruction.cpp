@@ -49,9 +49,9 @@ void addTestReturnValueUnderConstructionChecker(
   AnOpts.CheckersAndPackages =
     {{"test.TestReturnValueUnderConstruction", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addMockChecker<TestReturnValueUnderConstructionChecker>(
-        "test.TestReturnValueUnderConstruction");
-  });
+      Registry.addChecker<TestReturnValueUnderConstructionChecker>(
+          "test.TestReturnValueUnderConstruction", "", "");
+    });
 }
 
 TEST(TestReturnValueUnderConstructionChecker,

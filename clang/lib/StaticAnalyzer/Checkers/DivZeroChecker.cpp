@@ -39,6 +39,9 @@ public:
                                                categories::TaintedData};
 
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
+
+  /// Identifies this checker family for debugging purposes.
+  StringRef getTagDescription() const override { return "DivZeroChecker"; }
 };
 } // end anonymous namespace
 

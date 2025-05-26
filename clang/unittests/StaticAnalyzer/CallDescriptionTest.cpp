@@ -620,7 +620,8 @@ void addCallDescChecker(AnalysisASTConsumer &AnalysisConsumer,
                         AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"test.CallDescChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addMockChecker<CallDescChecker>("test.CallDescChecker");
+    Registry.addChecker<CallDescChecker>("test.CallDescChecker", "Description",
+                                         "");
   });
 }
 

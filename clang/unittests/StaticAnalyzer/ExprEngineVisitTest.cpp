@@ -77,8 +77,8 @@ void addExprEngineVisitPreChecker(AnalysisASTConsumer &AnalysisConsumer,
                                   AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"ExprEngineVisitPreChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addMockChecker<ExprEngineVisitPreChecker>(
-        "ExprEngineVisitPreChecker");
+    Registry.addChecker<ExprEngineVisitPreChecker>("ExprEngineVisitPreChecker",
+                                                   "Desc", "DocsURI");
   });
 }
 
@@ -86,8 +86,8 @@ void addExprEngineVisitPostChecker(AnalysisASTConsumer &AnalysisConsumer,
                                    AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"ExprEngineVisitPostChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addMockChecker<ExprEngineVisitPostChecker>(
-        "ExprEngineVisitPostChecker");
+    Registry.addChecker<ExprEngineVisitPostChecker>(
+        "ExprEngineVisitPostChecker", "Desc", "DocsURI");
   });
 }
 
@@ -95,7 +95,8 @@ void addMemAccessChecker(AnalysisASTConsumer &AnalysisConsumer,
                          AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"MemAccessChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addMockChecker<MemAccessChecker>("MemAccessChecker");
+    Registry.addChecker<MemAccessChecker>("MemAccessChecker", "Desc",
+                                          "DocsURI");
   });
 }
 

@@ -129,7 +129,6 @@ class CheckerManager {
   const AnalyzerOptions &AOptions;
   const Preprocessor *PP = nullptr;
   CheckerNameRef CurrentCheckerName;
-  CheckerNameRef CurrentCheckerDebugName;
   DiagnosticsEngine &Diags;
   std::unique_ptr<CheckerRegistryData> RegistryData;
 
@@ -160,15 +159,8 @@ public:
 
   ~CheckerManager();
 
-  void setCurrentCheckerName(CheckerNameRef Name) { CurrentCheckerName = Name; }
+  void setCurrentCheckerName(CheckerNameRef name) { CurrentCheckerName = name; }
   CheckerNameRef getCurrentCheckerName() const { return CurrentCheckerName; }
-
-  void setCurrentCheckerDebugName(CheckerNameRef Name) {
-    CurrentCheckerDebugName = Name;
-  }
-  CheckerNameRef getCurrentCheckerDebugName() const {
-    return CurrentCheckerDebugName;
-  }
 
   bool hasPathSensitiveCheckers() const;
 

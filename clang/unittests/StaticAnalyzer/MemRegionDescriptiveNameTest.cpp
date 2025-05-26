@@ -45,7 +45,8 @@ void addDescriptiveNameChecker(AnalysisASTConsumer &AnalysisConsumer,
                                AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"DescriptiveNameChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addMockChecker<DescriptiveNameChecker>("DescriptiveNameChecker");
+    Registry.addChecker<DescriptiveNameChecker>("DescriptiveNameChecker",
+                                                "Desc", "DocsURI");
   });
 }
 

@@ -3,16 +3,12 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 
-// This simple plugin is used by clang/test/Analysis/checker-plugins.c
-// to test use a checker that is defined in a plugin.
-
 using namespace clang;
 using namespace ento;
 
 namespace {
 class MainCallChecker : public Checker<check::PreStmt<CallExpr>> {
-
-  BugType BT{this, "call to main", "example analyzer plugin"};
+  mutable std::unique_ptr<BugType> BT;
 
 public:
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
@@ -37,17 +33,21 @@ void MainCallChecker::checkPreStmt(const CallExpr *CE,
     if (!N)
       return;
 
+    if (!BT)
+      BT.reset(new BugType(this, "call to main", "example analyzer plugin"));
+
     auto report =
-        std::make_unique<PathSensitiveBugReport>(BT, BT.getDescription(), N);
+        std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
     report->addRange(Callee->getSourceRange());
     C.emitReport(std::move(report));
   }
 }
 
 // Register plugin!
-extern "C" void clang_registerCheckers(CheckerRegistry &Registry) {
-  Registry.addChecker<MainCallChecker>("example.MainCallChecker",
-                                       "Example Description");
+extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
+  registry.addChecker<MainCallChecker>(
+      "example.MainCallChecker", "Disallows calls to functions called main",
+      "");
 }
 
 extern "C" const char clang_analyzerAPIVersionString[] =
