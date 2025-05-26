@@ -59895,12 +59895,20 @@ static SDValue combineSCALAR_TO_VECTOR(SDNode *N, SelectionDAG &DAG,
 
   if (VT == MVT::v4i32) {
     SDValue HalfSrc;
-    // Combine (v4i32 (scalar_to_vector (i32 (anyext (bitcast (f16))))))
+    // Combine (v4i32 (scalar_to_vector (i32 (a/zext (bitcast (f16))))))
     // to remove XMM->GPR->XMM moves.
     if (sd_match(Src, m_AnyExt(m_BitCast(
                           m_AllOf(m_SpecificVT(MVT::f16), m_Value(HalfSrc))))))
       return DAG.getBitcast(
           VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, HalfSrc));
+    if (sd_match(Src, m_ZExt(m_BitCast(m_AllOf(m_SpecificVT(MVT::f16),
+                                               m_Value(HalfSrc)))))) {
+      SDValue R = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, HalfSrc);
+      R = DAG.getVectorShuffle(MVT::v8f16, DL, R,
+                               getZeroVector(MVT::v8f16, Subtarget, DAG, DL),
+                               {0, 8, -1, -1, -1, -1, -1, -1});
+      return DAG.getBitcast(VT, R);
+    }
   }
 
   // See if we're broadcasting the scalar value, in which case just reuse that.
