@@ -479,16 +479,22 @@ func.func private @use(i32)
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
 func.func @read_read_add_write_interleaved_use(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
   // CHECK:     %[[C0:.*]] = arith.constant 0 : index
+  // CHECK:     %[[C2:.*]] = arith.constant 2 : index
   // CHECK:     %[[C3:.*]] = arith.constant 3 : index
-  // CHECK:     %[[V0:.*]] = memref.load %[[ARG0]][%[[C3]]] : memref<8xi32>
-  // CHECK:     %[[V1:.*]] = memref.load %[[ARG1]][%[[C3]]] : memref<8xi32>
+  // CHECK:     %[[V0:.*]] = memref.load %arg0[%[[C3]]] : memref<8xi32>
+  // CHECK:     %[[V1:.*]] = memref.load %arg1[%[[C3]]] : memref<8xi32>
   // CHECK:     call @use(%[[V0]]) : (i32) -> ()
-  // CHECK:     %[[V2:.*]] = arith.addi %[[V0]], %[[V1]] : i32
-  // CHECK:     %[[V3:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<3xi32>
-  // CHECK:     %[[V4:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<3xi32>
-  // CHECK:     %[[V5:.*]] = arith.addi %[[V3]], %[[V4]] : vector<3xi32>
-  // CHECK:     vector.store %[[V5]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<3xi32>
-  // CHECK:     memref.store %[[V2]], %[[ARG0]][%[[C3]]] : memref<8xi32>
+  // CHECK:     %[[V2:.*]] = vector.load %arg0[%[[C0]]] : memref<8xi32>, vector<2xi32>
+  // CHECK:     %[[V3:.*]] = vector.load %arg1[%[[C0]]] : memref<8xi32>, vector<2xi32>
+  // CHECK:     %[[V4:.*]] = memref.load %arg0[%[[C2]]] : memref<8xi32>
+  // CHECK:     %[[V5:.*]] = memref.load %arg1[%[[C2]]] : memref<8xi32>
+  // CHECK:     %[[V6:.*]] = vector.from_elements %[[V4]], %[[V0]] : vector<2xi32>
+  // CHECK:     %[[V7:.*]] = vector.from_elements %[[V5]], %[[V1]] : vector<2xi32>
+  // CHECK:     %[[V8:.*]] = arith.addi %[[V6]], %[[V7]] : vector<2xi32>
+  // CHECK:     %[[V9:.*]] = arith.addi %[[V2]], %[[V3]] : vector<2xi32>
+  // CHECK:     vector.store %[[V9]], %arg0[%[[C0]]] : memref<8xi32>, vector<2xi32>
+  // CHECK:     vector.store %[[V8]], %arg0[%[[C2]]] : memref<8xi32>, vector<2xi32>
+
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index

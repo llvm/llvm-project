@@ -11,11 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
@@ -266,6 +268,13 @@ static bool isVectorizable(Operation *op) {
   return true;
 }
 
+/// Get the next operation in the block, assuming `op` is not a terminator.
+static Operation *nextOp(Operation *op) {
+  assert(op && "null op");
+  auto it = op->getIterator();
+  return &*std::next(it);
+}
+
 /// A node in the SLP graph representing a group of vectorizable operations
 struct SLPGraphNode {
   SmallVector<Operation *> ops;
@@ -293,6 +302,31 @@ struct SLPGraphNode {
       if (op->isBeforeInBlock(ret))
         ret = op;
     }
+
+    for (Operation *op : ops) {
+      for (Value opOperand : op->getOperands()) {
+        Operation *defOp = opOperand.getDefiningOp();
+        if (!defOp || defOp->getBlock() != ret->getBlock())
+          continue;
+
+        Operation *next = nextOp(defOp);
+        if (ret->isBeforeInBlock(next))
+          ret = next;
+      }
+    }
+
+    // Try to adjust insertion point to satisfy dominance relations with
+    // operands.
+    for (SLPGraphNode *operand : operands) {
+      Operation *ip = operand->getInsertionPoint();
+      if (!ip)
+        return nullptr;
+
+      Operation *next = nextOp(ip);
+      if (next->getBlock() == ret->getBlock() && ret->isBeforeInBlock(next))
+        ret = next;
+    }
+
     return ret;
   }
 };
@@ -387,159 +421,9 @@ public:
 
   /// Vectorize the operations in the graph.
   /// Returns number of nodes vectorized or failure if failed.
-  FailureOr<size_t> vectorize(IRRewriter &rewriter) {
-    if (nodes.empty())
-      return 0;
-
-    LLVM_DEBUG(llvm::dbgs()
-               << "Vectorizing SLP graph with " << nodes.size() << " nodes\n");
-
-    // Get topologically sorted nodes
-    SmallVector<SLPGraphNode *> sortedNodes = topologicalSort();
-    if (sortedNodes.empty()) {
-      LLVM_DEBUG(llvm::dbgs() << "Failed to topologically sort nodes\n");
-      return failure();
-    }
-
-    LLVM_DEBUG({
-      llvm::dbgs() << "Topologically sorted nodes:\n";
-      for (auto *node : sortedNodes) {
-        llvm::dbgs() << "  Node with " << node->size()
-                     << " operations: " << node->op()->getName() << "\n";
-      }
-    });
-
-    auto isBadNode = [&](SLPGraphNode *node) {
-      // Do not vectorize stray nodes which are not connected to any other
-      // nodes.
-      return node->users.empty() && node->operands.empty();
-    };
-
-    // Update node vec sizes if its inputs vec sizes are smaller.
-    // This is nedeed to handle situations when we have 3->3->4 sizes in tree.
-    // TODO: It maybe possible to reconstruct the larger vec size combining src
-    // smaller vector and scalar arg.
-    for (auto *node : sortedNodes) {
-      size_t size = node->size();
-      for (auto *operand : node->operands)
-        size = std::min(size, operand->size());
-
-      node->ops.resize(size);
-    }
-
-    llvm::erase_if(sortedNodes, isBadNode);
-
-    IRMapping mapping;
-    for (auto *node : sortedNodes) {
-      LLVM_DEBUG({
-        llvm::dbgs() << "Processing node with " << node->size()
-                     << " operations\n";
-        llvm::dbgs() << "  First op: " << *node->op() << "\n";
-      });
-
-      // `op` is the node with the smallest index in vector and not the
-      // nessesarily the good insertion point.
-      Operation *op = node->op();
-      Operation *ip = node->getInsertionPoint();
-      if (!ip)
-        return op->emitError("no insertion point found for node");
-
-      rewriter.setInsertionPoint(ip);
-      int64_t numElements = node->size();
-      Location loc = op->getLoc();
-
-      auto handleNonVectorInputs = [&](ValueRange operands) {
-        for (auto [i, operand] : llvm::enumerate(operands)) {
-          if (getNodeForOp(operand.getDefiningOp()))
-            continue;
-
-          SmallVector<Value> args;
-          for (Operation *defOp : node->ops)
-            args.push_back(defOp->getOperand(i));
-
-          auto vecType = VectorType::get(numElements, operand.getType());
-          Value vector =
-              rewriter.create<vector::FromElementsOp>(loc, vecType, args);
-          mapping.map(operand, vector);
-        }
-      };
-
-      auto handleNonVectorOutputs = [&](Value newResult) {
-        for (auto [i, result] : llvm::enumerate(node->ops)) {
-          for (OpOperand &use : result->getUses()) {
-            Operation *useOwner = use.getOwner();
-            if (getNodeForOp(useOwner))
-              continue;
-
-            Value elem = rewriter.create<vector::ExtractOp>(loc, newResult, i);
-            use.set(elem);
-          }
-        }
-      };
-
-      auto handleVecSizeMismatch = [&](Value arg) -> Value {
-        auto srcType = cast<VectorType>(arg.getType());
-        assert(srcType.getRank() == 1);
-        if (srcType.getDimSize(0) == numElements)
-          return arg;
-
-        return rewriter.create<vector::ExtractStridedSliceOp>(loc, arg, 0,
-                                                              numElements, 1);
-      };
-
-      if (auto load = dyn_cast<memref::LoadOp>(op)) {
-        auto vecType =
-            VectorType::get(numElements, load.getMemRefType().getElementType());
-        Value result = rewriter.create<vector::LoadOp>(
-            loc, vecType, load.getMemRef(), load.getIndices());
-        mapping.map(load.getResult(), result);
-        handleNonVectorOutputs(result);
-      } else if (auto store = dyn_cast<memref::StoreOp>(op)) {
-        handleNonVectorInputs(store.getValueToStore());
-        Value val = mapping.lookupOrDefault(store.getValueToStore());
-        val = handleVecSizeMismatch(val);
-        rewriter.create<vector::StoreOp>(loc, val, store.getMemRef(),
-                                         store.getIndices());
-      } else if (isVectorizable(op)) {
-        handleNonVectorInputs(op->getOperands());
-        Operation *newOp = rewriter.clone(*op, mapping);
-        auto resVectorType =
-            VectorType::get(numElements, op->getResultTypes().front());
-
-        {
-          OpBuilder::InsertionGuard guard(rewriter);
-          rewriter.setInsertionPoint(newOp);
-          for (OpOperand &operand : newOp->getOpOperands()) {
-            Value newOperand = handleVecSizeMismatch(operand.get());
-            operand.set(newOperand);
-          }
-        }
-        newOp->getResult(0).setType(resVectorType);
-
-        mapping.map(op->getResults(), newOp->getResults());
-        handleNonVectorOutputs(newOp->getResult(0));
-      } else if (auto extract = dyn_cast<vector::ExtractOp>(op)) {
-        Value val = handleVecSizeMismatch(extract.getVector());
-        mapping.map(extract.getResult(), val);
-      } else {
-        op->emitError("unsupported operation");
-        return failure();
-      }
-    }
-
-    LLVM_DEBUG(llvm::dbgs() << "Erasing original ops\n");
-
-    // As all nodes were cloned, we need to erase the original ops in reverse
-    // topo order to avoid invalidation users.
-    for (auto *node : llvm::reverse(sortedNodes)) {
-      for (Operation *op : node->ops) {
-        rewriter.eraseOp(op);
-      }
-    }
-
-    LLVM_DEBUG(llvm::dbgs() << "Vectorization completed successfully\n");
-    return sortedNodes.size();
-  }
+  FailureOr<size_t>
+  vectorize(IRRewriter &rewriter,
+            llvm::function_ref<bool(Type, size_t)> isValidVecType);
 
   /// Print the graph structure
   [[maybe_unused]] void print() const {
@@ -736,6 +620,31 @@ struct OperationsFingerprint {
   DenseMap<Operation *, Fingerprint> fingerprints;
 };
 
+/// Check if op input/output types can be vectorized.
+static bool
+checkOpVecType(SLPGraphNode *node,
+               llvm::function_ref<bool(Type, size_t)> isValidVecType) {
+  Operation *op = node->op();
+  size_t size = node->size();
+  if (Type elementType = getElementType(op))
+    return isValidVecType(elementType, size);
+
+  if (isVectorizable(op)) {
+    for (auto type :
+         llvm::concat<Type>(op->getResultTypes(), op->getOperandTypes())) {
+      if (!isValidVecType(type, size))
+        return false;
+    }
+    return true;
+  }
+
+  if (auto extract = dyn_cast<vector::ExtractOp>(op))
+    return isValidVecType(extract.getResult().getType(), size);
+
+  LLVM_DEBUG(llvm::dbgs() << "Unsupported op " << op->getName() << "\n");
+  return false;
+}
+
 /// Check if two ops are equivalent for the purposes of SLP vectorization, i.e.
 /// they can be merged into single vector op.
 static bool isEquivalent(Operation *op1, Operation *op2) {
@@ -924,9 +833,176 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
   return graph;
 }
 
+FailureOr<size_t>
+SLPGraph::vectorize(IRRewriter &rewriter,
+                    llvm::function_ref<bool(Type, size_t)> isValidVecType) {
+  if (nodes.empty())
+    return 0;
+
+  LLVM_DEBUG(llvm::dbgs() << "Vectorizing SLP graph with " << nodes.size()
+                          << " nodes\n");
+
+  // Get topologically sorted nodes
+  SmallVector<SLPGraphNode *> sortedNodes = topologicalSort();
+  if (sortedNodes.empty()) {
+    LLVM_DEBUG(llvm::dbgs() << "Failed to topologically sort nodes\n");
+    return failure();
+  }
+
+  LLVM_DEBUG({
+    llvm::dbgs() << "Topologically sorted nodes:\n";
+    for (auto *node : sortedNodes) {
+      llvm::dbgs() << "  Node with " << node->size()
+                   << " operations: " << node->op()->getName() << "\n";
+    }
+  });
+
+  auto isBadNode = [&](SLPGraphNode *node) {
+    // Do not vectorize stray nodes which are not connected to any other
+    // nodes.
+    return (node->users.empty() && node->operands.empty()) || node->size() <= 1;
+  };
+
+  // Update node vec sizes if its inputs vec sizes are smaller.
+  // This is nedeed to handle situations when we have 3->3->4 sizes in tree.
+  // TODO: It maybe possible to reconstruct the larger vec size combining src
+  // smaller vector and scalar arg.
+  for (auto *node : sortedNodes) {
+    size_t size = node->size();
+    for (auto *operand : node->operands)
+      size = std::min(size, operand->size());
+
+    node->ops.resize(size);
+
+    while (node->size() > 1) {
+      if (checkOpVecType(node, isValidVecType))
+        break;
+
+      node->ops.pop_back();
+    }
+  }
+
+  llvm::erase_if(sortedNodes, isBadNode);
+
+  IRMapping mapping;
+  for (auto *node : sortedNodes) {
+    LLVM_DEBUG({
+      llvm::dbgs() << "Processing node with " << node->size()
+                   << " operations\n";
+      llvm::dbgs() << "  First op: " << *node->op() << "\n";
+    });
+
+    // `op` is the node with the smallest index in vector and not the
+    // nessesarily the good insertion point.
+    Operation *op = node->op();
+    Operation *ip = node->getInsertionPoint();
+    if (!ip)
+      return op->emitError("no insertion point found for node");
+
+    LLVM_DEBUG(llvm::dbgs() << "  Insertion point: " << *ip << "\n");
+
+    rewriter.setInsertionPoint(ip);
+    int64_t numElements = node->size();
+    Location loc = op->getLoc();
+
+    auto handleNonVectorInputs = [&](ValueRange operands) {
+      for (auto [i, operand] : llvm::enumerate(operands)) {
+        if (getNodeForOp(operand.getDefiningOp()))
+          continue;
+
+        SmallVector<Value> args;
+        for (Operation *defOp : node->ops)
+          args.push_back(defOp->getOperand(i));
+
+        auto vecType = VectorType::get(numElements, operand.getType());
+        Value vector =
+            rewriter.create<vector::FromElementsOp>(loc, vecType, args);
+        mapping.map(operand, vector);
+      }
+    };
+
+    auto handleNonVectorOutputs = [&](Value newResult) {
+      for (auto [i, result] : llvm::enumerate(node->ops)) {
+        for (OpOperand &use : result->getUses()) {
+          Operation *useOwner = use.getOwner();
+          if (getNodeForOp(useOwner))
+            continue;
+
+          Value elem = rewriter.create<vector::ExtractOp>(loc, newResult, i);
+          use.set(elem);
+        }
+      }
+    };
+
+    auto handleVecSizeMismatch = [&](Value arg) -> Value {
+      auto srcType = cast<VectorType>(arg.getType());
+      assert(srcType.getRank() == 1);
+      if (srcType.getDimSize(0) == numElements)
+        return arg;
+
+      return rewriter.create<vector::ExtractStridedSliceOp>(loc, arg, 0,
+                                                            numElements, 1);
+    };
+
+    if (auto load = dyn_cast<memref::LoadOp>(op)) {
+      auto vecType =
+          VectorType::get(numElements, load.getMemRefType().getElementType());
+      Value result = rewriter.create<vector::LoadOp>(
+          loc, vecType, load.getMemRef(), load.getIndices());
+      mapping.map(load.getResult(), result);
+      handleNonVectorOutputs(result);
+    } else if (auto store = dyn_cast<memref::StoreOp>(op)) {
+      handleNonVectorInputs(store.getValueToStore());
+      Value val = mapping.lookupOrDefault(store.getValueToStore());
+      val = handleVecSizeMismatch(val);
+      rewriter.create<vector::StoreOp>(loc, val, store.getMemRef(),
+                                       store.getIndices());
+    } else if (isVectorizable(op)) {
+      handleNonVectorInputs(op->getOperands());
+      Operation *newOp = rewriter.clone(*op, mapping);
+      auto resVectorType =
+          VectorType::get(numElements, op->getResultTypes().front());
+
+      {
+        OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPoint(newOp);
+        for (OpOperand &operand : newOp->getOpOperands()) {
+          Value newOperand = handleVecSizeMismatch(operand.get());
+          operand.set(newOperand);
+        }
+      }
+      newOp->getResult(0).setType(resVectorType);
+
+      mapping.map(op->getResults(), newOp->getResults());
+      handleNonVectorOutputs(newOp->getResult(0));
+    } else if (auto extract = dyn_cast<vector::ExtractOp>(op)) {
+      Value val = handleVecSizeMismatch(extract.getVector());
+      mapping.map(extract.getResult(), val);
+    } else {
+      op->emitError("unsupported operation");
+      return failure();
+    }
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "Erasing original ops\n");
+
+  // As all nodes were cloned, we need to erase the original ops in reverse
+  // topo order to avoid invalidation users.
+  for (auto *node : llvm::reverse(sortedNodes)) {
+    for (Operation *op : node->ops) {
+      rewriter.eraseOp(op);
+    }
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "Vectorization completed successfully\n");
+  return sortedNodes.size();
+}
+
 /// Try to vectorize ops in a block.
 /// Returns number of nodes vectorized or error flag if failed.
-static FailureOr<size_t> tryToVectorizeInBlock(Block &block) {
+static FailureOr<size_t>
+tryToVectorizeInBlock(Block &block,
+                      llvm::function_ref<bool(Type, size_t)> isValidVecType) {
   LLVM_DEBUG(llvm::dbgs() << "Processing block in operation: "
                           << block.getParentOp()->getName() << "\n");
 
@@ -956,22 +1032,42 @@ static FailureOr<size_t> tryToVectorizeInBlock(Block &block) {
 
   // Vectorize the graph
   IRRewriter rewriter(block.getParentOp()->getContext());
-  FailureOr<size_t> numNodesVectorized = graph.vectorize(rewriter);
+  FailureOr<size_t> numNodesVectorized =
+      graph.vectorize(rewriter, isValidVecType);
   if (failed(numNodesVectorized))
     LLVM_DEBUG(llvm::dbgs() << "Failed to vectorize graph\n");
 
   return numNodesVectorized;
 }
 
+static bool isPow2(size_t size) {
+  assert(size > 0);
+  return (size & (size - 1)) == 0;
+}
+
 void GreedySLPVectorizerPass::runOnOperation() {
   Operation *op = getOperation();
+
+  const DataLayout *dataLayout = nullptr;
+  auto isValidVecType = [&](Type type, size_t count) {
+    if (!isPow2(count))
+      return false;
+
+    if (!dataLayout)
+      dataLayout = &getAnalysis<DataLayoutAnalysis>().getAtOrAbove(op);
+
+    auto sizeInBits = dataLayout->getTypeSizeInBits(type);
+
+    return sizeInBits * count <= 256;
+  };
 
   // Run until fixed point is reached.
   bool changed;
   do {
     changed = false;
     auto visitor = [&](Block *block) -> WalkResult {
-      FailureOr<size_t> numNodesVectorized = tryToVectorizeInBlock(*block);
+      FailureOr<size_t> numNodesVectorized =
+          tryToVectorizeInBlock(*block, isValidVecType);
       if (failed(numNodesVectorized))
         return WalkResult::interrupt();
 
@@ -987,6 +1083,7 @@ void GreedySLPVectorizerPass::runOnOperation() {
       auto config = GreedyRewriteConfig().enableFolding().enableConstantCSE();
       (void)applyPatternsGreedily(op, {}, config);
     }
+    op->dump();
   } while (changed);
 }
 
