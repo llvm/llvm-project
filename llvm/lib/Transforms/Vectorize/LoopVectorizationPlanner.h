@@ -519,7 +519,8 @@ private:
   /// \p Range's largest included VF is restricted to the maximum VF the
   /// returned VPlan is valid for. If no VPlan can be built for the input range,
   /// set the largest included VF to the maximum VF for which no plan could be
-  /// built.
+  /// built. Each VPlan is built starting from a copy of \p InitialPlan, which
+  /// is a plain CFG VPlan wrapping the original scalar loop.
   VPlanPtr tryToBuildVPlanWithVPRecipes(VPlanPtr InitialPlan, VFRange &Range,
                                         LoopVersioning *LVer);
 

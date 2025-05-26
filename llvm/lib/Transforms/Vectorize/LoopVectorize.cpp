@@ -8715,9 +8715,9 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     // overlap across all iterations.
     LVer.prepareNoAliasMetadata();
   }
-  auto VPlan0 = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
 
   auto MaxVFTimes2 = MaxVF * 2;
+  auto VPlan0 = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
