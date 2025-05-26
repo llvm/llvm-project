@@ -23,14 +23,14 @@ void f_arg(std::shared_ptr<int> ptr)
 {
   if (*ptr)
     f(ptr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: Could be std::move() [performance-lost-std-move]
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: could be std::move() [performance-lost-std-move]
 }
 
 void f_rvalue_ref(std::shared_ptr<int>&& ptr)
 {
   if (*ptr)
     f(ptr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: Could be std::move() [performance-lost-std-move]
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: could be std::move() [performance-lost-std-move]
 }
 
 using SharedPtr = std::shared_ptr<int>;
@@ -38,7 +38,7 @@ void f_using(SharedPtr ptr)
 {
   if (*ptr)
     f(ptr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: Could be std::move() [performance-lost-std-move]
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: could be std::move() [performance-lost-std-move]
 }
 
 void f_local()
@@ -46,7 +46,7 @@ void f_local()
   std::shared_ptr<int> ptr;
   if (*ptr)
     f(ptr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: Could be std::move() [performance-lost-std-move]
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: could be std::move() [performance-lost-std-move]
 }
 
 void f_move()

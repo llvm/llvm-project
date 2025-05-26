@@ -9,6 +9,7 @@
 #include "LostStdMoveCheck.h"
 #include "../utils/DeclRefExprUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -111,7 +112,14 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
     return;
   }
 
-  diag(LastUsage->getBeginLoc(), "could be std::move()");
+
+  const SourceManager &Source = Result.Context->getSourceManager();
+  const auto Range = CharSourceRange::getTokenRange(LastUsage->getSourceRange());
+  const StringRef NeedleExprCode = Lexer::getSourceText(
+      Range, Source,
+      Result.Context->getLangOpts());
+  diag(LastUsage->getBeginLoc(), "could be std::move()")
+	  << FixItHint::CreateReplacement(Range, ("std::move(" + NeedleExprCode + ")").str());
 }
 
 }  // namespace clang::tidy::performance
