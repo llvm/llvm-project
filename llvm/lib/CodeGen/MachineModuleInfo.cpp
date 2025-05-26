@@ -48,21 +48,21 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
   TheModule = MMI.TheModule;
 }
 
-MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
-    : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
-                       TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false) {
-  Context.setObjectFileInfo(TM->getObjFileLowering());
+MachineModuleInfo::MachineModuleInfo(const TargetMachine &TM)
+    : TM(TM),
+      Context(TM.getTargetTriple(), TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
+              TM.getMCSubtargetInfo(), nullptr, &TM.Options.MCOptions, false) {
+  Context.setObjectFileInfo(TM.getObjFileLowering());
   initialize();
 }
 
-MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM,
+MachineModuleInfo::MachineModuleInfo(const TargetMachine &TM,
                                      MCContext *ExtContext)
-    : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
-                       TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false),
+    : TM(TM),
+      Context(TM.getTargetTriple(), TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
+              TM.getMCSubtargetInfo(), nullptr, &TM.Options.MCOptions, false),
       ExternalContext(ExtContext) {
-  Context.setObjectFileInfo(TM->getObjFileLowering());
+  Context.setObjectFileInfo(TM.getObjFileLowering());
   initialize();
 }
 
@@ -152,13 +152,13 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const TargetMachine *TM)
-    : ImmutablePass(ID), MMI(TM) {
+    : ImmutablePass(ID), MMI(*TM) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
     const TargetMachine *TM, MCContext *ExtContext)
-    : ImmutablePass(ID), MMI(TM, ExtContext) {
+    : ImmutablePass(ID), MMI(*TM, ExtContext) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 

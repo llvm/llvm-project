@@ -107,7 +107,7 @@ int llvm::compileModuleWithNewPM(
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
-  MachineModuleInfo MMI(Target.get());
+  MachineModuleInfo MMI(*Target);
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM,
