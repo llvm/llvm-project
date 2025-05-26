@@ -381,13 +381,14 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"::llvm::LogicalResult",
         /*methodName=*/"resolveConflicts",
         /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
-                      "const ::mlir::bufferization::AnalysisState &":$state),
+                      "const ::mlir::bufferization::AnalysisState &":$analysisState,
+                      "::mlir::bufferization::BufferizationState &":$bufferizationState),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           auto bufferizableOp =
               ::llvm::cast<BufferizableOpInterface>($_op.getOperation());
           return bufferizableOp.resolveTensorOpOperandConflicts(
-              rewriter, state);
+              rewriter, analysisState, bufferizationState);
         }]
       >,
       InterfaceMethod<
@@ -523,6 +524,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodName=*/"getBufferType",
         /*args=*/(ins "::mlir::Value":$value,
                       "const ::mlir::bufferization::BufferizationOptions &":$options,
+                      "::mlir::bufferization::BufferizationState &":$state,
                       "::llvm::SmallVector<::mlir::Value> &":$invocationStack),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
@@ -531,7 +533,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           assert(invocationStack.back() == value &&
                  "inconsistant invocation stack");
           return ::mlir::bufferization::detail::defaultGetBufferType(
-              value, options, invocationStack);
+              value, options, state, invocationStack);
         }]
       >,
       InterfaceMethod<
@@ -616,7 +618,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
     /// form of `bufferization.alloc_tensor` ops.
     ::llvm::LogicalResult resolveTensorOpOperandConflicts(
         ::mlir::RewriterBase &rewriter,
-        const ::mlir::bufferization::AnalysisState &state);
+        const ::mlir::bufferization::AnalysisState &analysisState,
+        ::mlir::bufferization::BufferizationState &bufferizationState);
 
     /// Return `true` if the given OpOperand creates an alias but does neither
     /// read nor write. This implies that `bufferizesToMemoryRead` and
