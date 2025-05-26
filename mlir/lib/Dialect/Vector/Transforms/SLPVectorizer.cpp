@@ -924,9 +924,10 @@ void GreedySLPVectorizerPass::runOnOperation() {
       return signalPassFailure();
 
     // Run empty `applyPatternsGreedily` for simple DCE and folding.
-    if (changed)
-      (void)applyPatternsGreedily(
-          op, {}, GreedyRewriteConfig().enableFolding().enableConstantCSE());
+    if (changed) {
+      auto config = GreedyRewriteConfig().enableFolding().enableConstantCSE();
+      (void)applyPatternsGreedily(op, {}, config);
+    }
   } while (changed);
 }
 
