@@ -4245,16 +4245,24 @@ class SPIRV_MatrixOfType<list<Type> allowedTypes> :
 class SPIRV_VectorOf<Type type> :
     VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>;
 
+class SPIRV_CoopMatrixOf<Type type> :
+    SPIRV_CoopMatrixOfType<[type]>;
+
 class SPIRV_ScalarOrVectorOf<Type type> :
     AnyTypeOf<[type, SPIRV_VectorOf<type>]>;
 
 class SPIRV_ScalarOrVectorOrCoopMatrixOf<Type type> :
     AnyTypeOf<[type, SPIRV_VectorOf<type>,
-               SPIRV_CoopMatrixOfType<[type]>]>;
+               SPIRV_CoopMatrixOf<type>]>;
+
+class SPIRV_ScalarOrVectorOfOrCoopMatrixOf<Type scalarVectorType,
+                                           Type coopMatrixType> :
+    AnyTypeOf<[scalarVectorType, SPIRV_VectorOf<scalarVectorType>,
+               SPIRV_CoopMatrixOf<coopMatrixType>]>;
 
 class SPIRV_MatrixOrCoopMatrixOf<Type type> :
     AnyTypeOf<[SPIRV_AnyMatrix,
-               SPIRV_CoopMatrixOfType<[type]>]>;
+               SPIRV_CoopMatrixOf<type>]>;
 
 class SPIRV_MatrixOf<Type type> :
     SPIRV_MatrixOfType<[type]>;

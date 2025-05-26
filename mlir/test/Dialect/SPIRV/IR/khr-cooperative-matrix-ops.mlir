@@ -437,6 +437,9 @@ spirv.func @cooperative_matrix_muladd_matrix_operands(%a : !spirv.coopmatrix<8x1
 !matA_f32 = !spirv.coopmatrix<2x2xf32, Subgroup, MatrixA>
 !matB_f32 = !spirv.coopmatrix<2x2xf32, Subgroup, MatrixB>
 
+!matA_bf16 = !spirv.coopmatrix<2x2xbf16, Subgroup, MatrixA>
+!matB_bf16 = !spirv.coopmatrix<2x2xbf16, Subgroup, MatrixB>
+
 // These tests are kept in the same order as the list of compatible ops in the
 // SPV_KHR_cooperative_matrix extension spec.
 
@@ -449,12 +452,21 @@ spirv.func @snegate(%a: !matA_i32, %b: !matB_i32) "None" {
   spirv.Return
 }
 
-// CHECK-LABEL: @fnegate
-spirv.func @fnegate(%a: !matA_f32, %b: !matB_f32) "None" {
+// CHECK-LABEL: @fnegate_f32
+spirv.func @fnegate_f32(%a: !matA_f32, %b: !matB_f32) "None" {
   // CHECK:      spirv.FNegate {{%.*}} : !spirv.coopmatrix
   // CHECK-NEXT: spirv.FNegate {{%.*}} : !spirv.coopmatrix
   %p = spirv.FNegate %a : !matA_f32
   %q = spirv.FNegate %b : !matB_f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fnegate_bf16
+spirv.func @fnegate_bf16(%a: !matA_bf16, %b: !matB_bf16) "None" {
+  // CHECK:      spirv.FNegate {{%.*}} : !spirv.coopmatrix
+  // CHECK-NEXT: spirv.FNegate {{%.*}} : !spirv.coopmatrix
+  %p = spirv.FNegate %a : !matA_bf16
+  %q = spirv.FNegate %b : !matB_bf16
   spirv.Return
 }
 
@@ -467,12 +479,21 @@ spirv.func @iadd(%a: !matA_i32, %b: !matB_i32) "None" {
   spirv.Return
 }
 
-// CHECK-LABEL: @fadd
-spirv.func @fadd(%a: !matA_f32, %b: !matB_f32) "None" {
+// CHECK-LABEL: @fadd_f32
+spirv.func @fadd_f32(%a: !matA_f32, %b: !matB_f32) "None" {
   // CHECK:      spirv.FAdd {{%.*}}, {{%.*}} : !spirv.coopmatrix
   // CHECK-NEXT: spirv.FAdd {{%.*}}, {{%.*}} : !spirv.coopmatrix
   %p = spirv.FAdd %a, %a : !matA_f32
   %q = spirv.FAdd %b, %b : !matB_f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fadd_bf16
+spirv.func @fadd_bf16(%a: !matA_bf16, %b: !matB_bf16) "None" {
+  // CHECK:      spirv.FAdd {{%.*}}, {{%.*}} : !spirv.coopmatrix
+  // CHECK-NEXT: spirv.FAdd {{%.*}}, {{%.*}} : !spirv.coopmatrix
+  %p = spirv.FAdd %a, %a : !matA_bf16
+  %q = spirv.FAdd %b, %b : !matB_bf16
   spirv.Return
 }
 
@@ -485,8 +506,8 @@ spirv.func @isub(%a: !matA_i32, %b: !matB_i32) "None" {
   spirv.Return
 }
 
-// CHECK-LABEL: @fsub
-spirv.func @fsub(%a: !matA_f32, %b: !matB_f32) "None" {
+// CHECK-LABEL: @fsub_f32
+spirv.func @fsub_f32(%a: !matA_f32, %b: !matB_f32) "None" {
   // CHECK:      spirv.FSub {{%.*}}, {{%.*}} : !spirv.coopmatrix
   // CHECK-NEXT: spirv.FSub {{%.*}}, {{%.*}} : !spirv.coopmatrix
   %p = spirv.FSub %a, %a : !matA_f32
@@ -494,12 +515,30 @@ spirv.func @fsub(%a: !matA_f32, %b: !matB_f32) "None" {
   spirv.Return
 }
 
-// CHECK-LABEL: @fmul
-spirv.func @fmul(%a: !matA_f32, %b: !matB_f32) "None" {
+// CHECK-LABEL: @fsub_bf16
+spirv.func @fsub_bf16(%a: !matA_bf16, %b: !matB_bf16) "None" {
+  // CHECK:      spirv.FSub {{%.*}}, {{%.*}} : !spirv.coopmatrix
+  // CHECK-NEXT: spirv.FSub {{%.*}}, {{%.*}} : !spirv.coopmatrix
+  %p = spirv.FSub %a, %a : !matA_bf16
+  %q = spirv.FSub %b, %b : !matB_bf16
+  spirv.Return
+}
+
+// CHECK-LABEL: @fmul_f32
+spirv.func @fmul_f32(%a: !matA_f32, %b: !matB_f32) "None" {
   // CHECK:      spirv.FMul {{%.*}}, {{%.*}} : !spirv.coopmatrix
   // CHECK-NEXT: spirv.FMul {{%.*}}, {{%.*}} : !spirv.coopmatrix
   %p = spirv.FMul %a, %a : !matA_f32
   %q = spirv.FMul %b, %b : !matB_f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fmul_bf16
+spirv.func @fmul_bf16(%a: !matA_bf16, %b: !matB_bf16) "None" {
+  // CHECK:      spirv.FMul {{%.*}}, {{%.*}} : !spirv.coopmatrix
+  // CHECK-NEXT: spirv.FMul {{%.*}}, {{%.*}} : !spirv.coopmatrix
+  %p = spirv.FMul %a, %a : !matA_bf16
+  %q = spirv.FMul %b, %b : !matB_bf16
   spirv.Return
 }
 
@@ -512,12 +551,21 @@ spirv.func @imul(%a: !matA_i32, %b: !matB_i32) "None" {
   spirv.Return
 }
 
-// CHECK-LABEL: @fdiv
-spirv.func @fdiv(%a: !matA_f32, %b: !matB_f32) "None" {
+// CHECK-LABEL: @fdiv_f32
+spirv.func @fdiv_f32(%a: !matA_f32, %b: !matB_f32) "None" {
   // CHECK:      spirv.FDiv {{%.*}}, {{%.*}} : !spirv.coopmatrix
   // CHECK-NEXT: spirv.FDiv {{%.*}}, {{%.*}} : !spirv.coopmatrix
   %p = spirv.FDiv %a, %a : !matA_f32
   %q = spirv.FDiv %b, %b : !matB_f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fdiv_bf16
+spirv.func @fdiv_bf16(%a: !matA_bf16, %b: !matB_bf16) "None" {
+  // CHECK:      spirv.FDiv {{%.*}}, {{%.*}} : !spirv.coopmatrix
+  // CHECK-NEXT: spirv.FDiv {{%.*}}, {{%.*}} : !spirv.coopmatrix
+  %p = spirv.FDiv %a, %a : !matA_bf16
+  %q = spirv.FDiv %b, %b : !matB_bf16
   spirv.Return
 }
 
