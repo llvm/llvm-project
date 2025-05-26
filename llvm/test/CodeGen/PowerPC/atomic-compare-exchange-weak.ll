@@ -3,8 +3,8 @@
 ;  return atomic_compare_exchange_weak_explicit(cp, old, c, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 ; }  
 
-; RUN: llc < %s -ppc-asm-full-reg-names  -mtriple=powerpc-ibm-aix7.2.0.0 -mcpu=pwr8  -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
-; RUN: llc < %s -ppc-asm-full-reg-names  -mtriple=powerpc64-ibm-aix7.2.0.0 -mcpu=pwr8  -verify-machineinstrs | FileCheck %s --check-prefix=CHECK64
+; RUN: llc < %s -ppc-asm-full-reg-names  -mtriple=powerpc-ibm-aix -mcpu=pwr8  -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
+; RUN: llc < %s -ppc-asm-full-reg-names  -mtriple=powerpc64-ibm-aix -mcpu=pwr8  -verify-machineinstrs | FileCheck %s --check-prefix=CHECK64
 
 define i32 @foo(ptr noundef %cp, ptr noundef %old, i32 noundef %c)  {
 entry:
