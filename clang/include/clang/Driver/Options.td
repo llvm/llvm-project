@@ -8026,6 +8026,10 @@ def fmodules_embed_file_EQ : Joined<["-"], "fmodules-embed-file=">,
   HelpText<"Embed the contents of the specified file into the module file "
            "being compiled.">,
   MarshallingInfoStringVector<FrontendOpts<"ModulesEmbedFiles">>;
+def fmodule_config_mismatch_ignores: CommaJoined<["-"], "fmodule-config-mismatch-ignores=">,
+  Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Comma separated list of options to ignore for the purposes of a config mismatch">,
+    MarshallingInfoStringVector<FrontendOpts<"ModuleConfigMismatchIgnoresVec">>;
 defm fimplicit_modules_use_lock : BoolOption<"f", "implicit-modules-use-lock",
   FrontendOpts<"BuildingImplicitModuleUsesLock">, DefaultTrue,
   NegFlag<SetFalse>,

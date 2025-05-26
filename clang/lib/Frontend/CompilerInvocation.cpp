@@ -3265,6 +3265,15 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   Opts.DashX = DashX;
 
+  for (auto&& OptName : std::move(Opts.ModuleConfigMismatchIgnoresVec)) {
+    if (LangOptionsOption* OptValue = Opts.LangOptionsOpts.get(OptName); OptValue != nullptr) {
+      OptValue->ignore_mismatch = true;
+    } else {
+      Diags.Report(diag::err_drv_invalid_value)
+          << "-fmodule-config-mismatch-ignores" << OptName;
+    }
+  }
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 

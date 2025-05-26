@@ -30,6 +30,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/LangOptionsOptions.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
@@ -861,7 +862,9 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = DisableValidationForModuleKind::All;
   AST->Reader = new ASTReader(
-      PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr, {}, /*isysroot=*/"",
+      PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr, {},
+      LangOptionsOptions{},
+      /*isysroot=*/"",
       /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
 
   unsigned Counter = 0;
