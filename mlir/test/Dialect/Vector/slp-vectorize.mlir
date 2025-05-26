@@ -266,6 +266,55 @@ func.func @read_read_add_write_size_mismatch(%arg0: memref<8xi32>, %arg1: memref
 }
 
 
+// CHECK-LABEL: func @read_read_add_write_attrs_mismatch
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
+func.func @read_read_add_write_attrs_mismatch(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
+  // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+  // CHECK:     %[[V0:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[V1:.*]] = vector.extract %[[V0]][2] : i32 from vector<4xi32>
+  // CHECK:     %[[V2:.*]] = vector.extract %[[V0]][3] : i32 from vector<4xi32>
+  // CHECK:     %[[V3:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[V4:.*]] = vector.extract %[[V3]][2] : i32 from vector<4xi32>
+  // CHECK:     %[[V5:.*]] = vector.extract %[[V3]][3] : i32 from vector<4xi32>
+  // CHECK:     %[[V6:.*]] = vector.extract_strided_slice %[[V0]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+  // CHECK:     %[[V7:.*]] = vector.extract_strided_slice %[[V3]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+  // CHECK:     %[[V8:.*]] = arith.addi %[[V6]], %[[V7]] overflow<nsw> : vector<2xi32>
+  // CHECK:     %[[V9:.*]] = vector.from_elements %[[V1]], %[[V2]] : vector<2xi32>
+  // CHECK:     %[[V10:.*]] = vector.from_elements %[[V4]], %[[V5]] : vector<2xi32>
+  // CHECK:     %[[V11:.*]] = arith.addi %[[V9]], %[[V10]] overflow<nuw> : vector<2xi32>
+  // CHECK:     vector.store %[[V8]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<2xi32>
+  // CHECK:     vector.store %[[V11]], %[[ARG0]][%[[C2]]] : memref<8xi32>, vector<2xi32>
+
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+
+  %0 = memref.load %arg0[%c0] : memref<8xi32>
+  %1 = memref.load %arg0[%c1] : memref<8xi32>
+  %2 = memref.load %arg0[%c2] : memref<8xi32>
+  %3 = memref.load %arg0[%c3] : memref<8xi32>
+
+  %4 = memref.load %arg1[%c0] : memref<8xi32>
+  %5 = memref.load %arg1[%c1] : memref<8xi32>
+  %6 = memref.load %arg1[%c2] : memref<8xi32>
+  %7 = memref.load %arg1[%c3] : memref<8xi32>
+
+  %8 = arith.addi %0, %4 overflow<nsw> : i32
+  %9 = arith.addi %1, %5 overflow<nsw> : i32
+  %10 = arith.addi %2, %6 overflow<nuw> : i32
+  %11 = arith.addi %3, %7 overflow<nuw> : i32
+
+  memref.store %8, %arg0[%c0] : memref<8xi32>
+  memref.store %9, %arg0[%c1] : memref<8xi32>
+  memref.store %10, %arg0[%c2] : memref<8xi32>
+  memref.store %11, %arg0[%c3] : memref<8xi32>
+
+  return
+}
+
+
 // CHECK-LABEL: func @read_read_add_write_interleaved
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
 func.func @read_read_add_write_interleaved(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
