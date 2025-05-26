@@ -192,10 +192,8 @@ define i1 @trunc_nuw_implies_icmp_eq(i8 %x, i1 %c) {
 
 define i1 @icmp_eq_implies_trunc_nuw(i8 %x, i1 %c) {
 ; CHECK-LABEL: @icmp_eq_implies_trunc_nuw(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[TRUNC]], i1 [[C1:%.*]], i1 false
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP]], i1 true, i1 [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP]], i1 true, i1 [[C:%.*]]
 ; CHECK-NEXT:    ret i1 [[SEL2]]
 ;
   %trunc = trunc nuw i8 %x to i1
@@ -220,10 +218,8 @@ define <2 x i1>  @trunc_nuw_implies_icmp_eq_vec(<2 x i8>  %x, <2 x i1> %c) {
 
 define <2 x i1>  @icmp_eq_implies_trunc_nuw_vec(<2 x i8>  %x, <2 x i1> %c) {
 ; CHECK-LABEL: @icmp_eq_implies_trunc_nuw_vec(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[X:%.*]] to <2 x i1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[TRUNC]], <2 x i1> [[C1:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[CMP]], <2 x i1> splat (i1 true), <2 x i1> [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[CMP]], <2 x i1> splat (i1 true), <2 x i1> [[C:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[SEL2]]
 ;
   %trunc = trunc nuw <2 x i8>  %x to <2 x i1>

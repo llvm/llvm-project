@@ -9358,6 +9358,15 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     return std::nullopt;
   }
 
+  const Value *V;
+  if (match(RHS, m_NUWTrunc(m_Value(V)))) {
+    if (auto Implied = isImpliedCondition(LHS, CmpInst::ICMP_NE, V,
+                                          ConstantInt::get(V->getType(), 0), DL,
+                                          LHSIsTrue, Depth))
+      return InvertRHS ? !*Implied : *Implied;
+    return std::nullopt;
+  }
+
   if (Depth == MaxAnalysisRecursionDepth)
     return std::nullopt;
 
