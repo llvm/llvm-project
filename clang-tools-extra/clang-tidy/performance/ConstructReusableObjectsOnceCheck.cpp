@@ -1,0 +1,107 @@
+//===--- ConstructReusableObjectsOnceCheck.cpp - clang-tidy ---------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "ConstructReusableObjectsOnceCheck.h"
+#include "../utils/OptionsUtils.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
+
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::performance {
+
+namespace {
+
+const StringRef DefaultCheckedClasses =
+    "::std::basic_regex;::boost::basic_regex";
+const StringRef DefaultIgnoredClasses = "";
+const StringRef DefaultIgnoredFunctions = "::main";
+
+} // namespace
+
+ConstructReusableObjectsOnceCheck::ConstructReusableObjectsOnceCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      CheckedClasses(utils::options::parseStringList(
+          Options.get("CheckedClasses", DefaultCheckedClasses))),
+      IgnoredClasses(utils::options::parseStringList(
+          Options.get("IgnoredClasses", DefaultIgnoredClasses))),
+      IgnoredFunctions(utils::options::parseStringList(
+          Options.get("IgnoredFunctions", DefaultIgnoredFunctions))) {}
+
+void ConstructReusableObjectsOnceCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "CheckedClasses", DefaultCheckedClasses);
+  Options.store(Opts, "IgnoredClasses", DefaultIgnoredClasses);
+  Options.store(Opts, "IgnoredFunctions", DefaultIgnoredFunctions);
+}
+
+void ConstructReusableObjectsOnceCheck::registerMatchers(MatchFinder *Finder) {
+  const auto ConstStrLiteralDecl =
+      varDecl(unless(parmVarDecl()), hasType(constantArrayType()),
+              hasType(isConstQualified()),
+              hasInitializer(ignoringParenImpCasts(stringLiteral())));
+  const auto ConstPtrStrLiteralDecl = varDecl(
+      unless(parmVarDecl()),
+      hasType(pointerType(pointee(isAnyCharacter(), isConstQualified()))),
+      hasInitializer(ignoringParenImpCasts(stringLiteral())));
+
+  const auto ConstNumberLiteralDecl =
+      varDecl(hasType(qualType(anyOf(isInteger(), realFloatingPointType()))),
+              hasType(isConstQualified()),
+              hasInitializer(ignoringParenImpCasts(
+                  anyOf(integerLiteral(), floatLiteral()))),
+              unless(parmVarDecl()));
+
+  const auto ConstEnumLiteralDecl = varDecl(
+      unless(parmVarDecl()), hasType(hasUnqualifiedDesugaredType(enumType())),
+      hasType(isConstQualified()),
+      hasInitializer(declRefExpr(to(enumConstantDecl()))));
+
+  const auto ConstLiteralArg = expr(ignoringParenImpCasts(
+      anyOf(stringLiteral(), integerLiteral(), floatLiteral(),
+            declRefExpr(to(enumConstantDecl())),
+            declRefExpr(hasDeclaration(varDecl(isConstexpr()))),
+            declRefExpr(hasDeclaration(
+                anyOf(ConstNumberLiteralDecl, ConstPtrStrLiteralDecl,
+                      ConstStrLiteralDecl, ConstEnumLiteralDecl))))));
+
+  const auto ConstructorCall =
+      cxxConstructExpr(hasDeclaration(cxxConstructorDecl(ofClass(
+                           cxxRecordDecl(hasAnyName(CheckedClasses),
+                                         unless(hasAnyName(IgnoredClasses)))
+                               .bind("class")))),
+                       unless(hasAnyArgument(expr(unless(ConstLiteralArg)))));
+
+  Finder->addMatcher(
+      varDecl(unless(hasGlobalStorage()), hasInitializer(ConstructorCall),
+              hasType(isConstQualified()),
+              hasAncestor(functionDecl(unless(hasAnyName(IgnoredFunctions)))
+                              .bind("function")))
+          .bind("var"),
+      this);
+}
+
+void ConstructReusableObjectsOnceCheck::check(
+    const MatchFinder::MatchResult &Result) {
+  const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var");
+  const auto *Class = Result.Nodes.getNodeAs<CXXRecordDecl>("class");
+  const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("function");
+  assert(Var && Class && Function);
+
+  // TODO: add "with only constant literals and constexpr expressions"
+  diag(Var->getLocation(),
+       "variable '%0' of type '%1' is constructed with only constant "
+       "literals on each invocation of '%2'; make this variable 'static', "
+       "declare as a global variable or move to a class member to avoid "
+       "repeated constructions")
+      << Var->getName() << Class->getQualifiedNameAsString()
+      << Function->getQualifiedNameAsString();
+}
+
+} // namespace clang::tidy::performance

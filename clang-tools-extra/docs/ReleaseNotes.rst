@@ -136,6 +136,12 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`performance-construct-reusable-objects-once
+  <clang-tidy/checks/performance/construct-reusable-objects-once>` check.
+
+  Finds variable declarations of expensive-to-construct classes that are
+  constructed from only constant literals and so can be reused.
+
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
 
