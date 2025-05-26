@@ -72,7 +72,7 @@ static void LLVMErrorHandler(void *UserData, const char *Message,
 
   // Run the interrupt handlers to make sure any special cleanups get done, in
   // particular that we remove files registered with RemoveFileOnSignal.
-  llvm::sys::RunInterruptHandlers();
+  llvm::sys::RunInterruptHandlers(/*ExecuteSignalHandlers=*/true);
 
   // We cannot recover from llvm errors.  When reporting a fatal error, exit
   // with status 70 to generate crash diagnostics.  For BSD systems this is

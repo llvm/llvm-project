@@ -80,6 +80,9 @@ Changes to LLVM infrastructure
 * Added the support for ``fmaximum`` and ``fminimum`` in ``atomicrmw`` instruction. The
   comparison is expected to match the behavior of ``llvm.maximum.*`` and
   ``llvm.minimum.*`` respectively.
+* On Windows, fatal usage errors no longer invoke LLVM's signal handlers. 
+  As a result, the default "please report a bug" message from the `PrettyStackTrace`
+  signal handler is no longer emitted.
 
 Changes to building LLVM
 ------------------------
