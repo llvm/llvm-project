@@ -456,9 +456,11 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   // That lets us emit a single buffer_load directly into a VGPR, without ever
   // allocating scratch memory for the intermediate pointer.
   Value *CurPtr = GEP;
+  SmallMapVector<Value *, APInt, 4> LocalVarsOffsets;
+  APInt LocalConstOffset(BW, 0);
   while (auto *CurGEP = dyn_cast<GetElementPtrInst>(CurPtr)) {
-    SmallMapVector<Value *, APInt, 4> LocalVarsOffsets;
-    APInt LocalConstOffset(BW, 0);
+    LocalVarsOffsets.clear();
+    LocalConstOffset = APInt(BW, 0);
 
     if (!CurGEP->collectOffset(DL, BW, LocalVarsOffsets, LocalConstOffset))
       return nullptr;

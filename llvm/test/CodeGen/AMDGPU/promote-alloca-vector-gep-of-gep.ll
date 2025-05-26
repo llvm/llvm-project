@@ -52,4 +52,28 @@ entry:
   ret void
 }
 
+define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_twice_idx(i32 %idx, ptr addrspace(1) %out) #0 {
+; CHECK-LABEL: define amdgpu_ps void @scalar_alloca_ptr_with_vector_gep_twice_idx(
+; CHECK-SAME: i32 [[IDX:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[BUF:%.*]] = freeze <20 x i32> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[IDX]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <20 x i32> [[BUF]], i32 1, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <20 x i32> [[TMP4]], i32 2, i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[IDX]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <20 x i32> [[TMP3]], i32 [[TMP1]]
+; CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca [10 x [2 x i32]], align 8, addrspace(5)
+  %row = getelementptr inbounds [10 x [2 x i32]], ptr addrspace(5) %alloca, i32 0, i32 %idx
+  store <2 x i32> <i32 1, i32 2>, ptr addrspace(5) %row, align 8
+  %elt = getelementptr inbounds [2 x i32], ptr addrspace(5) %row, i32 0, i32 %idx
+  %val = load i32, ptr addrspace(5) %elt, align 4
+  store i32 %val, ptr addrspace(1) %out
+  ret void
+}
+
 attributes #0 = { "amdgpu-promote-alloca-to-vector-max-regs"="32" }
