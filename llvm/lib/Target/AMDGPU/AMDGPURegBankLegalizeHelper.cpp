@@ -133,6 +133,43 @@ void RegBankLegalizeHelper::widenLoad(MachineInstr &MI, LLT WideTy,
   MI.eraseFromParent();
 }
 
+void RegBankLegalizeHelper::lowerVccExtToSel(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  Register Src = MI.getOperand(1).getReg();
+  unsigned Opc = MI.getOpcode();
+  int TrueExtCst = Opc == G_SEXT ? -1 : 1;
+  if (Ty == S32 || Ty == S16) {
+    auto True = B.buildConstant({VgprRB, Ty}, TrueExtCst);
+    auto False = B.buildConstant({VgprRB, Ty}, 0);
+    B.buildSelect(Dst, Src, True, False);
+  } else if (Ty == S64) {
+    auto True = B.buildConstant({VgprRB_S32}, TrueExtCst);
+    auto False = B.buildConstant({VgprRB_S32}, 0);
+    auto Lo = B.buildSelect({VgprRB_S32}, Src, True, False);
+    MachineInstrBuilder Hi;
+    switch (Opc) {
+    case G_SEXT:
+      Hi = Lo;
+      break;
+    case G_ZEXT:
+      Hi = False;
+      break;
+    case G_ANYEXT:
+      Hi = B.buildUndef({VgprRB_S32});
+      break;
+    default:
+      llvm_unreachable("Opcode not supported");
+    }
+
+    B.buildMergeValues(Dst, {Lo.getReg(0), Hi.getReg(0)});
+  } else {
+    llvm_unreachable("Type not supported");
+  }
+
+  MI.eraseFromParent();
+}
+
 static bool isSignedBFE(MachineInstr &MI) {
   if (GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI))
     return (GI->is(Intrinsic::amdgcn_sbfe));
@@ -256,26 +293,8 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
   switch (Mapping.LoweringMethod) {
   case DoNotLower:
     return;
-  case VccExtToSel: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    Register Src = MI.getOperand(1).getReg();
-    unsigned Opc = MI.getOpcode();
-    if (Ty == S32 || Ty == S16) {
-      auto True = B.buildConstant({VgprRB, Ty}, Opc == G_SEXT ? -1 : 1);
-      auto False = B.buildConstant({VgprRB, Ty}, 0);
-      B.buildSelect(MI.getOperand(0).getReg(), Src, True, False);
-    }
-    if (Ty == S64) {
-      auto True = B.buildConstant({VgprRB, S32}, Opc == G_SEXT ? -1 : 1);
-      auto False = B.buildConstant({VgprRB, S32}, 0);
-      auto Sel = B.buildSelect({VgprRB, S32}, Src, True, False);
-      B.buildMergeValues(
-          MI.getOperand(0).getReg(),
-          {Sel.getReg(0), Opc == G_SEXT ? Sel.getReg(0) : False.getReg(0)});
-    }
-    MI.eraseFromParent();
-    return;
-  }
+  case VccExtToSel:
+    return lowerVccExtToSel(MI);
   case UniExtToSel: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     auto True = B.buildConstant({SgprRB, Ty},
@@ -292,13 +311,23 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
   case Ext32To64: {
     const RegisterBank *RB = MRI.getRegBank(MI.getOperand(0).getReg());
     MachineInstrBuilder Hi;
-
-    if (MI.getOpcode() == AMDGPU::G_ZEXT) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::G_ZEXT: {
       Hi = B.buildConstant({RB, S32}, 0);
-    } else {
+      break;
+    }
+    case AMDGPU::G_SEXT: {
       // Replicate sign bit from 32-bit extended part.
       auto ShiftAmt = B.buildConstant({RB, S32}, 31);
       Hi = B.buildAShr({RB, S32}, MI.getOperand(1).getReg(), ShiftAmt);
+      break;
+    }
+    case AMDGPU::G_ANYEXT: {
+      Hi = B.buildUndef({RB, S32});
+      break;
+    }
+    default:
+      llvm_unreachable("Unsuported Opcode in Ext32To64");
     }
 
     B.buildMergeLikeInstr(MI.getOperand(0).getReg(),
@@ -321,7 +350,7 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
     // compares all bits in register.
     Register BoolSrc = MRI.createVirtualRegister({VgprRB, Ty});
     if (Ty == S64) {
-      auto Src64 = B.buildUnmerge({VgprRB, Ty}, Src);
+      auto Src64 = B.buildUnmerge(VgprRB_S32, Src);
       auto One = B.buildConstant(VgprRB_S32, 1);
       auto AndLo = B.buildAnd(VgprRB_S32, Src64.getReg(0), One);
       auto Zero = B.buildConstant(VgprRB_S32, 0);
@@ -409,8 +438,11 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32AExt:
   case Sgpr32AExtBoolInReg:
   case Sgpr32SExt:
+  case Sgpr32ZExt:
   case UniInVgprS32:
   case Vgpr32:
+  case Vgpr32SExt:
+  case Vgpr32ZExt:
     return LLT::scalar(32);
   case Sgpr64:
   case Vgpr64:
@@ -521,6 +553,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32AExt:
   case Sgpr32AExtBoolInReg:
   case Sgpr32SExt:
+  case Sgpr32ZExt:
     return SgprRB;
   case Vgpr16:
   case Vgpr32:
@@ -537,6 +570,8 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB128:
   case VgprB256:
   case VgprB512:
+  case Vgpr32SExt:
+  case Vgpr32ZExt:
     return VgprRB;
   default:
     return nullptr;
@@ -742,8 +777,8 @@ void RegBankLegalizeHelper::applyMappingSrc(
       assert(Ty.getSizeInBits() == 1);
       assert(RB == SgprRB);
       auto Aext = B.buildAnyExt(SgprRB_S32, Reg);
-      // Zext SgprS1 is not legal, this instruction is most of times meant to be
-      // combined away in RB combiner, so do not make AND with 1.
+      // Zext SgprS1 is not legal, make AND with 1 instead. This instruction is
+      // most of times meant to be combined away in AMDGPURegBankCombiner.
       auto Cst1 = B.buildConstant(SgprRB_S32, 1);
       auto BoolInReg = B.buildAnd(SgprRB_S32, Aext, Cst1);
       Op.setReg(BoolInReg.getReg(0));
@@ -754,6 +789,29 @@ void RegBankLegalizeHelper::applyMappingSrc(
       assert(RB == SgprRB);
       auto Sext = B.buildSExt(SgprRB_S32, Reg);
       Op.setReg(Sext.getReg(0));
+      break;
+    }
+    case Sgpr32ZExt: {
+      assert(1 < Ty.getSizeInBits() && Ty.getSizeInBits() < 32);
+      assert(RB == SgprRB);
+      auto Zext = B.buildZExt({SgprRB, S32}, Reg);
+      Op.setReg(Zext.getReg(0));
+      break;
+    }
+    case Vgpr32SExt: {
+      // Note this ext allows S1, and it is meant to be combined away.
+      assert(Ty.getSizeInBits() < 32);
+      assert(RB == VgprRB);
+      auto Sext = B.buildSExt({VgprRB, S32}, Reg);
+      Op.setReg(Sext.getReg(0));
+      break;
+    }
+    case Vgpr32ZExt: {
+      // Note this ext allows S1, and it is meant to be combined away.
+      assert(Ty.getSizeInBits() < 32);
+      assert(RB == VgprRB);
+      auto Zext = B.buildZExt({VgprRB, S32}, Reg);
+      Op.setReg(Zext.getReg(0));
       break;
     }
     default:
