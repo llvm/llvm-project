@@ -307,9 +307,11 @@ void __kmp_expand_file_name(char *result, size_t rlen, char *pattern) {
         case 'i': {
           pid_t id = getpid();
 #if (KMP_ARCH_X86_64 || KMP_ARCH_AARCH64) && defined(__MINGW32__)
-          snp_result = KMP_SNPRINTF(pos, end - pos + 1, "%0*lld", width, id);
+          snp_result = KMP_SNPRINTF(pos, end - pos + 1, "%0*" KMP_UINT64_SPEC,
+                                    width, (kmp_uint64)id);
 #else
-          snp_result = KMP_SNPRINTF(pos, end - pos + 1, "%0*d", width, id);
+          snp_result = KMP_SNPRINTF(pos, end - pos + 1, "%0*" KMP_UINT32_SPEC,
+                                    width, (kmp_uint32)id);
 #endif
           if (snp_result >= 0 && snp_result <= end - pos) {
             while (*pos)

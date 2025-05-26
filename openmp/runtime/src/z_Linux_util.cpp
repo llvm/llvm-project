@@ -2247,7 +2247,8 @@ int __kmp_is_address_mapped(void *addr) {
     return 0;
   }
 
-  char *name = __kmp_str_format("/proc/%d/map", pid);
+  char *name =
+      __kmp_str_format("/proc/%" KMP_INT32_SPEC "/map", (kmp_int32)pid);
   size_t sz = (1 << 20);
   file = open(name, O_RDONLY);
   if (file == -1) {

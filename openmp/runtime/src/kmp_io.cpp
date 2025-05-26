@@ -133,8 +133,8 @@ void __kmp_vprintf(enum kmp_io out_stream, char const *format, va_list ap) {
     int chars = 0;
 
 #ifdef KMP_DEBUG_PIDS
-    chars = KMP_SNPRINTF(db, __kmp_debug_buf_chars,
-                         "pid=%d: ", (kmp_int32)getpid());
+    chars = KMP_SNPRINTF(db, __kmp_debug_buf_chars, "pid=%" KMP_INT32_SPEC ": ",
+                         (kmp_int32)getpid());
 #endif
     chars += KMP_VSNPRINTF(db, __kmp_debug_buf_chars, format, ap);
 
@@ -167,7 +167,8 @@ void __kmp_vprintf(enum kmp_io out_stream, char const *format, va_list ap) {
 #if KMP_OS_WINDOWS
     DWORD count;
 #ifdef KMP_DEBUG_PIDS
-    __kmp_str_buf_print(&__kmp_console_buf, "pid=%d: ", (kmp_int32)getpid());
+    __kmp_str_buf_print(&__kmp_console_buf, "pid=%" KMP_INT32_SPEC ": ",
+                        (kmp_int32)getpid());
 #endif
     __kmp_str_buf_vprint(&__kmp_console_buf, format, ap);
     WriteFile(stream, __kmp_console_buf.str, __kmp_console_buf.used, &count,
@@ -175,7 +176,7 @@ void __kmp_vprintf(enum kmp_io out_stream, char const *format, va_list ap) {
     __kmp_str_buf_clear(&__kmp_console_buf);
 #else
 #ifdef KMP_DEBUG_PIDS
-    fprintf(stream, "pid=%d: ", (kmp_int32)getpid());
+    fprintf(stream, "pid=%" KMP_INT32_SPEC ": ", (kmp_int32)getpid());
 #endif
     vfprintf(stream, format, ap);
     fflush(stream);
