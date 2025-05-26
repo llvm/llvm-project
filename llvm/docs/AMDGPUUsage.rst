@@ -645,13 +645,11 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                          - ``gfx1150``                          IDs
                                          - ``gfx1151``
                                          - ``gfx1152``
-                                         - ``gfx1153``
-                                         - ``gfx1170``                                          Not all VGPRs can be used on:
+                                         - ``gfx1153``                                          Not all VGPRs can be used on:
 
                                                                                                 - ``gfx1100``
                                                                                                 - ``gfx1101``
                                                                                                 - ``gfx1151``
-                                                                                                - ``gfx1170``
 
                                                                                                 SALU floating point instructions
                                                                                                 are not available on:

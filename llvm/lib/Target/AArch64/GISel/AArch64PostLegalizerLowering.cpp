@@ -43,7 +43,6 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
