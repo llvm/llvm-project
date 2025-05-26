@@ -8,7 +8,7 @@ define float @test() {
   ; GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_256 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3, [[S_MOV_B32_]], %subreg.sub4, [[S_MOV_B32_]], %subreg.sub5, [[S_MOV_B32_]], %subreg.sub6, [[S_MOV_B32_]], %subreg.sub7
   ; GFX10-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX10-NEXT:   [[IMAGE_LOAD_V2_V2_nsa_gfx10_:%[0-9]+]]:vreg_64 = IMAGE_LOAD_V2_V2_nsa_gfx10 [[COPY]], [[COPY1]], killed [[REG_SEQUENCE]], 3, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 8)
+  ; GFX10-NEXT:   [[IMAGE_LOAD_V2_V2_nsa_gfx10_:%[0-9]+]]:vreg_64 = IMAGE_LOAD_V2_V2_R1_nsa_gfx10 [[COPY]], [[COPY1]], killed [[REG_SEQUENCE]], 3, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 8)
   ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[IMAGE_LOAD_V2_V2_nsa_gfx10_]].sub1
   ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[IMAGE_LOAD_V2_V2_nsa_gfx10_]].sub0
   ; GFX10-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY2]], 0, killed [[COPY3]], 0, 0, implicit $mode, implicit $exec

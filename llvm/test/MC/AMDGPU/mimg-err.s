@@ -98,3 +98,57 @@ image_gather4_cl v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x3
 // NOGCN:    error: invalid image_gather dmask: only one bit must be set
 // NOGFX9:   error: invalid image_gather dmask: only one bit must be set
 // NOGFX90A: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+//===----------------------------------------------------------------------===//
+// R128
+//===----------------------------------------------------------------------===//
+
+image_atomic_add v5, v1, s[8:11] dmask:0x1
+// NOGCN:    error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX9:   error: operands are not valid for this GPU or mode
+// NOGFX90A: error: operands are not valid for this GPU or mode
+
+image_atomic_add v5, v1, s[8:15] dmask:0x1 r128
+// NOGCN:    error: r128 not allowed with 256-bit RSRC reg
+// NOGFX9:   error: r128 modifier is not supported on this GPU
+// NOGFX90A: error: r128 modifier is not supported on this GPU
+
+image_sample  v[193:195], v[237:240], s[28:31], s[4:7] dmask:0x3
+// NOGCN:    error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX9:   error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX90A: error: operands are not valid for this GPU or mode
+
+image_sample  v[193:195], v[237:240], s[28:35], s[4:7] dmask:0x3 r128
+// NOGCN:    error: r128 not allowed with 256-bit RSRC reg
+// NOGFX9:   error: r128 modifier is not supported on this GPU
+// NOGFX90A: error: r128 modifier is not supported on this GPU
+
+image_gather4 v[5:8], v[1:4], s[8:11], s[12:15] dmask:0x3
+// NOGCN:    error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX9:   error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX90A: error: instruction not supported on this GPU
+
+image_gather4 v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x3 r128
+// NOGCN:    error: r128 not allowed with 256-bit RSRC reg
+// NOGFX9:   error: r128 modifier is not supported on this GPU
+// NOGFX90A: error: instruction not supported on this GPU
+
+image_load v[5:6], v1, s[8:11] dmask:0x1
+// NOGCN:    error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX9:   error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX90A: error: operands are not valid for this GPU or mode
+
+image_load v[5:6], v1, s[8:15] dmask:0x1 r128
+// NOGCN:    error: r128 not allowed with 256-bit RSRC reg
+// NOGFX9:   error: r128 modifier is not supported on this GPU
+// NOGFX90A: error: r128 modifier is not supported on this GPU
+
+image_store   v[4:7], v[237:240], s[28:31] dmask:0x7
+// NOGCN:    error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX9:   error: the RSRC reg should be 256-bit, or the r128 flag is required
+// NOGFX90A: error: operands are not valid for this GPU or mode
+
+image_store   v[4:7], v[237:240], s[28:35] dmask:0x7 r128
+// NOGCN:    error: r128 not allowed with 256-bit RSRC reg
+// NOGFX9:   error: r128 modifier is not supported on this GPU
+// NOGFX90A: error: r128 modifier is not supported on this GPU

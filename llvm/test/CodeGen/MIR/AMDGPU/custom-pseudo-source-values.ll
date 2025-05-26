@@ -5,7 +5,7 @@
 
 ; CHECK-LABEL: {{^}}name: shader
 ; CHECK: %[[#]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET killed %[[#]], %[[#]], 4, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.arg3, align 1, addrspace 8)
-; CHECK: IMAGE_STORE_V4_V3_nsa_gfx10 killed %[[#]], %[[#]], %[[#]], %[[#]], killed %[[#]], 15, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+; CHECK: IMAGE_STORE_V4_V3_R1_nsa_gfx10 killed %[[#]], %[[#]], %[[#]], %[[#]], killed %[[#]], 15, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 ; CHECK: DS_GWS_BARRIER %[[#]], 63, implicit $m0, implicit $exec :: (load (s32) from custom "GWSResource")
 define amdgpu_cs void @shader(i32 %arg0, i32 %arg1, <8 x i32> inreg %arg2, ptr addrspace(8) inreg %arg3) {
   %bload0 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %arg3, i32 4, i32 0, i32 0)
