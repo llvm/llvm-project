@@ -247,7 +247,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -284,47 +284,47 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
 
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 1.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 1.f);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -1.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -1.f);
 
   Elem = Elements[3];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
 
   Elem = Elements[4];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
 
   Elem = Elements[5];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -.42f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -.42f);
 
   Elem = Elements[6];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420.f);
 
   Elem = Elements[7];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.000000000042f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.000000000042f);
 
   Elem = Elements[8];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
 
   Elem = Elements[9];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
 
   Elem = Elements[10];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420000000000.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420000000000.f);
 
   Elem = Elements[11];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
