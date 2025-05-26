@@ -3418,28 +3418,28 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __eqtf2
 ; X86-NEXT:    addl $32, %esp
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    sete %bl
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __unordtf2
 ; X86-NEXT:    addl $32, %esp
@@ -3501,28 +3501,28 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    pushl %ebx
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
-; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; WIN-X86-NEXT:    pushl %ebp
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    pushl %edi
-; WIN-X86-NEXT:    pushl %ebp
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    calll ___eqtf2
 ; WIN-X86-NEXT:    addl $32, %esp
 ; WIN-X86-NEXT:    testl %eax, %eax
 ; WIN-X86-NEXT:    sete %bl
+; WIN-X86-NEXT:    pushl %ebp
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    pushl %edi
-; WIN-X86-NEXT:    pushl %ebp
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    calll ___unordtf2
 ; WIN-X86-NEXT:    addl $32, %esp
@@ -3640,28 +3640,28 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __eqtf2
 ; X86-NEXT:    addl $32, %esp
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setne %bl
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __unordtf2
 ; X86-NEXT:    addl $32, %esp
@@ -3723,28 +3723,28 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    pushl %ebx
 ; WIN-X86-NEXT:    pushl %edi
 ; WIN-X86-NEXT:    pushl %esi
-; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; WIN-X86-NEXT:    pushl %ebp
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    pushl %edi
-; WIN-X86-NEXT:    pushl %ebp
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    calll ___eqtf2
 ; WIN-X86-NEXT:    addl $32, %esp
 ; WIN-X86-NEXT:    testl %eax, %eax
 ; WIN-X86-NEXT:    setne %bl
+; WIN-X86-NEXT:    pushl %ebp
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    pushl %esi
 ; WIN-X86-NEXT:    pushl %edi
-; WIN-X86-NEXT:    pushl %ebp
 ; WIN-X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; WIN-X86-NEXT:    calll ___unordtf2
 ; WIN-X86-NEXT:    addl $32, %esp
