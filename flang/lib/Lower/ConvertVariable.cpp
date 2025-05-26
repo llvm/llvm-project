@@ -25,6 +25,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -735,8 +736,10 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     if (dataAttr.getValue() == cuf::DataAttribute::Shared)
       return builder.create<cuf::SharedMemoryOp>(loc, ty, nm, symNm, lenParams,
                                                  indices);
-    return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr, lenParams,
-                                        indices);
+
+    if (!cuf::isCUDADeviceContext(builder.getRegion()))
+      return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr,
+                                          lenParams, indices);
   }
 
   // Let the builder do all the heavy lifting.
@@ -1072,8 +1075,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   if (mustBeDefaultInitializedAtRuntime(var))
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
-  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
-    auto *builder = &converter.getFirOpBuilder();
+  auto *builder = &converter.getFirOpBuilder();
+  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol()) &&
+      !cuf::isCUDADeviceContext(builder->getRegion())) {
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
                                                         var.getSymbol());

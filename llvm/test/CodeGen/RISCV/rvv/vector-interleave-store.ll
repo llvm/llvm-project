@@ -239,6 +239,17 @@ define void @vector_interleave_store_nxv4p0_nxv2p0(<vscale x 2 x ptr> %a, <vscal
   ret void
 }
 
+define void @vector_interleave_store_factor3(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, ptr %p) {
+; CHECK-LABEL: vector_interleave_store_factor3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = call <vscale x 6 x i32> @llvm.vector.interleave3(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c)
+  store <vscale x 6 x i32> %v, ptr %p
+  ret void
+}
+
 define void @vector_interleave_store_factor4(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_factor4:
 ; CHECK:       # %bb.0:
@@ -249,6 +260,28 @@ define void @vector_interleave_store_factor4(<vscale x 4 x i32> %a, <vscale x 4 
   %v1 = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %b, <vscale x 4 x i32> %d)
   %v2 = call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %v0, <vscale x 8 x i32> %v1)
   store <vscale x 16 x i32> %v2, ptr %p
+  ret void
+}
+
+define void @vector_interleave_store_factor5(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, ptr %p) {
+; CHECK-LABEL: vector_interleave_store_factor5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg5e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = call <vscale x 10 x i32> @llvm.vector.interleave5(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e)
+  store <vscale x 10 x i32> %v, ptr %p
+  ret void
+}
+
+define void @vector_interleave_store_factor7(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f, <vscale x 2 x i32> %g, ptr %p) {
+; CHECK-LABEL: vector_interleave_store_factor7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg7e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = call <vscale x 14 x i32> @llvm.vector.interleave7(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f, <vscale x 2 x i32> %g)
+  store <vscale x 14 x i32> %v, ptr %p
   ret void
 }
 

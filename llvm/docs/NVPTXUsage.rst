@@ -199,21 +199,59 @@ map in the following way to CUDA builtins:
 Barriers
 --------
 
-'``llvm.nvvm.barrier0``'
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.nvvm.barrier.cta.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.barrier0()
+  declare void @llvm.nvvm.barrier.cta.sync.count(i32 %id, i32 %n)
+  declare void @llvm.nvvm.barrier.cta.sync.all(i32 %id)
+  declare void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %n)
+
+  declare void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %id, i32 %n)
+  declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %id)
+  declare void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 %id, i32 %n)
 
 Overview:
 """""""""
 
-The '``@llvm.nvvm.barrier0()``' intrinsic emits a PTX ``bar.sync 0``
-instruction, equivalent to the ``__syncthreads()`` call in CUDA.
+The '``@llvm.nvvm.barrier.cta.*``' family of intrinsics perform barrier
+synchronization and communication within a CTA. They can be used by the threads
+within the CTA for synchronization and communication.
+
+Semantics:
+""""""""""
+
+Operand %id specifies a logical barrier resource and must fall within the range
+0 through 15. When present, operand %n specifies the number of threads
+participating in the barrier. When specifying a thread count, the value must be
+a multiple of the warp size. With the '``@llvm.nvvm.barrier.cta.sync.*``'
+variants, the '``.all``' suffix indicates that all threads in the CTA should
+participate in the barrier while the '``.count``' suffix indicates that only
+the threads specified by the %n operand should participate in the barrier.
+
+All forms of the '``@llvm.nvvm.barrier.cta.*``' intrinsic cause the executing
+thread to wait for all non-exited threads from its warp and then marks the
+warp's arrival at the barrier. In addition to signaling its arrival at the 
+barrier, the '``@llvm.nvvm.barrier.cta.sync.*``' intrinsics cause the executing
+thread to wait for non-exited threads of all other warps participating in the
+barrier to arrive. On the other hand, the '``@llvm.nvvm.barrier.cta.arrive.*``'
+intrinsic does not cause the executing thread to wait for threads of other
+participating warps.
+
+When a barrier completes, the waiting threads are restarted without delay,
+and the barrier is reinitialized so that it can be immediately reused.
+
+The '``@llvm.nvvm.barrier.cta.*``' intrinsic has an optional '``.aligned``'
+modifier to indicate textual alignment of the barrier. When specified, it
+indicates that all threads in the CTA will execute the same
+'``@llvm.nvvm.barrier.cta.*``' instruction. In conditionally executed code, an
+aligned '``@llvm.nvvm.barrier.cta.*``' instruction should only be used if it is
+known that all threads in the CTA evaluate the condition identically, otherwise
+behavior is undefined.
 
 Electing a thread
 -----------------
@@ -623,6 +661,126 @@ all bits set to 0 except for %b bits starting at bit position %a. For the
 '``wrap``' variants, the values of %a and %b modulo 32 are used. For the
 '``clamp``' variants, the values of %a and %b are clamped to the range [0, 32],
 which in practice is equivalent to using them as is.
+
+'``llvm.nvvm.prmt``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.prmt(i32 %lo, i32 %hi, i32 %selector)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.prmt``' constructs a permutation of the bytes of the first two
+operands, selecting based on the third operand.
+
+Semantics:
+""""""""""
+
+The bytes in the first two source operands are numbered from 0 to 7:
+{%hi, %lo} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}. For each byte in the target
+register, a 4-bit selection value is defined.
+
+The 3 lsbs of the selection value specify which of the 8 source bytes should be
+moved into the target position. The msb defines if the byte value should be
+copied, or if the sign (msb of the byte) should be replicated over all 8 bits
+of the target position (sign extend of the byte value); msb=0 means copy the
+literal value; msb=1 means replicate the sign.
+
+These 4-bit selection values are pulled from the lower 16-bits of the %selector
+operand, with the least significant selection value corresponding to the least
+significant byte of the destination.
+
+
+'``llvm.nvvm.prmt.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.prmt.f4e(i32 %lo, i32 %hi, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.b4e(i32 %lo, i32 %hi, i32 %selector)
+
+    declare i32 @llvm.nvvm.prmt.rc8(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.ecl(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.ecr(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.rc16(i32 %lo, i32 %selector)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.prmt.*``' family of intrinsics constructs a permutation of the
+bytes of the first one or two operands, selecting based on the 2 least
+significant bits of the final operand.
+
+Semantics:
+""""""""""
+
+As with the generic '``llvm.nvvm.prmt``' intrinsic, the bytes in the first one
+or two source operands are numbered. The first source operand (%lo) is numbered
+{b3, b2, b1, b0}, in the case of the '``f4e``' and '``b4e``' variants, the
+second source operand (%hi) is numbered {b7, b6, b5, b4}.
+
+Depending on the 2 least significant bits of the %selector operand, the result
+of the permutation is defined as follows:
+
++------------+----------------+--------------+
+|    Mode    | %selector[1:0] |    Output    |
++------------+----------------+--------------+
+| '``f4e``'  | 0              | {3, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {4, 3, 2, 1} |
+|            +----------------+--------------+
+|            | 2              | {5, 4, 3, 2} |
+|            +----------------+--------------+
+|            | 3              | {6, 5, 4, 3} |
++------------+----------------+--------------+
+| '``b4e``'  | 0              | {5, 6, 7, 0} |
+|            +----------------+--------------+
+|            | 1              | {6, 7, 0, 1} |
+|            +----------------+--------------+
+|            | 2              | {7, 0, 1, 2} |
+|            +----------------+--------------+
+|            | 3              | {0, 1, 2, 3} |
++------------+----------------+--------------+
+| '``rc8``'  | 0              | {0, 0, 0, 0} |
+|            +----------------+--------------+
+|            | 1              | {1, 1, 1, 1} |
+|            +----------------+--------------+
+|            | 2              | {2, 2, 2, 2} |
+|            +----------------+--------------+
+|            | 3              | {3, 3, 3, 3} |
++------------+----------------+--------------+
+| '``ecl``'  | 0              | {3, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {3, 2, 1, 1} |
+|            +----------------+--------------+
+|            | 2              | {3, 2, 2, 2} |
+|            +----------------+--------------+
+|            | 3              | {3, 3, 3, 3} |
++------------+----------------+--------------+
+| '``ecr``'  | 0              | {0, 0, 0, 0} |
+|            +----------------+--------------+
+|            | 1              | {1, 1, 1, 0} |
+|            +----------------+--------------+
+|            | 2              | {2, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 3              | {3, 2, 1, 0} |
++------------+----------------+--------------+
+| '``rc16``' | 0              | {1, 0, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {3, 2, 3, 2} |
+|            +----------------+--------------+
+|            | 2              | {1, 0, 1, 0} |
+|            +----------------+--------------+
+|            | 3              | {3, 2, 3, 2} |
++------------+----------------+--------------+
 
 TMA family of Intrinsics
 ------------------------

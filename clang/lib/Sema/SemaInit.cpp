@@ -31,7 +31,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -6618,7 +6617,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // initializer present. However, we only do this for structure types, not
       // union types, because an unitialized field in a union is generally
       // reasonable, especially in C where unions can be used for type punning.
-      if (!Initializer && !Rec->isUnion()) {
+      if (!Initializer && !Rec->isUnion() && !Rec->isInvalidDecl()) {
         if (const FieldDecl *FD = getConstField(Rec)) {
           unsigned DiagID = diag::warn_default_init_const_field_unsafe;
           if (Var->getStorageDuration() == SD_Static ||

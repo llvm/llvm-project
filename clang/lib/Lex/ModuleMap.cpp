@@ -310,10 +310,8 @@ void ModuleMap::resolveHeader(Module *Mod,
   } else if (Header.HasBuiltinHeader && !Header.Size && !Header.ModTime) {
     // There's a builtin header but no corresponding on-disk header. Assume
     // this was supposed to modularize the builtin header alone.
-  } else if ((Header.Kind == Module::HK_Excluded) ||
-             (Header.Kind == Module::HK_Textual)) {
-    // Ignore excluded and textual header files as a module can be built with
-    // such headers missing.
+  } else if (Header.Kind == Module::HK_Excluded) {
+    // Ignore missing excluded header files. They're optional anyway.
   } else {
     // If we find a module that has a missing header, we mark this module as
     // unavailable and store the header directive for displaying diagnostics.

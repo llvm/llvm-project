@@ -1079,11 +1079,11 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
 
 LogicalResult acc::ParallelOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getPrivateOperands(), "private",
+          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
           "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
@@ -1870,11 +1870,11 @@ mlir::Value SerialOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
 
 LogicalResult acc::SerialOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getPrivateOperands(), "private",
+          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
           "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
@@ -2488,7 +2488,7 @@ LogicalResult acc::LoopOp::verify() {
   }
 
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getPrivateOperands(), "private",
+          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
           "privatizations", false)))
     return failure();
 

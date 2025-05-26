@@ -60,7 +60,6 @@
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -20158,9 +20157,10 @@ static void DoMarkVarDeclReferenced(
           Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
       }
 
-      if (UsableInConstantExpr) {
+      if (UsableInConstantExpr || Var->getType()->isUndeducedType()) {
         // Do not defer instantiations of variables that could be used in a
         // constant expression.
+        // The type deduction also needs a complete initializer.
         SemaRef.runWithSufficientStackSpace(PointOfInstantiation, [&] {
           SemaRef.InstantiateVariableDefinition(PointOfInstantiation, Var);
         });

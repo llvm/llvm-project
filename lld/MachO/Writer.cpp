@@ -25,7 +25,6 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
