@@ -1,6 +1,38 @@
-; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S < %s | FileCheck %s --check-prefix=CHECK
-; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=4 -S < %s | FileCheck %s --check-prefix=CHECK
-; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=4 -S < %s | FileCheck %s --check-prefix=CHECK
+; REQUIRES: asserts
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S < %s -debug-only=loop-vectorize,iv-descriptors 2>&1 | FileCheck %s --check-prefix=CHECK
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=4 -S < %s -debug-only=loop-vectorize,iv-descriptors 2>&1 | FileCheck %s --check-prefix=CHECK
+; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=4 -S < %s -debug-only=loop-vectorize,iv-descriptors 2>&1 | FileCheck %s --check-prefix=CHECK
+
+; CHECK-LABEL: LV: Checking a loop in 'smax_idx'
+; CHECK: Found a min/max recurrence PHI:   %max.09 = phi i64 [ %mm, %entry ], [ %1, %for.body ]
+; CHECK: Found a min/max with first index reduction PHI.  %idx.011 = phi i64 [ %ii, %entry ], [ %spec.select7, %for.body ]
+
+; CHECK-LABEL: LV: Checking a loop in 'smax_idx_inverted_phi'
+; CHECK: Found a min/max recurrence PHI:   %max.09 = phi i64 [ %mm, %entry ], [ %1, %for.body ]
+; CHECK: Found a min/max with first index reduction PHI.  %idx.011 = phi i64 [ %ii, %entry ], [ %spec.select7, %for.body ]
+
+; CHECK-LABEL: LV: Checking a loop in 'smax_idx_max_no_exit_user'
+; CHECK: Found a min/max recurrence PHI:   %max.09 = phi i64 [ %mm, %entry ], [ %1, %for.body ]
+; CHECK: Found a min/max with first index reduction PHI.  %idx.011 = phi i64 [ %ii, %entry ], [ %spec.select7, %for.body ]
+
+; CHECK-LABEL: LV: Checking a loop in 'smax_idx_select_cmp'
+; CHECK: LV: Not vectorizing: Found an unidentified PHI   %max.09 = phi i64 [ %mm, %entry ], [ %spec.select, %for.body ]
+
+; CHECK-LABEL: LV: Checking a loop in 'smax_idx_inverted_pred'
+; CHECK: Found a min/max recurrence PHI:   %max.09 = phi i64 [ %mm, %entry ], [ %1, %for.body ]
+; CHECK: Found a min/max with last index reduction PHI.  %idx.011 = phi i64 [ %ii, %entry ], [ %spec.select7, %for.body ]
+
+; CHECK-LABEL: LV: Checking a loop in 'smax_idx_extract_last'
+; CHECK: Found a min/max recurrence PHI:   %max.09 = phi i64 [ %mm, %entry ], [ %1, %for.body ]
+; CHECK: Found a min/max with last index reduction PHI.  %idx.011 = phi i64 [ %ii, %entry ], [ %spec.select7, %for.body ]
+
+; CHECK-LABEL: LV: Checking a loop in 'smax_idx_not_vec_1'
+; CHECK: Found a min/max recurrence PHI:   %max.09 = phi i64 [ %mm, %entry ], [ %2, %for.body ]
+; CHECK-NOT: Found a min/max with last index reduction PHI.
+
+; CHECK-LABEL: LV: Checking a loop in 'smax_idx_not_vec_2'
+; CHECK: Found a min/max recurrence PHI:   %max.09 = phi i64 [ %mm, %entry ], [ %1, %for.body ]
+; CHECK-NOT: Found a min/max with last index reduction PHI.
 
 define i64 @smax_idx(ptr nocapture readonly %a, i64 %mm, i64 %ii, ptr nocapture writeonly %res_max, i64 %n) {
 ; CHECK-LABEL: @smax_idx(
@@ -57,11 +89,6 @@ exit:
 
 ; Check if it is a min/max with index (MMI) pattern when the
 ; min/max value is not used outside the loop.
-;
-; Currently, the vectorizer checks if smax value is used outside
-; the loop. However, even if only the index part has external users,
-; and smax itself does not have external users, it can still form a
-; MMI pattern.
 ;
 define i64 @smax_idx_max_no_exit_user(ptr nocapture readonly %a, i64 %mm, i64 %ii, i64 %n) {
 ; CHECK-LABEL: @smax_idx_max_no_exit_user(
