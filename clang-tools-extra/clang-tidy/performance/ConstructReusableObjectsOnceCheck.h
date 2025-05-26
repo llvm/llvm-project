@@ -34,8 +34,9 @@ public:
   }
 
 private:
-  std::vector<llvm::StringRef> CheckedClasses;
-  std::vector<llvm::StringRef> IgnoredFunctions;
+  std::vector<StringRef> CheckedClasses;
+  std::vector<StringRef> IgnoredClasses;
+  std::vector<StringRef> IgnoredFunctions;
 };
 
 } // namespace clang::tidy::performance
