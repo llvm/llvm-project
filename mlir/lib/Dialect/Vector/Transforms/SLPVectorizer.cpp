@@ -515,6 +515,8 @@ private:
 struct GreedySLPVectorizerPass
     : public mlir::vector::impl::GreedySLPVectorizerBase<
           GreedySLPVectorizerPass> {
+  using GreedySLPVectorizerBase::GreedySLPVectorizerBase;
+
   void runOnOperation() override;
 };
 
@@ -1064,7 +1066,7 @@ void GreedySLPVectorizerPass::runOnOperation() {
 
     auto sizeInBits = dataLayout->getTypeSizeInBits(type);
 
-    return sizeInBits * count <= 256;
+    return sizeInBits * count <= this->maxVectorBitwidth;
   };
 
   // Run until fixed point is reached.

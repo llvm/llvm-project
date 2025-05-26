@@ -44,12 +44,14 @@ def GreedySLPVectorizer : Pass<"greedy-slp-vectorizer"> {
 
     This is greedy vectorizer, it doesn't have any cost model (yet) and it tries
     to create vector ops if we have at least 2 potential ops.
-
-    It doesn't check if target actually supports resulted vectors either, user
-    will need a follow up pass which will split large and/or unaliggned vectors
-    into sizes actually supported by the target.
   }];
   let dependentDialects = ["mlir::vector::VectorDialect"];
+
+  let options = [
+    Option<"maxVectorBitwidth", "max-vector-bitwidth", "unsigned",
+      /*default=*/"std::numeric_limits<unsigned>::max()",
+      "Maximum supported vector bitwidth">,
+  ];
 }
 
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_PASSES

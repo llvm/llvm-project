@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --greedy-slp-vectorizer | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(greedy-slp-vectorizer{max-vector-bitwidth=256}))' | FileCheck %s
 
 
 // CHECK-LABEL: func @negative_single_op
