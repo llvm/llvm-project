@@ -682,7 +682,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       auto MipLODBias = parseFloatParam();
       if (!MipLODBias.has_value())
         return std::nullopt;
-      Params.MipLODBias = (float)*MipLODBias;
+      Params.MipLODBias = MipLODBias;
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
