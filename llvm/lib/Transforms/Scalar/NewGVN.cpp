@@ -2383,7 +2383,7 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
     EClass = TOPClass;
   }
   if (!EClass) {
-    auto lookupResult = ExpressionToClass.insert({E, nullptr});
+    auto lookupResult = ExpressionToClass.try_emplace(E);
 
     // If it's not in the value table, create a new congruence class.
     if (lookupResult.second) {

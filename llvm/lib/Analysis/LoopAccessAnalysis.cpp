@@ -2979,7 +2979,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 }
 
 const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
-  const auto &[It, Inserted] = LoopAccessInfoMap.insert({&L, nullptr});
+  const auto &[It, Inserted] = LoopAccessInfoMap.try_emplace(&L);
 
   if (Inserted)
     It->second =

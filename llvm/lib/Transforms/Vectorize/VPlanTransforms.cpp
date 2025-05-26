@@ -1820,8 +1820,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         if (OpSizeInBits == NewResSizeInBits)
           continue;
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
-        auto [ProcessedIter, IterIsEmpty] =
-            ProcessedTruncs.insert({Op, nullptr});
+        auto [ProcessedIter, IterIsEmpty] = ProcessedTruncs.try_emplace(Op);
         VPWidenCastRecipe *NewOp =
             IterIsEmpty
                 ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy)

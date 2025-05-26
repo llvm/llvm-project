@@ -1115,7 +1115,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   bool FoundSrcAgg = false;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
-        SourceAggregates.insert({Pred, nullptr});
+        SourceAggregates.try_emplace(Pred);
     // Did we already evaluate this predecessor?
     if (!IV.second)
       continue;
