@@ -260,7 +260,7 @@ genrule(
     name = "test_irdl_to_cpp_gen",
     srcs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir"],
     outs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir.cpp.inc"],
-    cmd = "$(location //mlir:irdl-to-cpp) lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir -o $@",
+    cmd = "$(location //mlir:irdl-to-cpp) $(location //mlir/test:lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir) -o $@",
     tools = ["//mlir:irdl-to-cpp"],
 )
 
