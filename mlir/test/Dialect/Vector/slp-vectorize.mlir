@@ -633,9 +633,9 @@ func.func @read_read_add_write_interleaved_use_add(%arg0: memref<8xi32>, %arg1: 
 }
 
 
-// CHECK-LABEL: func @negative_different_blocks
+// CHECK-LABEL: func @different_blocks
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
-func.func @negative_different_blocks(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
+func.func @different_blocks(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
     // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
     // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
     // CHECK:     %[[V0:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
