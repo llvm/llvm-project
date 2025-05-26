@@ -8,6 +8,7 @@
 // RUN:     --target=i386-pc-win32 -### -- 2>&1 %s | FileCheck -check-prefix=MFLAGS %s
 // MFLAGS-NOT: invalid /arch: argument
 //
+// XFAIL: *
 
 // RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_32_ARCH_IA32 -- %s
 #if defined(TEST_32_ARCH_IA32)

@@ -4082,6 +4082,9 @@ def warn_thread_attribute_not_on_scoped_lockable_param : Warning<
   "%0 attribute applies to function parameters only if their type is a "
   "reference to a 'scoped_lockable'-annotated type">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_requires_preceded : Warning<
+  "%0 attribute on %1 must be preceded by %2 attribute">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def err_attribute_argument_out_of_bounds_extra_info : Error<
   "%0 attribute parameter %1 is out of bounds: "
   "%plural{0:no parameters to index into|"
@@ -4105,10 +4108,10 @@ def warn_expecting_locked : Warning<
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 // FIXME: improve the error message about locks not in scope
 def warn_lock_some_predecessors : Warning<
-  "%0 '%1' is not held on every path through here">,
+  "%0 '%1' is not held on every path through here%select{| with equal reentrancy depth}2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_expecting_lock_held_on_loop : Warning<
-  "expecting %0 '%1' to be held at start of each loop">,
+  "expecting %0 '%1' to be held at start of each loop%select{| with equal reentrancy depth}2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def note_locked_here : Note<"%0 acquired here">;
 def note_unlocked_here : Note<"%0 released here">;
