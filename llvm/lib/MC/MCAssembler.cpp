@@ -415,8 +415,8 @@ static bool getLabelOffset(const MCAssembler &Asm, const MCSymbol &S,
                            bool ReportError, uint64_t &Val) {
   if (!S.getFragment()) {
     if (ReportError)
-      report_fatal_error("unable to evaluate offset to undefined symbol '" +
-                         S.getName() + "'");
+      reportFatalUsageError("cannot evaluate undefined symbol '" + S.getName() +
+                            "'");
     return false;
   }
   Val = Asm.getFragmentOffset(*S.getFragment()) + S.getOffset();
@@ -431,8 +431,8 @@ static bool getSymbolOffsetImpl(const MCAssembler &Asm, const MCSymbol &S,
   // If SD is a variable, evaluate it.
   MCValue Target;
   if (!S.getVariableValue()->evaluateAsValue(Target, Asm))
-    report_fatal_error("unable to evaluate offset for variable '" +
-                       S.getName() + "'");
+    reportFatalUsageError("cannot evaluate equated symbol '" + S.getName() +
+                          "'");
 
   uint64_t Offset = Target.getConstant();
 
