@@ -1,0 +1,142 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Bilinear Uniform Interpolation</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../interpolation.html" title="Chapter 13. Interpolation">
+<link rel="prev" href="quintic_hermite.html" title="Quintic Hermite interpolation">
+<link rel="next" href="../quadrature.html" title="Chapter 14. Quadrature and Differentiation">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="quintic_hermite.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../quadrature.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.bilinear_uniform"></a><a class="link" href="bilinear_uniform.html" title="Bilinear Uniform Interpolation">Bilinear Uniform Interpolation</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.bilinear_uniform.h0"></a>
+      <span class="phrase"><a name="math_toolkit.bilinear_uniform.synopsis"></a></span><a class="link" href="bilinear_uniform.html#math_toolkit.bilinear_uniform.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">interpolators</span><span class="special">/</span><span class="identifier">bilinear_uniform</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span> <span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RandomAccessContainer</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">bilinear_uniform</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+    <span class="keyword">using</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">RandomAccessContainer</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">;</span>
+
+    <span class="identifier">bilinear_uniform</span><span class="special">(</span><span class="identifier">RandomAccessContainer</span> <span class="special">&amp;&amp;</span> <span class="identifier">fieldData</span><span class="special">,</span> <span class="keyword">decltype</span><span class="special">(</span><span class="identifier">fieldData</span><span class="special">.</span><span class="identifier">size</span><span class="special">())</span> <span class="identifier">rows</span><span class="special">,</span> <span class="keyword">decltype</span><span class="special">(</span><span class="identifier">fieldData</span><span class="special">.</span><span class="identifier">size</span><span class="special">())</span> <span class="identifier">cols</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">dx</span> <span class="special">=</span> <span class="number">1</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">dy</span> <span class="special">=</span> <span class="number">1</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">x0</span> <span class="special">=</span> <span class="number">0</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">y0</span> <span class="special">=</span> <span class="number">0</span><span class="special">)</span>
+
+    <span class="identifier">Real</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">y</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<h4>
+<a name="math_toolkit.bilinear_uniform.h1"></a>
+      <span class="phrase"><a name="math_toolkit.bilinear_uniform.bilinear_uniform_interpolation"></a></span><a class="link" href="bilinear_uniform.html#math_toolkit.bilinear_uniform.bilinear_uniform_interpolation">Bilinear
+      Uniform Interpolation</a>
+    </h4>
+<p>
+      The bilinear uniform interpolator takes a grid of data points specified by
+      a linear index and interpolates between each segment using a bilinear function.
+      Note that "bilinear" does not mean linear-it is the product of two
+      linear functions. The interpolant is continuous and its evaluation is constant
+      time. An example usage is as follows:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">{</span><span class="number">0.1</span><span class="special">,</span> <span class="number">0.2</span><span class="special">,</span> <span class="number">0.3</span><span class="special">,</span>
+                      <span class="number">0.4</span><span class="special">,</span> <span class="number">0.5</span><span class="special">,</span> <span class="number">0.5</span><span class="special">};</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">interpolators</span><span class="special">::</span><span class="identifier">bilinear_uniform</span><span class="special">;</span>
+<span class="keyword">int</span> <span class="identifier">rows</span> <span class="special">=</span> <span class="number">2</span><span class="special">;</span>
+<span class="keyword">int</span> <span class="identifier">cols</span> <span class="special">=</span> <span class="number">3</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">dx</span> <span class="special">=</span> <span class="number">1</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">dy</span> <span class="special">=</span> <span class="number">1</span><span class="special">;</span>
+<span class="keyword">auto</span> <span class="identifier">bu</span> <span class="special">=</span> <span class="identifier">bilinear_uniform</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">v</span><span class="special">),</span> <span class="identifier">rows</span><span class="special">,</span> <span class="identifier">cols</span><span class="special">,</span> <span class="identifier">dx</span><span class="special">,</span> <span class="identifier">dy</span><span class="special">);</span>
+<span class="comment">// evaluate at a point:</span>
+<span class="keyword">double</span> <span class="identifier">z</span> <span class="special">=</span> <span class="identifier">bu</span><span class="special">(</span><span class="number">0.0</span><span class="special">,</span> <span class="number">0.0</span><span class="special">);</span>
+</pre>
+<p>
+      Periodically, it is helpful to see what data the interpolator has. This can
+      be achieved via
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ub</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+</pre>
+<p>
+      Note that the interpolator is pimpl'd, so that copying the class is cheap,
+      and hence it can be shared between threads. (The call operator is threadsafe.)
+    </p>
+<p>
+      Note that the layout of the field data follows the convention found in laying
+      out images: The first value is associated with (x0, y0), and the last value
+      is associate with (x0 + (cols - 1)dx, y0 + (rows - 1)dy). This matches with
+      how we think about laying out matrices in C order, but of course there is no
+      canonical choice and conventions must be made. For example, it is traditional
+      in image processing the associate the first field value with the center of
+      the pixel (which would be called a cell-centered field in VTK). This interpolator
+      is point-centered, in the sense that (x0,y0) is associated with value v[0],
+      and (x0+dx, y0) associated with v[1]. If you have cell-centered data at (0,0),
+      then just pass (x0,y0) = (0.5, 0.5) to this interpolator.
+    </p>
+<p>
+      Note that this interpolator does not provide the option for a rotation. We
+      regarded that as too expensive to handle in this class. Rotating the arguments
+      must be performed by the user.
+    </p>
+<h4>
+<a name="math_toolkit.bilinear_uniform.h2"></a>
+      <span class="phrase"><a name="math_toolkit.bilinear_uniform.complexity_and_performance"></a></span><a class="link" href="bilinear_uniform.html#math_toolkit.bilinear_uniform.complexity_and_performance">Complexity
+      and Performance</a>
+    </h4>
+<p>
+      The google/benchmark in <code class="computeroutput"><span class="identifier">reporting</span><span class="special">/</span><span class="identifier">performance</span><span class="special">/</span><span class="identifier">bilinear_uniform_performance</span><span class="special">.</span><span class="identifier">cpp</span></code> demonstrates
+      the cost of the call operator for this interpolator:
+    </p>
+<pre class="programlisting"><span class="identifier">Run</span> <span class="identifier">on</span> <span class="special">(</span><span class="number">16</span> <span class="identifier">X</span> <span class="number">4300</span> <span class="identifier">MHz</span> <span class="identifier">CPU</span> <span class="identifier">s</span><span class="special">)</span>
+<span class="identifier">CPU</span> <span class="identifier">Caches</span><span class="special">:</span>
+  <span class="identifier">L1</span> <span class="identifier">Data</span> <span class="number">32</span><span class="identifier">K</span> <span class="special">(</span><span class="identifier">x8</span><span class="special">)</span>
+  <span class="identifier">L1</span> <span class="identifier">Instruction</span> <span class="number">32</span><span class="identifier">K</span> <span class="special">(</span><span class="identifier">x8</span><span class="special">)</span>
+  <span class="identifier">L2</span> <span class="identifier">Unified</span> <span class="number">1024</span><span class="identifier">K</span> <span class="special">(</span><span class="identifier">x8</span><span class="special">)</span>
+  <span class="identifier">L3</span> <span class="identifier">Unified</span> <span class="number">11264</span><span class="identifier">K</span> <span class="special">(</span><span class="identifier">x1</span><span class="special">)</span>
+<span class="identifier">Load</span> <span class="identifier">Average</span><span class="special">:</span> <span class="number">0.92</span><span class="special">,</span> <span class="number">0.64</span><span class="special">,</span> <span class="number">0.35</span>
+<span class="special">--------------------------------------</span>
+<span class="identifier">Benchmark</span>                      <span class="identifier">Time</span>
+<span class="special">--------------------------------------</span>
+<span class="identifier">Bilinear</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">64</span>            <span class="number">13.6</span> <span class="identifier">ns</span>
+<span class="identifier">Bilinear</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">128</span>           <span class="number">13.3</span> <span class="identifier">ns</span>
+<span class="identifier">Bilinear</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">256</span>           <span class="number">13.9</span> <span class="identifier">ns</span>
+<span class="identifier">Bilinear</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">512</span>           <span class="number">13.7</span> <span class="identifier">ns</span>
+<span class="identifier">Bilinear</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">1024</span>          <span class="number">13.2</span> <span class="identifier">ns</span>
+<span class="identifier">Bilinear</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">2048</span>          <span class="number">13.1</span> <span class="identifier">ns</span>
+<span class="identifier">Bilinear</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">4096</span>          <span class="number">13.2</span> <span class="identifier">ns</span>
+<span class="identifier">Bilinear</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8192</span>          <span class="number">13.2</span> <span class="identifier">ns</span>
+</pre>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="quintic_hermite.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../interpolation.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../quadrature.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

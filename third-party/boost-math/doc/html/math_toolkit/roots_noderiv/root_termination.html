@@ -1,0 +1,101 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Termination Condition Functors</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../roots_noderiv.html" title="Root Finding Without Derivatives">
+<link rel="prev" href="brent.html" title="Brent-Decker Algorithm">
+<link rel="next" href="implementation.html" title="Implementation">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="brent.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../roots_noderiv.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="implementation.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.roots_noderiv.root_termination"></a><a class="link" href="root_termination.html" title="Termination Condition Functors">Termination
+      Condition Functors</a>
+</h3></div></div></div>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">eps_tolerance</span>
+<span class="special">{</span>
+   <span class="identifier">eps_tolerance</span><span class="special">();</span>
+   <span class="identifier">eps_tolerance</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">bits</span><span class="special">);</span>
+   <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">b</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        <code class="computeroutput"><span class="identifier">eps_tolerance</span></code> is the usual
+        termination condition used with these root finding functions. Its <code class="computeroutput"><span class="keyword">operator</span><span class="special">()</span></code>
+        will return true when the relative distance between <span class="emphasis"><em>a</em></span>
+        and <span class="emphasis"><em>b</em></span> is less than four times the machine epsilon for
+        T, or 2<sup>1-bits</sup>, whichever is the larger. In other words, you set <span class="emphasis"><em>bits</em></span>
+        to the number of bits of precision you want in the result. The minimal tolerance
+        of <span class="emphasis"><em>four times the machine epsilon of type T</em></span> is required
+        to ensure that we get back a bracketing interval, since this must clearly
+        be at greater than one epsilon in size. While in theory a maximum distance
+        of twice machine epsilon is possible to achieve, in practice this results
+        in a great deal of "thrashing" given that the function whose root
+        is being found can only ever be accurate to 1 epsilon at best.
+      </p>
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">equal_floor</span>
+<span class="special">{</span>
+   <span class="identifier">equal_floor</span><span class="special">();</span>
+   <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">b</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        This termination condition is used when you want to find an integer result
+        that is the <span class="emphasis"><em>floor</em></span> of the true root. It will terminate
+        as soon as both ends of the interval have the same <span class="emphasis"><em>floor</em></span>.
+      </p>
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">equal_ceil</span>
+<span class="special">{</span>
+   <span class="identifier">equal_ceil</span><span class="special">();</span>
+   <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">b</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        This termination condition is used when you want to find an integer result
+        that is the <span class="emphasis"><em>ceil</em></span> of the true root. It will terminate
+        as soon as both ends of the interval have the same <span class="emphasis"><em>ceil</em></span>.
+      </p>
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">equal_nearest_integer</span>
+<span class="special">{</span>
+   <span class="identifier">equal_nearest_integer</span><span class="special">();</span>
+   <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">b</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        This termination condition is used when you want to find an integer result
+        that is the <span class="emphasis"><em>closest</em></span> to the true root. It will terminate
+        as soon as both ends of the interval round to the same nearest integer.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="brent.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../roots_noderiv.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="implementation.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

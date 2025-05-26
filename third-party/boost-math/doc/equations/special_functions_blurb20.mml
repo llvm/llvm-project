@@ -1,0 +1,42 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <msub>
+      <mtext>sinc</mtext>
+      <mi>a</mi>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <mfrac>
+      <mrow>
+        <mi>sin</mi>
+        <mfenced>
+          <mrow>
+            <mfrac>
+              <mrow>
+                <mi>&#x03C0;</mi>
+                <mi>x</mi>
+              </mrow>
+              <mi>a</mi>
+            </mfrac>
+          </mrow>
+        </mfenced>
+      </mrow>
+      <mrow>
+        <mfrac>
+          <mrow>
+            <mi>&#x03C0;</mi>
+            <mi>x</mi>
+          </mrow>
+          <mi>a</mi>
+        </mfrac>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+

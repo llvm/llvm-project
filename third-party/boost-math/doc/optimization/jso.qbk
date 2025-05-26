@@ -1,0 +1,105 @@
+[/
+Copyright (c) 2024 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:jso Algorithm jSO]
+
+[heading Synopsis]
+
+``
+    #include <boost/math/optimization/jso.hpp>
+    
+    namespace boost::math::optimization {
+
+    template <typename ArgumentContainer> struct jso_parameters {
+        using Real = typename ArgumentContainer::value_type;
+        ArgumentContainer lower_bounds;
+        ArgumentContainer upper_bounds;
+        size_t initial_population_size = 0;
+        size_t max_function_evaluations = 0;
+        ArgumentContainer const * initial_guess = nullptr;
+    };
+
+    template <typename ArgumentContainer, class Func, class URBG>
+    ArgumentContainer jso(
+        const Func cost_function, jso_parameters<ArgumentContainer> const &jso_params, URBG &gen,
+        std::invoke_result_t<Func, ArgumentContainer> target_value = std::numeric_limits<std::invoke_result_t<Func, ArgumentContainer>>::quiet_NaN(),
+        std::atomic<bool> *cancellation = nullptr,
+        std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr
+        std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr);
+
+    } // namespaces
+``
+
+The `jso` function provides a (hopefully) faithful implementation of Algorithm jSO, described in Brest et al 2017.
+This algorithm came in second place in the 2017 conference on evolutionary computing competition.
+It is an improvement on the classical differential evolution algorithm, which adapts the parameters in such as way that exploration is favored during early stages of the algorithm, and exploitation is favored during the later stages.
+In particular, it incorporates numerous ideas in the literature (in particular SHADE and L-SHADE) which aid in fast convergence.
+There are: Use of a historical archive of rejected vectors to provide information about convergence direction,
+adapting crossover and mutation parameters based on whether they were associated with successful updates, linear population size reduction, and use of "current-to-p-best" mutation.
+
+Like our implementation of differential evolution, it minimizes a cost function defined on a continuous space represented by a set of bounds.
+Again this function has been designed more for progress observability, graceful cancellation, and post-hoc data analysis than for speed of convergence.
+
+[heading Parameters]
+
+* `lower_bounds`: A container representing the lower bounds of the optimization space along each dimension.
+    The `.size()` of the bounds should return the dimension of the problem.
+* `upper_bounds`: A container representing the upper bounds of the optimization space along each dimension.
+    It should have the same size of `lower_bounds`, and each element should be >= the corresponding element of `lower_bounds`.
+* `initial_population_size`: How big the first generation should be. Defaults to `ceil(25log(D+1)sqrt(D))` where `D` is the dimension of the problem.
+* `max_function_evaluations`: Defaults to 10000D, where `D` is the dimension of the space.
+* `initial_guess`: An optional guess for where we should start looking for solutions.
+
+The defaults were chosen from a reading of Brest 2017.
+
+[heading The function]
+
+``
+template <typename ArgumentContainer, class Func, class URBG>
+ArgumentContainer jso(const Func cost_function,
+                      jso_parameters<ArgumentContainer> const &jso_params,
+                      URBG &gen,
+                      std::invoke_result_t<Func, ArgumentContainer> value_to_reach
+                        = std::numeric_limits<std::invoke_result_t<Func, ArgumentContainer>>::quiet_NaN(),
+                      std::atomic<bool> *cancellation = nullptr,
+                      std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr,
+                      std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr)
+``
+
+Parameters:
+
+* `cost_function`: The cost function to be minimized.
+* `jso_params`: The parameters to the algorithm as described above.
+* `gen`: A uniform random bit generator, like `std::mt19937_64`.
+* `value_to_reach`: An optional value that, if reached, stops the optimization.
+    This is the most robust way to terminate the calculation, but in most cases the optimal value of the cost function is unknown.
+    If it is, use it! Physical considerations can often be used to find optimal values for cost functions.
+* `cancellation`: An optional atomic boolean to allow the user to stop the computation and gracefully return the best result found up to that point.
+    N.B.: Cancellation is not immediate; the in-progress generation finishes.
+* `current_minimum_cost`: An optional atomic variable to store the current minimum cost during optimization.
+    This allows developers to (e.g.) plot the progress of the minimization over time and in conjunction with the `cancellation` argument allow halting the computation when the progress stagnates.
+* `queries`: An optional vector to store intermediate results during optimization.
+    This is useful for debugging and perhaps volume rendering of the objective function after the calculation is complete.
+
+Returns:
+
+The argument vector corresponding to the minimum cost found by the optimization.
+
+N.B.: The termination criteria is an "OR", not an "AND".
+So if the maximum generations is hit, the iteration stops, even if (say) a `value_to_reach` has not been attained.
+
+If you want more observability into what the optimization is doing, compile with `-DBOOST_MATH_DEBUG_JSO=1`
+
+[h4:examples Examples]
+
+An example exhibiting graceful cancellation and progress observability can be studied in [@../../example/jso_example.cpp jso_example.cpp].
+
+[h4:references References]
+
+* Brest, Janez, Mirjam Sepesy Maučec, and Borko Bošković. ['Single objective real-parameter optimization: Algorithm jSO.] 2017 IEEE congress on evolutionary computation (CEC). IEEE, 2017.
+
+[endsect] [/section:jso jSO]

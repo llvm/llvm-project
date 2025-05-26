@@ -1,0 +1,161 @@
+[section:ct_pow Compile Time Power of a Runtime Base]
+
+The `pow` function effectively computes the compile-time integral 
+power of a run-time base.
+
+[h4 Synopsis]
+
+[@../../../../boost/math/special_functions/pow.hpp `#include <boost/math/special_functions/pow.hpp>`]
+
+    namespace boost { namespace math {
+
+    template <int N, typename T>
+    BOOST_MATH_GPU_ENABLED constexpr ``__sf_result`` pow(T base);
+
+    template <int N, typename T, class Policy>
+    BOOST_MATH_GPU_ENABLED constexpr ``__sf_result`` pow(T base, const Policy& policy);
+
+    }}
+
+[h4 Rationale and Usage]
+
+Computing the power of a number with an exponent that is known 
+at compile time is a common need for programmers. In such cases, 
+the usual method is to avoid the overhead implied by
+the `pow`, `powf` and `powl` C functions by hardcoding an expression
+such as:
+
+    // Hand-written 8th power of a 'base' variable
+    double result = base*base*base*base*base*base*base*base;
+
+However, this kind of expression is not really readable (knowing the 
+value of the exponent involves counting the number of occurrences of /base/), 
+error-prone (it's easy to forget an occurrence), syntactically bulky, and 
+non-optimal in terms of performance.
+
+The `pow` function of Boost.Math helps writing this kind expression along 
+with solving all the problems listed above:
+
+    // 8th power of a 'base' variable using math::pow
+    double result = pow<8>(base);
+
+The expression is now shorter, easier to read, safer, and even faster. 
+Indeed, `pow` will compute the expression such that only log2(N) 
+products are made for a power of N. For instance in the
+example above, the resulting expression will be the same as if we had 
+written this, with only one computation of each identical subexpression:
+
+    // Internal effect of pow<8>(base)
+    double result = ((base*base)*(base*base))*((base*base)*(base*base));
+
+Only 3 different products were actually computed.
+
+
+[h4 Return Type]
+
+The return type of these functions is computed using the __arg_promotion_rules. 
+For example:
+
+* If T is a `float`, the return type is a `float`.
+* If T is a `long double`, the return type is a `long double`.
+* Otherwise, the return type is a `double`.
+
+[h4 constexpr]
+
+This function is usable in `constexpr` contexts from C++14 onwards.
+
+[h4 Policies]
+
+[optional_policy]
+
+[h4 Error Handling]
+
+Two cases of errors can occur when using `pow`:
+
+* In case of null base and negative exponent, an __overflow_error occurs since 
+this operation is a division by 0 (it equals to 1/0).
+* In case of null base and null exponent, an __indeterminate_result_error
+occurs since the result of this operation is indeterminate.
+Those errors follow the
+[link math_toolkit.error_handling 
+general policies of error handling in Boost.Math].
+
+The default overflow error policy is `throw_on_error`. A call like `pow<-2>(0)` 
+will thus throw a `std::overflow_error` exception. As shown in the 
+link given above, other error handling policies can be used:
+
+* `errno_on_error`: Sets `::errno`  to `ERANGE` and returns `std::numeric_limits<T>::infinity()`.
+* `ignore_error`: Returns `std::numeric_limits<T>::infinity()`.
+* `user_error`: Returns the result of `boost::math::policies::user_overflow_error`: 
+   this function must be defined by the user.
+
+The default indeterminate result error policy is `ignore_error`, which for this
+function returns 1 since it's the most commonly chosen result for a power of 0.
+Here again, other error handling policies can be used:
+
+* `throw_on_error`: Throws `std::domain_error`
+* `errno_on_error`: Sets `::errno`  to `EDOM` and returns 1.
+* `user_error`: Returns the result of `boost::math::policies::user_indeterminate_result_error`:
+   this function must be defined by the user.
+
+Here is an example of error handling customization where we want to 
+specify the result that has to be returned in case of error. We will 
+thus use the `user_error` policy, by passing as second argument an 
+instance of an overflow_error policy templated with `user_error`:
+
+    // First we open the boost::math::policies namespace and define the `user_overflow_error`
+    // by making it return the value we want in case of error (-1 here)
+
+    namespace boost { namespace math { namespace policies {
+    template <class T>
+    T user_overflow_error(const char*, const char*, const T&)
+    { return -1; }
+    }}}
+
+
+    // Then we invoke pow and indicate that we want to use the user_error policy
+    using boost::math::policies;
+    double result = pow<-5>(base, policy<overflow_error<user_error> >());
+
+    // We can now test the returned value and treat the special case if needed:
+    if (result == -1)
+    {
+        // there was an error, do something...
+    }
+
+Another way is to redefine the default `overflow_error` policy by using the
+BOOST_MATH_OVERFLOW_ERROR_POLICY macro. Once the `user_overflow_error` function 
+is defined as above, we can achieve the same result like this:
+
+    // Redefine the default error_overflow policy
+    #define BOOST_MATH_OVERFLOW_ERROR_POLICY user_error
+    #include <boost/math/special_functions/pow.hpp>
+
+    // From this point, passing a policy in argument is no longer needed, a call like this one
+    // will return -1 in case of error:
+
+    double result = pow<-5>(base);
+
+[h4 Acknowledgements]
+
+Bruno Lalande submitted this addition to Boost.Math.
+
+'''
+Thanks to Joaqu&#xed;n L&#xf3;pez Mu&#xf1;oz and Scott McMurray for their help in
+improving the implementation.
+'''
+
+[h4 References]
+
+D.E. Knuth, ['The Art of Computer Programming, Vol. 2: Seminumerical Algorithms], 2nd ed., Addison-Wesley, Reading, MA, 1981
+
+[endsect] [/section:ct_pow Compile Time Power of a Runtime Base]
+
+
+[/ 
+  Copyright 2008 Bruno Lalande.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

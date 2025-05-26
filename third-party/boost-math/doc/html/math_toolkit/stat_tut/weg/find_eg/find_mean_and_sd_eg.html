@@ -1,0 +1,454 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Find mean and standard deviation example</title>
+<link rel="stylesheet" href="../../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../find_eg.html" title="Find Location and Scale Examples">
+<link rel="prev" href="find_scale_eg.html" title="Find Scale (Standard Deviation) Example">
+<link rel="next" href="../nag_library.html" title="Comparison with C, R, FORTRAN-style Free Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="find_scale_eg.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../find_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../nag_library.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg"></a><a class="link" href="find_mean_and_sd_eg.html" title="Find mean and standard deviation example">Find
+          mean and standard deviation example</a>
+</h5></div></div></div>
+<p>
+            First we need some includes to access the normal distribution, the algorithms
+            to find location and scale (and some std output of course).
+          </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">normal</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span> <span class="comment">// for normal_distribution</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">normal</span><span class="special">;</span> <span class="comment">// typedef provides default type is double.</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">cauchy</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span> <span class="comment">// for cauchy_distribution</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">cauchy</span><span class="special">;</span> <span class="comment">// typedef provides default type is double.</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">find_location</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">find_location</span><span class="special">;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">find_scale</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">find_scale</span><span class="special">;</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">complement</span><span class="special">;</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">policy</span><span class="special">;</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">left</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">showpoint</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">noshowpoint</span><span class="special">;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iomanip</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">;</span> <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setprecision</span><span class="special">;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">limits</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">stdexcept</span><span class="special">&gt;</span>
+</pre>
+<h5>
+<a name="math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg.h0"></a>
+            <span class="phrase"><a name="math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg.using_find_location_and_find_sca"></a></span><a class="link" href="find_mean_and_sd_eg.html#math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg.using_find_location_and_find_sca">Using
+            find_location and find_scale to meet dispensing and measurement specifications</a>
+          </h5>
+<p>
+            Consider an example from K Krishnamoorthy, Handbook of Statistical Distributions
+            with Applications, ISBN 1-58488-635-8, (2006) p 126, example 10.3.7.
+          </p>
+<p>
+            "A machine is set to pack 3 kg of ground beef per pack. Over a long
+            period of time it is found that the average packed was 3 kg with a standard
+            deviation of 0.1 kg. Assume the packing is normally distributed."
+          </p>
+<p>
+            We start by constructing a normal distribution with the given parameters:
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">mean</span> <span class="special">=</span> <span class="number">3.</span><span class="special">;</span> <span class="comment">// kg</span>
+<span class="keyword">double</span> <span class="identifier">standard_deviation</span> <span class="special">=</span> <span class="number">0.1</span><span class="special">;</span> <span class="comment">// kg</span>
+<span class="identifier">normal</span> <span class="identifier">packs</span><span class="special">(</span><span class="identifier">mean</span><span class="special">,</span> <span class="identifier">standard_deviation</span><span class="special">);</span>
+</pre>
+<p>
+            We can then find the fraction (or %) of packages that weigh more than
+            3.1 kg.
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">max_weight</span> <span class="special">=</span> <span class="number">3.1</span><span class="special">;</span> <span class="comment">// kg</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Percentage of packs &gt; "</span> <span class="special">&lt;&lt;</span> <span class="identifier">max_weight</span> <span class="special">&lt;&lt;</span> <span class="string">" is "</span>
+<span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">packs</span><span class="special">,</span> <span class="identifier">max_weight</span><span class="special">))</span> <span class="special">*</span> <span class="number">100.</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// P(X &gt; 3.1)</span>
+</pre>
+<p>
+            We might want to ensure that 95% of packs are over a minimum weight specification,
+            then we want the value of the mean such that P(X &lt; 2.9) = 0.05.
+          </p>
+<p>
+            Using the mean of 3 kg, we can estimate the fraction of packs that fail
+            to meet the specification of 2.9 kg.
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">minimum_weight</span> <span class="special">=</span> <span class="number">2.9</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span><span class="string">"Fraction of packs &lt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span> <span class="special">&lt;&lt;</span> <span class="string">" with a mean of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">mean</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">packs</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// fraction of packs &lt;= 2.9 with a mean of 3 is 0.841345</span>
+</pre>
+<p>
+            This is 0.84 - more than the target fraction of 0.95. If we want 95%
+            to be over the minimum weight, what should we set the mean weight to
+            be?
+          </p>
+<p>
+            Using the KK StatCalc program supplied with the book and the method given
+            on page 126 gives 3.06449.
+          </p>
+<p>
+            We can confirm this by constructing a new distribution which we call
+            'xpacks' with a safety margin mean of 3.06449 thus:
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">over_mean</span> <span class="special">=</span> <span class="number">3.06449</span><span class="special">;</span>
+<span class="identifier">normal</span> <span class="identifier">xpacks</span><span class="special">(</span><span class="identifier">over_mean</span><span class="special">,</span> <span class="identifier">standard_deviation</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span>
+<span class="special">&lt;&lt;</span> <span class="string">" with a mean of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">xpacks</span><span class="special">.</span><span class="identifier">mean</span><span class="special">()</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">xpacks</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// fraction of packs &gt;= 2.9 with a mean of 3.06449 is 0.950005</span>
+</pre>
+<p>
+            Using this Math Toolkit, we can calculate the required mean directly
+            thus:
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">under_fraction</span> <span class="special">=</span> <span class="number">0.05</span><span class="special">;</span>  <span class="comment">// so 95% are above the minimum weight mean - sd = 2.9</span>
+<span class="keyword">double</span> <span class="identifier">low_limit</span> <span class="special">=</span> <span class="identifier">standard_deviation</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">offset</span> <span class="special">=</span> <span class="identifier">mean</span> <span class="special">-</span> <span class="identifier">low_limit</span> <span class="special">-</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">packs</span><span class="special">,</span> <span class="identifier">under_fraction</span><span class="special">);</span>
+<span class="keyword">double</span> <span class="identifier">nominal_mean</span> <span class="special">=</span> <span class="identifier">mean</span> <span class="special">+</span> <span class="identifier">offset</span><span class="special">;</span>
+<span class="comment">// mean + (mean - low_limit - quantile(packs, under_fraction));</span>
+
+<span class="identifier">normal</span> <span class="identifier">nominal_packs</span><span class="special">(</span><span class="identifier">nominal_mean</span><span class="special">,</span> <span class="identifier">standard_deviation</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Setting the packer to "</span> <span class="special">&lt;&lt;</span> <span class="identifier">nominal_mean</span> <span class="special">&lt;&lt;</span> <span class="string">" will mean that "</span>
+  <span class="special">&lt;&lt;</span> <span class="string">"fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">nominal_packs</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Setting the packer to 3.06449 will mean that fraction of packs &gt;= 2.9 is 0.95</span>
+</pre>
+<p>
+            This calculation is generalized as the free function called <code class="computeroutput"><span class="identifier">find_location</span></code>, see <a class="link" href="../../../dist_ref/dist_algorithms.html" title="Distribution Algorithms">algorithms</a>.
+          </p>
+<p>
+            To use this we will need to
+          </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">find_location</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+  <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">find_location</span><span class="special">;</span>
+</pre>
+<p>
+            and then use find_location function to find safe_mean, &amp; construct
+            a new normal distribution called 'goodpacks'.
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">safe_mean</span> <span class="special">=</span> <span class="identifier">find_location</span><span class="special">&lt;</span><span class="identifier">normal</span><span class="special">&gt;(</span><span class="identifier">minimum_weight</span><span class="special">,</span> <span class="identifier">under_fraction</span><span class="special">,</span> <span class="identifier">standard_deviation</span><span class="special">);</span>
+<span class="identifier">normal</span> <span class="identifier">good_packs</span><span class="special">(</span><span class="identifier">safe_mean</span><span class="special">,</span> <span class="identifier">standard_deviation</span><span class="special">);</span>
+</pre>
+<p>
+            with the same confirmation as before:
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Setting the packer to "</span> <span class="special">&lt;&lt;</span> <span class="identifier">nominal_mean</span> <span class="special">&lt;&lt;</span> <span class="string">" will mean that "</span>
+  <span class="special">&lt;&lt;</span> <span class="string">"fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">good_packs</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Setting the packer to 3.06449 will mean that fraction of packs &gt;= 2.9 is 0.95</span>
+</pre>
+<h5>
+<a name="math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg.h1"></a>
+            <span class="phrase"><a name="math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg.using_cauchy_lorentz_instead_of_"></a></span><a class="link" href="find_mean_and_sd_eg.html#math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg.using_cauchy_lorentz_instead_of_">Using
+            Cauchy-Lorentz instead of normal distribution</a>
+          </h5>
+<p>
+            After examining the weight distribution of a large number of packs, we
+            might decide that, after all, the assumption of a normal distribution
+            is not really justified. We might find that the fit is better to a <a class="link" href="../../../dist_ref/dists/cauchy_dist.html" title="Cauchy-Lorentz Distribution">Cauchy Distribution</a>.
+            This distribution has wider 'wings', so that whereas most of the values
+            are closer to the mean than the normal, there are also more values than
+            'normal' that lie further from the mean than the normal.
+          </p>
+<p>
+            This might happen because a larger than normal lump of meat is either
+            included or excluded.
+          </p>
+<p>
+            We first create a <a class="link" href="../../../dist_ref/dists/cauchy_dist.html" title="Cauchy-Lorentz Distribution">Cauchy
+            Distribution</a> with the original mean and standard deviation, and
+            estimate the fraction that lie below our minimum weight specification.
+          </p>
+<pre class="programlisting"><span class="identifier">cauchy</span> <span class="identifier">cpacks</span><span class="special">(</span><span class="identifier">mean</span><span class="special">,</span> <span class="identifier">standard_deviation</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Cauchy Setting the packer to "</span> <span class="special">&lt;&lt;</span> <span class="identifier">mean</span> <span class="special">&lt;&lt;</span> <span class="string">" will mean that "</span>
+  <span class="special">&lt;&lt;</span> <span class="string">"fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">cpacks</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Cauchy Setting the packer to 3 will mean that fraction of packs &gt;= 2.9 is 0.75</span>
+</pre>
+<p>
+            Note that far fewer of the packs meet the specification, only 75% instead
+            of 95%. Now we can repeat the find_location, using the cauchy distribution
+            as template parameter, in place of the normal used above.
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">lc</span> <span class="special">=</span> <span class="identifier">find_location</span><span class="special">&lt;</span><span class="identifier">cauchy</span><span class="special">&gt;(</span><span class="identifier">minimum_weight</span><span class="special">,</span> <span class="identifier">under_fraction</span><span class="special">,</span> <span class="identifier">standard_deviation</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"find_location&lt;cauchy&gt;(minimum_weight, over fraction, standard_deviation); "</span> <span class="special">&lt;&lt;</span> <span class="identifier">lc</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// find_location&lt;cauchy&gt;(minimum_weight, over fraction, packs.standard_deviation()); 3.53138</span>
+</pre>
+<p>
+            Note that the safe_mean setting needs to be much higher, 3.53138 instead
+            of 3.06449, so we will make rather less profit.
+          </p>
+<p>
+            And again confirm that the fraction meeting specification is as expected.
+          </p>
+<pre class="programlisting"><span class="identifier">cauchy</span> <span class="identifier">goodcpacks</span><span class="special">(</span><span class="identifier">lc</span><span class="special">,</span> <span class="identifier">standard_deviation</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Cauchy Setting the packer to "</span> <span class="special">&lt;&lt;</span> <span class="identifier">lc</span> <span class="special">&lt;&lt;</span> <span class="string">" will mean that "</span>
+  <span class="special">&lt;&lt;</span> <span class="string">"fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">goodcpacks</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Cauchy Setting the packer to 3.53138 will mean that fraction of packs &gt;= 2.9 is 0.95</span>
+</pre>
+<p>
+            Finally we could estimate the effect of a much tighter specification,
+            that 99% of packs met the specification.
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Cauchy Setting the packer to "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">find_location</span><span class="special">&lt;</span><span class="identifier">cauchy</span><span class="special">&gt;(</span><span class="identifier">minimum_weight</span><span class="special">,</span> <span class="number">0.99</span><span class="special">,</span> <span class="identifier">standard_deviation</span><span class="special">)</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" will mean that "</span>
+  <span class="special">&lt;&lt;</span> <span class="string">"fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">goodcpacks</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            Setting the packer to 3.13263 will mean that fraction of packs &gt;=
+            2.9 is 0.99, but will more than double the mean loss from 0.0644 to 0.133
+            kg per pack.
+          </p>
+<p>
+            Of course, this calculation is not limited to packs of meat, it applies
+            to dispensing anything, and it also applies to a 'virtual' material like
+            any measurement.
+          </p>
+<p>
+            The only caveat is that the calculation assumes that the standard deviation
+            (scale) is known with a reasonably low uncertainty, something that is
+            not so easy to ensure in practice. And that the distribution is well
+            defined, <a class="link" href="../../../dist_ref/dists/normal_dist.html" title="Normal (Gaussian) Distribution">Normal
+            Distribution</a> or <a class="link" href="../../../dist_ref/dists/cauchy_dist.html" title="Cauchy-Lorentz Distribution">Cauchy
+            Distribution</a>, or some other.
+          </p>
+<p>
+            If one is simply dispensing a very large number of packs, then it may
+            be feasible to measure the weight of hundreds or thousands of packs.
+            With a healthy 'degrees of freedom', the confidence intervals for the
+            standard deviation are not too wide, typically about + and - 10% for
+            hundreds of observations.
+          </p>
+<p>
+            For other applications, where it is more difficult or expensive to make
+            many observations, the confidence intervals are depressingly wide.
+          </p>
+<p>
+            See <a class="link" href="../cs_eg/chi_sq_intervals.html" title="Confidence Intervals on the Standard Deviation">Confidence
+            Intervals on the standard deviation</a> for a worked example <a href="../../../../../../example/chi_square_std_dev_test.cpp" target="_top">chi_square_std_dev_test.cpp</a>
+            of estimating these intervals.
+          </p>
+<h5>
+<a name="math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg.h2"></a>
+            <span class="phrase"><a name="math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg.changing_the_scale_or_standard_d"></a></span><a class="link" href="find_mean_and_sd_eg.html#math_toolkit.stat_tut.weg.find_eg.find_mean_and_sd_eg.changing_the_scale_or_standard_d">Changing
+            the scale or standard deviation</a>
+          </h5>
+<p>
+            Alternatively, we could invest in a better (more precise) packer (or
+            measuring device) with a lower standard deviation, or scale.
+          </p>
+<p>
+            This might cost more, but would reduce the amount we have to 'give away'
+            in order to meet the specification.
+          </p>
+<p>
+            To estimate how much better (how much smaller standard deviation) it
+            would have to be, we need to get the 5% quantile to be located at the
+            under_weight limit, 2.9
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">p</span> <span class="special">=</span> <span class="number">0.05</span><span class="special">;</span> <span class="comment">// wanted p th quantile.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Quantile of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">p</span> <span class="special">&lt;&lt;</span> <span class="string">" = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">packs</span><span class="special">,</span> <span class="identifier">p</span><span class="special">)</span>
+  <span class="special">&lt;&lt;</span> <span class="string">", mean = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">packs</span><span class="special">.</span><span class="identifier">mean</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="string">", sd = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">packs</span><span class="special">.</span><span class="identifier">standard_deviation</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+            Quantile of 0.05 = 2.83551, mean = 3, sd = 0.1
+          </p>
+<p>
+            With the current packer (mean = 3, sd = 0.1), the 5% quantile is at 2.8551
+            kg, a little below our target of 2.9 kg. So we know that the standard
+            deviation is going to have to be smaller.
+          </p>
+<p>
+            Let's start by guessing that it (now 0.1) needs to be halved, to a standard
+            deviation of 0.05 kg.
+          </p>
+<pre class="programlisting"><span class="identifier">normal</span> <span class="identifier">pack05</span><span class="special">(</span><span class="identifier">mean</span><span class="special">,</span> <span class="number">0.05</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Quantile of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">p</span> <span class="special">&lt;&lt;</span> <span class="string">" = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">pack05</span><span class="special">,</span> <span class="identifier">p</span><span class="special">)</span>
+  <span class="special">&lt;&lt;</span> <span class="string">", mean = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pack05</span><span class="special">.</span><span class="identifier">mean</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="string">", sd = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pack05</span><span class="special">.</span><span class="identifier">standard_deviation</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Quantile of 0.05 = 2.91776, mean = 3, sd = 0.05</span>
+
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span><span class="string">"Fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span> <span class="special">&lt;&lt;</span> <span class="string">" with a mean of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">mean</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" and standard deviation of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pack05</span><span class="special">.</span><span class="identifier">standard_deviation</span><span class="special">()</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">pack05</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Fraction of packs &gt;= 2.9 with a mean of 3 and standard deviation of 0.05 is 0.97725</span>
+</pre>
+<p>
+            So 0.05 was quite a good guess, but we are a little over the 2.9 target,
+            so the standard deviation could be a tiny bit more. So we could do some
+            more guessing to get closer, say by increasing standard deviation to
+            0.06 kg, constructing another new distribution called pack06.
+          </p>
+<pre class="programlisting"><span class="identifier">normal</span> <span class="identifier">pack06</span><span class="special">(</span><span class="identifier">mean</span><span class="special">,</span> <span class="number">0.06</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Quantile of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">p</span> <span class="special">&lt;&lt;</span> <span class="string">" = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">pack06</span><span class="special">,</span> <span class="identifier">p</span><span class="special">)</span>
+  <span class="special">&lt;&lt;</span> <span class="string">", mean = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pack06</span><span class="special">.</span><span class="identifier">mean</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="string">", sd = "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pack06</span><span class="special">.</span><span class="identifier">standard_deviation</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Quantile of 0.05 = 2.90131, mean = 3, sd = 0.06</span>
+
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span><span class="string">"Fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span> <span class="special">&lt;&lt;</span> <span class="string">" with a mean of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">mean</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" and standard deviation of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pack06</span><span class="special">.</span><span class="identifier">standard_deviation</span><span class="special">()</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">pack06</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Fraction of packs &gt;= 2.9 with a mean of 3 and standard deviation of 0.06 is 0.95221</span>
+</pre>
+<p>
+            Now we are getting really close, but to do the job properly, we might
+            need to use root finding method, for example the tools provided, and
+            used elsewhere, in the Math Toolkit, see <a class="link" href="../../../roots_noderiv.html" title="Root Finding Without Derivatives">root-finding
+            without derivatives</a>
+          </p>
+<p>
+            But in this (normal) distribution case, we can and should be even smarter
+            and make a direct calculation.
+          </p>
+<p>
+            Our required limit is minimum_weight = 2.9 kg, often called the random
+            variate z. For a standard normal distribution, then probability p = N((minimum_weight
+            - mean) / sd).
+          </p>
+<p>
+            We want to find the standard deviation that would be required to meet
+            this limit, so that the p th quantile is located at z (minimum_weight).
+            In this case, the 0.05 (5%) quantile is at 2.9 kg pack weight, when the
+            mean is 3 kg, ensuring that 0.95 (95%) of packs are above the minimum
+            weight.
+          </p>
+<p>
+            Rearranging, we can directly calculate the required standard deviation:
+          </p>
+<pre class="programlisting"><span class="identifier">normal</span> <span class="identifier">N01</span><span class="special">;</span> <span class="comment">// standard normal distribution with mean zero and unit standard deviation.</span>
+<span class="identifier">p</span> <span class="special">=</span> <span class="number">0.05</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">qp</span> <span class="special">=</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">N01</span><span class="special">,</span> <span class="identifier">p</span><span class="special">);</span>
+<span class="keyword">double</span> <span class="identifier">sd95</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">minimum_weight</span> <span class="special">-</span> <span class="identifier">mean</span><span class="special">)</span> <span class="special">/</span> <span class="identifier">qp</span><span class="special">;</span>
+
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"For the "</span><span class="special">&lt;&lt;</span> <span class="identifier">p</span> <span class="special">&lt;&lt;</span> <span class="string">"th quantile to be located at "</span>
+  <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span> <span class="special">&lt;&lt;</span> <span class="string">", would need a standard deviation of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">sd95</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// For the 0.05th quantile to be located at 2.9, would need a standard deviation of 0.0607957</span>
+</pre>
+<p>
+            We can now construct a new (normal) distribution pack95 for the 'better'
+            packer, and check that our distribution will meet the specification.
+          </p>
+<pre class="programlisting"><span class="identifier">normal</span> <span class="identifier">pack95</span><span class="special">(</span><span class="identifier">mean</span><span class="special">,</span> <span class="identifier">sd95</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span><span class="string">"Fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span> <span class="special">&lt;&lt;</span> <span class="string">" with a mean of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">mean</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" and standard deviation of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pack95</span><span class="special">.</span><span class="identifier">standard_deviation</span><span class="special">()</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">pack95</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Fraction of packs &gt;= 2.9 with a mean of 3 and standard deviation of 0.0607957 is 0.95</span>
+</pre>
+<p>
+            This calculation is generalized in the free function find_scale, as shown
+            below, giving the same standard deviation.
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">ss</span> <span class="special">=</span> <span class="identifier">find_scale</span><span class="special">&lt;</span><span class="identifier">normal</span><span class="special">&gt;(</span><span class="identifier">minimum_weight</span><span class="special">,</span> <span class="identifier">under_fraction</span><span class="special">,</span> <span class="identifier">packs</span><span class="special">.</span><span class="identifier">mean</span><span class="special">());</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"find_scale&lt;normal&gt;(minimum_weight, under_fraction, packs.mean()); "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ss</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// find_scale&lt;normal&gt;(minimum_weight, under_fraction, packs.mean()); 0.0607957</span>
+</pre>
+<p>
+            If we had defined an over_fraction, or percentage that must pass specification
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">over_fraction</span> <span class="special">=</span> <span class="number">0.95</span><span class="special">;</span>
+</pre>
+<p>
+            And (wrongly) written
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">sso</span> <span class="special">=</span> <span class="identifier">find_scale</span><span class="special">&lt;</span><span class="identifier">normal</span><span class="special">&gt;(</span><span class="identifier">minimum_weight</span><span class="special">,</span> <span class="identifier">over_fraction</span><span class="special">,</span> <span class="identifier">packs</span><span class="special">.</span><span class="identifier">mean</span><span class="special">());</span>
+</pre>
+<p>
+            With the default policy, we would get a message like
+          </p>
+<pre class="programlisting">Message from thrown exception was:
+   Error in function boost::math::find_scale&lt;Dist, Policy&gt;(double, double, double, Policy):
+   Computed scale (-0.060795683191176959) is &lt;= 0! Was the complement intended?
+</pre>
+<p>
+            But this would return a <span class="bold"><strong>negative</strong></span> standard
+            deviation - obviously impossible. The probability should be 1 - over_fraction,
+            not over_fraction, thus:
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">ss1o</span> <span class="special">=</span> <span class="identifier">find_scale</span><span class="special">&lt;</span><span class="identifier">normal</span><span class="special">&gt;(</span><span class="identifier">minimum_weight</span><span class="special">,</span> <span class="number">1</span> <span class="special">-</span> <span class="identifier">over_fraction</span><span class="special">,</span> <span class="identifier">packs</span><span class="special">.</span><span class="identifier">mean</span><span class="special">());</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"find_scale&lt;normal&gt;(minimum_weight, under_fraction, packs.mean()); "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ss1o</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// find_scale&lt;normal&gt;(minimum_weight, under_fraction, packs.mean()); 0.0607957</span>
+</pre>
+<p>
+            But notice that using '1 - over_fraction' - will lead to a loss of accuracy,
+            especially if over_fraction was close to unity. (See <a class="link" href="../../overview/complements.html#why_complements">why
+            complements?</a>). In this (very common) case, we should instead use
+            the <a class="link" href="../../overview/complements.html" title="Complements are supported too - and when to use them">complements</a>,
+            giving the most accurate result.
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">ssc</span> <span class="special">=</span> <span class="identifier">find_scale</span><span class="special">&lt;</span><span class="identifier">normal</span><span class="special">&gt;(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">minimum_weight</span><span class="special">,</span> <span class="identifier">over_fraction</span><span class="special">,</span> <span class="identifier">packs</span><span class="special">.</span><span class="identifier">mean</span><span class="special">()));</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"find_scale&lt;normal&gt;(complement(minimum_weight, over_fraction, packs.mean())); "</span> <span class="special">&lt;&lt;</span> <span class="identifier">ssc</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// find_scale&lt;normal&gt;(complement(minimum_weight, over_fraction, packs.mean())); 0.0607957</span>
+</pre>
+<p>
+            Note that our guess of 0.06 was close to the accurate value of 0.060795683191176959.
+          </p>
+<p>
+            We can again confirm our prediction thus:
+          </p>
+<pre class="programlisting"><span class="identifier">normal</span> <span class="identifier">pack95c</span><span class="special">(</span><span class="identifier">mean</span><span class="special">,</span> <span class="identifier">ssc</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span><span class="string">"Fraction of packs &gt;= "</span> <span class="special">&lt;&lt;</span> <span class="identifier">minimum_weight</span> <span class="special">&lt;&lt;</span> <span class="string">" with a mean of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">mean</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" and standard deviation of "</span> <span class="special">&lt;&lt;</span> <span class="identifier">pack95c</span><span class="special">.</span><span class="identifier">standard_deviation</span><span class="special">()</span>
+  <span class="special">&lt;&lt;</span> <span class="string">" is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">pack95c</span><span class="special">,</span> <span class="identifier">minimum_weight</span><span class="special">))</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// Fraction of packs &gt;= 2.9 with a mean of 3 and standard deviation of 0.0607957 is 0.95</span>
+</pre>
+<p>
+            Notice that these two deceptively simple questions:
+          </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+                Do we over-fill to make sure we meet a minimum specification (or
+                under-fill to avoid an overdose)?
+              </li></ul></div>
+<p>
+            and/or
+          </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+                Do we measure better?
+              </li></ul></div>
+<p>
+            are actually extremely common.
+          </p>
+<p>
+            The weight of beef might be replaced by a measurement of more or less
+            anything, from drug tablet content, Apollo landing rocket firing, X-ray
+            treatment doses...
+          </p>
+<p>
+            The scale can be variation in dispensing or uncertainty in measurement.
+          </p>
+<p>
+            See <a href="../../../../../../example/find_mean_and_sd_normal.cpp" target="_top">find_mean_and_sd_normal.cpp</a>
+            for full source code &amp; appended program output.
+          </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="find_scale_eg.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../find_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../nag_library.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

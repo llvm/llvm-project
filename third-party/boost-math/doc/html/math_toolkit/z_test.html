@@ -1,0 +1,173 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>z-tests</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../statistics.html" title="Chapter 6. Statistics">
+<link rel="prev" href="t_test.html" title="t-tests">
+<link rel="next" href="runs_test.html" title="Runs tests">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="t_test.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../statistics.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="runs_test.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.z_test"></a><a class="link" href="z_test.html" title="z-tests"><span class="emphasis"><em>z</em></span>-tests</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.z_test.h0"></a>
+      <span class="phrase"><a name="math_toolkit.z_test.synopsis"></a></span><a class="link" href="z_test.html#math_toolkit.z_test.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">statistics</span><span class="special">/</span><span class="identifier">z_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">statistics</span> <span class="special">{</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">one_sample_z_test</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">sample_mean</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">sample_variance</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">num_samples</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">assumed_mean</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ForwardIterator</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator_traits</span><span class="special">&lt;</span><span class="identifier">ForwardIterator</span><span class="special">&gt;::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">one_sample_z_test</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">begin</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">end</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">assumed_mean</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">one_sample_z_test</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">v</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span> <span class="identifier">assumed_mean</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ForwardIterator</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator_traits</span><span class="special">&lt;</span><span class="identifier">ForwardIterator</span><span class="special">&gt;::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">two_sample_z_test</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">begin_1</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">end_1</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">begin_2</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">begin_2</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">two_sample_z_test</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">u</span><span class="special">,</span> <span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">v</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ForwardIterator</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator_traits</span><span class="special">&lt;</span><span class="identifier">ForwardIterator</span><span class="special">&gt;::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">paired_samples_z_test</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">begin_1</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">end_1</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">begin_2</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">begin_2</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">paired_samples_z_test</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">u</span><span class="special">,</span> <span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">v</span><span class="special">);</span>
+
+<span class="special">}}}</span>
+</pre>
+<h4>
+<a name="math_toolkit.z_test.h1"></a>
+      <span class="phrase"><a name="math_toolkit.z_test.background"></a></span><a class="link" href="z_test.html#math_toolkit.z_test.background">Background</a>
+    </h4>
+<p>
+      A set of C++11 compatible functions for various one sample and independent
+      sample <span class="emphasis"><em>z</em></span>-tests. The input can be any real number or set
+      of real numbers. In the event that the input is an integer or a set of integers
+      typename Real will be deduced as a double precision type.
+    </p>
+<h4>
+<a name="math_toolkit.z_test.h2"></a>
+      <span class="phrase"><a name="math_toolkit.z_test.one_sample_z_test"></a></span><a class="link" href="z_test.html#math_toolkit.z_test.one_sample_z_test">One-sample
+      <span class="emphasis"><em>z</em></span>-test</a>
+    </h4>
+<p>
+      A one-sample <span class="emphasis"><em>z</em></span>-test is used to determine whether two population
+      means are different when the variances are known and the sample sizes are large.
+      The <span class="emphasis"><em>z</em></span>-test is closely related to the <span class="emphasis"><em>t</em></span>-test
+      but can be performed using a large sample size.
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/one_sample_z_test_statistic.svg"></object></span>
+    </p>
+<p>
+      where
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/one_sample_z_s_value.svg" width="51" height="34"></object></span>
+    </p>
+<p>
+      with <span class="emphasis"><em>X</em></span> being the test-statistic and µ<sub>0</sub> being the assumed
+      mean
+    </p>
+<p>
+      the test statistic <span class="emphasis"><em>X</em></span> can be assumed to come from a uniform
+      real distribution. Since we wish to know if the sample mean deviates from the
+      true mean in either direction, the test is two-tailed. Hence the <span class="emphasis"><em>p</em></span>-value
+      is straightforward to calculate from the uniform real distribution on <span class="emphasis"><em>n</em></span>
+      - 1 degrees of freedom, but nonetheless it is convenient to have it computed
+      here.
+    </p>
+<p>
+      An example usage is as follows:
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">random</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">statistics</span><span class="special">/</span><span class="identifier">z_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">random_device</span> <span class="identifier">rd</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">mt19937</span> <span class="identifier">gen</span><span class="special">{</span><span class="identifier">rd</span><span class="special">()};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">normal_distribution</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">dis</span><span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">1</span><span class="special">};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="number">1024</span><span class="special">);</span>
+<span class="keyword">for</span> <span class="special">(</span><span class="keyword">auto</span> <span class="special">&amp;</span> <span class="identifier">x</span> <span class="special">:</span> <span class="identifier">v</span><span class="special">)</span> <span class="special">{</span>
+  <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">dis</span><span class="special">(</span><span class="identifier">gen</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="keyword">auto</span> <span class="special">[</span><span class="identifier">t</span><span class="special">,</span> <span class="identifier">p</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">one_sample_z_test</span><span class="special">(</span><span class="identifier">v</span><span class="special">,</span> <span class="number">0.0</span><span class="special">);</span>
+</pre>
+<p>
+      The test statistic is the first element of the pair, and the <span class="emphasis"><em>p</em></span>-value
+      is the second element.
+    </p>
+<h4>
+<a name="math_toolkit.z_test.h3"></a>
+      <span class="phrase"><a name="math_toolkit.z_test.independent_two_sample_z_test"></a></span><a class="link" href="z_test.html#math_toolkit.z_test.independent_two_sample_z_test">Independent
+      two-sample <span class="emphasis"><em>z</em></span>-test</a>
+    </h4>
+<p>
+      A two-sample <span class="emphasis"><em>z</em></span>-test determines if the means of two sets
+      of data have a statistically significant difference from each other.
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/two_sample_z_statistic.svg"></object></span> An example of usage
+      is as follows:
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">random</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">statistics</span><span class="special">/</span><span class="identifier">z_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">random_device</span> <span class="identifier">rd</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">mt19937</span> <span class="identifier">gen</span><span class="special">{</span><span class="identifier">rd</span><span class="special">()};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">normal_distribution</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">dis</span><span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">1</span><span class="special">};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">u</span><span class="special">(</span><span class="number">1024</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="number">1024</span><span class="special">);</span>
+<span class="keyword">for</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="identifier">u</span><span class="special">.</span><span class="identifier">size</span><span class="special">();</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">u</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">dis</span><span class="special">(</span><span class="identifier">gen</span><span class="special">);</span>
+  <span class="identifier">v</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">dis</span><span class="special">(</span><span class="identifier">gen</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="keyword">auto</span> <span class="special">[</span><span class="identifier">t</span><span class="special">,</span> <span class="identifier">p</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">two_sample_z_test</span><span class="special">(</span><span class="identifier">u</span><span class="special">,</span> <span class="identifier">v</span><span class="special">);</span>
+</pre>
+<p>
+      <span class="emphasis"><em>Nota bene:</em></span> The sample sizes for the two sets of data do
+      not need to be equal.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="t_test.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../statistics.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="runs_test.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>
