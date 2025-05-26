@@ -109,15 +109,12 @@ func.func @main() {
 #identity1D = affine_map<(d0) -> (d0)>
 
 func.func @simple_add(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) -> (tensor<?xf32>) {
-    %c0 = arith.constant 0 : index
-    %dim = tensor.dim %arg0, %c0 : tensor<?xf32>
-    %result = tensor.empty(%dim) : tensor<?xf32> 
     %0 = linalg.generic {
-      indexing_maps = [#identity1D, #identity1D, #identity1D],
+      indexing_maps = [#identity1D, #identity1D],
       iterator_types = ["parallel"]
-    } ins(%arg0, %arg1 : tensor<?xf32>, tensor<?xf32>)
-      outs(%result : tensor<?xf32>) {
-      ^bb0(%gen_arg1: f32, %gen_arg2: f32, %out: f32) :
+    } ins(%arg0 : tensor<?xf32>)
+      outs(%arg1 : tensor<?xf32>) {
+      ^bb0(%gen_arg1: f32, %gen_arg2: f32) :
         %tmp1 = arith.addf %gen_arg1, %gen_arg2 : f32
         linalg.yield %tmp1 : f32
     } -> tensor<?xf32>
