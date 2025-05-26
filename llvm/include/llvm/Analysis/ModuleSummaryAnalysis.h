@@ -27,6 +27,7 @@ class Function;
 class Module;
 class ProfileSummaryInfo;
 class StackSafetyInfo;
+class TargetMachine;
 
 /// Direct function to compute a \c ModuleSummaryIndex from a given module.
 ///
@@ -38,6 +39,7 @@ LLVM_ABI ModuleSummaryIndex buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
     ProfileSummaryInfo *PSI,
+    const TargetMachine *TM = nullptr,
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback =
         [](const Function &F) -> const StackSafetyInfo * { return nullptr; });
 

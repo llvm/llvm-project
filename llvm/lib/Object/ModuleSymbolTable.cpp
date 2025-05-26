@@ -40,6 +40,7 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
@@ -49,7 +50,7 @@
 using namespace llvm;
 using namespace object;
 
-void ModuleSymbolTable::addModule(Module *M) {
+void ModuleSymbolTable::addModule(Module *M, const TargetMachine *TM) {
   if (FirstMod)
     assert(FirstMod->getTargetTriple() == M->getTargetTriple());
   else
@@ -61,12 +62,12 @@ void ModuleSymbolTable::addModule(Module *M) {
   CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
     SymTab.push_back(new (AsmSymbols.Allocate())
                          AsmSymbol(std::string(Name), Flags));
-  });
+  }, TM);
 }
 
-static void
-initializeRecordStreamer(const Module &M,
-                         function_ref<void(RecordStreamer &)> Init) {
+static void initializeRecordStreamer(const Module &M,
+                                     function_ref<void(RecordStreamer &)> Init,
+                                     const TargetMachine *TM = nullptr) {
   // This function may be called twice, once for ModuleSummaryIndexAnalysis and
   // the other when writing the IR symbol table. If parsing inline assembly has
   // caused errors in the first run, suppress the second run.
@@ -89,6 +90,8 @@ initializeRecordStreamer(const Module &M,
   std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT.str(), MCOptions));
   if (!MAI)
     return;
+  if (TM)
+    MCOptions = TM->Options.MCOptions;
 
   std::unique_ptr<MCSubtargetInfo> STI(
       T->createMCSubtargetInfo(TT.str(), "", ""));
@@ -104,6 +107,7 @@ initializeRecordStreamer(const Module &M,
   SourceMgr SrcMgr;
   SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
 
+  SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
   MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
@@ -139,7 +143,8 @@ initializeRecordStreamer(const Module &M,
 
 void ModuleSymbolTable::CollectAsmSymbols(
     const Module &M,
-    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol,
+    const TargetMachine *TM) {
   initializeRecordStreamer(M, [&](RecordStreamer &Streamer) {
     Streamer.flushSymverDirectives();
 
@@ -171,7 +176,7 @@ void ModuleSymbolTable::CollectAsmSymbols(
       }
       AsmSymbol(Key, BasicSymbolRef::Flags(Res));
     }
-  });
+  }, TM);
 
   // In ELF, object code generated for x86-32 and some code models of x86-64 may
   // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the

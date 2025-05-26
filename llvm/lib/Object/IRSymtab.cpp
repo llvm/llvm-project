@@ -76,13 +76,14 @@ struct Builder {
   SmallVector<char, 0> &Symtab;
   StringTableBuilder &StrtabBuilder;
   StringSaver Saver;
+  const TargetMachine* TM;
 
   // This ctor initializes a StringSaver using the passed in BumpPtrAllocator.
   // The StringTableBuilder does not create a copy of any strings added to it,
   // so this provides somewhere to store any strings that we create.
   Builder(SmallVector<char, 0> &Symtab, StringTableBuilder &StrtabBuilder,
-          BumpPtrAllocator &Alloc)
-      : Symtab(Symtab), StrtabBuilder(StrtabBuilder), Saver(Alloc) {}
+          BumpPtrAllocator &Alloc, const TargetMachine *TM)
+      : Symtab(Symtab), StrtabBuilder(StrtabBuilder), Saver(Alloc), TM(TM) {}
 
   DenseMap<const Comdat *, int> ComdatMap;
   Mangler Mang;
@@ -143,7 +144,7 @@ Error Builder::addModule(Module *M) {
   SmallPtrSet<GlobalValue *, 4> Used(llvm::from_range, UsedV);
 
   ModuleSymbolTable Msymtab;
-  Msymtab.addModule(M);
+  Msymtab.addModule(M, TM);
 
   storage::Module Mod;
   Mod.Begin = Syms.size();
@@ -376,8 +377,9 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
 
 Error irsymtab::build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
                       StringTableBuilder &StrtabBuilder,
-                      BumpPtrAllocator &Alloc) {
-  return Builder(Symtab, StrtabBuilder, Alloc).build(Mods);
+                      BumpPtrAllocator &Alloc,
+                      const TargetMachine *TM) {
+  return Builder(Symtab, StrtabBuilder, Alloc, TM).build(Mods);
 }
 
 // Upgrade a vector of bitcode modules created by an old version of LLVM by
