@@ -715,9 +715,13 @@ struct OperationsFingerprint {
   DenseMap<Operation *, Fingerprint> fingerprints;
 };
 
+/// Check if two ops are equivalent for the purposes of SLP vectorization, i.e.
+/// they can be merged into single vector op.
 static bool isEquivalent(Operation *op1, Operation *op2) {
   assert(op1 && "null op1");
   assert(op2 && "null op2");
+  if (op1 == op2)
+    return true;
 
   if (op1->getName() != op2->getName())
     return false;
