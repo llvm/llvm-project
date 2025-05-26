@@ -525,7 +525,13 @@ template <typename T>
 static void populateInfo(Info &I, const T *D, const FullComment *C,
                          bool &IsInAnonymousNamespace) {
   I.USR = getUSRForDecl(D);
-  I.Name = D->getNameAsString();
+  if (auto ConversionDecl = dyn_cast_or_null<CXXConversionDecl>(D);
+      ConversionDecl && ConversionDecl->getConversionType()
+                            .getTypePtr()
+                            ->isTemplateTypeParmType())
+    I.Name = "operator " + ConversionDecl->getConversionType().getAsString();
+  else
+    I.Name = D->getNameAsString();
   populateParentNamespaces(I.Namespace, D, IsInAnonymousNamespace);
   if (C) {
     I.Description.emplace_back();

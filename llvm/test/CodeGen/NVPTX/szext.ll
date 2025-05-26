@@ -10,8 +10,8 @@ define i32 @szext_wrap_u32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [szext_wrap_u32_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [szext_wrap_u32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [szext_wrap_u32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [szext_wrap_u32_param_1];
 ; CHECK-NEXT:    szext.wrap.u32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -25,8 +25,8 @@ define i32 @szext_clamp_u32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [szext_clamp_u32_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [szext_clamp_u32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [szext_clamp_u32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [szext_clamp_u32_param_1];
 ; CHECK-NEXT:    szext.clamp.u32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -40,8 +40,8 @@ define i32 @szext_wrap_s32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [szext_wrap_s32_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [szext_wrap_s32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [szext_wrap_s32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [szext_wrap_s32_param_1];
 ; CHECK-NEXT:    szext.wrap.s32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -55,8 +55,8 @@ define i32 @szext_clamp_s32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [szext_clamp_s32_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [szext_clamp_s32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [szext_clamp_s32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [szext_clamp_s32_param_1];
 ; CHECK-NEXT:    szext.clamp.s32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -84,7 +84,7 @@ define i32 @szext_wrap_s32_ir(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [szext_wrap_s32_ir_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [szext_wrap_s32_ir_param_0];
 ; CHECK-NEXT:    szext.wrap.s32 %r2, 5, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -98,7 +98,7 @@ define i32 @szext_clamp_u32_ri(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [szext_clamp_u32_ri_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [szext_clamp_u32_ri_param_0];
 ; CHECK-NEXT:    szext.clamp.u32 %r2, %r1, 7;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;

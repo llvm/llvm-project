@@ -144,7 +144,7 @@ struct PrintingPolicy {
 
   /// Suppress printing parts of scope specifiers that correspond
   /// to inline namespaces.
-  /// If Redudant, where the name is unambiguous with the specifier removed.
+  /// If Redundant, where the name is unambiguous with the specifier removed.
   /// If All, even if the name is ambiguous with the specifier
   /// removed.
   LLVM_PREFERRED_TYPE(SuppressInlineNamespaceMode)
