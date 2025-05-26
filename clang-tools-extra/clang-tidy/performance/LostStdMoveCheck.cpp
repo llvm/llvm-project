@@ -91,7 +91,7 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
 
   if (MatchedUseCall) return;
 
-  const auto* LastUsage =
+  const Expr* LastUsage =
       getLastVarUsage(*MatchedDecl, *MatchedFunc, *Result.Context);
   if (LastUsage == nullptr) return;
 
