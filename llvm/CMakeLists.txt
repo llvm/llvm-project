@@ -138,6 +138,10 @@ if(NOT "${FOUND_INDEX}" STREQUAL "-1")
   list(REMOVE_ITEM LLVM_ENABLE_PROJECTS "pstl")
 endif()
 
+foreach(proj ${LLVM_DISABLE_PROJECTS})
+  list(REMOVE_ITEM LLVM_ENABLE_PROJECTS "${proj}")
+endforeach ()
+
 foreach(proj ${LLVM_ENABLE_PROJECTS})
   if (NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
      MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}. Did you mean to enable it as a runtime in LLVM_ENABLE_RUNTIMES?")
@@ -666,7 +670,7 @@ if(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD STREQUAL "all")
   set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${LLVM_ALL_EXPERIMENTAL_TARGETS})
 endif()
 
-if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND 
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND
    "AArch64" IN_LIST LLVM_TARGETS_TO_BUILD AND
    NOT ("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS))
   message(STATUS "Enabling compiler-rt as a dependency of Flang")
