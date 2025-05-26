@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SHA1.h"
 
@@ -906,19 +907,22 @@ void GreedySLPVectorizerPass::runOnOperation() {
   bool changed;
   do {
     changed = false;
+    auto visitor = [&](Block *block) -> WalkResult {
+      FailureOr<size_t> numNodesVectorized = tryToVectorizeInBlock(*block);
+      if (failed(numNodesVectorized))
+        return WalkResult::interrupt();
+
+      changed = changed || *numNodesVectorized > 0;
+      return WalkResult::advance();
+    };
     // Walk all blocks recursively
-    if (op->walk([&](Block *block) -> WalkResult {
-            FailureOr<size_t> numNodesVectorized =
-                tryToVectorizeInBlock(*block);
-            if (failed(numNodesVectorized))
-              return WalkResult::interrupt();
-
-            changed = changed || *numNodesVectorized > 0;
-
-            return WalkResult::advance();
-          }).wasInterrupted())
+    if (op->walk(visitor).wasInterrupted())
       return signalPassFailure();
 
+    // Run empty `applyPatternsGreedily` for simple DCE and folding.
+    if (changed)
+      (void)applyPatternsGreedily(
+          op, {}, GreedyRewriteConfig().enableFolding().enableConstantCSE());
   } while (changed);
 }
 
