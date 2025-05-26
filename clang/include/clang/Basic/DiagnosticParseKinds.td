@@ -1760,8 +1760,8 @@ def ext_bit_int : Extension<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
-def err_unexpected_module_decl : Error<
-  "module declaration can only appear at the top level">;
+def err_unexpected_module_import_decl : Error<
+  "%select{module|import}0 declaration can only appear at the top level">;
 def err_module_expected_ident : Error<
   "expected a module name after '%select{module|import}0'">;
 def err_attribute_not_module_attr : Error<
@@ -1782,8 +1782,6 @@ def err_module_fragment_exported : Error<
 def err_private_module_fragment_expected_semi : Error<
   "expected ';' after private module fragment declaration">;
 def err_missing_before_module_end : Error<"expected %0 at end of module">;
-def err_unsupported_module_partition : Error<
-  "module partitions are only supported for C++20 onwards">;
 def err_import_not_allowed_here : Error<
   "imports must immediately follow the module declaration">;
 def err_partition_import_outside_module : Error<

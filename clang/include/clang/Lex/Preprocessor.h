@@ -48,6 +48,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -82,6 +83,7 @@ class PreprocessorLexer;
 class PreprocessorOptions;
 class ScratchBuffer;
 class TargetInfo;
+class ModuleNameLoc;
 
 namespace Builtin {
 class Context;
@@ -332,8 +334,9 @@ private:
   /// lexed, if any.
   SourceLocation ModuleImportLoc;
 
-  /// The import path for named module that we're currently processing.
-  SmallVector<IdentifierLoc, 2> NamedModuleImportPath;
+  /// The source location of the \c module contextual keyword we just
+  /// lexed, if any.
+  SourceLocation ModuleDeclLoc;
 
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
@@ -343,6 +346,21 @@ private:
 
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
+
+  /// Whether we're importing a standard C++20 named Modules.
+  bool ImportingCXXNamedModules = false;
+
+  /// Whether we're declaring a standard C++20 named Modules.
+  bool DeclaringCXXNamedModules = false;
+
+  struct ExportContextualKeywordInfo {
+    Token ExportTok;
+    bool TokAtPhysicalStartOfLine;
+  };
+
+  /// Whether the last token we lexed was an 'export' keyword.
+  std::optional<ExportContextualKeywordInfo> LastTokenWasExportKeyword =
+      std::nullopt;
 
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
@@ -547,23 +565,11 @@ private:
         reset();
     }
 
-    void handleIdentifier(IdentifierInfo *Identifier) {
-      if (isModuleCandidate() && Identifier)
-        Name += Identifier->getName().str();
-      else if (!isNamedModule())
-        reset();
-    }
+    void handleModuleName(ModuleNameLoc *Path);
 
     void handleColon() {
       if (isModuleCandidate())
         Name += ":";
-      else if (!isNamedModule())
-        reset();
-    }
-
-    void handlePeriod() {
-      if (isModuleCandidate())
-        Name += ".";
       else if (!isNamedModule())
         reset();
     }
@@ -621,10 +627,6 @@ private:
   };
 
   ModuleDeclSeq ModuleDeclState;
-
-  /// Whether the module import expects an identifier next. Otherwise,
-  /// it expects a '.' or ';'.
-  bool ModuleImportExpectsIdentifier = false;
 
   /// The identifier and source location of the currently-active
   /// \#pragma clang arc_cf_code_audited begin.
@@ -1759,6 +1761,19 @@ public:
   /// Lex the parameters for an #embed directive, returns nullopt on error.
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
+  bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
+                             SmallVectorImpl<IdentifierLoc> &Path,
+                             bool AllowMacroExpansion = true);
+  void HandleCXXImportDirective(Token Import);
+  void HandleCXXModuleDirective(Token Module);
+  
+  /// Callback invoked when the lexer sees one of export, import or module token
+  /// at the start of a line.
+  ///
+  /// This consumes the import, module directive, modifies the
+  /// lexer/preprocessor state, and advances the lexer(s) so that the next token
+  /// read is the correct one.
+  bool HandleModuleContextualKeyword(Token &Result, bool TokAtPhysicalStartOfLine);
 
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
@@ -2344,7 +2359,7 @@ public:
   ///
   /// \return The location of the end of the directive (the terminating
   /// newline).
-  SourceLocation CheckEndOfDirective(const char *DirType,
+  SourceLocation CheckEndOfDirective(StringRef DirType,
                                      bool EnableMacros = false);
 
   /// Read and discard all tokens remaining on the current line until
@@ -2426,11 +2441,12 @@ public:
   }
 
   /// If we're importing a standard C++20 Named Modules.
-  bool isInImportingCXXNamedModules() const {
-    // NamedModuleImportPath will be non-empty only if we're importing
-    // Standard C++ named modules.
-    return !NamedModuleImportPath.empty() && getLangOpts().CPlusPlusModules &&
-           !IsAtImport;
+  bool isImportingCXXNamedModules() const {
+    return getLangOpts().CPlusPlusModules && ImportingCXXNamedModules;
+  }
+
+  bool isDeclaringCXXNamedModules() const {
+    return getLangOpts().CPlusPlusModules && DeclaringCXXNamedModules;
   }
 
   /// Allocate a new MacroInfo object with the provided SourceLocation.
@@ -3082,6 +3098,53 @@ public:
 struct EmbedAnnotationData {
   StringRef BinaryData;
   StringRef FileName;
+};
+
+/// Represents module name annotation data.
+///
+///     module-name:
+///           module-name-qualifier[opt] identifier
+///
+///     partition-name: [C++20]
+///           : module-name-qualifier[opt] identifier
+///
+///     module-name-qualifier
+///           module-name-qualifier[opt] identifier .
+class ModuleNameLoc final
+    : llvm::TrailingObjects<ModuleNameLoc, IdentifierLoc> {
+  friend TrailingObjects;
+  unsigned NumIdentifierLocs;
+
+  unsigned numTrailingObjects(OverloadToken<IdentifierLoc>) const {
+    return getNumIdentifierLocs();
+  }
+
+  ModuleNameLoc(ModuleIdPath Path) : NumIdentifierLocs(Path.size()) {
+    (void)llvm::copy(Path, getTrailingObjects<IdentifierLoc>());
+  }
+
+public:
+  static std::string stringFromModuleIdPath(ModuleIdPath Path);
+  static ModuleNameLoc *Create(Preprocessor &PP, ModuleIdPath Path);
+  static Token CreateAnnotToken(Preprocessor &PP, ModuleIdPath Path);
+  unsigned getNumIdentifierLocs() const { return NumIdentifierLocs; }
+  ModuleIdPath getModuleIdPath() const {
+    return {getTrailingObjects<IdentifierLoc>(), getNumIdentifierLocs()};
+  }
+
+  SourceLocation getBeginLoc() const {
+    return getModuleIdPath().front().getLoc();
+  }
+  SourceLocation getEndLoc() const {
+    auto &Last = getModuleIdPath().back();
+    return Last.getLoc().getLocWithOffset(
+        Last.getIdentifierInfo()->getLength());
+  }
+  SourceRange getRange() const { return {getBeginLoc(), getEndLoc()}; }
+
+  std::string str() const;
+  void print(llvm::raw_ostream &OS) const;
+  void dump() const { print(llvm::errs()); }
 };
 
 /// Registry of pragma handlers added by plugins
