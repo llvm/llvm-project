@@ -1612,7 +1612,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
         return pauthlr_extension.PosTargetFeature == member;
       };
 
-      if (std::any_of(CmdArgs.begin(), CmdArgs.end(), isPAuthLR))
+      if (llvm::any_of(CmdArgs, isPAuthLR))
         EnablePAuthLR = true;
     }
     if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg,
@@ -3704,11 +3704,11 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
   // --param ssp-buffer-size=
   for (const Arg *A : Args.filtered(options::OPT__param)) {
     StringRef Str(A->getValue());
-    if (Str.starts_with("ssp-buffer-size=")) {
+    if (Str.consume_front("ssp-buffer-size=")) {
       if (StackProtectorLevel) {
         CmdArgs.push_back("-stack-protector-buffer-size");
         // FIXME: Verify the argument is a valid integer.
-        CmdArgs.push_back(Args.MakeArgString(Str.drop_front(16)));
+        CmdArgs.push_back(Args.MakeArgString(Str));
       }
       A->claim();
     }
@@ -5851,7 +5851,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "libmvec") {
+    } else if (Name == "libmvec" || Name == "AMDLIBM") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -6913,7 +6913,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--offload-new-driver");
   }
 
-  const XRayArgs &XRay = TC.getXRayArgs();
+  const XRayArgs &XRay = TC.getXRayArgs(Args);
   XRay.addArgs(TC, Args, CmdArgs, InputType);
 
   for (const auto &Filename :

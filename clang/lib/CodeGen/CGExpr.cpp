@@ -2222,6 +2222,8 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   }
 
   llvm::StoreInst *Store = Builder.CreateStore(Value, Addr, Volatile);
+  addInstToCurrentSourceAtom(Store, Value);
+
   if (isNontemporal) {
     llvm::MDNode *Node =
         llvm::MDNode::get(Store->getContext(),
@@ -2694,14 +2696,20 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
 void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
                                                                LValue Dst) {
+  llvm::Value *SrcVal = Src.getScalarVal();
+  Address DstAddr = Dst.getExtVectorAddress();
+  if (DstAddr.getElementType()->getScalarSizeInBits() >
+      SrcVal->getType()->getScalarSizeInBits())
+    SrcVal = Builder.CreateZExt(
+        SrcVal, convertTypeForLoadStore(Dst.getType(), SrcVal->getType()));
+
   // HLSL allows storing to scalar values through ExtVector component LValues.
   // To support this we need to handle the case where the destination address is
   // a scalar.
-  Address DstAddr = Dst.getExtVectorAddress();
   if (!DstAddr.getElementType()->isVectorTy()) {
     assert(!Dst.getType()->isVectorType() &&
            "this should only occur for non-vector l-values");
-    Builder.CreateStore(Src.getScalarVal(), DstAddr, Dst.isVolatileQualified());
+    Builder.CreateStore(SrcVal, DstAddr, Dst.isVolatileQualified());
     return;
   }
 
@@ -2722,11 +2730,6 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumSrcElts; ++i)
         Mask[getAccessedFieldNo(i, Elts)] = i;
 
-      llvm::Value *SrcVal = Src.getScalarVal();
-      if (VecTy->getScalarSizeInBits() >
-          SrcVal->getType()->getScalarSizeInBits())
-        SrcVal = Builder.CreateZExt(SrcVal, VecTy);
-
       Vec = Builder.CreateShuffleVector(SrcVal, Mask);
     } else if (NumDstElts > NumSrcElts) {
       // Extended the source vector to the same length and then shuffle it
@@ -2737,8 +2740,7 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumSrcElts; ++i)
         ExtMask.push_back(i);
       ExtMask.resize(NumDstElts, -1);
-      llvm::Value *ExtSrcVal =
-          Builder.CreateShuffleVector(Src.getScalarVal(), ExtMask);
+      llvm::Value *ExtSrcVal = Builder.CreateShuffleVector(SrcVal, ExtMask);
       // build identity
       SmallVector<int, 4> Mask;
       for (unsigned i = 0; i != NumDstElts; ++i)
@@ -2763,10 +2765,6 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
     // be updating one element.
     unsigned InIdx = getAccessedFieldNo(0, Elts);
     llvm::Value *Elt = llvm::ConstantInt::get(SizeTy, InIdx);
-
-    llvm::Value *SrcVal = Src.getScalarVal();
-    if (VecTy->getScalarSizeInBits() > SrcVal->getType()->getScalarSizeInBits())
-      SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
 
     Vec = Builder.CreateInsertElement(Vec, SrcVal, Elt);
   }
@@ -2940,9 +2938,31 @@ CodeGenFunction::EmitLoadOfReference(LValue RefLVal,
   llvm::LoadInst *Load =
       Builder.CreateLoad(RefLVal.getAddress(), RefLVal.isVolatile());
   CGM.DecorateInstructionWithTBAA(Load, RefLVal.getTBAAInfo());
-  return makeNaturalAddressForPointer(Load, RefLVal.getType()->getPointeeType(),
-                                      CharUnits(), /*ForPointeeType=*/true,
-                                      PointeeBaseInfo, PointeeTBAAInfo);
+  QualType PTy = RefLVal.getType()->getPointeeType();
+  CharUnits Align = CGM.getNaturalTypeAlignment(
+      PTy, PointeeBaseInfo, PointeeTBAAInfo, /*ForPointeeType=*/true);
+  if (!PTy->isIncompleteType()) {
+    llvm::LLVMContext &Ctx = getLLVMContext();
+    llvm::MDBuilder MDB(Ctx);
+    // Emit !nonnull metadata
+    if (CGM.getTypes().getTargetAddressSpace(PTy) == 0 &&
+        !CGM.getCodeGenOpts().NullPointerIsValid)
+      Load->setMetadata(llvm::LLVMContext::MD_nonnull,
+                        llvm::MDNode::get(Ctx, {}));
+    // Emit !align metadata
+    if (PTy->isObjectType()) {
+      auto AlignVal = Align.getQuantity();
+      if (AlignVal > 1) {
+        Load->setMetadata(
+            llvm::LLVMContext::MD_align,
+            llvm::MDNode::get(Ctx, MDB.createConstant(llvm::ConstantInt::get(
+                                       Builder.getInt64Ty(), AlignVal))));
+      }
+    }
+  }
+  return makeNaturalAddressForPointer(Load, PTy, Align,
+                                      /*ForPointeeType=*/true, PointeeBaseInfo,
+                                      PointeeTBAAInfo);
 }
 
 LValue CodeGenFunction::EmitLoadOfReferenceLValue(LValue RefLVal) {
@@ -5982,6 +6002,15 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
     return EmitPointerToDataMemberBinaryExpr(E);
 
   assert(E->getOpcode() == BO_Assign && "unexpected binary l-value");
+
+  // Create a Key Instructions source location atom group that covers both
+  // LHS and RHS expressions. Nested RHS expressions may get subsequently
+  // separately grouped (1 below):
+  //
+  //   1. `a = b = c`  -> Two atoms.
+  //   2. `x = new(1)` -> One atom (for both addr store and value store).
+  //   3. Complex and agg assignment -> One atom.
+  ApplyAtomGroup Grp(getDebugInfo());
 
   // Note that in all of these cases, __block variables need the RHS
   // evaluated first just in case the variable gets moved by the RHS.

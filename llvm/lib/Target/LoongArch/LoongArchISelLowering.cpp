@@ -1366,10 +1366,8 @@ static SDValue lowerVECTOR_SHUFFLE_VSHUF4I(const SDLoc &DL, ArrayRef<int> Mask,
                                            SelectionDAG &DAG) {
 
   unsigned SubVecSize = 4;
-  if (VT == MVT::v2f64 || VT == MVT::v2i64 || VT == MVT::v4f64 ||
-      VT == MVT::v4i64) {
+  if (VT == MVT::v2f64 || VT == MVT::v2i64)
     SubVecSize = 2;
-  }
 
   int SubMask[4] = {-1, -1, -1, -1};
   for (unsigned i = 0; i < SubVecSize; ++i) {
@@ -1407,9 +1405,8 @@ static SDValue lowerVECTOR_SHUFFLE_VSHUF4I(const SDLoc &DL, ArrayRef<int> Mask,
     Imm |= M & 0x3;
   }
 
-  // Return vshuf4i.d and xvshuf4i.d
-  if (VT == MVT::v2f64 || VT == MVT::v2i64 || VT == MVT::v4f64 ||
-      VT == MVT::v4i64)
+  // Return vshuf4i.d
+  if (VT == MVT::v2f64 || VT == MVT::v2i64)
     return DAG.getNode(LoongArchISD::VSHUF4I, DL, VT, V1, V2,
                        DAG.getConstant(Imm, DL, MVT::i64));
 
@@ -1797,6 +1794,10 @@ static SDValue lowerVECTOR_SHUFFLE_XVREPLVEI(const SDLoc &DL,
 static SDValue lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask,
                                             MVT VT, SDValue V1, SDValue V2,
                                             SelectionDAG &DAG) {
+  // When the size is less than or equal to 4, lower cost instructions may be
+  // used.
+  if (Mask.size() <= 4)
+    return SDValue();
   return lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG);
 }
 
@@ -2177,9 +2178,6 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if ((Result = lowerVECTOR_SHUFFLE_XVPICKEV(DL, NewMask, VT, V1, V2, DAG)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLE_XVPICKOD(DL, NewMask, VT, V1, V2, DAG)))
-    return Result;
-  if ((VT.SimpleTy == MVT::v4i64 || VT.SimpleTy == MVT::v4f64) &&
-      (Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG)))
     return Result;
   if ((Result =
            lowerVECTOR_SHUFFLEAsShift(DL, NewMask, VT, V1, V2, DAG, Zeroable)))
@@ -5731,7 +5729,7 @@ emitSelectPseudo(MachineInstr &MI, MachineBasicBlock *BB,
     SelectMBBI = Next;
   }
 
-  F->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+  F->getProperties().resetNoPHIs();
   return TailMBB;
 }
 
@@ -7278,6 +7276,8 @@ LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
   // 'm':  A memory operand whose address is formed by a base register and
   //       offset that is suitable for use in instructions with the same
   //       addressing mode as st.w and ld.w.
+  // 'q':  A general-purpose register except for $r0 and $r1 (for the csrxchg
+  //       instruction)
   // 'I':  A signed 12-bit constant (for arithmetic instructions).
   // 'J':  Integer zero.
   // 'K':  An unsigned 12-bit constant (for logic instructions).
@@ -7291,6 +7291,7 @@ LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
     default:
       break;
     case 'f':
+    case 'q':
       return C_RegisterClass;
     case 'l':
     case 'I':
@@ -7330,6 +7331,8 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
       if (VT.isVector())
         break;
       return std::make_pair(0U, &LoongArch::GPRRegClass);
+    case 'q':
+      return std::make_pair(0U, &LoongArch::GPRNoR0R1RegClass);
     case 'f':
       if (Subtarget.hasBasicF() && VT == MVT::f32)
         return std::make_pair(0U, &LoongArch::FPR32RegClass);

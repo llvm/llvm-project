@@ -2604,8 +2604,8 @@ public:
   /// Check for comparisons of floating-point values using == and !=. Issue a
   /// warning if the comparison is not likely to do what the programmer
   /// intended.
-  void CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
-                            BinaryOperatorKind Opcode);
+  void CheckFloatComparison(SourceLocation Loc, const Expr *LHS,
+                            const Expr *RHS, BinaryOperatorKind Opcode);
 
   /// Register a magic integral constant to be used as a type tag.
   void RegisterTypeTagForDatatype(const IdentifierInfo *ArgumentKind,
@@ -3013,7 +3013,8 @@ private:
   // Warn on anti-patterns as the 'size' argument to strncat.
   // The correct size argument should look like following:
   //   strncat(dst, src, sizeof(dst) - strlen(dest) - 1);
-  void CheckStrncatArguments(const CallExpr *Call, IdentifierInfo *FnName);
+  void CheckStrncatArguments(const CallExpr *Call,
+                             const IdentifierInfo *FnName);
 
   /// Alerts the user that they are attempting to free a non-malloc'd object.
   void CheckFreeArguments(const CallExpr *E);
@@ -5033,6 +5034,8 @@ public:
   /// which might be lying around on it.
   void checkUnusedDeclAttributes(Declarator &D);
 
+  void DiagnoseUnknownAttribute(const ParsedAttr &AL);
+
   /// DeclClonePragmaWeak - clone existing decl (maybe definition),
   /// \#pragma weak needs a non-definition decl and source may not have one.
   NamedDecl *DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
@@ -5908,6 +5911,11 @@ public:
   /// with expression \E
   void DiagnoseStaticAssertDetails(const Expr *E);
 
+  /// If E represents a built-in type trait, or a known standard type trait,
+  /// try to print more information about why the type type-trait failed.
+  /// This assumes we already evaluated the expression to a false boolean value.
+  void DiagnoseTypeTraitDetails(const Expr *E);
+
   /// Handle a friend type declaration.  This works in tandem with
   /// ActOnTag.
   ///
@@ -6758,6 +6766,9 @@ public:
     /// lifetime-extended, even if they're not bound to a reference (for
     /// example, in a for-range initializer).
     bool InLifetimeExtendingContext = false;
+
+    /// Whether evaluating an expression for a switch case label.
+    bool IsCaseExpr = false;
 
     /// Whether we should rebuild CXXDefaultArgExpr and CXXDefaultInitExpr.
     bool RebuildDefaultArgOrDefaultInit = false;
@@ -12365,16 +12376,19 @@ public:
     bool PrevLastDiagnosticIgnored;
 
   public:
-    explicit SFINAETrap(Sema &SemaRef, bool AccessCheckingSFINAE = false)
+    /// \param ForValidityCheck If true, discard all diagnostics (from the
+    /// immediate context) instead of adding them to the currently active
+    /// \ref TemplateDeductionInfo (as returned by \ref isSFINAEContext).
+    explicit SFINAETrap(Sema &SemaRef, bool ForValidityCheck = false)
         : SemaRef(SemaRef), PrevSFINAEErrors(SemaRef.NumSFINAEErrors),
           PrevInNonInstantiationSFINAEContext(
               SemaRef.InNonInstantiationSFINAEContext),
           PrevAccessCheckingSFINAE(SemaRef.AccessCheckingSFINAE),
           PrevLastDiagnosticIgnored(
               SemaRef.getDiagnostics().isLastDiagnosticIgnored()) {
-      if (!SemaRef.isSFINAEContext())
+      if (ForValidityCheck || !SemaRef.isSFINAEContext())
         SemaRef.InNonInstantiationSFINAEContext = true;
-      SemaRef.AccessCheckingSFINAE = AccessCheckingSFINAE;
+      SemaRef.AccessCheckingSFINAE = ForValidityCheck;
     }
 
     ~SFINAETrap() {
@@ -12404,7 +12418,7 @@ public:
 
   public:
     explicit TentativeAnalysisScope(Sema &SemaRef)
-        : SemaRef(SemaRef), Trap(SemaRef, true),
+        : SemaRef(SemaRef), Trap(SemaRef, /*ForValidityCheck=*/true),
           PrevDisableTypoCorrection(SemaRef.DisableTypoCorrection) {
       SemaRef.DisableTypoCorrection = true;
     }
@@ -14624,8 +14638,8 @@ public:
   bool SatisfactionStackContains(const NamedDecl *D,
                                  const llvm::FoldingSetNodeID &ID) const {
     const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
-    return llvm::find(SatisfactionStack, SatisfactionStackEntryTy{Can, ID}) !=
-           SatisfactionStack.end();
+    return llvm::is_contained(SatisfactionStack,
+                              SatisfactionStackEntryTy{Can, ID});
   }
 
   using SatisfactionStackEntryTy =

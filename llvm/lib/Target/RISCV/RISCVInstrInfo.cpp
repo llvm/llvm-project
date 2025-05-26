@@ -156,6 +156,7 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     MemBytes = TypeSize::getFixed(4);
     break;
   case RISCV::LD:
+  case RISCV::LD_RV32:
   case RISCV::FLD:
     MemBytes = TypeSize::getFixed(8);
     break;
@@ -206,6 +207,7 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     MemBytes = TypeSize::getFixed(4);
     break;
   case RISCV::SD:
+  case RISCV::SD_RV32:
   case RISCV::FSD:
     MemBytes = TypeSize::getFixed(8);
     break;
@@ -541,16 +543,21 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
+    MCRegister EvenReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_even);
+    MCRegister OddReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_odd);
+    // We need to correct the odd register of X0_Pair.
+    if (OddReg == RISCV::DUMMY_REG_PAIR_WITH_X0)
+      OddReg = RISCV::X0;
+    assert(DstReg != RISCV::X0_Pair && "Cannot write to X0_Pair");
+
     // Emit an ADDI for both parts of GPRPair.
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
             TRI->getSubReg(DstReg, RISCV::sub_gpr_even))
-        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_gpr_even),
-                getKillRegState(KillSrc))
+        .addReg(EvenReg, getKillRegState(KillSrc))
         .addImm(0);
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
             TRI->getSubReg(DstReg, RISCV::sub_gpr_odd))
-        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_gpr_odd),
-                getKillRegState(KillSrc))
+        .addReg(OddReg, getKillRegState(KillSrc))
         .addImm(0);
     return;
   }
@@ -3057,8 +3064,10 @@ bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
   case RISCV::SW_INX:
   case RISCV::FSW:
   case RISCV::LD:
+  case RISCV::LD_RV32:
   case RISCV::FLD:
   case RISCV::SD:
+  case RISCV::SD_RV32:
   case RISCV::FSD:
     break;
   default:
