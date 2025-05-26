@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
 ; RUN: opt < %s -passes=pseudo-probe -function-sections -S -o - | FileCheck %s
 
 ;; Check the generation of pseudoprobe intrinsic call for non-EH blocks only.
