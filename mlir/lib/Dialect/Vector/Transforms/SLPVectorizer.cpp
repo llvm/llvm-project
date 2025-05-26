@@ -1031,7 +1031,7 @@ tryToVectorizeInBlock(Block &block,
                      << " operations\n";
       }
     });
-    rootGroups.append(contiguousGroups.begin(), contiguousGroups.end());
+    rootGroups.append(contiguousGroups);
   }
 
   // Build the SLP graph from root groups
