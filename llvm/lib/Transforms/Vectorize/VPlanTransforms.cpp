@@ -1343,8 +1343,9 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     assert(OldStepVector->getNumUsers() == 1 &&
            "step vector should only be used by single "
            "VPWidenIntOrFpInductionRecipe");
-    auto *NewStepVector = new VPInstructionWithType(
-        VPInstruction::StepVector, {}, NewIVTy, OldStepVector->getDebugLoc());
+    auto *NewStepVector =
+        new VPInstructionWithType(VPInstruction::StepVector, {}, NewIVTy, {},
+                                  OldStepVector->getDebugLoc());
     NewStepVector->insertAfter(OldStepVector->getDefiningRecipe());
     OldStepVector->replaceAllUsesWith(NewStepVector);
     OldStepVector->eraseFromParent();
@@ -2524,11 +2525,12 @@ static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
   // Only ZExt contains non-neg flags.
   if (ExtRed->isZExt())
     Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
-                                ExtRed->getResultType(), ExtRed->isNonNeg(),
+                                ExtRed->getResultType(), *ExtRed,
                                 ExtRed->getDebugLoc());
   else
     Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
-                                ExtRed->getResultType(), ExtRed->getDebugLoc());
+                                ExtRed->getResultType(), {},
+                                ExtRed->getDebugLoc());
 
   auto *Red = new VPReductionRecipe(
       ExtRed->getRecurrenceKind(), FastMathFlags(), ExtRed->getChainOp(), Ext,
@@ -2551,12 +2553,12 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
   if (MulAcc->isExtended()) {
     Type *RedTy = MulAcc->getResultType();
     if (MulAcc->isZExt())
-      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
-                                  RedTy, MulAcc->isNonNeg(),
-                                  MulAcc->getDebugLoc());
+      Op0 = new VPWidenCastRecipe(
+          MulAcc->getExtOpcode(), MulAcc->getVecOp0(), RedTy,
+          VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg()), MulAcc->getDebugLoc());
     else
       Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
-                                  RedTy, MulAcc->getDebugLoc());
+                                  RedTy, {}, MulAcc->getDebugLoc());
     Op0->getDefiningRecipe()->insertBefore(MulAcc);
     // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
     // VPWidenCastRecipe.
@@ -2564,12 +2566,13 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
       Op1 = Op0;
     } else {
       if (MulAcc->isZExt())
-        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-                                    RedTy, MulAcc->isNonNeg(),
-                                    MulAcc->getDebugLoc());
+        Op1 = new VPWidenCastRecipe(
+            MulAcc->getExtOpcode(), MulAcc->getVecOp1(), RedTy,
+            VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg()),
+            MulAcc->getDebugLoc());
       else
         Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-                                    RedTy, MulAcc->getDebugLoc());
+                                    RedTy, {}, MulAcc->getDebugLoc());
       Op1->getDefiningRecipe()->insertBefore(MulAcc);
     }
   } else {
@@ -2643,14 +2646,14 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
             Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
       }
 
-      std::optional<FastMathFlags> FMFs;
+      VPIRFlags Flags;
       if (IVTy->isFloatingPointTy())
-        FMFs = VPI->getFastMathFlags();
+        Flags = {VPI->getFastMathFlags()};
 
       unsigned MulOpc =
           IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
       VPInstruction *Mul = Builder.createNaryOp(
-          MulOpc, {VectorStep, ScalarStep}, FMFs, R.getDebugLoc());
+          MulOpc, {VectorStep, ScalarStep}, Flags, R.getDebugLoc());
       VectorStep = Mul;
       VPI->replaceAllUsesWith(VectorStep);
       ToRemove.push_back(VPI);

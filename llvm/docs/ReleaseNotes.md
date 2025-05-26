@@ -138,6 +138,7 @@ Changes to the LoongArch Backend
 --------------------------------
 
 * Changing the default code model from `small` to `medium` for 64-bit.
+* Added inline asm support for the `q` constraint.
 
 Changes to the MIPS Backend
 ---------------------------

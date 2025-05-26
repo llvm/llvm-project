@@ -60,6 +60,7 @@ public:
 
   // MCObjectWriter interface implementation.
   void reset() override;
+  void setAssembler(MCAssembler *Asm) override;
   void setIncrementalLinkerCompatible(bool Value) {
     IncrementalLinkerCompatible = Value;
   }
@@ -69,7 +70,7 @@ public:
                                               bool IsPCRel) const override;
   void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
                         MCValue Target, uint64_t &FixedValue) override;
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
   int getSectionNumber(const MCSection &Section) const;
 };
 
