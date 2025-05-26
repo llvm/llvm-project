@@ -265,6 +265,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
     StaticSampler(s0, mipLODBias = 42.f),
     StaticSampler(s0, mipLODBias = 4.2F),
     StaticSampler(s0, mipLODBias = 42.e+10f),
+    StaticSampler(s0, mipLODBias = -2147483648),
+    StaticSampler(s0, mipLODBias = 2147483648),
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -323,6 +325,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
   Elem = Elements[10];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420000000000.f);
+
+  Elem = Elements[11];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -2147483648.f);
+
+  Elem = Elements[12];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 2147483648.f);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }

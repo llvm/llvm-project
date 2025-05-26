@@ -900,7 +900,7 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
          "NumSpelling can only consist of digits");
 
   llvm::APSInt Val = llvm::APSInt(32, true);
-  if (Literal.GetIntegerValue(Val) || INT32_MAX < Val.getExtValue()) {
+  if (Literal.GetIntegerValue(Val)) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
