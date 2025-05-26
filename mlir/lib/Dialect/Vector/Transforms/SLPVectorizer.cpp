@@ -280,6 +280,7 @@ struct SLPGraphNode {
   SmallVector<Operation *> ops;
   SmallVector<SLPGraphNode *> users;
   SmallVector<SLPGraphNode *> operands;
+  Operation *insertionPoint = nullptr;
   bool isRoot = false;
 
   SLPGraphNode() = default;
@@ -293,10 +294,13 @@ struct SLPGraphNode {
     return ops.front();
   }
 
-  Operation *getInsertionPoint() const {
+  Operation *getInsertionPoint() {
+    assert(!ops.empty() && "empty node");
+    if (insertionPoint)
+      return insertionPoint;
+
     // Find the toplogically first node, which is not nessesary the first in the
     // `ops` as `ops` are sorted by their position in vector.
-    assert(!ops.empty() && "empty node");
     Operation *ret = op();
     for (Operation *op : ArrayRef(ops).drop_front()) {
       if (op->isBeforeInBlock(ret))
@@ -327,6 +331,7 @@ struct SLPGraphNode {
         ret = next;
     }
 
+    insertionPoint = ret;
     return ret;
   }
 };
