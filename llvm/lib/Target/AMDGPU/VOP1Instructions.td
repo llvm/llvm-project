@@ -806,6 +806,10 @@ let SubtargetPredicate = isGFX1250Plus in {
       int_amdgcn_cvt_pk_f16_bf8>;
   }
 
+  let True16Predicate = UseRealTrue16Insts in {
+    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_fp8, V_CVT_F16_FP8_t16_e64, 1>;
+    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_t16_e64, 1>;
+  }
   let True16Predicate = UseFakeTrue16Insts in {
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_fp8, V_CVT_F16_FP8_fake16_e64, 1>;
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_fake16_e64, 1>;
