@@ -1448,12 +1448,8 @@ struct hash<text_encoding> {
   size_t operator()(const text_encoding& __enc) const noexcept { return std::hash<text_encoding::id>()(__enc.mib()); }
 };
 
-namespace ranges {
-
 template <>
-inline constexpr bool enable_borrowed_range<text_encoding::aliases_view> = true;
-
-} // namespace ranges
+inline constexpr bool ranges::enable_borrowed_range<text_encoding::aliases_view> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
