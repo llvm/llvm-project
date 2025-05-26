@@ -16,12 +16,16 @@
 
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
+#include <__concepts/semiregular.h>
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__format/concepts.h>
 #include <__format/format_arg.h>
+#include <__format/format_parse_context.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/extent.h>
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/remove_const.h>
 #include <cstdint>
 #include <string>
@@ -168,12 +172,11 @@ consteval __arg_t __determine_arg_t() {
 //
 // Modeled after template<class T> explicit basic_format_arg(T& v) noexcept;
 // [format.arg]/4-6
-template <class _Context, class _Tp>
+template <class _Context, __formattable_with<_Context> _Tp>
 _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __value) noexcept {
   using _Dp               = remove_const_t<_Tp>;
   constexpr __arg_t __arg = __format::__determine_arg_t<_Context, _Dp>();
   static_assert(__arg != __arg_t::__none, "the supplied type is not formattable");
-  static_assert(__formattable_with<_Tp, _Context>);
 
   using __context_char_type = _Context::char_type;
   // Not all types can be used to directly initialize the
@@ -213,6 +216,149 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
     return basic_format_arg<_Context>{__arg, typename __basic_format_arg_value<_Context>::__handle{__value}};
   else
     return basic_format_arg<_Context>{__arg, __value};
+}
+
+// Helper function that issues a diagnostic when __formattable_with<_Tp, _Context> is false.
+//
+// Since it's quite easy to make a mistake writing a formatter specialization
+// this function tries to give a better explanation. This should improve the
+// diagnostics when trying to format type that has no properly specialized
+// formatter.
+template <class _Context, class _Tp>
+[[noreturn]] _LIBCPP_HIDE_FROM_ABI constexpr void __diagnose_invalid_formatter() {
+  using _Formatter = typename _Context::template formatter_type<remove_const_t<_Tp>>;
+  constexpr bool __is_disabled =
+      !is_default_constructible_v<_Formatter> && !is_copy_constructible_v<_Formatter> &&
+      !is_move_constructible_v<_Formatter> && !is_copy_assignable_v<_Formatter> && !is_move_assignable_v<_Formatter>;
+  constexpr bool __is_semiregular = semiregular<_Formatter>;
+
+  constexpr bool __has_parse_function =
+      requires(_Formatter& __f, basic_format_parse_context<typename _Context::char_type> __pc) {
+        { __f.parse(__pc) };
+      };
+  constexpr bool __correct_parse_function_return_type =
+      requires(_Formatter& __f, basic_format_parse_context<typename _Context::char_type> __pc) {
+        { __f.parse(__pc) } -> same_as<typename decltype(__pc)::iterator>;
+      };
+
+  // The reason these static_asserts are placed in an if-constexpr-chain is to
+  // only show one error. For example, when the formatter is not specialized it
+  // would show all static_assert messages. With this chain the compiler only
+  // evaluates one static_assert.
+
+  if constexpr (__is_disabled)
+
+    static_assert(
+#  if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+        sizeof(_Tp) == 0
+#  else
+        false
+#  endif
+        ,
+        "The required formatter specialization has not been provided.");
+  else if constexpr (!__is_semiregular)
+    static_assert(
+#  if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+        sizeof(_Tp) == 0
+#  else
+        false
+#  endif
+        ,
+        "The required formatter specialization is not semiregular.");
+
+  else if constexpr (!__has_parse_function)
+    static_assert(
+#  if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+        sizeof(_Tp) == 0
+#  else
+        false
+#  endif
+        ,
+        "The required formatter specialization does not have a parse function taking the proper arguments.");
+  else if constexpr (!__correct_parse_function_return_type)
+    static_assert(
+#  if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+        sizeof(_Tp) == 0
+#  else
+        false
+#  endif
+        ,
+        "The required formatter specialization's parse function does not return the required type.");
+
+  else {
+    // During constant evaluation this function is called, but the format
+    // member function has not been evaluated. This means these functions
+    // can't be evaluated at that time.
+    //
+    // Note this else branch should never been taken during constant
+    // eveluation, the static_asserts in one of the branches above should
+    // trigger.
+    constexpr bool __has_format_function = requires(_Formatter& __f, _Tp&& __t, _Context __fc) {
+      { __f.format(__t, __fc) };
+    };
+    constexpr bool __is_format_function_const_qualified = requires(const _Formatter& __cf, _Tp&& __t, _Context __fc) {
+      { __cf.format(__t, __fc) };
+    };
+    constexpr bool __correct_format_function_return_type = requires(_Formatter& __f, _Tp&& __t, _Context __fc) {
+      { __f.format(__t, __fc)->template same_as<typename _Context::iterator> };
+    };
+
+    if constexpr (!__has_format_function)
+      static_assert(
+#  if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+          sizeof(_Tp) == 0
+#  else
+          false
+#  endif
+          ,
+          "The required formatter specialization does not have a format function taking the proper arguments.");
+    else if constexpr (!__is_format_function_const_qualified)
+      static_assert(
+#  if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+          sizeof(_Tp) == 0
+#  else
+          false
+#  endif
+          ,
+          "The required formatter specialization's format function is not const qualified.");
+    else if constexpr (!__correct_format_function_return_type)
+      static_assert(
+#  if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+          sizeof(_Tp) == 0
+#  else
+          false
+#  endif
+          ,
+          "The required formatter specialization's format function does not return the required type.");
+
+    else
+      // This should not happen; it makes sure the code is ill-formed.
+      static_assert(
+#  if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+          sizeof(_Tp) == 0
+#  else
+          false
+#  endif
+          ,
+          "The required formatter specialization is not formattable with its context.");
+  }
+}
+
+// The Psuedo constructor is constrained per [format.arg]/4.
+// The only way for a user to call __create_format_arg is from std::make_format_args.
+// Per [format.arg.store]/3
+//   template<class Context = format_context, class... Args>
+//     format-arg-store<Context, Args...> make_format_args(Args&... fmt_args);
+//
+//   Preconditions: The type typename Context::template formatter_type<remove_const_t<Ti>>
+//   meets the BasicFormatter requirements ([formatter.requirements]) for each Ti in Args.
+//
+// This function is only called when the precondition is violated.
+// Without this function the compilation would fail since the overload is
+// SFINAE'ed away. This function is used to provide better diagnostics.
+template <class _Context, class _Tp>
+_LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp&) noexcept {
+  __format::__diagnose_invalid_formatter<_Context, _Tp>();
 }
 
 template <class _Context, class... _Args>

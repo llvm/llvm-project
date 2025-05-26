@@ -15,6 +15,7 @@
 #include <__chrono/statically_widen.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/same_as.h>
+#include <__concepts/semiregular.h>
 #include <__config>
 #include <__format/buffer.h>
 #include <__format/format_arg.h>
@@ -81,6 +82,27 @@ template <class... _Args>
 
 namespace __format {
 
+/// A "watered-down" __formattable_with for usage during constant evaluation.
+///
+/// The member function "format" can have a decuded return type. When
+/// constraining the __compile_time_handle this leads to a nested concept
+/// eveluation that is always false. Instead ignore the "format" member function.
+///
+/// In theory the same could happen to the "parse" member function. However
+/// thisfunction does not is less likely to have odd cased, and this function
+/// is "required" to be called during constant evaluation. So if this
+/// function's return type needs to be deduced things will probably not work.
+///
+/// See https://github.com/llvm/llvm-project/issues/81590 and
+/// test/std/utilities/format/format.functions/bug_81590.compile.pass.cpp for
+/// an example of a problematic "format" member function.
+template <class _Tp, class _Context, class _Formatter = typename _Context::template formatter_type<remove_const_t<_Tp>>>
+concept __formattable_with_constexpr =
+    semiregular<_Formatter> &&
+    requires(_Formatter& __f, _Tp&& __t, basic_format_parse_context<typename _Context::char_type> __pc) {
+      { __f.parse(__pc) } -> same_as<typename decltype(__pc)::iterator>;
+    };
+
 /// Helper class parse and handle argument.
 ///
 /// When parsing a handle which is not enabled the code is ill-formed.
@@ -94,11 +116,20 @@ public:
   }
 
   template <class _Tp>
+    requires __formattable_with_constexpr<_Tp, __format_context<_CharT>>
   _LIBCPP_HIDE_FROM_ABI constexpr void __enable() {
     __parse_ = [](basic_format_parse_context<_CharT>& __ctx) {
       formatter<_Tp, _CharT> __f;
       __ctx.advance_to(__f.parse(__ctx));
     };
+  }
+
+  template <class _Tp>
+  _LIBCPP_HIDE_FROM_ABI constexpr void __enable() {
+    // Avoids the throw set in the constructor.
+    // Otherwise two diagnostics will be issued.
+    __parse_ = [](basic_format_parse_context<_CharT>&) {};
+    __format::__diagnose_invalid_formatter<__format_context<_CharT>, _Tp>();
   }
 
   // Before calling __parse the proper handler needs to be set with __enable.
