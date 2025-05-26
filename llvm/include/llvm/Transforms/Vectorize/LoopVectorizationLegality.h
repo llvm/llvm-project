@@ -345,6 +345,9 @@ public:
   /// Returns True if Phi is a fixed-order recurrence in this loop.
   bool isFixedOrderRecurrence(const PHINode *Phi) const;
 
+  /// Returns True if \p Phi is a min/max recurrence in this loop.
+  bool isMinMaxRecurrence(const PHINode *Phi) const;
+
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
   bool blockNeedsPredication(BasicBlock *BB) const;
@@ -519,6 +522,14 @@ private:
   /// specific checks for outer loop vectorization.
   bool canVectorizeOuterLoop();
 
+  // Min/max recurrences can only be vectorized when involved in a min/max with
+  // index reduction pattern. This function checks whether the \p Phi, which
+  // represents the min/max recurrence, can be vectorized based on the given \p
+  // Chain, which is the recurrence chain for the min/max recurrence. Returns
+  // true if the min/max recurrence can be vectorized.
+  bool canVectorizeMinMaxRecurrence(PHINode *Phi,
+                                    ArrayRef<Instruction *> Chain);
+
   /// Returns true if this is an early exit loop that can be vectorized.
   /// Currently, a loop with an uncountable early exit is considered
   /// vectorizable if:
@@ -605,6 +616,9 @@ private:
 
   /// Holds the phi nodes that are fixed-order recurrences.
   RecurrenceSet FixedOrderRecurrences;
+
+  /// Holds the min/max recurrences variables.
+  RecurrenceSet MinMaxRecurrences;
 
   /// Holds the widest induction type encountered.
   IntegerType *WidestIndTy = nullptr;

@@ -51,6 +51,8 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::UMin:
   case RecurKind::AnyOf:
   case RecurKind::FindLastIV:
+  case RecurKind::MinMaxFirstIdx:
+  case RecurKind::MinMaxLastIdx:
     return true;
   }
   return false;
@@ -1127,6 +1129,226 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
     }
   }
 
+  return true;
+}
+
+/// Return the recurrence kind if \p I is matched by the min/max operation
+/// pattern. Otherwise, return RecurKind::None.
+static RecurKind isMinMaxRecurOp(const Instruction *I) {
+  if (match(I, m_UMin(m_Value(), m_Value())))
+    return RecurKind::UMin;
+  if (match(I, m_UMax(m_Value(), m_Value())))
+    return RecurKind::UMax;
+  if (match(I, m_SMax(m_Value(), m_Value())))
+    return RecurKind::SMax;
+  if (match(I, m_SMin(m_Value(), m_Value())))
+    return RecurKind::SMin;
+  // TODO: support fp-min/max
+  return RecurKind::None;
+}
+
+SmallVector<Instruction *, 2>
+RecurrenceDescriptor::tryToGetMinMaxRecurrenceChain(
+    PHINode *Phi, Loop *TheLoop, RecurrenceDescriptor &RecurDes) {
+  SmallVector<Instruction *, 2> Chain;
+  // Check the phi is in the loop header and has two incoming values.
+  if (Phi->getParent() != TheLoop->getHeader() ||
+      Phi->getNumIncomingValues() != 2)
+    return {};
+
+  // Ensure the loop has a preheader and a latch block.
+  auto *Preheader = TheLoop->getLoopPreheader();
+  auto *Latch = TheLoop->getLoopLatch();
+  if (!Preheader || !Latch)
+    return {};
+
+  // Ensure that one of the incoming values of the PHI node is from the
+  // preheader, and the other one is from the loop latch.
+  if (Phi->getBasicBlockIndex(Preheader) < 0 ||
+      Phi->getBasicBlockIndex(Latch) < 0)
+    return {};
+
+  Value *StartValue = Phi->getIncomingValueForBlock(Preheader);
+  auto *BEValue = dyn_cast<Instruction>(Phi->getIncomingValueForBlock(Latch));
+  if (!BEValue || BEValue == Phi)
+    return {};
+
+  auto HasLoopExternalUse = [TheLoop](const Instruction *I) {
+    return any_of(I->users(), [TheLoop](auto *U) {
+      return !TheLoop->contains(cast<Instruction>(U));
+    });
+  };
+
+  // Ensure the recurrence phi has no users outside the loop, as such cases
+  // cannot be vectorized.
+  if (HasLoopExternalUse(Phi))
+    return {};
+
+  // Ensure the backedge value of the phi is only used internally by the phi;
+  // all other users must be outside the loop.
+  // TODO: support intermediate store.
+  if (any_of(BEValue->users(), [&](auto *U) {
+        auto *UI = cast<Instruction>(U);
+        return TheLoop->contains(UI) && UI != Phi;
+      }))
+    return {};
+
+  // Ensure the backedge value of the phi matches the min/max operation pattern.
+  RecurKind TargetKind = isMinMaxRecurOp(BEValue);
+  if (TargetKind == RecurKind::None)
+    return {};
+
+  // TODO: type-promoted recurrence
+  SmallPtrSet<Instruction *, 4> CastInsts;
+
+  // Trace the use-def chain from the backedge value to the phi, ensuring a
+  // unique in-loop path where all operations match the expected recurrence
+  // kind.
+  bool FoundRecurPhi = false;
+  SmallVector<Instruction *, 8> Worklist(1, BEValue);
+  SmallDenseMap<Instruction *, Instruction *, 4> VisitedFrom;
+
+  VisitedFrom.try_emplace(BEValue);
+
+  while (!Worklist.empty()) {
+    Instruction *Cur = Worklist.pop_back_val();
+    if (Cur == Phi) {
+      if (FoundRecurPhi)
+        return {};
+      FoundRecurPhi = true;
+      continue;
+    }
+
+    if (!TheLoop->contains(Cur))
+      continue;
+
+    // TODO: support the min/max recurrence in cmp-select pattern.
+    if (!isa<CallInst>(Cur) || isMinMaxRecurOp(Cur) != TargetKind)
+      continue;
+
+    for (Use &Op : Cur->operands()) {
+      if (auto *OpInst = dyn_cast<Instruction>(Op)) {
+        if (!VisitedFrom.try_emplace(OpInst, Cur).second)
+          return {};
+        Worklist.push_back(OpInst);
+      }
+    }
+  }
+
+  if (!FoundRecurPhi)
+    return {};
+
+  Instruction *ExitInstruction = nullptr;
+  // Get the recurrence chain by visited trace.
+  Instruction *VisitedInst = VisitedFrom.at(Phi);
+  while (VisitedInst) {
+    // Ensure that no instruction in the recurrence chain is used outside the
+    // loop, except for the backedge value, which is permitted.
+    if (HasLoopExternalUse(VisitedInst)) {
+      if (VisitedInst != BEValue)
+        return {};
+      ExitInstruction = BEValue;
+    }
+    Chain.push_back(VisitedInst);
+    VisitedInst = VisitedFrom.at(VisitedInst);
+  }
+
+  RecurDes = RecurrenceDescriptor(
+      StartValue, ExitInstruction, /*IntermediateStore=*/nullptr, TargetKind,
+      FastMathFlags(), /*ExactFPMathInst=*/nullptr, Phi->getType(),
+      /*IsSigned=*/false, /*IsOrdered=*/false, CastInsts,
+      /*MinWidthCastToRecurTy=*/-1U);
+
+  LLVM_DEBUG(dbgs() << "Found a min/max recurrence PHI: " << *Phi << "\n");
+
+  return Chain;
+}
+
+bool RecurrenceDescriptor::isMinMaxIdxReduction(
+    PHINode *IdxPhi, PHINode *MinMaxPhi, const RecurrenceDescriptor &MinMaxDesc,
+    ArrayRef<Instruction *> MinMaxChain) {
+  // Return early if the recurrence kind is already known to be min/max with
+  // index.
+  if (isMinMaxIdxRecurrenceKind(Kind))
+    return true;
+
+  if (!isFindLastIVRecurrenceKind(Kind))
+    return false;
+
+  // Ensure index reduction phi and min/max recurrence phi are in the same basic
+  // block.
+  if (IdxPhi->getParent() != MinMaxPhi->getParent())
+    return false;
+
+  RecurKind MinMaxRK = MinMaxDesc.getRecurrenceKind();
+  // TODO: support floating-point min/max with index.
+  if (!isIntMinMaxRecurrenceKind(MinMaxRK))
+    return false;
+
+  // FindLastIV only supports a single select operation in the recurrence chain
+  // so far. Therefore, do not consider min/max recurrences with more than one
+  // operation in the recurrence chain.
+  // TODO: support FindLastIV with multiple operations in the recurrence chain.
+  if (MinMaxChain.size() != 1)
+    return false;
+
+  Instruction *MinMaxChainCur = MinMaxPhi;
+  Instruction *MinMaxChainNext = MinMaxChain.front();
+  Value *OutOfChain;
+  bool IsMinMaxOperation = match(
+      MinMaxChainNext,
+      m_CombineOr(m_MaxOrMin(m_Specific(MinMaxChainCur), m_Value(OutOfChain)),
+                  m_MaxOrMin(m_Value(OutOfChain), m_Specific(MinMaxChainCur))));
+  assert(IsMinMaxOperation && "Unexpected operation in the recurrence chain");
+
+  auto *IdxExit = cast<SelectInst>(LoopExitInstr);
+  Value *IdxCond = IdxExit->getCondition();
+  // Check if the operands used by cmp instruction of index select is the same
+  // as the operands used by min/max recurrence.
+  bool IsMatchLHSInMinMaxChain =
+      match(IdxCond, m_Cmp(m_Specific(MinMaxChainCur), m_Specific(OutOfChain)));
+  bool IsMatchRHSInMinMaxChain =
+      match(IdxCond, m_Cmp(m_Specific(OutOfChain), m_Specific(MinMaxChainCur)));
+  if (!IsMatchLHSInMinMaxChain && !IsMatchRHSInMinMaxChain)
+    return false;
+
+  CmpInst::Predicate IdxPred = cast<CmpInst>(IdxCond)->getPredicate();
+  // The predicate of cmp instruction must be relational in min/max with index.
+  if (CmpInst::isEquality(IdxPred))
+    return false;
+
+  // Normalize predicate from
+  //   m_Cmp(pred, out_of_chain, in_chain)
+  // to
+  //   m_Cmp(swapped_pred, in_chain, out_of_chain).
+  if (IsMatchRHSInMinMaxChain)
+    IdxPred = CmpInst::getSwappedPredicate(IdxPred);
+
+  // Verify that the select operation is updated on the correct side based on
+  // the min/max kind.
+  bool IsTrueUpdateIdx = IdxExit->getFalseValue() == IdxPhi;
+  bool IsMaxRK = isIntMaxRecurrenceKind(MinMaxRK);
+  bool IsLess = ICmpInst::isLT(IdxPred) || ICmpInst::isLE(IdxPred);
+  bool IsExpectedTrueUpdateIdx = IsMaxRK == IsLess;
+  if (IsTrueUpdateIdx != IsExpectedTrueUpdateIdx)
+    return false;
+
+  RecurKind NewIdxRK;
+  // The index recurrence kind is the same for both the predicate and its
+  // inverse.
+  if (!IsLess)
+    IdxPred = CmpInst::getInversePredicate(IdxPred);
+  // For max recurrence, a strict less-than predicate indicates that the first
+  // matching index will be selected. For min recurrence, the opposite holds.
+  NewIdxRK = IsMaxRK != ICmpInst::isLE(IdxPred) ? RecurKind::MinMaxFirstIdx
+                                                : RecurKind::MinMaxLastIdx;
+
+  // Update the kind of index recurrence.
+  Kind = NewIdxRK;
+  LLVM_DEBUG(
+      dbgs() << "Found a min/max with "
+             << (NewIdxRK == RecurKind::MinMaxFirstIdx ? "first" : "last")
+             << " index reduction PHI." << *IdxPhi << "\n");
   return true;
 }
 

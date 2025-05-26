@@ -57,6 +57,8 @@ enum class RecurKind {
   FindLastIV, ///< FindLast reduction with select(cmp(),x,y) where one of
               ///< (x,y) is increasing loop induction, and both x and y are
               ///< integer type.
+  MinMaxFirstIdx, ///< Integer Min/Max with first index
+  MinMaxLastIdx,  ///< Integer Min/Max with last index
   // clang-format on
   // TODO: Any_of and FindLast reduction need not be restricted to integer type
   // only.
@@ -209,6 +211,26 @@ public:
   LLVM_ABI static bool isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
                                               DominatorTree *DT);
 
+  /// Returns the recurrence chain if \p Phi is an integer min/max recurrence in
+  /// \p TheLoop. The RecurrenceDescriptor is returned in \p RecurDes.
+  static SmallVector<Instruction *, 2>
+  tryToGetMinMaxRecurrenceChain(PHINode *Phi, Loop *TheLoop,
+                                RecurrenceDescriptor &RecurDes);
+
+  /// Returns true if the recurrence is a min/max with index pattern, and
+  /// updates the recurrence kind to RecurKind::MinMaxFirstIdx or
+  /// RecurKind::MinMaxLastIdx.
+  ///
+  /// \param IdxPhi         The phi representing the index recurrence.
+  /// \param MinMaxPhi      The phi representing the min/max recurrence involved
+  ///                       in the min/max with index pattern.
+  /// \param MinMaxDesc     The descriptor of the min/max recurrence.
+  /// \param MinMaxChain    The chain of instructions involved in the min/max
+  ///                       recurrence.
+  bool isMinMaxIdxReduction(PHINode *IdxPhi, PHINode *MinMaxPhi,
+                            const RecurrenceDescriptor &MinMaxDesc,
+                            ArrayRef<Instruction *> MinMaxChain);
+
   RecurKind getRecurrenceKind() const { return Kind; }
 
   unsigned getOpcode() const { return getOpcode(getRecurrenceKind()); }
@@ -260,6 +282,20 @@ public:
   ///   select(cmp(),x,y) where one of (x,y) is increasing loop induction.
   static bool isFindLastIVRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FindLastIV;
+  }
+
+  /// Returns true if the recurrence kind is of the form:
+  ///   select(icmp(a,b),x,y)
+  /// where one of (x,y) is an increasing loop induction variable, and icmp(a,b)
+  /// depends on a min/max recurrence.
+  static bool isMinMaxIdxRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::MinMaxFirstIdx ||
+           Kind == RecurKind::MinMaxLastIdx;
+  }
+
+  /// Returns true if the recurrence kind is an integer max kind.
+  static bool isIntMaxRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::UMax || Kind == RecurKind::SMax;
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the
