@@ -237,7 +237,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
             UI->print(errs(), "  ", Tracker);
 #endif
             return false;
-        }
+          }
           continue;
         }
         // TODO: Also verify VPPredInstPHIRecipe.

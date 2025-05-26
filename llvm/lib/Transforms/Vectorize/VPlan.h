@@ -1120,13 +1120,14 @@ public:
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
-     virtual unsigned getNumIncoming() const {
-     return getAsRecipe()->getNumOperands();
-     }
+  virtual unsigned getNumIncoming() const {
+    return getAsRecipe()->getNumOperands();
+  }
 
   /// Returns an interator range over the incoming values.
   VPUser::const_operand_range incoming_values() const {
-    return make_range(getAsRecipe()->op_begin(), getAsRecipe()->op_begin() + getNumIncoming());
+    return make_range(getAsRecipe()->op_begin(),
+                      getAsRecipe()->op_begin() + getNumIncoming());
   }
 
   using const_incoming_block_iterator =
