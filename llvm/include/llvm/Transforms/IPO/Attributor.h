@@ -6358,7 +6358,7 @@ struct AANoAliasAddrSpace
   static AANoAliasAddrSpace &createForPosition(const IRPosition &IRP,
                                                Attributor &A);
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoAliasAddrSpace"; }
+  StringRef getName() const override { return "AANoAliasAddrSpace"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
