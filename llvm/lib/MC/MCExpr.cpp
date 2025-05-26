@@ -478,13 +478,7 @@ static bool canExpand(const MCSymbol &Sym, bool InSet) {
   if (Sym.isWeakExternal())
     return false;
 
-  const MCExpr *Expr = Sym.getVariableValue(true);
-  // Special case for llvm-ml alias
-  const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
-  if (Inner) {
-    if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF)
-      return false;
-  }
+  Sym.getVariableValue(true);
 
   if (InSet)
     return true;
