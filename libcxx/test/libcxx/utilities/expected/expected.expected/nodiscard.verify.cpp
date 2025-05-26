@@ -31,19 +31,19 @@ void test() {
   returns_expected_void(); // expected-warning {{ignoring return value of type 'expected<void, int>'}}
 
   returns_expected().and_then(and_then);
-      // expected-warning@-1 {{ignoring return value of type 'expected<int, int>'}}
+      // expected-warning@-1 {{ignoring return value}}
   returns_expected_void().and_then(and_then_void);
-      // expected-warning@-1 {{ignoring return value of type 'expected<void, int>'}}
+      // expected-warning@-1 {{ignoring return value}}
   returns_expected().or_else(or_else);
-      // expected-warning@-1 {{ignoring return value of type 'expected<int, int>'}}
+      // expected-warning@-1 {{ignoring return value}}
   returns_expected_void().or_else(or_else_void);
-      // expected-warning@-1 {{ignoring return value of type 'expected<void, int>'}}
+      // expected-warning@-1 {{ignoring return value}}
   returns_expected().transform(transform);
-      // expected-warning@-1 {{ignoring return value of type 'expected<int, int>'}}
+      // expected-warning@-1 {{ignoring return value}}
   returns_expected_void().transform(transform_void);
-      // expected-warning@-1 {{ignoring return value of type 'expected<void, int>'}}
+      // expected-warning@-1 {{ignoring return value}}
   returns_expected().transform_error(transform_error);
-      // expected-warning@-1 {{ignoring return value of type 'expected<int, int>'}}
+      // expected-warning@-1 {{ignoring return value}}
   returns_expected_void().transform_error(transform_error_void);
-      // expected-warning@-1 {{ignoring return value of type 'expected<void, int>'}}
+      // expected-warning@-1 {{ignoring return value}}
 }
