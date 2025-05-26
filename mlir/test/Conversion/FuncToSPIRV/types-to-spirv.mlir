@@ -206,18 +206,6 @@ func.func @float64(%arg0: f64) { return }
 
 // -----
 
-// Check that bf16 is not supported.
-module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
-} {
-
-// CHECK-NOT: spirv.func @bf16_type
-func.func @bf16_type(%arg0: bf16) { return }
-
-} // end module
-
-// -----
-
 //===----------------------------------------------------------------------===//
 // Complex types
 //===----------------------------------------------------------------------===//

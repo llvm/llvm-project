@@ -31,6 +31,15 @@ spirv.func @cooperative_matrix_load_memoperand(%ptr : !spirv.ptr<i32, StorageBuf
   spirv.Return
 }
 
+// CHECK-LABEL: @cooperative_matrix_load_bf16
+spirv.func @cooperative_matrix_load_bf16(%ptr : !spirv.ptr<bf16, StorageBuffer>, %stride : i32) "None" {
+  // CHECK:      {{%.+}} = spirv.KHR.CooperativeMatrixLoad {{%.*}}, {{%.*}}, <RowMajor>
+  // CHECK-SAME:   : !spirv.ptr<bf16, StorageBuffer>, i32 -> !spirv.coopmatrix<16x8xbf16, Workgroup, MatrixA>
+  %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <RowMajor> :
+    !spirv.ptr<bf16, StorageBuffer>, i32 -> !spirv.coopmatrix<16x8xbf16, Workgroup, MatrixA>
+  spirv.Return
+}
+
 // CHECK-LABEL: @cooperative_matrix_load_vector_ptr_type
 spirv.func @cooperative_matrix_load_vector_ptr_type(%ptr : !spirv.ptr<vector<4xi32>, StorageBuffer>, %stride : i32) "None" {
   // CHECK:      {{%.*}} = spirv.KHR.CooperativeMatrixLoad {{%.*}}, {{%.*}}, <RowMajor>, <Volatile> :
@@ -222,6 +231,26 @@ spirv.func @cooperative_matrix_muladd_f32(%a : !spirv.coopmatrix<4x4xf32, Subgro
         !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>,
         !spirv.coopmatrix<4x4xf32, Subgroup, MatrixB> ->
           !spirv.coopmatrix<4x4xf32, Subgroup, MatrixAcc>
+  spirv.Return
+}
+
+spirv.func @cooperative_matrix_muladd_bf16_bf16(%a : !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>,
+                                             %b : !spirv.coopmatrix<16x4xbf16, Subgroup, MatrixB>,
+                                             %c : !spirv.coopmatrix<8x4xbf16, Subgroup, MatrixAcc>) "None" {
+  %r = spirv.KHR.CooperativeMatrixMulAdd %a, %b, %c :
+        !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>,
+        !spirv.coopmatrix<16x4xbf16, Subgroup, MatrixB> ->
+          !spirv.coopmatrix<8x4xbf16, Subgroup, MatrixAcc>
+  spirv.Return
+}
+
+spirv.func @cooperative_matrix_muladd_bf16_f32(%a : !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>,
+                                             %b : !spirv.coopmatrix<16x4xbf16, Subgroup, MatrixB>,
+                                             %c : !spirv.coopmatrix<8x4xf32, Subgroup, MatrixAcc>) "None" {
+  %r = spirv.KHR.CooperativeMatrixMulAdd %a, %b, %c :
+        !spirv.coopmatrix<8x16xbf16, Subgroup, MatrixA>,
+        !spirv.coopmatrix<16x4xbf16, Subgroup, MatrixB> ->
+          !spirv.coopmatrix<8x4xf32, Subgroup, MatrixAcc>
   spirv.Return
 }
 

@@ -57,11 +57,6 @@ func.func private @tensor_type(!spirv.array<4xtensor<4xf32>>) -> ()
 
 // -----
 
-// expected-error @+1 {{cannot use 'bf16' to compose SPIR-V types}}
-func.func private @bf16_type(!spirv.array<4xbf16>) -> ()
-
-// -----
-
 // expected-error @+1 {{only 1/8/16/32/64-bit integer type allowed but found 'i256'}}
 func.func private @i256_type(!spirv.array<4xi256>) -> ()
 
