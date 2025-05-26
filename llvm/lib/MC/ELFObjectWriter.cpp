@@ -1278,7 +1278,6 @@ bool ELFObjectWriter::useSectionSymbol(const MCValue &Val,
   // If we change such a relocation to use the section, the linker would think
   // that it pointed to another string and subtracting 42 at runtime will
   // produce the wrong value.
-  auto EMachine = TargetObjectWriter->getEMachine();
   if (Sym->isInSection()) {
     auto &Sec = cast<MCSectionELF>(Sym->getSection());
     unsigned Flags = Sec.getFlags();
@@ -1288,7 +1287,8 @@ bool ELFObjectWriter::useSectionSymbol(const MCValue &Val,
 
       // gold<2.34 incorrectly ignored the addend for R_386_GOTOFF (9)
       // (http://sourceware.org/PR16794).
-      if (EMachine == ELF::EM_386 && Type == ELF::R_386_GOTOFF)
+      if (TargetObjectWriter->getEMachine() == ELF::EM_386 &&
+          Type == ELF::R_386_GOTOFF)
         return false;
 
       // ld.lld handles R_MIPS_HI16/R_MIPS_LO16 separately, not as a whole, so
@@ -1298,7 +1298,8 @@ bool ELFObjectWriter::useSectionSymbol(const MCValue &Val,
       // (like R_RISCV_PC_INDIRECT for R_RISCV_PCREL_HI20 / R_RISCV_PCREL_LO12)
       // but the complexity is unnecessary given that GNU as keeps the original
       // symbol for this case as well.
-      if (EMachine == ELF::EM_MIPS && !hasRelocationAddend())
+      if (TargetObjectWriter->getEMachine() == ELF::EM_MIPS &&
+          !hasRelocationAddend())
         return false;
     }
 
@@ -1331,14 +1332,14 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
                                        const MCFixup &Fixup, MCValue Target,
                                        uint64_t &FixedValue) {
   MCAsmBackend &Backend = Asm->getBackend();
-  const MCSectionELF &FixupSection = cast<MCSectionELF>(*F.getParent());
+  const MCSectionELF &Section = cast<MCSectionELF>(*F.getParent());
   MCContext &Ctx = getContext();
 
   const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
   const MCSectionELF *SecA = (SymA && SymA->isInSection())
                                  ? cast<MCSectionELF>(&SymA->getSection())
                                  : nullptr;
-  if (DwoOS && !checkRelocation(Fixup.getLoc(), &FixupSection, SecA))
+  if (DwoOS && !checkRelocation(Fixup.getLoc(), &Section, SecA))
     return;
 
   bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
@@ -1356,7 +1357,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
 
     assert(!SymB.isAbsolute() && "Should have been folded");
     const MCSection &SecB = SymB.getSection();
-    if (&SecB != &FixupSection) {
+    if (&SecB != &Section) {
       Ctx.reportError(Fixup.getLoc(),
                       "Cannot represent a difference across sections");
       return;
@@ -1373,31 +1374,23 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   else
     Type = TargetObjectWriter->getRelocType(Fixup, Target, IsPCRel);
 
-  bool UseSectionSym =
-      SymA && SymA->getBinding() == ELF::STB_LOCAL && !SymA->isUndefined();
-  if (UseSectionSym) {
-    UseSectionSym = useSectionSymbol(Target, SymA, Addend, Type);
-
-    // Disable STT_SECTION adjustment for .reloc directives.
-    UseSectionSym &= !mc::isRelocRelocation(Fixup.getKind());
-
-    if (UseSectionSym)
-      Addend += Asm->getSymbolOffset(*SymA);
-  }
-
-  FixedValue = usesRela(Ctx.getTargetOptions(), FixupSection) ? 0 : Addend;
-  if (UseSectionSym) {
+  // Convert SymA to an STT_SECTION symbol if it's defined, local, and meets
+  // specific conditions, unless it's a .reloc directive, which disables
+  // STT_SECTION adjustment.
+  bool UseSectionSym = SymA && SymA->getBinding() == ELF::STB_LOCAL &&
+                       !SymA->isUndefined() &&
+                       !mc::isRelocRelocation(Fixup.getKind());
+  if (UseSectionSym && useSectionSymbol(Target, SymA, Addend, Type)) {
+    Addend += Asm->getSymbolOffset(*SymA);
     SymA = cast<MCSymbolELF>(SecA->getBeginSymbol());
-    SymA->setUsedInReloc();
-  } else {
-    if (SymA) {
-      if (const MCSymbolELF *R = Renames.lookup(SymA))
-        SymA = R;
-
-      SymA->setUsedInReloc();
-    }
+  } else if (const MCSymbolELF *R = Renames.lookup(SymA)) {
+    SymA = R;
   }
-  Relocations[&FixupSection].emplace_back(FixupOffset, SymA, Type, Addend);
+  if (SymA)
+    SymA->setUsedInReloc();
+
+  FixedValue = usesRela(Ctx.getTargetOptions(), Section) ? 0 : Addend;
+  Relocations[&Section].emplace_back(FixupOffset, SymA, Type, Addend);
 }
 
 bool ELFObjectWriter::usesRela(const MCTargetOptions *TO,
