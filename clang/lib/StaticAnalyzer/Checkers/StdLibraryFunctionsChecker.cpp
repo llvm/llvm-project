@@ -584,11 +584,9 @@ class StdLibraryFunctionsChecker
                           const Summary &Summary,
                           CheckerContext &C) const override {
       SValBuilder &SVB = C.getSValBuilder();
-      NonLoc ErrnoSVal =
-          SVB.conjureSymbolVal(&Tag, Call.getOriginExpr(),
-                               C.getLocationContext(), C.getASTContext().IntTy,
-                               C.blockCount())
-              .castAs<NonLoc>();
+      NonLoc ErrnoSVal = SVB.conjureSymbolVal(Call, C.getASTContext().IntTy,
+                                              C.blockCount(), &Tag)
+                             .castAs<NonLoc>();
       return errno_modeling::setErrnoForStdFailure(State, C, ErrnoSVal);
     }
   };
@@ -621,7 +619,7 @@ class StdLibraryFunctionsChecker
                           const Summary &Summary,
                           CheckerContext &C) const override {
       return errno_modeling::setErrnoStdMustBeChecked(State, C,
-                                                      Call.getOriginExpr());
+                                                      Call.getCFGElementRef());
     }
 
     const std::string describe(CheckerContext &C) const override {
@@ -1481,8 +1479,7 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
     ProgramStateRef State = C.getState();
     const LocationContext *LC = C.getLocationContext();
     const auto *CE = cast<CallExpr>(Call.getOriginExpr());
-    SVal V = C.getSValBuilder().conjureSymbolVal(
-        CE, LC, CE->getType().getCanonicalType(), C.blockCount());
+    SVal V = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
     State = State->BindExpr(CE, LC, V);
 
     C.addTransition(State);
@@ -2654,16 +2651,22 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "getcwd", Signature(ArgTypes{CharPtrTy, SizeTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
-            .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
+            .Case({NotNull(0),
+                   ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
                    ReturnValueCondition(BO_EQ, ArgNo(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
-            .Case({ArgumentCondition(1, WithinRange, SingleValue(0)),
+            .Case({NotNull(0),
+                   ArgumentCondition(1, WithinRange, SingleValue(0)),
                    IsNull(Ret)},
                   ErrnoNEZeroIrrelevant, "Assuming that argument 'size' is 0")
-            .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
+            .Case({NotNull(0),
+                   ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
                    IsNull(Ret)},
                   ErrnoNEZeroIrrelevant, GenericFailureMsg)
-            .ArgConstraint(NotNull(ArgNo(0)))
+            .Case({IsNull(0), NotNull(Ret)}, ErrnoMustNotBeChecked,
+                  GenericSuccessMsg)
+            .Case({IsNull(0), IsNull(Ret)}, ErrnoNEZeroIrrelevant,
+                  GenericFailureMsg)
             .ArgConstraint(
                 BufferSize(/*Buffer*/ ArgNo(0), /*BufSize*/ ArgNo(1)))
             .ArgConstraint(

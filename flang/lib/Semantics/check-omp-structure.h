@@ -98,6 +98,8 @@ public:
   void Enter(const parser::OmpEndSectionsDirective &);
   void Leave(const parser::OmpEndSectionsDirective &);
 
+  void Enter(const parser::OmpDeclareVariantDirective &);
+  void Leave(const parser::OmpDeclareVariantDirective &);
   void Enter(const parser::OpenMPDeclareSimdConstruct &);
   void Leave(const parser::OpenMPDeclareSimdConstruct &);
   void Enter(const parser::OpenMPDeclarativeAllocate &);
@@ -166,10 +168,6 @@ public:
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
-  void Leave(const parser::OmpClause::Fail &);
-  void Enter(const parser::OmpFailClause &);
-  void Leave(const parser::OmpFailClause &);
-
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
@@ -235,7 +233,9 @@ private:
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
   void CheckDoacross(const parser::OmpDoacross &doa);
   bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
-  void CheckIsVarPartOfAnotherVar(const parser::CharBlock &source,
+  void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
+      const parser::OmpObject &obj, llvm::StringRef clause = "");
+  void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(
       const parser::OmpObjectList &objList);
@@ -345,7 +345,6 @@ private:
   using LoopConstruct = std::variant<const parser::DoConstruct *,
       const parser::OpenMPLoopConstruct *>;
   std::vector<LoopConstruct> loopStack_;
-  bool isFailClause{false};
 };
 
 /// Find a duplicate entry in the range, and return an iterator to it.

@@ -1552,17 +1552,6 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
              .constrainAllUses(TII, TRI, RBI);
 }
 
-static bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
-  switch (SC) {
-  case SPIRV::StorageClass::Workgroup:
-  case SPIRV::StorageClass::CrossWorkgroup:
-  case SPIRV::StorageClass::Function:
-    return true;
-  default:
-    return false;
-  }
-}
-
 static bool isUSMStorageClass(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
   case SPIRV::StorageClass::DeviceOnlyINTEL:
@@ -2032,20 +2021,24 @@ bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
   assert(I.getOperand(4).isReg());
   MachineBasicBlock &BB = *I.getParent();
 
+  Register Acc = I.getOperand(2).getReg();
+  Register X = I.getOperand(3).getReg();
+  Register Y = I.getOperand(4).getReg();
+
   auto DotOp = Signed ? SPIRV::OpSDot : SPIRV::OpUDot;
   Register Dot = MRI->createVirtualRegister(GR.getRegClass(ResType));
   bool Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(DotOp))
                     .addDef(Dot)
                     .addUse(GR.getSPIRVTypeID(ResType))
-                    .addUse(I.getOperand(2).getReg())
-                    .addUse(I.getOperand(3).getReg())
+                    .addUse(X)
+                    .addUse(Y)
                     .constrainAllUses(TII, TRI, RBI);
 
   return Result && BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
                        .addDef(ResVReg)
                        .addUse(GR.getSPIRVTypeID(ResType))
                        .addUse(Dot)
-                       .addUse(I.getOperand(4).getReg())
+                       .addUse(Acc)
                        .constrainAllUses(TII, TRI, RBI);
 }
 
@@ -2063,8 +2056,10 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
 
   bool Result = true;
 
-  // Acc = C
-  Register Acc = I.getOperand(4).getReg();
+  Register Acc = I.getOperand(2).getReg();
+  Register X = I.getOperand(3).getReg();
+  Register Y = I.getOperand(4).getReg();
+
   SPIRVType *EltType = GR.getOrCreateSPIRVIntegerType(8, I, TII);
   auto ExtractOp =
       Signed ? SPIRV::OpBitFieldSExtract : SPIRV::OpBitFieldUExtract;
@@ -2078,7 +2073,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
         BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
             .addDef(AElt)
             .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(I.getOperand(2).getReg())
+            .addUse(X)
             .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII, ZeroAsNull))
             .addUse(GR.getOrCreateConstInt(8, I, EltType, TII, ZeroAsNull))
             .constrainAllUses(TII, TRI, RBI);
@@ -2089,7 +2084,7 @@ bool SPIRVInstructionSelector::selectDot4AddPackedExpansion(
         BuildMI(BB, I, I.getDebugLoc(), TII.get(ExtractOp))
             .addDef(BElt)
             .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(I.getOperand(3).getReg())
+            .addUse(Y)
             .addUse(GR.getOrCreateConstInt(i * 8, I, EltType, TII, ZeroAsNull))
             .addUse(GR.getOrCreateConstInt(8, I, EltType, TII, ZeroAsNull))
             .constrainAllUses(TII, TRI, RBI);
@@ -3083,6 +3078,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::length, GL::Length);
   case Intrinsic::spv_degrees:
     return selectExtInst(ResVReg, ResType, I, CL::degrees, GL::Degrees);
+  case Intrinsic::spv_faceforward:
+    return selectExtInst(ResVReg, ResType, I, GL::FaceForward);
   case Intrinsic::spv_frac:
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
@@ -3117,6 +3114,21 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                .addUse(ScopeReg)
                .addUse(MemSemReg)
                .constrainAllUses(TII, TRI, RBI);
+  }
+  case Intrinsic::spv_generic_cast_to_ptr_explicit: {
+    Register PtrReg = I.getOperand(I.getNumExplicitDefs() + 1).getReg();
+    SPIRV::StorageClass::StorageClass ResSC =
+        GR.getPointerStorageClass(ResType);
+    if (!isGenericCastablePtr(ResSC))
+      report_fatal_error("The target storage class is not castable from the "
+                         "Generic storage class");
+    return BuildMI(BB, I, I.getDebugLoc(),
+                   TII.get(SPIRV::OpGenericCastToPtrExplicit))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(PtrReg)
+        .addImm(ResSC)
+        .constrainAllUses(TII, TRI, RBI);
   }
   case Intrinsic::spv_lifetime_start:
   case Intrinsic::spv_lifetime_end: {

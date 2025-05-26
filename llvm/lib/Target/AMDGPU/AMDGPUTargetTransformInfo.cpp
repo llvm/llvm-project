@@ -834,8 +834,8 @@ GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 
 InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) const {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
@@ -941,7 +941,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   // atomic operation refers to the same address in each thread, then each
   // thread after the first sees the value written by the previous thread as
   // original value.
-  if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V))
+  if (isa<AtomicRMWInst, AtomicCmpXchgInst>(V))
     return true;
 
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
@@ -1043,6 +1043,8 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_is_private:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_make_buffer_rsrc:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1110,6 +1112,25 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
         M, II->getIntrinsicID(), {DestTy, SrcTy, DestTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
+  case Intrinsic::amdgcn_load_to_lds: {
+    Type *SrcTy = NewV->getType();
+    Module *M = II->getModule();
+    Function *NewDecl =
+        Intrinsic::getOrInsertDeclaration(M, II->getIntrinsicID(), {SrcTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
+  case Intrinsic::amdgcn_make_buffer_rsrc: {
+    Type *SrcTy = NewV->getType();
+    Type *DstTy = II->getType();
+    Module *M = II->getModule();
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        M, II->getIntrinsicID(), {DstTy, SrcTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;

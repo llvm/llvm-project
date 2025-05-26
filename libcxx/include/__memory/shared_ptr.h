@@ -72,6 +72,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI bad_weak_ptr : public std::exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_weak_ptr() _NOEXCEPT                               = default;
@@ -80,6 +81,7 @@ public:
   ~bad_weak_ptr() _NOEXCEPT override;
   const char* what() const _NOEXCEPT override;
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_weak_ptr() {
 #if _LIBCPP_HAS_EXCEPTIONS
@@ -92,6 +94,7 @@ public:
 template <class _Tp>
 class weak_ptr;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <class _Tp, class _Dp, class _Alloc>
 class __shared_ptr_pointer : public __shared_weak_count {
   _LIBCPP_COMPRESSED_TRIPLE(_Tp, __ptr_, _Dp, __deleter_, _Alloc, __alloc_);
@@ -215,6 +218,7 @@ private:
 
   _Storage __storage_;
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 struct __shared_ptr_dummy_rebind_allocator_type;
 template <>
@@ -316,8 +320,10 @@ public:
 #endif
 
   // A shared_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
-  // any bookkeeping, so it's always trivially relocatable.
+  // any bookkeeping, so it's always trivially relocatable. It is also replaceable because assignment just rebinds the
+  // shared_ptr to manage a different object.
   using __trivially_relocatable _LIBCPP_NODEBUG = shared_ptr;
+  using __replaceable _LIBCPP_NODEBUG           = shared_ptr;
 
 private:
   element_type* __ptr_;
@@ -768,6 +774,7 @@ struct __sp_aligned_storage {
 template <class _Tp, class _Alloc>
 struct __unbounded_array_control_block;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <class _Tp, class _Alloc>
 struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp* __get_data() noexcept { return __data_; }
@@ -846,6 +853,7 @@ private:
     _Tp __data_[1];
   };
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Array, class _Alloc, class... _Arg>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Array>
@@ -868,6 +876,7 @@ __allocate_shared_unbounded_array(const _Alloc& __a, size_t __n, _Arg&&... __arg
 template <class _Tp, class _Alloc>
 struct __bounded_array_control_block;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <class _Tp, size_t _Count, class _Alloc>
 struct __bounded_array_control_block<_Tp[_Count], _Alloc> : __shared_weak_count {
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp* __get_data() noexcept { return __data_; }
@@ -924,6 +933,7 @@ private:
     _Tp __data_[_Count];
   };
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Array, class _Alloc, class... _Arg>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Array> __allocate_shared_bounded_array(const _Alloc& __a, _Arg&&... __arg) {
@@ -1211,8 +1221,9 @@ public:
 #endif
 
   // A weak_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
-  // any bookkeeping, so it's always trivially relocatable.
+  // any bookkeeping, so it's always trivially relocatable. It's also replaceable for the same reason.
   using __trivially_relocatable _LIBCPP_NODEBUG = weak_ptr;
+  using __replaceable _LIBCPP_NODEBUG           = weak_ptr;
 
 private:
   element_type* __ptr_;
@@ -1476,6 +1487,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, shared_ptr<_Yp> const& __p);
 
 #if _LIBCPP_HAS_THREADS
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI __sp_mut {
   void* __lx_;
 
@@ -1492,6 +1504,7 @@ private:
 };
 
 _LIBCPP_EXPORTED_FROM_ABI __sp_mut& __get_sp_mut(const void*);
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const shared_ptr<_Tp>*) {

@@ -908,6 +908,81 @@
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{[^"]*}}libclang_rt.ubsan_standalone.so"
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "--export-dynamic-symbol=__cfi_check"
 
+// CFI by itself does not link runtime libraries.
+// RUN: %clang -fsanitize=cfi \
+// RUN:     -flto -fvisibility=hidden \
+// RUN:     -fsanitize-minimal-runtime \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -### %s 2>&1 \
+// RUN:   | %{filecheck} --check-prefix=CHECK-CFI-MINRT-LINUX
+// CHECK-CFI-MINRT-LINUX: "{{.*}}ld{{(.exe)?}}"
+
+// CFI with diagnostics links the UBSan runtime.
+// RUN: %clang -fsanitize=cfi -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
+// RUN:     -flto -fvisibility=hidden \
+// RUN:     -fsanitize-minimal-runtime \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -### %s 2>&1 \
+// RUN:   | %{filecheck} --check-prefix=CHECK-CFI-MINRT-DIAG-LINUX
+// CHECK-CFI-MINRT-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-MINRT-DIAG-LINUX: "--whole-archive" "{{[^"]*}}libclang_rt.ubsan_minimal.a" "--no-whole-archive"
+
+// Cross-DSO CFI links the CFI runtime.
+// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
+// RUN:     -flto -fvisibility=hidden \
+// RUN:     -fsanitize-minimal-runtime \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -### %s 2>&1 \
+// RUN:   | %{filecheck} --check-prefix=CHECK-CFI-MINRT-CROSS-DSO-LINUX
+// CHECK-CFI-MINRT-CROSS-DSO-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-MINRT-CROSS-DSO-LINUX: "--whole-archive" "{{[^"]*}}libclang_rt.cfi.a" "--no-whole-archive"
+// CHECK-CFI-MINRT-CROSS-DSO-LINUX: -export-dynamic
+
+// Cross-DSO CFI with diagnostics links just the CFI runtime.
+// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
+// RUN:     -flto -fvisibility=hidden \
+// RUN:     -fsanitize-minimal-runtime \
+// RUN:     -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -### %s 2>&1 \
+// RUN:   | %{filecheck} --check-prefix=CHECK-CFI-MINRT-CROSS-DSO-DIAG-LINUX
+// CHECK-CFI-MINRT-CROSS-DSO-DIAG-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-MINRT-CROSS-DSO-DIAG-LINUX: "--whole-archive" "{{[^"]*}}libclang_rt.cfi_diag.a" "--no-whole-archive"
+// CHECK-CFI-MINRT-CROSS-DSO-DIAG-LINUX: -export-dynamic
+
+// Cross-DSO CFI on Android does not link runtime libraries.
+// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
+// RUN:     -flto -fvisibility=hidden \
+// RUN:     -fsanitize-minimal-runtime \
+// RUN:     --target=aarch64-linux-android -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_android_tree \
+// RUN:     -### %s 2>&1 \
+// RUN:   | %{filecheck} --check-prefix=CHECK-CFI-MINRT-CROSS-DSO-ANDROID
+// CHECK-CFI-MINRT-CROSS-DSO-ANDROID: "{{.*}}ld{{(.exe)?}}"
+
+// Cross-DSO CFI with diagnostics on Android links just the UBSAN runtime.
+// RUN: %clang -fsanitize=cfi -fsanitize-cfi-cross-dso \
+// RUN:     -flto -fvisibility=hidden \
+// RUN:     -fsanitize-minimal-runtime \
+// RUN:     -fno-sanitize-trap=cfi -fsanitize-recover=cfi \
+// RUN:     --target=aarch64-linux-android -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_android_tree \
+// RUN:     -### %s 2>&1 \
+// RUN:   | %{filecheck} --check-prefix=CHECK-CFI-MINRT-CROSS-DSO-DIAG-ANDROID
+// CHECK-CFI-MINRT-CROSS-DSO-DIAG-ANDROID: "{{.*}}ld{{(.exe)?}}"
+// CHECK-CFI-MINRT-CROSS-DSO-DIAG-ANDROID: "{{[^"]*}}libclang_rt.ubsan_minimal.so"
+// CHECK-CFI-MINRT-CROSS-DSO-DIAG-ANDROID: "--export-dynamic-symbol=__cfi_check"
+
 // RUN: %clangxx -fsanitize=address -### %s 2>&1 \
 // RUN:     -mmacos-version-min=10.6 \
 // RUN:     --target=x86_64-apple-darwin13.4.0 -fuse-ld=ld -stdlib=platform \

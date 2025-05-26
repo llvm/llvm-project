@@ -119,7 +119,7 @@ private:
   /// Exclusive or shared.
   LockKind LKind : 8;
 
-  // How it was acquired.
+  /// How it was acquired.
   SourceKind Source : 8;
 
   /// Where it was acquired.
@@ -236,38 +236,34 @@ public:
   }
 
   iterator findLockIter(FactManager &FM, const CapabilityExpr &CapE) {
-    return std::find_if(begin(), end(), [&](FactID ID) {
-      return FM[ID].matches(CapE);
-    });
+    return llvm::find_if(*this,
+                         [&](FactID ID) { return FM[ID].matches(CapE); });
   }
 
   const FactEntry *findLock(FactManager &FM, const CapabilityExpr &CapE) const {
-    auto I = std::find_if(begin(), end(), [&](FactID ID) {
-      return FM[ID].matches(CapE);
-    });
+    auto I =
+        llvm::find_if(*this, [&](FactID ID) { return FM[ID].matches(CapE); });
     return I != end() ? &FM[*I] : nullptr;
   }
 
   const FactEntry *findLockUniv(FactManager &FM,
                                 const CapabilityExpr &CapE) const {
-    auto I = std::find_if(begin(), end(), [&](FactID ID) -> bool {
-      return FM[ID].matchesUniv(CapE);
-    });
+    auto I = llvm::find_if(
+        *this, [&](FactID ID) -> bool { return FM[ID].matchesUniv(CapE); });
     return I != end() ? &FM[*I] : nullptr;
   }
 
   const FactEntry *findPartialMatch(FactManager &FM,
                                     const CapabilityExpr &CapE) const {
-    auto I = std::find_if(begin(), end(), [&](FactID ID) -> bool {
+    auto I = llvm::find_if(*this, [&](FactID ID) -> bool {
       return FM[ID].partiallyMatches(CapE);
     });
     return I != end() ? &FM[*I] : nullptr;
   }
 
   bool containsMutexDecl(FactManager &FM, const ValueDecl* Vd) const {
-    auto I = std::find_if(begin(), end(), [&](FactID ID) -> bool {
-      return FM[ID].valueDecl() == Vd;
-    });
+    auto I = llvm::find_if(
+        *this, [&](FactID ID) -> bool { return FM[ID].valueDecl() == Vd; });
     return I != end();
   }
 };
@@ -1011,8 +1007,8 @@ private:
               SourceLocation loc, ThreadSafetyHandler *Handler) const {
     if (FSet.findLock(FactMan, Cp)) {
       FSet.removeLock(FactMan, Cp);
-      FSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
-                                !Cp, LK_Exclusive, loc));
+      FSet.addLock(FactMan,
+                   std::make_unique<LockableFactEntry>(!Cp, LK_Exclusive, loc));
     } else if (Handler) {
       SourceLocation PrevLoc;
       if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))
@@ -1230,25 +1226,6 @@ static const ValueDecl *getValueDecl(const Expr *Exp) {
 
   return nullptr;
 }
-
-namespace {
-
-template <typename Ty>
-class has_arg_iterator_range {
-  using yes = char[1];
-  using no = char[2];
-
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->args()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
-
-} // namespace
 
 bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
   const threadSafety::til::SExpr *SExp = CapE.sexpr();
@@ -1690,7 +1667,7 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
         // Guard against self-initialization. e.g., int &i = i;
         if (E == Exp)
           break;
-        Exp = E;
+        Exp = E->IgnoreImplicit()->IgnoreParenCasts();
         continue;
       }
     }

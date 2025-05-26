@@ -63,6 +63,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
@@ -1012,12 +1013,7 @@ namespace {
 #ifndef NDEBUG
 static raw_ostream &operator<<(raw_ostream &OS,
                                const AAPointerInfo::OffsetInfo &OI) {
-  ListSeparator LS;
-  OS << "[";
-  for (auto Offset : OI) {
-    OS << LS << Offset;
-  }
-  OS << "]";
+  OS << llvm::interleaved_array(OI);
   return OS;
 }
 #endif // NDEBUG
@@ -2154,7 +2150,8 @@ struct AANoUnwindCallSite final
 
 bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
-  case Intrinsic::nvvm_barrier0:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_count:
   case Intrinsic::nvvm_barrier0_and:
   case Intrinsic::nvvm_barrier0_or:
   case Intrinsic::nvvm_barrier0_popc:
@@ -5746,7 +5743,7 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   assert(ImpliedAttributeKind == Attribute::Captures &&
          "Unexpected attribute kind");
   Value &V = IRP.getAssociatedValue();
-  if (!IRP.isArgumentPosition())
+  if (!isa<Constant>(V) && !IRP.isArgumentPosition())
     return V.use_empty();
 
   // You cannot "capture" null in the default address space.
@@ -10913,9 +10910,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return II.I == I && II.S == S;
     };
     bool operator<(const ItemInfo &II) const {
-      if (I == II.I)
-        return S < II.S;
-      return I < II.I;
+      return std::tie(I, S) < std::tie(II.I, II.S);
     };
   };
 

@@ -537,7 +537,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               GEP->getSourceElementType(), NewPtr, NewOps);
-          NewGEP->setIsInBounds(GEP->isInBounds());
+          NewGEP->setNoWrapFlags(GEP->getNoWrapFlags());
           return NewGEP;
         }
       }
@@ -1982,7 +1982,7 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
       ArrayRef<Value*> Idx = NewOps.slice(1);
       return Builder.CreateGEP(cast<GEPOperator>(I)->getSourceElementType(),
                                Ptr, Idx, "",
-                               cast<GEPOperator>(I)->isInBounds());
+                               cast<GEPOperator>(I)->getNoWrapFlags());
     }
   }
   llvm_unreachable("failed to rebuild vector instructions");
@@ -3029,10 +3029,18 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     SmallVector<BitCastInst *, 8> BCs;
     DenseMap<Type *, Value *> NewBCs;
     for (User *U : SVI.users())
-      if (BitCastInst *BC = dyn_cast<BitCastInst>(U))
-        if (!BC->use_empty())
-          // Only visit bitcasts that weren't previously handled.
-          BCs.push_back(BC);
+      if (BitCastInst *BC = dyn_cast<BitCastInst>(U)) {
+        // Only visit bitcasts that weren't previously handled.
+        if (BC->use_empty())
+          continue;
+        // Prefer to combine bitcasts of bitcasts before attempting this fold.
+        if (BC->hasOneUse()) {
+          auto *BC2 = dyn_cast<BitCastInst>(BC->user_back());
+          if (BC2 && isEliminableCastPair(BC, BC2))
+            continue;
+        }
+        BCs.push_back(BC);
+      }
     for (BitCastInst *BC : BCs) {
       unsigned BegIdx = Mask.front();
       Type *TgtTy = BC->getDestTy();

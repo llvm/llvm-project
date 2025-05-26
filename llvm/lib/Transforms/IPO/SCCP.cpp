@@ -318,11 +318,10 @@ static bool runIPSCCP(
     for (Use &U : F->uses()) {
       CallBase *CB = dyn_cast<CallBase>(U.getUser());
       if (!CB) {
-        assert(isa<BlockAddress>(U.getUser()) ||
-               (isa<Constant>(U.getUser()) &&
-                all_of(U.getUser()->users(), [](const User *UserUser) {
-                  return cast<IntrinsicInst>(UserUser)->isAssumeLikeIntrinsic();
-                })));
+        assert(isa<Constant>(U.getUser()) &&
+               all_of(U.getUser()->users(), [](const User *UserUser) {
+                 return cast<IntrinsicInst>(UserUser)->isAssumeLikeIntrinsic();
+               }));
         continue;
       }
 

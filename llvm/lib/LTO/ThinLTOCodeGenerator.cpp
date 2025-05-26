@@ -295,7 +295,8 @@ addUsedSymbolToPreservedGUID(const lto::InputFile &File,
                              DenseSet<GlobalValue::GUID> &PreservedGUID) {
   for (const auto &Sym : File.symbols()) {
     if (Sym.isUsed())
-      PreservedGUID.insert(GlobalValue::getGUID(Sym.getIRName()));
+      PreservedGUID.insert(
+          GlobalValue::getGUIDAssumingExternalLinkage(Sym.getIRName()));
   }
 }
 
@@ -308,8 +309,9 @@ static void computeGUIDPreservedSymbols(const lto::InputFile &File,
   // compute the GUID for the symbol.
   for (const auto &Sym : File.symbols()) {
     if (PreservedSymbols.count(Sym.getName()) && !Sym.getIRName().empty())
-      GUIDs.insert(GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
-          Sym.getIRName(), GlobalValue::ExternalLinkage, "")));
+      GUIDs.insert(GlobalValue::getGUIDAssumingExternalLinkage(
+          GlobalValue::getGlobalIdentifier(Sym.getIRName(),
+                                           GlobalValue::ExternalLinkage, "")));
   }
 }
 
@@ -827,7 +829,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
 
   // 'EmitImportsFiles' emits the list of modules from which to import from, and
   // the set of keys in `ModuleToSummariesForIndex` should be a superset of keys
-  // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportFiles`.
+  // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportsFiles`.
   GVSummaryPtrSet DecSummaries;
   ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
   llvm::gatherImportedSummariesForModule(

@@ -45,6 +45,7 @@ class VarDecl;
 namespace CIRGen {
 
 class CIRGenFunction;
+class CIRGenCXXABI;
 
 enum ForDefinition_t : bool { NotForDefinition = false, ForDefinition = true };
 
@@ -59,7 +60,7 @@ public:
                const clang::CodeGenOptions &cgo,
                clang::DiagnosticsEngine &diags);
 
-  ~CIRGenModule() = default;
+  ~CIRGenModule();
 
 private:
   mutable std::unique_ptr<TargetCIRGenInfo> theTargetCIRGenInfo;
@@ -80,6 +81,8 @@ private:
 
   const clang::TargetInfo &target;
 
+  std::unique_ptr<CIRGenCXXABI> abi;
+
   CIRGenTypes genTypes;
 
   /// Per-function codegen information. Updated everytime emitCIR is called
@@ -94,6 +97,8 @@ public:
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
+
+  CIRGenCXXABI &getCXXABI() const { return *abi; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 
   const cir::CIRDataLayout getDataLayout() const {
@@ -117,6 +122,13 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
+  static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
+                                      llvm::StringRef name, mlir::Type t,
+                                      mlir::Operation *insertPoint = nullptr);
+
+  llvm::StringMap<unsigned> cgGlobalNames;
+  std::string getUniqueGlobalName(const std::string &baseName);
+
   /// Return the mlir::Value for the address of the given global variable.
   /// If Ty is non-null and if the global doesn't exist, then it will be created
   /// with the specified type instead of whatever the normal requested type
@@ -126,6 +138,14 @@ public:
   mlir::Value
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
+
+  /// Return a constant array for the given string.
+  mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
+
+  /// Return a global symbol reference to a constant array for the given string
+  /// literal.
+  cir::GlobalOp getGlobalForStringLiteral(const StringLiteral *s,
+                                          llvm::StringRef name = ".str");
 
   const TargetCIRGenInfo &getTargetCIRGenInfo();
 
@@ -165,9 +185,16 @@ public:
 
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
 
+  // C++ related functions.
+  void emitDeclContext(const DeclContext *dc);
+
   /// Return the result of value-initializing the given type, i.e. a null
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
+
+  llvm::StringRef getMangledName(clang::GlobalDecl gd);
+
+  static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,
@@ -226,6 +253,11 @@ public:
                              const T &name) {
     return errorNYI(loc.getBegin(), feature, name) << loc;
   }
+
+private:
+  // An ordered map of canonical GlobalDecls to their mangled names.
+  llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
+  llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
 };
 } // namespace CIRGen
 

@@ -883,11 +883,9 @@ define <4 x i32> @vwaddu_vv_disjoint_or_add(<4 x i8> %x.i8, <4 x i8> %y.i8) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vzext.vf4 v8, v9
-; CHECK-NEXT:    vor.vv v8, v10, v8
+; CHECK-NEXT:    vsll.vi v10, v10, 8
+; CHECK-NEXT:    vzext.vf2 v11, v9
+; CHECK-NEXT:    vwaddu.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %x.i16 = zext <4 x i8> %x.i8 to <4 x i16>
   %x.shl = shl <4 x i16> %x.i16, splat (i16 8)
@@ -901,9 +899,8 @@ define <4 x i32> @vwaddu_vv_disjoint_or(<4 x i16> %x.i16, <4 x i16> %y.i16) {
 ; CHECK-LABEL: vwaddu_vv_disjoint_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vor.vv v9, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
   %x.i32 = zext <4 x i16> %x.i16 to <4 x i32>
   %y.i32 = zext <4 x i16> %y.i16 to <4 x i32>
@@ -915,9 +912,8 @@ define <4 x i32> @vwadd_vv_disjoint_or(<4 x i16> %x.i16, <4 x i16> %y.i16) {
 ; CHECK-LABEL: vwadd_vv_disjoint_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vor.vv v9, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    vwadd.vv v10, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
   %x.i32 = sext <4 x i16> %x.i16 to <4 x i32>
   %y.i32 = sext <4 x i16> %y.i16 to <4 x i32>
@@ -929,9 +925,8 @@ define <4 x i32> @vwaddu_vx_disjoint_or(<4 x i16> %x.i16, i16 %y.i16) {
 ; CHECK-LABEL: vwaddu_vx_disjoint_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vor.vx v9, v8, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vwaddu.vx v9, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %x.i32 = zext <4 x i16> %x.i16 to <4 x i32>
   %y.head = insertelement <4 x i16> poison, i16 %y.i16, i32 0
@@ -945,9 +940,8 @@ define <4 x i32> @vwadd_vx_disjoint_or(<4 x i16> %x.i16, i16 %y.i16) {
 ; CHECK-LABEL: vwadd_vx_disjoint_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vor.vx v9, v8, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    vwadd.vx v9, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %x.i32 = sext <4 x i16> %x.i16 to <4 x i32>
   %y.head = insertelement <4 x i16> poison, i16 %y.i16, i32 0
@@ -960,9 +954,8 @@ define <4 x i32> @vwadd_vx_disjoint_or(<4 x i16> %x.i16, i16 %y.i16) {
 define <4 x i32> @vwaddu_wv_disjoint_or(<4 x i32> %x.i32, <4 x i16> %y.i16) {
 ; CHECK-LABEL: vwaddu_wv_disjoint_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v9
-; CHECK-NEXT:    vor.vv v8, v8, v10
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %y.i32 = zext <4 x i16> %y.i16 to <4 x i32>
   %or = or disjoint <4 x i32> %x.i32, %y.i32
@@ -972,9 +965,8 @@ define <4 x i32> @vwaddu_wv_disjoint_or(<4 x i32> %x.i32, <4 x i16> %y.i16) {
 define <4 x i32> @vwadd_wv_disjoint_or(<4 x i32> %x.i32, <4 x i16> %y.i16) {
 ; CHECK-LABEL: vwadd_wv_disjoint_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vsext.vf2 v10, v9
-; CHECK-NEXT:    vor.vv v8, v8, v10
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %y.i32 = sext <4 x i16> %y.i16 to <4 x i32>
   %or = or disjoint <4 x i32> %x.i32, %y.i32

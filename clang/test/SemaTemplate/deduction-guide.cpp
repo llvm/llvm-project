@@ -886,3 +886,30 @@ CC c{};
 // CHECK-NEXT:        `-ClassTemplateSpecialization {{.+}} 'A'
 
 }
+
+namespace GH67173 {
+
+template <class T> struct Vec2d {
+  struct {
+    T x;
+    T y;
+  };
+};
+
+void f() {
+  Vec2d v{.x = 1, .y = 2};
+}
+
+// CHECK-LABEL: Dumping GH67173::<deduction guide for Vec2d>:
+// CHECK-NEXT: FunctionTemplateDecl {{.+}} implicit <deduction guide for Vec2d>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} referenced class depth 0 index 0 T
+// CHECK:      |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for Vec2d> 'auto (T, T) -> Vec2d<T>' aggregate
+// CHECK-NEXT: | |-ParmVarDecl {{.+}} col:27 'T'
+// CHECK-NEXT: | `-ParmVarDecl {{.+}} col:27 'T'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for Vec2d> 'auto (int, int) -> GH67173::Vec2d<int>' implicit_instantiation aggregate
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.+}} 'int'
+// CHECK-NEXT:   `-ParmVarDecl {{.+}} 'int'
+
+}

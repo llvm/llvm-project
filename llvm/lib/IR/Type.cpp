@@ -247,6 +247,20 @@ int Type::getFPMantissaWidth() const {
   return -1;
 }
 
+bool Type::isFirstClassType() const {
+  switch (getTypeID()) {
+    default:
+      return true;
+    case FunctionTyID:
+    case VoidTyID:
+      return false;
+    case StructTyID: {
+      auto *ST = cast<StructType>(this);
+      return !ST->isOpaque();
+    }
+  }
+}
+
 bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
   if (auto *ATy = dyn_cast<ArrayType>(this))
     return ATy->getElementType()->isSized(Visited);
@@ -390,7 +404,7 @@ bool FunctionType::isValidReturnType(Type *RetTy) {
 }
 
 bool FunctionType::isValidArgumentType(Type *ArgTy) {
-  return ArgTy->isFirstClassType();
+  return ArgTy->isFirstClassType() && !ArgTy->isLabelTy();
 }
 
 //===----------------------------------------------------------------------===//

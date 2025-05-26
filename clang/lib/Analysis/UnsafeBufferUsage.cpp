@@ -600,11 +600,26 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
   } else if (const auto *BE = dyn_cast<BinaryOperator>(IndexExpr)) {
     // For an integer expression `e` and an integer constant `n`, `e & n` and
     // `n & e` are bounded by `n`:
-    if (BE->getOpcode() != BO_And)
+    if (BE->getOpcode() != BO_And && BE->getOpcode() != BO_Rem)
       return false;
 
     const Expr *LHS = BE->getLHS();
     const Expr *RHS = BE->getRHS();
+
+    if (BE->getOpcode() == BO_Rem) {
+      // If n is a negative number, then n % const can be greater than const
+      if (!LHS->getType()->isUnsignedIntegerType()) {
+        return false;
+      }
+
+      if (!RHS->isValueDependent() && RHS->EvaluateAsInt(EVResult, Ctx)) {
+        llvm::APSInt result = EVResult.Val.getInt();
+        if (result.isNonNegative() && result.getLimitedValue() <= limit)
+          return true;
+      }
+
+      return false;
+    }
 
     if ((!LHS->isValueDependent() &&
          LHS->EvaluateAsInt(EVResult, Ctx)) || // case: `n & e`
@@ -675,7 +690,7 @@ static bool isNullTermPointer(const Expr *Ptr) {
     const CXXMethodDecl *MD = MCE->getMethodDecl();
     const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
 
-    if (MD && RD && RD->isInStdNamespace())
+    if (MD && RD && RD->isInStdNamespace() && MD->getIdentifier())
       if (MD->getName() == "c_str" && RD->getName() == "basic_string")
         return true;
   }
