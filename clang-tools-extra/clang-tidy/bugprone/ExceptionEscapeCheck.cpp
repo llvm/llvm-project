@@ -81,9 +81,8 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   const utils::ExceptionAnalyzer::ExceptionInfo Info =
       Tracer.analyze(MatchedDecl);
 
-  if (Info.getBehaviour() != utils::ExceptionAnalyzer::State::Throwing) {
+  if (Info.getBehaviour() != utils::ExceptionAnalyzer::State::Throwing)
     return;
-  }
 
   diag(MatchedDecl->getLocation(), "an exception may be thrown in function "
                                    "%0 which should not throw exceptions")
@@ -92,9 +91,8 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   const utils::ExceptionAnalyzer::ExceptionInfo::ThrowInfo ThrowInfo =
       Info.getExceptions().begin()->getSecond();
 
-  if (ThrowInfo.Loc.isInvalid()) {
+  if (ThrowInfo.Loc.isInvalid())
     return;
-  }
 
   const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
   diag(ThrowInfo.Loc,
