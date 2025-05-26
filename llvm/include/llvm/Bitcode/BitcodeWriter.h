@@ -29,6 +29,7 @@ namespace llvm {
 class BitstreamWriter;
 class Module;
 class raw_ostream;
+class TargetMachine;
 
 class BitcodeWriter {
   std::unique_ptr<BitstreamWriter> Stream;
@@ -45,10 +46,13 @@ class BitcodeWriter {
 
   std::vector<Module *> Mods;
 
+  const TargetMachine *TM;
+
 public:
   /// Create a BitcodeWriter that writes to Buffer.
-  LLVM_ABI BitcodeWriter(SmallVectorImpl<char> &Buffer);
-  LLVM_ABI BitcodeWriter(raw_ostream &FS);
+  LLVM_ABI BitcodeWriter(SmallVectorImpl<char> &Buffer,
+                         const TargetMachine *TM = nullptr);
+  LLVM_ABI BitcodeWriter(raw_ostream &FS, const TargetMachine *TM = nullptr);
 
   LLVM_ABI ~BitcodeWriter();
 
@@ -135,7 +139,8 @@ LLVM_ABI void WriteBitcodeToFile(const Module &M, raw_ostream &Out,
                                  bool ShouldPreserveUseListOrder = false,
                                  const ModuleSummaryIndex *Index = nullptr,
                                  bool GenerateHash = false,
-                                 ModuleHash *ModHash = nullptr);
+                                 ModuleHash *ModHash = nullptr,
+                                 const TargetMachine *TM = nullptr);
 
 /// Write the specified thin link bitcode file (i.e., the minimized bitcode
 /// file) to the given raw output stream, where it will be written in a new
@@ -146,7 +151,8 @@ LLVM_ABI void WriteBitcodeToFile(const Module &M, raw_ostream &Out,
 /// bitcode file writing.
 LLVM_ABI void writeThinLinkBitcodeToFile(const Module &M, raw_ostream &Out,
                                          const ModuleSummaryIndex &Index,
-                                         const ModuleHash &ModHash);
+                                         const ModuleHash &ModHash,
+                                         const TargetMachine *TM = nullptr);
 
 /// Write the specified module summary index to the given raw output stream,
 /// where it will be written in a new bitcode block. This is used when

@@ -45,7 +45,7 @@ public:
   EmbedBitcodePass(bool IsThinLTO, bool EmitLTOSummary)
       : IsThinLTO(IsThinLTO), EmitLTOSummary(EmitLTOSummary) {}
 
-  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };

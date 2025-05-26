@@ -5480,13 +5480,14 @@ static void writeBitcodeHeader(BitstreamWriter &Stream) {
   Stream.Emit(0xD, 4);
 }
 
-BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
-    : Stream(new BitstreamWriter(Buffer)) {
+BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer,
+                             const TargetMachine *TM)
+    : Stream(new BitstreamWriter(Buffer)), TM(TM) {
   writeBitcodeHeader(*Stream);
 }
 
-BitcodeWriter::BitcodeWriter(raw_ostream &FS)
-    : Stream(new BitstreamWriter(FS, FlushThreshold)) {
+BitcodeWriter::BitcodeWriter(raw_ostream &FS, const TargetMachine *TM)
+    : Stream(new BitstreamWriter(FS, FlushThreshold)), TM(TM) {
   writeBitcodeHeader(*Stream);
 }
 
@@ -5528,7 +5529,7 @@ void BitcodeWriter::writeSymtab() {
   // module is malformed (e.g. it contains an invalid alias). Writing a symbol
   // table is not required for correctness, but we still want to be able to
   // write malformed modules to bitcode files, so swallow the error.
-  if (Error E = irsymtab::build(Mods, Symtab, StrtabBuilder, Alloc)) {
+  if (Error E = irsymtab::build(Mods, Symtab, StrtabBuilder, Alloc, TM)) {
     consumeError(std::move(E));
     return;
   }
@@ -5588,7 +5589,8 @@ void BitcodeWriter::writeIndex(
 void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
                               bool ShouldPreserveUseListOrder,
                               const ModuleSummaryIndex *Index,
-                              bool GenerateHash, ModuleHash *ModHash) {
+                              bool GenerateHash, ModuleHash *ModHash,
+                              const TargetMachine *TM) {
   auto Write = [&](BitcodeWriter &Writer) {
     Writer.writeModule(M, ShouldPreserveUseListOrder, Index, GenerateHash,
                        ModHash);
@@ -5609,7 +5611,7 @@ void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
     emitDarwinBCHeaderAndTrailer(Buffer, TT);
     Out.write(Buffer.data(), Buffer.size());
   } else {
-    BitcodeWriter Writer(Out);
+    BitcodeWriter Writer(Out, TM);
     Write(Writer);
   }
 }
@@ -5795,11 +5797,12 @@ void BitcodeWriter::writeThinLinkBitcode(const Module &M,
 // writing the per-module index file for ThinLTO.
 void llvm::writeThinLinkBitcodeToFile(const Module &M, raw_ostream &Out,
                                       const ModuleSummaryIndex &Index,
-                                      const ModuleHash &ModHash) {
+                                      const ModuleHash &ModHash,
+                                      const TargetMachine *TM) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
-  BitcodeWriter Writer(Buffer);
+  BitcodeWriter Writer(Buffer, TM);
   Writer.writeThinLinkBitcode(M, Index, ModHash);
   Writer.writeSymtab();
   Writer.writeStrtab();

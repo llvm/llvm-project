@@ -1173,7 +1173,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
             return;
         }
         MPM.addPass(ThinLTOBitcodeWriterPass(
-            *OS, ThinLinkOS ? &ThinLinkOS->os() : nullptr));
+            *OS, ThinLinkOS ? &ThinLinkOS->os() : nullptr,
+            /* ShouldPreserveUseListOrder */ false, TM.get()));
       } else if (Action == Backend_EmitLL) {
         MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
                                     /*EmitLTOSummary=*/true));
@@ -1191,7 +1192,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       }
       if (Action == Backend_EmitBC) {
         MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
-                                      EmitLTOSummary));
+                                      EmitLTOSummary, false, TM.get()));
       } else if (Action == Backend_EmitLL) {
         MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
                                     EmitLTOSummary));

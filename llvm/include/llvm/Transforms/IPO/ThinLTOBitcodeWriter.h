@@ -22,20 +22,23 @@
 namespace llvm {
 class Module;
 class raw_ostream;
+class TargetMachine;
 
 class ThinLTOBitcodeWriterPass
     : public PassInfoMixin<ThinLTOBitcodeWriterPass> {
   raw_ostream &OS;
   raw_ostream *ThinLinkOS;
   const bool ShouldPreserveUseListOrder;
+  const TargetMachine *TM;
 
 public:
   // Writes bitcode to OS. Also write thin link file to ThinLinkOS, if
   // it's not nullptr.
   ThinLTOBitcodeWriterPass(raw_ostream &OS, raw_ostream *ThinLinkOS,
-                           bool ShouldPreserveUseListOrder = false)
+                           bool ShouldPreserveUseListOrder = false,
+                           const TargetMachine *TM = nullptr)
       : OS(OS), ThinLinkOS(ThinLinkOS),
-        ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
+        ShouldPreserveUseListOrder(ShouldPreserveUseListOrder), TM(TM) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
