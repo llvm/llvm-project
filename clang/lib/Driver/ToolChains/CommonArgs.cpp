@@ -1367,7 +1367,7 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
 
   if (TC.getTriple().isOSAIX()) {
     SmallString<128> SanRTSymbolList;
-    (Twine(TC.getCompilerRTPath()) + "/" + Sanitizer +
+    (Twine(TC.getRuntimePath().value_or("")) + "/" + Sanitizer +
      ".link_with_main_exec.txt")
         .toVector(SanRTSymbolList);
     if (llvm::sys::fs::exists(SanRTSymbolList)) {

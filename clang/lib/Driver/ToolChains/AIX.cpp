@@ -290,13 +290,22 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // import file to make these undefined symbols be resolved at runtime.
   if (Args.hasArg(options::OPT_shared) &&
       ToolChain.getSanitizerArgs(Args).needsAsanRt()) {
-    CmdArgs.push_back(Args.MakeArgString(Twine("-bI:") +
-                                         ToolChain.getCompilerRTPath() +
-                                         "/asan.link_with_main_exec.txt"));
-    if (ToolChain.getSanitizerArgs(Args).linkCXXRuntimes())
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("-bI:") + ToolChain.getCompilerRTPath() +
-                             "/asan_cxx.link_with_main_exec.txt"));
+    SmallString<128> SanRTSymbolList;
+    (Twine(ToolChain.getRuntimePath().value_or("")) + 
+      "/asan.link_with_main_exec.txt").toVector(SanRTSymbolList);
+    if (llvm::sys::fs::exists(SanRTSymbolList))
+      CmdArgs.push_back(Args.MakeArgString(Twine("-bI:") + SanRTSymbolList));
+    else
+      llvm::report_fatal_error("Missing address sanitizer import list.");
+    if (ToolChain.getSanitizerArgs(Args).linkCXXRuntimes()) {
+      SanRTSymbolList.clear();
+      (Twine(ToolChain.getRuntimePath().value_or("")) + 
+        "/asan_cxx.link_with_main_exec.txt").toVector(SanRTSymbolList);
+      if (llvm::sys::fs::exists(SanRTSymbolList))
+        CmdArgs.push_back(Args.MakeArgString(Twine("-bI:") + SanRTSymbolList));
+      else
+        llvm::report_fatal_error("Missing address sanitizer c++ import list.");
+    }
   }
 
   if (D.isUsingLTO()) {
