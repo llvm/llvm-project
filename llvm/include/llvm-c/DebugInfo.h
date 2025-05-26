@@ -751,9 +751,9 @@ LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
  * \param Subscripts   Subscripts.
  * \param NumSubscripts Number of subscripts.
  * \param DataLocation DataLocation.
- * \param Associated   Associated.
- * \param Allocated    Allocated.
- * \param Rank         Rank.
+ * \param Associated   Associated (not NULL).
+ * \param Allocated    Allocated (not NULL).
+ * \param Rank         Rank (not NULL).
  * \param BitStride    BitStride.
  */
 LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
