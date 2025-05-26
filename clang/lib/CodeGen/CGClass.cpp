@@ -1337,6 +1337,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     assert(!Member->isBaseInitializer());
     assert(Member->isAnyMemberInitializer() &&
            "Delegating initializer on non-delegating constructor");
+    ApplyAtomGroup Grp(getDebugInfo());
     CM.addMemberInitializer(Member);
   }
   CM.finish();
@@ -2808,6 +2809,7 @@ SanitizerInfoFromCFICheckKind(CodeGenFunction::CFITypeCheckKind TCK) {
   case CodeGenFunction::CFITCK_VMFCall:
     llvm_unreachable("unexpected sanitizer kind");
   }
+  llvm_unreachable("Unknown CFITypeCheckKind enum");
 }
 
 void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
@@ -2816,6 +2818,9 @@ void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
                                                 SourceLocation Loc) {
   if (!SanOpts.has(SanitizerKind::CFICastStrict))
     RD = LeastDerivedClassWithSameLayout(RD);
+
+  auto [Ordinal, _] = SanitizerInfoFromCFICheckKind(TCK);
+  ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(Ordinal));
 
   EmitVTablePtrCheck(RD, VTable, TCK, Loc);
 }
@@ -2838,6 +2843,9 @@ void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T, Address Derived,
 
   if (!SanOpts.has(SanitizerKind::CFICastStrict))
     ClassDecl = LeastDerivedClassWithSameLayout(ClassDecl);
+
+  auto [Ordinal, _] = SanitizerInfoFromCFICheckKind(TCK);
+  ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(Ordinal));
 
   llvm::BasicBlock *ContBlock = nullptr;
 
@@ -2940,6 +2948,8 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   SanitizerScope SanScope(this);
 
   EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
+  ApplyDebugLocation ApplyTrapDI(
+      *this, SanitizerAnnotateDebugInfo(SanitizerKind::SO_CFIVCall));
 
   llvm::Metadata *MD =
       CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));

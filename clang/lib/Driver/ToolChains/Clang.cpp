@@ -1651,7 +1651,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
         return pauthlr_extension.PosTargetFeature == member;
       };
 
-      if (std::any_of(CmdArgs.begin(), CmdArgs.end(), isPAuthLR))
+      if (llvm::any_of(CmdArgs, isPAuthLR))
         EnablePAuthLR = true;
     }
     if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg,
@@ -3748,11 +3748,11 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
   // --param ssp-buffer-size=
   for (const Arg *A : Args.filtered(options::OPT__param)) {
     StringRef Str(A->getValue());
-    if (Str.starts_with("ssp-buffer-size=")) {
+    if (Str.consume_front("ssp-buffer-size=")) {
       if (StackProtectorLevel) {
         CmdArgs.push_back("-stack-protector-buffer-size");
         // FIXME: Verify the argument is a valid integer.
-        CmdArgs.push_back(Args.MakeArgString(Str.drop_front(16)));
+        CmdArgs.push_back(Args.MakeArgString(Str));
       }
       A->claim();
     }
@@ -4819,6 +4819,13 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
           << EffectiveDWARFVersion;
     else if (checkDebugInfoOption(A, Args, D, TC))
       CmdArgs.push_back("-gembed-source");
+  }
+
+  if (Args.hasFlag(options::OPT_gkey_instructions,
+                   options::OPT_gno_key_instructions, false)) {
+    CmdArgs.push_back("-gkey-instructions");
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-dwarf-use-key-instructions");
   }
 
   if (EmitCodeView) {
@@ -5927,7 +5934,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "libmvec") {
+    } else if (Name == "libmvec" || Name == "AMDLIBM") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -7077,7 +7084,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--offload-new-driver");
   }
 
-  const XRayArgs &XRay = TC.getXRayArgs();
+  const XRayArgs &XRay = TC.getXRayArgs(Args);
   XRay.addArgs(TC, Args, CmdArgs, InputType);
 
   for (const auto &Filename :
@@ -7790,8 +7797,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fgnu_inline_asm,
                      options::OPT_fno_gnu_inline_asm);
 
-  bool ProprietaryToolChainNeeded =
-    checkForAMDProprietaryOptOptions(TC, D, Args, CmdArgs, false /*isLLD*/);
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
   ParseMPreferVectorWidth(D, Args, CmdArgs);
@@ -8001,9 +8006,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   std::string AltPath = D.getInstalledDir();
   AltPath += "/../alt/bin/clang-" + std::to_string(LLVM_VERSION_MAJOR);
 
-  const char *Exec = ProprietaryToolChainNeeded
-         ? C.getArgs().MakeArgString(AltPath.c_str())
-	 : D.getClangProgramPath();
+  const char *Exec = D.getClangProgramPath();
   // Optionally embed the -cc1 level arguments into the debug info or a
   // section, for build analysis.
   // Also record command line arguments into the debug info if
@@ -8322,7 +8325,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Input.getInputArg().renderAsInput(Args, CmdArgs);
   }
 
-  if (D.CC1Main && !D.CCGenDiagnostics && !ProprietaryToolChainNeeded) {
+  if (D.CC1Main && !D.CCGenDiagnostics) {
     // Invoke the CC1 directly in this process
     C.addCommand(std::make_unique<CC1Command>(
         JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,

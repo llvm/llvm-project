@@ -6352,14 +6352,11 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
     writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
 
   int32_t MaxThreadsVal = Attrs.MaxThreads.front();
-#if FIX_NUM_THREADS_ISSUE
-  //breaks 534.hpgmg
   // If MaxThreads not set, select the maximum between the default workgroup
   // size and the MinThreads value.
   if (MaxThreadsVal < 0)
     MaxThreadsVal = std::max(
         int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), Attrs.MinThreads);
-#endif
 
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVal);
@@ -7768,7 +7765,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
                                               getTypeStoreSize(ElementType)));
       }
     }
-    
 
     Value *DepArray = emitTaskDependencies(*this, Dependencies);
 

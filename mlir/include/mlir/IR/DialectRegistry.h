@@ -143,6 +143,8 @@ class DialectRegistry {
 
 public:
   explicit DialectRegistry();
+  DialectRegistry(const DialectRegistry &) = delete;
+  DialectRegistry &operator=(const DialectRegistry &other) = delete;
 
   template <typename ConcreteDialect>
   void insert() {

@@ -59,9 +59,8 @@ define void @test_distributed_shared_cluster_float_atomic(ptr addrspace(7) %dsme
 ; CHECK-LABEL: test_distributed_shared_cluster_float_atomic(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %f<2>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .b64 %fd<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_distributed_shared_cluster_float_atomic_param_0];
@@ -69,8 +68,8 @@ define void @test_distributed_shared_cluster_float_atomic(ptr addrspace(7) %dsme
 ; CHECK-NEXT:    atom.shared::cluster.add.noftz.f16 %rs2, [%rd1], %rs1;
 ; CHECK-NEXT:    mov.b16 %rs3, 0x3F80;
 ; CHECK-NEXT:    atom.shared::cluster.add.noftz.bf16 %rs4, [%rd1], %rs3;
-; CHECK-NEXT:    atom.shared::cluster.add.f32 %f1, [%rd1], 0f3F800000;
-; CHECK-NEXT:    atom.shared::cluster.add.f64 %fd1, [%rd1], 0d3FF0000000000000;
+; CHECK-NEXT:    atom.shared::cluster.add.f32 %r1, [%rd1], 0f3F800000;
+; CHECK-NEXT:    atom.shared::cluster.add.f64 %rd2, [%rd1], 0d3FF0000000000000;
 ; CHECK-NEXT:    ret;
 entry:
   ; Floating point atomic operations

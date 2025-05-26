@@ -873,11 +873,10 @@ static std::optional<T> getArgumentsIfRequest(const Message &pm,
 
   T args;
   llvm::json::Path::Root root;
-  if (!fromJSON(req->arguments, args, root)) {
+  if (!fromJSON(req->arguments, args, root))
     return std::nullopt;
-  }
 
-  return std::move(args);
+  return args;
 }
 
 llvm::Error DAP::Loop() {
@@ -1015,159 +1014,6 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
           .str()
           .c_str());
   return error;
-}
-
-bool StartDebuggingRequestHandler::DoExecute(
-    lldb::SBDebugger debugger, char **command,
-    lldb::SBCommandReturnObject &result) {
-  // Command format like: `start-debugging <launch|attach> <configuration>`
-  if (!command) {
-    result.SetError("Invalid use of start-debugging, expected format "
-                    "`start-debugging <launch|attach> <configuration>`.");
-    return false;
-  }
-
-  if (!command[0] || llvm::StringRef(command[0]).empty()) {
-    result.SetError("start-debugging request type missing.");
-    return false;
-  }
-
-  if (!command[1] || llvm::StringRef(command[1]).empty()) {
-    result.SetError("start-debugging debug configuration missing.");
-    return false;
-  }
-
-  llvm::StringRef request{command[0]};
-  std::string raw_configuration{command[1]};
-
-  llvm::Expected<llvm::json::Value> configuration =
-      llvm::json::parse(raw_configuration);
-
-  if (!configuration) {
-    llvm::Error err = configuration.takeError();
-    std::string msg = "Failed to parse json configuration: " +
-                      llvm::toString(std::move(err)) + "\n\n" +
-                      raw_configuration;
-    result.SetError(msg.c_str());
-    return false;
-  }
-
-  dap.SendReverseRequest<LogFailureResponseHandler>(
-      "startDebugging",
-      llvm::json::Object{{"request", request},
-                         {"configuration", std::move(*configuration)}});
-
-  result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
-
-  return true;
-}
-
-bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
-                                       char **command,
-                                       lldb::SBCommandReturnObject &result) {
-  // Command format like: `repl-mode <variable|command|auto>?`
-  // If a new mode is not specified report the current mode.
-  if (!command || llvm::StringRef(command[0]).empty()) {
-    std::string mode;
-    switch (dap.repl_mode) {
-    case ReplMode::Variable:
-      mode = "variable";
-      break;
-    case ReplMode::Command:
-      mode = "command";
-      break;
-    case ReplMode::Auto:
-      mode = "auto";
-      break;
-    }
-
-    result.Printf("lldb-dap repl-mode %s.\n", mode.c_str());
-    result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-
-    return true;
-  }
-
-  llvm::StringRef new_mode{command[0]};
-
-  if (new_mode == "variable") {
-    dap.repl_mode = ReplMode::Variable;
-  } else if (new_mode == "command") {
-    dap.repl_mode = ReplMode::Command;
-  } else if (new_mode == "auto") {
-    dap.repl_mode = ReplMode::Auto;
-  } else {
-    lldb::SBStream error_message;
-    error_message.Printf("Invalid repl-mode '%s'. Expected one of 'variable', "
-                         "'command' or 'auto'.\n",
-                         new_mode.data());
-    result.SetError(error_message.GetData());
-    return false;
-  }
-
-  result.Printf("lldb-dap repl-mode %s set.\n", new_mode.data());
-  result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
-  return true;
-}
-
-// Sends a DAP event with an optional body.
-//
-// See
-// https://code.visualstudio.com/api/references/vscode-api#debug.onDidReceiveDebugSessionCustomEvent
-bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
-                                        char **command,
-                                        lldb::SBCommandReturnObject &result) {
-  // Command format like: `send-event <name> <body>?`
-  if (!command || !command[0] || llvm::StringRef(command[0]).empty()) {
-    result.SetError("Not enough arguments found, expected format "
-                    "`lldb-dap send-event <name> <body>?`.");
-    return false;
-  }
-
-  llvm::StringRef name{command[0]};
-  // Events that are stateful and should be handled by lldb-dap internally.
-  const std::array internal_events{"breakpoint", "capabilities", "continued",
-                                   "exited",     "initialize",   "loadedSource",
-                                   "module",     "process",      "stopped",
-                                   "terminated", "thread"};
-  if (llvm::is_contained(internal_events, name)) {
-    std::string msg =
-        llvm::formatv("Invalid use of lldb-dap send-event, event \"{0}\" "
-                      "should be handled by lldb-dap internally.",
-                      name)
-            .str();
-    result.SetError(msg.c_str());
-    return false;
-  }
-
-  llvm::json::Object event(CreateEventObject(name));
-
-  if (command[1] && !llvm::StringRef(command[1]).empty()) {
-    // See if we have unused arguments.
-    if (command[2]) {
-      result.SetError(
-          "Additional arguments found, expected `lldb-dap send-event "
-          "<name> <body>?`.");
-      return false;
-    }
-
-    llvm::StringRef raw_body{command[1]};
-
-    llvm::Expected<llvm::json::Value> body = llvm::json::parse(raw_body);
-
-    if (!body) {
-      llvm::Error err = body.takeError();
-      std::string msg = "Failed to parse custom event body: " +
-                        llvm::toString(std::move(err));
-      result.SetError(msg.c_str());
-      return false;
-    }
-
-    event.try_emplace("body", std::move(*body));
-  }
-
-  dap.SendJSON(llvm::json::Value(std::move(event)));
-  result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
-  return true;
 }
 
 void DAP::ConfigureSourceMaps() {
@@ -1446,15 +1292,7 @@ void DAP::EventThread() {
 
             llvm::StringRef reason;
             bool id_only = false;
-            if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) {
-              modules.insert(module_id);
-              reason = "new";
-            } else {
-              // If this is a module we've never told the client about, don't
-              // send an event.
-              if (!modules.contains(module_id))
-                continue;
-
+            if (modules.contains(module_id)) {
               if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
                 modules.erase(module_id);
                 reason = "removed";
@@ -1462,6 +1300,9 @@ void DAP::EventThread() {
               } else {
                 reason = "changed";
               }
+            } else {
+              modules.insert(module_id);
+              reason = "new";
             }
 
             llvm::json::Object body;
@@ -1521,6 +1362,89 @@ void DAP::EventThread() {
       }
     }
   }
+}
+
+std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
+    const protocol::Source &source,
+    const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints) {
+  std::vector<protocol::Breakpoint> response_breakpoints;
+  if (source.sourceReference) {
+    // Breakpoint set by assembly source.
+    auto &existing_breakpoints =
+        m_source_assembly_breakpoints[*source.sourceReference];
+    response_breakpoints =
+        SetSourceBreakpoints(source, breakpoints, existing_breakpoints);
+  } else {
+    // Breakpoint set by a regular source file.
+    const auto path = source.path.value_or("");
+    auto &existing_breakpoints = m_source_breakpoints[path];
+    response_breakpoints =
+        SetSourceBreakpoints(source, breakpoints, existing_breakpoints);
+  }
+
+  return response_breakpoints;
+}
+
+std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
+    const protocol::Source &source,
+    const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
+    SourceBreakpointMap &existing_breakpoints) {
+  std::vector<protocol::Breakpoint> response_breakpoints;
+
+  SourceBreakpointMap request_breakpoints;
+  if (breakpoints) {
+    for (const auto &bp : *breakpoints) {
+      SourceBreakpoint src_bp(*this, bp);
+      std::pair<uint32_t, uint32_t> bp_pos(src_bp.GetLine(),
+                                           src_bp.GetColumn());
+      request_breakpoints.try_emplace(bp_pos, src_bp);
+
+      const auto [iv, inserted] =
+          existing_breakpoints.try_emplace(bp_pos, src_bp);
+      // We check if this breakpoint already exists to update it.
+      if (inserted) {
+        if (llvm::Error error = iv->second.SetBreakpoint(source)) {
+          protocol::Breakpoint invalid_breakpoint;
+          invalid_breakpoint.message = llvm::toString(std::move(error));
+          invalid_breakpoint.verified = false;
+          response_breakpoints.push_back(std::move(invalid_breakpoint));
+          existing_breakpoints.erase(iv);
+          continue;
+        }
+      } else {
+        iv->second.UpdateBreakpoint(src_bp);
+      }
+
+      protocol::Breakpoint response_breakpoint =
+          iv->second.ToProtocolBreakpoint();
+      response_breakpoint.source = source;
+
+      if (!response_breakpoint.line &&
+          src_bp.GetLine() != LLDB_INVALID_LINE_NUMBER)
+        response_breakpoint.line = src_bp.GetLine();
+      if (!response_breakpoint.column &&
+          src_bp.GetColumn() != LLDB_INVALID_COLUMN_NUMBER)
+        response_breakpoint.column = src_bp.GetColumn();
+      response_breakpoints.push_back(std::move(response_breakpoint));
+    }
+  }
+
+  // Delete any breakpoints in this source file that aren't in the
+  // request_bps set. There is no call to remove breakpoints other than
+  // calling this function with a smaller or empty "breakpoints" list.
+  for (auto it = existing_breakpoints.begin();
+       it != existing_breakpoints.end();) {
+    auto request_pos = request_breakpoints.find(it->first);
+    if (request_pos == request_breakpoints.end()) {
+      // This breakpoint no longer exists in this source file, delete it
+      target.BreakpointDelete(it->second.GetID());
+      it = existing_breakpoints.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  return response_breakpoints;
 }
 
 void DAP::RegisterRequests() {
