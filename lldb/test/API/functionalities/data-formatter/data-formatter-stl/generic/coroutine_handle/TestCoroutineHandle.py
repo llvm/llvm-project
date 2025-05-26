@@ -43,7 +43,7 @@ class TestCoroutineHandle(TestBase):
                         ValueCheck(name="current_value", value="-1"),
                     ],
                 ),
-                # We don not check any members inside the `coro_frame`,
+                # We do not check any members inside the `coro_frame`,
                 # as its contents are highly compiler-specific.
                 ValueCheck(name="coro_frame"),
             ],

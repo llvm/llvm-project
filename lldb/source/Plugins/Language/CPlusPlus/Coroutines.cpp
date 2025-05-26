@@ -172,7 +172,6 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   lldbassert(destroy_ptr_sp);
   m_children.push_back(std::move(destroy_ptr_sp));
 
-  // Add promise and coro_frame
   // Add the `promise` and `coro_frame` member. We intentionally add them as
   // pointer types instead of a value type, and don't automatically dereference
   // those pointers. We do so to avoid potential very deep recursion in case
