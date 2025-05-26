@@ -526,7 +526,7 @@ class CheckerBase : public CheckerFrontend, public CheckerBackend {
 public:
   /// Attached to nodes created by this checker class when the ExplodedGraph is
   /// dumped for debugging.
-  StringRef getDebugName() const override;
+  StringRef getDebugTag() const override;
 };
 
 /// Simple checker classes that implement one frontend (i.e. checker name)
@@ -548,12 +548,12 @@ public:
 /// arguments of `FamilyChecker.`
 ///
 /// NOTE: Classes deriving from `CheckerFamily` must implement the pure virtual
-/// method `StringRef getDebugName()` which is inherited from `ProgramPointTag`
+/// method `StringRef getDebugTag()` which is inherited from `ProgramPointTag`
 /// and should return the name of the class as a string.
 ///
 /// Obviously, this boilerplate is not a good thing, but unfortunately there is
 /// no portable way to stringify the name of a type (e.g. class), so any
-/// portable implementation of `getDebugName` would need to take the name of
+/// portable implementation of `getDebugTag` would need to take the name of
 /// the class from *somewhere* where it's present as a string -- and then
 /// directly placing it in a method override is much simpler than loading it
 /// from `Checkers.td`.
