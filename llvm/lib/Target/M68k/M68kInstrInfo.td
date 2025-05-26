@@ -438,10 +438,17 @@ def MxBrTarget32 : MxBrTargetOperand<32>;
 
 // Used with MOVEM
 def MxMoveMaskClass : MxOpClass<"MoveMask">;
-def MxMoveMask : MxOp<i16, MxSize16, "m"> {
+class MxMoveMaskOp : MxOp<i16, MxSize16, "m"> {
   let OperandType = "OPERAND_IMMEDIATE";
   let PrintMethod = "printMoveMask";
   let ParserMatchClass = MxMoveMaskClass;
+}
+
+def MxMoveMask : MxMoveMaskOp;
+// The encoding of mask is reversed when the memory operand has an addressing
+// mode of 'e', that is, pre-decrement.
+def MxInverseMoveMask : MxMoveMaskOp {
+  let EncoderMethod = "encodeInverseMoveMask";
 }
 
 //===----------------------------------------------------------------------===//

@@ -574,8 +574,8 @@ void PlistDiagnostics::printBugPath(llvm::raw_ostream &o, const FIDMap &FM,
                              }) &&
          "PathDiagnostic is not partitioned so that notes precede the rest");
 
-  PathPieces::const_iterator FirstNonNote = std::partition_point(
-      Path.begin(), Path.end(), [](const PathDiagnosticPieceRef &E) {
+  PathPieces::const_iterator FirstNonNote =
+      llvm::partition_point(Path, [](const PathDiagnosticPieceRef &E) {
         return E->getKind() == PathDiagnosticPiece::Note;
       });
 

@@ -144,7 +144,7 @@ let mayRaiseFPException = 0 in {
 def FMVH_X_D : FPUnaryOp_r<0b1110001, 0b00001, 0b000, GPR, FPR64, "fmvh.x.d">,
                Sched<[WriteFMovF64ToI64, ReadFMovF64ToI64]>;
 def FMVP_D_X : FPBinaryOp_rr<0b1011001, 0b000, FPR64, GPR, "fmvp.d.x">,
-               Sched<[WriteFMovI64ToF64, ReadFMovI64ToF64]>;
+               Sched<[WriteFMovI64ToF64, ReadFMovI64ToF64, ReadFMovI64ToF64]>;
 }
 
 let isCodeGenOnly = 1, mayRaiseFPException = 0 in
@@ -177,17 +177,24 @@ def FLEQ_H : FPCmp_rr<0b1010010, 0b100, "fleq.h", FPR16>;
 
 let Predicates = [HasStdExtZfa, HasStdExtQ] in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
-def FLI_Q : FPFLI_r<0b1111011, 0b00001, 0b000, FPR128, "fli.q">;
+def FLI_Q : FPFLI_r<0b1111011, 0b00001, 0b000, FPR128, "fli.q">,
+            Sched<[WriteFLI128]>;
 
+let SchedRW = [WriteFMinMax128, ReadFMinMax128, ReadFMinMax128] in {
 def FMINM_Q: FPALU_rr<0b0010111, 0b010, "fminm.q", FPR128, Commutable=1>;
 def FMAXM_Q: FPALU_rr<0b0010111, 0b011, "fmaxm.q", FPR128, Commutable=1>;
+}
 
-def FROUND_Q : FPUnaryOp_r_frm<0b0100011, 0b00100, FPR128, FPR128, "fround.q">;
+def FROUND_Q : FPUnaryOp_r_frm<0b0100011, 0b00100, FPR128, FPR128, "fround.q">,
+               Sched<[WriteFRoundF128, ReadFRoundF128]>;
 def FROUNDNX_Q : FPUnaryOp_r_frm<0b0100011, 0b00101, FPR128, FPR128, 
-                                 "froundnx.q">;
+                                 "froundnx.q">,
+                 Sched<[WriteFRoundF128, ReadFRoundF128]>;
 
+let SchedRW = [WriteFCmp128, ReadFCmp128, ReadFCmp128] in {
 def FLTQ_Q : FPCmp_rr<0b1010011, 0b101, "fltq.q", FPR128>;
 def FLEQ_Q : FPCmp_rr<0b1010011, 0b100, "fleq.q", FPR128>;
+}
 } // Predicates = [HasStdExtZfa, HasStdExtQ]
 
 let Predicates = [HasStdExtZfa, HasStdExtQ, IsRV64] in {

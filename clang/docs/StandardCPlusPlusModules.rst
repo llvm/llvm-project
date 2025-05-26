@@ -709,7 +709,7 @@ Before Clang 19, a change in BMI of any (transitive) dependency would cause the
 outputs of the BMI to change. Starting with Clang 19, changes to non-direct
 dependencies should not directly affect the output BMI, unless they affect the
 results of the compilations. We expect that there are many more opportunities
-for this optimization than we currently have realized and would appreaciate 
+for this optimization than we currently have realized and would appreciate
 feedback about missed optimization opportunities. For example,
 
 .. code-block:: c++

@@ -17,7 +17,6 @@
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVTargetMachine.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;

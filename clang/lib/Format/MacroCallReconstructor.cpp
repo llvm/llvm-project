@@ -518,9 +518,9 @@ MacroCallReconstructor::createUnwrappedLine(const ReconstructedLine &Line,
       // If we only have one child, and the child is due to a macro expansion
       // (either attached to a left parenthesis or comma), merge the child into
       // the current line to prevent forced breaks for macro arguments.
-      auto *Child = std::find_if(
-          N->Children.begin(), N->Children.end(),
-          [](const auto &Child) { return !Child->Tokens.empty(); });
+      auto *Child = llvm::find_if(N->Children, [](const auto &Child) {
+        return !Child->Tokens.empty();
+      });
       auto Line = createUnwrappedLine(**Child, Level);
       Result.Tokens.splice(Result.Tokens.end(), Line.Tokens);
     } else if (NumChildren > 0) {

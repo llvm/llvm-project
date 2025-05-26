@@ -114,10 +114,8 @@ struct FuncBranchData {
 
   FuncBranchData() {}
 
-  FuncBranchData(StringRef Name, ContainerTy Data)
-      : Name(Name), Data(std::move(Data)) {}
-
-  FuncBranchData(StringRef Name, ContainerTy Data, ContainerTy EntryData)
+  FuncBranchData(StringRef Name, ContainerTy Data = ContainerTy(),
+                 ContainerTy EntryData = ContainerTy())
       : Name(Name), Data(std::move(Data)), EntryData(std::move(EntryData)) {}
 
   ErrorOr<const BranchInfo &> getBranch(uint64_t From, uint64_t To) const;
@@ -205,7 +203,7 @@ struct FuncMemData {
 
   FuncMemData() {}
 
-  FuncMemData(StringRef Name, ContainerTy Data)
+  FuncMemData(StringRef Name, ContainerTy Data = ContainerTy())
       : Name(Name), Data(std::move(Data)) {}
 };
 
@@ -241,7 +239,7 @@ struct FuncBasicSampleData {
   StringRef Name;
   ContainerTy Data;
 
-  FuncBasicSampleData(StringRef Name, ContainerTy Data)
+  FuncBasicSampleData(StringRef Name, ContainerTy Data = ContainerTy())
       : Name(Name), Data(std::move(Data)) {}
 
   /// Get the number of samples recorded in [Start, End)

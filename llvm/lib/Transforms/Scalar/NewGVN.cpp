@@ -1529,10 +1529,19 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
     }
   }
 
+  if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
+    auto *LifetimePtr = II->getOperand(1);
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start &&
+        (LoadPtr == lookupOperandLeader(LifetimePtr) ||
+         AA->isMustAlias(LoadPtr, LifetimePtr)))
+      return createConstantExpression(UndefValue::get(LoadType));
+  }
+
   // All of the below are only true if the loaded pointer is produced
   // by the dependent instruction.
-  if (LoadPtr != lookupOperandLeader(DepInst) &&
-      DepInst->getType()->isPointerTy() && !AA->isMustAlias(LoadPtr, DepInst))
+  if (!DepInst->getType()->isPointerTy() ||
+      (LoadPtr != lookupOperandLeader(DepInst) &&
+       !AA->isMustAlias(LoadPtr, DepInst)))
     return nullptr;
   // If this load really doesn't depend on anything, then we must be loading an
   // undef value.  This can happen when loading for a fresh allocation with no
@@ -1540,12 +1549,6 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   // that the result of the allocation is pointer equal to the load ptr.
   if (isa<AllocaInst>(DepInst)) {
     return createConstantExpression(UndefValue::get(LoadType));
-  }
-  // If this load occurs either right after a lifetime begin,
-  // then the loaded value is undefined.
-  else if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-      return createConstantExpression(UndefValue::get(LoadType));
   } else if (auto *InitVal =
                  getInitialValueOfAllocation(DepInst, TLI, LoadType))
       return createConstantExpression(InitVal);

@@ -221,6 +221,36 @@ DataLayoutImporter::tryToEmplaceStackAlignmentEntry(StringRef token) {
   return success();
 }
 
+LogicalResult DataLayoutImporter::tryToEmplaceFunctionPointerAlignmentEntry(
+    StringRef fnPtrString, StringRef token) {
+  auto key = StringAttr::get(
+      context, DLTIDialect::kDataLayoutFunctionPointerAlignmentKey);
+  if (keyEntries.count(key))
+    return success();
+
+  // The data layout entry for "F<type><abi>". <abi> is the aligment value,
+  // preceded by one of the two possible <types>:
+  // "i": The alignment of function pointers is independent of the alignment of
+  //      functions, and is a multiple of <abi>.
+  // "n": The alignment of function pointers is a multiple of the explicit
+  //      alignment specified on the function, and is a multiple of <abi>.
+  bool functionDependent = false;
+  if (fnPtrString == "n")
+    functionDependent = true;
+  else if (fnPtrString != "i")
+    return failure();
+
+  FailureOr<uint64_t> alignment = tryToParseInt(token);
+  if (failed(alignment))
+    return failure();
+
+  keyEntries.try_emplace(
+      key, DataLayoutEntryAttr::get(
+               key, FunctionPointerAlignmentAttr::get(
+                        key.getContext(), *alignment, functionDependent)));
+  return success();
+}
+
 void DataLayoutImporter::translateDataLayout(
     const llvm::DataLayout &llvmDataLayout) {
   dataLayout = {};
@@ -327,6 +357,14 @@ void DataLayoutImporter::translateDataLayout(
 
       auto type = LLVMPointerType::get(context, *space);
       if (failed(tryToEmplacePointerAlignmentEntry(type, token)))
+        return;
+      continue;
+    }
+    // Parse function pointer alignment specifications.
+    // Note that prefix here is "Fn" or "Fi", not a single character.
+    if (prefix->starts_with("F")) {
+      StringRef nextPrefix = prefix->drop_front(1);
+      if (failed(tryToEmplaceFunctionPointerAlignmentEntry(nextPrefix, token)))
         return;
       continue;
     }

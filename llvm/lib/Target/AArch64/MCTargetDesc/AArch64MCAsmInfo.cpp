@@ -108,7 +108,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   CommentString = "//";
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
-  Code32Directive = ".code\t32";
 
   Data16bitsDirective = "\t.hword\t";
   Data32bitsDirective = "\t.word\t";

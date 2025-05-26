@@ -71,12 +71,12 @@ subroutine acc_parallel_loop
   END DO
   !$acc end parallel loop
 
-! CHECK:      acc.parallel {{.*}} {
+! CHECK:      acc.parallel {{.*}} async {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
+! CHECK-NEXT: }
 
   !$acc parallel loop async(1)
   DO i = 1, n

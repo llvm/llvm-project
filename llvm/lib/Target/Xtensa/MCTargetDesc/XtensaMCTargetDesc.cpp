@@ -163,7 +163,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
 
   // Register the MCAsmBackend.
   TargetRegistry::RegisterMCAsmBackend(getTheXtensaTarget(),
-                                       createXtensaMCAsmBackend);
+                                       createXtensaAsmBackend);
 
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheXtensaTarget(),

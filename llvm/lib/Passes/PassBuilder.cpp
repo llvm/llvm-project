@@ -42,6 +42,7 @@
 #include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/InlineAdvisor.h"
@@ -447,7 +448,7 @@ public:
     // Intentionally create a virtual register and set NoVRegs property.
     auto &MRI = MF.getRegInfo();
     MRI.createGenericVirtualRegister(LLT::scalar(8));
-    MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+    MF.getProperties().setNoVRegs();
     return PreservedAnalyses::all();
   }
 
@@ -465,19 +466,18 @@ public:
   }
 
   static MachineFunctionProperties getRequiredProperties() {
-    MachineFunctionProperties MFProps;
-    MFProps.set(MachineFunctionProperties::Property::FailedISel);
-    MFProps.set(MachineFunctionProperties::Property::FailsVerification);
-    MFProps.set(MachineFunctionProperties::Property::IsSSA);
-    MFProps.set(MachineFunctionProperties::Property::Legalized);
-    MFProps.set(MachineFunctionProperties::Property::NoPHIs);
-    MFProps.set(MachineFunctionProperties::Property::NoVRegs);
-    MFProps.set(MachineFunctionProperties::Property::RegBankSelected);
-    MFProps.set(MachineFunctionProperties::Property::Selected);
-    MFProps.set(MachineFunctionProperties::Property::TiedOpsRewritten);
-    MFProps.set(MachineFunctionProperties::Property::TracksDebugUserValues);
-    MFProps.set(MachineFunctionProperties::Property::TracksLiveness);
-    return MFProps;
+    return MachineFunctionProperties()
+        .setFailedISel()
+        .setFailsVerification()
+        .setIsSSA()
+        .setLegalized()
+        .setNoPHIs()
+        .setNoVRegs()
+        .setRegBankSelected()
+        .setSelected()
+        .setTiedOpsRewritten()
+        .setTracksDebugUserValues()
+        .setTracksLiveness();
   }
   static StringRef name() { return "RequireAllMachineFunctionPropertiesPass"; }
 };

@@ -24,10 +24,9 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind)
-    : Endian(Endian), RelaxFixupKind(RelaxFixupKind) {}
-
 MCAsmBackend::~MCAsmBackend() = default;
+
+MCContext &MCAsmBackend::getContext() const { return Asm->getContext(); }
 
 std::unique_ptr<MCObjectWriter>
 MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
@@ -109,19 +108,22 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Builtins[Kind - FK_NONE];
 }
 
-bool MCAsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                                         const MCValue &Target,
-                                         const MCSubtargetInfo *) {
-  return Target.getSpecifier();
-}
-
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                                const MCFixup &Fixup,
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                 const MCValue &, uint64_t Value,
                                                 bool Resolved) const {
   if (!Resolved)
     return true;
   return fixupNeedsRelaxation(Fixup, Value);
+}
+
+bool MCAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+                            const MCValue &Target, uint64_t &FixedValue,
+                            bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+  return IsResolved;
 }
 
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
@@ -138,4 +140,25 @@ bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
   // being system-defined like these two, it is not very commonly-used.
   // Reserving an empty slot for it seems silly.
   return name == "___gxx_personality_v0" || name == "___objc_personality_v0";
+}
+
+const MCSubtargetInfo *MCAsmBackend::getSubtargetInfo(const MCFragment &F) {
+  const MCSubtargetInfo *STI = nullptr;
+  switch (F.getKind()) {
+  case MCFragment::FT_Data: {
+    auto &DF = cast<MCDataFragment>(F);
+    STI = DF.getSubtargetInfo();
+    assert(!DF.hasInstructions() || STI != nullptr);
+    break;
+  }
+  case MCFragment::FT_Relaxable: {
+    auto &RF = cast<MCRelaxableFragment>(F);
+    STI = RF.getSubtargetInfo();
+    assert(!RF.hasInstructions() || STI != nullptr);
+    break;
+  }
+  default:
+    break;
+  }
+  return STI;
 }

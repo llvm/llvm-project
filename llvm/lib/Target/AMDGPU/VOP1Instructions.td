@@ -666,7 +666,7 @@ let HasClamp = 0, HasOMod = 0, HasExtDPP = 0, HasExtVOP3DPP = 0,
 }
 
 class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT> : VOPProfile<[DstVT, i32, untyped, untyped]> {
-  let IsFP8SrcByteSel = 1;
+  let HasFP8SrcByteSel = 1;
   let HasOpSel = 0;
   let HasExtDPP = 1;
   let HasExtVOP3DPP = 1;
@@ -674,17 +674,6 @@ class VOPProfile_Base_CVT_F_F8_ByteSel<ValueType DstVT> : VOPProfile<[DstVT, i32
   let HasClamp = 0;
   let HasOMod = 0;
   let HasModifiers = 0;
-
-  defvar bytesel = (ins ByteSel:$byte_sel);
-  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                            HasClamp, HasModifiers, HasSrc2Mods,
-                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   bytesel);
-  let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, Src2VOP3DPP,
-                                        NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods,
-                                        HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
-                                        Src2ModVOP3DPP, HasOpSel>.ret,
-                         bytesel);
 }
 
 let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts],

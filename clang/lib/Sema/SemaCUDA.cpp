@@ -22,7 +22,6 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
 using namespace clang;
@@ -330,9 +329,10 @@ void SemaCUDA::EraseUnwantedMatches(
   };
 
   // Find the best call preference among the functions in Matches.
-  CUDAFunctionPreference BestCFP = GetCFP(*std::max_element(
-      Matches.begin(), Matches.end(),
-      [&](const Pair &M1, const Pair &M2) { return GetCFP(M1) < GetCFP(M2); }));
+  CUDAFunctionPreference BestCFP =
+      GetCFP(*llvm::max_element(Matches, [&](const Pair &M1, const Pair &M2) {
+        return GetCFP(M1) < GetCFP(M2);
+      }));
 
   // Erase all functions with lower priority.
   llvm::erase_if(Matches,

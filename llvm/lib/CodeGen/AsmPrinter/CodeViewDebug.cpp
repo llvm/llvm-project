@@ -234,7 +234,7 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
 CodeViewDebug::InlineSite &
 CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
                              const DISubprogram *Inlinee) {
-  auto SiteInsertion = CurFn->InlineSites.insert({InlinedAt, InlineSite()});
+  auto SiteInsertion = CurFn->InlineSites.try_emplace(InlinedAt);
   InlineSite *Site = &SiteInsertion.first->second;
   if (SiteInsertion.second) {
     unsigned ParentFuncId = CurFn->FuncId;
@@ -2743,7 +2743,7 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(const DIType *Ty) {
   // Check if we've already translated the complete record type.
   // Insert the type with a null TypeIndex to signify that the type is currently
   // being lowered.
-  auto InsertResult = CompleteTypeIndices.insert({CTy, TypeIndex()});
+  auto InsertResult = CompleteTypeIndices.try_emplace(CTy);
   if (!InsertResult.second)
     return InsertResult.first->second;
 
@@ -3005,7 +3005,7 @@ void CodeViewDebug::collectLexicalBlockInfo(
   // Create a new CodeView lexical block for this lexical scope.  If we've
   // seen this DILexicalBlock before then the scope tree is malformed and
   // we can handle this gracefully by not processing it a second time.
-  auto BlockInsertion = CurFn->LexicalBlocks.insert({DILB, LexicalBlock()});
+  auto BlockInsertion = CurFn->LexicalBlocks.try_emplace(DILB);
   if (!BlockInsertion.second)
     return;
 

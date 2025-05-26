@@ -804,6 +804,19 @@ public:
     return iterator_range<const_cfi_iterator>(cie_begin(), cie_end());
   }
 
+  /// Iterate over instructions (only if CFG is unavailable or not built yet).
+  iterator_range<InstrMapType::iterator> instrs() {
+    assert(!hasCFG() && "Iterate over basic blocks instead");
+    return make_range(Instructions.begin(), Instructions.end());
+  }
+  iterator_range<InstrMapType::const_iterator> instrs() const {
+    assert(!hasCFG() && "Iterate over basic blocks instead");
+    return make_range(Instructions.begin(), Instructions.end());
+  }
+
+  /// Returns whether there are any labels at Offset.
+  bool hasLabelAt(unsigned Offset) const { return Labels.count(Offset) != 0; }
+
   /// Iterate over all jump tables associated with this function.
   iterator_range<std::map<uint64_t, JumpTable *>::const_iterator>
   jumpTables() const {

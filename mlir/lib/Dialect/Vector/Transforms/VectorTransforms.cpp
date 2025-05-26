@@ -1118,7 +1118,7 @@ public:
     ArithIndexingBuilder idxBuilderf(rewriter, loc);
     for (auto i : llvm::seq<int64_t>(rankOffset, indices.size() - finalRank)) {
       OpFoldResult pos = extractPos[i - rankOffset];
-      if (isConstantIntValue(pos, 0))
+      if (isZeroInteger(pos))
         continue;
 
       Value offset = getValueOrCreateConstantIndexOp(rewriter, loc, pos);

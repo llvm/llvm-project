@@ -19,7 +19,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK:       Any UAV may not alias any other UAV
 ;
 
-; CHECK: Function loadUAV : 0x00000000
+; CHECK: Function loadUAV : 0x200010000
 define float @loadUAV() #0 {
   %res = call target("dx.TypedBuffer", float, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -29,7 +29,7 @@ define float @loadUAV() #0 {
   ret float %val
 }
 
-; CHECK: Function loadSRV : 0x00000010
+; CHECK: Function loadSRV : 0x200010010
 define float @loadSRV() #0 {
   %res = tail call target("dx.RawBuffer", float, 0, 0)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)

@@ -649,8 +649,6 @@ protected:
     result.GetOutputStream().Printf("%u targets deleted.\n",
                                     (uint32_t)num_targets_to_delete);
     result.SetStatus(eReturnStatusSuccessFinishResult);
-
-    return;
   }
 
   OptionGroupOptions m_option_group;

@@ -1,6 +1,10 @@
-// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20_plus -DTEST_LINUX %s
-// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20_plus -DTEST_WINDOWS %s
-// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20_plus -DTEST_DARWIN %s
+// RUN: %clang_cc1 -std=c++23 -verify -DTEST_LINUX %s
+// RUN: %clang_cc1 -std=c++23 -verify -DTEST_WINDOWS %s
+// RUN: %clang_cc1 -std=c++23 -verify -DTEST_DARWIN %s
+
+// RUN: %clang_cc1 -std=c++23 -verify -DTEST_LINUX %s   -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -verify -DTEST_WINDOWS %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -verify -DTEST_DARWIN %s  -fexperimental-new-constant-interpreter
 
 #ifdef __ASSERT_FUNCTION
 #undef __ASSERT_FUNCTION

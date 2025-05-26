@@ -193,8 +193,7 @@ bool ChainedASTReaderListener::ReadTargetOptions(
 }
 
 bool ChainedASTReaderListener::ReadDiagnosticOptions(
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts, StringRef ModuleFilename,
-    bool Complain) {
+    DiagnosticOptions &DiagOpts, StringRef ModuleFilename, bool Complain) {
   return First->ReadDiagnosticOptions(DiagOpts, ModuleFilename, Complain) ||
          Second->ReadDiagnosticOptions(DiagOpts, ModuleFilename, Complain);
 }
@@ -595,16 +594,16 @@ static Module *getTopImportImplicitModule(ModuleManager &ModuleMgr,
   return M;
 }
 
-bool PCHValidator::ReadDiagnosticOptions(
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts, StringRef ModuleFilename,
-    bool Complain) {
+bool PCHValidator::ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
+                                         StringRef ModuleFilename,
+                                         bool Complain) {
   DiagnosticsEngine &ExistingDiags = PP.getDiagnostics();
   IntrusiveRefCntPtr<DiagnosticIDs> DiagIDs(ExistingDiags.getDiagnosticIDs());
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagIDs, DiagOpts.get()));
+      new DiagnosticsEngine(DiagIDs, DiagOpts));
   // This should never fail, because we would have processed these options
   // before writing them to an ASTFile.
-  ProcessWarningOptions(*Diags, *DiagOpts,
+  ProcessWarningOptions(*Diags, DiagOpts,
                         PP.getFileManager().getVirtualFileSystem(),
                         /*Report*/ false);
 
@@ -6422,17 +6421,17 @@ bool ASTReader::ParseTargetOptions(const RecordData &Record,
 bool ASTReader::ParseDiagnosticOptions(const RecordData &Record,
                                        StringRef ModuleFilename, bool Complain,
                                        ASTReaderListener &Listener) {
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
+  DiagnosticOptions DiagOpts;
   unsigned Idx = 0;
-#define DIAGOPT(Name, Bits, Default) DiagOpts->Name = Record[Idx++];
-#define ENUM_DIAGOPT(Name, Type, Bits, Default) \
-  DiagOpts->set##Name(static_cast<Type>(Record[Idx++]));
+#define DIAGOPT(Name, Bits, Default) DiagOpts.Name = Record[Idx++];
+#define ENUM_DIAGOPT(Name, Type, Bits, Default)                                \
+  DiagOpts.set##Name(static_cast<Type>(Record[Idx++]));
 #include "clang/Basic/DiagnosticOptions.def"
 
   for (unsigned N = Record[Idx++]; N; --N)
-    DiagOpts->Warnings.push_back(ReadString(Record, Idx));
+    DiagOpts.Warnings.push_back(ReadString(Record, Idx));
   for (unsigned N = Record[Idx++]; N; --N)
-    DiagOpts->Remarks.push_back(ReadString(Record, Idx));
+    DiagOpts.Remarks.push_back(ReadString(Record, Idx));
 
   return Listener.ReadDiagnosticOptions(DiagOpts, ModuleFilename, Complain);
 }

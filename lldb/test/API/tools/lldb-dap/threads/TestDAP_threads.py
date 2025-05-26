@@ -50,7 +50,9 @@ class TestDAP_threads(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(
-            program, customThreadFormat="This is thread index #${thread.index}"
+            program,
+            customThreadFormat="This is thread index #${thread.index}",
+            stopCommands=["thread list"],
         )
         source = "main.c"
         breakpoint_line = line_number(source, "// break here")
@@ -63,5 +65,6 @@ class TestDAP_threads(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         # We are stopped at the second thread
         threads = self.dap_server.get_threads()
+        print("got thread", threads)
         self.assertEqual(threads[0]["name"], "This is thread index #1")
         self.assertEqual(threads[1]["name"], "This is thread index #2")

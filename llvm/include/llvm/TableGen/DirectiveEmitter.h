@@ -113,19 +113,22 @@ public:
 
   // Returns the name of the directive formatted for output. Whitespace are
   // replaced with underscores.
-  static std::string getFormattedName(const Record *R) {
-    StringRef Name = R->getValueAsString("name");
+  static std::string formatName(StringRef Name) {
     std::string N = Name.str();
     llvm::replace(N, ' ', '_');
     return N;
   }
 
-  std::string getFormattedName() const { return getFormattedName(Def); }
+  std::string getFormattedName() const {
+    return formatName(Def->getValueAsString("name"));
+  }
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
 
   // Returns the record name.
   StringRef getRecordName() const { return Def->getName(); }
+
+  const Record *getRecord() const { return Def; }
 
 protected:
   const Record *Def;

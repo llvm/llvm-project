@@ -317,6 +317,9 @@
 // RUN: not %clang --target=aarch64-linux -fsanitize=memtag -I +mte %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-NOMT-1
 // CHECK-SANMT-NOMT-1: '-fsanitize=memtag-stack' requires hardware support (+memtag)
 
+// RUN: not %clang --target=aarch64-linux-android31 -fsanitize-trap=memtag -march=armv8-a+memtag -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANMT-TRAP
+// CHECK-SANMT-TRAP: error: unsupported argument 'memtag' to option '-fsanitize-trap='
+
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-address-use-after-scope %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-USE-AFTER-SCOPE
 // RUN: %clang_cl --target=x86_64-windows -fsanitize=address -fsanitize-address-use-after-scope -### -- %s 2>&1 | FileCheck %s --check-prefix=CHECK-USE-AFTER-SCOPE
 // CHECK-USE-AFTER-SCOPE: -cc1{{.*}}-fsanitize-address-use-after-scope

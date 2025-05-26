@@ -14,6 +14,7 @@
 #define MLIR_TOOLS_MLIRQUERY_MATCHERS_SLICEMATCHERS_H
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/IR/Operation.h"
 
 /// A matcher encapsulating `getBackwardSlice` method from SliceAnalysis.h.
 /// Additionally, it limits the slice computation to a certain depth level using
@@ -111,7 +112,9 @@ bool BackwardSliceMatcher<Matcher>::matches(
     }
     return true;
   };
-  getBackwardSlice(rootOp, &backwardSlice, options);
+  LogicalResult result = getBackwardSlice(rootOp, &backwardSlice, options);
+  assert(result.succeeded() && "expected backward slice to succeed");
+  (void)result;
   return options.inclusive ? backwardSlice.size() > 1
                            : backwardSlice.size() >= 1;
 }

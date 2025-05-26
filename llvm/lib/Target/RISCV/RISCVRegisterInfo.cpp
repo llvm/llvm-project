@@ -291,6 +291,30 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Use the QC_E_ADDI instruction from the Xqcilia extension that can take a
+  // signed 26-bit immediate.
+  if (ST.hasVendorXqcilia() && isInt<26>(Val)) {
+    // The one case where using this instruction is sub-optimal is if Val can be
+    // materialized with a single compressible LUI and following add/sub is also
+    // compressible. Avoid doing this if that is the case.
+    int Hi20 = (Val & 0xFFFFF000) >> 12;
+    bool IsCompressLUI =
+        ((Val & 0xFFF) == 0) && (Hi20 != 0) &&
+        (isUInt<5>(Hi20) || (Hi20 >= 0xfffe0 && Hi20 <= 0xfffff));
+    bool IsCompressAddSub =
+        (SrcReg == DestReg) &&
+        ((Val > 0 && RISCV::GPRNoX0RegClass.contains(SrcReg)) ||
+         (Val < 0 && RISCV::GPRCRegClass.contains(SrcReg)));
+
+    if (!(IsCompressLUI && IsCompressAddSub)) {
+      BuildMI(MBB, II, DL, TII->get(RISCV::QC_E_ADDI), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrcReg))
+          .addImm(Val)
+          .setMIFlag(Flag);
+      return;
+    }
+  }
+
   // Try to split the offset across two ADDIs. We need to keep the intermediate
   // result aligned after each ADDI.  We need to determine the maximum value we
   // can put in each ADDI. In the negative direction, we can use -2048 which is

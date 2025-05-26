@@ -65,9 +65,8 @@ public:
   PlainCFGBuilder(Loop *Lp, LoopInfo *LI)
       : TheLoop(Lp), LI(LI), Plan(std::make_unique<VPlan>(Lp)) {}
 
-  /// Build plain CFG for TheLoop  and connects it to Plan's entry.
-  std::unique_ptr<VPlan>
-  buildPlainCFG(DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  /// Build plain CFG for TheLoop and connect it to Plan's entry.
+  std::unique_ptr<VPlan> buildPlainCFG();
 };
 } // anonymous namespace
 
@@ -242,8 +241,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 }
 
 // Main interface to build the plain CFG.
-std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
-    DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
   VPIRBasicBlock *Entry = cast<VPIRBasicBlock>(Plan->getEntry());
   BB2VPBB[Entry->getIRBasicBlock()] = Entry;
   for (VPIRBasicBlock *ExitVPBB : Plan->getExitBlocks())
@@ -334,18 +332,14 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
     }
   }
 
-  for (const auto &[IRBB, VPB] : BB2VPBB)
-    VPB2IRBB[VPB] = IRBB;
-
   LLVM_DEBUG(Plan->setName("Plain CFG\n"); dbgs() << *Plan);
   return std::move(Plan);
 }
 
-std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(
-    Loop *TheLoop, LoopInfo &LI,
-    DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(Loop *TheLoop,
+                                                      LoopInfo &LI) {
   PlainCFGBuilder Builder(TheLoop, &LI);
-  return Builder.buildPlainCFG(VPB2IRBB);
+  return Builder.buildPlainCFG();
 }
 
 /// Checks if \p HeaderVPB is a loop header block in the plain CFG; that is, it

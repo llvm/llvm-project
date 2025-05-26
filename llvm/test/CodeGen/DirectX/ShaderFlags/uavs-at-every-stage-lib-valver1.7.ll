@@ -12,7 +12,7 @@ target triple = "dxil-pc-shadermodel6.5-library"
 ; CHECK: Note: shader requires additional functionality:
 ; CHECK:        UAVs at every shader stage
 
-; CHECK: Function test : 0x00000000
+; CHECK: Function test : 0x00010000
 define void @test() "hlsl.export" {
   ; RWBuffer<float> Buf : register(u0, space0)
   %buf0 = call target("dx.TypedBuffer", float, 1, 0, 1)

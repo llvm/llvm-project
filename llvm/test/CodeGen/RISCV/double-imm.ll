@@ -55,9 +55,10 @@ define double @double_imm_op(double %a) nounwind {
 ; CHECKRV32ZDINX-LABEL: double_imm_op:
 ; CHECKRV32ZDINX:       # %bb.0:
 ; CHECKRV32ZDINX-NEXT:    lui a2, %hi(.LCPI1_0)
-; CHECKRV32ZDINX-NEXT:    lw a3, %lo(.LCPI1_0+4)(a2)
-; CHECKRV32ZDINX-NEXT:    lw a2, %lo(.LCPI1_0)(a2)
-; CHECKRV32ZDINX-NEXT:    fadd.d a0, a0, a2
+; CHECKRV32ZDINX-NEXT:    lw a4, %lo(.LCPI1_0)(a2)
+; CHECKRV32ZDINX-NEXT:    addi a2, a2, %lo(.LCPI1_0)
+; CHECKRV32ZDINX-NEXT:    lw a5, 4(a2)
+; CHECKRV32ZDINX-NEXT:    fadd.d a0, a0, a4
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: double_imm_op:

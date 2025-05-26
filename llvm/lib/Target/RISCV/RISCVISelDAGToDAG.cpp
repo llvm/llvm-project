@@ -2576,8 +2576,7 @@ bool RISCVDAGToDAGISel::SelectAddrFrameIndex(SDValue Addr, SDValue &Base,
 static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
                                const MVT VT, const RISCVSubtarget *Subtarget,
                                SDValue Addr, SDValue &Base, SDValue &Offset,
-                               bool IsPrefetch = false,
-                               bool IsRV32Zdinx = false) {
+                               bool IsPrefetch = false) {
   if (!isa<ConstantSDNode>(Addr))
     return false;
 
@@ -2591,9 +2590,6 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
   if (!Subtarget->is64Bit() || isInt<32>(Hi)) {
     if (IsPrefetch && (Lo12 & 0b11111) != 0)
       return false;
-    if (IsRV32Zdinx && !isInt<12>(Lo12 + 4))
-      return false;
-
     if (Hi) {
       int64_t Hi20 = (Hi >> 12) & 0xfffff;
       Base = SDValue(
@@ -2616,8 +2612,6 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
     return false;
   Lo12 = Seq.back().getImm();
   if (IsPrefetch && (Lo12 & 0b11111) != 0)
-    return false;
-  if (IsRV32Zdinx && !isInt<12>(Lo12 + 4))
     return false;
 
   // Drop the last instruction.
@@ -2710,7 +2704,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
-                                         SDValue &Offset, bool IsRV32Zdinx) {
+                                         SDValue &Offset) {
   if (SelectAddrFrameIndex(Addr, Base, Offset))
     return true;
 
@@ -2718,39 +2712,14 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   MVT VT = Addr.getSimpleValueType();
 
   if (Addr.getOpcode() == RISCVISD::ADD_LO) {
-    // If this is non RV32Zdinx we can always fold.
-    if (!IsRV32Zdinx) {
-      Base = Addr.getOperand(0);
-      Offset = Addr.getOperand(1);
-      return true;
-    }
-
-    // For RV32Zdinx we need to have more than 4 byte alignment so we can add 4
-    // to the offset when we expand in RISCVExpandPseudoInsts.
-    if (auto *GA = dyn_cast<GlobalAddressSDNode>(Addr.getOperand(1))) {
-      const DataLayout &DL = CurDAG->getDataLayout();
-      Align Alignment = commonAlignment(
-          GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-      if (Alignment > 4) {
-        Base = Addr.getOperand(0);
-        Offset = Addr.getOperand(1);
-        return true;
-      }
-    }
-    if (auto *CP = dyn_cast<ConstantPoolSDNode>(Addr.getOperand(1))) {
-      Align Alignment = commonAlignment(CP->getAlign(), CP->getOffset());
-      if (Alignment > 4) {
-        Base = Addr.getOperand(0);
-        Offset = Addr.getOperand(1);
-        return true;
-      }
-    }
+    Base = Addr.getOperand(0);
+    Offset = Addr.getOperand(1);
+    return true;
   }
 
-  int64_t RV32ZdinxRange = IsRV32Zdinx ? 4 : 0;
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    if (isInt<12>(CVal) && isInt<12>(CVal + RV32ZdinxRange)) {
+    if (isInt<12>(CVal) && isInt<12>(CVal)) {
       Base = Addr.getOperand(0);
       if (Base.getOpcode() == RISCVISD::ADD_LO) {
         SDValue LoOperand = Base.getOperand(1);
@@ -2763,8 +2732,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
           const DataLayout &DL = CurDAG->getDataLayout();
           Align Alignment = commonAlignment(
               GA->getGlobal()->getPointerAlignment(DL), GA->getOffset());
-          if ((CVal == 0 || Alignment > CVal) &&
-              (!IsRV32Zdinx || commonAlignment(Alignment, CVal) > 4)) {
+          if ((CVal == 0 || Alignment > CVal)) {
             int64_t CombinedOffset = CVal + GA->getOffset();
             Base = Base.getOperand(0);
             Offset = CurDAG->getTargetGlobalAddress(
@@ -2785,13 +2753,13 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   // Handle ADD with large immediates.
   if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1))) {
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    assert(!(isInt<12>(CVal) && isInt<12>(CVal + RV32ZdinxRange)) &&
+    assert(!(isInt<12>(CVal) && isInt<12>(CVal)) &&
            "simm12 not already handled?");
 
     // Handle immediates in the range [-4096,-2049] or [2048, 4094]. We can use
     // an ADDI for part of the offset and fold the rest into the load/store.
     // This mirrors the AddiPair PatFrag in RISCVInstrInfo.td.
-    if (CVal >= -4096 && CVal <= (4094 - RV32ZdinxRange)) {
+    if (CVal >= -4096 && CVal <= 4094) {
       int64_t Adj = CVal < 0 ? -2048 : 2047;
       Base = SDValue(
           CurDAG->getMachineNode(RISCV::ADDI, DL, VT, Addr.getOperand(0),
@@ -2809,7 +2777,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
     // instructions.
     if (isWorthFoldingAdd(Addr) &&
         selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr.getOperand(1), Base,
-                           Offset, /*IsPrefetch=*/false, RV32ZdinxRange)) {
+                           Offset, /*IsPrefetch=*/false)) {
       // Insert an ADD instruction with the materialized Hi52 bits.
       Base = SDValue(
           CurDAG->getMachineNode(RISCV::ADD, DL, VT, Addr.getOperand(0), Base),
@@ -2819,7 +2787,7 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   }
 
   if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset,
-                         /*IsPrefetch=*/false, RV32ZdinxRange))
+                         /*IsPrefetch=*/false))
     return true;
 
   Base = Addr;

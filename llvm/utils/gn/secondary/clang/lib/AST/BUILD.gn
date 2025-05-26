@@ -73,7 +73,6 @@ static_library("AST") {
     "ByteCode/EvalEmitter.cpp",
     "ByteCode/EvaluationResult.cpp",
     "ByteCode/Floating.cpp",
-    "ByteCode/Frame.cpp",
     "ByteCode/Function.cpp",
     "ByteCode/FunctionPointer.cpp",
     "ByteCode/Interp.cpp",

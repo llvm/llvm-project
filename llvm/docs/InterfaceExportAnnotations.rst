@@ -123,7 +123,7 @@ class declaration must be annotated with ``LLVM_ABI``.
 
    class ExampleClass {
    public:
-     // Public methods defined externally must be annotatated.
+     // Public methods defined externally must be annotated.
      LLVM_ABI int sourceDefinedPublicMethod(int a, int b);
 
      // Methods defined in the class definition do not need annotation.
@@ -135,7 +135,7 @@ class declaration must be annotated with ``LLVM_ABI``.
      ExampleClass() {}
      LLVM_ABI ~ExampleClass();
 
-     // Public static methods defined externally must be annotatated.
+     // Public static methods defined externally must be annotated.
      LLVM_ABI static int sourceDefinedPublicStaticMethod(int a, int b);
    };
 

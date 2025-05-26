@@ -542,10 +542,54 @@ define void @indirect_vararg_call(ptr addrspace(42) %fn) {
 ; CHECK-LABEL: @inlineasm
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define i32 @inlineasm(i32 %arg1) {
-  ; CHECK:  %[[RES:.+]] = llvm.inline_asm has_side_effects "bswap $0", "=r,r" %[[ARG1]] : (i32) -> i32
-  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1)
+  ; CHECK:  %[[RES:.+]] = llvm.inline_asm has_side_effects is_align_stack asm_dialect = intel "bswap $0", "=r,r" %[[ARG1]] : (i32) -> i32
+  %1 = call i32 asm sideeffect alignstack inteldialect "bswap $0", "=r,r"(i32 %arg1)
   ; CHECK: return %[[RES]]
   ret i32 %1
+}
+
+; // -----
+
+; CHECK-LABEL: @inlineasm2
+define void @inlineasm2() {
+  %p = alloca ptr, align 8
+  ; CHECK: {{.*}} = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  ; CHECK-NEXT: llvm.inline_asm has_side_effects tail_call_kind = <tail> asm_dialect = att operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" {{.*}} : (!llvm.ptr) -> !llvm.void
+  tail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %p)
+
+  ; CHECK: llvm.inline_asm has_side_effects tail_call_kind = <notail> asm_dialect = att operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" {{.*}} : (!llvm.ptr) -> !llvm.void
+  notail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %p)
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @inlineasm3
+; CHECK-SAME:(%[[A0:.*]]: !llvm.ptr, %[[A1:.*]]: i64, %[[A2:.*]]: !llvm.ptr, %[[A3:.*]]: i64) {
+define void @inlineasm3(
+    ptr %ptr0,
+    i64 %b,
+    ptr %ptr1,
+    i64 %c
+  ) {
+  ; CHECK: llvm.inline_asm asm_dialect = att operand_attrs =
+  ; CHECK-SAME: [{elementtype = !llvm.array<16 x i64>}, {},
+  ; CHECK-SAME: {elementtype = !llvm.array<16 x i64>}, {}, {}, {},
+  ; CHECK-SAME: {elementtype = !llvm.array<16 x i64>}]
+  ; CHECK-SAME: "ldr x4, [$2], #8   \0A\09ldr x5, [$1]       \0A\09mul x6, x4, $4     \0A\09",
+  ; CHECK-SAME: "=r,=r,=r,=*m,r,*m,0,1,2,*m,~{x4},~{x5},~{x6},~{x7},~{cc}"
+  ; CHECK-SAME: %[[A0]], %[[A1]], %[[A2]], %[[A3]], %[[A0]], %[[A2]], %[[A0]] :
+  ; CHECK-SAME: (!llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.struct<(i64, ptr, ptr)>
+  %r = call { i64, ptr, ptr } asm "ldr x4, [$2], #8   \0A\09ldr x5, [$1]       \0A\09mul x6, x4, $4     \0A\09",
+  "=r,=r,=r,=*m,r,*m,0,1,2,*m,~{x4},~{x5},~{x6},~{x7},~{cc}"(
+    ptr elementtype([16 x i64]) %ptr0,
+    i64 %b,
+    ptr elementtype([16 x i64]) %ptr1,
+    i64 %c,
+    ptr %ptr0,
+    ptr %ptr1,
+    ptr elementtype([16 x i64]) %ptr0)
+  ret void
 }
 
 ; // -----

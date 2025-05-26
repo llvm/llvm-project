@@ -1906,8 +1906,7 @@ Error OffloadBundler::UnbundleArchive() {
                   .str();
           // Replace ':' in optional target feature list with '_' to ensure
           // cross-platform validity.
-          std::replace(OutputBundleName.begin(), OutputBundleName.end(), ':',
-                       '_');
+          llvm::replace(OutputBundleName, ':', '_');
 
           std::unique_ptr<MemoryBuffer> MemBuf = MemoryBuffer::getMemBufferCopy(
               DataStream.str(), OutputBundleName);

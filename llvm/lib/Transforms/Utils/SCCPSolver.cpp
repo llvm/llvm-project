@@ -524,7 +524,7 @@ private:
   ValueLatticeElement &getValueState(Value *V) {
     assert(!V->getType()->isStructTy() && "Should use getStructValueState");
 
-    auto I = ValueState.insert(std::make_pair(V, ValueLatticeElement()));
+    auto I = ValueState.try_emplace(V);
     ValueLatticeElement &LV = I.first->second;
 
     if (!I.second)
@@ -765,10 +765,9 @@ public:
     if (auto *STy = dyn_cast<StructType>(F->getReturnType())) {
       MRVFunctionsTracked.insert(F);
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
-        TrackedMultipleRetVals.insert(
-            std::make_pair(std::make_pair(F, i), ValueLatticeElement()));
+        TrackedMultipleRetVals.try_emplace(std::make_pair(F, i));
     } else if (!F->getReturnType()->isVoidTy())
-      TrackedRetVals.insert(std::make_pair(F, ValueLatticeElement()));
+      TrackedRetVals.try_emplace(F);
   }
 
   void addToMustPreserveReturnsInFunctions(Function *F) {
@@ -840,15 +839,16 @@ public:
     return I->second;
   }
 
-  const MapVector<Function *, ValueLatticeElement> &getTrackedRetVals() {
+  const MapVector<Function *, ValueLatticeElement> &getTrackedRetVals() const {
     return TrackedRetVals;
   }
 
-  const DenseMap<GlobalVariable *, ValueLatticeElement> &getTrackedGlobals() {
+  const DenseMap<GlobalVariable *, ValueLatticeElement> &
+  getTrackedGlobals() const {
     return TrackedGlobals;
   }
 
-  const SmallPtrSet<Function *, 16> getMRVFunctionsTracked() {
+  const SmallPtrSet<Function *, 16> &getMRVFunctionsTracked() const {
     return MRVFunctionsTracked;
   }
 
@@ -2227,11 +2227,11 @@ SCCPSolver::getTrackedRetVals() const {
 }
 
 const DenseMap<GlobalVariable *, ValueLatticeElement> &
-SCCPSolver::getTrackedGlobals() {
+SCCPSolver::getTrackedGlobals() const {
   return Visitor->getTrackedGlobals();
 }
 
-const SmallPtrSet<Function *, 16> SCCPSolver::getMRVFunctionsTracked() {
+const SmallPtrSet<Function *, 16> &SCCPSolver::getMRVFunctionsTracked() const {
   return Visitor->getMRVFunctionsTracked();
 }
 

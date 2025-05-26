@@ -1858,7 +1858,8 @@ class ClassTemplateSpecializationDecl : public CXXRecordDecl,
   /// This needs to be cached as deduction is performed during declaration,
   /// and we need the information to be preserved so that it is consistent
   /// during instantiation.
-  bool StrictPackMatch : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned StrictPackMatch : 1;
 
 protected:
   ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,

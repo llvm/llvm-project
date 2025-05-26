@@ -548,7 +548,7 @@ class ArrayProp<Property elem = Property<>, string newSummary = ""> :
   // In the non-trivial case, we define a mapped range to get internal hash
   // codes.
   let hashProperty = !if(!empty(elem.hashProperty),
-    [{::llvm::hash_value(::llvm::ArrayRef<}] # elem.storageType # [{>{$_storage})}],
+    [{hash_value(::llvm::ArrayRef<}] # elem.storageType # [{>{$_storage})}],
     [{[&]() -> ::llvm::hash_code {
         auto getElemHash = [](const auto& propStorage) -> ::llvm::hash_code {
           return }] # !subst("$_storage", "propStorage", elem.hashProperty) # [{;
@@ -762,7 +762,7 @@ class OptionalProp<Property p, bit canDelegateParsing = 1>
   }] # !subst("$_storage", "(*($_storage))", p.writeToMlirBytecode);
 
   let hashProperty = !if(!empty(p.hashProperty), p.hashProperty,
-    [{ ::llvm::hash_value($_storage.has_value() ? std::optional<::llvm::hash_code>{}] #
+    [{ hash_value($_storage.has_value() ? std::optional<::llvm::hash_code>{}] #
       !subst("$_storage", "(*($_storage))", p.hashProperty) #[{} : std::nullopt) }]);
   assert !or(!not(delegatesParsing), !eq(defaultValue, "std::nullopt")),
     "For delegated parsing to be used, the default value must be nullopt. " #

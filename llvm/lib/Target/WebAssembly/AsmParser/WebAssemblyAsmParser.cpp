@@ -23,7 +23,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionWasm.h"
@@ -226,7 +226,7 @@ static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
 
 class WebAssemblyAsmParser final : public MCTargetAsmParser {
   MCAsmParser &Parser;
-  MCAsmLexer &Lexer;
+  AsmLexer &Lexer;
 
   // Order of labels, directives and instructions in a .s file have no
   // syntactical enforcement. This class is a callback from the actual parser,

@@ -15,7 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/BTF/BTFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/GSYM/GsymDIContext.h"
+#include "llvm/DebugInfo/GSYM/GsymContext.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
@@ -665,7 +665,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
   // If this is a COFF object containing PDB info and not containing DWARF
   // section, use a PDBContext to symbolize. Otherwise, use DWARF.
   // Create a DIContext to symbolize as follows:
-  // - If there is a GSYM file, create a GsymDIContext.
+  // - If there is a GSYM file, create a GsymContext.
   // - Otherwise, if this is a COFF object containing PDB info, create a
   // PDBContext.
   // - Otherwise, create a DWARFContext.
@@ -677,7 +677,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
       std::unique_ptr<gsym::GsymReader> Reader =
           std::make_unique<gsym::GsymReader>(std::move(*ReaderOrErr));
 
-      Context = std::make_unique<gsym::GsymDIContext>(std::move(Reader));
+      Context = std::make_unique<gsym::GsymContext>(std::move(Reader));
     }
   }
   if (!Context) {

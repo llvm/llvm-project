@@ -603,11 +603,8 @@ void Liveness::computePhiInfo() {
       for (NodeAddr<DefNode *> D : Ds) {
         if (D.Addr->getFlags() & NodeAttrs::PhiRef) {
           NodeId RP = D.Addr->getOwner(DFG).Id;
-          std::map<NodeId, RegisterAggr> &M = PhiUp[PUA.Id];
-          auto F = M.find(RP);
-          if (F == M.end())
-            M.insert(std::make_pair(RP, DefRRs));
-          else
+          auto [F, Inserted] = PhiUp[PUA.Id].try_emplace(RP, DefRRs);
+          if (!Inserted)
             F->second.insert(DefRRs);
         }
         DefRRs.insert(D.Addr->getRegRef(DFG));

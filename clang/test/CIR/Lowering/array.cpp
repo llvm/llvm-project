@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s
 
 int a[10];
 // CHECK: @a = dso_local global [10 x i32] zeroinitializer
@@ -40,7 +41,7 @@ void func() {
 // CHECK-NEXT: %[[INIT_2:.*]] = alloca i32, i64 1, align 4
 // CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
 // CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 0
-// CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
+// CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 16
 // CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT]], align 4
 // CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
 // CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 1

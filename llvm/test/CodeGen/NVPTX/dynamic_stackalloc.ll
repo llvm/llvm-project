@@ -66,8 +66,7 @@ define i32 @test_dynamic_stackalloc(i64 %n) {
 define float @test_dynamic_stackalloc_unaligned(i64 %0) {
 ; CHECK-32-LABEL: test_dynamic_stackalloc_unaligned(
 ; CHECK-32:       {
-; CHECK-32-NEXT:    .reg .b32 %r<6>;
-; CHECK-32-NEXT:    .reg .b32 %f<2>;
+; CHECK-32-NEXT:    .reg .b32 %r<7>;
 ; CHECK-32-EMPTY:
 ; CHECK-32-NEXT:  // %bb.0:
 ; CHECK-32-NEXT:    ld.param.b32 %r1, [test_dynamic_stackalloc_unaligned_param_0];
@@ -75,13 +74,13 @@ define float @test_dynamic_stackalloc_unaligned(i64 %0) {
 ; CHECK-32-NEXT:    add.s32 %r3, %r2, 7;
 ; CHECK-32-NEXT:    and.b32 %r4, %r3, -8;
 ; CHECK-32-NEXT:    alloca.u32 %r5, %r4, 8;
-; CHECK-32-NEXT:    ld.local.b32 %f1, [%r5];
-; CHECK-32-NEXT:    st.param.b32 [func_retval0], %f1;
+; CHECK-32-NEXT:    ld.local.b32 %r6, [%r5];
+; CHECK-32-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-32-NEXT:    ret;
 ;
 ; CHECK-64-LABEL: test_dynamic_stackalloc_unaligned(
 ; CHECK-64:       {
-; CHECK-64-NEXT:    .reg .b32 %f<2>;
+; CHECK-64-NEXT:    .reg .b32 %r<2>;
 ; CHECK-64-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-64-EMPTY:
 ; CHECK-64-NEXT:  // %bb.0:
@@ -90,8 +89,8 @@ define float @test_dynamic_stackalloc_unaligned(i64 %0) {
 ; CHECK-64-NEXT:    add.s64 %rd3, %rd2, 7;
 ; CHECK-64-NEXT:    and.b64 %rd4, %rd3, -8;
 ; CHECK-64-NEXT:    alloca.u64 %rd5, %rd4, 8;
-; CHECK-64-NEXT:    ld.local.b32 %f1, [%rd5];
-; CHECK-64-NEXT:    st.param.b32 [func_retval0], %f1;
+; CHECK-64-NEXT:    ld.local.b32 %r1, [%rd5];
+; CHECK-64-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-64-NEXT:    ret;
   %4 = alloca float, i64 %0, align 4
   %5 = getelementptr float, ptr %4, i64 0

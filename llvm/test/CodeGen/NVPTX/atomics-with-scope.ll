@@ -121,11 +121,11 @@ define void @test_atomics_scope_imm(ptr %fp, float %f,
 ; CHECK: atom.cta.add.u64{{.*}}, 2;
   %tmp2i = tail call i64 @llvm.nvvm.atomic.add.gen.i.cta.i64.p0(ptr %llp, i64 2)
 
-; CHECK: atom.cta.add.f32{{.*}}, %f{{[0-9]+}};
+; CHECK: atom.cta.add.f32{{.*}}, %r{{[0-9]+}};
   %tmp3r = tail call float @llvm.nvvm.atomic.add.gen.f.cta.f32.p0(ptr %fp, float %f)
 ; CHECK: atom.cta.add.f32{{.*}}, 0f40400000;
   %tmp3i = tail call float @llvm.nvvm.atomic.add.gen.f.cta.f32.p0(ptr %fp, float 3.0)
-; CHECK: atom.cta.add.f64{{.*}}, %fd{{[0-9]+}};
+; CHECK: atom.cta.add.f64{{.*}}, %rd{{[0-9]+}};
   %tmp4r = tail call double @llvm.nvvm.atomic.add.gen.f.cta.f64.p0(ptr %dfp, double %df)
 ; CHECK: atom.cta.add.f64{{.*}}, 0d4010000000000000;
   %tmp4i = tail call double @llvm.nvvm.atomic.add.gen.f.cta.f64.p0(ptr %dfp, double 4.0)

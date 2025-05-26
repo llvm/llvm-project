@@ -22,7 +22,7 @@
 // SRC-SAVE-SAME: "-o" "[[ASM:.*.s]]"
 // SRC-SAVE-SAME: "-x" "ir" "[[BITCODE]]"
 //
-// SRC-SAVE-NEXT: "-cc1as"
+// SRC-SAVE-NEXT: {{"-cc1as"|"[^"]*/as"}}
 // SRC-SAVE-SAME: "-o" "a.o" "[[ASM]]"
 //
 // RUN: %clang -O2 %t.i  -c -o a.o -no-integrated-cpp -### 2>&1 | FileCheck %s --check-prefixes=PRE
@@ -41,7 +41,7 @@
 // PRE-SAVE-SAME: "-o" "[[ASM:.*.s]]"
 // PRE-SAVE-SAME: "-x" "ir" "[[BITCODE]]"
 //
-// PRE-SAVE-NEXT: "-cc1as"
+// PRE-SAVE-NEXT: {{"-cc1as"|"[^"]*/as"}}
 // PRE-SAVE-SAME: "-o" "a.o" "[[ASM]]"
 //
 // RUN: %clang -O2 %s -c -emit-llvm -o a.bc -no-integrated-cpp -### 2>&1 | FileCheck %s --check-prefixes=LLVM
