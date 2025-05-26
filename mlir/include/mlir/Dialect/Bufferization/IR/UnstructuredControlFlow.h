@@ -34,7 +34,7 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-    BufferizationState &state,
+                BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     // Note: The user may want to override this function for OpResults in
     // case the bufferized result type is different from the bufferized type of
@@ -82,9 +82,9 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
       if (bufferType == callerType)
         continue;
 
-        // If the computed buffer type does not match the computed buffer type
-        // of the earlier forwarded operands, fall back to a buffer type with a
-        // fully dynamic layout map.
+      // If the computed buffer type does not match the computed buffer type
+      // of the earlier forwarded operands, fall back to a buffer type with a
+      // fully dynamic layout map.
 #ifndef NDEBUG
       if (auto rankedTensorType = dyn_cast<RankedTensorType>(tensorType)) {
         assert(bufferType.hasRank() && callerType.hasRank() &&
