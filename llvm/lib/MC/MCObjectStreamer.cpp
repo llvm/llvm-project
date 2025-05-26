@@ -753,7 +753,7 @@ void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {
   MCAssembler &Asm = getAssembler();
-  Asm.getWriter().addFileName(Asm, Filename);
+  Asm.getWriter().addFileName(Filename);
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename,
@@ -761,7 +761,7 @@ void MCObjectStreamer::emitFileDirective(StringRef Filename,
                                          StringRef TimeStamp,
                                          StringRef Description) {
   MCObjectWriter &W = getAssembler().getWriter();
-  W.addFileName(getAssembler(), Filename);
+  W.addFileName(Filename);
   if (CompilerVersion.size())
     W.setCompilerVersion(CompilerVersion);
   // TODO: add TimeStamp and Description to .file symbol table entry
