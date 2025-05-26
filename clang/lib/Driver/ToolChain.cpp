@@ -934,13 +934,13 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
     return *Path;
 
   if (T.isOSAIX()) {
+    // Strip the OS version from the triple on AIX.
     llvm::Triple AIXTriple;
     if (T.getEnvironment() == Triple::UnknownEnvironment) {
       // Strip unknown environment from the triple.
       AIXTriple = llvm::Triple(T.getArchName(), T.getVendorName(),
                                llvm::Triple::getOSTypeName(T.getOS()));
     } else {
-      // Get the triple without the OS version.
       AIXTriple = getTripleWithoutOSVersion();
     }
     if (auto Path = getPathForTriple(AIXTriple))
