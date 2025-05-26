@@ -75,13 +75,14 @@ DXContainerYAML::RootSignatureYamlDesc::create(
         return std::move(E);
 
       auto Constants = *ConstantsOrErr;
-      RootParameterLocationYaml Location (Header);
-      RootConstantsYaml &ConstantYaml = RootSigDesc.Parameters.getOrInsertConstants(Location);
-      RootSigDesc.Parameters.addLocation(Location);
+      RootParameterLocationYaml Location(Header);
+      RootConstantsYaml &ConstantYaml =
+          RootSigDesc.Parameters.getOrInsertConstants(Location);
+      RootSigDesc.Parameters.insertLocation(Location);
       ConstantYaml.Num32BitValues = Constants.Num32BitValues;
       ConstantYaml.ShaderRegister = Constants.ShaderRegister;
       ConstantYaml.RegisterSpace = Constants.RegisterSpace;
-      
+
     } else if (auto *RDV =
                    dyn_cast<object::DirectX::RootDescriptorView>(&ParamView)) {
       llvm::Expected<dxbc::RTS0::v2::RootDescriptor> DescriptorOrErr =
@@ -89,9 +90,10 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       if (Error E = DescriptorOrErr.takeError())
         return std::move(E);
       auto Descriptor = *DescriptorOrErr;
-      RootParameterLocationYaml Location (Header);
-      RootDescriptorYaml &YamlDescriptor = RootSigDesc.Parameters.getOrInsertDescriptor(Location);
-      RootSigDesc.Parameters.addLocation(Location);
+      RootParameterLocationYaml Location(Header);
+      RootDescriptorYaml &YamlDescriptor =
+          RootSigDesc.Parameters.getOrInsertDescriptor(Location);
+      RootSigDesc.Parameters.insertLocation(Location);
 
       YamlDescriptor.ShaderRegister = Descriptor.ShaderRegister;
       YamlDescriptor.RegisterSpace = Descriptor.RegisterSpace;
@@ -288,52 +290,57 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
   IO.mapRequired("Parameters", S.Parameters);
 }
 
-void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
-    IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
-  IO.mapRequired("Version", S.Version);
-  IO.mapRequired("NumRootParameters", S.NumRootParameters);
-  IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
-  IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
-  IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
-  IO.mapRequired("Parameters", S.Parameters.Locations, S);
-#define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-}
+      void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
+          IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
+        IO.mapRequired("Version", S.Version);
+        IO.mapRequired("NumRootParameters", S.NumRootParameters);
+        IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
+        IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
+        IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
+        IO.mapRequired("Parameters", S.Parameters.Locations, S);
+      #define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
+      #include "llvm/BinaryFormat/DXContainerConstants.def"
+      }
 
-void MappingContextTraits<DXContainerYAML::RootParameterLocationYaml, DXContainerYAML::RootSignatureYamlDesc>::mapping(IO &IO, DXContainerYAML::RootParameterLocationYaml &L, DXContainerYAML::RootSignatureYamlDesc &S) {
-      IO.mapRequired("ParameterType", L.Header.Type);
-      IO.mapRequired("ShaderVisibility", L.Header.Visibility);
+      void MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
+                                DXContainerYAML::RootSignatureYamlDesc>::
+          mapping(IO &IO, DXContainerYAML::RootParameterLocationYaml &L,
+                  DXContainerYAML::RootSignatureYamlDesc &S) {
+        IO.mapRequired("ParameterType", L.Header.Type);
+        IO.mapRequired("ShaderVisibility", L.Header.Visibility);
 
-      switch (L.Header.Type) {
+        switch (L.Header.Type) {
         case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
-          DXContainerYAML::RootConstantsYaml &Constants = S.Parameters.getOrInsertConstants(L);
+          DXContainerYAML::RootConstantsYaml &Constants =
+              S.Parameters.getOrInsertConstants(L);
           IO.mapRequired("Constants", Constants);
           break;
         }
         case llvm::to_underlying(dxbc::RootParameterType::CBV):
         case llvm::to_underlying(dxbc::RootParameterType::SRV):
-        case llvm::to_underlying(dxbc::RootParameterType::UAV):{
-          DXContainerYAML::RootDescriptorYaml &Descriptor = S.Parameters.getOrInsertDescriptor(L);
+        case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+          DXContainerYAML::RootDescriptorYaml &Descriptor =
+              S.Parameters.getOrInsertDescriptor(L);
           IO.mapRequired("Descriptor", Descriptor);
           break;
         }
+        }
       }
 
-}
-void MappingTraits<llvm::DXContainerYAML::RootConstantsYaml>::mapping(
-    IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C) {
-  IO.mapRequired("Num32BitValues", C.Num32BitValues);
-  IO.mapRequired("RegisterSpace", C.RegisterSpace);
-  IO.mapRequired("ShaderRegister", C.ShaderRegister);
-}
+      void MappingTraits<llvm::DXContainerYAML::RootConstantsYaml>::mapping(
+          IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C) {
+        IO.mapRequired("Num32BitValues", C.Num32BitValues);
+        IO.mapRequired("RegisterSpace", C.RegisterSpace);
+        IO.mapRequired("ShaderRegister", C.ShaderRegister);
+      }
 
-void MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml>::mapping(
-    IO &IO, llvm::DXContainerYAML::RootDescriptorYaml &D) {
-  IO.mapRequired("RegisterSpace", D.RegisterSpace);
-  IO.mapRequired("ShaderRegister", D.ShaderRegister);
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) IO.mapOptional(#Val, D.Val, false);
-#include "llvm/BinaryFormat/DXContainerConstants.def"
-}
+      void MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml>::mapping(
+          IO &IO, llvm::DXContainerYAML::RootDescriptorYaml &D) {
+        IO.mapRequired("RegisterSpace", D.RegisterSpace);
+        IO.mapRequired("ShaderRegister", D.ShaderRegister);
+      #define ROOT_DESCRIPTOR_FLAG(Num, Val) IO.mapOptional(#Val, D.Val, false);
+      #include "llvm/BinaryFormat/DXContainerConstants.def"
+      }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
