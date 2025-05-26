@@ -42,3 +42,12 @@ Additionally, it is recommended that developers thoroughly check and verify the
 safety of the conversion before using an explicit cast. This extra level of
 caution can help catch potential issues early on in the development process,
 improving the overall reliability and maintainability of the code.
+
+.. note::
+
+  This check is enabled only for C++ code, not for C code. The motivation is the
+  type of conversions that this check warns about are fairly common and
+  idiomatic in C, and there are no safer alternatives. This introduces quite
+  some friction in the form of suppressions or casts. The check remains active
+  in C++ to more easily detect C-style patterns that can potentially be
+  refactored to use safer C++ constructs.
