@@ -523,6 +523,9 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
       if (Found.isAmbiguous()) {
         Found.clear();
       } else if (!Found.empty()) {
+        // Do not erase the typo-corrected result to avoid duplicated
+        // diagnostics.
+        AllowFunctionTemplatesInLookup = true;
         Found.setLookupName(Corrected.getCorrection());
         if (LookupCtx) {
           std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
@@ -3115,7 +3118,7 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
 
     EnterExpressionEvaluationContext UnevaluatedContext(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
-    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
     QualType BaseTemplateInst =
@@ -3161,7 +3164,7 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
       auto CheckConditionalOperands = [&](bool ConstRefQual) -> QualType {
         EnterExpressionEvaluationContext UnevaluatedContext(
             S, Sema::ExpressionEvaluationContext::Unevaluated);
-        Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+        Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
         Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
         // false
@@ -4350,6 +4353,44 @@ struct PartialSpecMatchResult {
   VarTemplatePartialSpecializationDecl *Partial;
   TemplateArgumentList *Args;
 };
+
+// HACK 2025-05-13: workaround std::format_kind since libstdc++ 15.1 (2025-04)
+// See GH139067 / https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120190
+static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
+  if (Var->getName() != "format_kind" ||
+      !Var->getDeclContext()->isStdNamespace())
+    return false;
+
+  MacroInfo *MacroGLIBCXX =
+      PP.getMacroInfo(PP.getIdentifierInfo("__GLIBCXX__"));
+
+  if (!MacroGLIBCXX || MacroGLIBCXX->getNumTokens() != 1)
+    return false;
+
+  const Token &RevisionDateTok = MacroGLIBCXX->getReplacementToken(0);
+  bool Invalid = false;
+  std::string RevisionDate = PP.getSpelling(RevisionDateTok, &Invalid);
+
+  // We can use 20250520 as the final date, see the following commits.
+  // GCC releases/gcc-15 branch:
+  // https://gcc.gnu.org/g:fedf81ef7b98e5c9ac899b8641bb670746c51205
+  // https://gcc.gnu.org/g:53680c1aa92d9f78e8255fbf696c0ed36f160650
+  // GCC master branch:
+  // https://gcc.gnu.org/g:9361966d80f625c5accc25cbb439f0278dd8b278
+  // https://gcc.gnu.org/g:c65725eccbabf3b9b5965f27fff2d3b9f6c75930
+  StringRef FixDate = "20250520";
+
+  if (Invalid)
+    return false;
+
+  // The format of the revision date is in compressed ISO date format.
+  // See https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
+  // So we can use string comparison.
+  //
+  // Checking old versions of libstdc++ is not needed because 15.1 is the first
+  // release in which users can access std::format_kind.
+  return RevisionDate.size() == 8 && RevisionDate < FixDate;
+}
 } // end anonymous namespace
 
 DeclResult
@@ -4381,6 +4422,8 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
 
     if (VarDecl *Var = Template->getTemplatedDecl();
         ParsingInitForAutoVars.count(Var) &&
+        // See comments on this function definition
+        !IsLibstdcxxStdFormatKind(PP, Var) &&
         llvm::equal(
             CTAI.CanonicalConverted,
             Template->getTemplateParameters()->getInjectedTemplateArgs(Context),
@@ -8984,8 +9027,7 @@ Sema::CheckSpecializationInstantiationRedecl(SourceLocation NewLoc,
         // The declaration itself has not actually been instantiated, so it is
         // still okay to specialize it.
         StripImplicitInstantiation(
-            PrevDecl,
-            Context.getTargetInfo().getTriple().isWindowsGNUEnvironment());
+            PrevDecl, Context.getTargetInfo().getTriple().isOSCygMing());
         return false;
       }
       // Fall through
@@ -9380,7 +9422,10 @@ bool Sema::CheckFunctionTemplateSpecialization(
 
   // Mark the prior declaration as an explicit specialization, so that later
   // clients know that this is an explicit specialization.
-  if (!isFriend) {
+  // A dependent friend specialization which has a definition should be treated
+  // as explicit specialization, despite being invalid.
+  if (FunctionDecl *InstFrom = FD->getInstantiatedFromMemberFunction();
+      !isFriend || (InstFrom && InstFrom->getDependentSpecializationInfo())) {
     // Since explicit specializations do not inherit '=delete' from their
     // primary function template - check if the 'specialization' that was
     // implicitly generated (during template argument deduction for partial
@@ -9852,7 +9897,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
                                        : TSK_ExplicitInstantiationDeclaration;
 
   if (TSK == TSK_ExplicitInstantiationDeclaration &&
-      !Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) {
+      !Context.getTargetInfo().getTriple().isOSCygMing()) {
     // Check for dllexport class template instantiation declarations,
     // except for MinGW mode.
     for (const ParsedAttr &AL : Attr) {
@@ -9917,7 +9962,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
     = PrevDecl ? PrevDecl->getTemplateSpecializationKind() : TSK_Undeclared;
 
   if (TSK == TSK_ExplicitInstantiationDefinition && PrevDecl != nullptr &&
-      Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) {
+      Context.getTargetInfo().getTriple().isOSCygMing()) {
     // Check for dllexport class template instantiation definitions in MinGW
     // mode, if a previous declaration of the instantiation was seen.
     for (const ParsedAttr &AL : Attr) {
@@ -10085,7 +10130,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // In MinGW mode, export the template instantiation if the declaration
     // was marked dllexport.
     if (PrevDecl_TSK == TSK_ExplicitInstantiationDeclaration &&
-        Context.getTargetInfo().getTriple().isWindowsGNUEnvironment() &&
+        Context.getTargetInfo().getTriple().isOSCygMing() &&
         PrevDecl->hasAttr<DLLExportAttr>()) {
       dllExportImportClassTemplateSpecialization(*this, Def);
     }
@@ -11367,7 +11412,12 @@ private:
   template<typename SpecDecl>
   void checkImpl(SpecDecl *Spec) {
     bool IsHiddenExplicitSpecialization = false;
-    if (Spec->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {
+    TemplateSpecializationKind SpecKind = Spec->getTemplateSpecializationKind();
+    // Some invalid friend declarations are written as specializations but are
+    // instantiated implicitly.
+    if constexpr (std::is_same_v<SpecDecl, FunctionDecl>)
+      SpecKind = Spec->getTemplateSpecializationKindForInstantiation();
+    if (SpecKind == TSK_ExplicitSpecialization) {
       IsHiddenExplicitSpecialization = Spec->getMemberSpecializationInfo()
                                            ? !CheckMemberSpecialization(Spec)
                                            : !CheckExplicitSpecialization(Spec);

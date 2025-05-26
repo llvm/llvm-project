@@ -124,7 +124,6 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
     return Result;
   }
   std::string getKind(const TypeLoc &TL) {
-    std::string Result;
     if (TL.getTypeLocClass() == TypeLoc::Qualified)
       return "Qualified";
     return TL.getType()->getTypeClassName();

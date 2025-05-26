@@ -679,11 +679,17 @@ bool PPCTargetInfo::initFeatureMap(
     }
   }
 
-  if (!(ArchDefs & ArchDefinePwr8) &&
-      llvm::is_contained(FeaturesVec, "+rop-protect")) {
-    // We can turn on ROP Protect on Power 8 and above.
-    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
-    return false;
+  if (llvm::is_contained(FeaturesVec, "+rop-protect")) {
+    if (PointerWidth == 32) {
+      Diags.Report(diag::err_opt_not_valid_on_target) << "-mrop-protect";
+      return false;
+    }
+
+    if (!(ArchDefs & ArchDefinePwr8)) {
+      // We can turn on ROP Protect on Power 8 and above.
+      Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
+      return false;
+    }
   }
 
   if (!(ArchDefs & ArchDefinePwr8) &&

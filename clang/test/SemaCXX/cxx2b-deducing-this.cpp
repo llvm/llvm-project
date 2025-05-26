@@ -926,6 +926,33 @@ struct C {
     (&fref)();
   }
 };
+
+struct CTpl {
+  template <typename T>
+  constexpr int c(this const CTpl&, T) {  // #P2797-ctpl-1
+      return 42;
+  }
+
+  template <typename T>
+  void c(T)&; // #P2797-ctpl-2
+
+  template <typename T>
+  static void c(T = 0, T = 0);  // #P2797-ctpl-3
+
+  void d() {
+    c(0);               // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#P2797-ctpl-1{{candidate}}
+                        // expected-note@#P2797-ctpl-2{{candidate}}
+                        // expected-note@#P2797-ctpl-3{{candidate}}
+    (CTpl::c)(0);       // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#P2797-ctpl-1{{candidate}}
+                        // expected-note@#P2797-ctpl-2{{candidate}}
+                        // expected-note@#P2797-ctpl-3{{candidate}}
+
+    static_assert((&CTpl::c)(CTpl{}, 0) == 42); // selects #1
+  }
+};
+
 }
 
 namespace GH85992 {
