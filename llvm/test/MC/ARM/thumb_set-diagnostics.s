@@ -1,9 +1,11 @@
-@ RUN: not llvm-mc -triple armv7-eabi -o /dev/null 2>&1 %s | FileCheck %s
+@ RUN: not llvm-mc -triple armv7-eabi -o /dev/null %s 2>&1 | FileCheck %s
+@ RUN: not llvm-mc -filetype=obj -triple=armv7-eabi -o /dev/null %s --defsym LOOP=1 2>&1 | FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
 
 	.syntax unified
 
 	.thumb
 
+.ifndef LOOP
 	.thumb_set
 
 @ CHECK: error: expected identifier after '.thumb_set'
@@ -54,13 +56,6 @@ beta:
 @ CHECK: 	.thumb_set beta, alpha
 @ CHECK:                                            ^
 
-	.type recursive_use,%function
-	.thumb_set recursive_use, recursive_use + 1
-
-@ CHECK: error: Recursive use of 'recursive_use'
-@ CHECK: 	.thumb_set recursive_use, recursive_use + 1
-@ CHECK:                                            ^
-
   variable_result = alpha + 1
   .long variable_result
 	.thumb_set variable_result, 1
@@ -68,3 +63,15 @@ beta:
 @ CHECK: error: invalid reassignment of non-absolute variable 'variable_result'
 @ CHECK: 	.thumb_set variable_result, 1
 @ CHECK:                                            ^
+
+.else
+.type recursive_use,%function
+.thumb_set recursive_use, recursive_use + 1
+@ ERR2: [[#@LINE-1]]:41: error: cyclic dependency detected for symbol 'recursive_use'
+@ ERR2: [[#@LINE-2]]:41: error: expression could not be evaluated
+
+.type recursive_use2,%function
+.thumb_set recursive_use2, recursive_use2 + 1
+@ ERR2: [[#@LINE-1]]:43: error: cyclic dependency detected for symbol 'recursive_use2'
+@ ERR2: [[#@LINE-2]]:43: error: expression could not be evaluated
+.endif
