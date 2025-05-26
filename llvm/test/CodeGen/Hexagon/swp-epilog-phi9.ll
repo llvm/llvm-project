@@ -4,7 +4,6 @@
 ; blocks, when there are 3 epilog blocks. The Phi was scheduled in stage
 ; 2, so the computation for the number of Phis needs to be adjusted when
 ; the incoming prolog block is from prolog 0 or prolog 1.
-; Note: the pipeliner no longer generates a 3 stage pipeline for this test.
 ; Note: the pipeliner has been generating a 4-stage pipelined loop.
 
 ; CHECK: loop0
@@ -52,7 +51,3 @@ declare i32 @llvm.hexagon.M2.mpy.ll.s0(i32, i32) #1
 
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.hexagon.M2.mpy.acc.sat.ll.s0(i32, i32, i32) #1
-
-attributes #0 = { nounwind "target-cpu"="hexagonv68" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind }
