@@ -345,11 +345,13 @@ isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
 
 /// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
 /// this returns if \p Val can be assumed to never be a signaling NaN.
-LLVM_ABI bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI, GISelValueTracking *ValueTracking,
+LLVM_ABI bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
+                              GISelValueTracking *ValueTracking,
                               bool SNaN = false);
 
 /// Returns true if \p Val can be assumed to never be a signaling NaN.
-inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI, GISelValueTracking *ValueTracking) {
+inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI,
+                             GISelValueTracking *ValueTracking) {
   return isKnownNeverNaN(Val, MRI, ValueTracking, true);
 }
 

@@ -717,7 +717,7 @@ void GISelValueTracking::computeKnownFPClass(Register R, KnownFPClass &Known,
                                              unsigned Depth) {
   if (!R.isVirtual())
     return;
-  
+
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
@@ -975,8 +975,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownFPClass KnownSrc;
 
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
-      Depth + 1);
-    
+                        Depth + 1);
+
     Known.knownNot(fcSNan);
     Known.knownNot(fcInf);
 
@@ -1002,7 +1002,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
                         Depth + 1);
 
     bool NeverNaN = KnownLHS.isKnownNeverNaN() || KnownRHS.isKnownNeverNaN();
-    bool NeverSNaN = KnownLHS.isKnownNever(fcSNan) || KnownRHS.isKnownNever(fcSNan);
+    bool NeverSNaN =
+        KnownLHS.isKnownNever(fcSNan) || KnownRHS.isKnownNever(fcSNan);
     Known = KnownLHS | KnownRHS;
 
     if (Opcode == TargetOpcode::G_FMAXNUM_IEEE ||
@@ -1073,7 +1074,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     //
     if ((Known.KnownFPClasses & fcZero) != fcNone &&
         !Known.isKnownNeverSubnormal()) {
-      DenormalMode Mode = MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+      DenormalMode Mode =
+          MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
       if (Mode != DenormalMode::getIEEE())
         Known.KnownFPClasses |= fcZero;
     }
@@ -1117,8 +1119,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownFPClass KnownSrc;
 
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
-      Depth + 1);
-      
+                        Depth + 1);
+
     // This is essentially a stronger form of
     // propagateCanonicalizingSrc. Other "canonicalizing" operations don't
     // actually have an IR canonicalization guarantee.
@@ -1369,19 +1371,19 @@ void GISelValueTracking::computeKnownFPClass(Register R,
           Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
 
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
-        if ((KnownLHS.isKnownNeverLogicalNegZero(
-                 MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()))) ||
-             KnownRHS.isKnownNeverLogicalNegZero(
-                 MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) &&
+        if ((KnownLHS.isKnownNeverLogicalNegZero(MF->getDenormalMode(
+                 getFltSemanticForLLT(DstTy.getScalarType()))) ||
+             KnownRHS.isKnownNeverLogicalNegZero(MF->getDenormalMode(
+                 getFltSemanticForLLT(DstTy.getScalarType())))) &&
             // Make sure output negative denormal can't flush to -0
             outputDenormalIsIEEEOrPosZero(*MF, DstTy))
           Known.knownNot(fcNegZero);
       } else {
         // Only fsub -0, +0 can return -0
-        if ((KnownLHS.isKnownNeverLogicalNegZero(
-                 MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()))) ||
-             KnownRHS.isKnownNeverLogicalPosZero(
-                 MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) &&
+        if ((KnownLHS.isKnownNeverLogicalNegZero(MF->getDenormalMode(
+                 getFltSemanticForLLT(DstTy.getScalarType()))) ||
+             KnownRHS.isKnownNeverLogicalPosZero(MF->getDenormalMode(
+                 getFltSemanticForLLT(DstTy.getScalarType())))) &&
             // Make sure output negative denormal can't flush to -0
             outputDenormalIsIEEEOrPosZero(*MF, DstTy))
           Known.knownNot(fcNegZero);
@@ -1394,9 +1396,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_STRICT_FMUL: {
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
-    
+
     Known.knownNot(fcSNan);
-    
+
     // X * X is always non-negative or a NaN.
     if (LHS == RHS)
       Known.knownNot(fcNegative);
@@ -1430,8 +1432,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     }
 
     if ((KnownRHS.isKnownNeverInfinity() ||
-         KnownLHS.isKnownNeverLogicalZero(
-             MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) &&
+         KnownLHS.isKnownNeverLogicalZero(MF->getDenormalMode(
+             getFltSemanticForLLT(DstTy.getScalarType())))) &&
         (KnownLHS.isKnownNeverInfinity() ||
          KnownRHS.isKnownNeverLogicalZero(
              MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))))
@@ -1487,10 +1489,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
           (KnownLHS.isKnownNeverInfinity() ||
            KnownRHS.isKnownNeverInfinity()) &&
-          ((KnownLHS.isKnownNeverLogicalZero(
-               MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) ||
-           (KnownRHS.isKnownNeverLogicalZero(
-               MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))))) {
+          ((KnownLHS.isKnownNeverLogicalZero(MF->getDenormalMode(
+               getFltSemanticForLLT(DstTy.getScalarType())))) ||
+           (KnownRHS.isKnownNeverLogicalZero(MF->getDenormalMode(
+               getFltSemanticForLLT(DstTy.getScalarType())))))) {
         Known.knownNot(fcNan);
       }
 
@@ -1503,8 +1505,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       // Inf REM x and x REM 0 produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
           KnownLHS.isKnownNeverInfinity() &&
-          KnownRHS.isKnownNeverLogicalZero(
-              MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType())))) {
+          KnownRHS.isKnownNeverLogicalZero(MF->getDenormalMode(
+              getFltSemanticForLLT(DstTy.getScalarType())))) {
         Known.knownNot(fcNan);
       }
 
@@ -1551,7 +1553,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FPTRUNC: {
     computeKnownFPClassForFPTrunc(MI, DemandedElts, InterestedClasses, Known,
-      Depth);
+                                  Depth);
     Known.knownNot(fcSNan);
     break;
   }

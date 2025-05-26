@@ -807,8 +807,8 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
   return FoldedElements;
 }
 
-bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI, GISelValueTracking *VT,
-                           bool SNaN) {
+bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
+                           GISelValueTracking *VT, bool SNaN) {
   const MachineInstr *DefMI = MRI.getVRegDef(Val);
   if (!DefMI)
     return false;
@@ -816,11 +816,11 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI, GISelVa
   const TargetMachine& TM = DefMI->getMF()->getTarget();
   if (DefMI->getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath)
     return true;
-    
+
   KnownFPClass FPClass = VT->computeKnownFPClass(Val, fcNan);
   if (SNaN)
     return FPClass.isKnownNever(fcSNan);
-  
+
   return FPClass.isKnownNeverNaN();
 }
 
