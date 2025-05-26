@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
 package(
@@ -54,6 +55,20 @@ cc_test(
     ],
 )
 
+expand_template(
+    name = "clang_doc_config_h",
+    out = "clang-doc/config.h",
+    substitutions = {
+        "#define CLANG_DOC_TEST_ASSET_DIR \"${CLANG_DOC_TEST_ASSET_DIR}\"": "#define CLANG_DOC_TEST_ASSET_DIR \"clang-tools-extra/clang-doc/assets\"",
+    },
+    template = "clang-doc/config.h.cmake",
+)
+
+cc_library(
+    name = "clang_doc_config",
+    hdrs = ["clang-doc/config.h"],
+)
+
 cc_test(
     name = "clang_doc_test",
     size = "small",
@@ -63,10 +78,12 @@ cc_test(
             "clang-doc/*.h",
         ],
         allow_empty = False,
+        exclude = ["clang-doc/config.h"],
     ),
     data = ["//clang-tools-extra/clang-doc:assets"],
-    local_defines = ['CLANG_DOC_TEST_ASSET_DIR=\\"clang-tools-extra/clang-doc/assets\\"'],
+    includes = ["clang-doc"],
     deps = [
+        ":clang_doc_config",
         "//clang:ast",
         "//clang:basic",
         "//clang-tools-extra/clang-doc:generators",
