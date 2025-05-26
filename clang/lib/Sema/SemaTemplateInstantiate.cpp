@@ -1969,11 +1969,6 @@ bool TemplateInstantiator::maybeInstantiateFunctionParameterToScope(
     ParmVarDecl *OldParm) {
   if (SemaRef.CurrentInstantiationScope->findInstantiationUnsafe(OldParm))
     return false;
-  // We're instantiating a function parameter whose associated function template
-  // has not been instantiated at this point for constraint evaluation, so make
-  // sure the instantiated parameters are owned by a function declaration such
-  // that they can be correctly 'captured' in tryCaptureVariable().
-  Sema::ContextRAII Context(SemaRef, OldParm->getDeclContext());
 
   if (!OldParm->isParameterPack())
     return !TransformFunctionTypeParam(OldParm, /*indexAdjustment=*/0,
