@@ -556,12 +556,12 @@ public:
 /// portable implementation of `getTagDescription` would need to take the
 /// name of the class from *somewhere* where it's present as a string -- and
 /// then directly placing it in a method override is much simpler than
-/// loading it from `Checkers.td`.                                            
-///                                                                           
+/// loading it from `Checkers.td`.
+///
 /// Note that the existing `CLASS` field in `Checkers.td` is not suitable for
 /// our goals, because instead of storing the same class name for each
 /// frontend, in fact each frontendchecker needs to have its own unique value
-/// there (to ensure that the names of the register methods are all unique).  
+/// there (to ensure that the names of the register methods are all unique).
 template <typename... CHECKs>
 class CheckerFamily : public CheckerBackend, public CHECKs... {
 public:
