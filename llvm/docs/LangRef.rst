@@ -410,8 +410,8 @@ added in the future:
       calling convention: on most platforms, they are not preserved and need to
       be saved by the caller, but on Windows, xmm6-xmm15 are preserved.
 
-    - On AArch64 the callee preserve all general purpose registers, except X0-X8
-      and X16-X18.
+    - On AArch64 the callee preserve all general purpose registers, except
+      X0-X8 and X16-X18. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
@@ -447,9 +447,9 @@ added in the future:
       R11. R11 can be used as a scratch register. Furthermore it also preserves
       all floating-point registers (XMMs/YMMs).
 
-    - On AArch64 the callee preserve all general purpose registers, except X0-X8
-      and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31 SIMD -
-      floating point registers.
+    - On AArch64 the callee preserve all general purpose registers, except
+      X0-X8 and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31
+      SIMD floating point registers. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
     that don't need to call out to any other functions.
@@ -3133,6 +3133,9 @@ as follows:
     program memory space defaults to the default address space of 0,
     which corresponds to a Von Neumann architecture that has code
     and data in the same space.
+
+.. _globals_addrspace:
+
 ``G<address space>``
     Specifies the address space to be used by default when creating global
     variables. If omitted, the globals address space defaults to the default
@@ -3147,14 +3150,21 @@ as follows:
 ``A<address space>``
     Specifies the address space of objects created by '``alloca``'.
     Defaults to the default address space of 0.
-``p[n]:<size>:<abi>[:<pref>][:<idx>]``
-    This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``.
-    The fourth parameter ``<idx>`` is the size of the
-    index that used for address calculation, which must be less than or equal
-    to the pointer size. If not
-    specified, the default index size is equal to the pointer size. All sizes
-    are in bits. The address space, ``n``, is optional, and if not specified,
+``p[n]:<size>:<abi>[:<pref>[:<idx>]]``
+    This specifies the properties of a pointer in address space ``n``.
+    The ``<size>`` parameter specifies the size of the bitwise representation.
+    For :ref:`non-integral pointers <nointptrtype>` the representation size may
+    be larger than the address width of the underlying address space (e.g. to
+    accommodate additional metadata).
+    The alignment requirements are specified via the ``<abi>`` and
+    ``<pref>``\erred alignments parameters.
+    The fourth parameter ``<idx>`` is the size of the index that used for
+    address calculations such as :ref:`getelementptr <i_getelementptr>`.
+    It must be less than or equal to the pointer size. If not specified, the
+    default index size is equal to the pointer size.
+    The index size also specifies the width of addresses in this address space.
+    All sizes are in bits.
+    The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^24).
 ``i<size>:<abi>[:<pref>]``
@@ -4265,6 +4275,16 @@ address spaces defined in the :ref:`datalayout string<langref_datalayout>`.
 ``addrspace("A")`` will use the alloca address space, ``addrspace("G")``
 the default globals address space and ``addrspace("P")`` the program address
 space.
+
+The representation of pointers can be different for each address space and does
+not necessarily need to be a plain integer address (e.g. for
+:ref:`non-integral pointers <nointptrtype>`). In addition to a representation
+bits size, pointers in each address space also have an index size which defines
+the bitwidth of indexing operations as well as the size of `integer addresses`
+in this address space. For example, CHERI capabilities are twice the size of the
+underlying addresses to accommodate for additional metadata such as bounds and
+permissions: on a 32-bit system the bitwidth of the pointer representation size
+is 64, but the underlying address width remains 32 bits.
 
 The default address space is number zero.
 
@@ -15062,7 +15082,8 @@ Syntax:
 
 ::
 
-      declare ptr @llvm.thread.pointer()
+      declare ptr @llvm.thread.pointer.p0()
+      declare ptr addrspace(5) @llvm.thread.pointer.p5()
 
 Overview:
 """""""""
@@ -15079,7 +15100,8 @@ specific: it may point to the start of TLS area, to the end, or somewhere
 in the middle.  Depending on the target, this intrinsic may read a register,
 call a helper function, read from an alternate memory space, or perform
 other operations necessary to locate the TLS area.  Not all targets support
-this intrinsic.
+this intrinsic.  The address space must be the :ref:`globals address space
+<globals_addrspace>`.
 
 '``llvm.call.preallocated.setup``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17196,12 +17218,14 @@ type.
 
 Semantics:
 """"""""""
-If both operands are NaNs (including sNaN), returns qNaN. If one operand
-is NaN (including sNaN) and another operand is a number, return the number.
-Otherwise returns the lesser of the two arguments. -0.0 is considered to
-be less than +0.0 for this intrinsic.
 
-Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
+If both operands are NaNs (including sNaN), returns a :ref:`NaN <floatnan>`. If
+one operand is NaN (including sNaN) and another operand is a number,
+return the number.  Otherwise returns the lesser of the two
+arguments. -0.0 is considered to be less than +0.0 for this intrinsic.
+
+Note that these are the semantics of minimumNumber specified in
+IEEE-754-2019 with the usual :ref:`signaling NaN <floatnan>` exception.
 
 It has some differences with '``llvm.minnum.*``':
 1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
@@ -17242,12 +17266,15 @@ type.
 
 Semantics:
 """"""""""
-If both operands are NaNs (including sNaN), returns qNaN. If one operand
-is NaN (including sNaN) and another operand is a number, return the number.
-Otherwise returns the greater of the two arguments. -0.0 is considered to
-be less than +0.0 for this intrinsic.
 
-Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
+If both operands are NaNs (including sNaN), returns a
+:ref:`NaN <floatnan>`. If one operand is NaN (including sNaN) and
+another operand is a number, return the number.  Otherwise returns the
+greater of the two arguments. -0.0 is considered to be less than +0.0
+for this intrinsic.
+
+Note that these are the semantics of maximumNumber specified in
+IEEE-754-2019  with the usual :ref:`signaling NaN <floatnan>` exception.
 
 It has some differences with '``llvm.maxnum.*``':
 1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
@@ -21121,7 +21148,12 @@ sufficiently aligned block of memory; this memory is written to by the
 intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
-target-specific knowledge. The ``func`` argument must hold a function.
+target-specific knowledge.
+
+The ``func`` argument must be a constant (potentially bitcasted) pointer to a
+function declaration or definition, since the calling convention may affect the
+content of the trampoline that is created.
+
 
 Semantics:
 """"""""""

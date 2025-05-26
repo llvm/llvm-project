@@ -2313,8 +2313,8 @@ protected:
       StrSubCommandPairVector;
   // Print the options. Opts is assumed to be alphabetically sorted.
   virtual void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) {
-    for (size_t i = 0, e = Opts.size(); i != e; ++i)
-      Opts[i].second->printOptionInfo(MaxArgLen);
+    for (const auto &Opt : Opts)
+      Opt.second->printOptionInfo(MaxArgLen);
   }
 
   void printSubCommands(StrSubCommandPairVector &Subs, size_t MaxSubLen) {
@@ -2384,8 +2384,8 @@ public:
     if (Sub == &SubCommand::getTopLevel() && !Subs.empty()) {
       // Compute the maximum subcommand length...
       size_t MaxSubLen = 0;
-      for (size_t i = 0, e = Subs.size(); i != e; ++i)
-        MaxSubLen = std::max(MaxSubLen, strlen(Subs[i].first));
+      for (const auto &Sub : Subs)
+        MaxSubLen = std::max(MaxSubLen, strlen(Sub.first));
 
       outs() << "\n\n";
       outs() << "SUBCOMMANDS:\n\n";
@@ -2400,8 +2400,8 @@ public:
 
     // Compute the maximum argument length...
     size_t MaxArgLen = 0;
-    for (size_t i = 0, e = Opts.size(); i != e; ++i)
-      MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+    for (const auto &Opt : Opts)
+      MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
     outs() << "OPTIONS:\n";
     printOptions(Opts, MaxArgLen);
@@ -2447,9 +2447,9 @@ protected:
     // Walk through pre-sorted options and assign into categories.
     // Because the options are already alphabetically sorted the
     // options within categories will also be alphabetically sorted.
-    for (size_t I = 0, E = Opts.size(); I != E; ++I) {
-      Option *Opt = Opts[I].second;
-      for (auto &Cat : Opt->Categories) {
+    for (const auto &I : Opts) {
+      Option *Opt = I.second;
+      for (OptionCategory *Cat : Opt->Categories) {
         assert(llvm::is_contained(SortedCategories, Cat) &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
@@ -2708,11 +2708,11 @@ void CommandLineParser::printOptionValues() {
 
   // Compute the maximum argument length...
   size_t MaxArgLen = 0;
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+  for (const auto &Opt : Opts)
+    MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    Opts[i].second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
+  for (const auto &Opt : Opts)
+    Opt.second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
 }
 
 // Utility function for printing the help message.

@@ -2609,10 +2609,10 @@ void GICombinerEmitter::emitTestSimplePredicate(raw_ostream &OS) {
     // To avoid emitting a switch, we expect that all those rules are in order.
     // That way we can just get the RuleID from the enum by subtracting
     // (GICXXPred_Invalid + 1).
-    unsigned ExpectedID = 0;
-    (void)ExpectedID;
+    [[maybe_unused]] unsigned ExpectedID = 0;
     for (const auto &ID : keys(AllCombineRules)) {
-      assert(ExpectedID++ == ID && "combine rules are not ordered!");
+      assert(ExpectedID == ID && "combine rules are not ordered!");
+      ++ExpectedID;
       OS << "  " << getIsEnabledPredicateEnumName(ID) << EnumeratorSeparator;
       EnumeratorSeparator = ",\n";
     }

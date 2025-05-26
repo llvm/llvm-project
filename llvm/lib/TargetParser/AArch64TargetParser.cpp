@@ -227,10 +227,10 @@ AArch64::printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames) 
       EnabledExtensionsInfo.push_back(*ExtInfo);
   }
 
-  std::sort(EnabledExtensionsInfo.begin(), EnabledExtensionsInfo.end(),
-            [](const ExtensionInfo &Lhs, const ExtensionInfo &Rhs) {
-              return Lhs.ArchFeatureName < Rhs.ArchFeatureName;
-            });
+  llvm::sort(EnabledExtensionsInfo,
+             [](const ExtensionInfo &Lhs, const ExtensionInfo &Rhs) {
+               return Lhs.ArchFeatureName < Rhs.ArchFeatureName;
+             });
 
   for (const auto &Ext : EnabledExtensionsInfo) {
     outs() << "    "

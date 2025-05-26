@@ -3091,9 +3091,8 @@ private:
               FormatTok->isOneOf(tok::numeric_constant, tok::l_square,
                                  tok::l_brace))) ||
             (FormatTok->Tok.isAnyIdentifier() &&
-             std::binary_search(std::begin(FoundationIdentifiers),
-                                std::end(FoundationIdentifiers),
-                                FormatTok->TokenText)) ||
+             llvm::binary_search(FoundationIdentifiers,
+                                 FormatTok->TokenText)) ||
             FormatTok->is(TT_ObjCStringLiteral) ||
             FormatTok->isOneOf(Keywords.kw_NS_CLOSED_ENUM, Keywords.kw_NS_ENUM,
                                Keywords.kw_NS_ERROR_ENUM,

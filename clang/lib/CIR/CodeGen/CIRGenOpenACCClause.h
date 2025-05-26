@@ -266,10 +266,12 @@ public:
       else
         operation.getAsyncOperandMutable().append(
             createIntExpr(clause.getIntExpr()));
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. Combined constructs remain. Data, enter data, exit data,
-      // update, combined constructs remain.
+      // update constructs remain.
       return clauseNotImplemented(clause);
     }
   }

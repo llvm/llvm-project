@@ -6,7 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/geometric/fast_normalize.inc>
 #define __FLOAT_ONLY
-#include <clc/geometric/floatn.inc>
+#define __CLC_FUNCTION fast_normalize
+#define __CLC_GEOMETRIC_RET_GENTYPE
+#define __CLC_BODY <clc/geometric/unary_decl.inc>
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION
+#undef __CLC_GEOMETRIC_RET_GENTYPE
 #undef __FLOAT_ONLY

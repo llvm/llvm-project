@@ -2751,8 +2751,6 @@ static void GetSDLFromOffloadArchive(
       InputInfo(&JA, C.getArgs().MakeArgString(OutputLib))));
 
   CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
-
-  return;
 }
 
 // Wrapper function used by opaque-offload-linker  for adding SDLs

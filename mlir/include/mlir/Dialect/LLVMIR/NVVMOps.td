@@ -237,6 +237,76 @@ foreach index = !range(0, 32) in {
 }
 
 //===----------------------------------------------------------------------===//
+// Inline PTX op definition
+//===----------------------------------------------------------------------===//
+
+def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx", 
+  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
+    AttrSizedOperandSegments]>
+{
+  let summary = "Inline PTX Op";
+  let description = [{This op allows using PTX directly within the NVVM 
+    dialect, while greatly simplifying llvm.inline_asm generation. It 
+    automatically handles register size selection and sets the correct 
+    read/write access for each operand. The operation leverages the 
+    `BasicPtxBuilderInterface` to abstract away low-level details of 
+    PTX assembly formatting.
+
+    The `predicate` attribute is used to specify a predicate for the 
+    PTX instruction.
+
+    Example 1: Read-only Parameters
+    ```mlir
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" (%barrier_gen, %count) : !llvm.ptr, i32
+
+    // Lowers to:
+    llvm.inline_asm has_side_effects asm_dialect = att 
+      "mbarrier.init.b64 [$0], $1;", "l,r" %arg0, %arg2 : (!llvm.ptr, i32) -> ()
+    ```
+
+    Example 2: Read-only and Write-only Parameters
+    ```mlir
+    %0 = nvvm.inline_ptx "ex2.approx.ftz.f32 $0, $1;" (%input) : f32 -> f32
+
+    // Lowers to:
+    %0 = llvm.inline_asm has_side_effects asm_dialect = att 
+      "ex2.approx.ftz.f32 $0, $1;", "=f,f" %arg0 : (f32) -> f32
+    ```
+
+    Example 3: Predicate Usage
+    ```mlir
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" (%barrier_gen, %count), 
+      predicate = %pred : !llvm.ptr, i32, i1
+
+    // Lowers to:
+    llvm.inline_asm has_side_effects asm_dialect = att 
+      "@$2 mbarrier.init.b64 [$0], $1;", "l,r,b" %arg0, %arg2, %arg3 
+      : (!llvm.ptr, i32, i1) -> ()
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$readOnlyArgs, 
+                       StrAttr:$ptxCode,
+                       PtxPredicate:$predicate);
+                      
+  let results = (outs Variadic<AnyType>:$writeOnlyArgs);
+
+  let assemblyFormat = [{ 
+    $ptxCode `(` $readOnlyArgs `)` 
+    (`,` `predicate` `=` $predicate^)? attr-dict 
+    `:` type(operands) 
+    (`->` type($writeOnlyArgs)^)?
+  }];
+  
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      StringRef ptxInstStr = getPtxCode();
+      return std::string(ptxInstStr.data());
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM approximate op definitions
 //===----------------------------------------------------------------------===//
 

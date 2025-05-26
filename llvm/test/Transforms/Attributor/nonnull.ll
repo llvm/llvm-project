@@ -1058,7 +1058,7 @@ define internal void @optnone(ptr dereferenceable(4) %a) optnone noinline {
 ; CHECK: Function Attrs: noinline optnone
 ; CHECK-LABEL: define {{[^@]+}}@optnone
 ; CHECK-SAME: (ptr noundef nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr nofree noundef nonnull [[A]])
+; CHECK-NEXT:    call void @use_i32_ptr(ptr nofree noundef nonnull captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)

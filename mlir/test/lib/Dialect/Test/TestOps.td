@@ -243,16 +243,6 @@ def FloatElementsAttrOp : TEST_Op<"float_elements_attr"> {
   );
 }
 
-def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
-  let arguments = (ins NestedPolynomialAttr:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
-def ContainingIntPolynomialAttr2Op : TEST_Op<"containing_int_polynomial_attr2"> {
-  let arguments = (ins NestedPolynomialAttr2:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -332,6 +322,10 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
    `i32attr` `=` $i32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
    `f64attr` `=` $f64attr `emptyattr` `=` $emptyattr attr-dict
   }];
+}
+
+def SlashAttrOp : TEST_Op<"slash_attr"> {
+  let arguments = (ins SlashAttr:$attr);
 }
 
 //===----------------------------------------------------------------------===//

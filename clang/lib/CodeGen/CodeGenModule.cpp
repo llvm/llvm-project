@@ -1693,7 +1693,7 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
 
   const llvm::Triple &TT = CGM.getTriple();
   const auto &CGOpts = CGM.getCodeGenOpts();
-  if (TT.isWindowsGNUEnvironment()) {
+  if (TT.isOSCygMing()) {
     // In MinGW, variables without DLLImport can still be automatically
     // imported from a DLL by the linker; don't mark variables that
     // potentially could come from another DLL as DSO local.
@@ -7126,7 +7126,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     }
     // Emit any static data members, they may be definitions.
     for (auto *I : CRD->decls())
-      if (isa<VarDecl>(I) || isa<CXXRecordDecl>(I))
+      if (isa<VarDecl>(I) || isa<CXXRecordDecl>(I) || isa<EnumDecl>(I))
         EmitTopLevelDecl(I);
     break;
   }

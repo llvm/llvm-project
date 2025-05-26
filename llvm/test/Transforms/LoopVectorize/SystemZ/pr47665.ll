@@ -7,86 +7,87 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i1 true, false
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
 ; CHECK:       pred.store.if5:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
 ; CHECK:       pred.store.if7:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
 ; CHECK:       pred.store.continue8:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
 ; CHECK:       pred.store.if9:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE10]]
 ; CHECK:       pred.store.continue10:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12:%.*]]
 ; CHECK:       pred.store.if11:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE12]]
 ; CHECK:       pred.store.continue12:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF13:%.*]], label [[PRED_STORE_CONTINUE14:%.*]]
 ; CHECK:       pred.store.if13:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE14]]
 ; CHECK:       pred.store.continue14:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF15:%.*]], label [[PRED_STORE_CONTINUE16:%.*]]
 ; CHECK:       pred.store.if15:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE16]]
 ; CHECK:       pred.store.continue16:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF17:%.*]], label [[PRED_STORE_CONTINUE18:%.*]]
 ; CHECK:       pred.store.if17:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE18]]
 ; CHECK:       pred.store.continue18:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF19:%.*]], label [[PRED_STORE_CONTINUE20:%.*]]
 ; CHECK:       pred.store.if19:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE20]]
 ; CHECK:       pred.store.continue20:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF21:%.*]], label [[PRED_STORE_CONTINUE22:%.*]]
 ; CHECK:       pred.store.if21:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE22]]
 ; CHECK:       pred.store.continue22:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF23:%.*]], label [[PRED_STORE_CONTINUE24:%.*]]
 ; CHECK:       pred.store.if23:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE24]]
 ; CHECK:       pred.store.continue24:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF25:%.*]], label [[PRED_STORE_CONTINUE26:%.*]]
 ; CHECK:       pred.store.if25:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE26]]
 ; CHECK:       pred.store.continue26:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF27:%.*]], label [[PRED_STORE_CONTINUE28:%.*]]
 ; CHECK:       pred.store.if27:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE28]]
 ; CHECK:       pred.store.continue28:
 ; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF29:%.*]], label [[PRED_STORE_CONTINUE30:%.*]]
 ; CHECK:       pred.store.if29:
-; CHECK-NEXT:    store i1 false, ptr [[P]], align 1
+; CHECK-NEXT:    store i1 [[TMP0]], ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE30]]
 ; CHECK:       pred.store.continue30:
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]

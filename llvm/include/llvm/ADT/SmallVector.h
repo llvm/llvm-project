@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_SMALLVECTOR_H
 #define LLVM_ADT_SMALLVECTOR_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
@@ -1318,6 +1319,26 @@ extern template class llvm::SmallVectorBase<uint32_t>;
 #if SIZE_MAX > UINT32_MAX
 extern template class llvm::SmallVectorBase<uint64_t>;
 #endif
+
+// Provide DenseMapInfo for SmallVector of a type which has info.
+template <typename T, unsigned N> struct DenseMapInfo<llvm::SmallVector<T, N>> {
+  static SmallVector<T, N> getEmptyKey() {
+    return {DenseMapInfo<T>::getEmptyKey()};
+  }
+
+  static SmallVector<T, N> getTombstoneKey() {
+    return {DenseMapInfo<T>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const SmallVector<T, N> &V) {
+    return static_cast<unsigned>(hash_combine_range(V));
+  }
+
+  static bool isEqual(const SmallVector<T, N> &LHS,
+                      const SmallVector<T, N> &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // end namespace llvm
 

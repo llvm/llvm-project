@@ -672,6 +672,7 @@ Syntax:
 .. code-block:: llvm
 
   declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global(ptr addrspace(1) %dst, ptr addrspace(3) %src, i32 %size, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global.bytemask(..., i32 %size, i64 %ch, i1 %flag_ch, i16 %mask)
 
 Overview:
 """""""""
@@ -680,10 +681,13 @@ The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.global``' intrinsic
 corresponds to the ``cp.async.bulk.global.shared::cta.*`` set of PTX
 instructions. These instructions initiate an asynchronous copy from
 shared::cta to global memory. The 32-bit operand ``%size`` specifies
-the amount of memory to be copied and it must be a multiple of 16.
+the amount of memory to be copied (in bytes) and it must be a multiple
+of 16. For the ``.bytemask`` variant, the 16-bit wide mask operand
+specifies whether the i-th byte of each 16-byte wide chunk of source
+data is copied to the destination.
 
-* The last argument to these intrinsics is a boolean flag
-  indicating support for cache_hint. This flag argument must
+* The ``i1 %flag_ch`` argument to these intrinsics is a boolean
+  flag indicating support for cache_hint. This flag argument must
   be a compile-time constant. When set, it indicates a valid
   cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
   variant of the PTX instruction.

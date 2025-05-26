@@ -233,3 +233,9 @@ A script at `utils/tidy-and-format.sh` can be run to help automate the task of
 ensuring all sources conform to the coding standards. To support the use of
 this script, any exceptions must be annotated in source comments, as described
 in the clang-tidy manual.
+
+Aligning with the purpose of being a stable interface into LLVM functionality,
+the core enum values (AMD\_COMGR\_LANGUAGE_\*, AMD\_COMGR\_DATA\_KIND\_\*,
+AMD\_COMGR\_ACTION\_\*, etc.) should remain consistent between versions, even if
+some enum values are deprecated and removed. This will avoid potential breakages
+and binary incompatibilities.
