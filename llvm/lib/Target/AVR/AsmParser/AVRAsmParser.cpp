@@ -100,7 +100,7 @@ public:
   }
 
   MCAsmParser &getParser() const { return Parser; }
-  MCAsmLexer &getLexer() const { return Parser.getLexer(); }
+  AsmLexer &getLexer() const { return Parser.getLexer(); }
 };
 
 /// An parsed AVR assembly operand.

@@ -35,7 +35,7 @@ namespace {
 
 class WasmAsmParser : public MCAsmParserExtension {
   MCAsmParser *Parser = nullptr;
-  MCAsmLexer *Lexer = nullptr;
+  AsmLexer *Lexer = nullptr;
 
   template<bool (WasmAsmParser::*HandlerMethod)(StringRef, SMLoc)>
   void addDirectiveHandler(StringRef Directive) {

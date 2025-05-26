@@ -721,7 +721,7 @@ private:
 
 class HLASMAsmParser final : public AsmParser {
 private:
-  MCAsmLexer &Lexer;
+  AsmLexer &Lexer;
   MCStreamer &Out;
 
   void lexLeadingSpaces() {
