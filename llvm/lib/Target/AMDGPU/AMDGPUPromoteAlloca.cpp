@@ -488,8 +488,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   }
 
   // Only proceed if this GEP stems from the same alloca.
-  if (CurPtr != Alloca)
-    return nullptr;
+  assert(CurPtr == Alloca && "GEP not based on alloca");
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
   if (VarOffsets.size() > 1)
