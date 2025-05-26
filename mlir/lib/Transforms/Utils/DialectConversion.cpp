@@ -1605,7 +1605,7 @@ void ConversionPatternRewriterImpl::notifyBlockInserted(
                              << "'(" << parent << ")\n";
         } else {
           logger.startLine()
-              << "** Insert Block into detached Region (nullptr parent op)'";
+              << "** Insert Block into detached Region (nullptr parent op)'\n";
         }
       });
 
