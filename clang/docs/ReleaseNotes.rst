@@ -61,6 +61,8 @@ C++ Specific Potentially Breaking Changes
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
 
+- Added ``!nonnull/!align`` metadata to load of references for better codegen.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -315,7 +317,7 @@ New Compiler Flags
 
 - New option ``-ftime-report-json`` added which outputs the same timing data as ``-ftime-report`` but formatted as JSON.
 
-- New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunites.
+- New option ``-Wnrvo`` added and disabled by default to warn about missed NRVO opportunities.
 
 Deprecated Compiler Flags
 -------------------------
