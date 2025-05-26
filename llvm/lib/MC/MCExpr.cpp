@@ -538,6 +538,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         // Allows aliases with zero offset.
         if (Res.getConstant() == 0 && (!A || !B))
           return true;
+      } else {
+        return false;
       }
     }
 
