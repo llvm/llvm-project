@@ -308,7 +308,7 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     // Opcodes that support pretty much all combinations of reg banks and LLTs
     // (except S1). There is no point in writing rules for them.
     if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_UNMERGE_VALUES ||
-        Opc == AMDGPU::G_MERGE_VALUES) {
+        Opc == AMDGPU::G_MERGE_VALUES || Opc == AMDGPU::G_BITCAST) {
       RBLHelper.applyMappingTrivial(*MI);
       continue;
     }
