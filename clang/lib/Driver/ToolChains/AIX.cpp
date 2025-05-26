@@ -291,16 +291,18 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_shared) &&
       ToolChain.getSanitizerArgs(Args).needsAsanRt()) {
     SmallString<128> SanRTSymbolList;
-    (Twine(ToolChain.getRuntimePath().value_or("")) + 
-      "/asan.link_with_main_exec.txt").toVector(SanRTSymbolList);
+    (Twine(ToolChain.getRuntimePath().value_or("")) +
+     "/asan.link_with_main_exec.txt")
+        .toVector(SanRTSymbolList);
     if (llvm::sys::fs::exists(SanRTSymbolList))
       CmdArgs.push_back(Args.MakeArgString(Twine("-bI:") + SanRTSymbolList));
     else
       llvm::report_fatal_error("Missing address sanitizer import list.");
     if (ToolChain.getSanitizerArgs(Args).linkCXXRuntimes()) {
       SanRTSymbolList.clear();
-      (Twine(ToolChain.getRuntimePath().value_or("")) + 
-        "/asan_cxx.link_with_main_exec.txt").toVector(SanRTSymbolList);
+      (Twine(ToolChain.getRuntimePath().value_or("")) +
+       "/asan_cxx.link_with_main_exec.txt")
+          .toVector(SanRTSymbolList);
       if (llvm::sys::fs::exists(SanRTSymbolList))
         CmdArgs.push_back(Args.MakeArgString(Twine("-bI:") + SanRTSymbolList));
       else
