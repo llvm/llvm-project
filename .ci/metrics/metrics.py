@@ -29,8 +29,8 @@ GITHUB_WORKFLOW_TO_TRACK = {"CI Checks": "github_llvm_premerge_checks"}
 # name.
 GITHUB_JOB_TO_TRACK = {
     "github_llvm_premerge_checks": {
-        "Build and Test Linux (Test Only - Please Ignore Results)": "premerge_linux",
-        "Build and Test Windows (Test Only - Please Ignore Results)": "premerge_windows",
+        "Build and Test Linux": "premerge_linux",
+        "Build and Test Windows": "premerge_windows",
     }
 }
 
