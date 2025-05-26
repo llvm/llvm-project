@@ -148,6 +148,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check by fixing
+  false positives on deleted constructors that cannot be used to construct
+  objects, even if they have public or protected access.
+
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
@@ -184,6 +189,11 @@ Changes in existing checks
   `AnalyzePointers` option and fixing false positives when using const array
   type.
 
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by adding the options
+  `UnusedIncludes` and `MissingIncludes`, which specify whether the check should
+  report unused or missing includes respectively.
+
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
@@ -200,7 +210,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
-  ``constexpr`` and ``static``` values on member initialization and by detecting
+  arithmetic operations, ``constexpr`` and ``static`` values, and detecting
   explicit casting of built-in types within member list initialization.
 
 - Improved :doc:`modernize-use-designated-initializers
@@ -208,7 +218,7 @@ Changes in existing checks
   diagnosing designated initializers for ``std::array`` initializations.
 
 - Improved :doc:`modernize-use-ranges
-  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
+  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress
   warnings logic for ``nullptr`` in ``std::find``.
 
 - Improved :doc:`modernize-use-starts-ends-with

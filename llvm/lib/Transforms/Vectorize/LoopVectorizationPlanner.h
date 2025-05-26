@@ -164,25 +164,19 @@ public:
                               DebugLoc DL, const Twine &Name = "") {
     return createInstruction(Opcode, Operands, DL, Name);
   }
-  VPInstruction *createNaryOp(unsigned Opcode,
-                              std::initializer_list<VPValue *> Operands,
-                              std::optional<FastMathFlags> FMFs = {},
-                              DebugLoc DL = {}, const Twine &Name = "") {
-    if (FMFs)
-      return tryInsertInstruction(
-          new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
-    return createInstruction(Opcode, Operands, DL, Name);
-  }
-  VPInstruction *createNaryOp(unsigned Opcode,
-                              std::initializer_list<VPValue *> Operands,
-                              Type *ResultTy,
-                              std::optional<FastMathFlags> FMFs = {},
-                              DebugLoc DL = {}, const Twine &Name = "") {
-    if (FMFs)
-      return tryInsertInstruction(new VPInstructionWithType(
-          Opcode, Operands, ResultTy, *FMFs, DL, Name));
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                              const VPIRFlags &Flags, DebugLoc DL = {},
+                              const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Operands, ResultTy, DL, Name));
+        new VPInstruction(Opcode, Operands, Flags, DL, Name));
+  }
+
+  VPInstruction *createNaryOp(unsigned Opcode,
+                              std::initializer_list<VPValue *> Operands,
+                              Type *ResultTy, const VPIRFlags &Flags = {},
+                              DebugLoc DL = {}, const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstructionWithType(Opcode, Operands, ResultTy, Flags, DL, Name));
   }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
@@ -236,18 +230,20 @@ public:
     assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
            Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
     return tryInsertInstruction(
-        new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
+        new VPInstruction(Instruction::ICmp, {A, B}, Pred, DL, Name));
   }
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                               const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name));
+        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
+                          GEPNoWrapFlags::none(), DL, Name));
   }
   VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                                 const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));
+        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
+                          GEPNoWrapFlags::inBounds(), DL, Name));
   }
 
   VPInstruction *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
@@ -269,7 +265,7 @@ public:
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL) {
     return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, DL));
+        new VPInstructionWithType(Opcode, Op, ResultTy, {}, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,

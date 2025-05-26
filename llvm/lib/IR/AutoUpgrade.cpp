@@ -1343,12 +1343,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         // nvvm.abs.{i,ii}
         Expand =
             Name == "i" || Name == "ll" || Name == "bf16" || Name == "bf16x2";
-      else if (Name == "fabs.f" || Name == "fabs.ftz.f" || Name == "fabs.d")
+      else if (Name.consume_front("fabs."))
         // nvvm.fabs.{f,ftz.f,d}
-        Expand = true;
-      else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f" ||
-               Name == "swap.lo.hi.b64")
-        Expand = true;
+        Expand = Name == "f" || Name == "ftz.f" || Name == "d";
       else if (Name.consume_front("max.") || Name.consume_front("min."))
         // nvvm.{min,max}.{i,ii,ui,ull}
         Expand = Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
@@ -1380,7 +1377,18 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         Expand = (Name.starts_with("i.") || Name.starts_with("f.") ||
                   Name.starts_with("p."));
       else
-        Expand = false;
+        Expand = StringSwitch<bool>(Name)
+                     .Case("barrier0", true)
+                     .Case("barrier.n", true)
+                     .Case("barrier.sync.cnt", true)
+                     .Case("barrier.sync", true)
+                     .Case("barrier", true)
+                     .Case("bar.sync", true)
+                     .Case("clz.ll", true)
+                     .Case("popc.ll", true)
+                     .Case("h2f", true)
+                     .Case("swap.lo.hi.b64", true)
+                     .Default(false);
 
       if (Expand) {
         NewFn = nullptr;
@@ -2478,6 +2486,21 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     MDNode *MD = MDNode::get(Builder.getContext(), {});
     LD->setMetadata(LLVMContext::MD_invariant_load, MD);
     return LD;
+  } else if (Name == "barrier0" || Name == "barrier.n" || Name == "bar.sync") {
+    Value *Arg =
+        Name.ends_with('0') ? Builder.getInt32(0) : CI->getArgOperand(0);
+    Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_aligned_all,
+                                  {}, {Arg});
+  } else if (Name == "barrier") {
+    Rep = Builder.CreateIntrinsic(
+        Intrinsic::nvvm_barrier_cta_sync_aligned_count, {},
+        {CI->getArgOperand(0), CI->getArgOperand(1)});
+  } else if (Name == "barrier.sync") {
+    Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_all, {},
+                                  {CI->getArgOperand(0)});
+  } else if (Name == "barrier.sync.cnt") {
+    Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count, {},
+                                  {CI->getArgOperand(0), CI->getArgOperand(1)});
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&

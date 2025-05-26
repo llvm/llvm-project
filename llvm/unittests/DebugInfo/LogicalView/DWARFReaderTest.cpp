@@ -33,6 +33,7 @@ const char *DwarfClang = "test-dwarf-clang.o";
 // Two compile units: one declares `extern int foo_printf(const char *, ...);`
 // and another one that defines the function.
 const char *DwarfClangUnspecParams = "test-dwarf-clang-unspec-params.elf";
+const char *DwarfClangModule = "test-dwarf-clang-module.o";
 const char *DwarfGcc = "test-dwarf-gcc.o";
 
 // Helper function to get the first compile unit.
@@ -125,6 +126,26 @@ void checkElementProperties(LVReader *Reader) {
   const LVLines *Lines = Function->getLines();
   ASSERT_NE(Lines, nullptr);
   ASSERT_EQ(Lines->size(), 0x12u);
+
+  // Check size of types in CompileUnit.
+  const LVTypes *Types = CompileUnit->getTypes();
+  ASSERT_NE(Types, nullptr);
+  EXPECT_EQ(Types->size(), 7u);
+
+  const auto BoolType =
+      std::find_if(Types->begin(), Types->end(), [](const LVElement *elt) {
+        return elt->getName() == "bool";
+      });
+  ASSERT_NE(BoolType, Types->end());
+  const auto IntType =
+      std::find_if(Types->begin(), Types->end(), [](const LVElement *elt) {
+        return elt->getName() == "int";
+      });
+  ASSERT_NE(IntType, Types->end());
+  EXPECT_EQ(static_cast<LVType *>(*BoolType)->getBitSize(), 8u);
+  EXPECT_EQ(static_cast<LVType *>(*BoolType)->getStorageSizeInBytes(), 1u);
+  EXPECT_EQ(static_cast<LVType *>(*IntType)->getBitSize(), 32u);
+  EXPECT_EQ(static_cast<LVType *>(*IntType)->getStorageSizeInBytes(), 4u);
 }
 
 // Check proper handling of DW_AT_unspecified_parameters in
@@ -155,6 +176,22 @@ void checkUnspecifiedParameters(LVReader *Reader) {
                          static_cast<const LVSymbol *>(elt)->getIsUnspecified();
                 }),
             true);
+}
+
+// Check the basic properties on parsed DW_TAG_module.
+void checkScopeModule(LVReader *Reader) {
+  LVScopeRoot *Root = Reader->getScopesRoot();
+  LVScopeCompileUnit *CompileUnit = getFirstCompileUnit(Root);
+
+  EXPECT_EQ(Root->getFileFormatName(), "Mach-O 64-bit x86-64");
+  EXPECT_EQ(Root->getName(), DwarfClangModule);
+
+  ASSERT_NE(CompileUnit->getChildren(), nullptr);
+  LVElement *FirstChild = *(CompileUnit->getChildren()->begin());
+  EXPECT_EQ(FirstChild->getIsScope(), 1);
+  LVScopeModule *Module = static_cast<LVScopeModule *>(FirstChild);
+  EXPECT_EQ(Module->getIsModule(), 1);
+  EXPECT_EQ(Module->getName(), "DebugModule");
 }
 
 // Check the logical elements selection.
@@ -287,6 +324,7 @@ void elementProperties(SmallString<128> &InputsDir) {
   ReaderOptions.setAttributeRange();
   ReaderOptions.setAttributeLocation();
   ReaderOptions.setAttributeInserted();
+  ReaderOptions.setAttributeSize();
   ReaderOptions.setPrintAll();
   ReaderOptions.resolveDependencies();
 
@@ -301,6 +339,9 @@ void elementProperties(SmallString<128> &InputsDir) {
 
   Reader = createReader(ReaderHandler, InputsDir, DwarfClangUnspecParams);
   checkUnspecifiedParameters(Reader.get());
+
+  Reader = createReader(ReaderHandler, InputsDir, DwarfClangModule);
+  checkScopeModule(Reader.get());
 }
 
 // Logical elements selection.

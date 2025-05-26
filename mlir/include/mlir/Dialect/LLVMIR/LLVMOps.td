@@ -758,9 +758,9 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     the LLVM function type that uses an explicit void type to model functions
     that do not return a value.
 
-    If this operatin has the `no_inline` attribute, then this specific function call 
-    will never be inlined. The opposite behavior will occur if the call has `always_inline` 
-    attribute. The `inline_hint` attribute indicates that it is desirable to inline 
+    If this operatin has the `no_inline` attribute, then this specific function call
+    will never be inlined. The opposite behavior will occur if the call has `always_inline`
+    attribute. The `inline_hint` attribute indicates that it is desirable to inline
     this function call.
 
     Examples:
@@ -2298,6 +2298,9 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
     written, or referenced.
     Attempting to define or reference any symbol or any global behavior is
     considered undefined behavior at this time.
+    If `tail_call_kind` is used, the operation behaves like the specified
+    tail call kind. The `musttail` kind it's not available for this operation,
+    since it isn't supported by LLVM's inline asm.
   }];
   let arguments = (
     ins Variadic<LLVM_Type>:$operands,
@@ -2305,6 +2308,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
         StrAttr:$constraints,
         UnitAttr:$has_side_effects,
         UnitAttr:$is_align_stack,
+        DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$tail_call_kind,
         OptionalAttr<
           DefaultValuedAttr<AsmATTOrIntel, "AsmDialect::AD_ATT">>:$asm_dialect,
         OptionalAttr<ArrayAttr>:$operand_attrs);
@@ -2314,6 +2318,7 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
   let assemblyFormat = [{
     (`has_side_effects` $has_side_effects^)?
     (`is_align_stack` $is_align_stack^)?
+    (`tail_call_kind` `=` $tail_call_kind^)?
     (`asm_dialect` `=` $asm_dialect^)?
     (`operand_attrs` `=` $operand_attrs^)?
     attr-dict
@@ -2326,6 +2331,8 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
       return "elementtype";
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 //===--------------------------------------------------------------------===//
