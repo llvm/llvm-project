@@ -283,22 +283,18 @@ func.func @read_read_add_write_size_mismatch(%arg0: memref<8xi32>, %arg1: memref
 // CHECK-LABEL: func @read_read_add_write_attrs_mismatch
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
 func.func @read_read_add_write_attrs_mismatch(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
-  // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
-  // CHECK:     %[[V0:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
-  // CHECK:     %[[V1:.*]] = vector.extract %[[V0]][2] : i32 from vector<4xi32>
-  // CHECK:     %[[V2:.*]] = vector.extract %[[V0]][3] : i32 from vector<4xi32>
-  // CHECK:     %[[V3:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
-  // CHECK:     %[[V4:.*]] = vector.extract %[[V3]][2] : i32 from vector<4xi32>
-  // CHECK:     %[[V5:.*]] = vector.extract %[[V3]][3] : i32 from vector<4xi32>
-  // CHECK:     %[[V6:.*]] = vector.extract_strided_slice %[[V0]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
-  // CHECK:     %[[V7:.*]] = vector.extract_strided_slice %[[V3]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
-  // CHECK:     %[[V8:.*]] = arith.addi %[[V6]], %[[V7]] overflow<nsw> : vector<2xi32>
-  // CHECK:     %[[V9:.*]] = vector.from_elements %[[V1]], %[[V2]] : vector<2xi32>
-  // CHECK:     %[[V10:.*]] = vector.from_elements %[[V4]], %[[V5]] : vector<2xi32>
-  // CHECK:     %[[V11:.*]] = arith.addi %[[V9]], %[[V10]] overflow<nuw> : vector<2xi32>
-  // CHECK:     vector.store %[[V8]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<2xi32>
-  // CHECK:     vector.store %[[V11]], %[[ARG0]][%[[C2]]] : memref<8xi32>, vector<2xi32>
+    // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+    // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+    // CHECK:     %[[V0:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+    // CHECK:     %[[V1:.*]] = vector.extract_strided_slice %[[V0]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+    // CHECK:     %[[V2:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+    // CHECK:     %[[V3:.*]] = vector.extract_strided_slice %[[V2]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+    // CHECK:     %[[V4:.*]] = vector.extract_strided_slice %[[V0]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+    // CHECK:     %[[V5:.*]] = vector.extract_strided_slice %[[V2]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+    // CHECK:     %[[V6:.*]] = arith.addi %[[V4]], %[[V5]] overflow<nsw> : vector<2xi32>
+    // CHECK:     %[[V7:.*]] = arith.addi %[[V1]], %[[V3]] overflow<nuw> : vector<2xi32>
+    // CHECK:     vector.store %[[V6]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<2xi32>
+    // CHECK:     vector.store %[[V7]], %[[ARG0]][%[[C2]]] : memref<8xi32>, vector<2xi32>
 
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -571,34 +567,24 @@ func.func @read_read_add_write_interleaved_use_add(%arg0: memref<8xi32>, %arg1: 
 // CHECK-LABEL: func @negative_different_blocks
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
 func.func @negative_different_blocks(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
-  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
-  // CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
-  // CHECK:     %[[V0:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
-  // CHECK:     %[[V1:.*]] = vector.extract %[[V0]][2] : i32 from vector<4xi32>
-  // CHECK:     %[[V2:.*]] = vector.extract %[[V0]][3] : i32 from vector<4xi32>
-  // CHECK:     %[[V3:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
-  // CHECK:     %[[V4:.*]] = vector.extract %[[V3]][2] : i32 from vector<4xi32>
-  // CHECK:     %[[V5:.*]] = vector.extract %[[V3]][3] : i32 from vector<4xi32>
-  // CHECK:     cf.br ^bb1
-  // CHECK:   ^bb1:
-  // CHECK:     %[[V6:.*]] = vector.extract_strided_slice %[[V0]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
-  // CHECK:     %[[V7:.*]] = vector.extract_strided_slice %[[V3]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
-  // CHECK:     %[[V8:.*]] = arith.addi %[[V6]], %[[V7]] : vector<2xi32>
-  // CHECK:     %[[V9:.*]] = vector.extract %[[V8]][0] : i32 from vector<2xi32>
-  // CHECK:     %[[V10:.*]] = vector.extract %[[V8]][1] : i32 from vector<2xi32>
-  // CHECK:     cf.br ^bb2
-  // CHECK:   ^bb2:
-  // TODO: we need to properly handle vector.extract args to vectorizre that
-  // CHECK:     %[[V11:.*]] = arith.addi %[[V1]], %[[V4]] : i32
-  // CHECK:     %[[V12:.*]] = arith.addi %[[V2]], %[[V5]] : i32
-  // CHECK:     cf.br ^bb3
-  // CHECK:   ^bb3:
-  // CHECK:     memref.store %[[V9]], %[[ARG0]][%[[C0]]] : memref<8xi32>
-  // CHECK:     memref.store %[[V10]], %[[ARG0]][%[[C1]]] : memref<8xi32>
-  // CHECK:     memref.store %[[V11]], %[[ARG0]][%[[C2]]] : memref<8xi32>
-  // CHECK:     memref.store %[[V12]], %[[ARG0]][%[[C3]]] : memref<8xi32>
+    // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+    // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+    // CHECK:     %[[V0:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+    // CHECK:     %[[V1:.*]] = vector.extract_strided_slice %[[V0]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+    // CHECK:     %[[V2:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+    // CHECK:     %[[V3:.*]] = vector.extract_strided_slice %[[V2]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+    // CHECK:     cf.br ^bb1
+    // CHECK:   ^bb1:
+    // CHECK:     %[[V4:.*]] = vector.extract_strided_slice %[[V0]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+    // CHECK:     %[[V5:.*]] = vector.extract_strided_slice %[[V2]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+    // CHECK:     %[[V6:.*]] = arith.addi %[[V4]], %[[V5]] : vector<2xi32>
+    // CHECK:     cf.br ^bb2
+    // CHECK:   ^bb2:
+    // CHECK:     %[[V7:.*]] = arith.addi %[[V1]], %[[V3]] : vector<2xi32>
+    // CHECK:     cf.br ^bb3
+    // CHECK:   ^bb3:
+    // CHECK:     vector.store %[[V6]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<2xi32>
+    // CHECK:     vector.store %[[V7]], %[[ARG0]][%[[C2]]] : memref<8xi32>, vector<2xi32>
 
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
