@@ -606,7 +606,14 @@ const char *SDNode::getIndexedModeName(ISD::MemIndexedMode AM) {
 static Printable PrintNodeId(const SDNode &Node) {
   return Printable([&Node](raw_ostream &OS) {
 #ifndef NDEBUG
+    static const raw_ostream::Colors Color[] = {
+        raw_ostream::BLACK,  raw_ostream::RED,  raw_ostream::GREEN,
+        raw_ostream::YELLOW, raw_ostream::BLUE, raw_ostream::MAGENTA,
+        raw_ostream::CYAN,
+    };
+    OS.changeColor(Color[Node.PersistentId % std::size(Color)]);
     OS << 't' << Node.PersistentId;
+    OS.resetColor();
 #else
     OS << (const void*)&Node;
 #endif

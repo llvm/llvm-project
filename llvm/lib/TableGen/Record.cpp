@@ -1688,7 +1688,7 @@ static const Init *ForeachDagApply(const Init *LHS, const DagInit *MHSd,
   }
 
   if (Change)
-    return DagInit::get(Val, NewArgs);
+    return DagInit::get(Val, MHSd->getName(), NewArgs);
   return MHSd;
 }
 
