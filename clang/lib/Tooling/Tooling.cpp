@@ -510,11 +510,9 @@ static void injectResourceDir(CommandLineArguments &Args, const char *Argv0,
       return;
 
   // If there's no override in place add our resource dir.
-  CommandLineArguments Extra = {
-      "-resource-dir", CompilerInvocation::GetResourcesPath(Argv0, MainAddr)};
-
-  Args =
-      getInsertArgumentAdjuster(Extra, ArgumentInsertPosition::END)(Args, "");
+  Args = getInsertArgumentAdjuster(
+      ("-resource-dir=" + CompilerInvocation::GetResourcesPath(Argv0, MainAddr))
+          .c_str())(Args, "");
 }
 
 int ClangTool::run(ToolAction *Action) {
