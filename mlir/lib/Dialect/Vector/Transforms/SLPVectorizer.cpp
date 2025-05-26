@@ -995,6 +995,7 @@ SLPGraph::vectorize(IRRewriter &rewriter,
   // topo order to avoid invalidation users.
   for (auto *node : llvm::reverse(sortedNodes)) {
     for (Operation *op : node->ops) {
+      LLVM_DEBUG(llvm::dbgs() << "Erasing op: " << *op << "\n");
       rewriter.eraseOp(op);
     }
   }
@@ -1088,7 +1089,6 @@ void GreedySLPVectorizerPass::runOnOperation() {
       auto config = GreedyRewriteConfig().enableFolding().enableConstantCSE();
       (void)applyPatternsGreedily(op, {}, config);
     }
-    op->dump();
   } while (changed);
 }
 
