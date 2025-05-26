@@ -22,11 +22,9 @@ public:
   CSKYAsmBackend(const MCSubtargetInfo &STI, const MCTargetOptions &OP)
       : MCAsmBackend(llvm::endianness::little) {}
 
-
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
@@ -47,8 +45,7 @@ public:
                     const MCSubtargetInfo *STI) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
+                             const MCValue &Target) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;

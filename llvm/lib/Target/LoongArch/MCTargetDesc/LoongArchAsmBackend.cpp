@@ -140,12 +140,10 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup,
     Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
-void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
-                                     const MCFixup &Fixup,
+void LoongArchAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                      const MCValue &Target,
                                      MutableArrayRef<char> Data, uint64_t Value,
-                                     bool IsResolved,
-                                     const MCSubtargetInfo *STI) const {
+                                     bool IsResolved) {
   if (!Value)
     return; // Doesn't change encoding.
 
@@ -153,7 +151,7 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
   if (mc::isRelocation(Kind))
     return;
   MCFixupKindInfo Info = getFixupKindInfo(Kind);
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
 
   // Fixup leb128 separately.
   if (Fixup.getTargetKind() == FK_Data_leb128)
@@ -216,7 +214,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
     return false;
 
   MCSection *Sec = AF.getParent();
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
   MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_LARCH_ALIGN);
   unsigned MaxBytesToEmit = AF.getMaxBytesToEmit();
@@ -246,11 +244,10 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 
 bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCFixup &Fixup,
-                                                const MCValue &Target,
-                                                const MCSubtargetInfo *STI) {
+                                                const MCValue &Target) {
   switch (Fixup.getTargetKind()) {
   default:
-    return STI->hasFeature(LoongArch::FeatureRelax);
+    return STI.hasFeature(LoongArch::FeatureRelax);
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -300,7 +297,7 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(const MCAssembler &Asm,
 bool LoongArchAsmBackend::relaxDwarfLineAddr(const MCAssembler &Asm,
                                              MCDwarfLineAddrFragment &DF,
                                              bool &WasRelaxed) const {
-  MCContext &C = Asm.getContext();
+  MCContext &C = getContext();
 
   int64_t LineDelta = DF.getLineDelta();
   const MCExpr &AddrDelta = DF.getAddrDelta();
@@ -384,7 +381,7 @@ bool LoongArchAsmBackend::relaxDwarfCFA(const MCAssembler &Asm,
   Fixups.clear();
   raw_svector_ostream OS(Data);
 
-  assert(Asm.getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+  assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
     WasRelaxed = OldSize != Data.size();
@@ -438,11 +435,10 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
                                    const MCFixup &Fixup, const MCValue &Target,
-                                   uint64_t &FixedValue, bool IsResolved,
-                                   const MCSubtargetInfo *CurSTI) {
+                                   uint64_t &FixedValue, bool IsResolved) {
   auto Fallback = [&]() {
-    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved,
-                                  CurSTI);
+    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
+                                  IsResolved);
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
@@ -504,7 +500,7 @@ bool LoongArchAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
   IsResolved = Fallback();
   // If linker relaxation is enabled and supported by the current relocation,
   // append a RELAX relocation.
-  if (Fixup.needsRelax()) {
+  if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_LARCH_RELAX);
     Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
                                      FixedValueA);

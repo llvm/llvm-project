@@ -38,13 +38,12 @@ public:
   createObjectTargetWriter() const override;
 
   bool addReloc(MCAssembler &Asm, const MCFragment &F, const MCFixup &Fixup,
-                const MCValue &Target, uint64_t &FixedValue, bool IsResolved,
-                const MCSubtargetInfo *) override;
+                const MCValue &Target, uint64_t &FixedValue,
+                bool IsResolved) override;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
@@ -52,9 +51,8 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
+  bool forceRelocation(const MCAssembler &Asm, const MCFragment &F,
+                       const MCFixup &Fixup, const MCValue &Target);
 
 private:
   Triple::OSType OSType;

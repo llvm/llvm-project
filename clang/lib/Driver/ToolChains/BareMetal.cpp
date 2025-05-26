@@ -503,19 +503,10 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lc");
   }
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(TC, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
+
   if (TC.getTriple().isRISCV())
     CmdArgs.push_back("-X");
 
