@@ -402,9 +402,8 @@ static void widenCImmType(MachineOperand &MOP) {
   unsigned NewWidth = widenBitWidthToNextPow2(CurrentWidth);
   if (NewWidth != CurrentWidth) {
     // Replace the immediate value with the widened version
-    MOP.setCImm(ConstantInt::get(
-        CImmVal->getType()->getContext(),
-        CImmVal->getValue().zextOrTrunc(NewWidth)));
+    MOP.setCImm(ConstantInt::get(CImmVal->getType()->getContext(),
+                                 CImmVal->getValue().zextOrTrunc(NewWidth)));
   }
 }
 
@@ -522,7 +521,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       unsigned MIOp = MI.getOpcode();
 
       if (!IsExtendedInts) {
-        // validate bit width of scalar registers and immediates
+        // validate bit width of scalar registers and constant immediates
         for (auto &MOP : MI.operands()) {
           if (MOP.isReg())
             widenScalarType(MOP.getReg(), MRI);
