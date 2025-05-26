@@ -169,13 +169,10 @@ void checkUnspecifiedParameters(LVReader *Reader) {
   // `int foo_printf(const char *, ...)`, where the '...' is represented by a
   // DW_TAG_unspecified_parameters, i.e. we expect to find at least one child
   // for which getIsUnspecified() returns true.
-  EXPECT_EQ(std::any_of(
-                Elements->begin(), Elements->end(),
-                [](const LVElement *elt) {
-                  return elt->getIsSymbol() &&
-                         static_cast<const LVSymbol *>(elt)->getIsUnspecified();
-                }),
-            true);
+  EXPECT_TRUE(llvm::any_of(*Elements, [](const LVElement *elt) {
+    return elt->getIsSymbol() &&
+           static_cast<const LVSymbol *>(elt)->getIsUnspecified();
+  }));
 }
 
 // Check the basic properties on parsed DW_TAG_module.
