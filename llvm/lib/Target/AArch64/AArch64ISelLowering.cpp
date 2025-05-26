@@ -29783,10 +29783,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   }
 
   unsigned EltSize = VT.getScalarSizeInBits();
-  for (unsigned LaneSize : {64U, 32U, 16U}) {
-    if (isREVMask(ShuffleMask, EltSize, VT.getVectorNumElements(), LaneSize)) {
-      EVT NewVT =
-          getPackedSVEVectorVT(EVT::getIntegerVT(*DAG.getContext(), LaneSize));
+  for (unsigned BlockSize : {64U, 32U, 16U}) {
+    if (isREVMask(ShuffleMask, EltSize, VT.getVectorNumElements(), BlockSize)) {
       unsigned RevOp;
       if (EltSize == 8)
         RevOp = AArch64ISD::BSWAP_MERGE_PASSTHRU;
@@ -29794,24 +29792,24 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
         RevOp = AArch64ISD::REVH_MERGE_PASSTHRU;
       else
         RevOp = AArch64ISD::REVW_MERGE_PASSTHRU;
-
-      Op = DAG.getNode(ISD::BITCAST, DL, NewVT, Op1);
-      Op = LowerToPredicatedOp(Op, DAG, RevOp);
-      Op = DAG.getNode(ISD::BITCAST, DL, ContainerVT, Op);
-      return convertFromScalableVector(DAG, VT, Op);
+      EVT BlockedVT =
+          getPackedSVEVectorVT(EVT::getIntegerVT(*DAG.getContext(), BlockSize));
+      SDValue Pg = getPredicateForVector(DAG, DL, BlockedVT);
+      SDValue BlockedOp1 = DAG.getNode(ISD::BITCAST, DL, BlockedVT, Op1);
+      SDValue BlockedRev = DAG.getNode(RevOp, DL, BlockedVT, Pg, BlockedOp1,
+                                       DAG.getUNDEF(BlockedVT));
+      SDValue Container =
+          DAG.getNode(ISD::BITCAST, DL, ContainerVT, BlockedRev);
+      return convertFromScalableVector(DAG, VT, Container);
     }
   }
 
   if (Subtarget->hasSVE2p1() && EltSize == 64 &&
       isREVMask(ShuffleMask, EltSize, VT.getVectorNumElements(), 128)) {
-    if (!VT.isFloatingPoint())
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::REVD_MERGE_PASSTHRU);
-
-    EVT NewVT = getPackedSVEVectorVT(EVT::getIntegerVT(*DAG.getContext(), 64));
-    Op = DAG.getNode(ISD::BITCAST, DL, NewVT, Op1);
-    Op = LowerToPredicatedOp(Op, DAG, AArch64ISD::REVD_MERGE_PASSTHRU);
-    Op = DAG.getNode(ISD::BITCAST, DL, ContainerVT, Op);
-    return convertFromScalableVector(DAG, VT, Op);
+    SDValue Pg = getPredicateForVector(DAG, DL, VT);
+    SDValue Revd = DAG.getNode(AArch64ISD::REVD_MERGE_PASSTHRU, DL, ContainerVT,
+                               Pg, Op1, DAG.getUNDEF(ContainerVT));
+    return convertFromScalableVector(DAG, VT, Revd);
   }
 
   unsigned WhichResult;
