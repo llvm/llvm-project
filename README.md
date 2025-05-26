@@ -1,44 +1,117 @@
-# The LLVM Compiler Infrastructure
+# LLVM Project
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8273/badge)](https://www.bestpractices.dev/projects/8273)
-[![libc++](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml/badge.svg?branch=main&event=schedule)](https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml?query=event%3Aschedule)
+## Introduction
 
-Welcome to the LLVM project!
+The LLVM Project is a collection of modular and reusable compiler and toolchain technologies. Despite its name, LLVM has little to do with traditional virtual machines. The name "LLVM" itself is not an acronym; it is the full name of the project.
 
-This repository contains the source code for LLVM, a toolkit for the
-construction of highly optimized compilers, optimizers, and run-time
-environments.
+LLVM is an umbrella project that includes:
+- LLVM Core libraries (optimizer, code generators, etc.)
+- Clang: A C/C++/Objective-C compiler frontend
+- LLDB: A debugger
+- lld: A linker
+- And many other subprojects
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.
+## Prerequisites
 
-C-like languages use the [Clang](https://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
+To build LLVM, you'll need:
 
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
+- A C++17 compatible compiler (GCC ≥ 7.1.0, Clang ≥ 5.0.0, Apple Clang ≥ 10.0.0, MSVC ≥ 19.14)
+- CMake ≥ 3.13.4
+- Python ≥ 3.6
+- Git (for version control)
+- Ninja build system (recommended) or GNU Make
 
-## Getting the Source Code and Building LLVM
+On macOS, you can install the required tools with:
+```bash
+brew install cmake ninja python
+```
 
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-page for information on building and running LLVM.
+## Building LLVM
 
-For information on how to contribute to the LLVM project, please take a look at
-the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
+### Basic Build Instructions
 
-## Getting in touch
+1. Clone the repository (if you haven't already):
+   ```bash
+   git clone https://github.com/llvm/llvm-project.git
+   cd llvm-project
+   ```
 
-Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362),
-[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
-[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
+2. Create a build directory:
+   ```bash
+   mkdir build
+   cd build
+   ```
 
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+3. Configure with CMake:
+   ```bash
+   cmake -G Ninja ../llvm \
+     -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
+     -DCMAKE_BUILD_TYPE=Release \
+     -DLLVM_ENABLE_ASSERTIONS=ON
+   ```
+   
+   Note: Adjust the `-DLLVM_ENABLE_PROJECTS` parameter to include only the subprojects you need.
+
+4. Build:
+   ```bash
+   ninja
+   ```
+
+5. (Optional) Install:
+   ```bash
+   ninja install
+   ```
+
+### Using the New Pass Manager
+
+LLVM has transitioned to a new pass manager. When using tools like `opt`, use the new syntax:
+
+```bash
+# New pass manager syntax
+./bin/opt -passes=instcombine,reassociate -debug-pass-manager -disable-output test.ll
+
+# Old syntax (deprecated)
+# ./bin/opt -instcombine -reassociate -debug-pass=List -disable-output test.ll
+```
+
+## Documentation
+
+For more detailed information, refer to the official LLVM documentation:
+
+- [LLVM Documentation](https://llvm.org/docs/)
+- [Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html)
+- [Building LLVM with CMake](https://llvm.org/docs/CMake.html)
+- [LLVM Programmer's Manual](https://llvm.org/docs/ProgrammersManual.html)
+- [New Pass Manager](https://llvm.org/docs/NewPassManager.html)
+
+## License
+
+LLVM is available under the [Apache License v2.0 with LLVM Exceptions](https://llvm.org/LICENSE.txt).
+
+-----------------------------------------------------------------------------------------------------------
+
+# LLVM with -debug-pass-list Feature (New Pass Manager)
+
+This is a fork of the [official LLVM Project](https://github.com/llvm/llvm-project) focused on implementing an experimental `-debug-pass-list` command-line option for the New Pass Manager (NPM).
+
+## Feature: -debug-pass-list
+
+This feature provides a simple, flat list of pass names invoked by the New Pass Manager for a given optimization level. It's intended to be a more beginner-friendly way to see the sequence of operations compared to more verbose options.
+
+### How to Use
+(Assuming you have built this version of Clang/LLVM)
+
+With `clang`:
+```bash
+./bin/clang -O2 -mllvm -debug-pass-list your_file.c -o /dev/null
+# Or to avoid linker issues during testing:
+# ./bin/clang -O2 -mllvm -debug-pass-list -S your_file.c -o /dev/null
+
+
+
+with opt:
+# First generate LLVM IR:
+# ./bin/clang -O2 -S -emit-llvm your_file.c -o your_file.ll
+
+# Then run opt:
+./bin/opt -passes='default<O2>' -debug-pass-list -disable-output your_file.ll
