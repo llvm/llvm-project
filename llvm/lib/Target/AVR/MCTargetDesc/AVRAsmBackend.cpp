@@ -368,19 +368,19 @@ AVRAsmBackend::createObjectTargetWriter() const {
   return createAVRELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
-bool AVRAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
-                             const MCFixup &Fixup, const MCValue &Target,
-                             uint64_t &FixedValue, bool IsResolved) {
+bool AVRAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+                             const MCValue &Target, uint64_t &FixedValue,
+                             bool IsResolved) {
   // AVR sets the fixup value to bypass the assembly time overflow with a
   // relocation.
   if (IsResolved) {
     auto TargetVal = MCValue::get(Target.getAddSym(), Target.getSubSym(),
                                   FixedValue, Target.getSpecifier());
-    if (forceRelocation(Asm, F, Fixup, TargetVal))
+    if (forceRelocation(F, Fixup, TargetVal))
       IsResolved = false;
   }
   if (!IsResolved)
-    Asm.getWriter().recordRelocation(Asm, &F, Fixup, Target, FixedValue);
+    Asm->getWriter().recordRelocation(*Asm, &F, Fixup, Target, FixedValue);
   return IsResolved;
 }
 
@@ -513,8 +513,7 @@ bool AVRAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool AVRAsmBackend::forceRelocation(const MCAssembler &Asm, const MCFragment &F,
-                                    const MCFixup &Fixup,
+bool AVRAsmBackend::forceRelocation(const MCFragment &F, const MCFixup &Fixup,
                                     const MCValue &Target) {
   switch ((unsigned)Fixup.getKind()) {
   default:

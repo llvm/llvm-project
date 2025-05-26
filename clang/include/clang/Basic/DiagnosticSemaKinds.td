@@ -1762,6 +1762,29 @@ def err_user_defined_msg_constexpr : Error<
   "%sub{subst_user_defined_msg}0 must be produced by a "
   "constant expression">;
 
+// Type traits explanations
+def note_unsatisfied_trait : Note<"%0 is not %enum_select<TraitName>{"
+                                  "%TriviallyRelocatable{trivially relocatable}"
+                                  "}1">;
+
+def note_unsatisfied_trait_reason
+    : Note<"because it "
+           "%enum_select<TraitNotSatisfiedReason>{"
+           "%Ref{is a reference type}|"
+           "%HasArcLifetime{has an ARC lifetime qualifier}|"
+           "%VLA{is a variably-modified type}|"
+           "%VBase{has a virtual base %1}|"
+           "%NRBase{has a non-trivially-relocatable base %1}|"
+           "%NRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
+           "%UserProvidedCtr{has a user provided %select{copy|move}1 "
+           "constructor}|"
+           "%UserProvidedAssign{has a user provided %select{copy|move}1 "
+           "assignment operator}|"
+           "%UnionWithUserDeclaredSMF{is a union with a user-declared "
+           "%sub{select_special_member_kind}1}"
+           "}0">;
+
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,
   InGroup<DiagGroup<"redundant-consteval-if">>;

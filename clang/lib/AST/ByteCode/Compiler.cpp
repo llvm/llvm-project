@@ -4927,7 +4927,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       const auto *MemberCall = cast<CXXMemberCallExpr>(E);
       if (!this->visit(MemberCall->getImplicitObjectArgument()))
         return false;
-      return this->emitCheckDestruction(E) && this->emitPopPtr(E);
+      return this->emitCheckDestruction(E) && this->emitEndLifetime(E) &&
+             this->emitPopPtr(E);
     }
   }
 
@@ -5016,7 +5017,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return this->discard(Base);
     if (!this->visit(Base))
       return false;
-    return this->emitKill(E);
+    return this->emitEndLifetimePop(E);
   } else if (!FuncDecl) {
     const Expr *Callee = E->getCallee();
     CalleeOffset =
