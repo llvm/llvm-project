@@ -277,37 +277,8 @@ define { <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor3(ptr %p
 define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor4(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_factor4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a0, a0, 1
-; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetivli zero, 8, e8, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 24
-; CHECK-NEXT:    vslidedown.vi v12, v8, 16
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 8
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v12, v10, a0
-; CHECK-NEXT:    vslideup.vx v8, v9, a0
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vmv.v.v v9, v12
-; CHECK-NEXT:    vs2r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg4e8.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vec = load <32 x i8>, ptr %p
   %d0 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave4(<32 x i8> %vec)
@@ -371,46 +342,8 @@ define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave
 define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor6(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_factor6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; CHECK-NEXT:    li a1, 48
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    li a0, 40
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    srli a2, a2, 1
-; CHECK-NEXT:    vsetivli zero, 8, e8, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v12, v8, a0
-; CHECK-NEXT:    add a0, a2, a2
-; CHECK-NEXT:    vsetivli zero, 8, e8, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v14, v8, 24
-; CHECK-NEXT:    vslidedown.vi v20, v8, 16
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v13, v8, 8
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v20, v14, a2
-; CHECK-NEXT:    vsetivli zero, 8, e8, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v8, a1
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v13, a2
-; CHECK-NEXT:    vslideup.vx v16, v12, a2
-; CHECK-NEXT:    vmv1r.v v9, v20
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vmv2r.v v10, v16
-; CHECK-NEXT:    vs4r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg6e8.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vec = load <48 x i8>, ptr %p
   %d0 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave6(<48 x i8> %vec)
@@ -457,55 +390,9 @@ define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } 
 define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor8(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_factor8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; CHECK-NEXT:    li a1, 64
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    li a0, 56
-; CHECK-NEXT:    li a1, 48
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vsetivli zero, 8, e8, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v8, a0
-; CHECK-NEXT:    li a0, 40
-; CHECK-NEXT:    vslidedown.vx v12, v8, a1
-; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    srli a2, a2, 1
-; CHECK-NEXT:    vslidedown.vx v20, v8, a0
-; CHECK-NEXT:    add a0, a2, a2
-; CHECK-NEXT:    vsetivli zero, 8, e8, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v14, v8, 24
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v12, v16, a2
-; CHECK-NEXT:    vsetivli zero, 8, e8, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v22, v8, 16
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v22, v14, a2
-; CHECK-NEXT:    vsetivli zero, 8, e8, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v8, a1
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 8
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v9, a2
-; CHECK-NEXT:    vslideup.vx v16, v20, a2
-; CHECK-NEXT:    vmv1r.v v9, v22
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vmv1r.v v17, v12
-; CHECK-NEXT:    vmv2r.v v10, v16
-; CHECK-NEXT:    vs4r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg8e8.v v8, (a0)
 ; CHECK-NEXT:    vmv1r.v v15, v14
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vec = load <64 x i8>, ptr %p
   %d0 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave8(<64 x i8> %vec)

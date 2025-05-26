@@ -253,30 +253,8 @@ define void @vector_interleave_store_factor3(<vscale x 2 x i32> %a, <vscale x 2 
 define void @vector_interleave_store_factor4(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_factor4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    add a3, a1, a2
-; CHECK-NEXT:    add a4, a3, a2
-; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg4e32.v v8, (a1)
-; CHECK-NEXT:    vl1re32.v v10, (a4)
-; CHECK-NEXT:    add a2, a4, a2
-; CHECK-NEXT:    vl1re32.v v11, (a2)
-; CHECK-NEXT:    vl1re32.v v8, (a1)
-; CHECK-NEXT:    vl1re32.v v9, (a3)
-; CHECK-NEXT:    vs4r.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg4e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.interleave4(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d)
   store <vscale x 8 x i32> %v, ptr %p
@@ -309,129 +287,11 @@ define void @vector_interleave_store_factor5(<vscale x 2 x i32> %a, <vscale x 2 
 }
 
 define void @vector_interleave_store_factor6(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f, ptr %p) {
-; RV32-LABEL: vector_interleave_store_factor6:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    mv a2, a1
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    add a2, a2, a1
-; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    add a1, a1, a2
-; RV32-NEXT:    sub sp, sp, a1
-; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x0e, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 14 * vlenb
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    add a3, a1, a2
-; RV32-NEXT:    add a4, a3, a2
-; RV32-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
-; RV32-NEXT:    vsseg6e32.v v8, (a1)
-; RV32-NEXT:    vl1re32.v v10, (a4)
-; RV32-NEXT:    add a4, a4, a2
-; RV32-NEXT:    vl1re32.v v11, (a4)
-; RV32-NEXT:    add a4, a4, a2
-; RV32-NEXT:    vl1re32.v v8, (a1)
-; RV32-NEXT:    vl1re32.v v9, (a3)
-; RV32-NEXT:    vl1re32.v v12, (a4)
-; RV32-NEXT:    add a4, a4, a2
-; RV32-NEXT:    vl1re32.v v13, (a4)
-; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    srli a0, a2, 3
-; RV32-NEXT:    li a1, 12
-; RV32-NEXT:    call __mulsi3
-; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV32-NEXT:    vse32.v v8, (s0)
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 1
-; RV32-NEXT:    mv a1, a0
-; RV32-NEXT:    slli a0, a0, 1
-; RV32-NEXT:    add a1, a1, a0
-; RV32-NEXT:    slli a0, a0, 1
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    .cfi_def_cfa sp, 32
-; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    addi sp, sp, 32
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vector_interleave_store_factor6:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    .cfi_def_cfa_offset 32
-; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 1
-; RV64-NEXT:    mv a2, a1
-; RV64-NEXT:    slli a1, a1, 1
-; RV64-NEXT:    add a2, a2, a1
-; RV64-NEXT:    slli a1, a1, 1
-; RV64-NEXT:    add a1, a1, a2
-; RV64-NEXT:    sub sp, sp, a1
-; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x0e, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 14 * vlenb
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 3
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    add a3, a1, a2
-; RV64-NEXT:    add a4, a3, a2
-; RV64-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
-; RV64-NEXT:    vsseg6e32.v v8, (a1)
-; RV64-NEXT:    vl1re32.v v10, (a4)
-; RV64-NEXT:    add a4, a4, a2
-; RV64-NEXT:    vl1re32.v v11, (a4)
-; RV64-NEXT:    add a4, a4, a2
-; RV64-NEXT:    vl1re32.v v8, (a1)
-; RV64-NEXT:    vl1re32.v v9, (a3)
-; RV64-NEXT:    vl1re32.v v12, (a4)
-; RV64-NEXT:    add a4, a4, a2
-; RV64-NEXT:    vl1re32.v v13, (a4)
-; RV64-NEXT:    addi a1, sp, 16
-; RV64-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    srli a0, a2, 3
-; RV64-NEXT:    li a1, 12
-; RV64-NEXT:    call __muldi3
-; RV64-NEXT:    addi a1, sp, 16
-; RV64-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV64-NEXT:    vse32.v v8, (s0)
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a0, a0, 1
-; RV64-NEXT:    mv a1, a0
-; RV64-NEXT:    slli a0, a0, 1
-; RV64-NEXT:    add a1, a1, a0
-; RV64-NEXT:    slli a0, a0, 1
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    add sp, sp, a0
-; RV64-NEXT:    .cfi_def_cfa sp, 32
-; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
-; RV64-NEXT:    addi sp, sp, 32
-; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vector_interleave_store_factor6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg6e32.v v8, (a0)
+; CHECK-NEXT:    ret
   %v = call <vscale x 12 x i32> @llvm.vector.interleave6(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f)
   store <vscale x 12 x i32> %v, ptr %p
   ret void
@@ -451,38 +311,8 @@ define void @vector_interleave_store_factor7(<vscale x 2 x i32> %a, <vscale x 2 
 define void @vector_interleave_store_factor8(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f, <vscale x 2 x i32> %g, <vscale x 2 x i32> %h, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_factor8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    add a3, a1, a2
-; CHECK-NEXT:    add a4, a3, a2
-; CHECK-NEXT:    add a5, a4, a2
-; CHECK-NEXT:    add a6, a5, a2
-; CHECK-NEXT:    add a7, a6, a2
-; CHECK-NEXT:    add t0, a7, a2
-; CHECK-NEXT:    vsetvli t1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg8e32.v v8, (a1)
-; CHECK-NEXT:    vl1re32.v v14, (t0)
-; CHECK-NEXT:    add a2, t0, a2
-; CHECK-NEXT:    vl1re32.v v15, (a2)
-; CHECK-NEXT:    vl1re32.v v12, (a6)
-; CHECK-NEXT:    vl1re32.v v13, (a7)
-; CHECK-NEXT:    vl1re32.v v10, (a4)
-; CHECK-NEXT:    vl1re32.v v11, (a5)
-; CHECK-NEXT:    vl1re32.v v8, (a1)
-; CHECK-NEXT:    vl1re32.v v9, (a3)
-; CHECK-NEXT:    vs8r.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg8e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vector.interleave8(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, <vscale x 2 x i32> %e, <vscale x 2 x i32> %f, <vscale x 2 x i32> %g, <vscale x 2 x i32> %h)
   store <vscale x 16 x i32> %v, ptr %p
