@@ -86,6 +86,7 @@ cc_test(
         ":clang_doc_config",
         "//clang:ast",
         "//clang:basic",
+        "//clang-tools-extra/clang-doc:clang-doc-support",
         "//clang-tools-extra/clang-doc:generators",
         "//clang-tools-extra/clang-doc:lib",
         "//llvm:BitstreamReader",
