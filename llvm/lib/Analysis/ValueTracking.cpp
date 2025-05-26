@@ -9316,6 +9316,11 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
     return isImpliedCondICmps(LHSCmp->getCmpPredicate(), LHSCmp->getOperand(0),
                               LHSCmp->getOperand(1), RHSPred, RHSOp0, RHSOp1,
                               DL, LHSIsTrue);
+  const Value *V;
+  if (match(LHS, m_NUWTrunc(m_Value(V))))
+    return isImpliedCondICmps(CmpInst::ICMP_NE, V,
+                              ConstantInt::get(V->getType(), 0), RHSPred,
+                              RHSOp0, RHSOp1, DL, LHSIsTrue);
 
   /// The LHS should be an 'or', 'and', or a 'select' instruction.  We expect
   /// the RHS to be an icmp.
