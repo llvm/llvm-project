@@ -7,7 +7,7 @@
 ; check whether the lifetime start *actually* defines the loaded pointer
 ; before simplifying to uninitialized memory.
 define void @foo(ptr %arg) {
-; CHECK-LABEL: define void @main(
+; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 16
