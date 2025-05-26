@@ -56,7 +56,7 @@ namespace detail {
 template <typename Container, typename Predicate>
 typename std::remove_reference_t<Container>::iterator
 find_unique(Container &&container, Predicate &&pred) {
-  auto first = std::find_if(container.begin(), container.end(), pred);
+  auto first = llvm::find_if(container, pred);
   if (first == container.end())
     return first;
   auto second = std::find_if(std::next(first), container.end(), pred);
@@ -1123,8 +1123,7 @@ template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   bool success = true;
 
   auto isImplicit = [this](const ClauseTy *node) {
-    return llvm::any_of(
-        implicit, [node](const ClauseTy &clause) { return &clause == node; });
+    return llvm::is_contained(llvm::make_pointer_range(implicit), node);
   };
 
   for (llvm::omp::Directive leaf :

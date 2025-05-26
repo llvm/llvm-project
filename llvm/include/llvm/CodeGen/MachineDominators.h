@@ -32,12 +32,6 @@ class MachineFunction;
 class Module;
 class raw_ostream;
 
-template <>
-inline void DominatorTreeBase<MachineBasicBlock, false>::addRoot(
-    MachineBasicBlock *MBB) {
-  this->Roots.push_back(MBB);
-}
-
 extern template class DomTreeNodeBase<MachineBasicBlock>;
 extern template class DominatorTreeBase<MachineBasicBlock, false>; // DomTree
 
