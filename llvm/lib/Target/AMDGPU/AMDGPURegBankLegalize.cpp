@@ -213,6 +213,13 @@ public:
       return;
     }
 
+    if (DstTy == S64 && TruncSrcTy == S32) {
+      B.buildMergeLikeInstr(MI.getOperand(0).getReg(),
+                            {TruncSrc, B.buildUndef({SgprRB, S32})});
+      cleanUpAfterCombine(MI, Trunc);
+      return;
+    }
+
     if (DstTy == S32 && TruncSrcTy == S16) {
       B.buildAnyExt(Dst, TruncSrc);
       cleanUpAfterCombine(MI, Trunc);

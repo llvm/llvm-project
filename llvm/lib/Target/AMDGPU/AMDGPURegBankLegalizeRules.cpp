@@ -489,22 +489,61 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(B32, {{SgprB32}, {Sgpr32AExtBoolInReg, SgprB32, SgprB32}});
 
   addRulesForGOpcs({G_ANYEXT})
+      .Any({{UniS16, S1}, {{None}, {None}}}) // should be combined away
       .Any({{UniS32, S1}, {{None}, {None}}}) // should be combined away
-      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}});
+      .Any({{UniS64, S1}, {{None}, {None}}}) // should be combined away
+      .Any({{DivS16, S1}, {{Vgpr16}, {Vcc}, VccExtToSel}})
+      .Any({{DivS32, S1}, {{Vgpr32}, {Vcc}, VccExtToSel}})
+      .Any({{DivS64, S1}, {{Vgpr64}, {Vcc}, VccExtToSel}})
+      .Any({{UniS64, S32}, {{Sgpr64}, {Sgpr32}, Ext32To64}})
+      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}, Ext32To64}})
+      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}})
+      .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}});
 
   // In global-isel G_TRUNC in-reg is treated as no-op, inst selected into COPY.
   // It is up to user to deal with truncated bits.
   addRulesForGOpcs({G_TRUNC})
+      .Any({{UniS1, UniS16}, {{None}, {None}}}) // should be combined away
       .Any({{UniS1, UniS32}, {{None}, {None}}}) // should be combined away
+      .Any({{UniS1, UniS64}, {{None}, {None}}}) // should be combined away
       .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}})
+      .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
+      .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}})
       // This is non-trivial. VgprToVccCopy is done using compare instruction.
-      .Any({{DivS1, DivS32}, {{Vcc}, {Vgpr32}, VgprToVccCopy}});
+      .Any({{DivS1, DivS16}, {{Vcc}, {Vgpr16}, VgprToVccCopy}})
+      .Any({{DivS1, DivS32}, {{Vcc}, {Vgpr32}, VgprToVccCopy}})
+      .Any({{DivS1, DivS64}, {{Vcc}, {Vgpr64}, VgprToVccCopy}});
 
-  addRulesForGOpcs({G_ZEXT, G_SEXT})
+  addRulesForGOpcs({G_ZEXT})
+      .Any({{UniS16, S1}, {{Sgpr32Trunc}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
       .Any({{UniS32, S1}, {{Sgpr32}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{UniS64, S1}, {{Sgpr64}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{DivS16, S1}, {{Vgpr16}, {Vcc}, VccExtToSel}})
       .Any({{DivS32, S1}, {{Vgpr32}, {Vcc}, VccExtToSel}})
+      .Any({{DivS64, S1}, {{Vgpr64}, {Vcc}, VccExtToSel}})
       .Any({{UniS64, S32}, {{Sgpr64}, {Sgpr32}, Ext32To64}})
-      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}, Ext32To64}});
+      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}, Ext32To64}})
+      // not extending S16 to S32 is questionable.
+      .Any({{UniS64, S16}, {{Sgpr64}, {Sgpr32ZExt}, Ext32To64}})
+      .Any({{DivS64, S16}, {{Vgpr64}, {Vgpr32ZExt}, Ext32To64}})
+      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}})
+      .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}});
+
+  addRulesForGOpcs({G_SEXT})
+      .Any({{UniS16, S1}, {{Sgpr32Trunc}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{UniS32, S1}, {{Sgpr32}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{UniS64, S1}, {{Sgpr64}, {Sgpr32AExtBoolInReg}, UniExtToSel}})
+      .Any({{DivS16, S1}, {{Vgpr16}, {Vcc}, VccExtToSel}})
+      .Any({{DivS32, S1}, {{Vgpr32}, {Vcc}, VccExtToSel}})
+      .Any({{DivS64, S1}, {{Vgpr64}, {Vcc}, VccExtToSel}})
+      .Any({{UniS64, S32}, {{Sgpr64}, {Sgpr32}, Ext32To64}})
+      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}, Ext32To64}})
+      // not extending S16 to S32 is questionable.
+      .Any({{UniS64, S16}, {{Sgpr64}, {Sgpr32SExt}, Ext32To64}})
+      .Any({{DivS64, S16}, {{Vgpr64}, {Vgpr32SExt}, Ext32To64}})
+      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}})
+      .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}});
 
   bool hasUnalignedLoads = ST->getGeneration() >= AMDGPUSubtarget::GFX12;
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
