@@ -176,7 +176,7 @@ struct StaticSampler {
 /// RootElements in the array, and it holds a data member for the Visibility
 /// parameter.
 using RootElement =
-    std::variant<RootFlags, RootConstants, RootParam, DescriptorTable,
+    std::variant<RootFlags, RootConstants, RootDescriptor, DescriptorTable,
                  DescriptorTableClause, StaticSampler>;
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
