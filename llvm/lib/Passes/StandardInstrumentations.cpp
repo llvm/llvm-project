@@ -61,6 +61,13 @@ static cl::opt<bool> VerifyAnalysisInvalidation("verify-analysis-invalidation",
 #endif
 );
 
+static cl::opt<bool> DebugPassList(
+    "debug-pass-list", // This will be the command-line flag, e.g., -debug-pass-list
+    cl::Hidden,        // Keep it hidden like other developer debug flags
+    cl::desc("Print all pass names in a simple list (New PM)"));
+
+
+
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
 // of this option.  Note that this option has no effect without -print-changed.
@@ -2520,6 +2527,50 @@ void StandardInstrumentations::registerCallbacks(
   OptPassGate.registerCallbacks(PIC);
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
+
+  // Your new logic for DebugPassList
+  if (DebugPassList) { // Ensure DebugPassList is accessible here
+    PIC.registerBeforeNonSkippedPassCallback( // Changed from registerBeforeNonContainerPassCallback
+        [](llvm::StringRef PassID, llvm::Any IR) {
+          // Heuristic filter to identify transformation passes.
+          // This attempts to exclude common analysis, utility, verifier, and manager passes.
+          // You may need to adjust this list based on your specific needs and LLVM version.
+          bool isLikelyTransformation = true;
+
+          // Filter out Pass Managers first, as registerBeforeNonSkippedPassCallback might call for them
+          if (PassID.contains("Manager") ||
+              PassID.ends_with("ManagerPass") || // Changed from endswith
+              PassID == "PassManager") { // Changed from equals
+            isLikelyTransformation = false;
+          } else if ( // Else if, to avoid re-evaluating if already identified as a manager
+              PassID.contains("Analysis") ||
+              PassID.contains("Info") || // Catches LoopInfo, TargetLibraryInfo, etc.
+              PassID.contains("Printer") ||
+              PassID.contains("Verifier") ||
+              PassID.contains("Checker") ||
+              PassID.contains("DomTree") || // DominatorTreeWrapperPass
+              PassID.contains("ScalarEvolution") ||
+              PassID.contains("AssumptionCache") || // AssumptionCacheTracker
+              PassID.contains("ProfileSummary") ||
+              PassID.contains("MemorySSA") ||
+              PassID.contains("MemorySanitizer") ||
+              PassID.contains("AddressSanitizer") ||
+              PassID.contains("ThreadSanitizer") ||
+              PassID.contains("HWAddressSanitizer") ||
+              PassID.contains("AA") || // Alias Analysis related passes
+              PassID == "ForceFunctionAttrsPass" || // Changed from equals
+              PassID == "InferFunctionAttrsPass"    // Changed from equals
+              // Add other specific non-transformation pass names or patterns here
+              ) {
+            isLikelyTransformation = false;
+          }
+
+          if (isLikelyTransformation) {
+            llvm::errs() << PassID << "\n";
+          }
+        });
+  }
+
   if (VerifyEach)
     Verify.registerCallbacks(PIC, MAM);
   PrintChangedDiff.registerCallbacks(PIC);
@@ -2531,11 +2582,7 @@ void StandardInstrumentations::registerCallbacks(
     PreservedCFGChecker.registerCallbacks(PIC, *MAM);
 
   // TimeProfiling records the pass running time cost.
-  // Its 'BeforePassCallback' can be appended at the tail of all the
-  // BeforeCallbacks by calling `registerCallbacks` in the end.
-  // Its 'AfterPassCallback' is put at the front of all the
-  // AfterCallbacks by its `registerCallbacks`. This is necessary
-  // to ensure that other callbacks are not included in the timings.
+  // ... (rest of the comment and code)
   TimeProfilingPasses.registerCallbacks(PIC);
 }
 
