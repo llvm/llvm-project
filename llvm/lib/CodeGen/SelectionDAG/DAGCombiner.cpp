@@ -7528,6 +7528,13 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return DAG.getNode(ISD::AND, DL, VT, X,
                          DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y, Z), VT));
 
+  // Fold (and X, (add (not Y), Z)) -> (and X, (not (sub Y, Z)))
+  if (sd_match(N, m_And(m_Value(X), m_Add(m_Value(NotY), m_Value(Z)))) &&
+      sd_match(NotY, m_Not(m_Value(Y))) &&
+      (TLI.hasAndNot(SDValue(N, 0)) || NotY->hasOneUse()))
+    return DAG.getNode(ISD::AND, DL, VT, X,
+                       DAG.getNOT(DL, DAG.getNode(ISD::SUB, DL, VT, Y, Z), VT));
+
   // Fold (and (srl X, C), 1) -> (srl X, BW-1) for signbit extraction
   // If we are shifting down an extended sign bit, see if we can simplify
   // this to shifting the MSB directly to expose further simplifications.
