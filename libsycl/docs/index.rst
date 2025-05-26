@@ -1,6 +1,5 @@
 .. _index:
 
-
 Current Status
 ==============
 
@@ -46,4 +45,25 @@ This requires at least partial support of the following functionality on the lib
   * ``sycl::id`` and ``sycl::range`` classes
   * Unified shared memory allocation/deallocation
   * Program manager, an internal component for retrieving and using device images from the multi-architectural binaries
+
+To build LLVM with libsycl runtime enabled the following script can be used.
+
+.. code-block:: console
+
+  #!/bin/sh
+
+  build_llvm=`pwd`/build-llvm
+  installprefix=`pwd`/install
+  llvm=`pwd`
+  mkdir -p $build_llvm
+  mkdir -p $installprefix
+
+  cmake -G Ninja -S $llvm/llvm -B $build_llvm \
+        -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" \
+        -DLLVM_INSTALL_UTILS=ON \
+        -DCMAKE_INSTALL_PREFIX=$installprefix \
+        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libsycl;libunwind" \
+        -DCMAKE_BUILD_TYPE=Release
+
+  ninja -C $build_llvm install
   
