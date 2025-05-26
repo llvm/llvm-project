@@ -43,6 +43,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
@@ -934,7 +935,7 @@ static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
 ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
-    ProfileSummaryInfo *PSI,
+    ProfileSummaryInfo *PSI, const TargetMachine *TM,
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   assert(PSI);
   bool EnableSplitLTOUnit = false;
@@ -1031,7 +1032,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     SmallVector<ValueInfo, 0>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));
           }
-        });
+        },
+        TM);
   }
 
   bool IsThinLTO = true;
@@ -1147,7 +1149,8 @@ AnalysisKey ModuleSummaryIndexAnalysis::Key;
 ModuleSummaryIndex
 ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool NeedSSI = needsParamAccessSummary(M);
   return buildModuleSummaryIndex(
       M,
@@ -1155,7 +1158,7 @@ ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
         return &FAM.getResult<BlockFrequencyAnalysis>(
             *const_cast<Function *>(&F));
       },
-      &PSI,
+      &PSI, /*TM*/ nullptr,
       [&FAM, NeedSSI](const Function &F) -> const StackSafetyInfo * {
         return NeedSSI ? &FAM.getResult<StackSafetyAnalysis>(
                              const_cast<Function &>(F))
@@ -1190,7 +1193,7 @@ bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
                          *const_cast<Function *>(&F))
                      .getBFI());
       },
-      PSI,
+      PSI, /*TM*/ nullptr,
       [&](const Function &F) -> const StackSafetyInfo * {
         return NeedSSI ? &getAnalysis<StackSafetyInfoWrapperPass>(
                               const_cast<Function &>(F))
