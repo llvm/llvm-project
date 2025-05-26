@@ -154,8 +154,6 @@ private:
 
   SDValue LowerImmediate(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerImmediateFP(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
