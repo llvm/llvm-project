@@ -64,9 +64,9 @@ define i32 @test_udot_v4i8(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v3.4s, v3.4h, #0
-; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-GI-NEXT:    mul v0.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-GI-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; CHECK-GI-NEXT:    mul v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    addv s0, v0.4s
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    add w0, w8, w2
@@ -164,9 +164,9 @@ define i32 @test_sdot_v4i8(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; CHECK-GI-NEXT:    sshll v2.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    sshll v3.4s, v3.4h, #0
-; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-GI-NEXT:    mul v0.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-GI-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; CHECK-GI-NEXT:    mul v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    addv s0, v0.4s
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    add w0, w8, w2
@@ -324,9 +324,9 @@ define i32 @test_usdot_v4i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    sshll v2.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    sshll v3.4s, v3.4h, #0
-; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-GI-NEXT:    mul v0.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-GI-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; CHECK-GI-NEXT:    mul v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    addv s0, v0.4s
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    add w0, w8, w2
@@ -1541,12 +1541,11 @@ define i32 @test_udot_v24i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-GI-LABEL: test_udot_v24i8_nomla:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v0.8b, #1
-; CHECK-GI-NEXT:    movi v1.8b, #1
-; CHECK-GI-NEXT:    ldr q4, [x0]
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    ldr q4, [x0]
 ; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr d5, [x0, #16]
-; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-GI-NEXT:    zip1 v1.2d, v0.2d, v0.2d
 ; CHECK-GI-NEXT:    udot v2.4s, v5.16b, v0.16b
 ; CHECK-GI-NEXT:    udot v3.4s, v4.16b, v1.16b
 ; CHECK-GI-NEXT:    add v0.4s, v3.4s, v2.4s
@@ -2162,19 +2161,17 @@ define i32 @test_sdot_v24i8_double_nomla(<24 x i8> %a, <24 x i8> %b, <24 x i8> %
 ; CHECK-GI-NEXT:    ldr w9, [sp, #464]
 ; CHECK-GI-NEXT:    ldr w12, [sp, #400]
 ; CHECK-GI-NEXT:    mov v0.b[1], w1
-; CHECK-GI-NEXT:    movi v5.8b, #1
-; CHECK-GI-NEXT:    movi v6.8b, #1
+; CHECK-GI-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-GI-NEXT:    movi v6.2d, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s2, w9
 ; CHECK-GI-NEXT:    ldr w9, [sp, #96]
 ; CHECK-GI-NEXT:    movi v7.2d, #0000000000000000
 ; CHECK-GI-NEXT:    mov v1.b[1], w8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #352]
-; CHECK-GI-NEXT:    movi v16.2d, #0000000000000000
-; CHECK-GI-NEXT:    movi v17.2d, #0000000000000000
+; CHECK-GI-NEXT:    zip1 v16.2d, v4.2d, v4.2d
+; CHECK-GI-NEXT:    zip1 v17.2d, v4.2d, v4.2d
 ; CHECK-GI-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-GI-NEXT:    mov v0.b[2], w2
-; CHECK-GI-NEXT:    mov v5.d[1], v4.d[0]
-; CHECK-GI-NEXT:    mov v6.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    mov v1.b[2], w8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #360]
 ; CHECK-GI-NEXT:    mov v0.b[3], w3
@@ -2251,12 +2248,12 @@ define i32 @test_sdot_v24i8_double_nomla(<24 x i8> %a, <24 x i8> %b, <24 x i8> %
 ; CHECK-GI-NEXT:    mov v1.b[15], w9
 ; CHECK-GI-NEXT:    fmov d2, d2
 ; CHECK-GI-NEXT:    fmov d3, d3
-; CHECK-GI-NEXT:    sdot v16.4s, v0.16b, v5.16b
-; CHECK-GI-NEXT:    sdot v18.4s, v1.16b, v6.16b
-; CHECK-GI-NEXT:    sdot v7.4s, v2.16b, v4.16b
-; CHECK-GI-NEXT:    sdot v17.4s, v3.16b, v4.16b
-; CHECK-GI-NEXT:    add v1.4s, v18.4s, v7.4s
-; CHECK-GI-NEXT:    add v0.4s, v16.4s, v17.4s
+; CHECK-GI-NEXT:    sdot v6.4s, v0.16b, v16.16b
+; CHECK-GI-NEXT:    sdot v18.4s, v1.16b, v17.16b
+; CHECK-GI-NEXT:    sdot v5.4s, v2.16b, v4.16b
+; CHECK-GI-NEXT:    sdot v7.4s, v3.16b, v4.16b
+; CHECK-GI-NEXT:    add v1.4s, v18.4s, v5.4s
+; CHECK-GI-NEXT:    add v0.4s, v6.4s, v7.4s
 ; CHECK-GI-NEXT:    addv s1, v1.4s
 ; CHECK-GI-NEXT:    addv s0, v0.4s
 ; CHECK-GI-NEXT:    fmov w9, s1

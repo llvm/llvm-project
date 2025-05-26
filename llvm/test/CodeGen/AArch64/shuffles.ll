@@ -341,7 +341,7 @@ define <8 x i8> @test_shuf8(<8 x i8> %a, <8 x i8> %b)
 ; CHECKLE-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECKLE-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECKLE-NEXT:    adrp x8, .LCPI12_0
-; CHECKLE-NEXT:    mov v0.d[1], v1.d[0]
+; CHECKLE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECKLE-NEXT:    ldr d1, [x8, :lo12:.LCPI12_0]
 ; CHECKLE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECKLE-NEXT:    ret
@@ -352,7 +352,7 @@ define <8 x i8> @test_shuf8(<8 x i8> %a, <8 x i8> %b)
 ; CHECKBE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECKBE-NEXT:    adrp x8, .LCPI12_0
 ; CHECKBE-NEXT:    add x8, x8, :lo12:.LCPI12_0
-; CHECKBE-NEXT:    mov v0.d[1], v1.d[0]
+; CHECKBE-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECKBE-NEXT:    ld1 { v1.8b }, [x8]
 ; CHECKBE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECKBE-NEXT:    rev64 v0.8b, v0.8b

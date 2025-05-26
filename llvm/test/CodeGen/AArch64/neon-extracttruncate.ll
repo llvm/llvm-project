@@ -87,8 +87,8 @@ define <16 x i8> @extract_4_v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    zip1 v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -209,8 +209,8 @@ define <16 x i8> @extract_4_mixed(<4 x i16> %a, <4 x i32> %b, <4 x i32> %c, <4 x
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    xtn2 v0.8h, v1.4s
-; CHECK-NEXT:    mov v2.d[1], v3.d[0]
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    zip1 v1.2d, v2.2d, v3.2d
+; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %a0 = extractelement <4 x i16> %a, i32 0

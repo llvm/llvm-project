@@ -9,8 +9,8 @@ define <8 x i16> @concat_add(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16>
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v1.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = add <4 x i16> %a, %b
@@ -58,8 +58,8 @@ define <8 x i16> @concat_sub(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16>
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v1.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = sub <4 x i16> %a, %b
@@ -75,8 +75,8 @@ define <8 x i16> @concat_mul(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16>
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v1.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = mul <4 x i16> %a, %b
@@ -92,8 +92,8 @@ define <8 x i16> @concat_xor(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16>
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v1.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %x = xor <4 x i16> %a, %b
@@ -109,8 +109,8 @@ define <8 x half> @concat_fadd(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v1.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    fadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = fadd <4 x half> %a, %b
@@ -126,8 +126,8 @@ define <8 x half> @concat_fmul(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v1.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    fmul v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = fmul <4 x half> %a, %b
@@ -143,8 +143,8 @@ define <8 x half> @concat_min(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x 
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    mov v1.d[1], v3.d[0]
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    fminnm v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = call <4 x half> @llvm.minnum.v4f16(<4 x half> %a, <4 x half> %b)
@@ -158,7 +158,7 @@ define <8 x half> @concat_minmax(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmaxnm v2.4h, v2.4h, v3.4h
 ; CHECK-NEXT:    fminnm v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-NEXT:    ret
   %x = call <4 x half> @llvm.minnum.v4f16(<4 x half> %a, <4 x half> %b)
   %y = call <4 x half> @llvm.maxnum.v4f16(<4 x half> %c, <4 x half> %d)

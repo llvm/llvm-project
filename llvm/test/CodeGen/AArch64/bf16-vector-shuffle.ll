@@ -90,7 +90,7 @@ define <8 x bfloat> @test_vcombine_bf16(<4 x bfloat> %low, <4 x bfloat> %high) n
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x bfloat> %low, <4 x bfloat> %high, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

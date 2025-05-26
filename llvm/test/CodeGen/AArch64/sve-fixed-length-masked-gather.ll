@@ -232,8 +232,8 @@ define void @masked_gather_v8i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    str q1, [x0]
+; VBITS_GE_256-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; VBITS_GE_256-NEXT:    str q0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_gather_v8i16:
@@ -640,8 +640,8 @@ define void @masked_gather_v8f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    str q1, [x0]
+; VBITS_GE_256-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; VBITS_GE_256-NEXT:    str q0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_gather_v8f16:

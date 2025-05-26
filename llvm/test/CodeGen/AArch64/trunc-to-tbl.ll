@@ -344,7 +344,7 @@ define void @trunc_v16i64_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    ldp q18, q19, [x9, #96]
 ; CHECK-NEXT:    tbl.16b v1, { v1, v2, v3, v4 }, v0
 ; CHECK-NEXT:    tbl.16b v2, { v16, v17, v18, v19 }, v0
-; CHECK-NEXT:    mov.d v1[1], v2[0]
+; CHECK-NEXT:    zip1.2d v1, v1, v2
 ; CHECK-NEXT:    str q1, [x1, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
@@ -382,7 +382,7 @@ define void @trunc_v16i64_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v0.16b
 ; CHECK-BE-NEXT:    tbl v2.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v0.16b
-; CHECK-BE-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-BE-NEXT:    zip1 v1.2d, v1.2d, v2.2d
 ; CHECK-BE-NEXT:    st1 { v1.16b }, [x9]
 ; CHECK-BE-NEXT:    b.eq .LBB3_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit

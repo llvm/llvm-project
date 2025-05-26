@@ -74,8 +74,8 @@ define <3 x double> @fadd_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
-; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v3.2d, v3.2d, v4.2d
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    fadd v2.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fadd v0.2d, v0.2d, v3.2d
@@ -415,8 +415,8 @@ define <3 x double> @fsub_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
-; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v3.2d, v3.2d, v4.2d
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    fsub v2.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    fsub v0.2d, v0.2d, v3.2d

@@ -112,7 +112,7 @@ entry:
 ; CHECK-NEXT:  and     x1, x1, x16
 ; CHECK-NEXT:  csdb
 ; CHECK-NEXT:  ldr     d0, [x1]
-; CHECK-NEXT:  mov     v0.d[1], v0.d[0]
+; CHECK-NEXT:  zip1    v0.2d, v0.2d, v0.2d
 ; CHECK-NEXT:  str     q0, [x0]
 ; CHECK-NEXT:  mov     [[TMPREG:x[0-9]+]], sp
 ; CHECK-NEXT:  and     [[TMPREG]], [[TMPREG]], x16

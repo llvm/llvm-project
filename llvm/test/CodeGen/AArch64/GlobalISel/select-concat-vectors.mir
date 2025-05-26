@@ -25,8 +25,8 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY]], %subreg.dsub
-    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG]], 0
-    ; CHECK-NEXT: $q0 = COPY [[INSvi64lane]]
+    ; CHECK-NEXT: [[ZIP1v2i64_:%[0-9]+]]:fpr128 = ZIP1v2i64 [[INSERT_SUBREG1]], [[INSERT_SUBREG]]
+    ; CHECK-NEXT: $q0 = COPY [[ZIP1v2i64_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(<2 x s32>) = COPY $d0
     %1:fpr(<2 x s32>) = COPY $d1
@@ -59,8 +59,8 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY]], %subreg.dsub
-    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG]], 0
-    ; CHECK-NEXT: $q0 = COPY [[INSvi64lane]]
+    ; CHECK-NEXT: [[ZIP1v2i64_:%[0-9]+]]:fpr128 = ZIP1v2i64 [[INSERT_SUBREG1]], [[INSERT_SUBREG]]
+    ; CHECK-NEXT: $q0 = COPY [[ZIP1v2i64_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(<4 x s16>) = COPY $d0
     %1:fpr(<4 x s16>) = COPY $d1
@@ -110,7 +110,7 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %b, %subreg.dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], %a, %subreg.dsub
-    ; CHECK-NEXT: %concat:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG]], 0
+    ; CHECK-NEXT: %concat:fpr128 = ZIP1v2i64 [[INSERT_SUBREG1]], [[INSERT_SUBREG]]
     ; CHECK-NEXT: $q0 = COPY %concat
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %a:fpr(<8 x s8>) = COPY $d0

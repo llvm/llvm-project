@@ -613,27 +613,25 @@ define <2 x double> @v2f128_double(<2 x fp128> %a, <2 x fp128> %b, <2 x double> 
 ; CHECK-SD-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp q0, q2, [sp, #16] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    stp q4, q5, [sp, #48] // 32-byte Folded Spill
-; CHECK-SD-NEXT:    str q2, [sp, #32] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    cset w8, lt
 ; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    cset w8, lt
 ; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    ldp q2, q1, [sp, #48] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v1.16b
 ; CHECK-SD-NEXT:    add sp, sp, #96
@@ -678,24 +676,24 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-SD-NEXT:    str x30, [sp, #144] // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 160
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    stp q2, q5, [sp, #112] // 32-byte Folded Spill
-; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-SD-NEXT:    str q3, [sp, #48] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-SD-NEXT:    str q2, [sp, #96] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldp d2, d3, [sp, #168]
+; CHECK-SD-NEXT:    str q5, [sp, #128] // 16-byte Folded Spill
 ; CHECK-SD-NEXT:    ldr d5, [sp, #184]
-; CHECK-SD-NEXT:    str q3, [sp, #64] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldp d3, d2, [sp, #168]
-; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    zip1 v2.2d, v2.2d, v3.2d
+; CHECK-SD-NEXT:    str q5, [sp, #112] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldr d5, [sp, #160]
+; CHECK-SD-NEXT:    stp q2, q5, [sp, #64] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    zip1 v2.2d, v6.2d, v7.2d
+; CHECK-SD-NEXT:    stp q0, q2, [sp, #16] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v4.16b
-; CHECK-SD-NEXT:    str q5, [sp, #96] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldr d5, [sp, #160]
-; CHECK-SD-NEXT:    mov v3.d[1], v2.d[0]
-; CHECK-SD-NEXT:    str q5, [sp, #80] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp q6, q3, [sp, #32] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr q1, [sp, #64] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q1, [sp, #48] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    cset w8, lt
 ; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SD-NEXT:    fmov d0, x8
@@ -703,28 +701,30 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    cset w8, lt
 ; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SD-NEXT:    fmov d1, x8
-; CHECK-SD-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-SD-NEXT:    str q1, [sp, #64] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    ldp q0, q1, [sp, #112] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    ldr q1, [sp, #128] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    ldr q0, [sp, #96] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __lttf2
-; CHECK-SD-NEXT:    ldp q1, q0, [sp, #32] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    ldp q2, q0, [sp, #48] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldp q2, q4, [sp, #64] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    cset w8, lt
+; CHECK-SD-NEXT:    ldr q3, [sp, #112] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SD-NEXT:    ldr q3, [sp, #96] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q4, [sp, #80] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #144] // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    fmov d2, x8
-; CHECK-SD-NEXT:    bsl v2.16b, v4.16b, v3.16b
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    bsl v2.16b, v4.16b, v3.16b
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    add sp, sp, #160
 ; CHECK-SD-NEXT:    ret
 ;
@@ -813,22 +813,22 @@ define <3 x double> @v3f64_double(<3 x double> %a, <3 x double> %b, <3 x double>
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    ldr d16, [sp, #24]
 ; CHECK-SD-NEXT:    ldr d17, [sp]
-; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
+; CHECK-SD-NEXT:    zip1 v3.2d, v3.2d, v4.2d
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    fcmgt v2.2d, v5.2d, v2.2d
-; CHECK-SD-NEXT:    mov v1.d[1], v4.d[0]
+; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
+; CHECK-SD-NEXT:    zip1 v1.2d, v1.2d, v4.2d
+; CHECK-SD-NEXT:    zip1 v4.2d, v6.2d, v7.2d
 ; CHECK-SD-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
 ; CHECK-SD-NEXT:    bsl v2.16b, v17.16b, v16.16b
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v1.16b
+; CHECK-SD-NEXT:    bsl v0.16b, v4.16b, v1.16b
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
@@ -905,16 +905,16 @@ entry:
 define <3 x i32> @v3f64_i32(<3 x double> %a, <3 x double> %b, <3 x i32> %d, <3 x i32> %e) {
 ; CHECK-SD-LABEL: v3f64_i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    zip1 v1.2d, v3.2d, v4.2d
+; CHECK-SD-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
 ; CHECK-SD-NEXT:    fcmgt v1.2d, v5.2d, v2.2d
-; CHECK-SD-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
 ; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v7.16b
 ; CHECK-SD-NEXT:    ret
@@ -939,7 +939,7 @@ define <3 x i32> @v3f64_i32(<3 x double> %a, <3 x double> %b, <3 x i32> %d, <3 x
 ; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    mov v1.s[2], w8
 ; CHECK-GI-NEXT:    mov v3.s[1], w9
-; CHECK-GI-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    mov v3.s[2], w9
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    neg v1.4s, v1.4s

@@ -58,7 +58,7 @@ define <4 x i32> @z_i32_v4i32(i32 %x) {
 ; CHECK-GI-NEXT:    mov v1.h[1], w11
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %b = bitcast i32 %x to <4 x i8>
   %e = zext <4 x i8> %b to <4 x i32>
@@ -161,7 +161,7 @@ define <4 x i32> @s_i32_v4i32(i32 %x) {
 ; CHECK-GI-NEXT:    mov v1.h[1], w11
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
   %b = bitcast i32 %x to <4 x i8>
   %e = sext <4 x i8> %b to <4 x i32>

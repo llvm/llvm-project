@@ -7,7 +7,7 @@ define <4 x i32> @PR41535(<2 x i32> %p1, <2 x i32> %p2) {
 ; CHECK-LABEL: PR41535:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %cat1 = shufflevector <2 x i32> %p1, <2 x i32> undef, <4 x i32> <i32 undef, i32 1, i32 undef, i32 undef>
   %cat2 = shufflevector <2 x i32> %p2, <2 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>

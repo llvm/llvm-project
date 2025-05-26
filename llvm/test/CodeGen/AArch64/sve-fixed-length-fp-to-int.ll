@@ -658,10 +658,9 @@ define <8 x i16> @fcvtzu_v8f64_v8i16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    fcvtzu z1.d, p0/m, z1.d
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
-; VBITS_GE_256-NEXT:    uzp1 z2.h, z0.h, z0.h
-; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    mov v0.d[1], v2.d[0]
-; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
+; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
+; VBITS_GE_256-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzu_v8f64_v8i16:
@@ -1551,10 +1550,9 @@ define <8 x i16> @fcvtzs_v8f64_v8i16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    fcvtzs z1.d, p0/m, z1.d
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
-; VBITS_GE_256-NEXT:    uzp1 z2.h, z0.h, z0.h
-; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
-; VBITS_GE_256-NEXT:    mov v0.d[1], v2.d[0]
-; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
+; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
+; VBITS_GE_256-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzs_v8f64_v8i16:

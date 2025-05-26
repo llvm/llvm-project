@@ -1734,7 +1734,7 @@ define i64 @add_pair_v2i32_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    uaddlv d0, v0.4s
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
@@ -1842,7 +1842,7 @@ define i32 @add_pair_v4i16_v4i32_zext(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    uaddlv s0, v0.8h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -2693,7 +2693,7 @@ define i64 @add_pair_v2i16_v2i64_zext(<2 x i16> %x, <2 x i16> %y) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    movi v2.2d, #0x00ffff0000ffff
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-SD-NEXT:    uaddlv d0, v0.4s
 ; CHECK-SD-NEXT:    fmov x0, d0
@@ -2990,7 +2990,7 @@ define i32 @add_pair_v4i8_v4i32_zext(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    uaddlv s0, v0.8h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -3110,7 +3110,7 @@ define zeroext i16 @add_pair_v8i8_v8i16_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    uaddlv h0, v0.16b
 ; CHECK-SD-NEXT:    umov w0, v0.h[0]
 ; CHECK-SD-NEXT:    ret
@@ -3447,7 +3447,7 @@ define i64 @add_pair_v2i8_v2i64_zext(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    movi v2.2d, #0x0000ff000000ff
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-SD-NEXT:    uaddlv d0, v0.4s
 ; CHECK-SD-NEXT:    fmov x0, d0
@@ -4091,14 +4091,13 @@ define i32 @add_v24i8_v24i32_zext(<24 x i8> %x) {
 ; CHECK-GI-DOT-NEXT:    ldr w8, [sp]
 ; CHECK-GI-DOT-NEXT:    ldr w10, [sp, #72]
 ; CHECK-GI-DOT-NEXT:    movi v2.8b, #1
-; CHECK-GI-DOT-NEXT:    movi v3.8b, #1
+; CHECK-GI-DOT-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    fmov s1, w9
 ; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #80]
-; CHECK-GI-DOT-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-GI-DOT-NEXT:    mov v0.b[1], w1
 ; CHECK-GI-DOT-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-GI-DOT-NEXT:    mov v0.b[1], w1
 ; CHECK-GI-DOT-NEXT:    mov v1.b[1], w10
-; CHECK-GI-DOT-NEXT:    mov v3.d[1], v2.d[0]
+; CHECK-GI-DOT-NEXT:    zip1 v3.2d, v2.2d, v2.2d
 ; CHECK-GI-DOT-NEXT:    mov v0.b[2], w2
 ; CHECK-GI-DOT-NEXT:    mov v1.b[2], w9
 ; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #88]
@@ -4363,14 +4362,13 @@ define i32 @add_v24i8_v24i32_sext(<24 x i8> %x) {
 ; CHECK-GI-DOT-NEXT:    ldr w8, [sp]
 ; CHECK-GI-DOT-NEXT:    ldr w10, [sp, #72]
 ; CHECK-GI-DOT-NEXT:    movi v2.8b, #1
-; CHECK-GI-DOT-NEXT:    movi v3.8b, #1
+; CHECK-GI-DOT-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-GI-DOT-NEXT:    fmov s1, w9
 ; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #80]
-; CHECK-GI-DOT-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-GI-DOT-NEXT:    mov v0.b[1], w1
 ; CHECK-GI-DOT-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-GI-DOT-NEXT:    mov v0.b[1], w1
 ; CHECK-GI-DOT-NEXT:    mov v1.b[1], w10
-; CHECK-GI-DOT-NEXT:    mov v3.d[1], v2.d[0]
+; CHECK-GI-DOT-NEXT:    zip1 v3.2d, v2.2d, v2.2d
 ; CHECK-GI-DOT-NEXT:    mov v0.b[2], w2
 ; CHECK-GI-DOT-NEXT:    mov v1.b[2], w9
 ; CHECK-GI-DOT-NEXT:    ldr w9, [sp, #88]
@@ -4798,7 +4796,7 @@ entry:
 define i32 @extract_hi_hi(<8 x i16> %a) {
 ; CHECK-SD-LABEL: extract_hi_hi:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.d[0], v0.d[1]
+; CHECK-SD-NEXT:    zip2 v0.2d, v0.2d, v0.2d
 ; CHECK-SD-NEXT:    uaddlv s0, v0.8h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -4820,7 +4818,7 @@ entry:
 define i32 @extract_lo_lo(<8 x i16> %a) {
 ; CHECK-SD-LABEL: extract_lo_lo:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v0.2d
 ; CHECK-SD-NEXT:    uaddlv s0, v0.8h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret

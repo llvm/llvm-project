@@ -241,9 +241,9 @@ define <4 x float> @uitofp_v4f32_v4i64(<4 x i64> %x) #0 {
 ; CHECK-NEXT:    fmul v0.2s, v2.2s, v1.2s
 ; CHECK-NEXT:    fmul v1.2s, v4.2s, v1.2s
 ; CHECK-NEXT:    mov v5.s[1], v3.s[0]
-; CHECK-NEXT:    fadd v2.2s, v0.2s, v6.2s
-; CHECK-NEXT:    fadd v0.2s, v1.2s, v5.2s
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    fadd v0.2s, v0.2s, v6.2s
+; CHECK-NEXT:    fadd v1.2s, v1.2s, v5.2s
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %val = call <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i64(<4 x i64> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <4 x float> %val

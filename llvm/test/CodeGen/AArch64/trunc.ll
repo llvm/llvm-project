@@ -226,7 +226,7 @@ define <3 x i8> @trunc_v3i8_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    xtn v1.2s, v2.2d
 ; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SD-NEXT:    fmov w2, s1
@@ -264,7 +264,7 @@ define <3 x i16> @trunc_v3i16_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
@@ -290,7 +290,7 @@ define <3 x i32> @trunc_v3i32_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -349,7 +349,7 @@ define <3 x i10> @trunc_v3i10_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    xtn v1.2s, v2.2d
 ; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SD-NEXT:    fmov w2, s1

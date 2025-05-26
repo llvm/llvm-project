@@ -32,8 +32,8 @@ define <3 x double> @max_nnan_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; AARCH64-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; AARCH64-NEXT:    // kill: def $d5 killed $d5 def $q5
-; AARCH64-NEXT:    mov v3.d[1], v4.d[0]
-; AARCH64-NEXT:    mov v0.d[1], v1.d[0]
+; AARCH64-NEXT:    zip1 v3.2d, v3.2d, v4.2d
+; AARCH64-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; AARCH64-NEXT:    fmaxnm v2.2d, v2.2d, v5.2d
 ; AARCH64-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; AARCH64-NEXT:    fmaxnm v0.2d, v0.2d, v3.2d
@@ -569,8 +569,8 @@ define <3 x double> @min_nnan_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; AARCH64-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; AARCH64-NEXT:    // kill: def $d5 killed $d5 def $q5
-; AARCH64-NEXT:    mov v3.d[1], v4.d[0]
-; AARCH64-NEXT:    mov v0.d[1], v1.d[0]
+; AARCH64-NEXT:    zip1 v3.2d, v3.2d, v4.2d
+; AARCH64-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; AARCH64-NEXT:    fminnm v2.2d, v2.2d, v5.2d
 ; AARCH64-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; AARCH64-NEXT:    fminnm v0.2d, v0.2d, v3.2d
@@ -1104,16 +1104,16 @@ entry:
 define <3 x double> @max_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-LABEL: max_v3f64:
 ; AARCH64:       // %bb.0: // %entry
-; AARCH64-NEXT:    // kill: def $d3 killed $d3 def $q3
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; AARCH64-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; AARCH64-NEXT:    // kill: def $d4 killed $d4 def $q4
-; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
+; AARCH64-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; AARCH64-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; AARCH64-NEXT:    // kill: def $d5 killed $d5 def $q5
-; AARCH64-NEXT:    mov v0.d[1], v1.d[0]
-; AARCH64-NEXT:    mov v3.d[1], v4.d[0]
+; AARCH64-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; AARCH64-NEXT:    zip1 v1.2d, v3.2d, v4.2d
 ; AARCH64-NEXT:    fminnm v2.2d, v2.2d, v2.2d
-; AARCH64-NEXT:    fminnm v1.2d, v3.2d, v3.2d
+; AARCH64-NEXT:    fminnm v1.2d, v1.2d, v1.2d
 ; AARCH64-NEXT:    fminnm v0.2d, v0.2d, v0.2d
 ; AARCH64-NEXT:    fmaxnm v0.2d, v0.2d, v1.2d
 ; AARCH64-NEXT:    fminnm v1.2d, v5.2d, v5.2d
@@ -1685,16 +1685,16 @@ entry:
 define <3 x double> @min_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-LABEL: min_v3f64:
 ; AARCH64:       // %bb.0: // %entry
-; AARCH64-NEXT:    // kill: def $d3 killed $d3 def $q3
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; AARCH64-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; AARCH64-NEXT:    // kill: def $d4 killed $d4 def $q4
-; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
+; AARCH64-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; AARCH64-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; AARCH64-NEXT:    // kill: def $d5 killed $d5 def $q5
-; AARCH64-NEXT:    mov v0.d[1], v1.d[0]
-; AARCH64-NEXT:    mov v3.d[1], v4.d[0]
+; AARCH64-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; AARCH64-NEXT:    zip1 v1.2d, v3.2d, v4.2d
 ; AARCH64-NEXT:    fminnm v2.2d, v2.2d, v2.2d
-; AARCH64-NEXT:    fminnm v1.2d, v3.2d, v3.2d
+; AARCH64-NEXT:    fminnm v1.2d, v1.2d, v1.2d
 ; AARCH64-NEXT:    fminnm v0.2d, v0.2d, v0.2d
 ; AARCH64-NEXT:    fminnm v0.2d, v0.2d, v1.2d
 ; AARCH64-NEXT:    fminnm v1.2d, v5.2d, v5.2d
