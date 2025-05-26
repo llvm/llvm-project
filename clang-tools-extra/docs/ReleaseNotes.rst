@@ -136,6 +136,11 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`performance-lost-std-move
+  <clang-tidy/checks/performance/lost-std-move>` check.
+
+  Warns if copy constructor is used instead of ``std::move()``.
+
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
 
