@@ -8714,9 +8714,11 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   }
 
   auto MaxVFTimes2 = MaxVF * 2;
+  auto VPlan0 = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
-    if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange, &LVer)) {
+    if (auto Plan = tryToBuildVPlanWithVPRecipes(
+            std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer)) {
       bool HasScalarVF = Plan->hasScalarVFOnly();
       // Now optimize the initial VPlan.
       if (!HasScalarVF)
@@ -8977,9 +8979,8 @@ static void addExitUsersForFirstOrderRecurrences(
   }
 }
 
-VPlanPtr
-LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
-                                                       LoopVersioning *LVer) {
+VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
+    VPlanPtr Plan, VFRange &Range, LoopVersioning *LVer) {
 
   using namespace llvm::VPlanPatternMatch;
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
@@ -9001,7 +9002,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
   VPlanTransforms::prepareForVectorization(
       *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
       CM.foldTailByMasking(), OrigLoop,
