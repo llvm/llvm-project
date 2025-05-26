@@ -118,7 +118,8 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
 std::vector<Diag> generateMissingIncludeDiagnostics(
     ParsedAST &AST, llvm::ArrayRef<MissingIncludeDiagInfo> MissingIncludes,
     llvm::StringRef Code, HeaderFilter IgnoreHeaders,
-    HeaderFilter AngledHeaders, const ThreadsafeFS &TFS) {
+    HeaderFilter AngledHeaders, HeaderFilter QuotedHeaders,
+    const ThreadsafeFS &TFS) {
   std::vector<Diag> Result;
   const SourceManager &SM = AST.getSourceManager();
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
@@ -142,12 +143,25 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
          AST.getPreprocessor().getHeaderSearchInfo(), MainFile});
 
     llvm::StringRef HeaderRef{Spelling};
-    bool Angled = HeaderRef.starts_with("<");
+
+    bool IsAngled = false;
     for (auto &Filter : AngledHeaders) {
       if (Filter(HeaderRef)) {
-        Angled = true;
+        IsAngled = true;
         break;
       }
+    }
+    bool IsQuoted = false;
+    for (auto &Filter : QuotedHeaders) {
+      if (Filter(HeaderRef)) {
+        IsQuoted = true;
+        break;
+      }
+    }
+    if (IsAngled == IsQuoted) {
+      IsAngled = HeaderRef.starts_with("<");
+    } else if (!IsAngled && IsQuoted) {
+      IsAngled = false;
     }
 
     // We might suggest insertion of an existing include in edge cases, e.g.,
@@ -155,11 +169,11 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
     // turns out to be the same as one of the unresolved includes in the
     // main file.
     std::optional<tooling::Replacement> Replacement = HeaderIncludes.insert(
-        HeaderRef.trim("\"<>"), Angled, tooling::IncludeDirective::Include);
+        HeaderRef.trim("\"<>"), IsAngled, tooling::IncludeDirective::Include);
     if (!Replacement.has_value())
       continue;
 
-    if (Angled && Spelling.front() == '\"') {
+    if (IsAngled && Spelling.front() == '\"') {
       Spelling.front() = '<';
       Spelling.back() = '>';
     }
@@ -497,14 +511,16 @@ bool isPreferredProvider(const Inclusion &Inc,
 std::vector<Diag> issueIncludeCleanerDiagnostics(
     ParsedAST &AST, llvm::StringRef Code,
     const IncludeCleanerFindings &Findings, const ThreadsafeFS &TFS,
-    HeaderFilter IgnoreHeaders, HeaderFilter AngledHeaders) {
+    HeaderFilter IgnoreHeaders, HeaderFilter AngledHeaders,
+    HeaderFilter QuotedHeaders) {
   trace::Span Tracer("IncludeCleaner::issueIncludeCleanerDiagnostics");
   std::vector<Diag> UnusedIncludes = generateUnusedIncludeDiagnostics(
       AST.tuPath(), Findings.UnusedIncludes, Code, IgnoreHeaders);
   std::optional<Fix> RemoveAllUnused = removeAllUnusedIncludes(UnusedIncludes);
 
   std::vector<Diag> MissingIncludeDiags = generateMissingIncludeDiagnostics(
-      AST, Findings.MissingIncludes, Code, IgnoreHeaders, AngledHeaders, TFS);
+      AST, Findings.MissingIncludes, Code, IgnoreHeaders, AngledHeaders,
+      QuotedHeaders, TFS);
   std::optional<Fix> AddAllMissing = addAllMissingIncludes(MissingIncludeDiags);
 
   std::optional<Fix> FixAll;

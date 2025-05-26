@@ -60,7 +60,8 @@ computeIncludeCleanerFindings(ParsedAST &AST,
 std::vector<Diag> issueIncludeCleanerDiagnostics(
     ParsedAST &AST, llvm::StringRef Code,
     const IncludeCleanerFindings &Findings, const ThreadsafeFS &TFS,
-    HeaderFilter IgnoreHeader = {}, HeaderFilter AngledHeaders = {});
+    HeaderFilter IgnoreHeader = {}, HeaderFilter AngledHeaders = {},
+    HeaderFilter QuotedHeaders = {});
 
 /// Converts the clangd include representation to include-cleaner
 /// include representation.
