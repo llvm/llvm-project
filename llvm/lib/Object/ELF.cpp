@@ -965,8 +965,7 @@ ELFFile<ELFT>::getSectionAndRelocations(
       continue;
     }
     if (*DoesSectionMatch) {
-      if (SecToRelocMap.insert(std::make_pair(&Sec, (const Elf_Shdr *)nullptr))
-              .second)
+      if (SecToRelocMap.try_emplace(&Sec).second)
         continue;
     }
 
