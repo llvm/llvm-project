@@ -265,10 +265,7 @@ struct CallOpInterface
     //    bufferized callee.
     SmallVector<Value> newOperands;
 
-    // TODO Avoid recomputing the symbol tables every time.
-    SymbolTableCollection symbolTable;
-
-    FuncOp funcOp = getCalledFunction(callOp, symbolTable);
+    FuncOp funcOp = getCalledFunction(callOp, state.getSymbolTables());
     assert(funcOp && "expected CallOp to a FuncOp");
     FunctionType funcType = funcOp.getFunctionType();
 
