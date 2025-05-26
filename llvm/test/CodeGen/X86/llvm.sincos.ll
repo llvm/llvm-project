@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -fast-isel  | FileCheck %s --check-prefixes=X64,FASTISEL-X64
 ; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=0 -fast-isel=0  | FileCheck %s --check-prefixes=X86,SDAG-X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=0 -fast-isel=0  | FileCheck %s --check-prefixes=X64,SDAG-X64
+; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefixes=X86,GISEL-X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefixes=X64,GISEL-X64
 
 define { float, float } @test_sincos_f32(float %Val) nounwind {
@@ -198,6 +199,34 @@ define void @can_fold_with_call_in_chain(float %x, ptr noalias %a, ptr noalias %
 ; SDAG-X64-NEXT:    popq %rbx
 ; SDAG-X64-NEXT:    popq %r14
 ; SDAG-X64-NEXT:    retq
+;
+; GISEL-X86-LABEL: can_fold_with_call_in_chain:
+; GISEL-X86:       # %bb.0: # %entry
+; GISEL-X86-NEXT:    pushl %ebx
+; GISEL-X86-NEXT:    pushl %edi
+; GISEL-X86-NEXT:    pushl %esi
+; GISEL-X86-NEXT:    subl $16, %esp
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; GISEL-X86-NEXT:    movl %ebx, (%esp)
+; GISEL-X86-NEXT:    calll sinf
+; GISEL-X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; GISEL-X86-NEXT:    movl %ebx, (%esp)
+; GISEL-X86-NEXT:    calll cosf
+; GISEL-X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; GISEL-X86-NEXT:    movl %esi, (%esp)
+; GISEL-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    calll foo
+; GISEL-X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; GISEL-X86-NEXT:    fstps (%esi)
+; GISEL-X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; GISEL-X86-NEXT:    fstps (%edi)
+; GISEL-X86-NEXT:    addl $16, %esp
+; GISEL-X86-NEXT:    popl %esi
+; GISEL-X86-NEXT:    popl %edi
+; GISEL-X86-NEXT:    popl %ebx
+; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: can_fold_with_call_in_chain:
 ; GISEL-X64:       # %bb.0: # %entry
