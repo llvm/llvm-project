@@ -2528,7 +2528,7 @@ void StandardInstrumentations::registerCallbacks(
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
 
-  // Your new logic for DebugPassList
+  // new logic for DebugPassList
   if (DebugPassList) { // Ensure DebugPassList is accessible here
     PIC.registerBeforeNonSkippedPassCallback( // Changed from registerBeforeNonContainerPassCallback
         [](llvm::StringRef PassID, llvm::Any IR) {
