@@ -10,8 +10,8 @@ define i32 @bmsk_wrap(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bmsk_wrap_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [bmsk_wrap_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [bmsk_wrap_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [bmsk_wrap_param_1];
 ; CHECK-NEXT:    bmsk.wrap.b32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -25,8 +25,8 @@ define i32 @bmsk_clamp(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bmsk_clamp_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [bmsk_clamp_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [bmsk_clamp_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [bmsk_clamp_param_1];
 ; CHECK-NEXT:    bmsk.clamp.b32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -54,7 +54,7 @@ define i32 @bmsk_clamp_ir(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bmsk_clamp_ir_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [bmsk_clamp_ir_param_0];
 ; CHECK-NEXT:    bmsk.clamp.b32 %r2, %r1, 7;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -68,7 +68,7 @@ define i32 @bmsk_wrap_ri(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [bmsk_wrap_ri_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [bmsk_wrap_ri_param_0];
 ; CHECK-NEXT:    bmsk.wrap.b32 %r2, 5, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;

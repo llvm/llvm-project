@@ -1518,17 +1518,18 @@ def GIAddrRegImm :
 
 /// Stack probing
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+    Defs = [X2], Uses = [X2] in {
 // Probed stack allocation of a constant size, used in function prologues when
 // stack-clash protection is enabled.
-def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
+def PROBED_STACKALLOC : Pseudo<(outs),
                                (ins GPR:$target),
                                []>,
                                Sched<[]>;
-def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
-                               (ins GPR:$target),
-                               []>,
-                               Sched<[]>;
+def PROBED_STACKALLOC_RVV : Pseudo<(outs),
+                                   (ins GPR:$target),
+                                   []>,
+                                   Sched<[]>;
 let usesCustomInserter = 1 in
 def PROBED_STACKALLOC_DYN : Pseudo<(outs),
                                (ins GPR:$target),
@@ -1643,6 +1644,14 @@ def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 let Predicates = [HasStdExtC, OptForMinSize] in {
   def : SelectCompressOpt<SETEQ>;
   def : SelectCompressOpt<SETNE>;
+}
+
+multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
+  let usesCustomInserter = 1 in
+  def Select_# valty #_Using_ # NAME
+      : Pseudo<(outs valty:$dst),
+               (ins valty:$lhs, imm:$imm, cond_code:$cc,
+                valty:$truev, valty:$falsev), []>;
 }
 
 /// Branches and jumps
@@ -2199,6 +2208,14 @@ def : Pat<(i64 (add GPR:$rs1, negImm:$rs2)), (SUB GPR:$rs1, negImm:$rs2)>;
 }
 
 //===----------------------------------------------------------------------===//
+// Zihintpause
+//===----------------------------------------------------------------------===//
+
+// Zihintpause
+let Predicates = [HasStdExtZihintpause] in
+def : Pat<(int_riscv_pause), (FENCE 0x1, 0x0)>;
+
+//===----------------------------------------------------------------------===//
 // Standard extensions
 //===----------------------------------------------------------------------===//
 
@@ -2210,9 +2227,17 @@ include "RISCVInstrInfoA.td"
 include "RISCVInstrInfoZa.td"
 include "RISCVInstrInfoZalasr.td"
 
+// Integer
+include "RISCVInstrInfoZimop.td"
+include "RISCVInstrInfoZicbo.td"
+include "RISCVInstrInfoZicond.td"
+include "RISCVInstrInfoZicfiss.td"
+include "RISCVInstrInfoZilsd.td"
+
 // Scalar FP
 include "RISCVInstrInfoF.td"
 include "RISCVInstrInfoD.td"
+include "RISCVInstrInfoQ.td"
 include "RISCVInstrInfoZfh.td"
 include "RISCVInstrInfoZfbfmin.td"
 include "RISCVInstrInfoZfa.td"
@@ -2225,13 +2250,6 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvqdotq.td"
-
-// Integer
-include "RISCVInstrInfoZimop.td"
-include "RISCVInstrInfoZicbo.td"
-include "RISCVInstrInfoZicond.td"
-include "RISCVInstrInfoZicfiss.td"
-include "RISCVInstrInfoZilsd.td"
 
 // Compressed
 include "RISCVInstrInfoC.td"
@@ -2249,6 +2267,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
+include "RISCVInstrInfoXSfmm.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"

@@ -13,6 +13,7 @@
 #include "RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/TargetParser/Triple.h"
@@ -44,5 +45,5 @@ const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   MCContext &Ctx = Streamer.getContext();
   const MCExpr *ME = MCSymbolRefExpr::create(Sym, Ctx);
   assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
-  return RISCVMCExpr::create(ME, RISCVMCExpr::VK_32_PCREL, Ctx);
+  return RISCVMCExpr::create(ME, ELF::R_RISCV_32_PCREL, Ctx);
 }
