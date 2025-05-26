@@ -846,6 +846,8 @@ public:
   }
 
   bool mayLoad(const MCInst &Inst) const override {
+    // FIXME: Probably this could be tablegen-erated not to miss any existing
+    //        or future opcodes.
     return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst) ||
            isLDRQ(Inst) || isLDRD(Inst) || isLDRS(Inst);
   }
