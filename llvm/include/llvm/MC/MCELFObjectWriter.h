@@ -149,6 +149,8 @@ public:
 
   DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
   DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
+  // .weakref aliases
+  SmallVector<const MCSymbolELF *, 0> Weakrefs;
   bool IsLittleEndian = false;
   bool SeenGnuAbi = false;
   std::optional<uint8_t> OverrideABIVersion;
