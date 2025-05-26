@@ -255,6 +255,7 @@ protected:
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
   bool HasAshrPkInsts = false;
+  bool HasIEEEMinimumMaximumInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
@@ -1447,7 +1448,7 @@ public:
   bool hasIEEEMode() const { return getGeneration() < GFX12; }
 
   // \returns true if the target has IEEE fminimum/fmaximum instructions
-  bool hasIEEEMinMaxInsts() const { return getGeneration() >= GFX12; }
+  bool hasIEEEMinimumMaximumInsts() const { return HasIEEEMinimumMaximumInsts; }
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }

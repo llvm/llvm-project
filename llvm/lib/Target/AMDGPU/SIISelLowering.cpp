@@ -877,7 +877,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasPrefetch() && Subtarget->hasSafeSmemPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
-  if (Subtarget->hasIEEEMinMaxInsts()) {
+  if (Subtarget->hasIEEEMinimumMaximumInsts()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
   } else {
@@ -7023,7 +7023,7 @@ SDValue SITargetLowering::lowerFMINIMUM_FMAXIMUM(SDValue Op,
   if (VT.isVector())
     return splitBinaryVectorOp(Op, DAG);
 
-  assert(!Subtarget->hasIEEEMinMaxInsts() &&
+  assert(!Subtarget->hasIEEEMinimumMaximumInsts() &&
          !Subtarget->hasMinimum3Maximum3F16() &&
          Subtarget->hasMinimum3Maximum3PKF16() && VT == MVT::f16 &&
          "should not need to widen f16 minimum/maximum to v2f16");
