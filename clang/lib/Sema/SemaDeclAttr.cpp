@@ -6243,6 +6243,21 @@ static void handleCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) CapabilityAttr(S.Context, AL, N));
 }
 
+static void handleReentrantCapabilityAttr(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  // Do not permit 'reentrant_capability' without 'capability(..)'. Note that
+  // the check here requires 'capability' to be before 'reentrant_capability'.
+  // This helps enforce a canonical style. Also avoids placing an additional
+  // branch into ProcessDeclAttributeList().
+  if (!D->hasAttr<CapabilityAttr>()) {
+    S.Diag(AL.getLoc(), diag::warn_thread_attribute_requires_preceded)
+        << AL << cast<NamedDecl>(D) << "'capability'";
+    return;
+  }
+
+  D->addAttr(::new (S.Context) ReentrantCapabilityAttr(S.Context, AL));
+}
+
 static void handleAssertCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<Expr*, 1> Args;
   if (!checkLockFunAttrCommon(S, D, AL, Args))
@@ -7556,6 +7571,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Capability:
   case ParsedAttr::AT_Lockable:
     handleCapabilityAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ReentrantCapability:
+    handleReentrantCapabilityAttr(S, D, AL);
     break;
   case ParsedAttr::AT_RequiresCapability:
     handleRequiresCapabilityAttr(S, D, AL);
