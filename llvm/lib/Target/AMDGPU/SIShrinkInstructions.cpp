@@ -15,6 +15,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineOperand.h"
 
 #define DEBUG_TYPE "si-shrink-instructions"
 
@@ -44,6 +45,7 @@ class SIShrinkInstructions {
   void shrinkMIMG(MachineInstr &MI) const;
   void shrinkMadFma(MachineInstr &MI) const;
   bool shrinkScalarLogicOp(MachineInstr &MI) const;
+  bool shrinkToBitset(MachineInstr &MI) const;
   bool tryReplaceDeadSDST(MachineInstr &MI) const;
   bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
                      Register Reg, unsigned SubReg) const;
@@ -576,8 +578,7 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
       const bool IsUndef = SrcReg->isUndef();
       const bool IsKill = SrcReg->isKill();
       MI.setDesc(TII->get(Opc));
-      if (Opc == AMDGPU::S_BITSET0_B32 ||
-          Opc == AMDGPU::S_BITSET1_B32) {
+      if (Opc == AMDGPU::S_BITSET0_B32 || Opc == AMDGPU::S_BITSET1_B32) {
         Src0->ChangeToImmediate(NewImm);
         // Remove the immediate and add the tied input.
         MI.getOperand(2).ChangeToRegister(Dest->getReg(), /*IsDef*/ false,
@@ -591,6 +592,66 @@ bool SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
   }
 
   return false;
+}
+
+//  case 1:
+//  From:
+//  s_lshl_b32 s1, 1, s1
+//  s_or_b32 s0, s0, s1
+//  To:
+//  s_bitset1_b32 s0, s1
+//
+//  case 2:
+//  s_lshl_b32 s1, 1, s1
+//  s_andn2_b32 s0, s0, s1
+//  To:
+//  s_bitset0_b32 s0, s1
+bool SIShrinkInstructions::shrinkToBitset(MachineInstr &MI) const {
+  MachineOperand *Dest = &MI.getOperand(0);
+  MachineOperand *Src0 = &MI.getOperand(1);
+  MachineOperand *Src1 = &MI.getOperand(2);
+
+  if (!Src0->isReg() || !Src1->isReg() || Dest->getReg() != Src0->getReg())
+    return false;
+
+  MachineInstr *Shl = MRI->getUniqueVRegDef(Src1->getReg());
+  if (!Shl || Shl->getOpcode() != AMDGPU::S_LSHL_B32 ||
+      !Shl->getOperand(1).isImm() || Shl->getOperand(1).getImm() != 1 ||
+      MI.getParent() != Shl->getParent())
+    return false;
+
+  if (!MRI->hasAtMostUserInstrs(Shl->getOperand(0).getReg(), 2))
+    return false;
+
+  int ShlSrc1Reg = Shl->getOperand(2).getReg();
+  bool IsKilled = false;
+  for (auto IE = MI.getIterator(), I = std::next(Shl->getIterator()); I != IE;
+       ++I) {
+    for (MachineOperand &MO : I->operands()) {
+      if (MO.isReg() && MO.getReg() == ShlSrc1Reg) {
+        if (MO.isDef())
+          return false;
+        if (MO.isKill()) {
+          MO.setIsKill(false);
+          IsKilled = true;
+        }
+      }
+    }
+  }
+
+  unsigned int NewOpc = (MI.getOpcode() == AMDGPU::S_OR_B32)
+                            ? AMDGPU::S_BITSET1_B32
+                            : AMDGPU::S_BITSET0_B32;
+  MI.setDesc(TII->get(NewOpc));
+  Src0->setReg(ShlSrc1Reg);
+  if (IsKilled)
+    Src0->setIsKill(true);
+  MI.getOperand(2).ChangeToRegister(Dest->getReg(), /*IsDef*/ false,
+                                    /*isImp*/ false, Src0->isKill(),
+                                    /*isDead*/ false, Src0->isUndef());
+  MI.tieOperands(0, 2);
+  Shl->eraseFromParent();
+  return true;
 }
 
 // This is the same as MachineInstr::readsRegister/modifiesRegister except
@@ -945,6 +1006,12 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::S_OR_B32 ||
           MI.getOpcode() == AMDGPU::S_XOR_B32) {
         if (shrinkScalarLogicOp(MI))
+          continue;
+      }
+
+      if (MI.getOpcode() == AMDGPU::S_ANDN2_B32 ||
+          MI.getOpcode() == AMDGPU::S_OR_B32) {
+        if (shrinkToBitset(MI))
           continue;
       }
 
