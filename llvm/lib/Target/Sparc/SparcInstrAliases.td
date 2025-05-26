@@ -286,11 +286,11 @@ multiclass cp_cond_alias<string cond, int condVal> {
 
   // cb<cond> $imm
   def : InstAlias<!strconcat(!strconcat("cb", cond), " $imm"),
-                  (CBCOND brtarget:$imm, condVal), 0>;
+                  (CPBCOND brtarget:$imm, condVal), 0>;
 
   // cb<cond>,a $imm
   def : InstAlias<!strconcat(!strconcat("cb", cond), ",a $imm"),
-                  (CBCONDA brtarget:$imm, condVal), 0>;
+                  (CPBCONDA brtarget:$imm, condVal), 0>;
 }
 
 // Instruction aliases for register conditional branches and moves.

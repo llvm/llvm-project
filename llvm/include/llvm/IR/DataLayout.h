@@ -92,6 +92,7 @@ public:
     /// The function pointer alignment is a multiple of the function alignment.
     MultipleOfFunctionAlign,
   };
+
 private:
   bool BigEndian = false;
 
@@ -324,15 +325,37 @@ public:
   /// the backends/clients are updated.
   Align getPointerPrefAlignment(unsigned AS = 0) const;
 
-  /// Layout pointer size in bytes, rounded up to a whole
-  /// number of bytes.
+  /// The pointer representation size in bytes, rounded up to a whole number of
+  /// bytes. The difference between this function and getAddressSize() is that
+  /// this one returns the size of the entire pointer representation (including
+  /// metadata bits for fat pointers) and the latter only returns the number of
+  /// address bits.
+  /// \sa DataLayout::getAddressSizeInBits
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSize(unsigned AS = 0) const;
 
-  // Index size in bytes used for address calculation,
-  /// rounded up to a whole number of bytes.
+  /// The index size in bytes used for address calculation, rounded up to a
+  /// whole number of bytes. This not only defines the size used in
+  /// getelementptr operations, but also the size of addresses in this \p AS.
+  /// For example, a 64-bit CHERI-enabled target has 128-bit pointers of which
+  /// only 64 are used to represent the address and the remaining ones are used
+  /// for metadata such as bounds and access permissions. In this case
+  /// getPointerSize() returns 16, but getIndexSize() returns 8.
+  /// To help with code understanding, the alias getAddressSize() can be used
+  /// instead of getIndexSize() to clarify that an address width is needed.
   unsigned getIndexSize(unsigned AS) const;
+
+  /// The integral size of a pointer in a given address space in bytes, which
+  /// is defined to be the same as getIndexSize(). This exists as a separate
+  /// function to make it clearer when reading code that the size of an address
+  /// is being requested. While targets exist where index size and the
+  /// underlying address width are not identical (e.g. AMDGPU fat pointers with
+  /// 48-bit addresses and 32-bit offsets indexing), there is currently no need
+  /// to differentiate these properties in LLVM.
+  /// \sa DataLayout::getIndexSize
+  /// \sa DataLayout::getAddressSizeInBits
+  unsigned getAddressSize(unsigned AS) const { return getIndexSize(AS); }
 
   /// Return the address spaces containing non-integral pointers.  Pointers in
   /// this address space don't have a well-defined bitwise representation.
@@ -358,28 +381,52 @@ public:
     return PTy && isNonIntegralPointerType(PTy);
   }
 
-  /// Layout pointer size, in bits
+  /// The size in bits of the pointer representation in a given address space.
+  /// This is not necessarily the same as the integer address of a pointer (e.g.
+  /// for fat pointers).
+  /// \sa DataLayout::getAddressSizeInBits()
   /// FIXME: The defaults need to be removed once all of
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
     return getPointerSpec(AS).BitWidth;
   }
 
-  /// Size in bits of index used for address calculation in getelementptr.
+  /// The size in bits of indices used for address calculation in getelementptr
+  /// and for addresses in the given AS. See getIndexSize() for more
+  /// information.
+  /// \sa DataLayout::getAddressSizeInBits()
   unsigned getIndexSizeInBits(unsigned AS) const {
     return getPointerSpec(AS).IndexBitWidth;
   }
 
-  /// Layout pointer size, in bits, based on the type.  If this function is
+  /// The size in bits of an address in for the given AS. This is defined to
+  /// return the same value as getIndexSizeInBits() since there is currently no
+  /// target that requires these two properties to have different values. See
+  /// getIndexSize() for more information.
+  /// \sa DataLayout::getIndexSizeInBits()
+  unsigned getAddressSizeInBits(unsigned AS) const {
+    return getIndexSizeInBits(AS);
+  }
+
+  /// The pointer representation size in bits for this type. If this function is
   /// called with a pointer type, then the type size of the pointer is returned.
   /// If this function is called with a vector of pointers, then the type size
   /// of the pointer is returned.  This should only be called with a pointer or
   /// vector of pointers.
   unsigned getPointerTypeSizeInBits(Type *) const;
 
-  /// Layout size of the index used in GEP calculation.
+  /// The size in bits of the index used in GEP calculation for this type.
   /// The function should be called with pointer or vector of pointers type.
+  /// This is defined to return the same value as getAddressSizeInBits(),
+  /// but separate functions exist for code clarity.
   unsigned getIndexTypeSizeInBits(Type *Ty) const;
+
+  /// The size in bits of an address for this type.
+  /// This is defined to return the same value as getIndexTypeSizeInBits(),
+  /// but separate functions exist for code clarity.
+  unsigned getAddressSizeInBits(Type *Ty) const {
+    return getIndexTypeSizeInBits(Ty);
+  }
 
   unsigned getPointerTypeSize(Type *Ty) const {
     return getPointerTypeSizeInBits(Ty) / 8;
@@ -515,15 +562,21 @@ public:
   /// are set.
   unsigned getLargestLegalIntTypeSizeInBits() const;
 
-  /// Returns the type of a GEP index in AddressSpace.
+  /// Returns the type of a GEP index in \p AddressSpace.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.
   IntegerType *getIndexType(LLVMContext &C, unsigned AddressSpace) const;
+  /// Returns the type of an address in \p AddressSpace
+  IntegerType *getAddressType(LLVMContext &C, unsigned AddressSpace) const {
+    return getIndexType(C, AddressSpace);
+  }
 
   /// Returns the type of a GEP index.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.
   Type *getIndexType(Type *PtrTy) const;
+  /// Returns the type of an address in \p AddressSpace
+  Type *getAddressType(Type *PtrTy) const { return getIndexType(PtrTy); }
 
   /// Returns the offset from the beginning of the type for the specified
   /// indices.
@@ -564,7 +617,9 @@ inline LLVMTargetDataRef wrap(const DataLayout *P) {
 
 /// Used to lazily calculate structure layout information for a target machine,
 /// based on the DataLayout structure.
-class StructLayout final : public TrailingObjects<StructLayout, TypeSize> {
+class StructLayout final : private TrailingObjects<StructLayout, TypeSize> {
+  friend TrailingObjects;
+
   TypeSize StructSize;
   Align StructAlignment;
   unsigned IsPadded : 1;
@@ -586,11 +641,11 @@ public:
   unsigned getElementContainingOffset(uint64_t FixedOffset) const;
 
   MutableArrayRef<TypeSize> getMemberOffsets() {
-    return llvm::MutableArrayRef(getTrailingObjects<TypeSize>(), NumElements);
+    return getTrailingObjects(NumElements);
   }
 
   ArrayRef<TypeSize> getMemberOffsets() const {
-    return llvm::ArrayRef(getTrailingObjects<TypeSize>(), NumElements);
+    return getTrailingObjects(NumElements);
   }
 
   TypeSize getElementOffset(unsigned Idx) const {
@@ -606,10 +661,6 @@ private:
   friend class DataLayout; // Only DataLayout can create this class
 
   StructLayout(StructType *ST, const DataLayout &DL);
-
-  size_t numTrailingObjects(OverloadToken<TypeSize>) const {
-    return NumElements;
-  }
 };
 
 // The implementation of this method is provided inline as it is particularly

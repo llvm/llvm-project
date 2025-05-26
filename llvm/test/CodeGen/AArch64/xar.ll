@@ -19,4 +19,82 @@ define <2 x i64> @xar(<2 x i64> %x, <2 x i64> %y) {
     ret <2 x i64> %b
 }
 
+define <2 x i64> @xar_instead_of_or1(<2 x i64> %r) {
+; SHA3-LABEL: xar_instead_of_or1:
+; SHA3:       // %bb.0: // %entry
+; SHA3-NEXT:    movi v1.2d, #0000000000000000
+; SHA3-NEXT:    xar v0.2d, v0.2d, v1.2d, #39
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: xar_instead_of_or1:
+; NOSHA3:       // %bb.0: // %entry
+; NOSHA3-NEXT:    shl v1.2d, v0.2d, #25
+; NOSHA3-NEXT:    usra v1.2d, v0.2d, #39
+; NOSHA3-NEXT:    mov v0.16b, v1.16b
+; NOSHA3-NEXT:    ret
+entry:
+  %or = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %r, <2 x i64> %r, <2 x i64> splat (i64 25))
+  ret <2 x i64> %or
+}
+
+define <4 x i32> @xar_instead_of_or2(<4 x i32> %r) {
+; SHA3-LABEL: xar_instead_of_or2:
+; SHA3:       // %bb.0: // %entry
+; SHA3-NEXT:    shl v1.4s, v0.4s, #25
+; SHA3-NEXT:    usra v1.4s, v0.4s, #7
+; SHA3-NEXT:    mov v0.16b, v1.16b
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: xar_instead_of_or2:
+; NOSHA3:       // %bb.0: // %entry
+; NOSHA3-NEXT:    shl v1.4s, v0.4s, #25
+; NOSHA3-NEXT:    usra v1.4s, v0.4s, #7
+; NOSHA3-NEXT:    mov v0.16b, v1.16b
+; NOSHA3-NEXT:    ret
+entry:
+  %or = call <4 x i32> @llvm.fshl.v2i32(<4 x i32> %r, <4 x i32> %r, <4 x i32> splat (i32 25))
+  ret <4 x i32> %or
+}
+
+define <8 x i16> @xar_instead_of_or3(<8 x i16> %r) {
+; SHA3-LABEL: xar_instead_of_or3:
+; SHA3:       // %bb.0: // %entry
+; SHA3-NEXT:    shl v1.8h, v0.8h, #9
+; SHA3-NEXT:    usra v1.8h, v0.8h, #7
+; SHA3-NEXT:    mov v0.16b, v1.16b
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: xar_instead_of_or3:
+; NOSHA3:       // %bb.0: // %entry
+; NOSHA3-NEXT:    shl v1.8h, v0.8h, #9
+; NOSHA3-NEXT:    usra v1.8h, v0.8h, #7
+; NOSHA3-NEXT:    mov v0.16b, v1.16b
+; NOSHA3-NEXT:    ret
+entry:
+  %or = call <8 x i16> @llvm.fshl.v2i16(<8 x i16> %r, <8 x i16> %r, <8 x i16> splat (i16 25))
+  ret <8 x i16> %or
+}
+
+define <16 x i8> @xar_instead_of_or4(<16 x i8> %r) {
+; SHA3-LABEL: xar_instead_of_or4:
+; SHA3:       // %bb.0: // %entry
+; SHA3-NEXT:    add v1.16b, v0.16b, v0.16b
+; SHA3-NEXT:    usra v1.16b, v0.16b, #7
+; SHA3-NEXT:    mov v0.16b, v1.16b
+; SHA3-NEXT:    ret
+;
+; NOSHA3-LABEL: xar_instead_of_or4:
+; NOSHA3:       // %bb.0: // %entry
+; NOSHA3-NEXT:    add v1.16b, v0.16b, v0.16b
+; NOSHA3-NEXT:    usra v1.16b, v0.16b, #7
+; NOSHA3-NEXT:    mov v0.16b, v1.16b
+; NOSHA3-NEXT:    ret
+entry:
+  %or = call <16 x i8> @llvm.fshl.v2i8(<16 x i8> %r, <16 x i8> %r, <16 x i8> splat (i8 25))
+  ret <16 x i8> %or
+}
+
 declare <2 x i64> @llvm.fshl.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
+declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <8 x i16> @llvm.fshl.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
+declare <16 x i8> @llvm.fshl.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)

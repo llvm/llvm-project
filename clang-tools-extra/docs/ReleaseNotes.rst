@@ -124,6 +124,12 @@ New checks
   pointer and store it as class members without handle the copy and move
   constructors and the assignments.
 
+- New :doc:`bugprone-misleading-setter-of-reference
+  <clang-tidy/checks/bugprone/misleading-setter-of-reference>` check.
+
+  Finds setter-like member functions that take a pointer parameter and set a
+  reference member of the same class with the pointed value.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
@@ -141,6 +147,11 @@ New check aliases
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check by fixing
+  false positives on deleted constructors that cannot be used to construct
+  objects, even if they have public or protected access.
 
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
@@ -166,6 +177,10 @@ Changes in existing checks
   <clang-tidy/checks/cert/err33-c>` check by fixing false positives when
   a function name is just prefixed with a targeted function name.
 
+- Improved :doc:`concurrency-mt-unsafe
+  <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
+  where ``strerror`` was flagged as MT-unsafe.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
@@ -173,6 +188,11 @@ Changes in existing checks
   with template in parameters and supporting to check pointee mutation by
   `AnalyzePointers` option and fixing false positives when using const array
   type.
+
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by adding the options
+  `UnusedIncludes` and `MissingIncludes`, which specify whether the check should
+  report unused or missing includes respectively.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
@@ -190,7 +210,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
-  ``constexpr`` and ``static``` values on member initialization and by detecting
+  arithmetic operations, ``constexpr`` and ``static`` values, and detecting
   explicit casting of built-in types within member list initialization.
 
 - Improved :doc:`modernize-use-designated-initializers
@@ -198,7 +218,7 @@ Changes in existing checks
   diagnosing designated initializers for ``std::array`` initializations.
 
 - Improved :doc:`modernize-use-ranges
-  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
+  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress
   warnings logic for ``nullptr`` in ``std::find``.
 
 - Improved :doc:`modernize-use-starts-ends-with
