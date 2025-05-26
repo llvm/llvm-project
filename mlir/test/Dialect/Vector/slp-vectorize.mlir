@@ -503,3 +503,17 @@ func.func @read_read_add_write_interleaved_use_add(%arg0: memref<8xi32>, %arg1: 
   call @use(%12) : (i32) -> ()
   return
 }
+
+
+// CHECK-LABEL: func @negative_single_op
+func.func @negative_single_op(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
+  // CHECK-NOT: vector
+  %c0 = arith.constant 0 : index
+
+  %0 = memref.load %arg0[%c0] : memref<8xi32>
+  %4 = memref.load %arg1[%c0] : memref<8xi32>
+  %8 = arith.addi %0, %4 : i32
+  memref.store %8, %arg0[%c0] : memref<8xi32>
+
+  return
+}
