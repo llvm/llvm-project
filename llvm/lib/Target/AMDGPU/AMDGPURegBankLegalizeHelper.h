@@ -111,10 +111,15 @@ private:
              SmallSet<Register, 4> &SgprWaterfallOperandRegs);
 
   void lowerVccExtToSel(MachineInstr &MI);
+  const std::pair<Register, Register> unpackZExt(Register Reg);
+  const std::pair<Register, Register> unpackSExt(Register Reg);
+  const std::pair<Register, Register> unpackAExt(Register Reg);
+  void lowerUnpackBitShift(MachineInstr &MI);
   void lowerV_BFE(MachineInstr &MI);
   void lowerS_BFE(MachineInstr &MI);
   void lowerSplitTo32(MachineInstr &MI);
   void lowerSplitTo32Select(MachineInstr &MI);
+  void lowerSplitTo32SExtInReg(MachineInstr &MI);
 };
 
 } // end namespace AMDGPU

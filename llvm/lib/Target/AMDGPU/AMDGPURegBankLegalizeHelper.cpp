@@ -171,6 +171,62 @@ void RegBankLegalizeHelper::lowerVccExtToSel(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+const std::pair<Register, Register>
+RegBankLegalizeHelper::unpackZExt(Register Reg) {
+  auto PackedS32 = B.buildBitcast(SgprRB_S32, Reg);
+  auto Mask = B.buildConstant(SgprRB_S32, 0x0000ffff);
+  auto Lo = B.buildAnd(SgprRB_S32, PackedS32, Mask);
+  auto Hi = B.buildLShr(SgprRB_S32, PackedS32, B.buildConstant(SgprRB_S32, 16));
+  return {Lo.getReg(0), Hi.getReg(0)};
+}
+
+const std::pair<Register, Register>
+RegBankLegalizeHelper::unpackSExt(Register Reg) {
+  auto PackedS32 = B.buildBitcast(SgprRB_S32, Reg);
+  auto Lo = B.buildSExtInReg(SgprRB_S32, PackedS32, 16);
+  auto Hi = B.buildAShr(SgprRB_S32, PackedS32, B.buildConstant(SgprRB_S32, 16));
+  return {Lo.getReg(0), Hi.getReg(0)};
+}
+
+const std::pair<Register, Register>
+RegBankLegalizeHelper::unpackAExt(Register Reg) {
+  auto PackedS32 = B.buildBitcast(SgprRB_S32, Reg);
+  auto Lo = PackedS32;
+  auto Hi = B.buildLShr(SgprRB_S32, PackedS32, B.buildConstant(SgprRB_S32, 16));
+  return {Lo.getReg(0), Hi.getReg(0)};
+}
+
+void RegBankLegalizeHelper::lowerUnpackBitShift(MachineInstr &MI) {
+  Register Lo, Hi;
+  switch (MI.getOpcode()) {
+  case AMDGPU::G_SHL: {
+    auto [Val0, Val1] = unpackAExt(MI.getOperand(1).getReg());
+    auto [Amt0, Amt1] = unpackAExt(MI.getOperand(2).getReg());
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0, Amt0}).getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val1, Amt1}).getReg(0);
+    break;
+  }
+  case AMDGPU::G_LSHR: {
+    auto [Val0, Val1] = unpackZExt(MI.getOperand(1).getReg());
+    auto [Amt0, Amt1] = unpackZExt(MI.getOperand(2).getReg());
+    Lo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val0, Amt0}).getReg(0);
+    Hi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Val1, Amt1}).getReg(0);
+    break;
+  }
+  case AMDGPU::G_ASHR: {
+    auto [Val0, Val1] = unpackSExt(MI.getOperand(1).getReg());
+    auto [Amt0, Amt1] = unpackSExt(MI.getOperand(2).getReg());
+    Lo = B.buildAShr(SgprRB_S32, Val0, Amt0).getReg(0);
+    Hi = B.buildAShr(SgprRB_S32, Val1, Amt1).getReg(0);
+    break;
+  }
+  default:
+    llvm_unreachable("Unpack lowering not implemented");
+  }
+  B.buildBuildVectorTrunc(MI.getOperand(0).getReg(), {Lo, Hi});
+  MI.eraseFromParent();
+}
+
 static bool isSignedBFE(MachineInstr &MI) {
   if (GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI))
     return (GI->is(Intrinsic::amdgcn_sbfe));
@@ -306,6 +362,33 @@ void RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+void RegBankLegalizeHelper::lowerSplitTo32SExtInReg(MachineInstr &MI) {
+  auto Op1 = B.buildUnmerge(VgprRB_S32, MI.getOperand(1).getReg());
+  int Amt = MI.getOperand(2).getImm();
+  Register Lo, Hi;
+  // Hi|Lo: s sign bit, ?/x bits changed/not changed by sign-extend
+  if (Amt <= 32) {
+    auto Freeze = B.buildFreeze(VgprRB_S32, Op1.getReg(0));
+    if (Amt == 32) {
+      // Hi|Lo: ????????|sxxxxxxx -> ssssssss|sxxxxxxx
+      Lo = Freeze.getReg(0);
+    } else {
+      // Hi|Lo: ????????|???sxxxx -> ssssssss|ssssxxxx
+      Lo = B.buildSExtInReg(VgprRB_S32, Freeze, Amt).getReg(0);
+    }
+
+    auto SignExtCst = B.buildConstant(SgprRB_S32, 31);
+    Hi = B.buildAShr(VgprRB_S32, Lo, SignExtCst).getReg(0);
+  } else {
+    // Hi|Lo: ?????sxx|xxxxxxxx -> ssssssxx|xxxxxxxx
+    Lo = Op1.getReg(0);
+    Hi = B.buildSExtInReg(VgprRB_S32, Op1.getReg(1), Amt - 32).getReg(0);
+  }
+
+  B.buildMergeLikeInstr(MI.getOperand(0).getReg(), {Lo, Hi});
+  MI.eraseFromParent();
+}
+
 void RegBankLegalizeHelper::lower(MachineInstr &MI,
                                   const RegBankLLTMapping &Mapping,
                                   SmallSet<Register, 4> &WaterfallSgprs) {
@@ -328,6 +411,8 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
     MI.eraseFromParent();
     return;
   }
+  case UnpackBitShift:
+    return lowerUnpackBitShift(MI);
   case Ext32To64: {
     const RegisterBank *RB = MRI.getRegBank(MI.getOperand(0).getReg());
     MachineInstrBuilder Hi;
@@ -394,6 +479,8 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerSplitTo32(MI);
   case SplitTo32Select:
     return lowerSplitTo32Select(MI);
+  case SplitTo32SExtInReg:
+    return lowerSplitTo32SExtInReg(MI);
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = DstTy.getSizeInBits();
@@ -483,6 +570,13 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case SgprP5:
   case VgprP5:
     return LLT::pointer(5, 32);
+  case SgprV2S16:
+  case VgprV2S16:
+  case UniInVgprV2S16:
+    return LLT::fixed_vector(2, 16);
+  case SgprV2S32:
+  case VgprV2S32:
+    return LLT::fixed_vector(2, 32);
   case SgprV4S32:
   case VgprV4S32:
   case UniInVgprV4S32:
@@ -556,6 +650,8 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprP3:
   case SgprP4:
   case SgprP5:
+  case SgprV2S16:
+  case SgprV2S32:
   case SgprV4S32:
   case SgprB32:
   case SgprB64:
@@ -565,6 +661,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprB512:
   case UniInVcc:
   case UniInVgprS32:
+  case UniInVgprV2S16:
   case UniInVgprV4S32:
   case UniInVgprB32:
   case UniInVgprB64:
@@ -586,6 +683,8 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprP3:
   case VgprP4:
   case VgprP5:
+  case VgprV2S16:
+  case VgprV2S32:
   case VgprV4S32:
   case VgprB32:
   case VgprB64:
@@ -623,6 +722,8 @@ void RegBankLegalizeHelper::applyMappingDst(
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprV2S16:
+    case SgprV2S32:
     case SgprV4S32:
     case Vgpr16:
     case Vgpr32:
@@ -632,6 +733,8 @@ void RegBankLegalizeHelper::applyMappingDst(
     case VgprP3:
     case VgprP4:
     case VgprP5:
+    case VgprV2S16:
+    case VgprV2S32:
     case VgprV4S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
@@ -666,6 +769,7 @@ void RegBankLegalizeHelper::applyMappingDst(
       break;
     }
     case UniInVgprS32:
+    case UniInVgprV2S16:
     case UniInVgprV4S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == SgprRB);
@@ -739,6 +843,8 @@ void RegBankLegalizeHelper::applyMappingSrc(
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprV2S16:
+    case SgprV2S32:
     case SgprV4S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       assert(RB == getRegBankFromID(MethodIDs[i]));
@@ -764,6 +870,8 @@ void RegBankLegalizeHelper::applyMappingSrc(
     case VgprP3:
     case VgprP4:
     case VgprP5:
+    case VgprV2S16:
+    case VgprV2S32:
     case VgprV4S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != VgprRB) {
