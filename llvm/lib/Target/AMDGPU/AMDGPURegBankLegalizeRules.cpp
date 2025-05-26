@@ -106,6 +106,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isUniform(Reg);
   case DivS1:
     return MRI.getType(Reg) == LLT::scalar(1) && MUI.isDivergent(Reg);
+  case DivS16:
+    return MRI.getType(Reg) == LLT::scalar(16) && MUI.isDivergent(Reg);
   case DivS32:
     return MRI.getType(Reg) == LLT::scalar(32) && MUI.isDivergent(Reg);
   case DivS64:
@@ -441,6 +443,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_XOR, G_OR, G_AND}, StandardB)
       .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}}})
       .Any({{DivS1}, {{Vcc}, {Vcc, Vcc}}})
+      .Any({{UniS16}, {{Sgpr16}, {Sgpr16, Sgpr16}}})
+      .Any({{DivS16}, {{Vgpr16}, {Vgpr16, Vgpr16}}})
+      .Uni(B32, {{SgprB32}, {SgprB32, SgprB32}})
       .Div(B32, {{VgprB32}, {VgprB32, VgprB32}})
       .Uni(B64, {{SgprB64}, {SgprB64, SgprB64}})
       .Div(B64, {{VgprB64}, {VgprB64, VgprB64}, SplitTo32});
@@ -483,11 +488,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B32, {{VgprB32}, {Vcc, VgprB32, VgprB32}})
       .Uni(B32, {{SgprB32}, {Sgpr32AExtBoolInReg, SgprB32, SgprB32}});
 
-  addRulesForGOpcs({G_ANYEXT}).Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}});
+  addRulesForGOpcs({G_ANYEXT})
+      .Any({{UniS32, S1}, {{None}, {None}}}) // should be combined away
+      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}});
 
   // In global-isel G_TRUNC in-reg is treated as no-op, inst selected into COPY.
   // It is up to user to deal with truncated bits.
   addRulesForGOpcs({G_TRUNC})
+      .Any({{UniS1, UniS32}, {{None}, {None}}}) // should be combined away
       .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}})
       // This is non-trivial. VgprToVccCopy is done using compare instruction.
       .Any({{DivS1, DivS32}, {{Vcc}, {Vgpr32}, VgprToVccCopy}});
