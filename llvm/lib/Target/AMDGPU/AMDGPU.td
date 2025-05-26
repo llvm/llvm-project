@@ -1776,7 +1776,6 @@ def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureDot5Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureDot9Insts,
@@ -1794,9 +1793,9 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureVcmpxPermlaneHazard,
    FeatureMemoryAtomicFAddF32DenormalSupport]>;
 
-// There are few workarounds that need to be
-// added to all targets. This pessimizes codegen
-// a bit on the generic GFX11 target.
+// There are few workarounds that need to be added to all targets. This
+// pessimizes codegen a bit on the generic GFX11 target. This generic target
+// does not include GFX1170 due to incompatible changes.
 def FeatureISAVersion11_Generic: FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
@@ -1806,6 +1805,7 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6,
      FeatureRequiredExportPriority,
+     FeatureDot5Insts,
      FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
@@ -1814,6 +1814,7 @@ def FeatureISAVersion11_0_Common : FeatureSet<
      FeatureVALUTransUseHazard,
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
+     FeatureDot5Insts,
      FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
@@ -1838,6 +1839,7 @@ def FeatureISAVersion11_5_Common : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
+     FeatureDot5Insts,
      FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_5_0 : FeatureSet<
