@@ -2569,6 +2569,12 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     Indices.append(GEP.idx_begin()+1, GEP.idx_end());
   }
 
+  // Don't create GEPs with more than one variable index.
+  unsigned NumVarIndices =
+      count_if(Indices, [](Value *Idx) { return !isa<Constant>(Idx); });
+  if (NumVarIndices > 1)
+    return nullptr;
+
   if (!Indices.empty())
     return replaceInstUsesWith(
         GEP, Builder.CreateGEP(
@@ -2993,6 +2999,30 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *NewGEP =
         Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
     return replaceInstUsesWith(GEP, NewGEP);
+  }
+
+  bool SeenVarIndex = false;
+  for (auto [IdxNum, Idx] : enumerate(Indices)) {
+    if (isa<Constant>(Idx))
+      continue;
+
+    if (!SeenVarIndex) {
+      SeenVarIndex = true;
+      continue;
+    }
+
+    // GEP has multiple variable indices: Split it.
+    ArrayRef<Value *> FrontIndices = ArrayRef(Indices).take_front(IdxNum);
+    Value *FrontGEP =
+        Builder.CreateGEP(GEPEltType, PtrOp, FrontIndices,
+                          GEP.getName() + ".split", GEP.getNoWrapFlags());
+
+    SmallVector<Value *> BackIndices;
+    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
+    append_range(BackIndices, drop_begin(Indices, IdxNum));
+    return GetElementPtrInst::Create(
+        GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
+        BackIndices, GEP.getNoWrapFlags());
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
