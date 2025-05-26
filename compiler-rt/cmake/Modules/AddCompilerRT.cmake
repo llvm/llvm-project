@@ -583,9 +583,9 @@ macro(add_compiler_rt_script name)
 endmacro(add_compiler_rt_script src name)
 
 
-macro(add_compiler_rt_cfg target_name file_name component)
+macro(add_compiler_rt_cfg target_name file_name component arch)
   set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
-  get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
+  get_compiler_rt_output_dir(${arch} output_dir)
   set(dst_file "${output_dir}/${file_name}")
   add_custom_command(OUTPUT ${dst_file}
     DEPENDS ${src_file}
