@@ -37,7 +37,7 @@ define half @fceil32(half %f) #0 {
 ;
 ; X86-LABEL: fceil32:
 ; X86:       # %bb.0:
-; X86-NEXT:    vrndscalesh $10, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vrndscalesh $10, {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fceil32:
@@ -73,7 +73,7 @@ define half @ffloor32(half %f) #0 {
 ;
 ; X86-LABEL: ffloor32:
 ; X86:       # %bb.0:
-; X86-NEXT:    vrndscalesh $9, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vrndscalesh $9, {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ffloor32:
@@ -109,7 +109,7 @@ define half @ftrunc32(half %f) #0 {
 ;
 ; X86-LABEL: ftrunc32:
 ; X86:       # %bb.0:
-; X86-NEXT:    vrndscalesh $11, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vrndscalesh $11, {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ftrunc32:
@@ -145,7 +145,7 @@ define half @frint32(half %f) #0 {
 ;
 ; X86-LABEL: frint32:
 ; X86:       # %bb.0:
-; X86-NEXT:    vrndscalesh $4, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vrndscalesh $4, {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: frint32:
@@ -182,7 +182,7 @@ define half @fnearbyint32(half %f) #0 {
 ;
 ; X86-LABEL: fnearbyint32:
 ; X86:       # %bb.0:
-; X86-NEXT:    vrndscalesh $12, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vrndscalesh $12, {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fnearbyint32:
@@ -219,7 +219,7 @@ define half @froundeven16(half %f) #0 {
 ;
 ; X86-LABEL: froundeven16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vrndscalesh $8, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vrndscalesh $8, {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: froundeven16:
