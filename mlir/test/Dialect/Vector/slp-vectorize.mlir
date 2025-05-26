@@ -245,6 +245,69 @@ func.func @read_read_add_write(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
 }
 
 
+// CHECK-LABEL: func @read_read_add_write_seven
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xindex>, %[[ARG1:.*]]: memref<8xindex>)
+func.func @read_read_add_write_seven(%arg0: memref<8xindex>, %arg1: memref<8xindex>) {
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+  // CHECK-DAG: %[[C6:.*]] = arith.constant 6 : index
+  // CHECK:     %[[A0:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xindex>, vector<4xindex>
+  // CHECK:     %[[A1:.*]] = vector.load %[[ARG0]][%[[C4]]] : memref<8xindex>, vector<2xindex>
+  // CHECK:     %[[A2:.*]] = memref.load %[[ARG0]][%[[C6]]] : memref<8xindex>
+  // CHECK:     %[[B0:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xindex>, vector<4xindex>
+  // CHECK:     %[[B1:.*]] = vector.load %[[ARG1]][%[[C4]]] : memref<8xindex>, vector<2xindex>
+  // CHECK:     %[[B2:.*]] = memref.load %[[ARG1]][%[[C6]]] : memref<8xindex>
+  // CHECK:     %[[RES0:.*]] = arith.addi %[[A0]], %[[B0]] : vector<4xindex>
+  // CHECK:     %[[RES1:.*]] = arith.addi %[[A1]], %[[B1]] : vector<2xindex>
+  // CHECK:     %[[RES2:.*]] = arith.addi %[[A2]], %[[B2]] : index
+  // CHECK:     vector.store %[[RES0]], %[[ARG0]][%[[C0]]] : memref<8xindex>, vector<4xindex>
+  // CHECK:     vector.store %[[RES1]], %[[ARG0]][%[[C4]]] : memref<8xindex>, vector<2xindex>
+  // CHECK:     memref.store %[[RES2]], %[[ARG0]][%[[C6]]] : memref<8xindex>
+
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c6 = arith.constant 6 : index
+
+  %0 = memref.load %arg0[%c0] : memref<8xindex>
+  %1 = memref.load %arg0[%c1] : memref<8xindex>
+  %2 = memref.load %arg0[%c2] : memref<8xindex>
+  %3 = memref.load %arg0[%c3] : memref<8xindex>
+  %4 = memref.load %arg0[%c4] : memref<8xindex>
+  %5 = memref.load %arg0[%c5] : memref<8xindex>
+  %6 = memref.load %arg0[%c6] : memref<8xindex>
+
+  %7 = memref.load %arg1[%c0] : memref<8xindex>
+  %8 = memref.load %arg1[%c1] : memref<8xindex>
+  %9 = memref.load %arg1[%c2] : memref<8xindex>
+  %10 = memref.load %arg1[%c3] : memref<8xindex>
+  %11 = memref.load %arg1[%c4] : memref<8xindex>
+  %12 = memref.load %arg1[%c5] : memref<8xindex>
+  %13 = memref.load %arg1[%c6] : memref<8xindex>
+
+  %14 = arith.addi %0, %7 : index
+  %15 = arith.addi %1, %8 : index
+  %16 = arith.addi %2, %9 : index
+  %17 = arith.addi %3, %10 : index
+  %18 = arith.addi %4, %11 : index
+  %19 = arith.addi %5, %12 : index
+  %20 = arith.addi %6, %13 : index
+
+  memref.store %14, %arg0[%c0] : memref<8xindex>
+  memref.store %15, %arg0[%c1] : memref<8xindex>
+  memref.store %16, %arg0[%c2] : memref<8xindex>
+  memref.store %17, %arg0[%c3] : memref<8xindex>
+  memref.store %18, %arg0[%c4] : memref<8xindex>
+  memref.store %19, %arg0[%c5] : memref<8xindex>
+  memref.store %20, %arg0[%c6] : memref<8xindex>
+
+  return
+}
+
+
 // CHECK-LABEL: func @read_read_add_write_size_mismatch
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
 func.func @read_read_add_write_size_mismatch(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
