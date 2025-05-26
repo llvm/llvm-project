@@ -11899,6 +11899,7 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   // The types v1024i1 and v2048i1 are used for Dense Math dmr registers and
   // Dense Math dmr pair registers, respectively.
   assert((IsV1024i1 || IsV2048i1) && "Unsupported type.");
+  (void)IsV2048i1;
   assert((Subtarget.hasMMA() && Subtarget.isISAFuture()) &&
          "Dense Math support required.");
   assert(Subtarget.pairedVectorMemops() && "Vector pair support required.");
@@ -12037,6 +12038,7 @@ SDValue PPCTargetLowering::LowerDMFVectorStore(SDValue Op,
   // The types v1024i1 and v2048i1 are used for Dense Math dmr registers and
   // Dense Math dmr pair registers, respectively.
   assert((IsV1024i1 || IsV2048i1) && "Unsupported type.");
+  (void)IsV2048i1;
   assert((Subtarget.hasMMA() && Subtarget.isISAFuture()) &&
          "Dense Math support required.");
   assert(Subtarget.pairedVectorMemops() && "Vector pair support required.");
