@@ -3172,13 +3172,11 @@ static void DiagnoseForRangeVariableCopies(Sema &SemaRef,
   if (SemaRef.inTemplateInstantiation())
     return;
 
+  SourceLocation Loc = ForStmt->getBeginLoc();
   if (SemaRef.Diags.isIgnored(
-          diag::warn_for_range_const_ref_binds_temp_built_from_ref,
-          ForStmt->getBeginLoc()) &&
-      SemaRef.Diags.isIgnored(diag::warn_for_range_ref_binds_ret_temp,
-                              ForStmt->getBeginLoc()) &&
-      SemaRef.Diags.isIgnored(diag::warn_for_range_copy,
-                              ForStmt->getBeginLoc())) {
+          diag::warn_for_range_const_ref_binds_temp_built_from_ref, Loc) &&
+      SemaRef.Diags.isIgnored(diag::warn_for_range_ref_binds_ret_temp, Loc) &&
+      SemaRef.Diags.isIgnored(diag::warn_for_range_copy, Loc)) {
     return;
   }
 
