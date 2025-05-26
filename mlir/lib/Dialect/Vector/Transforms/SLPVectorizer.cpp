@@ -48,7 +48,7 @@ struct MemoryOpGroup {
   size_t size() const { return ops.size(); }
 };
 
-static bool isReadOp(Operation *op) {
+static bool maybeReadOp(Operation *op) {
   auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op);
   if (!effectInterface)
     return true;
@@ -56,7 +56,7 @@ static bool isReadOp(Operation *op) {
   return effectInterface.hasEffect<MemoryEffects::Read>();
 }
 
-static bool isWriteOp(Operation *op) {
+static bool maybeWriteOp(Operation *op) {
   auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op);
   if (!effectInterface)
     return true;
@@ -72,10 +72,11 @@ static SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block) {
   MemoryOpGroup *currentGroup = nullptr;
 
   for (Operation &op : block) {
+    // Check if current group is interrupted by a read or write op.
     if (currentGroup) {
-      if (currentGroup->isLoadGroup() && isWriteOp(&op)) {
+      if (currentGroup->isLoadGroup() && maybeWriteOp(&op)) {
         currentGroup = nullptr;
-      } else if (currentGroup->isStoreGroup() && isReadOp(&op)) {
+      } else if (currentGroup->isStoreGroup() && maybeReadOp(&op)) {
         currentGroup = nullptr;
       }
     }
@@ -83,7 +84,7 @@ static SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block) {
     if (!isa<memref::LoadOp, memref::StoreOp>(op))
       continue;
 
-    bool isLoad = isReadOp(&op);
+    bool isLoad = maybeReadOp(&op);
     MemoryOpGroup::Type type =
         isLoad ? MemoryOpGroup::Type::Load : MemoryOpGroup::Type::Store;
 
@@ -99,6 +100,7 @@ static SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block) {
 }
 
 static Value getBase(Operation *op) {
+  assert(op && "null op");
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
     return loadOp.getMemRef();
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
@@ -120,6 +122,7 @@ static bool isContiguousLastDim(Value val) {
 }
 
 static ValueRange getIndices(Operation *op) {
+  assert(op && "null op");
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
     return loadOp.getIndices();
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
@@ -128,6 +131,7 @@ static ValueRange getIndices(Operation *op) {
 }
 
 static Type getElementType(Operation *op) {
+  assert(op && "null op");
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
     return loadOp.getResult().getType();
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
@@ -135,7 +139,7 @@ static Type getElementType(Operation *op) {
   return {};
 }
 
-/// Check if two indices are consecutive, i.e fastest index differs by 1.
+/// Check if two indices are consecutive, i.e index1 + 1 == index2.
 static bool isAdjacentIndices(Value idx1, Value idx2) {
   if (auto c1 = getConstantIntValue(idx1)) {
     if (auto c2 = getConstantIntValue(idx2))
@@ -153,7 +157,7 @@ static bool isAdjacentIndices(Value idx1, Value idx2) {
     }
   }
 
-  // TODO: affine.apply, etc
+  // TODO: Handle affine.apply, etc
   return false;
 }
 
@@ -173,6 +177,9 @@ static bool isAdjacentIndices(ValueRange idx1, ValueRange idx2) {
 /// This is done by checking if the base memrefs are the same, the last
 /// dimension is contiguous, and the element types and indices are compatible
 static bool isAdjacentOps(Operation *op1, Operation *op2) {
+  assert(op1 && "null op1");
+  assert(op2 && "null op2");
+
   Value base1 = getBase(op1);
   Value base2 = getBase(op2);
   if (base1 != base2)
@@ -181,8 +188,10 @@ static bool isAdjacentOps(Operation *op1, Operation *op2) {
   if (!isContiguousLastDim(base1))
     return false;
 
-  return getElementType(op1) == getElementType(op2) &&
-         isAdjacentIndices(getIndices(op1), getIndices(op2));
+  if (getElementType(op1) != getElementType(op2))
+    return false;
+
+  return isAdjacentIndices(getIndices(op1), getIndices(op2));
 }
 
 // Extract contiguous groups from a MemoryOpGroup
@@ -229,6 +238,7 @@ extractContiguousGroups(const MemoryOpGroup &group) {
     } while (foundMore);
 
     if (currentOps.size() <= 1) {
+      // Do not vectorize if there is only one op.
       result.pop_back();
       continue;
     }
@@ -256,9 +266,16 @@ struct SLPGraphNode {
 
   size_t size() const { return ops.size(); }
 
-  Operation *getEarliestOp() const {
+  Operation *op() const {
+    assert(!ops.empty() && "empty ops");
+    return ops.front();
+  }
+
+  Operation *getInsertionPoint() const {
+    // Find the toplogically first node, which is not nessesary the first in the
+    // `ops` as `ops` are sorted by their position in vector.
     assert(!ops.empty() && "empty node");
-    Operation *ret = ops.front();
+    Operation *ret = op();
     for (Operation *op : ArrayRef(ops).drop_front()) {
       if (op->isBeforeInBlock(ret))
         ret = op;
@@ -374,15 +391,20 @@ public:
       llvm::dbgs() << "Topologically sorted nodes:\n";
       for (auto *node : sortedNodes) {
         llvm::dbgs() << "  Node with " << node->size()
-                     << " operations: " << node->ops.front()->getName() << "\n";
+                     << " operations: " << node->op()->getName() << "\n";
       }
     });
 
     auto isBadNode = [&](SLPGraphNode *node) {
+      // Do not vectorize stray nodes which are not connected to any other
+      // nodes.
       return node->users.empty() && node->operands.empty();
     };
 
-    // Update vec sizes if inputs are smaller.
+    // Update node vec sizes if its inputs vec sizes are smaller.
+    // This is nedeed to handle situations when we have 3->3->4 sizes in tree.
+    // TODO: It maybe possible to reconstruct the larger vec size combining src
+    // smaller vector and scalar arg.
     for (auto *node : sortedNodes) {
       size_t size = node->size();
       for (auto *operand : node->operands)
@@ -391,14 +413,19 @@ public:
       node->ops.resize(size);
     }
 
-    // Remove nodes that are not good (have users or operands)
     llvm::erase_if(sortedNodes, isBadNode);
 
     IRMapping mapping;
     for (auto *node : sortedNodes) {
+      // `op` is the node with the smallest index in vector and not the
+      // nessesarily the good insertion point.
+      Operation *op = node->op();
+      Operation *ip = node->getInsertionPoint();
+      if (!ip)
+        return op->emitError("no insertion point found for node");
+
+      rewriter.setInsertionPoint(ip);
       int64_t numElements = node->size();
-      Operation *op = node->ops.front();
-      rewriter.setInsertionPoint(node->getEarliestOp());
       Location loc = op->getLoc();
 
       auto handleNonVectorInputs = [&](ValueRange operands) {
@@ -477,6 +504,10 @@ public:
       }
     }
 
+    LLVM_DEBUG(llvm::dbgs() << "Erasing original ops\n");
+
+    // As all nodes were cloned, we need to erase the original ops in reverse
+    // topo order to avoid invalidation users.
     for (auto *node : llvm::reverse(sortedNodes)) {
       for (Operation *op : node->ops) {
         rewriter.eraseOp(op);
@@ -498,8 +529,7 @@ public:
       if (!node->isRoot)
         continue;
       llvm::dbgs() << "  "
-                   << (isa<memref::LoadOp>(node->ops.front()) ? "LOAD"
-                                                              : "STORE")
+                   << (isa<memref::LoadOp>(node->op()) ? "LOAD" : "STORE")
                    << " group with " << node->size() << " operations:\n";
       for (auto *op : node->ops) {
         llvm::dbgs() << "    " << *op << "\n";
@@ -588,10 +618,41 @@ static void addDataToHash(llvm::SHA1 &hasher, const T &data) {
 /// multiple users with the same immediate op type, this class tries to compute
 /// fingerprint for such ops based on the entire ops graph to maximize further
 /// scalar ops merging.
+///
+/// Example:
+/// ```
+///  %0 = memref.load %arg0[%c0] : memref<8xi32>
+///  %1 = memref.load %arg0[%c1] : memref<8xi32>
+///  %2 = memref.load %arg0[%c2] : memref<8xi32>
+///  %3 = memref.load %arg0[%c3] : memref<8xi32>
+///
+///  %4 = memref.load %arg1[%c0] : memref<8xi32>
+///  %5 = memref.load %arg1[%c1] : memref<8xi32>
+///  %6 = memref.load %arg1[%c2] : memref<8xi32>
+///  %7 = memref.load %arg1[%c3] : memref<8xi32>
+///
+///  %8 = arith.addi %0, %4 : i32
+///  %12 = arith.addi %0, %arg2 : i32
+///
+///  %13 = arith.addi %1, %arg3 : i32
+///  %9 = arith.addi %1, %5 : i32
+///
+///  %10 = arith.addi %2, %6 : i32
+///  %14 = arith.addi %2, %arg4 : i32
+///
+///  %15 = arith.addi %3, %arg5 : i32
+///  %11 = arith.addi %3, %7 : i32
+/// ```
+/// Here each load have multiple uses, in different order, and we want to merge
+/// them in a way that maximizes the number of merged ops.
+///
+/// To achieve this, we compute fingerprint for each op including the other
+/// operands, which will include the other loads in this example.
 struct OperationsFingerprint {
   OperationsFingerprint(const SLPGraph &graph) : graph(graph) {}
 
   Fingerprint getFingerprint(Operation *op) {
+    assert(op && "null op");
     auto it = fingerprints.find(op);
     if (it != fingerprints.end())
       return it->second;
@@ -653,6 +714,9 @@ struct OperationsFingerprint {
 };
 
 static bool isEquivalent(Operation *op1, Operation *op2) {
+  assert(op1 && "null op1");
+  assert(op2 && "null op2");
+
   if (op1->getName() != op2->getName())
     return false;
 
@@ -696,9 +760,8 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
     Operation *user = use.getOwner();
     auto *existingNode = graph.getNodeForOp(user);
     if (existingNode) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "  Adding edge from " << node->ops.front()->getName()
-                 << " to " << user->getName() << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "  Adding edge from " << node->op()->getName()
+                              << " to " << user->getName() << "\n");
       graph.addEdge(node, existingNode);
       return;
     }
@@ -749,9 +812,8 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
 
     auto *existingNode = graph.getNodeForOp(srcOp);
     if (existingNode) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "  Adding edge from " << srcOp->getName() << " to "
-                 << node->ops.front()->getName() << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "  Adding edge from " << srcOp->getName()
+                              << " to " << node->op()->getName() << "\n");
       graph.addEdge(existingNode, node);
       return;
     }
@@ -782,11 +844,11 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
 
   while (!worklist.empty()) {
     SLPGraphNode *node = worklist.pop_back_val();
-    LLVM_DEBUG(llvm::dbgs() << "Processing node with " << node->size()
-                            << " operations, first op: "
-                            << node->ops.front()->getName() << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "Processing node with " << node->size()
+               << " operations, first op: " << node->op()->getName() << "\n");
 
-    Operation *op = node->ops.front();
+    Operation *op = node->op();
     for (OpOperand &use : op->getUses())
       processUse(node, use);
 
