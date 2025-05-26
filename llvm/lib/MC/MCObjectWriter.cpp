@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
@@ -50,6 +51,14 @@ bool MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   return &SecA == &SecB;
 }
 
-void MCObjectWriter::addFileName(MCAssembler &Asm, StringRef FileName) {
-  FileNames.emplace_back(std::string(FileName), Asm.Symbols.size());
+void MCObjectWriter::addFileName(StringRef FileName) {
+  FileNames.emplace_back(std::string(FileName), Asm->Symbols.size());
+}
+
+MCContext &MCObjectTargetWriter::getContext() const {
+  return Asm->getContext();
+}
+
+void MCObjectTargetWriter::reportError(SMLoc L, const Twine &Msg) const {
+  return Asm->getContext().reportError(L, Msg);
 }

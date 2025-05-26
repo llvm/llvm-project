@@ -12,7 +12,6 @@
 #include "ExportTrie.h"
 #include "ICF.h"
 #include "InputFiles.h"
-#include "MachOStructs.h"
 #include "ObjC.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -21,11 +20,9 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 
 #if defined(__APPLE__)
