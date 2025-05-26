@@ -251,7 +251,19 @@ extractContiguousGroups(const MemoryOpGroup &group) {
 }
 
 static bool isVectorizable(Operation *op) {
-  return OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1;
+  if (!OpTrait::hasElementwiseMappableTraits(op))
+    return false;
+
+  if (op->getNumResults() != 1)
+    return false;
+
+  for (auto type :
+       llvm::concat<Type>(op->getResultTypes(), op->getOperandTypes())) {
+    if (!type.isIntOrIndexOrFloat())
+      return false;
+  }
+
+  return true;
 }
 
 /// A node in the SLP graph representing a group of vectorizable operations
@@ -419,6 +431,12 @@ public:
 
     IRMapping mapping;
     for (auto *node : sortedNodes) {
+      LLVM_DEBUG({
+        llvm::dbgs() << "Processing node with " << node->size()
+                     << " operations\n";
+        llvm::dbgs() << "  First op: " << *node->op() << "\n";
+      });
+
       // `op` is the node with the smallest index in vector and not the
       // nessesarily the good insertion point.
       Operation *op = node->op();
@@ -500,6 +518,9 @@ public:
 
         mapping.map(op->getResults(), newOp->getResults());
         handleNonVectorOutputs(newOp->getResult(0));
+      } else if (auto extract = dyn_cast<vector::ExtractOp>(op)) {
+        Value val = handleVecSizeMismatch(extract.getVector());
+        mapping.map(extract.getResult(), val);
       } else {
         op->emitError("unsupported operation");
         return failure();
@@ -735,6 +756,14 @@ static bool isEquivalent(Operation *op1, Operation *op2) {
   return true;
 }
 
+/// Get static position of the extract op, if it is 1D and static.
+static std::optional<int64_t> getExtractIndex(vector::ExtractOp extractOp) {
+  if (extractOp.getNumIndices() != 1 || extractOp.hasDynamicPosition())
+    return std::nullopt;
+
+  return extractOp.getStaticPosition().front();
+}
+
 /// Build the SLP graph starting from memory operation groups and going both
 /// top-down and bottom-up through uses/operands respectively.
 static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
@@ -824,17 +853,47 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
       return;
     }
 
-    if (!isVectorizable(srcOp))
-      return;
-
     SmallVector<Operation *> currentOps;
-    currentOps.emplace_back(srcOp);
-    for (Operation *op : ArrayRef(node->ops).drop_front()) {
-      Operation *otherOp = op->getOperand(index).getDefiningOp();
-      if (!otherOp || !isEquivalent(otherOp, srcOp))
-        break;
+    if (auto extractOp = dyn_cast<vector::ExtractOp>(srcOp)) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  Processing vector.extract op with index "
+                 << getExtractIndex(extractOp).value_or(-1) << "\n");
+      currentOps.push_back(extractOp);
 
-      currentOps.push_back(otherOp);
+      std::optional<int64_t> extractIndex = getExtractIndex(extractOp);
+      if (!extractIndex)
+        return;
+
+      Value vector = extractOp.getVector();
+      int64_t currentIndex = *extractIndex;
+      for (Operation *op : ArrayRef(node->ops).drop_front()) {
+        auto otherOp = op->getOperand(index).getDefiningOp<vector::ExtractOp>();
+        if (!otherOp || otherOp.getVector() != vector)
+          break;
+
+        std::optional<int64_t> otherExtractIndex = getExtractIndex(otherOp);
+        if (!otherExtractIndex || *otherExtractIndex != (currentIndex + 1))
+          break;
+
+        currentOps.push_back(otherOp);
+        ++currentIndex;
+      }
+    } else if (isVectorizable(srcOp)) {
+      LLVM_DEBUG(llvm::dbgs() << "  Processing vectorizable op "
+                              << srcOp->getName() << "\n");
+
+      currentOps.emplace_back(srcOp);
+      for (Operation *op : ArrayRef(node->ops).drop_front()) {
+        Operation *otherOp = op->getOperand(index).getDefiningOp();
+        if (!otherOp || !isEquivalent(otherOp, srcOp))
+          break;
+
+        currentOps.push_back(otherOp);
+      }
+    } else {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  Unsupported op " << srcOp->getName() << "\n");
+      return;
     }
 
     if (currentOps.size() == 1)
