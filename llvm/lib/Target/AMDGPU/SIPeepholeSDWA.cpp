@@ -1275,10 +1275,10 @@ MachineInstr *SIPeepholeSDWA::createSDWAVersion(MachineInstr &MI) {
 
   // Initialize SDWA specific operands
   if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_sel))
-      SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
+    SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
 
   if (AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_unused))
-      SDWAInst.addImm(AMDGPU::SDWA::DstUnused::UNUSED_PAD);
+    SDWAInst.addImm(AMDGPU::SDWA::DstUnused::UNUSED_PAD);
 
   assert(AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::src0_sel));
   SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
