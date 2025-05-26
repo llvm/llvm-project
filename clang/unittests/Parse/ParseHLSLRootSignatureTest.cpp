@@ -803,6 +803,28 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseOverflowedNegativeNumberTest) {
+  // This test will check that parsing fails due to a unsigned integer having
+  // too large of a magnitude to be interpreted as its negative
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, mipLODBias = -4294967295)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
 TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedFloatTest) {
   // This test will check that the lexing fails due to a float overflow
   const llvm::StringLiteral Source = R"cc(

@@ -876,7 +876,7 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   assert(Literal.isIntegerLiteral() &&
          "NumSpelling can only consist of digits");
 
-  llvm::APSInt Val = llvm::APSInt(32, false);
+  llvm::APSInt Val = llvm::APSInt(32, /*IsUnsigned=*/true);
   if (Literal.GetIntegerValue(Val)) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
@@ -899,8 +899,13 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
   assert(Literal.isIntegerLiteral() &&
          "NumSpelling can only consist of digits");
 
-  llvm::APSInt Val = llvm::APSInt(32, true);
-  if (Literal.GetIntegerValue(Val)) {
+  llvm::APSInt Val = llvm::APSInt(32, /*IsUnsigned=*/true);
+  // GetIntegerValue will overwrite Val from the parsed Literal and return
+  // true if it overflows as a 32-bit unsigned int. Then check that it also
+  // doesn't overflow as a signed 32-bit int.
+  int64_t MaxMagnitude =
+      -static_cast<int64_t>(std::numeric_limits<int32_t>::min());
+  if (Literal.GetIntegerValue(Val) || MaxMagnitude < Val.getExtValue()) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
