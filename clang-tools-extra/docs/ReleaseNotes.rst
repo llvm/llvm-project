@@ -148,6 +148,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-crtp-constructor-accessibility
+  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check by fixing
+  false positives on deleted constructors that cannot be used to construct
+  objects, even if they have public or protected access.
+
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
@@ -233,6 +238,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
+
+- Improved :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability/qualified-auto>` check by adding the option
+  `AllowedTypes`, that excludes specified types from adding qualifiers.
 
 Removed checks
 ^^^^^^^^^^^^^^
