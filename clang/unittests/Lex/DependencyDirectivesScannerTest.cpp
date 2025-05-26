@@ -986,11 +986,11 @@ ort \
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
   EXPECT_STREQ("#include \"textual-header.h\"\nexport module m;"
-               "exp\\\nort import:l[[rename]];"
-               "import<<=3;import a b d e d e f e;"
-               "import foo[[no_unique_address]];import foo();"
-               "import f(:sefse);import f(->a=3);"
-               "<TokBeforeEOF>\n",
+               "\nexp\\\nort import:l[[rename]];"
+               "\nimport<<=3;\nimport a b d e d e f e;"
+               "\nimport foo[[no_unique_address]];\nimport foo();"
+               "\nimport f(:sefse);\nimport f(->a=3);"
+               "\n<TokBeforeEOF>\n",
                Out.data());
   ASSERT_EQ(Directives.size(), 11u);
   EXPECT_EQ(Directives[0].Kind, pp_include);

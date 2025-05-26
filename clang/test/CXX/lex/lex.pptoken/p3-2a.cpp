@@ -15,7 +15,7 @@ import <foo  bar>;
 // CHECK: import <foo  bar>;
 import <foo  bar>;
 
-// CHECK: foo; import <foo  bar>;
+// CHECK: foo; import <foo bar>;
 foo; import <foo  bar>;
 
 // CHECK: foo import <foo bar>;
@@ -45,7 +45,7 @@ export export import <foo  bar>;
 import <foo  bar>;
 
 UNBALANCED_PAREN
-// CHECK: import <foo bar>;
+// CHECK: import <foo  bar>;
 import <foo  bar>;
 )
 
@@ -57,14 +57,19 @@ import <foo  bar>;
 // CHECK: import <foo bar>;
 import HEADER;
 
-// CHECK: import <foo bar>;
+// CHECK: {{^}}foo{{$}}
+// CHECK-NEXT: {{^}}  bar{{$}}
+// CHECK-NEXT: {{^}}>;{{$}}
 import <
 foo
   bar
 >;
 
 // CHECK: import{{$}}
-// CHECK: {{^}}<foo bar>;
+// CHECK-NEXT: {{^}}<{{$}}
+// CHECK-NEXT: {{^}}foo{{$}}
+// CHECK-NEXT: {{^}}  bar{{$}}
+// CHECK-NEXT: {{^}}>;{{$}}
 import
 <
 foo
@@ -72,7 +77,7 @@ foo
 >;
 
 // CHECK: import{{$}}
-// CHECK: {{^}}<foo  bar>;
+// CHECK: {{^}}<foo bar>;
 import
 <foo  bar>;
 
