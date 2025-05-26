@@ -281,6 +281,8 @@ else()
       PARENT_TARGET asan)
   endif()
 
+  # On AIX, we only need the static libraries.
+  if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   foreach(arch ${ASAN_SUPPORTED_ARCH})
     if (COMPILER_RT_HAS_VERSION_SCRIPT)
       if(WIN32)
@@ -382,6 +384,7 @@ else()
       endif()
     endif()
   endforeach()
+  endif()
 endif()
 
 add_compiler_rt_resource_file(asan_ignorelist asan_ignorelist.txt asan)
