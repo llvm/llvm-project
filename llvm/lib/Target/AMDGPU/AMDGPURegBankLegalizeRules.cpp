@@ -198,7 +198,8 @@ UniformityLLTOpPredicateID LLTToBId(LLT Ty) {
     return B32;
   if (Ty == LLT::scalar(64) || Ty == LLT::fixed_vector(2, 32) ||
       Ty == LLT::fixed_vector(4, 16) || Ty == LLT::pointer(1, 64) ||
-      Ty == LLT::pointer(4, 64))
+      Ty == LLT::pointer(4, 64) ||
+      (Ty.isPointer() && Ty.getAddressSpace() > AMDGPUAS::MAX_AMDGPU_ADDRESS))
     return B64;
   if (Ty == LLT::fixed_vector(3, 32))
     return B96;
@@ -485,8 +486,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_BR}).Any({{_}, {{}, {None}}});
 
   addRulesForGOpcs({G_SELECT}, StandardB)
+      .Any({{DivS16}, {{Vgpr16}, {Vcc, Vgpr16, Vgpr16}}})
+      .Any({{UniS16}, {{Sgpr16}, {Sgpr32AExtBoolInReg, Sgpr16, Sgpr16}}})
       .Div(B32, {{VgprB32}, {Vcc, VgprB32, VgprB32}})
-      .Uni(B32, {{SgprB32}, {Sgpr32AExtBoolInReg, SgprB32, SgprB32}});
+      .Uni(B32, {{SgprB32}, {Sgpr32AExtBoolInReg, SgprB32, SgprB32}})
+      .Div(B64, {{VgprB64}, {Vcc, VgprB64, VgprB64}, SplitTo32Select})
+      .Uni(B64, {{SgprB64}, {Sgpr32AExtBoolInReg, SgprB64, SgprB64}});
 
   addRulesForGOpcs({G_ANYEXT})
       .Any({{UniS16, S1}, {{None}, {None}}}) // should be combined away

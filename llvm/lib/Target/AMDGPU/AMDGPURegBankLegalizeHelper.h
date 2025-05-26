@@ -114,6 +114,7 @@ private:
   void lowerV_BFE(MachineInstr &MI);
   void lowerS_BFE(MachineInstr &MI);
   void lowerSplitTo32(MachineInstr &MI);
+  void lowerSplitTo32Select(MachineInstr &MI);
 };
 
 } // end namespace AMDGPU
