@@ -2691,6 +2691,7 @@ public:
   bool isHLSLSpecificType() const; // Any HLSL specific type
   bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
   bool isHLSLAttributedResourceType() const;
+  bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
@@ -6364,6 +6365,143 @@ public:
   findHandleTypeOnResource(const Type *RT);
 };
 
+/// Instances of this class represent operands to a SPIR-V type instruction.
+class SpirvOperand {
+public:
+  enum SpirvOperandKind : unsigned char {
+    Invalid,    ///< Uninitialized.
+    ConstantId, ///< Integral value to represent as a SPIR-V OpConstant
+                ///< instruction ID.
+    Literal,    ///< Integral value to represent as an immediate literal.
+    TypeId,     ///< Type to represent as a SPIR-V type ID.
+
+    Max,
+  };
+
+private:
+  SpirvOperandKind Kind = Invalid;
+
+  QualType ResultType;
+  llvm::APInt Value; // Signedness of constants is represented by ResultType.
+
+public:
+  SpirvOperand() : Kind(Invalid), ResultType(), Value() {}
+
+  SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
+      : Kind(Kind), ResultType(ResultType), Value(Value) {}
+
+  SpirvOperand(const SpirvOperand &Other) { *this = Other; }
+  ~SpirvOperand() {}
+
+  SpirvOperand &operator=(const SpirvOperand &Other) {
+    this->Kind = Other.Kind;
+    this->ResultType = Other.ResultType;
+    this->Value = Other.Value;
+    return *this;
+  }
+
+  bool operator==(const SpirvOperand &Other) const {
+    return Kind == Other.Kind && ResultType == Other.ResultType &&
+           Value == Other.Value;
+  }
+
+  bool operator!=(const SpirvOperand &Other) const { return !(*this == Other); }
+
+  SpirvOperandKind getKind() const { return Kind; }
+
+  bool isValid() const { return Kind != Invalid && Kind < Max; }
+  bool isConstant() const { return Kind == ConstantId; }
+  bool isLiteral() const { return Kind == Literal; }
+  bool isType() const { return Kind == TypeId; }
+
+  llvm::APInt getValue() const {
+    assert((isConstant() || isLiteral()) &&
+           "This is not an operand with a value!");
+    return Value;
+  }
+
+  QualType getResultType() const {
+    assert((isConstant() || isType()) &&
+           "This is not an operand with a result type!");
+    return ResultType;
+  }
+
+  static SpirvOperand createConstant(QualType ResultType, llvm::APInt Val) {
+    return SpirvOperand(ConstantId, ResultType, Val);
+  }
+
+  static SpirvOperand createLiteral(llvm::APInt Val) {
+    return SpirvOperand(Literal, QualType(), Val);
+  }
+
+  static SpirvOperand createType(QualType T) {
+    return SpirvOperand(TypeId, T, llvm::APSInt());
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    ID.AddInteger(Kind);
+    ID.AddPointer(ResultType.getAsOpaquePtr());
+    Value.Profile(ID);
+  }
+};
+
+/// Represents an arbitrary, user-specified SPIR-V type instruction.
+class HLSLInlineSpirvType final
+    : public Type,
+      public llvm::FoldingSetNode,
+      private llvm::TrailingObjects<HLSLInlineSpirvType, SpirvOperand> {
+  friend class ASTContext; // ASTContext creates these
+  friend TrailingObjects;
+
+private:
+  uint32_t Opcode;
+  uint32_t Size;
+  uint32_t Alignment;
+  size_t NumOperands;
+
+  HLSLInlineSpirvType(uint32_t Opcode, uint32_t Size, uint32_t Alignment,
+                      ArrayRef<SpirvOperand> Operands)
+      : Type(HLSLInlineSpirv, QualType(), TypeDependence::None), Opcode(Opcode),
+        Size(Size), Alignment(Alignment), NumOperands(Operands.size()) {
+    for (size_t I = 0; I < NumOperands; I++) {
+      // Since Operands are stored as a trailing object, they have not been
+      // initialized yet. Call the constructor manually.
+      auto *Operand =
+          new (&getTrailingObjects<SpirvOperand>()[I]) SpirvOperand();
+      *Operand = Operands[I];
+    }
+  }
+
+public:
+  uint32_t getOpcode() const { return Opcode; }
+  uint32_t getSize() const { return Size; }
+  uint32_t getAlignment() const { return Alignment; }
+  ArrayRef<SpirvOperand> getOperands() const {
+    return {getTrailingObjects<SpirvOperand>(), NumOperands};
+  }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, Opcode, Size, Alignment, getOperands());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, uint32_t Opcode,
+                      uint32_t Size, uint32_t Alignment,
+                      ArrayRef<SpirvOperand> Operands) {
+    ID.AddInteger(Opcode);
+    ID.AddInteger(Size);
+    ID.AddInteger(Alignment);
+    for (auto &Operand : Operands)
+      Operand.Profile(ID);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == HLSLInlineSpirv;
+  }
+};
+
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
@@ -8495,11 +8633,16 @@ inline bool Type::isHLSLBuiltinIntangibleType() const {
 }
 
 inline bool Type::isHLSLSpecificType() const {
-  return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType();
+  return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType() ||
+         isHLSLInlineSpirvType();
 }
 
 inline bool Type::isHLSLAttributedResourceType() const {
   return isa<HLSLAttributedResourceType>(this);
+}
+
+inline bool Type::isHLSLInlineSpirvType() const {
+  return isa<HLSLInlineSpirvType>(this);
 }
 
 inline bool Type::isTemplateTypeParmType() const {
