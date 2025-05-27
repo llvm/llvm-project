@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o - \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
+
+// Check assignments to bitfield members are given source atom groups, as this
+// has distinct codegen codepath to other variable/member assignments.
 
 struct S { int a:3; };
 
