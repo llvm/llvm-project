@@ -459,51 +459,17 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
   return false;
 }
 
-static void collectUses(const Value &V, SmallVectorImpl<const Use *> &Uses) {
-  SmallVector<const User *> WorkList;
-  SmallPtrSet<const User *, 8> Visited;
-
-  auto extendWorkList = [&](const Use &U) {
-    auto User = U.getUser();
-    if (Visited.count(User))
-      return;
-    Visited.insert(User);
-    if (isa<ConstantExpr>(User) && isa<GEPOperator>(User))
-      WorkList.push_back(User);
-    else if (isa<GetElementPtrInst, PHINode, SelectInst>(User))
-      WorkList.push_back(User);
-  };
-
-  for (auto &U : V.uses()) {
-    Uses.push_back(&U);
-    extendWorkList(U);
-  }
-
-  while (!WorkList.empty()) {
-    auto *Cur = WorkList.pop_back_val();
-    for (auto &U : Cur->uses()) {
-      Uses.push_back(&U);
-      extendWorkList(U);
-    }
-  }
-}
-
-static bool allPtrInputsInSameClass(const Value &V, Instruction *Inst) {
+static bool allPtrInputsInSetOrNull(const Instruction *Inst,
+                                    DenseSet<Value *> &Set) {
   unsigned i = isa<SelectInst>(Inst) ? 1 : 0;
   for (; i < Inst->getNumOperands(); ++i) {
     Value *Op = Inst->getOperand(i);
 
-    if (isa<ConstantPointerNull>(Op))
+    if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op))
       continue;
 
-    // TODO-GFX13: if pointers are derived from two different
-    // global lane-shared or private objects, it should still work. The
-    // important part is both must be promotable into vgpr at
-    // the end. It will require one more iteration of processing
-    const Value *Obj = getUnderlyingObjectAggressive(Op);
-    if (Obj != &V) {
-      LLVM_DEBUG(dbgs() << "Found a select/phi with ptrs derived from two "
-                           "different objects\n");
+    if (!Set.count(Op)) {
+      LLVM_DEBUG(dbgs() << "Found a select/phi with ptrs not in the set\n");
       return false;
     }
   }
@@ -523,7 +489,8 @@ static bool isSupportedMemset(MemSetInst *I, const Value &V, Type *ValueType,
          match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
 }
 
-bool IsPromotableToVGPR(const Value &V, const DataLayout &DL) {
+bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
+                        DenseSet<Value *> &Pointers) {
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
     LLVM_DEBUG(dbgs() << "  Cannot promote to vgpr: " << Msg << "\n"
                       << "    " << *Inst << "\n");
@@ -549,9 +516,31 @@ bool IsPromotableToVGPR(const Value &V, const DataLayout &DL) {
     return false;
   }
 
-  SmallVector<const Use *, 8> Uses;
-  collectUses(V, Uses);
+  // Step 1: Collect all derived pointers and their uses.
+  SmallVector<const Use *> Uses;
+  assert(Pointers.empty());
 
+  {
+    SmallVector<const Value *> WorkList;
+
+    Pointers.insert(&V);
+    WorkList.push_back(&V);
+
+    while (!WorkList.empty()) {
+      auto *Cur = WorkList.pop_back_val();
+      for (auto &U : Cur->uses()) {
+        Uses.push_back(&U);
+
+        auto User = U.getUser();
+        if (isa<GEPOperator, PHINode, SelectInst>(User)) {
+          if (Pointers.insert(User).second)
+            WorkList.push_back(User);
+        }
+      }
+    }
+  }
+
+  // Step 2: Verify uses.
   for (auto *U : Uses) {
     Instruction *Inst = dyn_cast<Instruction>(U->getUser());
     if (!Inst)
@@ -582,21 +571,14 @@ bool IsPromotableToVGPR(const Value &V, const DataLayout &DL) {
       continue;
     }
 
-    if (isa<GetElementPtrInst>(Inst)) {
+    if (isa<GetElementPtrInst>(Inst))
       continue;
-    }
 
-    if (isa<PHINode>(Inst)) {
-      if (allPtrInputsInSameClass(V, Inst)) {
+    if (isa<PHINode, SelectInst>(Inst)) {
+      if (allPtrInputsInSetOrNull(Inst, Pointers)) {
         continue;
       }
-      return RejectUser(Inst, "phi on ptrs from two different objects");
-    }
-    if (isa<SelectInst>(Inst)) {
-      if (allPtrInputsInSameClass(V, Inst)) {
-        continue;
-      }
-      return RejectUser(Inst, "select on ptrs from two different objects");
+      return RejectUser(Inst, "phi/select on ptrs from two different objects");
     }
 
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {

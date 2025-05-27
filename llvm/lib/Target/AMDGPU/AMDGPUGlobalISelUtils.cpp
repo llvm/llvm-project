@@ -80,10 +80,37 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   return std::pair(Reg, 0);
 }
 
+static const Value *linearValueTracking(const Value *V) {
+  do {
+    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
+      V = GEP->getPointerOperand();
+    } else if (Operator::getOpcode(V) == Instruction::BitCast ||
+               Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
+      Value *NewV = cast<Operator>(V)->getOperand(0);
+      if (!NewV->getType()->isPointerTy())
+        return V;
+      V = NewV;
+    } else if (auto *PHI = dyn_cast<PHINode>(V)) {
+      // Look through single-arg phi nodes created by LCSSA.
+      if (PHI->getNumIncomingValues() == 1)
+        V = PHI->getIncomingValue(0);
+      else
+        return V;
+    } else
+      return V;
+  } while (1);
+  return nullptr;
+}
+
 bool AMDGPU::IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd) {
-  if (auto *val = MemOpnd->getValue()) {
-    auto *Obj = getUnderlyingObjectAggressive(val);
-    if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Obj)) {
+  if (const Value *Val = MemOpnd->getValue()) {
+    // Simple linear value tracking is enough because we have attached
+    // metadata to all the ptr-def instructions originated from the GV.
+    Val = linearValueTracking(Val);
+    if (auto *Inst = dyn_cast<Instruction>(Val))
+      return Inst->hasMetadata("lane-shared-in-vgpr");
+
+    if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Val)) {
       std::optional<ConstantRange> AbsSymRange = GV->getAbsoluteSymbolRange();
       if (!AbsSymRange)
         return false;
@@ -104,9 +131,11 @@ bool AMDGPU::IsPromotablePrivate(const AllocaInst &Alloca) {
 
 bool AMDGPU::IsPromotablePrivate(const MachineMemOperand *MemOpnd) {
   if (const Value *Val = MemOpnd->getValue()) {
-    const Value *Obj = getUnderlyingObjectAggressive(Val);
-    if (auto *Alloca = dyn_cast<AllocaInst>(Obj))
-      return IsPromotablePrivate(*Alloca);
+    // Simple linear value tracking is enough because we have attached
+    // metadata to all the ptr-def instructions originated from the alloca.
+    Val = linearValueTracking(Val);
+    if (auto *Inst = dyn_cast<Instruction>(Val))
+      return Inst->hasMetadata("amdgpu.promotable.to.vgpr");
   }
   return false;
 }
