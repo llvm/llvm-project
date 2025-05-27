@@ -232,7 +232,7 @@ Status ProcessElfCore::DoLoadCore() {
   bool prstatus_signal_found = false;
   // Check we found a signal in a SIGINFO note.
   for (const auto &thread_data : m_thread_data) {
-    if (thread_data.siginfo.si_signo != 0)
+    if (!thread_data.siginfo_bytes.empty() || thread_data.signo != 0)
       siginfo_signal_found = true;
     if (thread_data.prstatus_sig != 0)
       prstatus_signal_found = true;
@@ -242,10 +242,10 @@ Status ProcessElfCore::DoLoadCore() {
     // PRSTATUS note.
     if (prstatus_signal_found) {
       for (auto &thread_data : m_thread_data)
-        thread_data.siginfo.si_signo = thread_data.prstatus_sig;
+        thread_data.signo = thread_data.prstatus_sig;
     } else if (m_thread_data.size() > 0) {
       // If all else fails force the first thread to be SIGSTOP
-      m_thread_data.begin()->siginfo.si_signo =
+      m_thread_data.begin()->signo =
           GetUnixSignals()->GetSignalNumberFromName("SIGSTOP");
     }
   }
@@ -506,7 +506,7 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   else
     offset += 16;
 
-  thread_data.siginfo.si_signo = data.GetU32(&offset); // pr_cursig
+  thread_data.signo = data.GetU32(&offset); // pr_cursig
   thread_data.tid = data.GetU32(&offset);   // pr_pid
   if (lp64)
     offset += 4;
@@ -589,7 +589,7 @@ static void ParseOpenBSDProcInfo(ThreadData &thread_data,
     return;
 
   offset += 4;
-  thread_data.siginfo.si_signo = data.GetU32(&offset);
+  thread_data.signo = data.GetU32(&offset);
 }
 
 llvm::Expected<std::vector<CoreNote>>
@@ -827,7 +827,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   // Signal targeted at the whole process.
   if (siglwp == 0) {
     for (auto &data : m_thread_data)
-      data.siginfo.si_signo = signo;
+      data.signo = signo;
   }
   // Signal destined for a particular LWP.
   else {
@@ -835,7 +835,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 
     for (auto &data : m_thread_data) {
       if (data.tid == siglwp) {
-        data.siginfo.si_signo = signo;
+        data.signo = signo;
         passed = true;
         break;
       }
@@ -938,12 +938,10 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       break;
     }
     case ELF::NT_SIGINFO: {
-      const lldb_private::UnixSignals &unix_signals = *GetUnixSignals();
-      ELFLinuxSigInfo siginfo;
-      Status status = siginfo.Parse(note.data, arch, unix_signals);
+      Status status = ELFLinuxSigInfo::Parse(
+          note.data, arch, GetTarget().GetPlatform(), thread_data);
       if (status.Fail())
         return status.ToError();
-      thread_data.siginfo = siginfo;
       break;
     }
     case ELF::NT_FILE: {

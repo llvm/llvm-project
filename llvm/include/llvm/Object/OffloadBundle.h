@@ -108,16 +108,6 @@ public:
   OffloadBundleFatBin(MemoryBufferRef Source, StringRef File)
       : FileName(File), NumberOfEntries(0),
         Entries(SmallVector<OffloadBundleEntry>()) {}
-
-  SmallVector<OffloadBundleEntry> entryIDContains(StringRef Str) {
-
-    SmallVector<OffloadBundleEntry> Found = SmallVector<OffloadBundleEntry>();
-    llvm::transform(Entries, std::back_inserter(Found), [Str](auto &X) {
-      if (X.ID.contains(Str))
-        return X;
-    });
-    return Found;
-  }
 };
 
 enum UriTypeT { FILE_URI, MEMORY_URI };
@@ -145,10 +135,8 @@ public:
     case MEMORY_URI:
       return createMemoryURI(Str);
       break;
-    default:
-      return createStringError(object_error::parse_failed,
-                               "Unrecognized URI type");
     }
+    llvm_unreachable("Unknown UriTypeT enum");
   }
 
   static Expected<std::unique_ptr<OffloadBundleURI>>
@@ -179,7 +167,7 @@ public:
     Str.getAsInteger(10, S);
     std::unique_ptr<OffloadBundleURI> OffloadingURI(
         new OffloadBundleURI(FilePathname, O, S));
-    return OffloadingURI;
+    return std::move(OffloadingURI);
   }
 
   static Expected<std::unique_ptr<OffloadBundleURI>>

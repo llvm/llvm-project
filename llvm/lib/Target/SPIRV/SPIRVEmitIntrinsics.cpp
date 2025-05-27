@@ -13,7 +13,6 @@
 
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
-#include "SPIRVMetadata.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"

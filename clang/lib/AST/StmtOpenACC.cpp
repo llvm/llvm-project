@@ -41,10 +41,8 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(unsigned NumClauses)
           OpenACCLoopConstructClass, OpenACCDirectiveKind::Loop,
           SourceLocation{}, SourceLocation{}, SourceLocation{},
           /*AssociatedStmt=*/nullptr) {
-  std::uninitialized_value_construct(
-      getTrailingObjects<const OpenACCClause *>(),
-      getTrailingObjects<const OpenACCClause *>() + NumClauses);
-  setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+  std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+  setClauseList(getTrailingObjects(NumClauses));
 }
 
 OpenACCLoopConstruct::OpenACCLoopConstruct(
@@ -60,10 +58,9 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(
   assert((Loop == nullptr || isa<ForStmt, CXXForRangeStmt>(Loop)) &&
          "Associated Loop not a for loop?");
   // Initialize the trailing storage.
-  llvm::uninitialized_copy(Clauses,
-                           getTrailingObjects<const OpenACCClause *>());
+  llvm::uninitialized_copy(Clauses, getTrailingObjects());
 
-  setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+  setClauseList(getTrailingObjects(Clauses.size()));
 }
 
 OpenACCLoopConstruct *OpenACCLoopConstruct::CreateEmpty(const ASTContext &C,
