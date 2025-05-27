@@ -408,9 +408,9 @@ template class VPUnrollPartAccessor<3>;
 
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, DebugLoc DL,
-                             const Twine &Name)
+                             const Twine &Name, bool IsSingleScalar)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, Flags, DL),
-      Opcode(Opcode), Name(Name.str()) {
+      IsSingleScalar(IsSingleScalar), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
 }
@@ -841,7 +841,8 @@ bool VPInstruction::isVectorToScalar() const {
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == VPInstruction::ResumePhi ||
+  // TODO: Set IsSingleScalar for ResumePhi and PHI.
+  return IsSingleScalar || getOpcode() == VPInstruction::ResumePhi ||
          getOpcode() == Instruction::PHI;
 }
 
@@ -965,7 +966,7 @@ void VPInstruction::dump() const {
 
 void VPInstruction::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
+  O << Indent << (isSingleScalar() ? "SINGLE-SCALAR " : "EMIT ");
 
   if (hasResult()) {
     printAsOperand(O, SlotTracker);
@@ -1049,15 +1050,17 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 
 void VPInstructionWithType::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
-  switch (getOpcode()) {
-  case Instruction::ZExt:
-  case Instruction::Trunc: {
+  if (Instruction::isCast(getOpcode())) {
     Value *Op = State.get(getOperand(0), VPLane(0));
     Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
                                            Op, ResultTy);
+    if (auto *I = dyn_cast<Instruction>(Cast))
+      applyFlags(*I);
     State.set(this, Cast, VPLane(0));
-    break;
+    return;
   }
+
+  switch (getOpcode()) {
   case VPInstruction::StepVector: {
     Value *StepVector =
         State.Builder.CreateStepVector(VectorType::get(ResultTy, State.VF));
@@ -1069,10 +1072,19 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   }
 }
 
+InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // TODO: Compute cost for VPInstructions without underlying values once
+  // the legacy cost model has been retired.
+  if (!getUnderlyingValue())
+    return 0;
+  return Ctx.getLegacyCost(cast<Instruction>(getUnderlyingValue()), VF);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
+  O << Indent << (isSingleScalar() ? "SINGLE-SCALAR " : "EMIT ");
   printAsOperand(O, SlotTracker);
   O << " = ";
 
@@ -1585,12 +1597,13 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   switch (OpType) {
   case OperationType::OverflowingBinOp:
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
-           Opcode == Instruction::Mul ||
+           Opcode == Instruction::Mul || Opcode == Instruction::Shl ||
            Opcode == VPInstruction::VPInstruction::CanonicalIVIncrementForPart;
   case OperationType::DisjointOp:
     return Opcode == Instruction::Or;
   case OperationType::PossiblyExactOp:
-    return Opcode == Instruction::AShr;
+    return Opcode == Instruction::AShr || Opcode == Instruction::LShr ||
+           Opcode == Instruction::SDiv || Opcode == Instruction::UDiv;
   case OperationType::GEPOp:
     return Opcode == Instruction::GetElementPtr ||
            Opcode == VPInstruction::PtrAdd;
@@ -1598,10 +1611,11 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
     return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
            Opcode == Instruction::FSub || Opcode == Instruction::FNeg ||
            Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
+           Opcode == Instruction::FPTrunc || Opcode == Instruction::FPExt ||
            Opcode == Instruction::FCmp || Opcode == Instruction::Select ||
            Opcode == VPInstruction::WideIVStep;
   case OperationType::NonNegOp:
-    return Opcode == Instruction::ZExt;
+    return Opcode == Instruction::UIToFP || Opcode == Instruction::ZExt;
     break;
   case OperationType::Cmp:
     return Opcode == Instruction::ICmp;

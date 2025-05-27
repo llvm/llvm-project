@@ -40,7 +40,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:    vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:    WIDEN vp.store vp<[[PTR3]]>, ir<[[ADD]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:    EMIT vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
+; IF-EVL-NEXT:    SINGLE-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-NEXT:    EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>
@@ -112,7 +112,7 @@ define void @safe_dep(ptr %p) {
 ; CHECK-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr ir<%p>, vp<[[ST]]>
 ; CHECK-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; CHECK-NEXT:    WIDEN ir<[[V:%.+]]> = load vp<[[PTR1]]>
-; CHECK-NEXT:    CLONE ir<[[OFFSET:.+]]> = add vp<[[ST]]>, ir<100>
+; CHECK-NEXT:    SINGLE-SCALAR ir<[[OFFSET:.+]]> = add vp<[[ST]]>, ir<100>
 ; CHECK-NEXT:    CLONE ir<[[GEP2:%.+]]> = getelementptr ir<%p>, ir<[[OFFSET]]>
 ; CHECK-NEXT:    vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; CHECK-NEXT:    WIDEN store vp<[[PTR2]]>, ir<[[V]]>

@@ -118,8 +118,8 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
-; DBG-NEXT:  EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
-; DBG-NEXT:  EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<false>
+; DBG-NEXT:  SINGLE-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
+; DBG-NEXT:  SINGLE-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<false>
 ; DBG-NEXT: Successor(s): ir-bb<loop.header>
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<loop.header>:
@@ -208,7 +208,7 @@ exit:
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
-; DBG-NEXT:     EMIT vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
+; DBG-NEXT:     SINGLE-SCALAR vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
 ; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, ir<1>, vp<[[VF]]
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
@@ -225,8 +225,8 @@ exit:
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
-; DBG-NEXT:  EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
-; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
+; DBG-NEXT:  SINGLE-SCALAR vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; DBG-NEXT:  SINGLE-SCALAR vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
 ; DBG-NEXT: Successor(s): ir-bb<loop>
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<loop>:
@@ -347,12 +347,10 @@ define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, pt
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = sext i8 [[TMP5]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP6]] to i16
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP7]] to i16
-; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP8]], %arg
-; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP9]], %arg
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP4]] to i16
+; CHECK-NEXT:    [[TMP7:%.*]] = sext i8 [[TMP5]] to i16
+; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP6]], %arg
+; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP7]], %arg
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP1]]
 ; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP12]], align 2

@@ -154,6 +154,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (auto *RepR = dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
       if (!ScalarVFOnly && RepR->isSingleScalar())
         continue;
+    } else if (auto *RepR = dyn_cast<VPInstruction>(SinkCandidate)) {
+      if ((!ScalarVFOnly && RepR->isSingleScalar()) ||
+          !RepR->getUnderlyingValue())
+        continue;
     } else if (!isa<VPScalarIVStepsRecipe>(SinkCandidate))
       continue;
 
@@ -196,6 +200,15 @@ static bool sinkScalarOperands(VPlan &Plan) {
       SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
         return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
       });
+    } else {
+      if (auto *VPI = dyn_cast<VPInstruction>(SinkCandidate)) {
+        auto *OldCand = SinkCandidate;
+        SinkCandidate = new VPReplicateRecipe(VPI->getUnderlyingInstr(),
+                                              SinkCandidate->operands(), true,
+                                              nullptr /*Mask*/);
+        SinkCandidate->insertBefore(OldCand);
+        OldCand->replaceAllUsesWith(SinkCandidate);
+      }
     }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
     for (VPValue *Op : SinkCandidate->operands())
@@ -1047,8 +1060,14 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
-        auto *VPC =
-            new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
+        VPSingleDefRecipe *VPC;
+        if (vputils::isSingleScalar(R.getVPSingleValue()))
+          VPC = new VPInstructionWithType(Instruction::CastOps(ExtOpcode), {A},
+                                          TruncTy, {}, {});
+        else
+          VPC = new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A,
+                                      TruncTy);
+
         if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue()) {
           // UnderlyingExt has distinct return type, used to retain legacy cost.
           VPC->setUnderlyingValue(UnderlyingExt);

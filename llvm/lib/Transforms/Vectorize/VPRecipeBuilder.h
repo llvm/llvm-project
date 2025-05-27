@@ -199,7 +199,7 @@ public:
   /// Build a VPReplicationRecipe for \p I using \p Operands. If it is
   /// predicated, add the mask as last operand. Range.End may be decreased to
   /// ensure same recipe behavior from \p Range.Start to \p Range.End.
-  VPReplicateRecipe *handleReplication(Instruction *I,
+  VPSingleDefRecipe *handleReplication(Instruction *I,
                                        ArrayRef<VPValue *> Operands,
                                        VFRange &Range);
 

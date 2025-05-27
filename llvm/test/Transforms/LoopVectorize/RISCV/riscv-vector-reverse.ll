@@ -74,8 +74,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:      SINGLE-SCALAR ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
+; CHECK-NEXT:      SINGLE-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, vp<[[VF]]>
 ; CHECK-NEXT:      WIDEN ir<%1> = load vp<[[VEC_PTR]]>
@@ -95,8 +95,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
+; CHECK-NEXT:    SINGLE-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    SINGLE-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -198,8 +198,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:    vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    SINGLE-SCALAR ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:    SINGLE-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
 ; CHECK-NEXT:    WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>
@@ -220,8 +220,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
+; CHECK-NEXT:    SINGLE-SCALAR vp<[[RESUME_1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    SINGLE-SCALAR vp<[[RESUME_2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -322,8 +322,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:      SINGLE-SCALAR ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
+; CHECK-NEXT:      SINGLE-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, vp<[[VF]]>
 ; CHECK-NEXT:      WIDEN ir<%1> = load vp<[[VEC_PTR]]>
@@ -343,8 +343,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
+; CHECK-NEXT:    SINGLE-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    SINGLE-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -446,8 +446,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:    vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
-; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    SINGLE-SCALAR ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:    SINGLE-SCALAR ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
 ; CHECK-NEXT:    WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>
@@ -468,8 +468,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
+; CHECK-NEXT:    SINGLE-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    SINGLE-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:

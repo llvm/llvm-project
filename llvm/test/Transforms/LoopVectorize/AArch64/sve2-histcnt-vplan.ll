@@ -29,10 +29,10 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>, [[VF]]
 ; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
 ; CHECK-NEXT:     CLONE [[IDX:.*]] = load [[GEP_IDX]]
-; CHECK-NEXT:     CLONE [[EXT_IDX:.*]] = zext [[IDX]]
+; CHECK-NEXT:     SINGLE-SCALAR [[EXT_IDX:.*]] = zext [[IDX]]
 ; CHECK-NEXT:     CLONE [[GEP_BUCKET:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX]]
 ; CHECK-NEXT:     CLONE [[HISTVAL:.*]] = load [[GEP_BUCKET]]
-; CHECK-NEXT:     CLONE [[UPDATE:.*]] = add nsw [[HISTVAL]], ir<1>
+; CHECK-NEXT:     SINGLE-SCALAR [[UPDATE:.*]] = add nsw [[HISTVAL]], ir<1>
 ; CHECK-NEXT:     CLONE store [[UPDATE]], [[GEP_BUCKET]]
 ; CHECK-NEXT:     EMIT [[IV_NEXT]] = add nuw [[IV]], [[VFxUF]]
 ; CHECK-NEXT:     EMIT branch-on-count [[IV_NEXT]], [[VTC]]
@@ -46,7 +46,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
+; CHECK-NEXT:   SINGLE-SCALAR vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
@@ -93,7 +93,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
+; CHECK-NEXT:   SINGLE-SCALAR vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
