@@ -140,8 +140,8 @@ New checks
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-accesses>`
   check.
 
-  Flags calls to ``operator[]`` in STL containers and suggests replacing it with
-  safe alternatives.
+  Finds calls to ``operator[]`` in STL containers and suggests replacing them
+  with safe alternatives.
 
 - New :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
