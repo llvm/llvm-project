@@ -614,6 +614,22 @@ public:
 
     // Bootstrap with branch targets
     auto const *DivTermCycle = CI.getCycle(&DivTermBlock);
+
+    // Locate the largest ancestor cycle that is not reducible and does not
+    // contain a reducible ancestor. This is done with a lambda that is defined
+    // and invoked in the same statement.
+    const CycleT *IrreducibleAncestor = [](const CycleT *C) -> const CycleT* {
+      if (!C) return nullptr;
+      if (C->isReducible()) return nullptr;
+      while (const CycleT *P = C->getParentCycle()) {
+        if (P->isReducible()) return C;
+        C = P;
+      }
+      assert(!C->getParentCycle());
+      assert(!C->isReducible());
+      return C;
+    } (DivTermCycle);
+
     for (const auto *SuccBlock : successors(&DivTermBlock)) {
       if (DivTermCycle && !DivTermCycle->contains(SuccBlock)) {
         // If DivTerm exits the cycle immediately, computeJoin() might
@@ -625,19 +641,6 @@ public:
       }
       visitEdge(*SuccBlock, *SuccBlock);
     }
-
-    // Return true if B is inside an irreducible cycle
-    auto IsInIrreducibleCycle = [this](const BlockT *B) {
-      for (const auto *Cycle = CI.getCycle(B); Cycle;
-           Cycle = Cycle->getParentCycle()) {
-        // If everything is inside a reducible cycle, then look no further
-        if (Cycle->isReducible() && Cycle->contains(&DivTermBlock))
-          return false;
-        if (!Cycle->isReducible())
-          return true;
-      }
-      return false;
-    };
 
     // Technically propagation can continue until it reaches the last node.
     //
@@ -652,7 +655,7 @@ public:
       const auto *Block = CyclePOT[BlockIdx];
       // If no irreducible cycle, stop if freshLable.count() = 1 and Block
       // is the IPD. If it is in any irreducible cycle, continue propagation.
-      if (FreshLabels.count() == 1 && !IsInIrreducibleCycle(Block))
+      if (FreshLabels.count() == 1 && (!IrreducibleAncestor || !IrreducibleAncestor->contains(Block)))
         break;
 
       LLVM_DEBUG(dbgs() << "Current labels:\n"; printDefs(dbgs()));
