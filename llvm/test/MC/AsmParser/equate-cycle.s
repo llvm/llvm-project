@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llvm-mc -filetype=obj -triple=x86_64 %s -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: [[#@LINE+2]]:7: error: cyclic dependency detected for symbol 'a'
 # CHECK: [[#@LINE+1]]:7: error: expression could not be evaluated
