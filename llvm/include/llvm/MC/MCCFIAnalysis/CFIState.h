@@ -3,9 +3,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/Support/FormatVariadic.h"
-#include <cassert>
-#include <cstdint>
 #include <optional>
 #include <string>
 namespace llvm {
