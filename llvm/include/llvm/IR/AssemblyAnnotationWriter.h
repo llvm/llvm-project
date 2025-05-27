@@ -24,7 +24,7 @@ class Instruction;
 class Value;
 class formatted_raw_ostream;
 
-class AssemblyAnnotationWriter {
+class LLVM_ABI AssemblyAnnotationWriter {
 public:
   virtual ~AssemblyAnnotationWriter();
 

@@ -17,6 +17,7 @@
 #ifndef LLVM_IR_FUNCTION_H
 #define LLVM_IR_FUNCTION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -1052,7 +1053,7 @@ namespace CallingConv {
 
 // TODO: Need similar function for support of argument in position. General
 // version on FunctionType + Attributes + CallingConv::ID?
-LLVM_READNONE
+LLVM_ABI LLVM_READNONE
 bool supportsNonVoidReturnType(CallingConv::ID CC);
 } // namespace CallingConv
 
@@ -1061,7 +1062,7 @@ bool supportsNonVoidReturnType(CallingConv::ID CC);
 /// Null pointer access in non-zero address space is not considered undefined.
 /// Return value: false => null pointer dereference is undefined.
 /// Return value: true =>  null pointer dereference is not undefined.
-bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
+LLVM_ABI bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
 template <> struct OperandTraits<Function> : public HungoffOperandTraits {};
 

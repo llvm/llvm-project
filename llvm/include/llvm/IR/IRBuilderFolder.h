@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_IRBUILDERFOLDER_H
 #define LLVM_IR_IRBUILDERFOLDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/InstrTypes.h"
@@ -22,7 +23,7 @@
 namespace llvm {
 
 /// IRBuilderFolder - Interface for constant folding in IRBuilder.
-class IRBuilderFolder {
+class LLVM_ABI IRBuilderFolder {
 public:
   virtual ~IRBuilderFolder();
 

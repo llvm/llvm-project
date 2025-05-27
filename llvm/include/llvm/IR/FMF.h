@@ -104,7 +104,7 @@ public:
   }
 
   /// Print fast-math flags to \p O.
-  void print(raw_ostream &O) const;
+  LLVM_ABI void print(raw_ostream &O) const;
 
   /// Intersect rewrite-based flags
   static inline FastMathFlags intersectRewrite(FastMathFlags LHS,

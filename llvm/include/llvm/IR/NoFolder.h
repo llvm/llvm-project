@@ -21,6 +21,7 @@
 #ifndef LLVM_IR_NOFOLDER_H
 #define LLVM_IR_NOFOLDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/FMF.h"
@@ -32,7 +33,7 @@
 namespace llvm {
 
 /// NoFolder - Create "constants" (actually, instructions) with no folding.
-class NoFolder final : public IRBuilderFolder {
+class LLVM_ABI NoFolder final : public IRBuilderFolder {
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:

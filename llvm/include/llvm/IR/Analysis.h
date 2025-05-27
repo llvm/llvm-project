@@ -12,6 +12,7 @@
 #ifndef LLVM_IR_ANALYSIS_H
 #define LLVM_IR_ANALYSIS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace llvm {
@@ -74,7 +75,7 @@ public:
   static AnalysisSetKey *ID() { return &SetKey; }
 
 private:
-  static AnalysisSetKey SetKey;
+  LLVM_ABI static AnalysisSetKey SetKey;
 };
 
 /// A set of analyses that are preserved following a run of a transformation
@@ -310,7 +311,7 @@ public:
 
 private:
   /// A special key used to indicate all analyses.
-  static AnalysisSetKey AllAnalysesKey;
+  LLVM_ABI static AnalysisSetKey AllAnalysesKey;
 
   /// The IDs of analyses and analysis sets that are preserved.
   SmallPtrSet<void *, 2> PreservedIDs;

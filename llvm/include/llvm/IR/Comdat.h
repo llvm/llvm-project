@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_COMDAT_H
 #define LLVM_IR_COMDAT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm-c/Types.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/CBindingWrapping.h"
@@ -41,13 +42,13 @@ public:
   };
 
   Comdat(const Comdat &) = delete;
-  Comdat(Comdat &&C);
+  LLVM_ABI Comdat(Comdat &&C);
 
   SelectionKind getSelectionKind() const { return SK; }
   void setSelectionKind(SelectionKind Val) { SK = Val; }
-  StringRef getName() const;
-  void print(raw_ostream &OS, bool IsForDebug = false) const;
-  void dump() const;
+  LLVM_ABI StringRef getName() const;
+  LLVM_ABI void print(raw_ostream &OS, bool IsForDebug = false) const;
+  LLVM_ABI void dump() const;
   const SmallPtrSetImpl<GlobalObject *> &getUsers() const { return Users; }
 
 private:

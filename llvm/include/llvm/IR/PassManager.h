@@ -37,6 +37,7 @@
 #ifndef LLVM_IR_PASSMANAGER_H
 #define LLVM_IR_PASSMANAGER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -229,7 +230,7 @@ template <typename IRUnitT>
 void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
 
 template <>
-void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+LLVM_ABI void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
 
 extern template class PassManager<Module>;
 
@@ -237,7 +238,7 @@ extern template class PassManager<Module>;
 using ModulePassManager = PassManager<Module>;
 
 template <>
-void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+LLVM_ABI void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
                                             const Function &IR);
 
 extern template class PassManager<Function>;
@@ -650,7 +651,7 @@ using FunctionAnalysisManagerModuleProxy =
 /// Specialization of the invalidate method for the \c
 /// FunctionAnalysisManagerModuleProxy's result.
 template <>
-bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
+LLVM_ABI bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
     Module &M, const PreservedAnalyses &PA,
     ModuleAnalysisManager::Invalidator &Inv);
 
@@ -834,8 +835,8 @@ public:
       : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
 
   /// Runs the function pass across every function in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
