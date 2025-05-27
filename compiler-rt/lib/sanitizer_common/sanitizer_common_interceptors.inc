@@ -1816,7 +1816,7 @@ FORMAT_INTERCEPTOR_IMPL(__isoc99_snprintf, __isoc99_vsnprintf, str, size,
 #endif  // SANITIZER_INTERCEPT_PRINTF
 
 #if SANITIZER_INTERCEPT_PRINTF
-#    define INIT_PRINTF_COMMON                   \
+# define INIT_PRINTF_COMMON                      \
       COMMON_INTERCEPT_FUNCTION_LDBL(printf);    \
       COMMON_INTERCEPT_FUNCTION_LDBL(sprintf);   \
       COMMON_INTERCEPT_FUNCTION_LDBL(snprintf);  \
@@ -1829,12 +1829,11 @@ FORMAT_INTERCEPTOR_IMPL(__isoc99_snprintf, __isoc99_vsnprintf, str, size,
   // AIX does not have [v]asprintf.
 #    define INIT_PRINTF_EXTRA                    \
       COMMON_INTERCEPT_FUNCTION_LDBL(asprintf);  \
-      COMMON_INTERCEPT_FUNCTION_LDBL(vasprintf); \
-#else
-   #define INIT_PRINTF_EXTRA                          
-#endif
-#    define INIT_PRINTF  INIT_PRINTF_COMMON INIT_PRINTF_EXTRA
+      COMMON_INTERCEPT_FUNCTION_LDBL(vasprintf);
+#  else
+#   define INIT_PRINTF_EXTRA                          
 #  endif
+#  define INIT_PRINTF INIT_PRINTF_COMMON INIT_PRINTF_EXTRA
 #else
 #define INIT_PRINTF
 #endif
