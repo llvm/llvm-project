@@ -103,10 +103,37 @@ ExecutionCountThreshold("execution-count-threshold",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
-cl::opt<unsigned>
-    HeatmapBlock("block-size",
-                 cl::desc("size of a heat map block in bytes (default 64)"),
-                 cl::init(64), cl::cat(HeatmapCategory));
+bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
+                                   StringRef Arg, HeatmapBlockSpec &Val) {
+  auto [InitialPart, ScalesPart] = Arg.split(':');
+  if (InitialPart.getAsInteger(10, Val.Initial)) {
+    O.error("'" + Arg + "' value invalid for block-size initial_size argument");
+    return true;
+  }
+  // Scales part is optional.
+  if (ScalesPart.empty())
+    return false;
+  SmallVector<StringRef> Scales;
+  ScalesPart.split(Scales, ',');
+  for (StringRef Scale : Scales) {
+    unsigned &ScaleVal = Val.Scales.emplace_back(0);
+    if (Scale.getAsInteger(10, ScaleVal)) {
+      O.error("'" + Scale + "' value invalid for block-size scale argument");
+      return true;
+    }
+  }
+  return false;
+}
+
+cl::opt<opts::HeatmapBlockSpec, false, opts::HeatmapBlockSpecParser>
+    HeatmapBlock(
+        "block-size", cl::value_desc("initial_size{:pow2_scale1,...}"),
+        cl::desc("size of a heat map block in bytes (default 64), optionally "
+                 "followed by a comma-separated list of cumulative scales "
+                 "represented as powers of 2 to produce zoomed-out heatmaps "
+                 "(default 6, 2, 6 = 4k, 16k, 1M block sizes)."),
+        cl::init(HeatmapBlockSpec{/*Initial*/ 64, /*Scales*/ {6, 2, 6}}),
+        cl::cat(HeatmapCategory));
 
 cl::opt<unsigned long long> HeatmapMaxAddress(
     "max-address", cl::init(0xffffffff),
