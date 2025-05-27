@@ -40,3 +40,16 @@ define void @address_capture_and_full_capture() {
   load i32, ptr %a
   ret void
 }
+
+declare ptr @capture_ret(ptr, ptr)
+
+; CHECK-LABEL: capture_ret_only
+; CHECK: MayAlias:	i8* %a, i8* %ret
+; CHECK: NoAlias:	i8* %b, i8* %ret
+define void @capture_ret_only(ptr noalias %a, ptr noalias %b) {
+  %ret = call ptr @capture_ret(ptr captures(ret: address, provenance) %a, ptr captures(none) %b)
+  load i8, ptr %ret
+  load i8, ptr %a
+  load i8, ptr %b
+  ret void
+}
