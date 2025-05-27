@@ -40,8 +40,8 @@ protected:
                         const MCFixup &Fixup, bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
-  bool isNonILP32reloc(const MCFixup &Fixup, AArch64MCExpr::Specifier RefKind,
-                       MCContext &Ctx) const;
+  bool isNonILP32reloc(const MCFixup &Fixup,
+                       AArch64MCExpr::Specifier RefKind) const;
 
   bool IsILP32;
 };
@@ -57,9 +57,8 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
   IsILP32 ? ELF::R_AARCH64_P32_##rtype : ELF::R_AARCH64_##rtype
 
 // assumes IsILP32 is true
-bool AArch64ELFObjectWriter::isNonILP32reloc(const MCFixup &Fixup,
-                                             AArch64MCExpr::Specifier RefKind,
-                                             MCContext &Ctx) const {
+bool AArch64ELFObjectWriter::isNonILP32reloc(
+    const MCFixup &Fixup, AArch64MCExpr::Specifier RefKind) const {
   if (Fixup.getTargetKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch (RefKind) {
@@ -216,7 +215,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_AARCH64_NONE;
     }
   } else {
-    if (IsILP32 && isNonILP32reloc(Fixup, RefKind, Ctx))
+    if (IsILP32 && isNonILP32reloc(Fixup, RefKind))
       return ELF::R_AARCH64_NONE;
     switch (Fixup.getTargetKind()) {
     case FK_Data_1:
