@@ -7593,6 +7593,22 @@ Note that setting ``llvm.loop.interleave.count`` to 1 disables interleaving
 multiple iterations of the loop. If ``llvm.loop.interleave.count`` is set to 0
 then the interleave count will be determined automatically.
 
+'``llvm.loop.vectorize.reassociation.enable``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata selectively allows or disallows reassociating computations,
+which otherwise may be unsafe to reassociate, during the loop vectorization.
+For example, a floating point ``ADD`` reduction without ``reassoc`` fast-math
+flags may be vectorized provided that this metadata allows it. The first
+operand is the string ``llvm.loop.vectorize.reassociation.enable``
+and the second operand is a bit. If the bit operand value is 1 unsafe
+reassociations aqre enabled. A value of 0 disables unsafe reassociations.
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.reassociation.enable", i1 0}
+   !1 = !{!"llvm.loop.vectorize.reassociation.enable", i1 1}
+
 '``llvm.loop.vectorize.enable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
