@@ -80,6 +80,7 @@ KEYWORD(RootSignature) // used only for diagnostic messaging
 KEYWORD(RootFlags)
 KEYWORD(DescriptorTable)
 KEYWORD(RootConstants)
+KEYWORD(StaticSampler)
 
 // RootConstants Keywords:
 KEYWORD(num32BitConstants)

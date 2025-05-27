@@ -128,7 +128,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     RootSignature
 
-    RootFlags DescriptorTable RootConstants
+    RootFlags DescriptorTable RootConstants StaticSampler
 
     num32BitConstants
 
