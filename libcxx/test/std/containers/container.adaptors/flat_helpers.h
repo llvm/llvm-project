@@ -9,6 +9,7 @@
 #ifndef TEST_STD_CONTAINERS_CONTAINER_ADAPTORS_FLAT_HELPERS_H
 #define TEST_STD_CONTAINERS_CONTAINER_ADAPTORS_FLAT_HELPERS_H
 
+#include <cstdint>
 #include <vector>
 
 #include "test_macros.h"
@@ -17,19 +18,20 @@ template <class T>
 struct CopyOnlyVector : std::vector<T> {
   using std::vector<T>::vector;
 
-  CopyOnlyVector(const CopyOnlyVector&) = default;
-  CopyOnlyVector(CopyOnlyVector&& other) : CopyOnlyVector(other) {}
-  CopyOnlyVector(CopyOnlyVector&& other, std::vector<T>::allocator_type alloc) : CopyOnlyVector(other, alloc) {}
+  constexpr CopyOnlyVector(const CopyOnlyVector&) = default;
+  constexpr CopyOnlyVector(CopyOnlyVector&& other) : CopyOnlyVector(other) {}
+  constexpr CopyOnlyVector(CopyOnlyVector&& other, std::vector<T>::allocator_type alloc)
+      : CopyOnlyVector(other, alloc) {}
 
-  CopyOnlyVector& operator=(const CopyOnlyVector&) = default;
-  CopyOnlyVector& operator=(CopyOnlyVector& other) { return this->operator=(other); }
+  constexpr CopyOnlyVector& operator=(const CopyOnlyVector&) = default;
+  constexpr CopyOnlyVector& operator=(CopyOnlyVector& other) { return this->operator=(other); }
 };
 
 template <class T, bool ConvertibleToT = false>
 struct Transparent {
   T t;
 
-  explicit operator T() const
+  constexpr explicit operator T() const
     requires ConvertibleToT
   {
     return t;
@@ -50,10 +52,10 @@ struct TransparentComparator {
 
   bool* transparent_used  = nullptr;
   TransparentComparator() = default;
-  TransparentComparator(bool& used) : transparent_used(&used) {}
+  constexpr TransparentComparator(bool& used) : transparent_used(&used) {}
 
   template <class T, bool Convertible>
-  bool operator()(const T& t, const Transparent<T, Convertible>& transparent) const {
+  constexpr bool operator()(const T& t, const Transparent<T, Convertible>& transparent) const {
     if (transparent_used != nullptr) {
       *transparent_used = true;
     }
@@ -61,7 +63,7 @@ struct TransparentComparator {
   }
 
   template <class T, bool Convertible>
-  bool operator()(const Transparent<T, Convertible>& transparent, const T& t) const {
+  constexpr bool operator()(const Transparent<T, Convertible>& transparent, const T& t) const {
     if (transparent_used != nullptr) {
       *transparent_used = true;
     }
@@ -69,7 +71,7 @@ struct TransparentComparator {
   }
 
   template <class T>
-  bool operator()(const T& t1, const T& t2) const {
+  constexpr bool operator()(const T& t1, const T& t2) const {
     return t1 < t2;
   }
 };
