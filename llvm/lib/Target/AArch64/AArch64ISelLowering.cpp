@@ -29441,34 +29441,9 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   EVT OpVT = Op.getValueType();
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_DEINTERLEAVE.");
-  assert(Op->getNumOperands() == 2 ||
-         Op->getNumOperands() == 4 && "Expected factor to be 2 or 4.");
 
-  // Deinterleave 'ab cd ac bd' as a series of factor 2 deinterleaves.
-  if (Op.getNumOperands() == 4) {
-    SDVTList VTList = DAG.getVTList({OpVT, OpVT});
-    // ac ac
-    SDNode *LHS0 = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTList,
-                               Op.getOperand(0), Op.getOperand(1))
-                       .getNode();
-    // bd bd
-    SDNode *RHS0 = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTList,
-                               Op.getOperand(2), Op.getOperand(3))
-                       .getNode();
-    // aa cc
-    SDNode *LHS1 = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTList,
-                               SDValue(LHS0, 0), SDValue(RHS0, 0))
-                       .getNode();
-    // bb dd
-    SDNode *RHS1 = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, VTList,
-                               SDValue(LHS0, 1), SDValue(RHS0, 1))
-                       .getNode();
-
-    // aa bb cc dd
-    return DAG.getMergeValues({SDValue(LHS1, 0), SDValue(RHS1, 0),
-                               SDValue(LHS1, 1), SDValue(RHS1, 1)},
-                              DL);
-  }
+  if (Op->getNumOperands() != 2)
+    return SDValue();
 
   SDValue Even = DAG.getNode(AArch64ISD::UZP1, DL, OpVT, Op.getOperand(0),
                              Op.getOperand(1));
@@ -29483,34 +29458,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   EVT OpVT = Op.getValueType();
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_INTERLEAVE.");
-  assert(Op->getNumOperands() == 2 ||
-         Op->getNumOperands() == 4 && "Expected factor to be 2 or 4.");
 
-  // Interleave 'aa bb cc dd' as a series of factor 2 interleaves.
-  if (Op.getNumOperands() == 4) {
-    SDVTList VTList = DAG.getVTList({OpVT, OpVT});
-    // ac ac
-    SDNode *LHS0 = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTList,
-                               Op.getOperand(0), Op.getOperand(2))
-                       .getNode();
-    // bd bd
-    SDNode *RHS0 = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTList,
-                               Op.getOperand(1), Op.getOperand(3))
-                       .getNode();
-    // ab cd
-    SDNode *LHS1 = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTList,
-                               SDValue(LHS0, 0), SDValue(RHS0, 0))
-                       .getNode();
-    // ab cd
-    SDNode *RHS1 = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTList,
-                               SDValue(LHS0, 1), SDValue(RHS0, 1))
-                       .getNode();
-
-    // ab cd ab cd
-    return DAG.getMergeValues({SDValue(LHS1, 0), SDValue(LHS1, 1),
-                               SDValue(RHS1, 0), SDValue(RHS1, 1)},
-                              DL);
-  }
+  if (Op->getNumOperands() != 2)
+    return SDValue();
 
   SDValue Lo = DAG.getNode(AArch64ISD::ZIP1, DL, OpVT, Op.getOperand(0),
                            Op.getOperand(1));

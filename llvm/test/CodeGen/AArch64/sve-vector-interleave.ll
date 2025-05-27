@@ -210,6 +210,38 @@ define <vscale x 8 x i64> @interleave4_nxv8i64(<vscale x 2 x i64> %vec0, <vscale
   ret <vscale x 8 x i64> %retval
 }
 
+define <vscale x 16 x i64> @interleave8_nxv16i64(<vscale x 2 x i64> %vec0, <vscale x 2 x i64> %vec1, <vscale x 2 x i64> %vec2, <vscale x 2 x i64> %vec3, <vscale x 2 x i64> %vec4, <vscale x 2 x i64> %vec5, <vscale x 2 x i64> %vec6, <vscale x 2 x i64> %vec7) {
+; CHECK-LABEL: interleave8_nxv16i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 z24.d, z3.d, z7.d
+; CHECK-NEXT:    zip1 z25.d, z1.d, z5.d
+; CHECK-NEXT:    zip1 z26.d, z2.d, z6.d
+; CHECK-NEXT:    zip1 z27.d, z0.d, z4.d
+; CHECK-NEXT:    zip2 z3.d, z3.d, z7.d
+; CHECK-NEXT:    zip2 z1.d, z1.d, z5.d
+; CHECK-NEXT:    zip2 z2.d, z2.d, z6.d
+; CHECK-NEXT:    zip2 z0.d, z0.d, z4.d
+; CHECK-NEXT:    zip1 z4.d, z25.d, z24.d
+; CHECK-NEXT:    zip2 z6.d, z25.d, z24.d
+; CHECK-NEXT:    zip1 z5.d, z27.d, z26.d
+; CHECK-NEXT:    zip2 z7.d, z27.d, z26.d
+; CHECK-NEXT:    zip1 z24.d, z1.d, z3.d
+; CHECK-NEXT:    zip1 z25.d, z0.d, z2.d
+; CHECK-NEXT:    zip2 z26.d, z1.d, z3.d
+; CHECK-NEXT:    zip2 z27.d, z0.d, z2.d
+; CHECK-NEXT:    zip1 z0.d, z5.d, z4.d
+; CHECK-NEXT:    zip2 z1.d, z5.d, z4.d
+; CHECK-NEXT:    zip1 z2.d, z7.d, z6.d
+; CHECK-NEXT:    zip2 z3.d, z7.d, z6.d
+; CHECK-NEXT:    zip1 z4.d, z25.d, z24.d
+; CHECK-NEXT:    zip2 z5.d, z25.d, z24.d
+; CHECK-NEXT:    zip1 z6.d, z27.d, z26.d
+; CHECK-NEXT:    zip2 z7.d, z27.d, z26.d
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 16 x i64> @llvm.vector.interleave8.nxv16i64(<vscale x 2 x i64> %vec0, <vscale x 2 x i64> %vec1, <vscale x 2 x i64> %vec2, <vscale x 2 x i64> %vec3, <vscale x 2 x i64> %vec4, <vscale x 2 x i64> %vec5, <vscale x 2 x i64> %vec6, <vscale x 2 x i64> %vec7)
+  ret <vscale x 16 x i64> %retval
+}
+
 ; Predicated
 
 define <vscale x 32 x i1> @interleave2_nxv32i1(<vscale x 16 x i1> %vec0, <vscale x 16 x i1> %vec1) {

@@ -215,6 +215,38 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 
   ret {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} %retval
 }
 
+define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_nxv2i64_nxv16i64(<vscale x 16 x i64> %vec) {
+; CHECK-LABEL: vector_deinterleave_nxv2i64_nxv16i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z24.d, z6.d, z7.d
+; CHECK-NEXT:    uzp1 z25.d, z4.d, z5.d
+; CHECK-NEXT:    uzp1 z26.d, z2.d, z3.d
+; CHECK-NEXT:    uzp1 z27.d, z0.d, z1.d
+; CHECK-NEXT:    uzp2 z6.d, z6.d, z7.d
+; CHECK-NEXT:    uzp2 z4.d, z4.d, z5.d
+; CHECK-NEXT:    uzp2 z2.d, z2.d, z3.d
+; CHECK-NEXT:    uzp2 z0.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z5.d, z25.d, z24.d
+; CHECK-NEXT:    uzp2 z24.d, z25.d, z24.d
+; CHECK-NEXT:    uzp1 z7.d, z27.d, z26.d
+; CHECK-NEXT:    uzp1 z28.d, z4.d, z6.d
+; CHECK-NEXT:    uzp2 z25.d, z27.d, z26.d
+; CHECK-NEXT:    uzp1 z29.d, z0.d, z2.d
+; CHECK-NEXT:    uzp2 z26.d, z4.d, z6.d
+; CHECK-NEXT:    uzp2 z27.d, z0.d, z2.d
+; CHECK-NEXT:    uzp1 z0.d, z7.d, z5.d
+; CHECK-NEXT:    uzp1 z2.d, z25.d, z24.d
+; CHECK-NEXT:    uzp2 z4.d, z7.d, z5.d
+; CHECK-NEXT:    uzp1 z1.d, z29.d, z28.d
+; CHECK-NEXT:    uzp1 z3.d, z27.d, z26.d
+; CHECK-NEXT:    uzp2 z5.d, z29.d, z28.d
+; CHECK-NEXT:    uzp2 z6.d, z25.d, z24.d
+; CHECK-NEXT:    uzp2 z7.d, z27.d, z26.d
+; CHECK-NEXT:    ret
+  %retval = call {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.vector.deinterleave8.nxv16i64(<vscale x 16 x i64> %vec)
+  ret {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} %retval
+}
+
 ; Predicated
 define {<vscale x 16 x i1>, <vscale x 16 x i1>} @vector_deinterleave_nxv16i1_nxv32i1(<vscale x 32 x i1> %vec) {
 ; CHECK-LABEL: vector_deinterleave_nxv16i1_nxv32i1:

@@ -3558,6 +3558,62 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandVectorSplice(Node, DAG));
     break;
   }
+  case ISD::VECTOR_DEINTERLEAVE: {
+    unsigned Factor = Node->getNumOperands();
+    if (Factor <= 2 || !isPowerOf2_32(Factor))
+      break;
+    SmallVector<SDValue, 8> Ops;
+    for (SDValue Op : Node->ops())
+      Ops.push_back(Op);
+    EVT VecVT = Node->getValueType(0);
+    SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
+    // Deinterleave at Factor/2 so each result contains two factors interleaved:
+    // ab cd ab cd -> [ac bd] [ac bd]
+    SDValue L = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, HalfVTs,
+                            ArrayRef(Ops).take_front(Factor / 2));
+    SDValue R = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, HalfVTs,
+                            ArrayRef(Ops).take_back(Factor / 2));
+    Results.resize(Factor);
+    // Deinterleave the 2 factors out:
+    // [ac ac] [bd bd] -> aa bb cc dd
+    for (unsigned I = 0; I < Factor / 2; I++) {
+      SDValue Deinterleave =
+          DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, {VecVT, VecVT},
+                      {L.getValue(I), R.getValue(I)});
+      Results[I] = Deinterleave.getValue(0);
+      Results[I + Factor / 2] = Deinterleave.getValue(1);
+    }
+    break;
+  }
+  case ISD::VECTOR_INTERLEAVE: {
+    unsigned Factor = Node->getNumOperands();
+    if (Factor <= 2 || !isPowerOf2_32(Factor))
+      break;
+    SmallVector<SDValue, 8> Ops;
+    for (SDValue Op : Node->ops())
+      Ops.push_back(Op);
+    EVT VecVT = Node->getValueType(0);
+    SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
+    SmallVector<SDValue, 8> LOps, ROps;
+    // Interleave so we have 2 factors per result:
+    // aa bb cc dd -> [ac bd] [ac bd]
+    for (unsigned I = 0; I < Factor / 2; I++) {
+      SDValue Interleave =
+          DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, {VecVT, VecVT},
+                      {Ops[I], Ops[I + Factor / 2]});
+      LOps.push_back(Interleave.getValue(0));
+      ROps.push_back(Interleave.getValue(1));
+    }
+    // Interleave at Factor/2:
+    // [ac bd] [ac bd] -> ab cd ab cd
+    SDValue L = DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, HalfVTs, LOps);
+    SDValue R = DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, HalfVTs, ROps);
+    for (unsigned I = 0; I < Factor / 2; I++)
+      Results.push_back(L.getValue(I));
+    for (unsigned I = 0; I < Factor / 2; I++)
+      Results.push_back(R.getValue(I));
+    break;
+  }
   case ISD::EXTRACT_ELEMENT: {
     EVT OpTy = Node->getOperand(0).getValueType();
     if (Node->getConstantOperandVal(1)) {
