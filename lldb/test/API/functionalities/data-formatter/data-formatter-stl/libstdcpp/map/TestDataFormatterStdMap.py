@@ -27,7 +27,7 @@ class StdMapDataFormatterTestCase(TestBase):
         build_args = {"CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
         self.with_run_command("__debug::", build_args)
 
-    def with_run_command(self, namespace: str, dictionary: Optional[dict] = None):
+    def with_run_command(self, namespace: str = "", dictionary: Optional[dict] = None):
         """Test that that file and class static variables display correctly."""
         self.build(dictionary=dictionary)
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
