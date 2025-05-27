@@ -6357,9 +6357,7 @@ std::optional<bool> llvm::computeKnownFPSignBit(const Value *V, unsigned Depth,
   return Known.SignBit;
 }
 
-/// Return true if the sign bit of result can be ignored by the user when the
-/// result is zero.
-bool llvm::ignoreSignBitOfZero(const Use &U) {
+bool llvm::canIgnoreSignBitOfZero(const Use &U) {
   auto *User = cast<Instruction>(U.getUser());
   if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
     if (FPOp->hasNoSignedZeros())
@@ -6398,9 +6396,7 @@ bool llvm::ignoreSignBitOfZero(const Use &U) {
   }
 }
 
-/// Return true if the sign bit of result can be ignored by the user when the
-/// result is NaN.
-bool llvm::ignoreSignBitOfNaN(const Use &U) {
+bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
   auto *User = cast<Instruction>(U.getUser());
   if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
     if (FPOp->hasNoNaNs())

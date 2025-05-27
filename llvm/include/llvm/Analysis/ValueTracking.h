@@ -330,13 +330,13 @@ bool isKnownNeverNaN(const Value *V, unsigned Depth, const SimplifyQuery &SQ);
 std::optional<bool> computeKnownFPSignBit(const Value *V, unsigned Depth,
                                           const SimplifyQuery &SQ);
 
-/// Return true if the sign bit of result can be ignored by the user when the
-/// result is zero.
-bool ignoreSignBitOfZero(const Use &U);
+/// Return true if the sign bit of the FP value can be ignored by the user when
+/// the value is zero.
+bool canIgnoreSignBitOfZero(const Use &U);
 
-/// Return true if the sign bit of result can be ignored by the user when the
-/// result is NaN.
-bool ignoreSignBitOfNaN(const Use &U);
+/// Return true if the sign bit of the FP value can be ignored by the user when
+/// the value is NaN.
+bool canIgnoreSignBitOfNaN(const Use &U);
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
