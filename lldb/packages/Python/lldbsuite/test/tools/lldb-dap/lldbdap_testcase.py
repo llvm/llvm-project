@@ -3,8 +3,7 @@ import time
 from typing import Optional
 import uuid
 
-import dap_server
-from dap_server import Source
+from dap_server import DebugAdapterServer, Source, Response
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
@@ -26,7 +25,7 @@ class DAPTestCaseBase(TestBase):
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
         log_file_path = self.getBuildArtifact("dap.txt")
-        self.dap_server = dap_server.DebugAdapterServer(
+        self.dap_server = DebugAdapterServer(
             executable=self.lldbDAPExec,
             connection=connection,
             init_commands=self.setUpCommands(),
@@ -103,6 +102,17 @@ class DAPTestCaseBase(TestBase):
                 return True
             time.sleep(0.5)
         return False
+
+    def assertResponseSuccess(self, response: Response):
+        self.assertIsNotNone(response)
+        if not response.get("success", False):
+            cmd = response.get("command", "<not set>")
+            msg = f"command ({cmd}) failed"
+            if "message" in response:
+                msg += " " + str(response["message"])
+            if "body" in response and response["body"] and "error" in response["body"]:
+                msg += " " + str(response["body"]["error"]["format"])
+            self.fail(msg)
 
     def verify_breakpoint_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify we hit

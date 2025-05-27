@@ -12,13 +12,52 @@ import signal
 import sys
 import threading
 import time
-from typing import Any, Optional, Union, BinaryIO, TextIO
+from typing import (
+    Any,
+    Optional,
+    Union,
+    BinaryIO,
+    TextIO,
+    TypedDict,
+    Literal,
+    Callable,
+    TypeVar,
+)
 
 ## DAP type references
-Event = dict[str, Any]
-Request = dict[str, Any]
-Response = dict[str, Any]
+
+
+class Event(TypedDict):
+    type: Literal["event"]
+    seq: Literal[0]
+    event: str
+    body: Optional[dict]
+
+
+class Request(TypedDict):
+    type: Literal["request"]
+    seq: int
+    command: str
+    arguments: Optional[dict]
+
+
+class Response(TypedDict):
+    type: Literal["response"]
+    seq: Literal[0]
+    request_seq: int
+    success: bool
+    command: str
+    message: Optional[str]
+    body: Optional[dict]
+
+
+_T = TypeVar("_T")
 ProtocolMessage = Union[Event, Request, Response]
+# An internal type used for tracking protocol messages and an EOF sentinel
+# value. 'None' cannot easily be used as a sentinel because it is a falsey
+# value. When returned outside of DebugCommunication an EOFError is typically
+# converted into 'None'.
+_InternalProtocolMessage = Union[Event, Request, Response, EOFError]
 
 
 def dump_memory(base_addr, data, num_per_line, outfile):
@@ -58,44 +97,42 @@ def dump_memory(base_addr, data, num_per_line, outfile):
         outfile.write("\n")
 
 
-def read_packet(f, verbose=False, trace_file=None):
+def read_packet(
+    f: BinaryIO, verbose=False, trace_file=None
+) -> _InternalProtocolMessage:
     """Decode a JSON packet that starts with the content length and is
     followed by the JSON bytes from a file 'f'. Returns None on EOF.
     """
-    line = f.readline().decode("utf-8")
+    line = f.readline().decode()
     if len(line) == 0:
-        return None  # EOF.
+        return EOFError()  # EOF.
 
     # Watch for line that starts with the prefix
     prefix = "Content-Length: "
     if line.startswith(prefix):
         # Decode length of JSON bytes
         if verbose:
-            print('content: "%s"' % (line))
+            print("content:", line)
         length = int(line[len(prefix) :])
         if verbose:
-            print('length: "%u"' % (length))
+            print("length:", length)
         # Skip empty line
-        line = f.readline()
+        line = f.readline().decode()
         if verbose:
-            print('empty: "%s"' % (line))
+            print("empty:", line)
         # Read JSON bytes
-        json_str = f.read(length)
+        json_str = f.read(length).decode()
         if verbose:
-            print('json: "%s"' % (json_str))
+            print("json:", json_str)
         if trace_file:
-            trace_file.write("from adapter:\n%s\n" % (json_str))
+            trace_file.write(f"from adapter:\n{json_str}\n")
         # Decode the JSON bytes into a python dictionary
         return json.loads(json_str)
 
     raise Exception("unexpected malformed message from lldb-dap: " + line)
 
 
-def packet_type_is(packet, packet_type):
-    return "type" in packet and packet["type"] == packet_type
-
-
-def dump_dap_log(log_file):
+def dump_dap_log(log_file: str):
     print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
     if log_file is None:
         print("no log file available", file=sys.stderr)
@@ -124,8 +161,8 @@ class Source(object):
     def __str__(self):
         return f"Source(name={self.name}, path={self.path}), source_reference={self.source_reference})"
 
-    def as_dict(self):
-        source_dict = {}
+    def as_dict(self) -> dict:
+        source_dict: dict[str, Any] = {}
         if self._name is not None:
             source_dict["name"] = self._name
         if self._path is not None:
@@ -141,38 +178,42 @@ class DebugCommunication(object):
         recv: BinaryIO,
         send: BinaryIO,
         init_commands: list[str],
-        log_file: Optional[TextIO] = None,
+        log_file: Optional[str] = None,
     ):
         # For debugging test failures, try setting `trace_file = sys.stderr`.
         self.trace_file: Optional[TextIO] = None
         self.log_file = log_file
         self.send = send
         self.recv = recv
-        self.recv_packets: list[Optional[ProtocolMessage]] = []
+        self.recv_packets: list[_InternalProtocolMessage] = []
         self.recv_condition = threading.Condition()
         self.recv_thread = threading.Thread(target=self._read_packet_thread)
-        self.process_event_body = None
         self.exit_status: Optional[int] = None
+        self.init_commands = init_commands
         self.initialize_body = None
+        self.initialized = False
+        self.configuration_done_sent = False
+        self.process_event_body: Optional[dict] = None
+        self.terminated = False
         self.progress_events: list[Event] = []
-        self.reverse_requests = []
+        self.reverse_requests: list[Request] = []
         self.sequence = 1
-        self.threads = None
-        self.thread_stop_reasons = {}
-        self.recv_thread.start()
         self.output_condition = threading.Condition()
         self.output: dict[str, list[str]] = {}
-        self.configuration_done_sent = False
-        self.initialized = False
-        self.frame_scopes = {}
-        self.init_commands = init_commands
+
+        # debuggee state
+        self.threads = None
+        self.thread_stop_reasons: dict[str, Any] = {}
+        self.frame_scopes: dict[str, Any] = {}
+
+        self.recv_thread.start()
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
         return ("Content-Length: %u\r\n\r\n%s" % (len(s), s)).encode("utf-8")
 
     @classmethod
-    def validate_response(cls, command, response):
+    def validate_response(cls, command: Request, response: Response):
         if command["command"] != response["command"]:
             raise ValueError("command mismatch in response")
         if command["seq"] != response["request_seq"]:
@@ -224,84 +265,91 @@ class DebugCommunication(object):
                     break
         return collected_output if collected_output else None
 
-    def _enqueue_recv_packet(self, packet: Optional[ProtocolMessage]):
-        self.recv_condition.acquire()
+    def _enqueue_recv_packet(self, packet: Union[ProtocolMessage, EOFError]):
         self.recv_packets.append(packet)
         self.recv_condition.notify()
-        self.recv_condition.release()
 
-    def _handle_recv_packet(self, packet: Optional[ProtocolMessage]) -> bool:
+    def _handle_recv_packet(self, packet: _InternalProtocolMessage) -> bool:
         """Called by the read thread that is waiting for all incoming packets
         to store the incoming packet in "self.recv_packets" in a thread safe
         way. This function will then signal the "self.recv_condition" to
         indicate a new packet is available. Returns True if the caller
         should keep calling this function for more packets.
         """
-        # If EOF, notify the read thread by enqueuing a None.
-        if not packet:
-            self._enqueue_recv_packet(None)
-            return False
+        # Hold the recv_condition for consistency of debugger state.
+        with self.recv_condition:
+            if isinstance(packet, EOFError):
+                self._enqueue_recv_packet(packet)
+                return False
 
-        # Check the packet to see if is an event packet
-        keepGoing = True
-        packet_type = packet["type"]
-        if packet_type == "event":
-            event = packet["event"]
-            body = None
-            if "body" in packet:
-                body = packet["body"]
-            # Handle the event packet and cache information from these packets
-            # as they come in
-            if event == "output":
-                # Store any output we receive so clients can retrieve it later.
-                category = body["category"]
-                output = body["output"]
-                self.output_condition.acquire()
-                if category in self.output:
-                    self.output[category] += output
-                else:
-                    self.output[category] = output
-                self.output_condition.notify()
-                self.output_condition.release()
-                # no need to add 'output' event packets to our packets list
-                return keepGoing
-            elif event == "initialized":
-                self.initialized = True
-            elif event == "process":
-                # When a new process is attached or launched, remember the
-                # details that are available in the body of the event
-                self.process_event_body = body
-            elif event == "exited":
-                # Process exited, mark the status to indicate the process is not
-                # alive.
-                self.exit_status = body["exitCode"]
-            elif event == "continued":
-                # When the process continues, clear the known threads and
-                # thread_stop_reasons.
-                all_threads_continued = body.get("allThreadsContinued", True)
-                tid = body["threadId"]
-                if tid in self.thread_stop_reasons:
-                    del self.thread_stop_reasons[tid]
-                self._process_continued(all_threads_continued)
-            elif event == "stopped":
-                # Each thread that stops with a reason will send a
-                # 'stopped' event. We need to remember the thread stop
-                # reasons since the 'threads' command doesn't return
-                # that information.
-                self._process_stopped()
-                tid = body["threadId"]
-                self.thread_stop_reasons[tid] = body
-            elif event.startswith("progress"):
-                # Progress events come in as 'progressStart', 'progressUpdate',
-                # and 'progressEnd' events. Keep these around in case test
-                # cases want to verify them.
-                self.progress_events.append(packet)
+            keep_going = True
 
-        elif packet_type == "response":
-            if packet["command"] == "disconnect":
-                keepGoing = False
-        self._enqueue_recv_packet(packet)
-        return keepGoing
+            # Check the packet to see if is an event packet
+            if packet["type"] == "event" and "event" in packet:
+                event = packet["event"]
+                body = packet.get("body")
+                # Handle the event packet and cache DAP stateful information from
+                # these packets as they come in.
+                if event == "output" and body is not None:
+                    # Store any output we receive so clients can retrieve it later.
+                    category = body["category"]
+                    output = body["output"]
+                    self.output_condition.acquire()
+                    if category in self.output:
+                        self.output[category] += output
+                    else:
+                        self.output[category] = output
+                    self.output_condition.notify()
+                    self.output_condition.release()
+                    # no need to add 'output' event packets to our packets list
+                    return keep_going
+                elif event == "initialized":
+                    self.initialized = True
+                elif event == "process" and body is not None:
+                    # When a new process is attached or launched, remember the
+                    # details that are available in the body of the event
+                    self.process_event_body = body
+                elif event == "terminated":
+                    # If we get the 'terminated' event then lldb-dap has exited
+                    # itself.
+                    self.terminated = True
+                elif event == "exited" and body is not None:
+                    # Process exited, mark the status to indicate the process is not
+                    # alive.
+                    self.exit_status = body.get("exitCode", 0)
+                elif event == "continued" and body is not None:
+                    # When the process continues, clear the known threads and
+                    # thread_stop_reasons.
+                    all_threads_continued = body.get("allThreadsContinued", True)
+                    tid = body["threadId"]
+                    if tid in self.thread_stop_reasons:
+                        del self.thread_stop_reasons[tid]
+                    self._process_continued(all_threads_continued)
+                elif event == "stopped" and body is not None:
+                    # Each thread that stops with a reason will send a
+                    # 'stopped' event. We need to remember the thread stop
+                    # reasons since the 'threads' command doesn't return
+                    # that information.
+                    self._process_stopped()
+                    tid = body["threadId"]
+                    self.thread_stop_reasons[tid] = body
+                elif event.startswith("progress"):
+                    # Progress events come in as 'progressStart', 'progressUpdate',
+                    # and 'progressEnd' events. Keep these around in case test
+                    # cases want to verify them.
+                    self.progress_events.append(packet)
+
+            elif packet["type"] == "response":
+                if packet["command"] == "disconnect":
+                    keep_going = False
+
+            elif packet["type"] == "request":
+                # Handle reverse requests and keep processing.
+                self._handle_reverse_request(packet)
+                return keep_going
+
+            self._enqueue_recv_packet(packet)
+            return keep_going
 
     def _process_continued(self, all_threads_continued: bool):
         self.threads = None
@@ -309,14 +357,63 @@ class DebugCommunication(object):
         if all_threads_continued:
             self.thread_stop_reasons = {}
 
-    def send_packet(self, command_dict: Request, set_sequence=True):
+    def _handle_reverse_request(self, request: Request):
+        self.reverse_requests.append(request)
+        arguments = request.get("arguments")
+        if request["command"] == "runInTerminal" and arguments is not None:
+            in_shell = arguments.get("argsCanBeInterpretedByShell", False)
+            proc = subprocess.Popen(
+                arguments["args"],
+                env=arguments.get("env", {}),
+                cwd=arguments["cwd"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                shell=in_shell,
+            )
+            body = {}
+            if in_shell:
+                body["shellProcessId"] = proc.pid
+            else:
+                body["processId"] = proc.pid
+            self.send_packet(
+                {
+                    "type": "response",
+                    "seq": 0,
+                    "request_seq": request["seq"],
+                    "success": True,
+                    "command": "runInTerminal",
+                    "message": None,
+                    "body": body,
+                }
+            )
+        elif request["command"] == "startDebugging":
+            self.send_packet(
+                {
+                    "type": "response",
+                    "seq": 0,
+                    "request_seq": request["seq"],
+                    "success": True,
+                    "message": None,
+                    "command": "startDebugging",
+                    "body": {},
+                }
+            )
+        else:
+            desc = 'unknown reverse request "%s"' % (request["command"])
+            raise ValueError(desc)
+
+    def send_packet(self, command_dict: ProtocolMessage) -> int:
         """Take the "command_dict" python dictionary and encode it as a JSON
         string and send the contents as a packet to the VSCode debug
-        adapter"""
+        adapter."""
+        seq = 0
         # Set the sequence ID for this command automatically
-        if set_sequence:
-            command_dict["seq"] = self.sequence
+        if command_dict["type"] == "request":
+            seq = command_dict["seq"] = self.sequence
             self.sequence += 1
+        else:
+            command_dict["seq"] = 0
         # Encode our command dictionary as a JSON string
         json_str = json.dumps(command_dict, separators=(",", ":"))
         if self.trace_file:
@@ -326,104 +423,70 @@ class DebugCommunication(object):
             # Send the encoded JSON packet and flush the 'send' file
             self.send.write(self.encode_content(json_str))
             self.send.flush()
+        return seq
 
-    def recv_packet(
+    def receive_response(
         self,
-        filter_type: Optional[str] = None,
-        filter_event: Optional[Union[str, list[str]]] = None,
+        seq: int,
+    ) -> Optional[Response]:
+        """Waits for the a response with the associated request_sec."""
+
+        def predicate(p: Response):
+            return p["type"] == "response" and p["request_seq"] == seq
+
+        return self._recv_packet(predicate=predicate)
+
+    def _recv_packet(
+        self,
+        *,
+        predicate: Callable[[_T], bool],
         timeout: Optional[float] = None,
-    ) -> Optional[ProtocolMessage]:
+    ) -> Optional[_T]:
         """Get a JSON packet from the VSCode debug adapter. This function
         assumes a thread that reads packets is running and will deliver
         any received packets by calling handle_recv_packet(...). This
         function will wait for the packet to arrive and return it when
         it does."""
-        while True:
-            try:
-                self.recv_condition.acquire()
-                packet = None
-                while True:
-                    for i, curr_packet in enumerate(self.recv_packets):
-                        if not curr_packet:
-                            raise EOFError
-                        packet_type = curr_packet["type"]
-                        if filter_type is None or packet_type in filter_type:
-                            if filter_event is None or (
-                                packet_type == "event"
-                                and curr_packet["event"] in filter_event
-                            ):
-                                packet = self.recv_packets.pop(i)
-                                break
-                    if packet:
-                        break
-                    # Sleep until packet is received
-                    len_before = len(self.recv_packets)
-                    self.recv_condition.wait(timeout)
-                    len_after = len(self.recv_packets)
-                    if len_before == len_after:
-                        return None  # Timed out
-                return packet
-            except EOFError:
-                return None
-            finally:
-                self.recv_condition.release()
+        with self.recv_condition:
 
-    def send_recv(self, command):
+            def _predicate():
+                return next(
+                    filter(
+                        lambda p: isinstance(p, EOFError) or predicate(p),
+                        self.recv_packets,
+                    ),
+                    None,
+                )
+
+            packet = self.recv_condition.wait_for(_predicate, timeout=timeout)
+            if packet is None:  # Timeout
+                return None
+            self.recv_packets.remove(packet)
+            if isinstance(packet, EOFError):
+                return None
+            return packet
+
+    def _send_recv(self, command: Request) -> Optional[Response]:
         """Send a command python dictionary as JSON and receive the JSON
         response. Validates that the response is the correct sequence and
-        command in the reply. Any events that are received are added to the
-        events list in this object"""
-        self.send_packet(command)
-        done = False
-        while not done:
-            response_or_request = self.recv_packet(filter_type=["response", "request"])
-            if response_or_request is None:
-                desc = 'no response for "%s"' % (command["command"])
-                raise ValueError(desc)
-            if response_or_request["type"] == "response":
-                self.validate_response(command, response_or_request)
-                return response_or_request
-            else:
-                self.reverse_requests.append(response_or_request)
-                if response_or_request["command"] == "runInTerminal":
-                    subprocess.Popen(
-                        response_or_request["arguments"]["args"],
-                        env=response_or_request["arguments"]["env"],
-                    )
-                    self.send_packet(
-                        {
-                            "type": "response",
-                            "request_seq": response_or_request["seq"],
-                            "success": True,
-                            "command": "runInTerminal",
-                            "body": {},
-                        },
-                    )
-                elif response_or_request["command"] == "startDebugging":
-                    self.send_packet(
-                        {
-                            "type": "response",
-                            "request_seq": response_or_request["seq"],
-                            "success": True,
-                            "command": "startDebugging",
-                            "body": {},
-                        },
-                    )
-                else:
-                    desc = 'unknown reverse request "%s"' % (
-                        response_or_request["command"]
-                    )
-                    raise ValueError(desc)
-
-        return None
+        command in the reply."""
+        seq = self.send_packet(command)
+        response = self.receive_response(seq)
+        if response is None:
+            desc = 'no response for "%s"' % (command["command"])
+            raise ValueError(desc)
+        self.validate_response(command, response)
+        return response
 
     def wait_for_event(
-        self, filter: Union[str, list[str]], timeout: Optional[float] = None
+        self, filter: list[str] = [], timeout: Optional[float] = None
     ) -> Optional[Event]:
         """Wait for the first event that matches the filter."""
-        return self.recv_packet(
-            filter_type="event", filter_event=filter, timeout=timeout
-        )
+
+        def predicate(p: Event):
+            return p["type"] == "event" and p["event"] in filter
+
+        return self._recv_packet(predicate=predicate, timeout=timeout)
 
     def wait_for_stopped(
         self, timeout: Optional[float] = None
@@ -448,20 +511,22 @@ class DebugCommunication(object):
     def wait_for_breakpoint_events(self, timeout: Optional[float] = None):
         breakpoint_events: list[Event] = []
         while True:
-            event = self.wait_for_event("breakpoint", timeout=timeout)
+            event = self.wait_for_event(["breakpoint"], timeout=timeout)
             if not event:
                 break
             breakpoint_events.append(event)
         return breakpoint_events
 
     def wait_for_exited(self, timeout: Optional[float] = None):
-        event_dict = self.wait_for_event("exited", timeout=timeout)
+        event_dict = self.wait_for_event(["exited"], timeout=timeout)
         if event_dict is None:
             raise ValueError("didn't get exited event")
         return event_dict
 
     def wait_for_terminated(self, timeout: Optional[float] = None):
-        event_dict = self.wait_for_event("terminated", timeout)
+        if self.terminated:
+            raise ValueError("already terminated")
+        event_dict = self.wait_for_event(["terminated"], timeout)
         if event_dict is None:
             raise ValueError("didn't get terminated event")
         return event_dict
@@ -600,7 +665,7 @@ class DebugCommunication(object):
                     raise ValueError("decode packet failed from replay file")
                 print("Sending:")
                 pprint.PrettyPrinter(indent=2).pprint(command_dict)
-                # raw_input('Press ENTER to send:')
+                # input('Press ENTER to send:')
                 self.send_packet(command_dict, set_sequence)
                 mode = "invalid"
             elif mode == "recv":
@@ -639,7 +704,7 @@ class DebugCommunication(object):
         gdbRemotePort: Optional[int] = None,
         gdbRemoteHostname: Optional[str] = None,
     ):
-        args_dict = {}
+        args_dict: dict[str, Any] = {}
         if pid is not None:
             args_dict["pid"] = pid
         if program is not None:
@@ -671,8 +736,13 @@ class DebugCommunication(object):
             args_dict["gdb-remote-port"] = gdbRemotePort
         if gdbRemoteHostname is not None:
             args_dict["gdb-remote-hostname"] = gdbRemoteHostname
-        command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
-        return self.send_recv(command_dict)
+        command_dict: Request = {
+            "command": "attach",
+            "type": "request",
+            "seq": 0,
+            "arguments": args_dict,
+        }
+        return self._send_recv(command_dict)
 
     def request_breakpointLocations(
         self, file_path, line, end_line=None, column=None, end_column=None
@@ -694,7 +764,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_configurationDone(self):
         command_dict = {
@@ -702,7 +772,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": {},
         }
-        response = self.send_recv(command_dict)
+        response = self._send_recv(command_dict)
         if response:
             self.configuration_done_sent = True
             self.request_threads()
@@ -731,7 +801,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        response = self.send_recv(command_dict)
+        response = self._send_recv(command_dict)
         if response["success"]:
             self._process_continued(response["body"]["allThreadsContinued"])
         # Caller must still call wait_for_stopped.
@@ -745,23 +815,24 @@ class DebugCommunication(object):
         if restartArguments:
             command_dict["arguments"] = restartArguments
 
-        response = self.send_recv(command_dict)
+        response = self._send_recv(command_dict)
         # Caller must still call wait_for_stopped.
         return response
 
-    def request_disconnect(self, terminateDebuggee=None):
+    def request_disconnect(
+        self,
+        terminateDebuggee: Optional[bool] = None,
+    ):
         args_dict = {}
         if terminateDebuggee is not None:
-            if terminateDebuggee:
-                args_dict["terminateDebuggee"] = True
-            else:
-                args_dict["terminateDebuggee"] = False
-        command_dict = {
+            args_dict["terminateDebuggee"] = terminateDebuggee
+        command_dict: Request = {
             "command": "disconnect",
             "type": "request",
+            "seq": 0,
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_disassemble(
         self,
@@ -781,7 +852,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)["body"]["instructions"]
+        return self._send_recv(command_dict)["body"]["instructions"]
 
     def request_readMemory(self, memoryReference, offset, count):
         args_dict = {
@@ -794,7 +865,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
@@ -810,7 +881,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_exceptionInfo(self, threadId=None):
         if threadId is None:
@@ -821,7 +892,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_initialize(self, sourceInitFile=False):
         command_dict = {
@@ -842,7 +913,7 @@ class DebugCommunication(object):
                 "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
-        response = self.send_recv(command_dict)
+        response = self._send_recv(command_dict)
         if response:
             if "body" in response:
                 self.initialize_body = response["body"]
@@ -877,7 +948,7 @@ class DebugCommunication(object):
         customFrameFormat: Optional[str] = None,
         customThreadFormat: Optional[str] = None,
     ):
-        args_dict = {"program": program}
+        args_dict: dict[str, Any] = {"program": program}
         if args:
             args_dict["args"] = args
         if cwd:
@@ -924,15 +995,20 @@ class DebugCommunication(object):
         args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
         if commandEscapePrefix is not None:
             args_dict["commandEscapePrefix"] = commandEscapePrefix
-        command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
-        return self.send_recv(command_dict)
+        command_dict: Request = {
+            "type": "request",
+            "seq": 0,
+            "command": "launch",
+            "arguments": args_dict,
+        }
+        return self._send_recv(command_dict)
 
     def request_next(self, threadId, granularity="statement"):
         if self.exit_status is not None:
             raise ValueError("request_continue called after process exited")
         args_dict = {"threadId": threadId, "granularity": granularity}
         command_dict = {"command": "next", "type": "request", "arguments": args_dict}
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_stepIn(self, threadId, targetId, granularity="statement"):
         if self.exit_status is not None:
@@ -945,7 +1021,7 @@ class DebugCommunication(object):
             "granularity": granularity,
         }
         command_dict = {"command": "stepIn", "type": "request", "arguments": args_dict}
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_stepInTargets(self, frameId):
         if self.exit_status is not None:
@@ -956,14 +1032,14 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_stepOut(self, threadId):
         if self.exit_status is not None:
             raise ValueError("request_stepOut called after process exited")
         args_dict = {"threadId": threadId}
         command_dict = {"command": "stepOut", "type": "request", "arguments": args_dict}
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_pause(self, threadId=None):
         if self.exit_status is not None:
@@ -972,12 +1048,12 @@ class DebugCommunication(object):
             threadId = self.get_thread_id()
         args_dict = {"threadId": threadId}
         command_dict = {"command": "pause", "type": "request", "arguments": args_dict}
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_scopes(self, frameId):
         args_dict = {"frameId": frameId}
         command_dict = {"command": "scopes", "type": "request", "arguments": args_dict}
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_setBreakpoints(self, source: Source, line_array, data=None):
         """data is array of parameters for breakpoints in line_array.
@@ -1008,12 +1084,13 @@ class DebugCommunication(object):
                 breakpoints.append(bp)
             args_dict["breakpoints"] = breakpoints
 
-        command_dict = {
+        command_dict: Request = {
             "command": "setBreakpoints",
             "type": "request",
+            "seq": 0,
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_setExceptionBreakpoints(self, filters):
         args_dict = {"filters": filters}
@@ -1022,7 +1099,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_setFunctionBreakpoints(self, names, condition=None, hitCondition=None):
         breakpoints = []
@@ -1039,7 +1116,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_dataBreakpointInfo(
         self, variablesReference, name, frameIndex=0, threadId=None
@@ -1057,7 +1134,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_setDataBreakpoint(self, dataBreakpoints):
         """dataBreakpoints is a list of dictionary with following fields:
@@ -1074,7 +1151,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_compileUnits(self, moduleId):
         args_dict = {"moduleId": moduleId}
@@ -1083,7 +1160,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        response = self.send_recv(command_dict)
+        response = self._send_recv(command_dict)
         return response
 
     def request_completions(self, text, frameId=None):
@@ -1095,10 +1172,10 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_modules(self):
-        return self.send_recv({"command": "modules", "type": "request"})
+        return self._send_recv({"command": "modules", "type": "request"})
 
     def request_stackTrace(
         self, threadId=None, startFrame=None, levels=None, format=None, dump=False
@@ -1117,7 +1194,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        response = self.send_recv(command_dict)
+        response = self._send_recv(command_dict)
         if dump:
             for idx, frame in enumerate(response["body"]["stackFrames"]):
                 name = frame["name"]
@@ -1143,7 +1220,7 @@ class DebugCommunication(object):
                 "sourceReference": sourceReference,
             },
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_threads(self):
         """Request a list of all threads and combine any information from any
@@ -1151,7 +1228,7 @@ class DebugCommunication(object):
         thread actually stopped. Returns an array of thread dictionaries
         with information about all threads"""
         command_dict = {"command": "threads", "type": "request", "arguments": {}}
-        response = self.send_recv(command_dict)
+        response = self._send_recv(command_dict)
         body = response["body"]
         # Fill in "self.threads" correctly so that clients that call
         # self.get_threads() or self.get_thread_id(...) can get information
@@ -1188,7 +1265,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_setVariable(self, containingVarRef, name, value, id=None):
         args_dict = {
@@ -1203,7 +1280,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_locations(self, locationReference):
         args_dict = {
@@ -1214,7 +1291,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def request_testGetTargetBreakpoints(self):
         """A request packet used in the LLDB test suite to get all currently
@@ -1226,7 +1303,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": {},
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
     def terminate(self):
         self.send.close()
@@ -1246,7 +1323,7 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
+        return self._send_recv(command_dict)
 
 
 class DebugAdapterServer(DebugCommunication):
@@ -1255,7 +1332,7 @@ class DebugAdapterServer(DebugCommunication):
         executable: Optional[str] = None,
         connection: Optional[str] = None,
         init_commands: list[str] = [],
-        log_file: Optional[TextIO] = None,
+        log_file: Optional[str] = None,
         env: Optional[dict[str, str]] = None,
     ):
         self.process = None
@@ -1293,7 +1370,7 @@ class DebugAdapterServer(DebugCommunication):
         *,
         executable: str,
         env: Optional[dict[str, str]] = None,
-        log_file: Optional[TextIO] = None,
+        log_file: Optional[str] = None,
         connection: Optional[str] = None,
     ) -> tuple[subprocess.Popen, Optional[str]]:
         adapter_env = os.environ.copy()
@@ -1696,7 +1773,7 @@ def main():
         executable=options.vscode_path, connection=options.connection
     )
     if options.debug:
-        raw_input('Waiting for debugger to attach pid "%i"' % (dbg.get_pid()))
+        input('Waiting for debugger to attach pid "%i"' % (dbg.get_pid()))
     if options.replay:
         dbg.replay_packets(options.replay)
     else:
