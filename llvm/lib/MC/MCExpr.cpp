@@ -479,8 +479,6 @@ static bool canExpand(const MCSymbol &Sym, bool InSet) {
   if (Sym.isWeakExternal())
     return false;
 
-  Sym.getVariableValue(true);
-
   if (InSet)
     return true;
   return !Sym.isInSection();
@@ -508,7 +506,6 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         Asm->getContext().reportError(
             Sym.getVariableValue()->getLoc(),
             "cyclic dependency detected for symbol '" + Sym.getName() + "'");
-        Sym.IsUsed = false;
         Sym.setVariableValue(MCConstantExpr::create(0, Asm->getContext()));
       }
       return false;
