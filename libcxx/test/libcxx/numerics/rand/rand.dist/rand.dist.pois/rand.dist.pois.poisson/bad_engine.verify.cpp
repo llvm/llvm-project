@@ -13,7 +13,7 @@
 
 #include <random>
 
-template <class Int>
+template<class Int>
 struct G {
   using result_type = Int;
   result_type operator()();
@@ -21,7 +21,8 @@ struct G {
   static constexpr result_type max() { return 255; }
 };
 
-void test(std::poisson_distribution<int> dist) {
+void test(std::poisson_distribution<int> dist)
+{
   G<int> badg;
   G<unsigned> okg;
 
