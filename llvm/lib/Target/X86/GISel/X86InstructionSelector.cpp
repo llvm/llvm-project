@@ -94,7 +94,7 @@ private:
   bool selectCmp(MachineInstr &I, MachineRegisterInfo &MRI,
                  MachineFunction &MF) const;
   bool selectFCmp(MachineInstr &I, MachineRegisterInfo &MRI,
-                 MachineFunction &MF) const;
+                  MachineFunction &MF) const;
   bool selectUAddSub(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
   bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI) const;
