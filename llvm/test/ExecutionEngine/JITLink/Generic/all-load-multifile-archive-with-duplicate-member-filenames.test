@@ -27,6 +27,6 @@
 # definition error. The `-all_load` option is used to force all member files in
 # the archive to be loaded, despite the members not being directly referenced.
 #
-# CHECK-DAG: main{{.*}}/main.o
-# CHECK-DAG: initializer_foo_ran{{.*}}/libFoo.a[0](foo.o)
-# CHECK-DAG: initializer_bar_ran{{.*}}/libFoo.a[1](foo.o)
+# CHECK-DAG: main{{.*}}main.o
+# CHECK-DAG: initializer_foo_ran{{.*}}libFoo.a[0](foo.o)
+# CHECK-DAG: initializer_bar_ran{{.*}}libFoo.a[1](foo.o)
