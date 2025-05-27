@@ -1175,12 +1175,45 @@ static Instruction *moveAddAfterMinMax(IntrinsicInst *II,
                   : BinaryOperator::CreateNUWAdd(NewMinMax, Add->getOperand(1));
 }
 
-// Try canonicalize max(max(X,C1) binop C2, C3) -> max(X binop C2, C3)
-static Instruction *moveShiftAfterMinMax(IntrinsicInst *II,
-                                         InstCombiner::BuilderTy &Builder) {
+
+static bool rightDistributesOverLeft(Instruction::BinaryOps ROp, bool HasNUW,
+                                     bool HasNSW, Intrinsic::ID LOp) {
+  switch (LOp) {
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+    // Unsigned min/max distribute over addition and left shift if no unsigned
+    // wrap.
+    if (HasNUW && (ROp == Instruction::Add || ROp == Instruction::Shl))
+      return true;
+    // Multiplication preserves order for unsigned min/max with no unsigned
+    // wrap.
+    if (HasNUW && ROp == Instruction::Mul)
+      return true;
+    return false;
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+    // Signed min/max distribute over addition if no signed wrap.
+    if (HasNSW && ROp == Instruction::Add)
+      return true;
+    // Multiplication preserves order for signed min/max with no signed wrap.
+    if (HasNSW && ROp == Instruction::Mul)
+      return true;
+    return false;
+  default:
+    return false;
+  }
+}
+
+///  Try canonicalize max(max(X,C1) binop C2, C3) -> max(X binop C2, max(C1
+///  binop C2, C3)) -> max(X binop C2, C4) max(max(X,C1) binop C2, C3) -> //
+///  Associative laws max(max(X binop C2, C1 binop C2), C3) -> // Commutative
+///  laws max(X binop C2, max(C1 binop C2, C3)) -> // Constant fold max(X binop
+///  C2, C4)
+
+static Instruction *reduceMinMax(IntrinsicInst *II,
+                                 InstCombiner::BuilderTy &Builder) {
   Intrinsic::ID MinMaxID = II->getIntrinsicID();
-  assert(isa<MinMaxIntrinsic>(II) &&
-         "Expected a min or max intrinsic");
+  assert(isa<MinMaxIntrinsic>(II) && "Expected a min or max intrinsic");
 
   Value *Op0 = II->getArgOperand(0), *Op1 = II->getArgOperand(1);
   Value *InnerMax;
@@ -1188,15 +1221,14 @@ static Instruction *moveShiftAfterMinMax(IntrinsicInst *II,
   if (!match(Op0, m_OneUse(m_BinOp(m_Value(InnerMax), m_APInt(C)))) ||
       !match(Op1, m_APInt(C)))
     return nullptr;
-    
+
   auto *BinOpInst = cast<BinaryOperator>(Op0);
   Instruction::BinaryOps BinOp = BinOpInst->getOpcode();
 
   InnerMax = BinOpInst->getOperand(0);
 
   auto *InnerMinMaxInst = dyn_cast<MinMaxIntrinsic>(BinOpInst->getOperand(0));
-
-  if (!InnerMinMaxInst || !InnerMinMaxInst->hasOneUse()) 
+  if (!InnerMinMaxInst || !InnerMinMaxInst->hasOneUse())
     return nullptr;
 
   bool IsSigned = InnerMinMaxInst->isSigned();
@@ -1207,52 +1239,97 @@ static Instruction *moveShiftAfterMinMax(IntrinsicInst *II,
       (!IsSigned && !BinOpInst->hasNoUnsignedWrap()))
     return nullptr;
 
-  // Check if BinOp is a left shift
-  if (BinOp != Instruction::Shl) {
+  if (!rightDistributesOverLeft(BinOp, BinOpInst->hasNoUnsignedWrap(),
+                                BinOpInst->hasNoSignedWrap(),
+                                InnerMinMaxInst->getIntrinsicID()))
     return nullptr;
+
+  // Get constant values
+  APInt C1 = llvm::dyn_cast<llvm::ConstantInt>(InnerMinMaxInst->getOperand(1))
+                 ->getValue();
+  APInt C2 =
+      llvm::dyn_cast<llvm::ConstantInt>(BinOpInst->getOperand(1))->getValue();
+  APInt C3 =
+      llvm::dyn_cast<llvm::ConstantInt>(II->getArgOperand(1))->getValue();
+
+  // Constant fold: Compute C1 binop C2
+  APInt C1BinOpC2, Two, Pow2C2, C1TimesPow2C2;
+  bool overflow = false;
+  switch (BinOp) {
+  case Instruction::Add:
+    C1BinOpC2 = IsSigned ? C1.sadd_ov(C2, overflow) : C1.uadd_ov(C2, overflow);
+    break;
+  case Instruction::Mul:
+    C1BinOpC2 = IsSigned ? C1.smul_ov(C2, overflow) : C1.umul_ov(C2, overflow);
+    break;
+  case Instruction::Sub:
+    C1BinOpC2 = IsSigned ? C1.ssub_ov(C2, overflow) : C1.usub_ov(C2, overflow);
+    break;
+  case Instruction::Shl:
+    // Compute C1 * 2^C2
+    Two = APInt(C2.getBitWidth(), 2);
+    Pow2C2 = Two.shl(C2);        // 2^C2
+    C1TimesPow2C2 = C1 * Pow2C2; // C1 * 2^C2
+
+    // Check C3 >= C1 * 2^C2
+    if (C3.ult(C1TimesPow2C2)) {
+      return nullptr;
+    } else {
+      C1BinOpC2 = C1.shl(C2);
+    }
+    break;
+  default:
+    return nullptr; // Unsupported binary operation
   }
 
-  APInt C2 =llvm::dyn_cast<llvm::ConstantInt>(BinOpInst->getOperand(1))->getValue();
-  APInt C3 =llvm::dyn_cast<llvm::ConstantInt>(II->getArgOperand(1))->getValue();
-  APInt C1 = llvm::dyn_cast<llvm::ConstantInt>(InnerMinMaxInst->getOperand(1))->getValue();
-
-  // Compute C1 * 2^C2
-  APInt Two = APInt(C2.getBitWidth(), 2);
-  APInt Pow2C2 = Two.shl(C2);        // 2^C2
-  APInt C1TimesPow2C2 = C1 * Pow2C2; // C1 * 2^C2
-
-  // Check C3 >= C1 * 2^C2
-  if (C3.ult(C1TimesPow2C2)) {
-    return nullptr;
+  // Constant fold: Compute MinMaxID(C1 binop C2, C3) to get C4
+  APInt C4;
+  switch (MinMaxID) {
+  case Intrinsic::umax:
+    C4 = APIntOps::umax(C1BinOpC2, C3);
+    break;
+  case Intrinsic::umin:
+    C4 = APIntOps::umin(C1BinOpC2, C3);
+    break;
+  case Intrinsic::smax:
+    C4 = APIntOps::smax(C1BinOpC2, C3);
+    break;
+  case Intrinsic::smin:
+    C4 = APIntOps::smin(C1BinOpC2, C3);
+    break;
+  default:
+    return nullptr; // Unsupported intrinsic
   }
 
-  // Create new x binop c2
+  // Create new X binop C2
   Value *NewBinOp = Builder.CreateBinOp(BinOp, InnerMinMaxInst->getOperand(0),
                                         BinOpInst->getOperand(1));
 
-  // Create new min/max intrinsic with new binop and c3
-  if (auto *NewBinInst = dyn_cast<Instruction>(NewBinOp))
+  // Set overflow flags on new binary operation
+  if (auto *NewBinInst = dyn_cast<Instruction>(NewBinOp)) {
     if (IsSigned) {
-      cast<Instruction>(NewBinOp)->setHasNoSignedWrap(true);
-      cast<Instruction>(NewBinOp)->setHasNoUnsignedWrap(false);
+      NewBinInst->setHasNoSignedWrap(true);
+      NewBinInst->setHasNoUnsignedWrap(false);
     } else {
-      cast<Instruction>(NewBinOp)->setHasNoUnsignedWrap(true);
-      cast<Instruction>(NewBinOp)->setHasNoSignedWrap(false);
+      NewBinInst->setHasNoUnsignedWrap(true);
+      NewBinInst->setHasNoSignedWrap(false);
     }
+  }
+
+  // Create constant for C4
+  Value *C4Val = ConstantInt::get(II->getType(), C4);
 
   // Get the intrinsic function for MinMaxID
   Type *Ty = II->getType();
   Function *MinMaxFn =
       Intrinsic::getDeclaration(II->getModule(), MinMaxID, {Ty});
 
-  // Create new min/max intrinsic: MinMaxID(NewBinOp, C3) (not inserted)
-  Value *Args[] = {NewBinOp, Op1};
+  // Create new min/max intrinsic: MinMaxID(NewBinOp, C4)
+  Value *Args[] = {NewBinOp, C4Val};
   Instruction *NewMax = CallInst::Create(MinMaxFn, Args, "", nullptr);
 
   return NewMax;
 }
-
-
 
 /// Match a sadd_sat or ssub_sat which is using min/max to clamp the value.
 Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
@@ -2118,8 +2195,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *I = moveAddAfterMinMax(II, Builder))
       return I;
 
-    // minmax(x << shamt , c << shamt) -> minmax(x, c) << shamt
-    if (Instruction *I = moveShiftAfterMinMax(II, Builder))  
+    // max(max(X,C1) binop C2, C3) -> max(X binop C2, max(C1 binop C2, C3)) -> max(X binop C2, C4)
+    if (Instruction *I = reduceMinMax(II, Builder))  
       return I;
 
 
