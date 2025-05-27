@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <stack>
@@ -124,7 +125,8 @@ namespace {
 /// Emitter that uses dialect specific emitters to emit C++ code.
 struct CppEmitter {
   explicit CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
-                      StringRef fileId, StringRef className);
+                      StringRef fileId, bool emitClass, StringRef className,
+                      StringRef fieldNameAttribute);
 
   /// Emits attribute or returns failure.
   LogicalResult emitAttribute(Location loc, Attribute attr);
@@ -242,10 +244,13 @@ struct CppEmitter {
   bool shouldDeclareVariablesAtTop() { return declareVariablesAtTop; };
 
   // Returns whether we should emit a C++ class
-  bool shouldPrintClass() { return !className.empty(); };
+  bool shouldPrintClass() { return emitClass; };
 
   // Returns the class name to emit
   std::string getClassName() { return className; };
+
+  // Returns the field name to use in the map
+  std::string getfieldNameAttribute() { return fieldNameAttribute; };
 
   /// Returns whether this file op should be emitted
   bool shouldEmitFile(FileOp file) {
@@ -282,8 +287,17 @@ private:
   /// Only emit file ops whos id matches this value.
   std::string fileId;
 
-  /// Name of the C++ class we will spit
+  /// Controls whether the output should be a C++ class.
+  /// If true, the generated C++ code will be encapsulated within a class,
+  /// and functions from the input module will become its member functions.
+  bool emitClass;
+
+  /// The specified name for the generated C++ class
   std::string className;
+
+  /// Name of the MLIR attribute to use as a field name within the generated
+  /// class
+  std::string fieldNameAttribute;
 
   /// Map from value to name of C++ variable that contain the name.
   ValueMapper valueMapper;
@@ -1051,16 +1065,6 @@ static LogicalResult printFunctionArgs(CppEmitter &emitter,
 }
 
 static LogicalResult printFields(CppEmitter &emitter, Operation *functionOp,
-                                 ArrayRef<Type> arguments) {
-  raw_indented_ostream &os = emitter.ostream();
-
-  return (interleaveWithNewLineWithError(
-      arguments, os, [&](Type arg) -> LogicalResult {
-        return emitter.emitType(functionOp->getLoc(), arg);
-      }));
-}
-
-static LogicalResult printFields(CppEmitter &emitter, Operation *functionOp,
                                  Region::BlockArgListType arguments) {
   raw_indented_ostream &os = emitter.ostream();
 
@@ -1175,71 +1179,38 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
-static LogicalResult printFunctionHeader(CppEmitter &emitter,
-                                         emitc::FuncOp functionOp) {
+static LogicalResult emitClassFields(CppEmitter &emitter,
+                                     emitc::FuncOp functionOp) {
   raw_indented_ostream &os = emitter.ostream();
-  Operation *operation = functionOp.getOperation();
-  if (functionOp.getSpecifiers()) {
-    for (Attribute specifier : functionOp.getSpecifiersAttr()) {
-      os << cast<StringAttr>(specifier).str() << " ";
-    }
-  }
-
-  if (failed(emitter.emitTypes(functionOp.getLoc(),
-                               functionOp.getFunctionType().getResults())))
-    return failure();
-  os << " " << functionOp.getName();
-  if (!emitter.shouldPrintClass()) {
-    os << "(";
-    if (functionOp.isExternal()) {
-      if (failed(printFunctionArgs(emitter, operation,
-                                   functionOp.getArgumentTypes())))
-        return failure();
-      os << ");";
-      return success();
-    }
-    if (failed(
-            printFunctionArgs(emitter, operation, functionOp.getArguments())))
-      return failure();
-    os << ") {\n";
-
-  } else {
-    os << "() { \n";
-  }
-
-  return success();
-}
-
-static LogicalResult emitClassBody(CppEmitter &emitter,
-                                   emitc::FuncOp functionOp) {
-  raw_indented_ostream &os = emitter.ostream();
-  Operation *operation = functionOp.getOperation();
   auto argAttrs = functionOp.getArgAttrs();
+  Operation *operation = functionOp.getOperation();
+  if (failed(printFields(emitter, operation, functionOp.getArguments())))
+    return failure();
+  os << ";\n";
+
   std::map<std::string, Value> fields;
-  os << "\nstd::map<std::string, char*> _buffer_map {";
-  if (argAttrs) // We can have no argattrs in the case that the function has no
-                // inputs nor outputs -> procedure
+  os << "std::map<std::string, char*> _buffer_map {";
+  if (argAttrs) {
+    bool isFirst = true;
     for (const auto [a, v] : zip(*argAttrs, functionOp.getArguments())) {
       if (auto da = dyn_cast<mlir::DictionaryAttr>(a)) {
-        auto nv =
-            da.getNamed("tf_saved_model.index_path")
-                ->getValue(); // From what I've seen so far, this is the only
-                              // way to have the argAttrs keys. If there is
-                              // another way, I need to run the tests to see and
-                              // see what cases trigger this change in format.
+        auto nv = da.getNamed(emitter.getfieldNameAttribute())->getValue();
         auto name = cast<mlir::StringAttr>(cast<mlir::ArrayAttr>(nv)[0]).str();
-        fields[name] = v; // The only way to not have unique names is in the
-                          // case that you have duplicate arguments in your
-                          // tensorflow/python function. By python syntax rules,
-                          // you're not allowed to have that(Current assumption)
+        auto Ins = fields.insert({name, v});
+        if (!Ins.second)
+          return failure();
+        if (!isFirst) {
+          os << ",";
+        }
         os << "{ \"" << name << "\"" << ", reinterpret_cast<char*>("
-           << emitter.getOrCreateName(v) << ") },";
+           << emitter.getOrCreateName(v) << ") }";
+        isFirst = false;
       }
     }
-  else
+  } else
     return failure();
 
-  os << " };\n";
+  os << "};";
   os << "char* getBufferForName(const std::string& name) const {\n";
   os.indent();
   os.indent();
@@ -1248,15 +1219,6 @@ static LogicalResult emitClassBody(CppEmitter &emitter,
   os.unindent();
   os.unindent();
   os << "}\n\n";
-
-  if (failed(printFunctionHeader(emitter, functionOp)))
-    return failure();
-
-  if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
-    return failure();
-  os << "}\n";
-  os.unindent();
-  os << "};\n";
 
   return success();
 }
@@ -1270,38 +1232,58 @@ static LogicalResult printOperation(CppEmitter &emitter,
         "with multiple blocks needs variables declared at top");
   }
 
-  CppEmitter::Scope classScope(emitter);
+  CppEmitter::Scope scope(emitter);
   raw_indented_ostream &os = emitter.ostream();
   Operation *operation = functionOp.getOperation();
-  if (!emitter.shouldPrintClass()) {
-
-    if (failed(printFunctionHeader(emitter, functionOp)))
+  if (emitter.shouldPrintClass()) {
+    if (functionOp.isExternal())
       return failure();
-
-    if (failed(printFunctionBody(
-            emitter, operation,
-            functionOp.getBlocks()))) // This is the only similarity between the
-                                      // function and the class
-      return failure();
-    os << "}\n";
-
-  } else {
     os << "class " << emitter.getClassName() << " final {\n";
     os << "public: \n";
     os.indent();
 
+    if (failed(emitClassFields(emitter, functionOp)))
+      return failure();
+  }
+
+  if (functionOp.getSpecifiers()) {
+    for (Attribute specifier : functionOp.getSpecifiersAttr()) {
+      os << cast<StringAttr>(specifier).str() << " ";
+    }
+  }
+
+  if (failed(emitter.emitTypes(functionOp.getLoc(),
+                               functionOp.getFunctionType().getResults())))
+    return failure();
+  os << " " << functionOp.getName();
+
+  os << "(";
+
+  if (emitter.shouldPrintClass())
+    os << ") { \n";
+  else {
     if (functionOp.isExternal()) {
-      if (failed(
-              printFields(emitter, operation, functionOp.getArgumentTypes())))
+      if (failed(printFunctionArgs(emitter, operation,
+                                   functionOp.getArgumentTypes())))
         return failure();
+      os << ");";
       return success();
     }
-    if (failed(printFields(emitter, operation, functionOp.getArguments())))
+    if (failed(
+            printFunctionArgs(emitter, operation, functionOp.getArguments())))
       return failure();
-    os << ";\n";
+    os << ") {\n";
+  }
 
-    if (failed(emitClassBody(emitter, functionOp)))
-      return failure();
+  if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
+    return failure();
+
+  if (emitter.shouldPrintClass()) {
+    os << "}\n";
+    os.unindent();
+    os << "};\n";
+  } else {
+    os << "}\n";
   }
 
   return success();
@@ -1339,9 +1321,11 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
-                       StringRef fileId, StringRef className)
+                       StringRef fileId, bool emitClass, StringRef className,
+                       StringRef fieldNameAttribute)
     : os(os), declareVariablesAtTop(declareVariablesAtTop),
-      fileId(fileId.str()), className(className.str()) {
+      fileId(fileId.str()), emitClass(emitClass), className(className.str()),
+      fieldNameAttribute(fieldNameAttribute.str()) {
   valueInScopeCount.push(0);
   labelInScopeCount.push(0);
 }
@@ -1924,7 +1908,10 @@ LogicalResult CppEmitter::emitTupleType(Location loc, ArrayRef<Type> types) {
 
 LogicalResult emitc::translateToCpp(Operation *op, raw_ostream &os,
                                     bool declareVariablesAtTop,
-                                    StringRef fileId, StringRef className) {
-  CppEmitter emitter(os, declareVariablesAtTop, fileId, className);
+                                    StringRef fileId, bool emitClass,
+                                    StringRef className,
+                                    StringRef fieldNameAttribute) {
+  CppEmitter emitter(os, declareVariablesAtTop, fileId, emitClass, className,
+                     fieldNameAttribute);
   return emitter.emitOperation(*op, /*trailingSemicolon=*/false);
 }

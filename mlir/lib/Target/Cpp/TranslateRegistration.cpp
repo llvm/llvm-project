@@ -33,20 +33,50 @@ void registerToCppTranslation() {
       "file-id", llvm::cl::desc("Emit emitc.file ops with matching id"),
       llvm::cl::init(""));
 
+  static llvm::cl::opt<bool> emitClass(
+      "emit-class",
+      llvm::cl::desc("If specified, the output will be a class where "
+                     "the function(s) in the module are members. "
+                     "Enables class-related options."),
+      llvm::cl::init(false));
+
   static llvm::cl::opt<std::string> className(
       "class-name",
-      llvm::cl::desc("Optional class name. If specified, the output will be a "
-                     "class where the function(s) in the module are members."),
+      llvm::cl::desc("Mandatory class name if --emit-class is set."),
+      llvm::cl::init(""));
+
+  static llvm::cl::opt<std::string> fieldNameAttribute(
+      "field-name-attribute",
+      llvm::cl::desc("Mandatory name of the attribute to use as field name if "
+                     "--emit-class is set."),
       llvm::cl::init(""));
 
   TranslateFromMLIRRegistration reg(
       "mlir-to-cpp", "translate from mlir to cpp",
       [](Operation *op, raw_ostream &output) {
+        if (emitClass) {
+          if (className.empty()) {
+            llvm::errs() << "Error: --class-name is mandatory when "
+                            "--emit-class is set.\n";
+            return mlir::failure();
+          }
+          if (fieldNameAttribute.empty()) {
+            llvm::errs() << "Error: --field-name-attribute is mandatory when "
+                            "--emit-class is set.\n";
+            return mlir::failure();
+          }
+          return emitc::translateToCpp(
+              op, output,
+              /*declareVariablesAtTop=*/declareVariablesAtTop,
+              /*fileId=*/fileId, /*emitClass=*/emitClass,
+              /*className=*/className,
+              /*fieldNameAttribute=*/fieldNameAttribute);
+        }
         return emitc::translateToCpp(
             op, output,
             /*declareVariablesAtTop=*/declareVariablesAtTop,
-            /*fileId=*/fileId,
-            /*className=*/className);
+            /*fileId=*/fileId, /*emitClass=*/emitClass, /*className=*/className,
+            /*fieldNameAttribute=*/fieldNameAttribute);
       },
       [](DialectRegistry &registry) {
         // clang-format off
