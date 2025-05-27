@@ -252,7 +252,8 @@ ol_impl_result_t olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_PLATFORM:
     return ReturnValue(Device->Platform);
   case OL_DEVICE_INFO_TYPE:
-    return ReturnValue(OL_DEVICE_TYPE_GPU);
+    return Device == HostDevice() ? ReturnValue(OL_DEVICE_TYPE_HOST)
+                                  : ReturnValue(OL_DEVICE_TYPE_GPU);
   case OL_DEVICE_INFO_NAME:
     return ReturnValue(GetInfo({"Device Name"}).c_str());
   case OL_DEVICE_INFO_VENDOR:
