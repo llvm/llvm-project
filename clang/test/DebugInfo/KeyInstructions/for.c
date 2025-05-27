@@ -20,17 +20,18 @@ void a(int A) {
 // O0. Since we're no longer targeting O0 we should reevaluate whether this
 // adds any value.
 // CHECK: for.body:
-// CHECK: br label %for.inc, !dbg [[G5R1:!.*]]
+// CHECK-NEXT: br label %for.inc, !dbg [[G5R1:!.*]]
 
 // CHECK: for.inc:
 // CHECK: %inc = add{{.*}}, !dbg [[G4R2:!.*]]
 // CHECK: store i32 %inc, ptr %i{{.*}}, !dbg [[G4R1:!.*]]
-    for (int i = 0; i < A; ++i) { }
+  for (int i = 0; i < A; ++i) {
+  }
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
-// CHECK: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
+// CHECK: [[G5R1]] = !DILocation(line: 29,{{.*}} atomGroup: 5, atomRank: 1)
 // CHECK: [[G4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
