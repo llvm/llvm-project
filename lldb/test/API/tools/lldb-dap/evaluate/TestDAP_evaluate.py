@@ -5,10 +5,8 @@ Test lldb-dap completions request
 import re
 
 import lldbdap_testcase
-import dap_server
-from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.lldbtest import line_number
 
 
 class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
@@ -45,20 +43,32 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             enableAutoVariableSummaries=enableAutoVariableSummaries,
         )
         source = "main.cpp"
-        self.set_source_breakpoints(
-            source,
-            [
-                line_number(source, "// breakpoint 1"),
-                line_number(source, "// breakpoint 2"),
-                line_number(source, "// breakpoint 3"),
-                line_number(source, "// breakpoint 4"),
-                line_number(source, "// breakpoint 5"),
-                line_number(source, "// breakpoint 6"),
-                line_number(source, "// breakpoint 7"),
-                line_number(source, "// breakpoint 8"),
-            ],
+        breakpoint_lines = [
+            line_number(source, "// breakpoint 1"),
+            line_number(source, "// breakpoint 2"),
+            line_number(source, "// breakpoint 3"),
+            line_number(source, "// breakpoint 4"),
+            line_number(source, "// breakpoint 5"),
+            line_number(source, "// breakpoint 6"),
+            line_number(source, "// breakpoint 7"),
+            line_number(source, "// breakpoint 8"),
+        ]
+        breakpoint_ids = self.set_source_breakpoints(source, breakpoint_lines)
+
+        self.assertEqual(
+            len(breakpoint_ids),
+            len(breakpoint_lines),
+            "Did not resolve all the breakpoints.",
         )
-        self.continue_to_next_stop()
+        breakpoint_1 = breakpoint_ids[0]
+        breakpoint_2 = breakpoint_ids[1]
+        breakpoint_3 = breakpoint_ids[2]
+        breakpoint_4 = breakpoint_ids[3]
+        breakpoint_5 = breakpoint_ids[4]
+        breakpoint_6 = breakpoint_ids[5]
+        breakpoint_7 = breakpoint_ids[6]
+        breakpoint_8 = breakpoint_ids[7]
+        self.continue_to_breakpoint(breakpoint_1)
 
         # Expressions at breakpoint 1, which is in main
         self.assertEvaluate("var1", "20")
@@ -124,7 +134,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluateFailure("foo_var")
 
         # Expressions at breakpoint 2, which is an anonymous block
-        self.continue_to_next_stop()
+        self.continue_to_breakpoint(breakpoint_2)
         self.assertEvaluate("var1", "20")
         self.assertEvaluate("var2", "2")  # different variable with the same name
         self.assertEvaluate("static_int", "42")
@@ -162,7 +172,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluateFailure("foo_var")
 
         # Expressions at breakpoint 3, which is inside a_function
-        self.continue_to_next_stop()
+        self.continue_to_breakpoint(breakpoint_3)
         self.assertEvaluate("list", "42")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
@@ -188,27 +198,29 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluateFailure("foo_var")
 
         # Now we check that values are updated after stepping
-        self.continue_to_next_stop()
+        self.continue_to_breakpoint(breakpoint_4)
         self.assertEvaluate("my_vec", "size=2")
-        self.continue_to_next_stop()
+        self.continue_to_breakpoint(breakpoint_5)
         self.assertEvaluate("my_vec", "size=3")
 
         self.assertEvaluate("my_map", "size=2")
-        self.continue_to_next_stop()
+        self.continue_to_breakpoint(breakpoint_6)
         self.assertEvaluate("my_map", "size=3")
 
         self.assertEvaluate("my_bool_vec", "size=1")
-        self.continue_to_next_stop()
+        self.continue_to_breakpoint(breakpoint_7)
         self.assertEvaluate("my_bool_vec", "size=2")
 
+        self.continue_to_breakpoint(breakpoint_8)
         # Test memory read, especially with 'empty' repeat commands.
         if context == "repl":
-            self.continue_to_next_stop()
             self.assertEvaluate("memory read -c 1 &my_ints", ".* 05 .*\n")
             self.assertEvaluate("", ".* 0a .*\n")
             self.assertEvaluate("", ".* 0f .*\n")
             self.assertEvaluate("", ".* 14 .*\n")
             self.assertEvaluate("", ".* 19 .*\n")
+
+        self.continue_to_exit()
 
     @skipIfWindows
     def test_generic_evaluate_expressions(self):
