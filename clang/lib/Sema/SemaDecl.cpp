@@ -13775,7 +13775,6 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   // Perform the initialization.
-  ParenListExpr *CXXDirectInit = dyn_cast<ParenListExpr>(Init);
   bool IsParenListInit = false;
   if (!VDecl->isInvalidDecl()) {
     InitializedEntity Entity = InitializedEntity::InitializeVariable(VDecl);
