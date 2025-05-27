@@ -117,7 +117,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
     // Case: a[i]
     auto LeftBracket = SourceRange(OCE->getCallee()->getBeginLoc(),
                                    OCE->getCallee()->getBeginLoc());
-    auto RightBracket =
+    const auto RightBracket =
         SourceRange(OCE->getOperatorLoc(), OCE->getOperatorLoc());
 
     if (FixMode == At) {
