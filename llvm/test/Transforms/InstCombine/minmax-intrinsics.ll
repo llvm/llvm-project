@@ -2423,7 +2423,7 @@ define <3 x i8> @smax_unary_shuffle_ops_lhs_const(<3 x i8> %x) {
 ; CHECK-NEXT:    ret <3 x i8> [[SX]]
 ;
   %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 1, i32 0, i32 2>
-  %r = call <3 x i8> @llvm.smax(<3 x i8> <i8 0, i8 1, i8 2>, <3 x i8> %sx)
+  %r = call <3 x i8> @llvm.smax(<3 x i8> %sx, <3 x i8> <i8 0, i8 1, i8 2>)
   ret <3 x i8> %r
 }
 
@@ -2434,7 +2434,7 @@ define <vscale x 3 x i8> @smax_unary_shuffle_ops_lhs_const_scalable(<vscale x 3 
 ; CHECK-NEXT:    ret <vscale x 3 x i8> [[R1]]
 ;
   %sx = shufflevector <vscale x 3 x i8> %x, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
-  %r = call <vscale x 3 x i8> @llvm.smax(<vscale x 3 x i8> splat (i8 42), <vscale x 3 x i8> %sx)
+  %r = call <vscale x 3 x i8> @llvm.smax(<vscale x 3 x i8> %sx, <vscale x 3 x i8> splat (i8 42))
   ret <vscale x 3 x i8> %r
 }
 
@@ -2445,7 +2445,7 @@ define <3 x i8> @smax_unary_shuffle_ops_lhs_const_widening(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <3 x i8> [[SX]]
 ;
   %sx = shufflevector <2 x i8> %x, <2 x i8> poison, <3 x i32> <i32 1, i32 0, i32 poison>
-  %r = call <3 x i8> @llvm.smax(<3 x i8> <i8 0, i8 1, i8 2>, <3 x i8> %sx)
+  %r = call <3 x i8> @llvm.smax(<3 x i8> %sx, <3 x i8> <i8 0, i8 1, i8 2>)
   ret <3 x i8> %r
 }
 
