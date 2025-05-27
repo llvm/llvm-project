@@ -1019,8 +1019,22 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
     return C;
   };
 
-  if (TIL.TheKind != TypeTestResolution::Unsat)
-    TIL.OffsetedGlobal = ImportGlobal("global_addr");
+  if (TIL.TheKind != TypeTestResolution::Unsat) {
+    auto *GV = ImportGlobal("global_addr");
+    // This is either a vtable (in .data.rel.ro) or a jump table (in .text).
+    // Either way it's expected to be in the low 2 GiB, so set the small code
+    // model.
+    //
+    // For .data.rel.ro, we currently place all such sections in the low 2 GiB
+    // [1], and for .text the sections are expected to be in the low 2 GiB under
+    // the small and medium code models [2] and this pass only supports those
+    // code models (e.g. jump tables use jmp instead of movabs/jmp).
+    //
+    // [1]https://github.com/llvm/llvm-project/pull/137742
+    // [2]https://maskray.me/blog/2023-05-14-relocation-overflow-and-code-models
+    GV->setCodeModel(CodeModel::Small);
+    TIL.OffsetedGlobal = GV;
+  }
 
   if (TIL.TheKind == TypeTestResolution::ByteArray ||
       TIL.TheKind == TypeTestResolution::Inline ||
