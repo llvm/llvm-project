@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_RUNTIME_LIBCALLS_H
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -96,7 +97,7 @@ private:
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
-  void initLibcalls(const Triple &TT);
+  LLVM_ABI void initLibcalls(const Triple &TT);
 };
 
 } // namespace RTLIB

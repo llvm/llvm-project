@@ -16,6 +16,7 @@
 #ifndef LLVM_IR_CONSTANTFOLDER_H
 #define LLVM_IR_CONSTANTFOLDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/ConstantFold.h"
@@ -27,7 +28,7 @@
 namespace llvm {
 
 /// ConstantFolder - Create constants with minimum, target independent, folding.
-class ConstantFolder final : public IRBuilderFolder {
+class LLVM_ABI ConstantFolder final : public IRBuilderFolder {
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:

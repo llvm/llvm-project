@@ -163,9 +163,9 @@ public:
   }
 
   /// Add a class name to pass name mapping for use by pass instrumentation.
-  void addClassToPassName(StringRef ClassName, StringRef PassName);
+  LLVM_ABI void addClassToPassName(StringRef ClassName, StringRef PassName);
   /// Get the pass name for a given pass class name.
-  StringRef getPassNameForClassName(StringRef ClassName);
+  LLVM_ABI StringRef getPassNameForClassName(StringRef ClassName);
 
 private:
   friend class PassInstrumentation;
@@ -344,7 +344,7 @@ public:
   }
 };
 
-bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);
+LLVM_ABI bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);
 
 /// Pseudo-analysis pass that exposes the \c PassInstrumentation to pass
 /// managers.

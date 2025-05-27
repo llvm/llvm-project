@@ -33,7 +33,7 @@ class Function;
 ///
 /// If \p IncludeSelf is enabled, also convert the passed constants themselves
 /// to instructions, rather than only their users.
-bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
+LLVM_ABI bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
                                            Function *RestrictToFunc = nullptr,
                                            bool RemoveDeadConstants = true,
                                            bool IncludeSelf = false);

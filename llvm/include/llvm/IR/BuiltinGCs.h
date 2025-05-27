@@ -20,13 +20,13 @@ namespace llvm {
 ///        serve any purpose except to link in the plugins.
 
 /// Ensure the definition of the builtin GCs gets linked in
-void linkAllBuiltinGCs();
+LLVM_ABI void linkAllBuiltinGCs();
 
 /// Creates an ocaml-compatible metadata printer.
-void linkOcamlGCPrinter();
+LLVM_ABI void linkOcamlGCPrinter();
 
 /// Creates an erlang-compatible metadata printer.
-void linkErlangGCPrinter();
+LLVM_ABI void linkErlangGCPrinter();
 
 } // namespace llvm
 

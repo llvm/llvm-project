@@ -15,13 +15,14 @@
 #ifndef LLVM_IR_PASSMANAGERIMPL_H
 #define LLVM_IR_PASSMANAGERIMPL_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+LLVM_ABI extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 

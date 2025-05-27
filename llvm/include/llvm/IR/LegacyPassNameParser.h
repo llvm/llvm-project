@@ -25,6 +25,7 @@
 #ifndef LLVM_IR_LEGACYPASSNAMEPARSER_H
 #define LLVM_IR_LEGACYPASSNAMEPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -38,7 +39,7 @@ namespace llvm {
 // PassNameParser class - Make use of the pass registration mechanism to
 // automatically add a command line argument to opt for each pass.
 //
-class PassNameParser : public PassRegistrationListener,
+class LLVM_ABI PassNameParser : public PassRegistrationListener,
                        public cl::parser<const PassInfo*> {
 public:
   PassNameParser(cl::Option &O);
