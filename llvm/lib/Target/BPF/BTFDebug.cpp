@@ -1622,6 +1622,13 @@ void BTFDebug::endModule() {
   // Collect global types/variables except MapDef globals.
   processGlobals(false);
 
+  // In case that BPF_TRAP usage is removed during machine-level optimization,
+  // generate btf for BPF_TRAP function here.
+  for (const Function &F : *MMI->getModule()) {
+    if (F.getName() == BPF_TRAP)
+      processFuncPrototypes(&F);
+  }
+
   for (auto &DataSec : DataSecEntries)
     addType(std::move(DataSec.second));
 
