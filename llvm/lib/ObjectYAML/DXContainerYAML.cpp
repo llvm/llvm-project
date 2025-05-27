@@ -105,7 +105,6 @@ DXContainerYAML::RootSignatureYamlDesc::create(
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       }
-      NewP.Data = YamlDescriptor;
     }
   }
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
