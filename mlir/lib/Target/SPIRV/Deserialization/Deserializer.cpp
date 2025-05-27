@@ -1065,12 +1065,20 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
   IntegerAttr columnsAttr = getConstantInt(operands[4]);
   IntegerAttr useAttr = getConstantInt(operands[5]);
 
-  if (!rowsAttr || !columnsAttr || !useAttr)
-    return emitError(
-               unknownLoc,
-               "OpTypeCooperativeMatrixKHR references undefined constant <id> ")
-           << (rowsAttr ? (columnsAttr ? operands[5] : operands[4])
-                        : operands[3]);
+  if (!rowsAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Rows` references "
+                                 "undefined constant <id> ")
+           << operands[3];
+
+  if (!columnsAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Columns` "
+                                 "references undefined constant <id> ")
+           << operands[4];
+
+  if (!useAttr)
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixKHR `Use` references "
+                                 "undefined constant <id> ")
+           << operands[5];
 
   unsigned rows = rowsAttr.getInt();
   unsigned columns = columnsAttr.getInt();
