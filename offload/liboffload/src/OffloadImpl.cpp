@@ -89,7 +89,6 @@ namespace offload {
 
 struct AllocInfo {
   ol_device_handle_t Device;
-  ol_alloc_type_t Type;
 };
 
 using AllocInfoMapT = DenseMap<void *, AllocInfo>;
@@ -314,7 +313,7 @@ ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
     return ol_impl_result_t::fromError(Alloc.takeError());
 
   *AllocationOut = *Alloc;
-  allocInfoMap().insert_or_assign(*Alloc, AllocInfo{Device, Type});
+  allocInfoMap().insert_or_assign(*Alloc, AllocInfo{Device});
   return OL_SUCCESS;
 }
 
@@ -324,10 +323,8 @@ ol_impl_result_t olMemFree_impl(void *Address) {
 
   auto AllocInfo = allocInfoMap().at(Address);
   auto Device = AllocInfo.Device;
-  auto Type = AllocInfo.Type;
 
-  auto Res =
-      Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type));
+  auto Res = Device->Device->dataDelete(Address);
   if (Res)
     return ol_impl_result_t::fromError(std::move(Res));
 

@@ -1479,7 +1479,7 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
     [[fallthrough]];
   case TARGET_ALLOC_HOST:
   case TARGET_ALLOC_SHARED:
-    Res = free(TgtPtr, Kind);
+    Res = free(TgtPtr);
     if (Res)
       return Plugin::error(
           ErrorCode::UNKNOWN,
@@ -1491,6 +1491,29 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
   if (Kind == TARGET_ALLOC_HOST)
     if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
       return Err;
+
+  return Plugin::success();
+}
+
+Error GenericDeviceTy::dataDelete(void *TgtPtr) {
+  // Try to free via the memory manager if it exists. If the allocation isn't
+  // managed by the memory manager it will fall back to the device allocator
+  // which should succeed.
+  int Res;
+  if (MemoryManager) {
+    Res = MemoryManager->free(TgtPtr);
+    if (Res)
+      return Plugin::error(
+          ErrorCode::UNKNOWN,
+          "Failure to deallocate device pointer %p via memory manager", TgtPtr);
+  } else {
+    Res = free(TgtPtr);
+    if (Res)
+      return Plugin::error(
+          ErrorCode::UNKNOWN,
+          "Failure to deallocate device pointer %p via device deallocator",
+          TgtPtr);
+  }
 
   return Plugin::success();
 }

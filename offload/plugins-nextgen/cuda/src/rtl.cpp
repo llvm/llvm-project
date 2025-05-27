@@ -602,7 +602,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Deallocate memory on the device or related to the device.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  int free(void *TgtPtr) override {
     if (TgtPtr == nullptr)
       return OFFLOAD_SUCCESS;
 
@@ -612,30 +612,65 @@ struct CUDADeviceTy : public GenericDeviceTy {
     }
 
     CUresult Res;
-    switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
-    case TARGET_ALLOC_SHARED:
-      Res = cuMemFree((CUdeviceptr)TgtPtr);
-      break;
-    case TARGET_ALLOC_HOST:
+
+    unsigned int IsManaged;
+    unsigned int Type;
+    void *AttributeValues[2] = {&IsManaged, &Type};
+    CUpointer_attribute Attributes[2] = {CU_POINTER_ATTRIBUTE_IS_MANAGED,
+                                         CU_POINTER_ATTRIBUTE_MEMORY_TYPE};
+    cuPointerGetAttributes(2, Attributes, AttributeValues,
+                           reinterpret_cast<CUdeviceptr>(TgtPtr));
+    if (IsManaged || Type == CU_MEMORYTYPE_DEVICE) {
+      // Memory allocated with cuMemAlloc and cuMemAllocManaged must be freed
+      // with cuMemFree
+      Res = cuMemFree(reinterpret_cast<CUdeviceptr>(TgtPtr));
+    } else {
+      // Memory allocated with cuMemAllocHost must be freed with cuMemFreeHost
       Res = cuMemFreeHost(TgtPtr);
-      break;
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
-      CUstream Stream;
-      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
-        break;
-      cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(TgtPtr), Stream);
-      cuStreamSynchronize(Stream);
-      if ((Res = cuStreamDestroy(Stream)))
-        break;
-    }
     }
 
     if (auto Err = Plugin::check(Res, "error in cuMemFree[Host]: %s")) {
       REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
       return OFFLOAD_FAIL;
     }
+    return OFFLOAD_SUCCESS;
+  }
+
+  int free_non_blocking(void *TgtPtr) override {
+    if (TgtPtr == nullptr)
+      return OFFLOAD_SUCCESS;
+
+    if (auto Err = setContext()) {
+      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
+      return OFFLOAD_FAIL;
+    }
+
+    CUresult Res;
+    CUstream Stream;
+    Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING);
+    if (auto Err = Plugin::check(Res, "Error in cuStreamCreate: %s")) {
+      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
+      return OFFLOAD_FAIL;
+    }
+
+    Res = cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(TgtPtr), Stream);
+    if (auto Err = Plugin::check(Res, "Error in cuMemFreeAsync: %s")) {
+      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
+      return OFFLOAD_FAIL;
+    }
+
+    Res = cuStreamSynchronize(Stream);
+    if (auto Err = Plugin::check(Res, "Error in cuStreamSynchronize: %s")) {
+      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
+      return OFFLOAD_FAIL;
+    }
+
+    Res = cuStreamDestroy(Stream);
+    if (auto Err = Plugin::check(Res, "Error in cuStreamSynchronize: %s")) {
+      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
+      return OFFLOAD_FAIL;
+    }
+
     return OFFLOAD_SUCCESS;
   }
 
@@ -1239,7 +1274,7 @@ private:
     Error Err = Plugin::success();
     AsyncInfoWrapper.finalize(Err);
 
-    if (free(Buffer, TARGET_ALLOC_DEVICE) != OFFLOAD_SUCCESS)
+    if (free(Buffer) != OFFLOAD_SUCCESS)
       return Plugin::error(ErrorCode::UNKNOWN,
                            "failed to free memory for global buffer");
 

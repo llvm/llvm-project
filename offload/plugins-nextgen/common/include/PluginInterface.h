@@ -771,6 +771,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind);
 
+  /// Deallocate data from the device or involving the device, where the
+  /// allocation type is unknown.
+  Error dataDelete(void *TgtPtr);
+
   /// Pin host memory to optimize transfers and return the device accessible
   /// pointer that devices should use for memory transfers involving the host
   /// pinned allocation.

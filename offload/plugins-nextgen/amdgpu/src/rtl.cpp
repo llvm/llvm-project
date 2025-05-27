@@ -312,7 +312,7 @@ struct AMDGPUMemoryPoolTy {
   }
 
   /// Return memory to the memory pool.
-  Error deallocate(void *Ptr) {
+  static Error deallocate(void *Ptr) {
     hsa_status_t Status = hsa_amd_memory_pool_free(Ptr);
     return Plugin::check(Status, "error in hsa_amd_memory_pool_free: %s");
   }
@@ -444,13 +444,15 @@ private:
   void *allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) override;
 
   /// Deallocation callback that will be called by the memory manager.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  int free(void *TgtPtr) override {
     if (auto Err = MemoryPool->deallocate(TgtPtr)) {
       consumeError(std::move(Err));
       return OFFLOAD_FAIL;
     }
     return OFFLOAD_SUCCESS;
   }
+
+  int free_non_blocking(void *TgtPtr) override { return free(TgtPtr); }
 
   /// The underlying plugin that owns this memory manager.
   AMDGPUPluginTy &Plugin;
@@ -2219,37 +2221,19 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   void *allocate(size_t Size, void *, TargetAllocTy Kind) override;
 
   /// Deallocate memory on the device or related to the device.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  int free(void *TgtPtr) override {
     if (TgtPtr == nullptr)
       return OFFLOAD_SUCCESS;
 
-    AMDGPUMemoryPoolTy *MemoryPool = nullptr;
-    switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
-    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
-      MemoryPool = CoarseGrainedMemoryPools[0];
-      break;
-    case TARGET_ALLOC_HOST:
-      MemoryPool = &HostDevice.getFineGrainedMemoryPool();
-      break;
-    case TARGET_ALLOC_SHARED:
-      MemoryPool = &HostDevice.getFineGrainedMemoryPool();
-      break;
-    }
-
-    if (!MemoryPool) {
-      REPORT("No memory pool for the specified allocation kind\n");
-      return OFFLOAD_FAIL;
-    }
-
-    if (Error Err = MemoryPool->deallocate(TgtPtr)) {
+    if (Error Err = AMDGPUMemoryPoolTy::deallocate(TgtPtr)) {
       REPORT("%s\n", toString(std::move(Err)).data());
       return OFFLOAD_FAIL;
     }
 
     return OFFLOAD_SUCCESS;
   }
+
+  int free_non_blocking(void *TgtPtr) override { return free(TgtPtr); }
 
   /// Synchronize current thread with the pending operations on the async info.
   Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {

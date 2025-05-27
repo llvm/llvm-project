@@ -35,8 +35,7 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
   }
   case LIBC_FREE: {
     Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
-      Device.free(reinterpret_cast<void *>(Buffer->data[0]),
-                  TARGET_ALLOC_DEVICE_NON_BLOCKING);
+      Device.free_non_blocking(reinterpret_cast<void *>(Buffer->data[0]));
     });
     break;
   }
@@ -198,7 +197,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
 
 Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
   std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
-  Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST);
+  Device.free(Buffers[Device.getDeviceId()]);
   Buffers[Device.getDeviceId()] = nullptr;
   Devices[Device.getDeviceId()] = nullptr;
   return Error::success();
