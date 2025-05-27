@@ -202,8 +202,6 @@ private:
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
-  std::set<std::string> DylibsToPreload;
-
   std::mutex PlatformMutex;
 };
 
