@@ -118,6 +118,10 @@ public:
   }
 };
 
+extern template class LLVM_TEMPLATE_ABI DbgRecordParamRef<DIExpression>;
+extern template class LLVM_TEMPLATE_ABI DbgRecordParamRef<DILabel>;
+extern template class LLVM_TEMPLATE_ABI DbgRecordParamRef<DILocalVariable>;
+
 /// Base class for non-instruction debug metadata records that have positions
 /// within IR. Features various methods copied across from the Instruction
 /// class to aid ease-of-use. DbgRecords should always be linked into a

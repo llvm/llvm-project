@@ -1336,9 +1336,9 @@ public:
   /// @}
 
 private:
-  MDNode *replaceWithPermanentImpl();
-  MDNode *replaceWithUniquedImpl();
-  MDNode *replaceWithDistinctImpl();
+  LLVM_ABI MDNode *replaceWithPermanentImpl();
+  LLVM_ABI MDNode *replaceWithUniquedImpl();
+  LLVM_ABI MDNode *replaceWithDistinctImpl();
 
 protected:
   /// Set an operand.

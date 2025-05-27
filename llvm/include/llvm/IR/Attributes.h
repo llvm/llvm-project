@@ -373,38 +373,38 @@ public:
 
   /// Add an argument attribute. Returns a new set because attribute sets are
   /// immutable.
-  LLVM_ABI [[nodiscard]] AttributeSet addAttribute(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeSet addAttribute(LLVMContext &C,
                                           Attribute::AttrKind Kind) const;
 
   /// Add a target-dependent attribute. Returns a new set because attribute sets
   /// are immutable.
-  LLVM_ABI [[nodiscard]] AttributeSet addAttribute(LLVMContext &C, StringRef Kind,
+  [[nodiscard]] LLVM_ABI AttributeSet addAttribute(LLVMContext &C, StringRef Kind,
                                           StringRef Value = StringRef()) const;
 
   /// Add attributes to the attribute set. Returns a new set because attribute
   /// sets are immutable.
-  LLVM_ABI [[nodiscard]] AttributeSet addAttributes(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
                                            AttributeSet AS) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
-  LLVM_ABI [[nodiscard]] AttributeSet removeAttribute(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeSet removeAttribute(LLVMContext &C,
                                              Attribute::AttrKind Kind) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
-  LLVM_ABI [[nodiscard]] AttributeSet removeAttribute(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeSet removeAttribute(LLVMContext &C,
                                              StringRef Kind) const;
 
   /// Remove the specified attributes from this set. Returns a new set because
   /// attribute sets are immutable.
-  LLVM_ABI [[nodiscard]] AttributeSet
+  [[nodiscard]] LLVM_ABI AttributeSet
   removeAttributes(LLVMContext &C, const AttributeMask &AttrsToRemove) const;
 
   /// Try to intersect this AttributeSet with Other. Returns std::nullopt if
   /// the two lists are inherently incompatible (imply different behavior, not
   /// just analysis).
-  LLVM_ABI [[nodiscard]] std::optional<AttributeSet>
+  [[nodiscard]] LLVM_ABI std::optional<AttributeSet>
   intersectWith(LLVMContext &C, AttributeSet Other) const;
 
   /// Return the number of attributes in this set.
@@ -554,24 +554,24 @@ public:
   // TODO: remove non-AtIndex versions of these methods.
   /// Add an attribute to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   addAttributeAtIndex(LLVMContext &C, unsigned Index,
                       Attribute::AttrKind Kind) const;
 
   /// Add an attribute to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   addAttributeAtIndex(LLVMContext &C, unsigned Index, StringRef Kind,
                       StringRef Value = StringRef()) const;
 
   /// Add an attribute to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   addAttributeAtIndex(LLVMContext &C, unsigned Index, Attribute A) const;
 
   /// Add attributes to the attribute set at the given index.
   /// Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList addAttributesAtIndex(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeList addAttributesAtIndex(LLVMContext &C,
                                                    unsigned Index,
                                                    const AttrBuilder &B) const;
 
@@ -643,7 +643,7 @@ public:
 
   /// Add an attribute to the attribute list at the given arg indices. Returns a
   /// new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList addParamAttribute(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeList addParamAttribute(LLVMContext &C,
                                                 ArrayRef<unsigned> ArgNos,
                                                 Attribute A) const;
 
@@ -656,13 +656,13 @@ public:
 
   /// Remove the specified attribute at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   removeAttributeAtIndex(LLVMContext &C, unsigned Index,
                          Attribute::AttrKind Kind) const;
 
   /// Remove the specified attribute at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   removeAttributeAtIndex(LLVMContext &C, unsigned Index, StringRef Kind) const;
   [[nodiscard]] AttributeList removeAttribute(LLVMContext &C, unsigned Index,
                                               StringRef Kind) const {
@@ -671,13 +671,13 @@ public:
 
   /// Remove the specified attributes at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   removeAttributesAtIndex(LLVMContext &C, unsigned Index,
                           const AttributeMask &AttrsToRemove) const;
 
   /// Remove all attributes at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList removeAttributesAtIndex(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeList removeAttributesAtIndex(LLVMContext &C,
                                                       unsigned Index) const;
 
   /// Remove the specified attribute at the function index from this
@@ -773,37 +773,37 @@ public:
 
   /// \brief Add the dereferenceable attribute to the attribute set at the given
   /// index. Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList addDereferenceableRetAttr(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeList addDereferenceableRetAttr(LLVMContext &C,
                                                         uint64_t Bytes) const;
 
   /// \brief Add the dereferenceable attribute to the attribute set at the given
   /// arg index. Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList addDereferenceableParamAttr(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeList addDereferenceableParamAttr(LLVMContext &C,
                                                           unsigned ArgNo,
                                                           uint64_t Bytes) const;
 
   /// Add the dereferenceable_or_null attribute to the attribute set at
   /// the given arg index. Returns a new list because attribute lists are
   /// immutable.
-  LLVM_ABI [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   addDereferenceableOrNullParamAttr(LLVMContext &C, unsigned ArgNo,
                                     uint64_t Bytes) const;
 
   /// Add the range attribute to the attribute set at the return value index.
   /// Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList addRangeRetAttr(LLVMContext &C,
+  [[nodiscard]] LLVM_ABI AttributeList addRangeRetAttr(LLVMContext &C,
                                               const ConstantRange &CR) const;
 
   /// Add the allocsize attribute to the attribute set at the given arg index.
   /// Returns a new list because attribute lists are immutable.
-  LLVM_ABI [[nodiscard]] AttributeList
+  [[nodiscard]] LLVM_ABI AttributeList
   addAllocSizeParamAttr(LLVMContext &C, unsigned ArgNo, unsigned ElemSizeArg,
                         const std::optional<unsigned> &NumElemsArg) const;
 
   /// Try to intersect this AttributeList with Other. Returns std::nullopt if
   /// the two lists are inherently incompatible (imply different behavior, not
   /// just analysis).
-  LLVM_ABI [[nodiscard]] std::optional<AttributeList>
+  [[nodiscard]] LLVM_ABI std::optional<AttributeList>
   intersectWith(LLVMContext &C, AttributeList Other) const;
 
   //===--------------------------------------------------------------------===//

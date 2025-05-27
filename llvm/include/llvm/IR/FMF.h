@@ -13,6 +13,8 @@
 #ifndef LLVM_IR_FMF_H
 #define LLVM_IR_FMF_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class raw_ostream;
 
