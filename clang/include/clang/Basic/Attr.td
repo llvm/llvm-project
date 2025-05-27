@@ -1354,6 +1354,17 @@ def Cleanup : InheritableAttr {
   let Args = [DeclArgument<Function, "FunctionDecl">];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [CleanupDocs];
+  // FIXME: DeclArgument should be reworked to also store the
+  // Expr instead of adding attr specific hacks like the following.
+  // See the discussion in https://github.com/llvm/llvm-project/pull/14023.
+  let AdditionalMembers = [{
+private:
+    SourceLocation ArgLoc;
+
+public:
+    void setArgLoc(const SourceLocation &Loc) { ArgLoc = Loc; }
+    auto getArgLoc() const { return ArgLoc; }
+  }];
 }
 
 def CmseNSEntry : InheritableAttr, TargetSpecificAttr<TargetARM> {
@@ -1813,6 +1824,22 @@ def RegCall : DeclOrTypeAttr {
 def Final : InheritableAttr {
   let Spellings = [CustomKeyword<"final">, CustomKeyword<"sealed">];
   let Accessors = [Accessor<"isSpelledAsSealed", [CustomKeyword<"sealed">]>];
+  let SemaHandler = 0;
+  // Omitted from docs, since this is language syntax, not an attribute, as far
+  // as users are concerned.
+  let Documentation = [InternalOnly];
+}
+
+def TriviallyRelocatable : InheritableAttr {
+  let Spellings = [CustomKeyword<"trivially_relocatable_if_eligible">];
+  let SemaHandler = 0;
+  // Omitted from docs, since this is language syntax, not an attribute, as far
+  // as users are concerned.
+  let Documentation = [InternalOnly];
+}
+
+def Replaceable : InheritableAttr {
+  let Spellings = [CustomKeyword<"replaceable_if_eligible">];
   let SemaHandler = 0;
   // Omitted from docs, since this is language syntax, not an attribute, as far
   // as users are concerned.
@@ -3856,6 +3883,7 @@ def AssertCapability : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
                     [Clang<"assert_shared_capability", 0>,
                      GNU<"assert_shared_lock">]>];
@@ -3873,6 +3901,7 @@ def AcquireCapability : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
                     [Clang<"acquire_shared_capability", 0>,
                      GNU<"shared_lock_function">]>];
@@ -3890,6 +3919,7 @@ def TryAcquireCapability : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [ExprArgument<"SuccessValue">, VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
                     [Clang<"try_acquire_shared_capability", 0>,
                      GNU<"shared_trylock_function">]>];
@@ -3907,6 +3937,7 @@ def ReleaseCapability : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
                     [Clang<"release_shared_capability", 0>]>,
                    Accessor<"isGeneric",
@@ -3921,6 +3952,7 @@ def RequiresCapability : InheritableAttr {
                    Clang<"requires_shared_capability", 0>,
                    Clang<"shared_locks_required", 0>];
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -3963,6 +3995,7 @@ def PtGuardedBy : InheritableAttr {
 def AcquiredAfter : InheritableAttr {
   let Spellings = [GNU<"acquired_after">];
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -3974,6 +4007,7 @@ def AcquiredAfter : InheritableAttr {
 def AcquiredBefore : InheritableAttr {
   let Spellings = [GNU<"acquired_before">];
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -3995,12 +4029,20 @@ def LockReturned : InheritableAttr {
 def LocksExcluded : InheritableAttr {
   let Spellings = [GNU<"locks_excluded">];
   let Args = [VariadicExprArgument<"Args">];
+  let AcceptsExprPack = 1;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Subjects = SubjectList<[Function, ParmVar]>;
   let Documentation = [Undocumented];
+}
+
+def ReentrantCapability : InheritableAttr {
+  let Spellings = [Clang<"reentrant_capability">];
+  let Subjects = SubjectList<[Record, TypedefName]>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
 }
 
 // C/C++ consumed attributes.
@@ -4711,6 +4753,18 @@ def Error : InheritableAttr {
   let Documentation = [ErrorAttrDocs];
 }
 
+/// HLSL Root Signature Attribute
+def RootSignature : Attr {
+  /// [RootSignature(Signature)]
+  let Spellings = [Microsoft<"RootSignature">];
+  let Args = [IdentifierArgument<"SignatureIdent">,
+              DeclArgument<HLSLRootSignature, "SignatureDecl", 0, /*fake=*/1>];
+  let Subjects = SubjectList<[Function],
+                             ErrorDiag, "'function'">;
+  let LangOpts = [HLSL];
+  let Documentation = [RootSignatureDocs];
+}
+
 def HLSLNumThreads: InheritableAttr {
   let Spellings = [Microsoft<"numthreads">];
   let Args = [IntArgument<"X">, IntArgument<"Y">, IntArgument<"Z">];
@@ -4752,23 +4806,39 @@ def HLSLResourceBinding: InheritableAttr {
 
   private:
       RegisterType RegType;
-      unsigned SlotNumber;
+      std::optional<unsigned> SlotNumber;
       unsigned SpaceNumber;
+      std::optional<unsigned> ImplicitBindingOrderID;
 
   public:
-      void setBinding(RegisterType RT, unsigned SlotNum, unsigned SpaceNum) {
+      void setBinding(RegisterType RT, std::optional<unsigned> SlotNum, unsigned SpaceNum) {
         RegType = RT;
         SlotNumber = SlotNum;
         SpaceNumber = SpaceNum;
       }
+      bool hasRegisterSlot() const {
+        return SlotNumber.has_value();
+      }
       RegisterType getRegisterType() const {
+        assert(hasRegisterSlot() && "binding does not have register slot");
         return RegType;
       }
       unsigned getSlotNumber() const {
-        return SlotNumber;
+        assert(hasRegisterSlot() && "binding does not have register slot");
+        return SlotNumber.value();
       }
       unsigned getSpaceNumber() const {
         return SpaceNumber;
+      }
+      void setImplicitBindingOrderID(uint32_t Value) {
+        ImplicitBindingOrderID = Value;
+      }
+      bool hasImplicitBindingOrderID() const {
+        return ImplicitBindingOrderID.has_value();
+      }
+      uint32_t getImplicitBindingOrderID() const {
+        assert(hasImplicitBindingOrderID() && "attribute does not have implicit binding order id");
+        return ImplicitBindingOrderID.value();
       }
   }];
 }
@@ -5023,4 +5093,10 @@ def OpenACCRoutineDecl :InheritableAttr {
     llvm::SmallVector<const OpenACCClause *> Clauses;
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
   }];
+}
+
+def NonString : InheritableAttr {
+  let Spellings = [GCC<"nonstring">];
+  let Subjects = SubjectList<[Var, Field]>;
+  let Documentation = [NonStringDocs];
 }

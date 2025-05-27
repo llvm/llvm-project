@@ -20,6 +20,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstring>
 #include <mutex>
 #include <system_error>
 
@@ -233,6 +234,22 @@ std::string GetStringValue(const lldb::SBStructuredData &data) {
   std::string str(str_length, 0);
   data.GetStringValue(str.data(), str_length + 1);
   return str;
+}
+
+ScopeSyncMode::ScopeSyncMode(lldb::SBDebugger &debugger)
+    : m_debugger(debugger), m_async(m_debugger.GetAsync()) {
+  m_debugger.SetAsync(false);
+}
+
+ScopeSyncMode::~ScopeSyncMode() { m_debugger.SetAsync(m_async); }
+
+std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec) {
+  const auto directory_length = ::strlen(file_spec.GetDirectory());
+  const auto file_name_length = ::strlen(file_spec.GetFilename());
+
+  std::string path(directory_length + file_name_length + 1, '\0');
+  file_spec.GetPath(path.data(), path.length() + 1);
+  return path;
 }
 
 } // namespace lldb_dap

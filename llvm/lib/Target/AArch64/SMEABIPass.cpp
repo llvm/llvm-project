@@ -20,7 +20,6 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
@@ -30,9 +29,7 @@ using namespace llvm;
 namespace {
 struct SMEABI : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  SMEABI() : FunctionPass(ID) {
-    initializeSMEABIPass(*PassRegistry::getPassRegistry());
-  }
+  SMEABI() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
 

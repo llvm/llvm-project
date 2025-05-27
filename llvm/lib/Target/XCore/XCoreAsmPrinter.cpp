@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -49,9 +48,11 @@ namespace {
     XCoreTargetStreamer &getTargetStreamer();
 
   public:
+    static char ID;
+
     explicit XCoreAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-        : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(*this) {}
+        : AsmPrinter(TM, std::move(Streamer), ID), MCInstLowering(*this) {}
 
     StringRef getPassName() const override { return "XCore Assembly Printer"; }
 
@@ -287,6 +288,11 @@ void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   EmitToStreamer(*OutStreamer, TmpInst);
 }
+
+char XCoreAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(XCoreAsmPrinter, "xcore-asm-printer", "XCore Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreAsmPrinter() {

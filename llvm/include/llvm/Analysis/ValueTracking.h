@@ -213,49 +213,6 @@ Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                     bool &TrueIfSigned);
 
-/// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
-/// same result as an fcmp with the given operands.
-///
-/// If \p LookThroughSrc is true, consider the input value when computing the
-/// mask.
-///
-/// If \p LookThroughSrc is false, ignore the source value (i.e. the first pair
-/// element will always be LHS.
-std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
-                                                const Function &F, Value *LHS,
-                                                Value *RHS,
-                                                bool LookThroughSrc = true);
-std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
-                                                const Function &F, Value *LHS,
-                                                const APFloat *ConstRHS,
-                                                bool LookThroughSrc = true);
-
-/// Compute the possible floating-point classes that \p LHS could be based on
-/// fcmp \Pred \p LHS, \p RHS.
-///
-/// \returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
-///
-/// If the compare returns an exact class test, ClassesIfTrue == ~ClassesIfFalse
-///
-/// This is a less exact version of fcmpToClassTest (e.g. fcmpToClassTest will
-/// only succeed for a test of x > 0 implies positive, but not x > 1).
-///
-/// If \p LookThroughSrc is true, consider the input value when computing the
-/// mask. This may look through sign bit operations.
-///
-/// If \p LookThroughSrc is false, ignore the source value (i.e. the first pair
-/// element will always be LHS.
-///
-std::tuple<Value *, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 Value *RHS, bool LookThroughSrc = true);
-std::tuple<Value *, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 FPClassTest RHS, bool LookThroughSrc = true);
-std::tuple<Value *, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 const APFloat &RHS, bool LookThroughSrc = true);
-
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
 ///
@@ -539,6 +496,12 @@ bool isNotCrossLaneOperation(const Instruction *I);
 /// move the instruction as long as the correct dominance relationships for
 /// the operands and users hold.
 ///
+/// If \p UseVariableInfo is true, the information from non-constant operands
+/// will be taken into account.
+///
+/// If \p IgnoreUBImplyingAttrs is true, UB-implying attributes will be ignored.
+/// The caller is responsible for correctly propagating them after hoisting.
+///
 /// This method can return true for instructions that read memory;
 /// for such instructions, moving them may change the resulting value.
 bool isSafeToSpeculativelyExecute(const Instruction *I,
@@ -546,24 +509,28 @@ bool isSafeToSpeculativelyExecute(const Instruction *I,
                                   AssumptionCache *AC = nullptr,
                                   const DominatorTree *DT = nullptr,
                                   const TargetLibraryInfo *TLI = nullptr,
-                                  bool UseVariableInfo = true);
+                                  bool UseVariableInfo = true,
+                                  bool IgnoreUBImplyingAttrs = true);
 
 inline bool isSafeToSpeculativelyExecute(const Instruction *I,
                                          BasicBlock::iterator CtxI,
                                          AssumptionCache *AC = nullptr,
                                          const DominatorTree *DT = nullptr,
                                          const TargetLibraryInfo *TLI = nullptr,
-                                         bool UseVariableInfo = true) {
+                                         bool UseVariableInfo = true,
+                                         bool IgnoreUBImplyingAttrs = true) {
   // Take an iterator, and unwrap it into an Instruction *.
-  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseVariableInfo);
+  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseVariableInfo,
+                                      IgnoreUBImplyingAttrs);
 }
 
 /// Don't use information from its non-constant operands. This helper is used
 /// when its operands are going to be replaced.
-inline bool
-isSafeToSpeculativelyExecuteWithVariableReplaced(const Instruction *I) {
+inline bool isSafeToSpeculativelyExecuteWithVariableReplaced(
+    const Instruction *I, bool IgnoreUBImplyingAttrs = true) {
   return isSafeToSpeculativelyExecute(I, nullptr, nullptr, nullptr, nullptr,
-                                      /*UseVariableInfo=*/false);
+                                      /*UseVariableInfo=*/false,
+                                      IgnoreUBImplyingAttrs);
 }
 
 /// This returns the same result as isSafeToSpeculativelyExecute if Opcode is
@@ -586,7 +553,8 @@ isSafeToSpeculativelyExecuteWithVariableReplaced(const Instruction *I) {
 bool isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI = nullptr,
     AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
-    const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true);
+    const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true,
+    bool IgnoreUBImplyingAttrs = true);
 
 /// Returns true if the result or effects of the given instructions \p I
 /// depend values not reachable through the def use graph.

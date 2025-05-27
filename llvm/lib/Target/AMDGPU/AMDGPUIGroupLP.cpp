@@ -957,8 +957,6 @@ private:
       auto *DAG = SyncPipe[0].DAG;
 
       if (Cache->empty()) {
-        SmallVector<SUnit *, 8> Worklist;
-
         auto I = DAG->SUnits.begin();
         auto E = DAG->SUnits.end();
         for (; I != E; I++) {
@@ -1290,7 +1288,6 @@ private:
     bool apply(const SUnit *SU, const ArrayRef<SUnit *> Collection,
                SmallVectorImpl<SchedGroup> &SyncPipe) override {
 
-      SmallVector<SUnit *, 12> Worklist;
       auto *DAG = SyncPipe[0].DAG;
       if (Cache->empty()) {
         for (auto &SU : DAG->SUnits)
@@ -2412,17 +2409,15 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM) != SchedGroupMask::NONE) &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           MI.mayLoad() && TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() &&
-           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+           MI.mayStore() && TII->isVMEM(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&

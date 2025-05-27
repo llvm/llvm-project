@@ -33,6 +33,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <optional>
@@ -60,7 +61,6 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
 OpFoldResult tensor::getMixedSize(OpBuilder &builder, Location loc, Value value,
                                   int64_t dim) {
   auto tensorType = llvm::cast<RankedTensorType>(value.getType());
-  SmallVector<OpFoldResult> result;
   if (tensorType.isDynamicDim(dim))
     return builder.createOrFold<tensor::DimOp>(loc, value, dim);
 
@@ -331,8 +331,9 @@ bool mlir::tensor::canFoldIntoConsumerOp(CastOp castOp) {
 
 /// Determines whether the tensor::CastOp casts to a more static version of the
 /// source tensor. This is useful to fold into a producing op and implement
-/// canonicaliation patterns with the `tensor.cast` op as the root, but producer
-/// being from different dialects. Returns true when all conditions are met:
+/// canonicalization patterns with the `tensor.cast` op as the root, but
+/// producer being from different dialects. Returns true when all conditions are
+/// met:
 /// 1. source and result and ranked tensors with same element type and rank.
 /// 2. the result type has more static information than the source.
 ///
@@ -774,11 +775,110 @@ struct SingleInputConcatOp : public OpRewritePattern<ConcatOp> {
     return success();
   }
 };
+
+/// Propagate static shapes into the operands of a `tensor.concat`.
+///
+/// `tensor.concat` requires every operand to match on all dimensions except the
+/// concatenation dimension. If one operand is already static in those
+/// dimensions, the other operands may safely be refined to that same static
+/// shape.
+///
+/// Example:
+///
+/// ```mlir
+///   %2 = tensor.concat dim(0) %0, %1: (tensor<?x12xi32>, tensor<?x?xi32>) ->
+///        tensor<?x12xi32>
+/// ```
+/// ->
+/// ```mlir
+///   %cast = tensor.cast %1 : tensor<?x?xi32> to tensor<?x12xi32>
+///   %2 = tensor.concat dim(0) %0, %cast :
+///        (tensor<?x12xi32>, tensor<?x12xi32>) -> tensor<?x12xi32>
+/// ```
+struct InferConcatOperandTypes : public OpRewritePattern<ConcatOp> {
+  using OpRewritePattern<ConcatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConcatOp concatOp,
+                                PatternRewriter &rewriter) const override {
+    int64_t dim = concatOp.getDim();
+    RankedTensorType inferredResultType =
+        ConcatOp::inferResultType(dim, concatOp->getOperandTypes());
+
+    // Find operands for which a more static shape can be inferred.
+    LogicalResult matched = failure();
+    // Inferred operand shapes are identical in every dimension except the
+    // concatenation dimension.
+    SmallVector<int64_t> inferredOperandShape(inferredResultType.getShape());
+    for (auto [operandIdx, operandType] :
+         llvm::enumerate(concatOp->getOperandTypes())) {
+      // Compute inferred type for operand.
+      inferredOperandShape[dim] =
+          cast<RankedTensorType>(operandType).getDimSize(dim);
+      auto inferredOperandType = RankedTensorType::get(
+          inferredOperandShape, inferredResultType.getElementType());
+
+      // Check if inferred type is more static.
+      if (!preservesStaticInformation(inferredOperandType, operandType)) {
+        matched = success();
+
+        // Use refined operand type and create cast from original operand.
+        auto castOp =
+            rewriter.create<CastOp>(concatOp->getLoc(), inferredOperandType,
+                                    concatOp.getOperand(operandIdx));
+        rewriter.modifyOpInPlace(concatOp, [=, operandIdx = operandIdx] {
+          concatOp->setOperand(operandIdx, castOp->getResult(0));
+        });
+      }
+    }
+
+    return matched;
+  }
+};
+
+// Ensure `tensor.concat`'s result type is at least as static as can be inferred
+// from its operand types.
+///
+/// Example:
+/// ```mlir
+///   %2 = tensor.concat dim(0) %0, %1: (tensor<?x12xi32>, tensor<?x12xi32>) ->
+///   tensor<?x?xi32>
+/// ```
+/// ->
+/// ```mlir
+///   %2 = tensor.concat dim(0) %0, %cast : (tensor<?x12xi32>, tensor<?x12xi32>)
+///   -> tensor<?x12xi32> %cast = tensor.cast %2 : tensor<?x12xi32> to
+///   tensor<?x?xi32>
+/// ```
+struct InferConcatResultType : public OpRewritePattern<ConcatOp> {
+  using OpRewritePattern<ConcatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConcatOp concatOp,
+                                PatternRewriter &rewriter) const override {
+    int64_t dim = concatOp.getDim();
+    RankedTensorType inferredResultType =
+        ConcatOp::inferResultType(dim, concatOp->getOperandTypes());
+
+    // The result type should be at least as static as inferred result type.
+    if (preservesStaticInformation(inferredResultType,
+                                   concatOp.getResultType())) {
+      return failure();
+    }
+
+    auto newConcatOp = rewriter.create<ConcatOp>(
+        concatOp->getLoc(), inferredResultType, dim, concatOp->getOperands());
+    rewriter.replaceOpWithNewOp<CastOp>(concatOp, concatOp.getResultType(),
+                                        newConcatOp);
+
+    return success();
+  }
+};
 } // namespace
 
 void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<SingleInputConcatOp>(context);
+  results
+      .add<SingleInputConcatOp, InferConcatOperandTypes, InferConcatResultType>(
+          context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1357,7 +1457,7 @@ RankedTensorType GatherOp::inferResultType(RankedTensorType sourceType,
   SmallVector<int64_t> resultShape(indicesType.getShape().drop_back());
   resultShape.reserve(resultShape.size() + sourceType.getRank());
   for (int64_t idx : llvm::seq<int64_t>(0, sourceType.getRank())) {
-    if (std::binary_search(gatherDims.begin(), gatherDims.end(), idx)) {
+    if (llvm::binary_search(gatherDims, idx)) {
       if (!rankReduced)
         resultShape.push_back(1);
       continue;
@@ -1703,7 +1803,6 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
       if (auto dimOp = element.getDefiningOp<tensor::DimOp>()) {
         dynamicNoop &= dimOp.getSource() == source;
 
-        APSInt dim;
         auto cst = getConstantIntValue(dimOp.getIndex());
         dynamicNoop &=
             cst.has_value() && cst.value() == static_cast<int64_t>(id);
@@ -2740,8 +2839,7 @@ OpFoldResult InsertSliceOp::fold(FoldAdaptor) {
     return getResult();
   if (auto result = foldInsertAfterExtractSlice(*this))
     return result;
-  if (llvm::any_of(getMixedSizes(),
-                   [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }))
+  if (llvm::any_of(getMixedSizes(), isZeroInteger))
     return getDest();
   return OpFoldResult();
 }

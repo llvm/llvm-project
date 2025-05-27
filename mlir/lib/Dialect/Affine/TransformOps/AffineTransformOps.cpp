@@ -118,7 +118,6 @@ SimplifyBoundedAffineOpsOp::apply(transform::TransformRewriter &rewriter,
     }
     targets.push_back(target);
   }
-  SmallVector<Operation *> transformed;
   RewritePatternSet patterns(getContext());
   // Canonicalization patterns are needed so that affine.apply ops are composed
   // with the remaining affine.min/max ops.

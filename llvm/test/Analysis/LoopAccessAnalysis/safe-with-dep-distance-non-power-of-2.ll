@@ -221,12 +221,12 @@ define void @non_power_2_storeloadforward(ptr %A) {
 ; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Forward:
-; CHECK-NEXT:            %3 = load i32, ptr %arrayidx2, align 4 ->
-; CHECK-NEXT:            store i32 %add3, ptr %arrayidx5, align 4
+; CHECK-NEXT:            %3 = load i32, ptr %gep.iv.4, align 4 ->
+; CHECK-NEXT:            store i32 %add3, ptr %gep.iv, align 4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
-; CHECK-NEXT:            %1 = load i32, ptr %arrayidx, align 4 ->
-; CHECK-NEXT:            store i32 %add3, ptr %arrayidx5, align 4
+; CHECK-NEXT:            %1 = load i32, ptr %gep.iv.sub.3, align 4 ->
+; CHECK-NEXT:            store i32 %add3, ptr %gep.iv, align 4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:

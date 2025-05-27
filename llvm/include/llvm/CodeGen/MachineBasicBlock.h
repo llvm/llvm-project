@@ -18,6 +18,7 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugLoc.h"
@@ -46,8 +47,6 @@ class LiveIntervals;
 class LiveVariables;
 class TargetRegisterClass;
 class TargetRegisterInfo;
-template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
-using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 
 // This structure uniquely identifies a basic block section.
 // Possible values are
@@ -1263,6 +1262,9 @@ public:
   /// MachineBranchProbabilityInfo class.
   BranchProbability getSuccProbability(const_succ_iterator Succ) const;
 
+  // Helper function for MIRPrinter.
+  bool canPredictBranchProbabilities() const;
+
 private:
   /// Return probability iterator corresponding to the I successor iterator.
   probability_iterator getProbabilityIterator(succ_iterator I);
@@ -1270,7 +1272,6 @@ private:
   getProbabilityIterator(const_succ_iterator I) const;
 
   friend class MachineBranchProbabilityInfo;
-  friend class MIPrinter;
 
   // Methods used to maintain doubly linked list of blocks...
   friend struct ilist_callback_traits<MachineBasicBlock>;

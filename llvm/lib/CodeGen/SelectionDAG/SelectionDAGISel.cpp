@@ -101,7 +101,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -345,8 +344,7 @@ SelectionDAGISelLegacy::SelectionDAGISelLegacy(
 
 bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
   // If we already selected that function, we do not need to run SDISel.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return false;
 
   // Do some sanity-checking on the command-line options.
@@ -421,8 +419,7 @@ PreservedAnalyses
 SelectionDAGISelPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
   // If we already selected that function, we do not need to run SDISel.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return PreservedAnalyses::all();
 
   // Do some sanity-checking on the command-line options.
@@ -2897,11 +2894,11 @@ CheckPatternPredicate(unsigned Opcode, const unsigned char *MatcherTable,
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
 CheckNodePredicate(unsigned Opcode, const unsigned char *MatcherTable,
                    unsigned &MatcherIndex, const SelectionDAGISel &SDISel,
-                   SDNode *N) {
+                   SDValue Op) {
   unsigned PredNo = Opcode == SelectionDAGISel::OPC_CheckPredicate
                         ? MatcherTable[MatcherIndex++]
                         : Opcode - SelectionDAGISel::OPC_CheckPredicate0;
-  return SDISel.CheckNodePredicate(N, PredNo);
+  return SDISel.CheckNodePredicate(Op, PredNo);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
@@ -3062,7 +3059,7 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
   case SelectionDAGISel::OPC_CheckPredicate5:
   case SelectionDAGISel::OPC_CheckPredicate6:
   case SelectionDAGISel::OPC_CheckPredicate7:
-    Result = !::CheckNodePredicate(Opcode, Table, Index, SDISel, N.getNode());
+    Result = !::CheckNodePredicate(Opcode, Table, Index, SDISel, N);
     return Index;
   case SelectionDAGISel::OPC_CheckOpcode:
     Result = !::CheckOpcode(Table, Index, N.getNode());
@@ -3575,8 +3572,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case SelectionDAGISel::OPC_CheckPredicate6:
     case SelectionDAGISel::OPC_CheckPredicate7:
     case OPC_CheckPredicate:
-      if (!::CheckNodePredicate(Opcode, MatcherTable, MatcherIndex, *this,
-                                N.getNode()))
+      if (!::CheckNodePredicate(Opcode, MatcherTable, MatcherIndex, *this, N))
         break;
       continue;
     case OPC_CheckPredicateWithOperands: {
@@ -3587,7 +3583,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         Operands.push_back(RecordedNodes[MatcherTable[MatcherIndex++]].first);
 
       unsigned PredNo = MatcherTable[MatcherIndex++];
-      if (!CheckNodePredicateWithOperands(N.getNode(), PredNo, Operands))
+      if (!CheckNodePredicateWithOperands(N, PredNo, Operands))
         break;
       continue;
     }
@@ -4417,6 +4413,8 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
   std::string msg;
   raw_string_ostream Msg(msg);
   Msg << "Cannot select: ";
+
+  Msg.enable_colors(errs().has_colors());
 
   if (N->getOpcode() != ISD::INTRINSIC_W_CHAIN &&
       N->getOpcode() != ISD::INTRINSIC_WO_CHAIN &&

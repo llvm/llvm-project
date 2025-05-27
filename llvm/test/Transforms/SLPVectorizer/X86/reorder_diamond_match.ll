@@ -4,19 +4,40 @@
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr undef, i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x [4 x i32]], ptr undef, i64 0, i64 1, i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i16> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shl <4 x i16> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[TMP6]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i16> [[TMP7]], <4 x i16> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i16> [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = sub <4 x i16> [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[TMP9]], <4 x i16> [[TMP10]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP13:%.*]] = sub <4 x i16> zeroinitializer, [[TMP11]]
-; CHECK-NEXT:    [[TMP15:%.*]] = sext <4 x i16> [[TMP13]] to <4 x i32>
-; CHECK-NEXT:    store <4 x i32> [[TMP15]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw i32 0, [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i32 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr undef, i64 5
+; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw i32 0, [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nsw i32 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr undef, i64 6
+; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP13]], align 1
+; CHECK-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP14]] to i32
+; CHECK-NEXT:    [[TMP16:%.*]] = sub nsw i32 0, [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl nsw i32 [[TMP16]], 0
+; CHECK-NEXT:    [[TMP18:%.*]] = add nsw i32 [[TMP17]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr undef, i64 7
+; CHECK-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; CHECK-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP20]] to i32
+; CHECK-NEXT:    [[TMP22:%.*]] = sub nsw i32 0, [[TMP21]]
+; CHECK-NEXT:    [[TMP23:%.*]] = shl nsw i32 [[TMP22]], 0
+; CHECK-NEXT:    [[TMP24:%.*]] = add nsw i32 [[TMP23]], 0
+; CHECK-NEXT:    [[TMP25:%.*]] = add nsw i32 [[TMP12]], [[TMP6]]
+; CHECK-NEXT:    [[TMP26:%.*]] = sub nsw i32 [[TMP6]], [[TMP12]]
+; CHECK-NEXT:    [[TMP27:%.*]] = add nsw i32 [[TMP24]], [[TMP18]]
+; CHECK-NEXT:    [[TMP28:%.*]] = sub nsw i32 [[TMP18]], [[TMP24]]
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [4 x [4 x i32]], ptr undef, i64 0, i64 1, i64 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>, i32 [[TMP25]], i32 0
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP26]], i32 1
+; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>, i32 [[TMP27]], i32 2
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP28]], i32 3
+; CHECK-NEXT:    [[TMP34:%.*]] = sub nsw <4 x i32> [[TMP31]], [[TMP33]]
+; CHECK-NEXT:    store <4 x i32> [[TMP34]], ptr [[TMP29]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %1 = getelementptr inbounds i8, ptr undef, i64 4

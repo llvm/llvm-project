@@ -410,6 +410,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
     libc.src.math.asin
@@ -933,6 +934,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr

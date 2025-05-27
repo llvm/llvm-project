@@ -53,6 +53,8 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "X86GenInstrInfo.inc"
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 static cl::opt<bool>
     NoFusing("disable-spill-fusing",
              cl::desc("Disable fusing of spill code into instructions"),
@@ -102,22 +104,8 @@ X86InstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
   if (X86II::canUseApxExtendedReg(MCID))
     return RC;
 
-  switch (RC->getID()) {
-  default:
-    return RC;
-  case X86::GR8RegClassID:
-    return &X86::GR8_NOREX2RegClass;
-  case X86::GR16RegClassID:
-    return &X86::GR16_NOREX2RegClass;
-  case X86::GR32RegClassID:
-    return &X86::GR32_NOREX2RegClass;
-  case X86::GR64RegClassID:
-    return &X86::GR64_NOREX2RegClass;
-  case X86::GR32_NOSPRegClassID:
-    return &X86::GR32_NOREX2_NOSPRegClass;
-  case X86::GR64_NOSPRegClassID:
-    return &X86::GR64_NOREX2_NOSPRegClass;
-  }
+  const X86RegisterInfo *RI = Subtarget.getRegisterInfo();
+  return RI->constrainRegClassToNonRex2(RC);
 }
 
 bool X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
@@ -3726,6 +3714,7 @@ bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
+  case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
     return true;
   default:
@@ -5464,8 +5453,16 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           continue;
         }
 
+        // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
+        // optimization for replacing non-NF with NF. This is to keep backward
+        // compatiblity with old version of linkers without APX relocation type
+        // support on Linux OS.
+        bool IsWithReloc = X86EnableAPXForRelocation
+                               ? false
+                               : isAddMemInstrWithRelocation(Inst);
+
         // Try to replace non-NF with NF instructions.
-        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI) && !IsWithReloc) {
           unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
           if (!NewOp)
             return false;
@@ -7462,7 +7459,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // do not fold loads into calls or pushes, unless optimizing for size
   // aggressively.
   if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
-      (Opc == X86::CALL32r || Opc == X86::CALL64r || Opc == X86::PUSH16r ||
+      (Opc == X86::CALL32r || Opc == X86::CALL64r ||
+       Opc == X86::CALL64r_ImpCall || Opc == X86::PUSH16r ||
        Opc == X86::PUSH32r || Opc == X86::PUSH64r))
     return nullptr;
 
@@ -8124,6 +8122,14 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (!MF.getFunction().hasOptSize() &&
       (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/ true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
+    return nullptr;
+
+  // Do not fold a NDD instruction and a memory instruction with relocation to
+  // avoid emit APX relocation when the flag is disabled for backward
+  // compatibility.
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+  if (!X86EnableAPXForRelocation && isMemInstrWithGOTPCREL(LoadMI) &&
+      X86II::hasNewDataDest(TSFlags))
     return nullptr;
 
   // Determine the alignment of the load.
