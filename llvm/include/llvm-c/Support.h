@@ -14,10 +14,10 @@
 #ifndef LLVM_C_SUPPORT_H
 #define LLVM_C_SUPPORT_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/DataTypes.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -33,7 +33,7 @@ LLVM_C_EXTERN_C_BEGIN
  *
  * @see sys::DynamicLibrary::LoadLibraryPermanently()
   */
-LLVM_C_ABI LLVMBool LLVMLoadLibraryPermanently(const char* Filename);
+LLVM_C_ABI LLVMBool LLVMLoadLibraryPermanently(const char *Filename);
 
 /**
  * This function parses the given arguments using the LLVM command line parser.
@@ -44,7 +44,7 @@ LLVM_C_ABI LLVMBool LLVMLoadLibraryPermanently(const char* Filename);
  * @see llvm::cl::ParseCommandLineOptions()
  */
 LLVM_C_ABI void LLVMParseCommandLineOptions(int argc, const char *const *argv,
-                                 const char *Overview);
+                                            const char *Overview);
 
 /**
  * This function will search through all previously loaded dynamic

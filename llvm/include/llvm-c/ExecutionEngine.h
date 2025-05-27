@@ -19,11 +19,11 @@
 #ifndef LLVM_C_EXECUTIONENGINE_H
 #define LLVM_C_EXECUTIONENGINE_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -60,41 +60,41 @@ struct LLVMMCJITCompilerOptions {
 /*===-- Operations on generic values --------------------------------------===*/
 
 LLVM_C_ABI LLVMGenericValueRef LLVMCreateGenericValueOfInt(LLVMTypeRef Ty,
-                                                unsigned long long N,
-                                                LLVMBool IsSigned);
+                                                           unsigned long long N,
+                                                           LLVMBool IsSigned);
 
 LLVM_C_ABI LLVMGenericValueRef LLVMCreateGenericValueOfPointer(void *P);
 
-LLVM_C_ABI LLVMGenericValueRef LLVMCreateGenericValueOfFloat(LLVMTypeRef Ty, double N);
+LLVM_C_ABI LLVMGenericValueRef LLVMCreateGenericValueOfFloat(LLVMTypeRef Ty,
+                                                             double N);
 
 LLVM_C_ABI unsigned LLVMGenericValueIntWidth(LLVMGenericValueRef GenValRef);
 
 LLVM_C_ABI unsigned long long LLVMGenericValueToInt(LLVMGenericValueRef GenVal,
-                                         LLVMBool IsSigned);
+                                                    LLVMBool IsSigned);
 
 LLVM_C_ABI void *LLVMGenericValueToPointer(LLVMGenericValueRef GenVal);
 
-LLVM_C_ABI double LLVMGenericValueToFloat(LLVMTypeRef TyRef, LLVMGenericValueRef GenVal);
+LLVM_C_ABI double LLVMGenericValueToFloat(LLVMTypeRef TyRef,
+                                          LLVMGenericValueRef GenVal);
 
 LLVM_C_ABI void LLVMDisposeGenericValue(LLVMGenericValueRef GenVal);
 
 /*===-- Operations on execution engines -----------------------------------===*/
 
-LLVM_C_ABI LLVMBool LLVMCreateExecutionEngineForModule(LLVMExecutionEngineRef *OutEE,
-                                            LLVMModuleRef M,
-                                            char **OutError);
+LLVM_C_ABI LLVMBool LLVMCreateExecutionEngineForModule(
+    LLVMExecutionEngineRef *OutEE, LLVMModuleRef M, char **OutError);
 
-LLVM_C_ABI LLVMBool LLVMCreateInterpreterForModule(LLVMExecutionEngineRef *OutInterp,
-                                        LLVMModuleRef M,
-                                        char **OutError);
+LLVM_C_ABI LLVMBool LLVMCreateInterpreterForModule(
+    LLVMExecutionEngineRef *OutInterp, LLVMModuleRef M, char **OutError);
 
-LLVM_C_ABI LLVMBool LLVMCreateJITCompilerForModule(LLVMExecutionEngineRef *OutJIT,
-                                        LLVMModuleRef M,
-                                        unsigned OptLevel,
-                                        char **OutError);
+LLVM_C_ABI LLVMBool
+LLVMCreateJITCompilerForModule(LLVMExecutionEngineRef *OutJIT, LLVMModuleRef M,
+                               unsigned OptLevel, char **OutError);
 
-LLVM_C_ABI void LLVMInitializeMCJITCompilerOptions(
-  struct LLVMMCJITCompilerOptions *Options, size_t SizeOfOptions);
+LLVM_C_ABI void
+LLVMInitializeMCJITCompilerOptions(struct LLVMMCJITCompilerOptions *Options,
+                                   size_t SizeOfOptions);
 
 /**
  * Create an MCJIT execution engine for a module, with the given options. It is
@@ -114,9 +114,9 @@ LLVM_C_ABI void LLVMInitializeMCJITCompilerOptions(
  * LLVMCreateMCJITCompilerForModule(&jit, mod, 0, 0, &error);
  */
 LLVM_C_ABI LLVMBool LLVMCreateMCJITCompilerForModule(
-  LLVMExecutionEngineRef *OutJIT, LLVMModuleRef M,
-  struct LLVMMCJITCompilerOptions *Options, size_t SizeOfOptions,
-  char **OutError);
+    LLVMExecutionEngineRef *OutJIT, LLVMModuleRef M,
+    struct LLVMMCJITCompilerOptions *Options, size_t SizeOfOptions,
+    char **OutError);
 
 LLVM_C_ABI void LLVMDisposeExecutionEngine(LLVMExecutionEngineRef EE);
 
@@ -125,43 +125,48 @@ LLVM_C_ABI void LLVMRunStaticConstructors(LLVMExecutionEngineRef EE);
 LLVM_C_ABI void LLVMRunStaticDestructors(LLVMExecutionEngineRef EE);
 
 LLVM_C_ABI int LLVMRunFunctionAsMain(LLVMExecutionEngineRef EE, LLVMValueRef F,
-                          unsigned ArgC, const char * const *ArgV,
-                          const char * const *EnvP);
+                                     unsigned ArgC, const char *const *ArgV,
+                                     const char *const *EnvP);
 
-LLVM_C_ABI LLVMGenericValueRef LLVMRunFunction(LLVMExecutionEngineRef EE, LLVMValueRef F,
-                                    unsigned NumArgs,
-                                    LLVMGenericValueRef *Args);
+LLVM_C_ABI LLVMGenericValueRef LLVMRunFunction(LLVMExecutionEngineRef EE,
+                                               LLVMValueRef F, unsigned NumArgs,
+                                               LLVMGenericValueRef *Args);
 
-LLVM_C_ABI void LLVMFreeMachineCodeForFunction(LLVMExecutionEngineRef EE, LLVMValueRef F);
+LLVM_C_ABI void LLVMFreeMachineCodeForFunction(LLVMExecutionEngineRef EE,
+                                               LLVMValueRef F);
 
 LLVM_C_ABI void LLVMAddModule(LLVMExecutionEngineRef EE, LLVMModuleRef M);
 
 LLVM_C_ABI LLVMBool LLVMRemoveModule(LLVMExecutionEngineRef EE, LLVMModuleRef M,
-                          LLVMModuleRef *OutMod, char **OutError);
+                                     LLVMModuleRef *OutMod, char **OutError);
 
-LLVM_C_ABI LLVMBool LLVMFindFunction(LLVMExecutionEngineRef EE, const char *Name,
-                          LLVMValueRef *OutFn);
+LLVM_C_ABI LLVMBool LLVMFindFunction(LLVMExecutionEngineRef EE,
+                                     const char *Name, LLVMValueRef *OutFn);
 
 LLVM_C_ABI void *LLVMRecompileAndRelinkFunction(LLVMExecutionEngineRef EE,
-                                     LLVMValueRef Fn);
+                                                LLVMValueRef Fn);
 
-LLVM_C_ABI LLVMTargetDataRef LLVMGetExecutionEngineTargetData(LLVMExecutionEngineRef EE);
+LLVM_C_ABI LLVMTargetDataRef
+LLVMGetExecutionEngineTargetData(LLVMExecutionEngineRef EE);
 LLVM_C_ABI LLVMTargetMachineRef
 LLVMGetExecutionEngineTargetMachine(LLVMExecutionEngineRef EE);
 
-LLVM_C_ABI void LLVMAddGlobalMapping(LLVMExecutionEngineRef EE, LLVMValueRef Global,
-                          void* Addr);
+LLVM_C_ABI void LLVMAddGlobalMapping(LLVMExecutionEngineRef EE,
+                                     LLVMValueRef Global, void *Addr);
 
-LLVM_C_ABI void *LLVMGetPointerToGlobal(LLVMExecutionEngineRef EE, LLVMValueRef Global);
+LLVM_C_ABI void *LLVMGetPointerToGlobal(LLVMExecutionEngineRef EE,
+                                        LLVMValueRef Global);
 
-LLVM_C_ABI uint64_t LLVMGetGlobalValueAddress(LLVMExecutionEngineRef EE, const char *Name);
+LLVM_C_ABI uint64_t LLVMGetGlobalValueAddress(LLVMExecutionEngineRef EE,
+                                              const char *Name);
 
-LLVM_C_ABI uint64_t LLVMGetFunctionAddress(LLVMExecutionEngineRef EE, const char *Name);
+LLVM_C_ABI uint64_t LLVMGetFunctionAddress(LLVMExecutionEngineRef EE,
+                                           const char *Name);
 
 /// Returns true on error, false on success. If true is returned then the error
 /// message is copied to OutStr and cleared in the ExecutionEngine instance.
 LLVM_C_ABI LLVMBool LLVMExecutionEngineGetErrMsg(LLVMExecutionEngineRef EE,
-                                      char **OutError);
+                                                 char **OutError);
 
 /*===-- Operations on memory managers -------------------------------------===*/
 
@@ -187,11 +192,11 @@ typedef void (*LLVMMemoryManagerDestroyCallback)(void *Opaque);
  *   success, 1 on error.
  */
 LLVM_C_ABI LLVMMCJITMemoryManagerRef LLVMCreateSimpleMCJITMemoryManager(
-  void *Opaque,
-  LLVMMemoryManagerAllocateCodeSectionCallback AllocateCodeSection,
-  LLVMMemoryManagerAllocateDataSectionCallback AllocateDataSection,
-  LLVMMemoryManagerFinalizeMemoryCallback FinalizeMemory,
-  LLVMMemoryManagerDestroyCallback Destroy);
+    void *Opaque,
+    LLVMMemoryManagerAllocateCodeSectionCallback AllocateCodeSection,
+    LLVMMemoryManagerAllocateDataSectionCallback AllocateDataSection,
+    LLVMMemoryManagerFinalizeMemoryCallback FinalizeMemory,
+    LLVMMemoryManagerDestroyCallback Destroy);
 
 LLVM_C_ABI void LLVMDisposeMCJITMemoryManager(LLVMMCJITMemoryManagerRef MM);
 

@@ -26,8 +26,8 @@
 #ifndef LLVM_C_LLJITUTILS_H
 #define LLVM_C_LLJITUTILS_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/LLJIT.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 

@@ -24,12 +24,12 @@
 #ifndef LLVM_C_ORCEE_H
 #define LLVM_C_ORCEE_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm-c/Orc.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
