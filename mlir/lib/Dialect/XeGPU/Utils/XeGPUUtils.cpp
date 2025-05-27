@@ -224,16 +224,16 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
     Operation *op, TypeConverter converter) {
   MLIRContext *context = op->getContext();
 
-  auto materializeCast = [&](OpBuilder &builder, Type type, ValueRange inputs,
-                             Location loc) -> Value {
+  auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
+                            Location loc) -> Value {
     return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
         .getResult(0);
   };
 
   { // convert VectorType to RankedTensorType for SCF Structural ops
     TypeConverter converter;
-    converter.addConversion([&](Type type) -> Type { return type; });
-    converter.addConversion([&](VectorType type) -> Type {
+    converter.addConversion([](Type type) -> Type { return type; });
+    converter.addConversion([](VectorType type) -> Type {
       return RankedTensorType::get(type.getShape(), type.getElementType());
     });
     converter.addSourceMaterialization(materializeCast);
@@ -251,7 +251,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
   { // propagate the layout attribute to RankedTensorType by checking
     // BuiltInUnrealizedCastOps
     // for VectorType to RankedTensorType cast.
-    op->walk([&](UnrealizedConversionCastOp castOp) {
+    op->walk([](UnrealizedConversionCastOp castOp) {
       if (castOp.getNumOperands() != 1 || castOp.getNumResults() != 1)
         return WalkResult::skip();
 
@@ -289,7 +289,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
     });
 
     // using yieldOp as anchor to update the result type of its ParentOp
-    op->walk([&](scf::YieldOp yieldOp) {
+    op->walk([](scf::YieldOp yieldOp) {
       Operation *parentOp = yieldOp->getParentOp();
       for (OpResult r : parentOp->getOpResults()) {
         unsigned idx = r.getResultNumber();
@@ -351,8 +351,8 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
 
     mlir::ConversionTarget target(*context);
     target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
-        [&](UnrealizedConversionCastOp op) {
-          auto isTensorTy = [&](Type type) {
+        [](UnrealizedConversionCastOp op) {
+          auto isTensorTy = [](Type type) {
             return isa<RankedTensorType>(type);
           };
           return llvm::none_of(op->getOperandTypes(), isTensorTy) &&
