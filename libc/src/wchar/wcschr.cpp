@@ -14,10 +14,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(const wchar_t*, wcschr, (const wchar_t *s, wchar_t c)) {
-    for (; *s && *s != c; ++s);
-    if (*s == c) return s;
-    return nullptr;
+LLVM_LIBC_FUNCTION(const wchar_t *, wcschr, (const wchar_t *s, wchar_t c)) {
+  for (; *s && *s != c; ++s)
+    ;
+  if (*s == c)
+    return s;
+  return nullptr;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
