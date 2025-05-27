@@ -23813,6 +23813,17 @@ TEST_F(FormatTest, FormatsLambdas) {
                "          }};\n"
                "}",
                LLVMWithBeforeLambdaBody);
+  verifyFormat("if ([]()\n"
+               "    {\n"
+               "      return true;\n"
+               "    }()) {\n"
+               "}",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("fun([]()\n"
+               "    {\n"
+               "      return 17;\n"
+               "    });",
+               LLVMWithBeforeLambdaBody);
 
   LLVMWithBeforeLambdaBody.AllowShortLambdasOnASingleLine =
       FormatStyle::ShortLambdaStyle::SLS_Empty;
