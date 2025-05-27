@@ -30,5 +30,6 @@ TEST(LlvmLibcSysIoctlTest, InvalidCommandENOTTY) {
   // 0xDEADBEEF is just a random nonexistent command;
   // calling this should always fail with ENOTTY
   int ret = LIBC_NAMESPACE::ioctl(3, 0xDEADBEEF, NULL);
-  ASSERT_TRUE(ret == -1 && errno == ENOTTY);
+  ASSERT_EQ(ret, -1);
+  ASSERT_ERRNO_EQ(ENOTTY);
 }
