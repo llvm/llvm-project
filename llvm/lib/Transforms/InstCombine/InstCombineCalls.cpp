@@ -1430,18 +1430,17 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
-  SmallVector<Value *, 4> NewArgs(II->arg_size());
+  SmallVector<Value *, 4> NewArgs;
   Type *SrcTy = X->getType();
-  for (unsigned i = 0, e = II->arg_size(); i != e; ++i) {
-    if (match(II->getArgOperand(i),
-              m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))) &&
+  for (Value *Arg : II->args()) {
+    if (match(Arg, m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))) &&
         X->getType() == SrcTy)
-      NewArgs[i] = X;
-    else if (match(II->getArgOperand(i), m_ImmConstant(C))) {
+      NewArgs.push_back(X);
+    else if (match(Arg, m_ImmConstant(C))) {
       // If it's a constant, try find the constant that would be shuffled to C.
       if (Constant *ShuffledC =
               unshuffleConstant(Mask, C, cast<VectorType>(SrcTy)))
-        NewArgs[i] = ShuffledC;
+        NewArgs.push_back(ShuffledC);
       else
         return nullptr;
     } else
