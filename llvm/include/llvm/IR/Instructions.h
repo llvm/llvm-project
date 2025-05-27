@@ -15,7 +15,6 @@
 #ifndef LLVM_IR_INSTRUCTIONS_H
 #define LLVM_IR_INSTRUCTIONS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/MapVector.h"
@@ -36,6 +35,7 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -79,13 +79,14 @@ protected:
 
 public:
   LLVM_ABI explicit AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
-                      const Twine &Name, InsertPosition InsertBefore);
+                               const Twine &Name, InsertPosition InsertBefore);
 
   LLVM_ABI AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
-             InsertPosition InsertBefore);
+                      InsertPosition InsertBefore);
 
-  LLVM_ABI AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, Align Align,
-             const Twine &Name = "", InsertPosition InsertBefore = nullptr);
+  LLVM_ABI AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
+                      Align Align, const Twine &Name = "",
+                      InsertPosition InsertBefore = nullptr);
 
   /// Return true if there is an allocation size parameter to the allocation
   /// instruction that is not 1.
@@ -108,11 +109,13 @@ public:
 
   /// Get allocation size in bytes. Returns std::nullopt if size can't be
   /// determined, e.g. in case of a VLA.
-  LLVM_ABI std::optional<TypeSize> getAllocationSize(const DataLayout &DL) const;
+  LLVM_ABI std::optional<TypeSize>
+  getAllocationSize(const DataLayout &DL) const;
 
   /// Get allocation size in bits. Returns std::nullopt if size can't be
   /// determined, e.g. in case of a VLA.
-  LLVM_ABI std::optional<TypeSize> getAllocationSizeInBits(const DataLayout &DL) const;
+  LLVM_ABI std::optional<TypeSize>
+  getAllocationSizeInBits(const DataLayout &DL) const;
 
   /// Return the type that is being allocated by the instruction.
   Type *getAllocatedType() const { return AllocatedType; }
@@ -192,15 +195,15 @@ protected:
 
 public:
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
-           InsertPosition InsertBefore);
+                    InsertPosition InsertBefore);
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-           InsertPosition InsertBefore);
+                    InsertPosition InsertBefore);
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-           Align Align, InsertPosition InsertBefore = nullptr);
+                    Align Align, InsertPosition InsertBefore = nullptr);
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-           Align Align, AtomicOrdering Order,
-           SyncScope::ID SSID = SyncScope::System,
-           InsertPosition InsertBefore = nullptr);
+                    Align Align, AtomicOrdering Order,
+                    SyncScope::ID SSID = SyncScope::System,
+                    InsertPosition InsertBefore = nullptr);
 
   /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }
@@ -311,12 +314,13 @@ protected:
 public:
   LLVM_ABI StoreInst(Value *Val, Value *Ptr, InsertPosition InsertBefore);
   LLVM_ABI StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            InsertPosition InsertBefore);
+                     InsertPosition InsertBefore);
   LLVM_ABI StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
-            InsertPosition InsertBefore = nullptr);
+                     InsertPosition InsertBefore = nullptr);
   LLVM_ABI StoreInst(Value *Val, Value *Ptr, bool isVolatile, Align Align,
-            AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
-            InsertPosition InsertBefore = nullptr);
+                     AtomicOrdering Order,
+                     SyncScope::ID SSID = SyncScope::System,
+                     InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -439,8 +443,8 @@ public:
   // Ordering may only be Acquire, Release, AcquireRelease, or
   // SequentiallyConsistent.
   LLVM_ABI FenceInst(LLVMContext &C, AtomicOrdering Ordering,
-            SyncScope::ID SSID = SyncScope::System,
-            InsertPosition InsertBefore = nullptr);
+                     SyncScope::ID SSID = SyncScope::System,
+                     InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -518,10 +522,10 @@ protected:
   LLVM_ABI AtomicCmpXchgInst *cloneImpl() const;
 
 public:
-  LLVM_ABI AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal, Align Alignment,
-                    AtomicOrdering SuccessOrdering,
-                    AtomicOrdering FailureOrdering, SyncScope::ID SSID,
-                    InsertPosition InsertBefore = nullptr);
+  LLVM_ABI AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
+                             Align Alignment, AtomicOrdering SuccessOrdering,
+                             AtomicOrdering FailureOrdering, SyncScope::ID SSID,
+                             InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly three operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -794,9 +798,10 @@ private:
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
 
 public:
-  LLVM_ABI AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val, Align Alignment,
-                AtomicOrdering Ordering, SyncScope::ID SSID,
-                InsertPosition InsertBefore = nullptr);
+  LLVM_ABI AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
+                         Align Alignment, AtomicOrdering Ordering,
+                         SyncScope::ID SSID,
+                         InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -955,7 +960,8 @@ class GetElementPtrInst : public Instruction {
                            ArrayRef<Value *> IdxList, AllocInfo AllocInfo,
                            const Twine &NameStr, InsertPosition InsertBefore);
 
-  LLVM_ABI void init(Value *Ptr, ArrayRef<Value *> IdxList, const Twine &NameStr);
+  LLVM_ABI void init(Value *Ptr, ArrayRef<Value *> IdxList,
+                     const Twine &NameStr);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -1128,10 +1134,12 @@ public:
   /// undefined (it is *not* preserved!). The APInt passed into this routine
   /// must be at least as wide as the IntPtr type for the address space of
   /// the base GEP pointer.
-  LLVM_ABI bool accumulateConstantOffset(const DataLayout &DL, APInt &Offset) const;
-  LLVM_ABI bool collectOffset(const DataLayout &DL, unsigned BitWidth,
-                     SmallMapVector<Value *, APInt, 4> &VariableOffsets,
-                     APInt &ConstantOffset) const;
+  LLVM_ABI bool accumulateConstantOffset(const DataLayout &DL,
+                                         APInt &Offset) const;
+  LLVM_ABI bool
+  collectOffset(const DataLayout &DL, unsigned BitWidth,
+                SmallMapVector<Value *, APInt, 4> &VariableOffsets,
+                APInt &ConstantOffset) const;
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return (I->getOpcode() == Instruction::GetElementPtr);
@@ -1291,8 +1299,8 @@ public:
 
   /// Determine if Pred1 implies Pred2 is true, false, or if nothing can be
   /// inferred about the implication, when two compares have matching operands.
-  LLVM_ABI static std::optional<bool> isImpliedByMatchingCmp(CmpPredicate Pred1,
-                                                    CmpPredicate Pred2);
+  LLVM_ABI static std::optional<bool>
+  isImpliedByMatchingCmp(CmpPredicate Pred1, CmpPredicate Pred2);
 
   void setSameSign(bool B = true) {
     SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);
@@ -1375,12 +1383,12 @@ public:
 
   /// Return result of `LHS Pred RHS` comparison.
   LLVM_ABI static bool compare(const APInt &LHS, const APInt &RHS,
-                      ICmpInst::Predicate Pred);
+                               ICmpInst::Predicate Pred);
 
   /// Return result of `LHS Pred RHS`, if it can be determined from the
   /// KnownBits. Otherwise return nullopt.
-  LLVM_ABI static std::optional<bool> compare(const KnownBits &LHS, const KnownBits &RHS,
-                                     ICmpInst::Predicate Pred);
+  LLVM_ABI static std::optional<bool>
+  compare(const KnownBits &LHS, const KnownBits &RHS, ICmpInst::Predicate Pred);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1482,7 +1490,7 @@ public:
 
   /// Return result of `LHS Pred RHS` comparison.
   LLVM_ABI static bool compare(const APFloat &LHS, const APFloat &RHS,
-                      FCmpInst::Predicate Pred);
+                               FCmpInst::Predicate Pred);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1513,10 +1521,10 @@ class CallInst : public CallBase {
       : CallInst(Ty, Func, Args, {}, NameStr, AllocInfo, InsertBefore) {}
 
   LLVM_ABI explicit CallInst(FunctionType *Ty, Value *F, const Twine &NameStr,
-                    AllocInfo AllocInfo, InsertPosition InsertBefore);
+                             AllocInfo AllocInfo, InsertPosition InsertBefore);
 
   LLVM_ABI void init(FunctionType *FTy, Value *Func, ArrayRef<Value *> Args,
-            ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
+                     ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
   void init(FunctionType *FTy, Value *Func, const Twine &NameStr);
 
   /// Compute the number of operands to allocate.
@@ -1588,8 +1596,9 @@ public:
   /// The returned call instruction is identical \p CI in every way except that
   /// the operand bundles for the new instruction are set to the operand bundles
   /// in \p Bundles.
-  LLVM_ABI static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
-                          InsertPosition InsertPt = nullptr);
+  LLVM_ABI static CallInst *Create(CallInst *CI,
+                                   ArrayRef<OperandBundleDef> Bundles,
+                                   InsertPosition InsertPt = nullptr);
 
   // Note that 'musttail' implies 'tail'.
   enum TailCallKind : unsigned {
@@ -1730,7 +1739,8 @@ public:
 
   /// Return a string if the specified operands are invalid
   /// for a select operation, otherwise return null.
-  LLVM_ABI static const char *areInvalidOperands(Value *Cond, Value *True, Value *False);
+  LLVM_ABI static const char *areInvalidOperands(Value *Cond, Value *True,
+                                                 Value *False);
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -1799,7 +1809,7 @@ class ExtractElementInst : public Instruction {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
 
   LLVM_ABI ExtractElementInst(Value *Vec, Value *Idx, const Twine &NameStr = "",
-                     InsertPosition InsertBefore = nullptr);
+                              InsertPosition InsertBefore = nullptr);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -1858,8 +1868,8 @@ class InsertElementInst : public Instruction {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
   LLVM_ABI InsertElementInst(Value *Vec, Value *NewElt, Value *Idx,
-                    const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
+                             const Twine &NameStr = "",
+                             InsertPosition InsertBefore = nullptr);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -1878,7 +1888,7 @@ public:
   /// Return true if an insertelement instruction can be
   /// formed with the specified operands.
   LLVM_ABI static bool isValidOperands(const Value *Vec, const Value *NewElt,
-                              const Value *Idx);
+                                       const Value *Idx);
 
   /// Overload to return most specific vector type.
   ///
@@ -1935,15 +1945,16 @@ protected:
 
 public:
   LLVM_ABI ShuffleVectorInst(Value *V1, Value *Mask, const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
-  LLVM_ABI ShuffleVectorInst(Value *V1, ArrayRef<int> Mask, const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
+                             InsertPosition InsertBefore = nullptr);
+  LLVM_ABI ShuffleVectorInst(Value *V1, ArrayRef<int> Mask,
+                             const Twine &NameStr = "",
+                             InsertPosition InsertBefore = nullptr);
   LLVM_ABI ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
-                    const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
+                             const Twine &NameStr = "",
+                             InsertPosition InsertBefore = nullptr);
   LLVM_ABI ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
-                    const Twine &NameStr = "",
-                    InsertPosition InsertBefore = nullptr);
+                             const Twine &NameStr = "",
+                             InsertPosition InsertBefore = nullptr);
 
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
   void operator delete(void *Ptr) { return User::operator delete(Ptr); }
@@ -1955,9 +1966,9 @@ public:
   /// Return true if a shufflevector instruction can be
   /// formed with the specified operands.
   LLVM_ABI static bool isValidOperands(const Value *V1, const Value *V2,
-                              const Value *Mask);
+                                       const Value *Mask);
   LLVM_ABI static bool isValidOperands(const Value *V1, const Value *V2,
-                              ArrayRef<int> Mask);
+                                       ArrayRef<int> Mask);
 
   /// Overload to return most specific vector type.
   ///
@@ -1975,7 +1986,7 @@ public:
   /// Convert the input shuffle mask operand to a vector of integers. Undefined
   /// elements of the mask are returned as PoisonMaskElem.
   LLVM_ABI static void getShuffleMask(const Constant *Mask,
-                             SmallVectorImpl<int> &Result);
+                                      SmallVectorImpl<int> &Result);
 
   /// Return the mask for this instruction as a vector of integers. Undefined
   /// elements of the mask are returned as PoisonMaskElem.
@@ -1990,7 +2001,7 @@ public:
   Constant *getShuffleMaskForBitcode() const { return ShuffleMaskForBitcode; }
 
   LLVM_ABI static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
-                                                Type *ResultTy);
+                                                         Type *ResultTy);
 
   LLVM_ABI void setShuffleMask(ArrayRef<int> Mask);
 
@@ -2214,7 +2225,8 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
   /// This assumes that vector operands (of length \p NumSrcElts) are the same
   /// length as the mask.
-  LLVM_ABI static bool isSpliceMask(ArrayRef<int> Mask, int NumSrcElts, int &Index);
+  LLVM_ABI static bool isSpliceMask(ArrayRef<int> Mask, int NumSrcElts,
+                                    int &Index);
   static bool isSpliceMask(const Constant *Mask, int NumSrcElts, int &Index) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
@@ -2234,8 +2246,8 @@ public:
   /// Return true if this shuffle mask is an extract subvector mask.
   /// A valid extract subvector mask returns a smaller vector from a single
   /// source operand. The base extraction index is returned as well.
-  LLVM_ABI static bool isExtractSubvectorMask(ArrayRef<int> Mask, int NumSrcElts,
-                                     int &Index);
+  LLVM_ABI static bool isExtractSubvectorMask(ArrayRef<int> Mask,
+                                              int NumSrcElts, int &Index);
   static bool isExtractSubvectorMask(const Constant *Mask, int NumSrcElts,
                                      int &Index) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
@@ -2265,7 +2277,7 @@ public:
   /// source operand into an in-place first source operand.
   /// Both the sub vector width and the insertion index is returned.
   LLVM_ABI static bool isInsertSubvectorMask(ArrayRef<int> Mask, int NumSrcElts,
-                                    int &NumSubElts, int &Index);
+                                             int &NumSubElts, int &Index);
   static bool isInsertSubvectorMask(const Constant *Mask, int NumSrcElts,
                                     int &NumSubElts, int &Index) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
@@ -2294,8 +2306,8 @@ public:
   /// in a vector \p ReplicationFactor times.
   /// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
   ///   <0,0,0,1,1,1,2,2,2,3,3,3>
-  LLVM_ABI static bool isReplicationMask(ArrayRef<int> Mask, int &ReplicationFactor,
-                                int &VF);
+  LLVM_ABI static bool isReplicationMask(ArrayRef<int> Mask,
+                                         int &ReplicationFactor, int &VF);
   static bool isReplicationMask(const Constant *Mask, int &ReplicationFactor,
                                 int &VF) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
@@ -2361,9 +2373,9 @@ public:
   /// Note that this does not check if the input vectors are consecutive:
   /// It will return true for masks such as
   /// <0, 4, 6, 1, 5, 7> (Factor=3, LaneLen=2)
-  LLVM_ABI static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
-                               unsigned NumInputElts,
-                               SmallVectorImpl<unsigned> &StartIndexes);
+  LLVM_ABI static bool
+  isInterleaveMask(ArrayRef<int> Mask, unsigned Factor, unsigned NumInputElts,
+                   SmallVectorImpl<unsigned> &StartIndexes);
   static bool isInterleaveMask(ArrayRef<int> Mask, unsigned Factor,
                                unsigned NumInputElts) {
     SmallVector<unsigned, 8> StartIndexes;
@@ -2373,8 +2385,9 @@ public:
   /// Check if the mask is a DE-interleave mask of the given factor
   /// \p Factor like:
   ///     <Index, Index+Factor, ..., Index+(NumElts-1)*Factor>
-  LLVM_ABI static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
-                                         unsigned &Index);
+  LLVM_ABI static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask,
+                                                  unsigned Factor,
+                                                  unsigned &Index);
   static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor) {
     unsigned Unused;
     return isDeInterleaveMaskOfFactor(Mask, Factor, Unused);
@@ -2391,9 +2404,11 @@ public:
   ///
   /// If it can be expressed as a rotation, returns the number of subelements to
   /// group by in NumSubElts and the number of bits to rotate left in RotateAmt.
-  LLVM_ABI static bool isBitRotateMask(ArrayRef<int> Mask, unsigned EltSizeInBits,
-                              unsigned MinSubElts, unsigned MaxSubElts,
-                              unsigned &NumSubElts, unsigned &RotateAmt);
+  LLVM_ABI static bool isBitRotateMask(ArrayRef<int> Mask,
+                                       unsigned EltSizeInBits,
+                                       unsigned MinSubElts, unsigned MaxSubElts,
+                                       unsigned &NumSubElts,
+                                       unsigned &RotateAmt);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -2526,7 +2541,7 @@ class InsertValueInst : public Instruction {
                   InsertPosition InsertBefore = nullptr);
 
   LLVM_ABI void init(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
-            const Twine &NameStr);
+                     const Twine &NameStr);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -2772,7 +2787,8 @@ public:
   /// dummy values.  The only time there should be zero incoming values to a PHI
   /// node is when the block is dead, so this strategy is sound.
   ///
-  LLVM_ABI Value *removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty = true);
+  LLVM_ABI Value *removeIncomingValue(unsigned Idx,
+                                      bool DeletePHIIfEmpty = true);
 
   Value *removeIncomingValue(const BasicBlock *BB, bool DeletePHIIfEmpty=true) {
     int Idx = getBasicBlockIndex(BB);
@@ -2783,7 +2799,7 @@ public:
   /// Remove all incoming values for which the predicate returns true.
   /// The predicate accepts the incoming value index.
   LLVM_ABI void removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
-                             bool DeletePHIIfEmpty = true);
+                                      bool DeletePHIIfEmpty = true);
 
   /// Return the first index of the specified basic
   /// block in the value list for this PHI.  Returns -1 if no instance.
@@ -2895,9 +2911,10 @@ public:
 
   /// Constructors - NumReservedClauses is a hint for the number of incoming
   /// clauses that this landingpad will have (use 0 if you really have no idea).
-  LLVM_ABI static LandingPadInst *Create(Type *RetTy, unsigned NumReservedClauses,
-                                const Twine &NameStr = "",
-                                InsertPosition InsertBefore = nullptr);
+  LLVM_ABI static LandingPadInst *Create(Type *RetTy,
+                                         unsigned NumReservedClauses,
+                                         const Twine &NameStr = "",
+                                         InsertPosition InsertBefore = nullptr);
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -2975,8 +2992,9 @@ private:
   //
   // NOTE: If the Value* passed is of type void then the constructor behaves as
   // if it was passed NULL.
-  LLVM_ABI explicit ReturnInst(LLVMContext &C, Value *retVal, AllocInfo AllocInfo,
-                      InsertPosition InsertBefore);
+  LLVM_ABI explicit ReturnInst(LLVMContext &C, Value *retVal,
+                               AllocInfo AllocInfo,
+                               InsertPosition InsertBefore);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -3052,9 +3070,9 @@ class BranchInst : public Instruction {
   // BranchInst(BB* B, BB *I)                    - 'br B'        insert at end
   // BranchInst(BB* T, BB *F, Value *C, BB *I)   - 'br C, T, F', insert at end
   LLVM_ABI explicit BranchInst(BasicBlock *IfTrue, AllocInfo AllocInfo,
-                      InsertPosition InsertBefore);
+                               InsertPosition InsertBefore);
   LLVM_ABI BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
-             AllocInfo AllocInfo, InsertPosition InsertBefore);
+                      AllocInfo AllocInfo, InsertPosition InsertBefore);
 
   void AssertOK();
 
@@ -3190,7 +3208,7 @@ class SwitchInst : public Instruction {
   /// to make memory allocation more efficient. This constructor can also
   /// auto-insert before another instruction.
   LLVM_ABI SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
-             InsertPosition InsertBefore);
+                      InsertPosition InsertBefore);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -3550,7 +3568,8 @@ public:
   LLVM_ABI void setSuccessorWeight(unsigned idx, CaseWeightOpt W);
   LLVM_ABI CaseWeightOpt getSuccessorWeight(unsigned idx);
 
-  LLVM_ABI static CaseWeightOpt getSuccessorWeight(const SwitchInst &SI, unsigned idx);
+  LLVM_ABI static CaseWeightOpt getSuccessorWeight(const SwitchInst &SI,
+                                                   unsigned idx);
 };
 
 template <> struct OperandTraits<SwitchInst> : public HungoffOperandTraits {};
@@ -3578,7 +3597,7 @@ class IndirectBrInst : public Instruction {
   /// here to make memory allocation more efficient.  This constructor can also
   /// autoinsert before another instruction.
   LLVM_ABI IndirectBrInst(Value *Address, unsigned NumDests,
-                 InsertPosition InsertBefore);
+                          InsertPosition InsertBefore);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -3712,8 +3731,8 @@ class InvokeInst : public CallBase {
                     const Twine &NameStr, InsertPosition InsertBefore);
 
   LLVM_ABI void init(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
-            BasicBlock *IfException, ArrayRef<Value *> Args,
-            ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
+                     BasicBlock *IfException, ArrayRef<Value *> Args,
+                     ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
 
   /// Compute the number of operands to allocate.
   static unsigned ComputeNumOperands(unsigned NumArgs,
@@ -3777,8 +3796,9 @@ public:
   /// The returned invoke instruction is identical to \p II in every way except
   /// that the operand bundles for the new instruction are set to the operand
   /// bundles in \p Bundles.
-  LLVM_ABI static InvokeInst *Create(InvokeInst *II, ArrayRef<OperandBundleDef> Bundles,
-                            InsertPosition InsertPt = nullptr);
+  LLVM_ABI static InvokeInst *Create(InvokeInst *II,
+                                     ArrayRef<OperandBundleDef> Bundles,
+                                     InsertPosition InsertPt = nullptr);
 
   // get*Dest - Return the destination basic blocks...
   BasicBlock *getNormalDest() const {
@@ -3866,8 +3886,9 @@ class CallBrInst : public CallBase {
                     InsertPosition InsertBefore);
 
   LLVM_ABI void init(FunctionType *FTy, Value *Func, BasicBlock *DefaultDest,
-            ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
-            ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
+                     ArrayRef<BasicBlock *> IndirectDests,
+                     ArrayRef<Value *> Args, ArrayRef<OperandBundleDef> Bundles,
+                     const Twine &NameStr);
 
   /// Compute the number of operands to allocate.
   static unsigned ComputeNumOperands(int NumArgs, int NumIndirectDests,
@@ -3935,8 +3956,9 @@ public:
   /// The returned callbr instruction is identical to \p CBI in every way
   /// except that the operand bundles for the new instruction are set to the
   /// operand bundles in \p Bundles.
-  LLVM_ABI static CallBrInst *Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> Bundles,
-                            InsertPosition InsertBefore = nullptr);
+  LLVM_ABI static CallBrInst *Create(CallBrInst *CBI,
+                                     ArrayRef<OperandBundleDef> Bundles,
+                                     InsertPosition InsertBefore = nullptr);
 
   /// Return the number of callbr indirect dest labels.
   ///
@@ -4027,7 +4049,8 @@ class ResumeInst : public Instruction {
 
   ResumeInst(const ResumeInst &RI);
 
-  LLVM_ABI explicit ResumeInst(Value *Exn, InsertPosition InsertBefore = nullptr);
+  LLVM_ABI explicit ResumeInst(Value *Exn,
+                               InsertPosition InsertBefore = nullptr);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -4095,8 +4118,8 @@ class CatchSwitchInst : public Instruction {
   /// here to make memory allocation more efficient.
   /// This constructor can also autoinsert before another instruction.
   LLVM_ABI CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
-                  unsigned NumHandlers, const Twine &NameStr,
-                  InsertPosition InsertBefore);
+                           unsigned NumHandlers, const Twine &NameStr,
+                           InsertPosition InsertBefore);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -4313,7 +4336,8 @@ class CatchReturnInst : public Instruction {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
 
   CatchReturnInst(const CatchReturnInst &RI);
-  LLVM_ABI CatchReturnInst(Value *CatchPad, BasicBlock *BB, InsertPosition InsertBefore);
+  LLVM_ABI CatchReturnInst(Value *CatchPad, BasicBlock *BB,
+                           InsertPosition InsertBefore);
 
   void init(Value *CatchPad, BasicBlock *BB);
 
@@ -4390,7 +4414,8 @@ class CleanupReturnInst : public Instruction {
 private:
   CleanupReturnInst(const CleanupReturnInst &RI, AllocInfo AllocInfo);
   LLVM_ABI CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB,
-                    AllocInfo AllocInfo, InsertPosition InsertBefore = nullptr);
+                             AllocInfo AllocInfo,
+                             InsertPosition InsertBefore = nullptr);
 
   void init(Value *CleanupPad, BasicBlock *UnwindBB);
 
@@ -4492,7 +4517,7 @@ protected:
 
 public:
   LLVM_ABI explicit UnreachableInst(LLVMContext &C,
-                           InsertPosition InsertBefore = nullptr);
+                                    InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -4509,7 +4534,8 @@ public:
   }
 
   // Whether to do target lowering in SelectionDAG.
-  LLVM_ABI bool shouldLowerToTrap(bool TrapUnreachable, bool NoTrapAfterNoreturn) const;
+  LLVM_ABI bool shouldLowerToTrap(bool TrapUnreachable,
+                                  bool NoTrapAfterNoreturn) const;
 
 private:
   BasicBlock *getSuccessor(unsigned idx) const {
@@ -4538,7 +4564,8 @@ public:
   enum { AnyWrap = 0, NoUnsignedWrap = (1 << 0), NoSignedWrap = (1 << 1) };
 
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI TruncInst(Value *S,                  ///< The value to be truncated
+  LLVM_ABI
+  TruncInst(Value *S,                  ///< The value to be truncated
             Type *Ty,                  ///< The (smaller) type to truncate to
             const Twine &NameStr = "", ///< A name for the new instruction
             InsertPosition InsertBefore =
@@ -4602,7 +4629,8 @@ protected:
 
 public:
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI ZExtInst(Value *S,                  ///< The value to be zero extended
+  LLVM_ABI
+  ZExtInst(Value *S,                  ///< The value to be zero extended
            Type *Ty,                  ///< The type to zero extend to
            const Twine &NameStr = "", ///< A name for the new instruction
            InsertPosition InsertBefore =
@@ -4633,7 +4661,8 @@ protected:
 
 public:
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI SExtInst(Value *S,                  ///< The value to be sign extended
+  LLVM_ABI
+  SExtInst(Value *S,                  ///< The value to be sign extended
            Type *Ty,                  ///< The type to sign extend to
            const Twine &NameStr = "", ///< A name for the new instruction
            InsertPosition InsertBefore =
@@ -4663,8 +4692,9 @@ protected:
   LLVM_ABI FPTruncInst *cloneImpl() const;
 
 public:                 /// Constructor with insert-before-instruction semantics
-  LLVM_ABI FPTruncInst(Value *S, ///< The value to be truncated
-              Type *Ty, ///< The type to truncate to
+  LLVM_ABI
+  FPTruncInst(Value *S,                  ///< The value to be truncated
+              Type *Ty,                  ///< The type to truncate to
               const Twine &NameStr = "", ///< A name for the new instruction
               InsertPosition InsertBefore =
                   nullptr ///< Where to insert the new instruction
@@ -4694,7 +4724,8 @@ protected:
 
 public:
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI FPExtInst(Value *S,                  ///< The value to be extended
+  LLVM_ABI
+  FPExtInst(Value *S,                  ///< The value to be extended
             Type *Ty,                  ///< The type to extend to
             const Twine &NameStr = "", ///< A name for the new instruction
             InsertPosition InsertBefore =
@@ -4725,7 +4756,8 @@ protected:
 
 public:
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI UIToFPInst(Value *S,                  ///< The value to be converted
+  LLVM_ABI
+  UIToFPInst(Value *S,                  ///< The value to be converted
              Type *Ty,                  ///< The type to convert to
              const Twine &NameStr = "", ///< A name for the new instruction
              InsertPosition InsertBefore =
@@ -4756,7 +4788,8 @@ protected:
 
 public:
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI SIToFPInst(Value *S,                  ///< The value to be converted
+  LLVM_ABI
+  SIToFPInst(Value *S,                  ///< The value to be converted
              Type *Ty,                  ///< The type to convert to
              const Twine &NameStr = "", ///< A name for the new instruction
              InsertPosition InsertBefore =
@@ -4787,7 +4820,8 @@ protected:
 
 public:
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI FPToUIInst(Value *S,                  ///< The value to be converted
+  LLVM_ABI
+  FPToUIInst(Value *S,                  ///< The value to be converted
              Type *Ty,                  ///< The type to convert to
              const Twine &NameStr = "", ///< A name for the new instruction
              InsertPosition InsertBefore =
@@ -4818,7 +4852,8 @@ protected:
 
 public:
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI FPToSIInst(Value *S,                  ///< The value to be converted
+  LLVM_ABI
+  FPToSIInst(Value *S,                  ///< The value to be converted
              Type *Ty,                  ///< The type to convert to
              const Twine &NameStr = "", ///< A name for the new instruction
              InsertPosition InsertBefore =
@@ -4845,7 +4880,8 @@ public:
   friend class Instruction;
 
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI IntToPtrInst(Value *S,                  ///< The value to be converted
+  LLVM_ABI
+  IntToPtrInst(Value *S,                  ///< The value to be converted
                Type *Ty,                  ///< The type to convert to
                const Twine &NameStr = "", ///< A name for the new instruction
                InsertPosition InsertBefore =
@@ -4884,7 +4920,8 @@ protected:
 
 public:
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI PtrToIntInst(Value *S,                  ///< The value to be converted
+  LLVM_ABI
+  PtrToIntInst(Value *S,                  ///< The value to be converted
                Type *Ty,                  ///< The type to convert to
                const Twine &NameStr = "", ///< A name for the new instruction
                InsertPosition InsertBefore =
@@ -4927,7 +4964,8 @@ protected:
 
 public:
   /// Constructor with insert-before-instruction semantics
-  LLVM_ABI BitCastInst(Value *S,                  ///< The value to be casted
+  LLVM_ABI
+  BitCastInst(Value *S,                  ///< The value to be casted
               Type *Ty,                  ///< The type to casted to
               const Twine &NameStr = "", ///< A name for the new instruction
               InsertPosition InsertBefore =
@@ -5121,7 +5159,7 @@ protected:
 
 public:
   LLVM_ABI explicit FreezeInst(Value *S, const Twine &NameStr = "",
-                      InsertPosition InsertBefore = nullptr);
+                               InsertPosition InsertBefore = nullptr);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {

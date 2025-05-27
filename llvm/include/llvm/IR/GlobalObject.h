@@ -14,11 +14,11 @@
 #ifndef LLVM_IR_GLOBALOBJECT_H
 #define LLVM_IR_GLOBALOBJECT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

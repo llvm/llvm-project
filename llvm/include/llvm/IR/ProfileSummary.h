@@ -83,7 +83,7 @@ public:
   Kind getKind() const { return PSK; }
   /// Return summary information as metadata.
   LLVM_ABI Metadata *getMD(LLVMContext &Context, bool AddPartialField = true,
-                  bool AddPartialProfileRatioField = true);
+                           bool AddPartialProfileRatioField = true);
   /// Construct profile summary from metdata.
   LLVM_ABI static ProfileSummary *getFromMD(Metadata *MD);
   const SummaryEntryVector &getDetailedSummary() { return DetailedSummary; }

@@ -14,7 +14,6 @@
 #ifndef LLVM_IR_OPERATOR_H
 #define LLVM_IR_OPERATOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/FMF.h"
@@ -23,6 +22,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <optional>
 
@@ -546,9 +546,10 @@ public:
 
   /// Collect the offset of this GEP as a map of Values to their associated
   /// APInt multipliers, as well as a total Constant Offset.
-  LLVM_ABI bool collectOffset(const DataLayout &DL, unsigned BitWidth,
-                     SmallMapVector<Value *, APInt, 4> &VariableOffsets,
-                     APInt &ConstantOffset) const;
+  LLVM_ABI bool
+  collectOffset(const DataLayout &DL, unsigned BitWidth,
+                SmallMapVector<Value *, APInt, 4> &VariableOffsets,
+                APInt &ConstantOffset) const;
 };
 
 template <>

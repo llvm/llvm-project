@@ -13,7 +13,6 @@
 #ifndef LLVM_IR_VALUE_H
 #define LLVM_IR_VALUE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/Types.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -22,6 +21,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -236,7 +236,7 @@ public:
   /// @{
   LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
   LLVM_ABI void print(raw_ostream &O, ModuleSlotTracker &MST,
-             bool IsForDebug = false) const;
+                      bool IsForDebug = false) const;
   /// @}
 
   /// Print the name of this Value out to the specified raw_ostream.
@@ -247,9 +247,9 @@ public:
   /// pointer is printed symbolically.
   /// @{
   LLVM_ABI void printAsOperand(raw_ostream &O, bool PrintType = true,
-                      const Module *M = nullptr) const;
+                               const Module *M = nullptr) const;
   LLVM_ABI void printAsOperand(raw_ostream &O, bool PrintType,
-                      ModuleSlotTracker &MST) const;
+                               ModuleSlotTracker &MST) const;
   /// @}
 
   /// All values are typed, get the type of this value.
@@ -310,8 +310,8 @@ public:
   /// to "V" if the callback ShouldReplace returns true for the given Use.
   /// Unlike replaceAllUsesWith() this function does not support basic block
   /// values.
-  LLVM_ABI void replaceUsesWithIf(Value *New,
-                         llvm::function_ref<bool(Use &U)> ShouldReplace);
+  LLVM_ABI void
+  replaceUsesWithIf(Value *New, llvm::function_ref<bool(Use &U)> ShouldReplace);
 
   /// replaceUsesOutsideBlock - Go through the uses list for this definition and
   /// make each use point to "V" instead of "this" when the use is outside the
@@ -488,8 +488,9 @@ public:
   /// some Droppable uses pervent it.
   /// This function optionally takes a filter to only remove some droppable
   /// uses.
-  LLVM_ABI void dropDroppableUses(llvm::function_ref<bool(const Use *)> ShouldDrop =
-                             [](const Use *) { return true; });
+  LLVM_ABI void
+  dropDroppableUses(llvm::function_ref<bool(const Use *)> ShouldDrop =
+                        [](const Use *) { return true; });
 
   /// Remove every use of this value in \p User that can safely be removed.
   LLVM_ABI void dropDroppableUsesIn(User &Usr);
@@ -584,8 +585,10 @@ protected:
   /// If the Value has no attachments with the given ID, or if ID is invalid,
   /// leaves MDs unchanged.
   /// @{
-  LLVM_ABI void getMetadata(unsigned KindID, SmallVectorImpl<MDNode *> &MDs) const;
-  LLVM_ABI void getMetadata(StringRef Kind, SmallVectorImpl<MDNode *> &MDs) const;
+  LLVM_ABI void getMetadata(unsigned KindID,
+                            SmallVectorImpl<MDNode *> &MDs) const;
+  LLVM_ABI void getMetadata(StringRef Kind,
+                            SmallVectorImpl<MDNode *> &MDs) const;
   /// @}
 
   /// Appends all metadata attached to this value to \c MDs, sorting by
@@ -768,8 +771,8 @@ public:
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  LLVM_ABI const Value *stripInBoundsOffsets(function_ref<void(const Value *)> Func =
-                                        [](const Value *) {}) const;
+  LLVM_ABI const Value *stripInBoundsOffsets(
+      function_ref<void(const Value *)> Func = [](const Value *) {}) const;
   inline Value *stripInBoundsOffsets(function_ref<void(const Value *)> Func =
                                   [](const Value *) {}) {
     return const_cast<Value *>(
@@ -778,8 +781,8 @@ public:
 
   /// If this ptr is provably equal to \p Other plus a constant offset, return
   /// that offset in bytes. Essentially `ptr this` subtract `ptr Other`.
-  LLVM_ABI std::optional<int64_t> getPointerOffsetFrom(const Value *Other,
-                                              const DataLayout &DL) const;
+  LLVM_ABI std::optional<int64_t>
+  getPointerOffsetFrom(const Value *Other, const DataLayout &DL) const;
 
   /// Return true if the memory object referred to by V can by freed in the
   /// scope for which the SSA value defining the allocation is statically
@@ -797,8 +800,8 @@ public:
   /// point of definition only.  Caller must prove that allocation is not
   /// deallocated between point of definition and use.
   LLVM_ABI uint64_t getPointerDereferenceableBytes(const DataLayout &DL,
-                                          bool &CanBeNull,
-                                          bool &CanBeFreed) const;
+                                                   bool &CanBeNull,
+                                                   bool &CanBeFreed) const;
 
   /// Returns an alignment of the pointer value.
   ///
@@ -813,7 +816,7 @@ public:
   /// useful if you want to know the value something has in a predecessor
   /// block.
   LLVM_ABI const Value *DoPHITranslation(const BasicBlock *CurBB,
-                                const BasicBlock *PredBB) const;
+                                         const BasicBlock *PredBB) const;
   Value *DoPHITranslation(const BasicBlock *CurBB, const BasicBlock *PredBB) {
     return const_cast<Value *>(
              static_cast<const Value *>(this)->DoPHITranslation(CurBB, PredBB));

@@ -23,8 +23,10 @@ template class LLVM_EXPORT_TEMPLATE PassManager<Module>;
 template class LLVM_EXPORT_TEMPLATE PassManager<Function>;
 template class LLVM_EXPORT_TEMPLATE AnalysisManager<Module>;
 template class LLVM_EXPORT_TEMPLATE AnalysisManager<Function>;
-template class LLVM_EXPORT_TEMPLATE InnerAnalysisManagerProxy<FunctionAnalysisManager, Module>;
-template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
+template class LLVM_EXPORT_TEMPLATE
+    InnerAnalysisManagerProxy<FunctionAnalysisManager, Module>;
+template class LLVM_EXPORT_TEMPLATE
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 
 template <>
 bool FunctionAnalysisManagerModuleProxy::Result::invalidate(

@@ -14,10 +14,10 @@
 #ifndef LLVM_IR_RUNTIME_LIBCALLS_H
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {

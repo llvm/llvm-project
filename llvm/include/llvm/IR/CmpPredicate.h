@@ -13,8 +13,8 @@
 #ifndef LLVM_IR_CMPPREDICATE_H
 #define LLVM_IR_CMPPREDICATE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 /// An abstraction over a floating-point predicate, and a pack of an integer
@@ -56,7 +56,7 @@ public:
   ///   ult + ult -> ult
   ///   ult + slt -> std::nullopt
   LLVM_ABI static std::optional<CmpPredicate> getMatching(CmpPredicate A,
-                                                 CmpPredicate B);
+                                                          CmpPredicate B);
 
   /// Attempts to return a signed CmpInst::Predicate from the CmpPredicate. If
   /// the CmpPredicate has samesign, return ICmpInst::getSignedPredicate,

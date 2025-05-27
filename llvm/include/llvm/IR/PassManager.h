@@ -37,13 +37,13 @@
 #ifndef LLVM_IR_PASSMANAGER_H
 #define LLVM_IR_PASSMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManagerInternal.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
@@ -230,7 +230,8 @@ template <typename IRUnitT>
 void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
 
 template <>
-LLVM_ABI void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+LLVM_ABI void printIRUnitNameForStackTrace<Module>(raw_ostream &OS,
+                                                   const Module &IR);
 
 extern template class LLVM_TEMPLATE_ABI PassManager<Module>;
 
@@ -239,7 +240,7 @@ using ModulePassManager = PassManager<Module>;
 
 template <>
 LLVM_ABI void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
-                                            const Function &IR);
+                                                     const Function &IR);
 
 extern template class LLVM_TEMPLATE_ABI PassManager<Function>;
 
@@ -796,8 +797,8 @@ template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
 AnalysisKey
     OuterAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::Key;
 
-extern template class LLVM_TEMPLATE_ABI OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                                Function>;
+extern template class LLVM_TEMPLATE_ABI
+    OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 /// Provide the \c ModuleAnalysisManager to \c Function proxy.
 using ModuleAnalysisManagerFunctionProxy =
     OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
@@ -836,8 +837,9 @@ public:
 
   /// Runs the function pass across every function in the module.
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  LLVM_ABI void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
 

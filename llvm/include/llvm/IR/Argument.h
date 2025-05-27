@@ -13,10 +13,10 @@
 #ifndef LLVM_IR_ARGUMENT_H
 #define LLVM_IR_ARGUMENT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -38,8 +38,8 @@ class Argument final : public Value {
 
 public:
   /// Argument constructor.
-  LLVM_ABI explicit Argument(Type *Ty, const Twine &Name = "", Function *F = nullptr,
-                    unsigned ArgNo = 0);
+  LLVM_ABI explicit Argument(Type *Ty, const Twine &Name = "",
+                             Function *F = nullptr, unsigned ArgNo = 0);
 
   inline const Function *getParent() const { return Parent; }
   inline       Function *getParent()       { return Parent; }
@@ -108,8 +108,8 @@ public:
   /// If this is a byval or inalloca argument, return its alignment.
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getParamAlign() instead.
-  LLVM_ABI LLVM_DEPRECATED("Use getParamAlign() instead", "getParamAlign")
-  uint64_t getParamAlignment() const;
+  LLVM_ABI LLVM_DEPRECATED("Use getParamAlign() instead",
+                           "getParamAlign") uint64_t getParamAlignment() const;
 
   /// If this is a byval or inalloca argument, return its alignment.
   LLVM_ABI MaybeAlign getParamAlign() const;

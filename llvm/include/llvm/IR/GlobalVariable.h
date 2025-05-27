@@ -19,13 +19,13 @@
 #ifndef LLVM_IR_GLOBALVARIABLE_H
 #define LLVM_IR_GLOBALVARIABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 
@@ -59,17 +59,20 @@ public:
   /// GlobalVariable ctor - If a parent module is specified, the global is
   /// automatically inserted into the end of the specified modules global list.
   LLVM_ABI GlobalVariable(Type *Ty, bool isConstant, LinkageTypes Linkage,
-                 Constant *Initializer = nullptr, const Twine &Name = "",
-                 ThreadLocalMode = NotThreadLocal, unsigned AddressSpace = 0,
-                 bool isExternallyInitialized = false);
+                          Constant *Initializer = nullptr,
+                          const Twine &Name = "",
+                          ThreadLocalMode = NotThreadLocal,
+                          unsigned AddressSpace = 0,
+                          bool isExternallyInitialized = false);
   /// GlobalVariable ctor - This creates a global and inserts it before the
   /// specified other global.
-  LLVM_ABI GlobalVariable(Module &M, Type *Ty, bool isConstant, LinkageTypes Linkage,
-                 Constant *Initializer, const Twine &Name = "",
-                 GlobalVariable *InsertBefore = nullptr,
-                 ThreadLocalMode = NotThreadLocal,
-                 std::optional<unsigned> AddressSpace = std::nullopt,
-                 bool isExternallyInitialized = false);
+  LLVM_ABI GlobalVariable(Module &M, Type *Ty, bool isConstant,
+                          LinkageTypes Linkage, Constant *Initializer,
+                          const Twine &Name = "",
+                          GlobalVariable *InsertBefore = nullptr,
+                          ThreadLocalMode = NotThreadLocal,
+                          std::optional<unsigned> AddressSpace = std::nullopt,
+                          bool isExternallyInitialized = false);
   GlobalVariable(const GlobalVariable &) = delete;
   GlobalVariable &operator=(const GlobalVariable &) = delete;
 
@@ -203,7 +206,8 @@ public:
   LLVM_ABI void addDebugInfo(DIGlobalVariableExpression *GV);
 
   /// Fill the vector with all debug info attachements.
-  LLVM_ABI void getDebugInfo(SmallVectorImpl<DIGlobalVariableExpression *> &GVs) const;
+  LLVM_ABI void
+  getDebugInfo(SmallVectorImpl<DIGlobalVariableExpression *> &GVs) const;
 
   /// Add attribute to this global.
   void addAttribute(Attribute::AttrKind Kind) {

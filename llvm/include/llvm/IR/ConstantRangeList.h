@@ -16,9 +16,9 @@
 #ifndef LLVM_IR_CONSTANTRANGELIST_H
 #define LLVM_IR_CONSTANTRANGELIST_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <cstddef>
 #include <cstdint>

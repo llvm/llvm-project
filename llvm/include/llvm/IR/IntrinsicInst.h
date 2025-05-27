@@ -23,7 +23,6 @@
 #ifndef LLVM_IR_INTRINSICINST_H
 #define LLVM_IR_INTRINSICINST_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -34,6 +33,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
@@ -316,13 +316,13 @@ public:
   LLVM_ABI Value *getVariableLocationOp(unsigned OpIdx) const;
 
   LLVM_ABI void replaceVariableLocationOp(Value *OldValue, Value *NewValue,
-                                 bool AllowEmpty = false);
+                                          bool AllowEmpty = false);
   LLVM_ABI void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
   /// Adding a new location operand will always result in this intrinsic using
   /// an ArgList, and must always be accompanied by a new expression that uses
   /// the new operand.
   LLVM_ABI void addVariableLocationOps(ArrayRef<Value *> NewValues,
-                              DIExpression *NewExpr);
+                                       DIExpression *NewExpr);
 
   void setVariable(DILocalVariable *NewVar) {
     setArgOperand(1, MetadataAsValue::get(NewVar->getContext(), NewVar));
@@ -569,13 +569,14 @@ public:
   /// \brief Declares a llvm.vp.* intrinsic in \p M that matches the parameters
   /// \p Params. Additionally, the load and gather intrinsics require
   /// \p ReturnType to be specified.
-  LLVM_ABI static Function *getOrInsertDeclarationForParams(Module *M, Intrinsic::ID,
-                                                   Type *ReturnType,
-                                                   ArrayRef<Value *> Params);
+  LLVM_ABI static Function *
+  getOrInsertDeclarationForParams(Module *M, Intrinsic::ID, Type *ReturnType,
+                                  ArrayRef<Value *> Params);
 
-  LLVM_ABI static std::optional<unsigned> getMaskParamPos(Intrinsic::ID IntrinsicID);
-  LLVM_ABI static std::optional<unsigned> getVectorLengthParamPos(
-      Intrinsic::ID IntrinsicID);
+  LLVM_ABI static std::optional<unsigned>
+  getMaskParamPos(Intrinsic::ID IntrinsicID);
+  LLVM_ABI static std::optional<unsigned>
+  getVectorLengthParamPos(Intrinsic::ID IntrinsicID);
 
   /// The llvm.vp.* intrinsics for this instruction Opcode
   LLVM_ABI static Intrinsic::ID getForOpcode(unsigned OC);
@@ -609,7 +610,8 @@ public:
 
   /// \return The pointer operand of this load,store, gather or scatter.
   LLVM_ABI Value *getMemoryPointerParam() const;
-  LLVM_ABI static std::optional<unsigned> getMemoryPointerParamPos(Intrinsic::ID);
+  LLVM_ABI static std::optional<unsigned>
+      getMemoryPointerParamPos(Intrinsic::ID);
 
   /// \return The data (payload) operand of this store or scatter.
   LLVM_ABI Value *getMemoryDataParam() const;
@@ -639,7 +641,8 @@ public:
   }
 
   // Equivalent non-predicated opcode
-  LLVM_ABI static std::optional<unsigned> getFunctionalOpcodeForVP(Intrinsic::ID ID);
+  LLVM_ABI static std::optional<unsigned>
+  getFunctionalOpcodeForVP(Intrinsic::ID ID);
 
   // Equivalent non-predicated intrinsic ID
   LLVM_ABI static std::optional<Intrinsic::ID>
@@ -1792,8 +1795,8 @@ public:
 
   LLVM_ABI static ConvergenceControlInst *CreateAnchor(BasicBlock &BB);
   LLVM_ABI static ConvergenceControlInst *CreateEntry(BasicBlock &BB);
-  LLVM_ABI static ConvergenceControlInst *CreateLoop(BasicBlock &BB,
-                                            ConvergenceControlInst *Parent);
+  LLVM_ABI static ConvergenceControlInst *
+  CreateLoop(BasicBlock &BB, ConvergenceControlInst *Parent);
 };
 
 } // end namespace llvm

@@ -14,10 +14,10 @@
 #ifndef LLVM_IR_LLVMCONTEXT_H
 #define LLVM_IR_LLVMCONTEXT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/Types.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -115,7 +115,8 @@ public:
 
   /// getOrInsertBundleTag - Returns the Tag to use for an operand bundle of
   /// name TagName.
-  LLVM_ABI StringMapEntry<uint32_t> *getOrInsertBundleTag(StringRef TagName) const;
+  LLVM_ABI StringMapEntry<uint32_t> *
+  getOrInsertBundleTag(StringRef TagName) const;
 
   /// getOperandBundleTagID - Maps a bundle tag to an integer ID.  Every bundle
   /// tag registered with an LLVMContext has an unique ID.
@@ -188,11 +189,12 @@ public:
   ///
   /// Ownership of this pointer is moved to LLVMContextImpl.
   LLVM_ABI void setDiagnosticHandler(std::unique_ptr<DiagnosticHandler> &&DH,
-                            bool RespectFilters = false);
+                                     bool RespectFilters = false);
 
   /// getDiagnosticHandlerCallBack - Return the diagnostic handler call back set by
   /// setDiagnosticHandlerCallBack.
-  LLVM_ABI DiagnosticHandler::DiagnosticHandlerTy getDiagnosticHandlerCallBack() const;
+  LLVM_ABI DiagnosticHandler::DiagnosticHandlerTy
+  getDiagnosticHandlerCallBack() const;
 
   /// getDiagnosticContext - Return the diagnostic context set by
   /// setDiagnosticContext.
@@ -215,7 +217,8 @@ public:
 
   LLVM_ABI bool getMisExpectWarningRequested() const;
   LLVM_ABI void setMisExpectWarningRequested(bool Requested);
-  LLVM_ABI void setDiagnosticsMisExpectTolerance(std::optional<uint32_t> Tolerance);
+  LLVM_ABI void
+  setDiagnosticsMisExpectTolerance(std::optional<uint32_t> Tolerance);
   LLVM_ABI uint32_t getDiagnosticsMisExpectTolerance() const;
 
   /// Return the minimum hotness value a diagnostic would need in order
@@ -232,7 +235,8 @@ public:
 
   /// Set the minimum hotness value a diagnostic needs in order to be
   /// included in optimization diagnostics.
-  LLVM_ABI void setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold);
+  LLVM_ABI void
+  setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold);
 
   /// Return if hotness threshold is requested from PSI.
   LLVM_ABI bool isDiagnosticsHotnessThresholdSetFromPSI() const;
@@ -261,7 +265,8 @@ public:
 
   /// Get the prefix that should be printed in front of a diagnostic of
   ///        the given \p Severity
-  LLVM_ABI static const char *getDiagnosticMessagePrefix(DiagnosticSeverity Severity);
+  LLVM_ABI static const char *
+  getDiagnosticMessagePrefix(DiagnosticSeverity Severity);
 
   /// Report a message to the currently installed diagnostic handler.
   ///
@@ -318,7 +323,7 @@ public:
   ///
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
-  LLVM_ABI void setOptPassGate(OptPassGate&);
+  LLVM_ABI void setOptPassGate(OptPassGate &);
 
   /// Get or set the current "default" target CPU (target-cpu function
   /// attribute). The intent is that compiler frontends will set this to a value

@@ -13,9 +13,9 @@
 #ifndef LLVM_IR_MANGLER_H
 #define LLVM_IR_MANGLER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -38,31 +38,36 @@ public:
   /// If the global variable doesn't have a name, this fills in a unique name
   /// for the global.
   LLVM_ABI void getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
-                         bool CannotUsePrivateLabel) const;
-  LLVM_ABI void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,
-                         bool CannotUsePrivateLabel) const;
+                                  bool CannotUsePrivateLabel) const;
+  LLVM_ABI void getNameWithPrefix(SmallVectorImpl<char> &OutName,
+                                  const GlobalValue *GV,
+                                  bool CannotUsePrivateLabel) const;
 
   /// Print the appropriate prefix and the specified name as the global variable
   /// name. GVName must not be empty.
   LLVM_ABI static void getNameWithPrefix(raw_ostream &OS, const Twine &GVName,
-                                const DataLayout &DL);
+                                         const DataLayout &DL);
   LLVM_ABI static void getNameWithPrefix(SmallVectorImpl<char> &OutName,
-                                const Twine &GVName, const DataLayout &DL);
+                                         const Twine &GVName,
+                                         const DataLayout &DL);
 };
 
-LLVM_ABI void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
-                                  const Triple &TT, Mangler &Mangler);
+LLVM_ABI void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS,
+                                           const GlobalValue *GV,
+                                           const Triple &TT, Mangler &Mangler);
 
 LLVM_ABI void emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
-                                const Triple &T, Mangler &M);
+                                         const Triple &T, Mangler &M);
 
 /// Returns the ARM64EC mangled function name unless the input is already
 /// mangled.
-LLVM_ABI std::optional<std::string> getArm64ECMangledFunctionName(StringRef Name);
+LLVM_ABI std::optional<std::string>
+getArm64ECMangledFunctionName(StringRef Name);
 
 /// Returns the ARM64EC demangled function name, unless the input is not
 /// mangled.
-LLVM_ABI std::optional<std::string> getArm64ECDemangledFunctionName(StringRef Name);
+LLVM_ABI std::optional<std::string>
+getArm64ECDemangledFunctionName(StringRef Name);
 
 /// Check if an ARM64EC function name is mangled.
 bool inline isArm64ECMangledFunctionName(StringRef Name) {

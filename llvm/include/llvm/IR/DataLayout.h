@@ -542,7 +542,8 @@ public:
 
   /// Returns an integer type with size at least as big as that of a
   /// pointer in the given address space.
-  LLVM_ABI IntegerType *getIntPtrType(LLVMContext &C, unsigned AddressSpace = 0) const;
+  LLVM_ABI IntegerType *getIntPtrType(LLVMContext &C,
+                                      unsigned AddressSpace = 0) const;
 
   /// Returns an integer (vector of integer) type with size at least as
   /// big as that of a pointer of the given pointer (vector of pointer) type.
@@ -550,7 +551,8 @@ public:
 
   /// Returns the smallest integer type with size at least as big as
   /// Width bits.
-  LLVM_ABI Type *getSmallestLegalIntType(LLVMContext &C, unsigned Width = 0) const;
+  LLVM_ABI Type *getSmallestLegalIntType(LLVMContext &C,
+                                         unsigned Width = 0) const;
 
   /// Returns the largest legal integer type, or null if none are set.
   Type *getLargestLegalIntType(LLVMContext &C) const {
@@ -565,7 +567,8 @@ public:
   /// Returns the type of a GEP index in \p AddressSpace.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.
-  LLVM_ABI IntegerType *getIndexType(LLVMContext &C, unsigned AddressSpace) const;
+  LLVM_ABI IntegerType *getIndexType(LLVMContext &C,
+                                     unsigned AddressSpace) const;
   /// Returns the type of an address in \p AddressSpace
   IntegerType *getAddressType(LLVMContext &C, unsigned AddressSpace) const {
     return getIndexType(C, AddressSpace);
@@ -583,17 +586,20 @@ public:
   ///
   /// Note that this takes the element type, not the pointer type.
   /// This is used to implement getelementptr.
-  LLVM_ABI int64_t getIndexedOffsetInType(Type *ElemTy, ArrayRef<Value *> Indices) const;
+  LLVM_ABI int64_t getIndexedOffsetInType(Type *ElemTy,
+                                          ArrayRef<Value *> Indices) const;
 
   /// Get GEP indices to access Offset inside ElemTy. ElemTy is updated to be
   /// the result element type and Offset to be the residual offset.
-  LLVM_ABI SmallVector<APInt> getGEPIndicesForOffset(Type *&ElemTy, APInt &Offset) const;
+  LLVM_ABI SmallVector<APInt> getGEPIndicesForOffset(Type *&ElemTy,
+                                                     APInt &Offset) const;
 
   /// Get single GEP index to access Offset inside ElemTy. Returns std::nullopt
   /// if index cannot be computed, e.g. because the type is not an aggregate.
   /// ElemTy is updated to be the result element type and Offset to be the
   /// residual offset.
-  LLVM_ABI std::optional<APInt> getGEPIndexForOffset(Type *&ElemTy, APInt &Offset) const;
+  LLVM_ABI std::optional<APInt> getGEPIndexForOffset(Type *&ElemTy,
+                                                     APInt &Offset) const;
 
   /// Returns a StructLayout object, indicating the alignment of the
   /// struct, its size, and the offsets of its fields.

@@ -14,8 +14,8 @@
 #ifndef LLVM_IR_TYPEDPOINTERTYPE_H
 #define LLVM_IR_TYPEDPOINTERTYPE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -34,7 +34,8 @@ public:
 
   /// This constructs a pointer to an object of the specified type in a numbered
   /// address space.
-  LLVM_ABI static TypedPointerType *get(Type *ElementType, unsigned AddressSpace);
+  LLVM_ABI static TypedPointerType *get(Type *ElementType,
+                                        unsigned AddressSpace);
 
   /// Return true if the specified type is valid as a element type.
   LLVM_ABI static bool isValidElementType(Type *ElemTy);

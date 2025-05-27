@@ -110,8 +110,8 @@ public:
   FunctionType &operator=(const FunctionType &) = delete;
 
   /// This static method is the primary way of constructing a FunctionType.
-  LLVM_ABI static FunctionType *get(Type *Result,
-                           ArrayRef<Type*> Params, bool isVarArg);
+  LLVM_ABI static FunctionType *get(Type *Result, ArrayRef<Type *> Params,
+                                    bool isVarArg);
 
   /// Create a FunctionType taking no parameters.
   LLVM_ABI static FunctionType *get(Type *Result, bool isVarArg);
@@ -247,11 +247,13 @@ public:
   LLVM_ABI static StructType *create(LLVMContext &Context);
 
   LLVM_ABI static StructType *create(ArrayRef<Type *> Elements, StringRef Name,
-                            bool isPacked = false);
+                                     bool isPacked = false);
   LLVM_ABI static StructType *create(ArrayRef<Type *> Elements);
-  LLVM_ABI static StructType *create(LLVMContext &Context, ArrayRef<Type *> Elements,
-                            StringRef Name, bool isPacked = false);
-  LLVM_ABI static StructType *create(LLVMContext &Context, ArrayRef<Type *> Elements);
+  LLVM_ABI static StructType *create(LLVMContext &Context,
+                                     ArrayRef<Type *> Elements, StringRef Name,
+                                     bool isPacked = false);
+  LLVM_ABI static StructType *create(LLVMContext &Context,
+                                     ArrayRef<Type *> Elements);
   template <class... Tys>
   static std::enable_if_t<are_base_of<Type, Tys...>::value, StructType *>
   create(StringRef Name, Type *elt1, Tys *... elts) {
@@ -260,8 +262,8 @@ public:
   }
 
   /// This static method is the primary way to create a literal StructType.
-  LLVM_ABI static StructType *get(LLVMContext &Context, ArrayRef<Type*> Elements,
-                         bool isPacked = false);
+  LLVM_ABI static StructType *
+  get(LLVMContext &Context, ArrayRef<Type *> Elements, bool isPacked = false);
 
   /// Create an empty structure type.
   LLVM_ABI static StructType *get(LLVMContext &Context, bool isPacked = false);
@@ -336,11 +338,12 @@ public:
 
   /// Specify a body for an opaque identified type, which must not make the type
   /// recursive.
-  LLVM_ABI void setBody(ArrayRef<Type*> Elements, bool isPacked = false);
+  LLVM_ABI void setBody(ArrayRef<Type *> Elements, bool isPacked = false);
 
   /// Specify a body for an opaque identified type or return an error if it
   /// would make the type recursive.
-  LLVM_ABI Error setBodyOrError(ArrayRef<Type *> Elements, bool isPacked = false);
+  LLVM_ABI Error setBodyOrError(ArrayRef<Type *> Elements,
+                                bool isPacked = false);
 
   /// Return an error if the body for an opaque identified type would make it
   /// recursive.
@@ -639,7 +642,8 @@ protected:
       : VectorType(ElTy, MinNumElts, ScalableVectorTyID) {}
 
 public:
-  LLVM_ABI static ScalableVectorType *get(Type *ElementType, unsigned MinNumElts);
+  LLVM_ABI static ScalableVectorType *get(Type *ElementType,
+                                          unsigned MinNumElts);
 
   static ScalableVectorType *get(Type *ElementType,
                                  const ScalableVectorType *SVTy) {
@@ -789,16 +793,15 @@ public:
   /// Return a target extension type having the specified name and optional
   /// type and integer parameters.
   LLVM_ABI static TargetExtType *get(LLVMContext &Context, StringRef Name,
-                            ArrayRef<Type *> Types = {},
-                            ArrayRef<unsigned> Ints = {});
+                                     ArrayRef<Type *> Types = {},
+                                     ArrayRef<unsigned> Ints = {});
 
   /// Return a target extension type having the specified name and optional
   /// type and integer parameters, or an appropriate Error if it fails the
   /// parameters check.
-  LLVM_ABI static Expected<TargetExtType *> getOrError(LLVMContext &Context,
-                                              StringRef Name,
-                                              ArrayRef<Type *> Types = {},
-                                              ArrayRef<unsigned> Ints = {});
+  LLVM_ABI static Expected<TargetExtType *>
+  getOrError(LLVMContext &Context, StringRef Name, ArrayRef<Type *> Types = {},
+             ArrayRef<unsigned> Ints = {});
 
   /// Check that a newly created target extension type has the expected number
   /// of type parameters and integer parameters, returning the type itself if OK

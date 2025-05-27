@@ -9,8 +9,8 @@
 #ifndef LLVM_IR_VECTORTYPEUTILS_H
 #define LLVM_IR_VECTORTYPEUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

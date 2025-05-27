@@ -14,7 +14,6 @@
 #ifndef LLVM_IR_DOMINATORS_H
 #define LLVM_IR_DOMINATORS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -31,6 +30,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CFGDiff.h"
 #include "llvm/Support/CFGUpdate.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <algorithm>
 #include <utility>
@@ -45,8 +45,10 @@ class raw_ostream;
 template <class GraphType> struct GraphTraits;
 
 extern template class LLVM_TEMPLATE_ABI DomTreeNodeBase<BasicBlock>;
-extern template class LLVM_TEMPLATE_ABI DominatorTreeBase<BasicBlock, false>; // DomTree
-extern template class LLVM_TEMPLATE_ABI DominatorTreeBase<BasicBlock, true>; // PostDomTree
+extern template class LLVM_TEMPLATE_ABI
+    DominatorTreeBase<BasicBlock, false>; // DomTree
+extern template class LLVM_TEMPLATE_ABI
+    DominatorTreeBase<BasicBlock, true>; // PostDomTree
 
 extern template class cfg::Update<BasicBlock *>;
 
@@ -60,34 +62,34 @@ using BBDomTreeGraphDiff = GraphDiff<BasicBlock *, false>;
 using BBPostDomTreeGraphDiff = GraphDiff<BasicBlock *, true>;
 
 extern template LLVM_TEMPLATE_ABI void Calculate<BBDomTree>(BBDomTree &DT);
-extern template LLVM_TEMPLATE_ABI void CalculateWithUpdates<BBDomTree>(BBDomTree &DT,
-                                                     BBUpdates U);
+extern template LLVM_TEMPLATE_ABI void
+CalculateWithUpdates<BBDomTree>(BBDomTree &DT, BBUpdates U);
 
-extern template LLVM_TEMPLATE_ABI void Calculate<BBPostDomTree>(BBPostDomTree &DT);
+extern template LLVM_TEMPLATE_ABI void
+Calculate<BBPostDomTree>(BBPostDomTree &DT);
 
-extern template LLVM_TEMPLATE_ABI void InsertEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From,
-                                           BasicBlock *To);
-extern template LLVM_TEMPLATE_ABI void InsertEdge<BBPostDomTree>(BBPostDomTree &DT,
-                                               BasicBlock *From,
-                                               BasicBlock *To);
+extern template LLVM_TEMPLATE_ABI void
+InsertEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From, BasicBlock *To);
+extern template LLVM_TEMPLATE_ABI void
+InsertEdge<BBPostDomTree>(BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
 
-extern template LLVM_TEMPLATE_ABI void DeleteEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From,
-                                           BasicBlock *To);
-extern template LLVM_TEMPLATE_ABI void DeleteEdge<BBPostDomTree>(BBPostDomTree &DT,
-                                               BasicBlock *From,
-                                               BasicBlock *To);
+extern template LLVM_TEMPLATE_ABI void
+DeleteEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From, BasicBlock *To);
+extern template LLVM_TEMPLATE_ABI void
+DeleteEdge<BBPostDomTree>(BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
 
-extern template LLVM_TEMPLATE_ABI void ApplyUpdates<BBDomTree>(BBDomTree &DT,
-                                             BBDomTreeGraphDiff &,
-                                             BBDomTreeGraphDiff *);
-extern template LLVM_TEMPLATE_ABI void ApplyUpdates<BBPostDomTree>(BBPostDomTree &DT,
-                                                 BBPostDomTreeGraphDiff &,
-                                                 BBPostDomTreeGraphDiff *);
+extern template LLVM_TEMPLATE_ABI void
+ApplyUpdates<BBDomTree>(BBDomTree &DT, BBDomTreeGraphDiff &,
+                        BBDomTreeGraphDiff *);
+extern template LLVM_TEMPLATE_ABI void
+ApplyUpdates<BBPostDomTree>(BBPostDomTree &DT, BBPostDomTreeGraphDiff &,
+                            BBPostDomTreeGraphDiff *);
 
-extern template LLVM_TEMPLATE_ABI bool Verify<BBDomTree>(const BBDomTree &DT,
-                                       BBDomTree::VerificationLevel VL);
-extern template LLVM_TEMPLATE_ABI bool Verify<BBPostDomTree>(const BBPostDomTree &DT,
-                                           BBPostDomTree::VerificationLevel VL);
+extern template LLVM_TEMPLATE_ABI bool
+Verify<BBDomTree>(const BBDomTree &DT, BBDomTree::VerificationLevel VL);
+extern template LLVM_TEMPLATE_ABI bool
+Verify<BBPostDomTree>(const BBPostDomTree &DT,
+                      BBPostDomTree::VerificationLevel VL);
 }  // namespace DomTreeBuilder
 
 using DomTreeNode = DomTreeNodeBase<BasicBlock>;
@@ -172,7 +174,7 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
 
   /// Handle invalidation explicitly.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+                           FunctionAnalysisManager::Invalidator &);
 
   // Ensure base-class overloads are visible.
   using Base::dominates;
@@ -210,9 +212,11 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   /// If BBE is not a unique edge between start and end of the edge, it can
   /// never dominate the use.
   LLVM_ABI bool dominates(const BasicBlockEdge &BBE, const Use &U) const;
-  LLVM_ABI bool dominates(const BasicBlockEdge &BBE, const BasicBlock *BB) const;
+  LLVM_ABI bool dominates(const BasicBlockEdge &BBE,
+                          const BasicBlock *BB) const;
   /// Returns true if edge \p BBE1 dominates edge \p BBE2.
-  LLVM_ABI bool dominates(const BasicBlockEdge &BBE1, const BasicBlockEdge &BBE2) const;
+  LLVM_ABI bool dominates(const BasicBlockEdge &BBE1,
+                          const BasicBlockEdge &BBE2) const;
 
   // Ensure base class overloads are visible.
   using Base::isReachableFromEntry;
@@ -226,7 +230,7 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   /// Find the nearest instruction I that dominates both I1 and I2, in the sense
   /// that a result produced before I will be available at both I1 and I2.
   LLVM_ABI Instruction *findNearestCommonDominator(Instruction *I1,
-                                          Instruction *I2) const;
+                                                   Instruction *I2) const;
 
   // Pop up a GraphViz/gv window with the Dominator Tree rendered using `dot`.
   LLVM_ABI void viewGraph(const Twine &Name, const Twine &Title);

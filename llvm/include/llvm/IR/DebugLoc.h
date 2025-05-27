@@ -14,9 +14,9 @@
 #ifndef LLVM_IR_DEBUGLOC_H
 #define LLVM_IR_DEBUGLOC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/TrackingMDRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -167,9 +167,9 @@ namespace llvm {
     /// Rebuild the entire inlined-at chain for this instruction so that the top of
     /// the chain now is inlined-at the new call site.
     /// \param   InlinedAt    The new outermost inlined-at in the chain.
-    LLVM_ABI static DebugLoc appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
-                                    LLVMContext &Ctx,
-                                    DenseMap<const MDNode *, MDNode *> &Cache);
+    LLVM_ABI static DebugLoc
+    appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt, LLVMContext &Ctx,
+                    DenseMap<const MDNode *, MDNode *> &Cache);
 
     /// Return true if the source locations match, ignoring isImplicitCode and
     /// source atom info.

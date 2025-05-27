@@ -14,8 +14,8 @@
 #ifndef LLVM_IR_LLVMREMARKSTREAMER_H
 #define LLVM_IR_LLVMREMARKSTREAMER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Remarks/Remark.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>
@@ -83,11 +83,10 @@ struct LLVMRemarkSetupFormatError
 };
 
 /// Setup optimization remarks that output to a file.
-LLVM_ABI Expected<std::unique_ptr<ToolOutputFile>>
-setupLLVMOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
-                             StringRef RemarksPasses, StringRef RemarksFormat,
-                             bool RemarksWithHotness,
-                             std::optional<uint64_t> RemarksHotnessThreshold = 0);
+LLVM_ABI Expected<std::unique_ptr<ToolOutputFile>> setupLLVMOptimizationRemarks(
+    LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
+    StringRef RemarksFormat, bool RemarksWithHotness,
+    std::optional<uint64_t> RemarksHotnessThreshold = 0);
 
 /// Setup optimization remarks that output directly to a raw_ostream.
 /// \p OS is managed by the caller and should be open for writing as long as \p

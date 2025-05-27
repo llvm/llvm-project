@@ -15,11 +15,11 @@
 #ifndef LLVM_IR_INLINEASM_H
 #define LLVM_IR_INLINEASM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <string>
@@ -65,9 +65,10 @@ public:
   /// InlineAsm::get - Return the specified uniqued inline asm string.
   ///
   LLVM_ABI static InlineAsm *get(FunctionType *Ty, StringRef AsmString,
-                        StringRef Constraints, bool hasSideEffects,
-                        bool isAlignStack = false,
-                        AsmDialect asmDialect = AD_ATT, bool canThrow = false);
+                                 StringRef Constraints, bool hasSideEffects,
+                                 bool isAlignStack = false,
+                                 AsmDialect asmDialect = AD_ATT,
+                                 bool canThrow = false);
 
   bool hasSideEffects() const { return HasSideEffects; }
   bool isAlignStack() const { return IsAlignStack; }
@@ -185,7 +186,8 @@ public:
   /// ParseConstraints - Split up the constraint string into the specific
   /// constraints and their prefixes.  If this returns an empty vector, and if
   /// the constraint string itself isn't empty, there was an error parsing.
-  LLVM_ABI static ConstraintInfoVector ParseConstraints(StringRef ConstraintString);
+  LLVM_ABI static ConstraintInfoVector
+  ParseConstraints(StringRef ConstraintString);
 
   /// ParseConstraints - Parse the constraints of this inlineasm object,
   /// returning them the same way that ParseConstraints(str) does.

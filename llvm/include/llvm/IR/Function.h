@@ -17,7 +17,6 @@
 #ifndef LLVM_IR_FUNCTION_H
 #define LLVM_IR_FUNCTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -33,6 +32,7 @@
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -793,7 +793,8 @@ public:
 private:
   // These need access to the underlying BB list.
   LLVM_ABI_FRIEND friend void BasicBlock::removeFromParent();
-  LLVM_ABI_FRIEND friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
+  LLVM_ABI_FRIEND friend iplist<BasicBlock>::iterator
+  BasicBlock::eraseFromParent();
   template <class BB_t, class BB_i_t, class BI_t, class II_t>
   friend class InstIterator;
   friend class llvm::SymbolTableListTraits<llvm::BasicBlock>;
@@ -1053,8 +1054,7 @@ namespace CallingConv {
 
 // TODO: Need similar function for support of argument in position. General
 // version on FunctionType + Attributes + CallingConv::ID?
-LLVM_ABI LLVM_READNONE
-bool supportsNonVoidReturnType(CallingConv::ID CC);
+LLVM_ABI LLVM_READNONE bool supportsNonVoidReturnType(CallingConv::ID CC);
 } // namespace CallingConv
 
 /// Check whether null pointer dereferencing is considered undefined behavior

@@ -13,10 +13,10 @@
 #ifndef LLVM_IR_VALUESYMBOLTABLE_H
 #define LLVM_IR_VALUESYMBOLTABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -94,9 +94,9 @@ public:
   /// Print out symbol table on stderr
   LLVM_ABI void dump() const;
 
-/// @}
-/// @name Iteration
-/// @{
+  /// @}
+  /// @name Iteration
+  /// @{
 
   /// Get an iterator that from the beginning of the symbol table.
   inline iterator begin() { return vmap.begin(); }

@@ -15,9 +15,9 @@
 #ifndef LLVM_IR_FPENV_H
 #define LLVM_IR_FPENV_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -55,11 +55,13 @@ LLVM_ABI std::optional<StringRef> convertRoundingModeToStr(RoundingMode);
 
 /// Returns a valid ExceptionBehavior enumerator when given a string
 /// valid as input in constrained intrinsic exception behavior metadata.
-LLVM_ABI std::optional<fp::ExceptionBehavior> convertStrToExceptionBehavior(StringRef);
+LLVM_ABI std::optional<fp::ExceptionBehavior>
+    convertStrToExceptionBehavior(StringRef);
 
 /// For any ExceptionBehavior enumerator, returns a string valid as
 /// input in constrained intrinsic exception behavior metadata.
-LLVM_ABI std::optional<StringRef> convertExceptionBehaviorToStr(fp::ExceptionBehavior);
+LLVM_ABI std::optional<StringRef>
+    convertExceptionBehaviorToStr(fp::ExceptionBehavior);
 
 /// Returns true if the exception handling behavior and rounding mode
 /// match what is used in the default floating point environment.
