@@ -570,7 +570,8 @@ void ScheduleDAGTopologicalSort::RemovePred(SUnit *M, SUnit *N) {
 }
 
 void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
-                                     bool &HasLoop) {
+                                     bool &HasLoop,
+                                     std::optional<SDep::Kind> OnlyDepKind) {
   std::vector<const SUnit*> WorkList;
   WorkList.reserve(SUnits.size());
 
@@ -580,6 +581,8 @@ void ScheduleDAGTopologicalSort::DFS(const SUnit *SU, int UpperBound,
     WorkList.pop_back();
     Visited.set(SU->NodeNum);
     for (const SDep &SuccDep : llvm::reverse(SU->Succs)) {
+      if (OnlyDepKind && SuccDep.getKind() != *OnlyDepKind)
+        continue;
       unsigned s = SuccDep.getSUnit()->NodeNum;
       // Edges to non-SUnits are allowed but ignored (e.g. ExitSU).
       if (s >= Node2Index.size())
@@ -722,8 +725,9 @@ void ScheduleDAGTopologicalSort::AddSUnitWithoutPredecessors(const SUnit *SU) {
   Visited.resize(Node2Index.size());
 }
 
-bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
-                                             const SUnit *TargetSU) {
+bool ScheduleDAGTopologicalSort::IsReachable(
+    const SUnit *SU, const SUnit *TargetSU,
+    std::optional<SDep::Kind> OnlyDepKind) {
   assert(TargetSU != nullptr && "Invalid target SUnit");
   assert(SU != nullptr && "Invalid SUnit");
   FixOrder();
@@ -737,7 +741,7 @@ bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
   if (LowerBound < UpperBound) {
     Visited.reset();
     // There may be a path from TargetSU to SU. Check for it.
-    DFS(TargetSU, UpperBound, HasLoop);
+    DFS(TargetSU, UpperBound, HasLoop, OnlyDepKind);
   }
   return HasLoop;
 }
