@@ -216,12 +216,12 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
 
 void XeGPUBlockingPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
-  Operation *mod = getOperation();
+  Operation *op = getOperation();
 
   // Preserve the LayoutAttr for each operand to the owner's DictionaryAttr.
   // This ensures that the LayoutAttr remains accessible even if the defining
   // operation is replaced.
-  xegpu::setLayoutAttrs(mod, [](Value v) { return xegpu::getLayoutAttr(v); });
+  xegpu::setLayoutAttrs(op, [](Value v) { return xegpu::getLayoutAttr(v); });
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
                                  xegpu::LayoutAttr layout) {
@@ -279,7 +279,7 @@ void XeGPUBlockingPass::runOnOperation() {
         return success();
       });
 
-  xegpu::doSCFStructuralTypeConversionWithTensorType(mod, converter);
+  xegpu::doSCFStructuralTypeConversionWithTensorType(op, converter);
 
   xegpu::UnrollOptions options;
   options.setFilterConstraint([&](Operation *op) -> LogicalResult {
@@ -313,9 +313,9 @@ void XeGPUBlockingPass::runOnOperation() {
   populateXeGPUUnrollPatterns(patterns, options);
   vector::populateVectorUnrollPatterns(patterns, vectorOptions);
 
-  (void)applyPatternsGreedily(mod, std::move(patterns));
+  (void)applyPatternsGreedily(op, std::move(patterns));
 
-  mod->walk([](Operation *op) {
+  op->walk([](Operation *op) {
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
 
