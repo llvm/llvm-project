@@ -43,30 +43,44 @@ static void
 resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   ValueRange inputs = castOp.getInputs();
   ValueRange outputs = castOp.getOutputs();
-
-  if (inputs.size() == 1 && outputs.size() == 1) {
-    castOp->replaceAllUsesWith(inputs);
+  if (inputs.empty() || outputs.empty()) {
+    LDBG("erase unrealized conversion cast op has no inputs/outputs.");
     castOp->erase();
+    return;
   }
 
   VectorType inputTy = dyn_cast<VectorType>(inputs[0].getType());
   VectorType outputTy = dyn_cast<VectorType>(outputs[0].getType());
-  if (inputTy && outputTy) {
-    OpBuilder builder(castOp);
-    // unpack
-    if (inputs.size() > 1 && outputs.size() == 1) {
-      ArrayRef<int64_t> shape = outputTy.getShape();
-      Value result = xegpu::createVectorWithShapeFromValues(
-          builder, castOp.getLoc(), inputs, shape);
-      castOp->replaceAllUsesWith(ValueRange(result));
-      castOp->erase();
-    } else if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
-      ArrayRef<int64_t> tileShape = outputTy.getShape();
-      SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
-          builder, castOp.getLoc(), inputs[0], tileShape);
-      castOp->replaceAllUsesWith(results);
-      castOp->erase();
-    }
+  if (!inputTy || !outputTy) {
+    LDBG("skip unrealized conversion cast op has non-vector inputs/outputs.");
+    return;
+  }
+
+  // We only interest in the case where all inputs and outputs have the
+  // identical types
+  if (llvm::any_of(castOp->getOperandTypes(),
+                   [&](Type t) { return t != inputTy; }) ||
+      llvm::any_of(castOp->getResultTypes(),
+                   [&](Type t) { return t != outputTy; })) {
+    LDBG("skip unrealized conversion cast op not emulating pack/unpack.");
+    return;
+  }
+
+  OpBuilder builder(castOp);
+  if (inputs.size() > 1 && outputs.size() == 1) {
+    // the castOp is emulating an unpack op
+    ArrayRef<int64_t> shape = outputTy.getShape();
+    Value result = xegpu::createVectorWithShapeFromValues(
+        builder, castOp.getLoc(), inputs, shape);
+    castOp->replaceAllUsesWith(ValueRange(result));
+    castOp->erase();
+  } else if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
+    // the castOp is emulating a pack op
+    ArrayRef<int64_t> tileShape = outputTy.getShape();
+    SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
+        builder, castOp.getLoc(), inputs[0], tileShape);
+    castOp->replaceAllUsesWith(results);
+    castOp->erase();
   }
 }
 
