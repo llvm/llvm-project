@@ -360,6 +360,7 @@ void VerifyPCHAction::ExecuteAction() {
   std::unique_ptr<ASTReader> Reader(new ASTReader(
       CI.getPreprocessor(), CI.getModuleCache(), &CI.getASTContext(),
       CI.getPCHContainerReader(), CI.getFrontendOpts().ModuleFileExtensions,
+      CI.getFrontendOpts().LangOptionsOpts,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       DisableValidationForModuleKind::None,
       /*AllowASTWithCompilerErrors*/ false,

@@ -53,6 +53,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/LangOptionsOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/OpenACCKinds.h"
@@ -285,34 +286,35 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
                                  const LangOptions &ExistingLangOpts,
                                  StringRef ModuleFilename,
                                  DiagnosticsEngine *Diags,
+                                 const LangOptionsOptions &LangOptionsOpts,
                                  bool AllowCompatibleDifferences = true) {
 #define LANGOPT(Name, Bits, Default, Description)                              \
-  if (ExistingLangOpts.Name != LangOpts.Name) {                                \
+  if (ExistingLangOpts.Name != LangOpts.Name && !LangOptionsOpts.Name.ignore_mismatch) {                                \
     if (Diags) {                                                               \
       if (Bits == 1)                                                           \
         Diags->Report(diag::err_ast_file_langopt_mismatch)                     \
             << Description << LangOpts.Name << ExistingLangOpts.Name           \
-            << ModuleFilename;                                                 \
+            << ModuleFilename << #Name;                                        \
       else                                                                     \
         Diags->Report(diag::err_ast_file_langopt_value_mismatch)               \
-            << Description << ModuleFilename;                                  \
+            << Description << ModuleFilename << #Name;                         \
     }                                                                          \
     return true;                                                               \
   }
 
 #define VALUE_LANGOPT(Name, Bits, Default, Description)                        \
-  if (ExistingLangOpts.Name != LangOpts.Name) {                                \
+  if (ExistingLangOpts.Name != LangOpts.Name && !LangOptionsOpts.Name.ignore_mismatch) {                                \
     if (Diags)                                                                 \
       Diags->Report(diag::err_ast_file_langopt_value_mismatch)                 \
-          << Description << ModuleFilename;                                    \
+          << Description << ModuleFilename << #Name;                           \
     return true;                                                               \
   }
 
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Description)                   \
-  if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {                  \
+  if (ExistingLangOpts.get##Name() != LangOpts.get##Name() && !LangOptionsOpts.Name.ignore_mismatch) {                  \
     if (Diags)                                                                 \
       Diags->Report(diag::err_ast_file_langopt_value_mismatch)                 \
-          << Description << ModuleFilename;                                    \
+          << Description << ModuleFilename << #Name;                           \
     return true;                                                               \
   }
 
@@ -335,14 +337,14 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
 
   if (ExistingLangOpts.ModuleFeatures != LangOpts.ModuleFeatures) {
     if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
+      Diags->Report(diag::err_ast_file_langopt_value_nameless_mismatch)
           << "module features" << ModuleFilename;
     return true;
   }
 
   if (ExistingLangOpts.ObjCRuntime != LangOpts.ObjCRuntime) {
     if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
+      Diags->Report(diag::err_ast_file_langopt_value_nameless_mismatch)
           << "target Objective-C runtime" << ModuleFilename;
     return true;
   }
@@ -350,7 +352,7 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
   if (ExistingLangOpts.CommentOpts.BlockCommandNames !=
       LangOpts.CommentOpts.BlockCommandNames) {
     if (Diags)
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)
+      Diags->Report(diag::err_ast_file_langopt_value_nameless_mismatch)
           << "block command names" << ModuleFilename;
     return true;
   }
@@ -461,6 +463,7 @@ bool PCHValidator::ReadLanguageOptions(const LangOptions &LangOpts,
   const LangOptions &ExistingLangOpts = PP.getLangOpts();
   return checkLanguageOptions(LangOpts, ExistingLangOpts, ModuleFilename,
                               Complain ? &Reader.Diags : nullptr,
+                              Reader.LangOptionsOpts,
                               AllowCompatibleDifferences);
 }
 
@@ -5643,6 +5646,7 @@ namespace {
     const LangOptions &ExistingLangOpts;
     const TargetOptions &ExistingTargetOpts;
     const PreprocessorOptions &ExistingPPOpts;
+    const LangOptionsOptions &LangOptionsOpts;
     std::string ExistingModuleCachePath;
     FileManager &FileMgr;
     bool StrictOptionMatches;
@@ -5651,11 +5655,13 @@ namespace {
     SimplePCHValidator(const LangOptions &ExistingLangOpts,
                        const TargetOptions &ExistingTargetOpts,
                        const PreprocessorOptions &ExistingPPOpts,
+                       const LangOptionsOptions &LangOptionsOpts,
                        StringRef ExistingModuleCachePath, FileManager &FileMgr,
                        bool StrictOptionMatches)
         : ExistingLangOpts(ExistingLangOpts),
           ExistingTargetOpts(ExistingTargetOpts),
           ExistingPPOpts(ExistingPPOpts),
+          LangOptionsOpts(LangOptionsOpts),
           ExistingModuleCachePath(ExistingModuleCachePath), FileMgr(FileMgr),
           StrictOptionMatches(StrictOptionMatches) {}
 
@@ -5663,7 +5669,7 @@ namespace {
                              StringRef ModuleFilename, bool Complain,
                              bool AllowCompatibleDifferences) override {
       return checkLanguageOptions(ExistingLangOpts, LangOpts, ModuleFilename,
-                                  nullptr, AllowCompatibleDifferences);
+                                  nullptr, LangOptionsOpts, AllowCompatibleDifferences);
     }
 
     bool ReadTargetOptions(const TargetOptions &TargetOpts,
@@ -6015,8 +6021,10 @@ bool ASTReader::isAcceptableASTFile(
     StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
     const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
     const TargetOptions &TargetOpts, const PreprocessorOptions &PPOpts,
+    const LangOptionsOptions& LangOptionsOpts,
     StringRef ExistingModuleCachePath, bool RequireStrictOptionMatches) {
   SimplePCHValidator validator(LangOpts, TargetOpts, PPOpts,
+                               LangOptionsOpts,
                                ExistingModuleCachePath, FileMgr,
                                RequireStrictOptionMatches);
   return !readASTFileControlBlock(Filename, FileMgr, ModCache, PCHContainerRdr,
@@ -10969,6 +10977,7 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
                      ASTContext *Context,
                      const PCHContainerReader &PCHContainerRdr,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
+                     const LangOptionsOptions& LangOptionsOpts,
                      StringRef isysroot,
                      DisableValidationForModuleKind DisableValidationKind,
                      bool AllowASTWithCompilerErrors,
@@ -10988,6 +10997,7 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
       DisableValidationKind(DisableValidationKind),
       AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),
       AllowConfigurationMismatch(AllowConfigurationMismatch),
+      LangOptionsOpts(LangOptionsOpts),
       ValidateSystemInputs(ValidateSystemInputs),
       ForceValidateUserInputs(ForceValidateUserInputs),
       ValidateASTInputFilesContent(ValidateASTInputFilesContent),

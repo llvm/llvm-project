@@ -63,6 +63,7 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
   Reader.reset(new ASTReader(
       PP, CI.getModuleCache(), &CI.getASTContext(), CI.getPCHContainerReader(),
       /*Extensions=*/{},
+      CI.getFrontendOpts().LangOptionsOpts,
       /*isysroot=*/"", DisableValidationForModuleKind::PCH));
   for (unsigned ti = 0; ti < bufNames.size(); ++ti) {
     StringRef sr(bufNames[ti]);

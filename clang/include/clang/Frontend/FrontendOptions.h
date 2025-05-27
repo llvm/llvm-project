@@ -10,6 +10,7 @@
 #define LLVM_CLANG_FRONTEND_FRONTENDOPTIONS_H
 
 #include "clang/AST/ASTDumperUtils.h"
+#include "clang/Basic/LangOptionsOptions.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Sema/CodeCompleteOptions.h"
@@ -489,6 +490,9 @@ public:
   /// The list of files to embed into the compiled module file.
   std::vector<std::string> ModulesEmbedFiles;
 
+  // The list of names of options to ignore for the purposes of a module config mismatch.
+  std::vector<std::string> ModuleConfigMismatchIgnoresVec;
+
   /// The list of AST files to merge.
   std::vector<std::string> ASTMergeFiles;
 
@@ -533,6 +537,9 @@ public:
   /// Output path to dump ranges of deserialized declarations to use as
   /// minimization hints.
   std::string DumpMinimizationHintsPath;
+
+  // A per-opt configuration.
+  LangOptionsOptions LangOptionsOpts; 
 
 public:
   FrontendOptions()

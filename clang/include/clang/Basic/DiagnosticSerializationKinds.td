@@ -37,8 +37,10 @@ def err_ast_file_targetopt_feature_mismatch : Error<
     "feature '%2' but the %select{current translation unit is|AST file '%1' was}0 "
     "not">;
 def err_ast_file_langopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "
-    "AST file '%3' but is currently %select{disabled|enabled}2">;
+    "AST file '%3' but is currently %select{disabled|enabled}2. To ignore this, add -fmodule-config-mismatch-ignore=%4">;
 def err_ast_file_langopt_value_mismatch : Error<
+  "%0 differs in AST file '%1' vs. current file. To ignore this, add -fmodule-config-mismatch-ignore=%4">;
+def err_ast_file_langopt_value_nameless_mismatch : Error<
   "%0 differs in AST file '%1' vs. current file">;
 def err_ast_file_diagopt_mismatch : Error<"%0 is currently enabled, but was not in "
   "the AST file '%1'">;

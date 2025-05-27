@@ -17,6 +17,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LangOptionsOptions.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/StackExhaustionHandler.h"
@@ -1090,6 +1091,9 @@ private:
   /// from the current compiler instance.
   bool AllowConfigurationMismatch;
 
+  /// The options controlling how we use language options.
+  LangOptionsOptions LangOptionsOpts;
+
   /// Whether to validate system input files.
   bool ValidateSystemInputs;
 
@@ -1732,9 +1736,11 @@ public:
   ///
   /// \param PCHContainerRdr the PCHContainerOperations to use for loading and
   /// creating modules.
-  ///
+  /// 
   /// \param Extensions the list of module file extensions that can be loaded
   /// from the AST files.
+  ///
+  /// \param LangOptionsOpts Controls how LangOptions are treated.
   ///
   /// \param isysroot If non-NULL, the system include path specified by the
   /// user. This is only used with relocatable PCH files. If non-NULL,
@@ -1763,6 +1769,7 @@ public:
   ASTReader(Preprocessor &PP, ModuleCache &ModCache, ASTContext *Context,
             const PCHContainerReader &PCHContainerRdr,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
+            const LangOptionsOptions &LangOptionsOpts,
             StringRef isysroot = "",
             DisableValidationForModuleKind DisableValidationKind =
                 DisableValidationForModuleKind::None,
@@ -1987,6 +1994,7 @@ public:
                                   const LangOptions &LangOpts,
                                   const TargetOptions &TargetOpts,
                                   const PreprocessorOptions &PPOpts,
+                                  const LangOptionsOptions &LangOptionsOpts,
                                   StringRef ExistingModuleCachePath,
                                   bool RequireStrictOptionMatches = false);
 
