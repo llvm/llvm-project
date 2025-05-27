@@ -46,8 +46,6 @@ class DataFormatterDisablingTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        # self.runCmd('type category enable system VectorTypes libcxx gnu-libstdc++ CoreGraphics CoreServices AppKit CoreFoundation objc default', check=False)
-
         self.expect(
             "type category list",
             substrs=[
