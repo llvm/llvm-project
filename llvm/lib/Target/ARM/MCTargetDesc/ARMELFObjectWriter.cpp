@@ -28,16 +28,13 @@ namespace {
 class ARMELFObjectWriter : public MCELFObjectTargetWriter {
   enum { DefaultEABIVersion = 0x05000000U };
 
-  unsigned getRelocTypeInner(const MCValue &Target, const MCFixup &Fixup,
-                             bool IsPCRel) const;
-
 public:
   ARMELFObjectWriter(uint8_t OSABI);
 
   ~ARMELFObjectWriter() override = default;
 
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 
   bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
                                unsigned Type) const override;
@@ -69,15 +66,9 @@ bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
 // Need to examine the Fixup when determining whether to
 // emit the relocation as an explicit symbol or as a section relative
 // offset
-unsigned ARMELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned ARMELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
-  return getRelocTypeInner(Target, Fixup, IsPCRel);
-}
-
-unsigned ARMELFObjectWriter::getRelocTypeInner(const MCValue &Target,
-                                               const MCFixup &Fixup,
-                                               bool IsPCRel) const {
   unsigned Kind = Fixup.getTargetKind();
   uint8_t Specifier = Target.getSpecifier();
   auto CheckFDPIC = [&](uint32_t Type) {
