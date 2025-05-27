@@ -418,7 +418,7 @@ void GCNHazardRecognizer::AdvanceCycle() {
 
 void GCNHazardRecognizer::RecedeCycle() {
   if (IsHazardRecognizerMode || ST.getGeneration() < AMDGPUSubtarget::GFX11)
-    llvm_unreachable(
+    report_fatal_error(
         "hazard recognizer does not support bottom-up scheduling.");
 }
 
