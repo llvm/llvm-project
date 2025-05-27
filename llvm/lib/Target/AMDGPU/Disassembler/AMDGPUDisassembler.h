@@ -235,7 +235,9 @@ public:
   bool isGFX10() const;
   bool isGFX10Plus() const;
   bool isGFX11() const;
+  bool isGFX1170() const;
   bool isGFX11Plus() const;
+  bool isGFX1170Plus() const;
   bool isGFX12() const;
   bool isGFX12Plus() const;
   bool isGFX1250Plus() const;

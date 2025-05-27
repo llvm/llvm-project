@@ -19,6 +19,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -440,8 +441,17 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           MaxVGPR = MaxUsed > MaxVGPR ? MaxUsed : MaxVGPR;
         }
       }
-
-      if (MI.isCall()) {
+      // Special handling for wavegroup rank call.
+      // They do not appear as regular function call hence their NumVGPR are
+      // NOT included in kernel's regular NumVGPR. Eventually we report
+      // WaveGroupTotalVGPR =
+      //   NumLanesharedVGPR + max(NumWaves*NumVGPR, sum(rank-callee-NumVGPR)).
+      if (SIInstrInfo::isWaveGroupRankCallMarker(MI)) {
+        Info.WavegroupRankCalls.push_back((MachineInstr*)&MI);
+        assert(getCalleeFunction(MI.getOperand(1)));
+        assert(AMDGPU::getWavegroupRankFunction(
+            *getCalleeFunction(MI.getOperand(1))));
+      } else if (MI.isCall()) {
         // Pseudo used just to encode the underlying global. Is there a better
         // way to track this?
 

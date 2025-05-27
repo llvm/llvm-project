@@ -221,6 +221,13 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
           break;
         }
       }
+      // Just a convenient place to set the source of the special IDX0 init
+      // for wavegroup.rank call to the known number.
+      if (MI.getOperand(0).getReg() == AMDGPU::IDX0 &&
+          MI.getOperand(1).isTargetIndex()) {
+        assert(MI.getOperand(1).getIndex() == AMDGPU::TI_NUM_VGPRS_LANESHARED);
+        MI.getOperand(1).ChangeToImmediate(MFI->getLaneSharedVGPRSize() / 4);
+      }
     }
     TimeStamp++;
   }

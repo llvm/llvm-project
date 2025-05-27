@@ -4073,6 +4073,13 @@ def LocksExcluded : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def ReentrantCapability : InheritableAttr {
+  let Spellings = [Clang<"reentrant_capability">];
+  let Subjects = SubjectList<[Record, TypedefName]>;
+  let Documentation = [Undocumented];
+  let SimpleHandler = 1;
+}
+
 // C/C++ consumed attributes.
 
 def Consumable : InheritableAttr {

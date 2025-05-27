@@ -18,7 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/MathExtras.h"
@@ -394,13 +394,13 @@ void AMDGPUMCKernelCodeT::validate(const MCSubtargetInfo *STI, MCContext &Ctx) {
   if (!compute_pgm_resource1_registers->evaluateAsAbsolute(Value))
     return;
 
-  if (G_00B848_DX10_CLAMP(Value) && AMDGPU::isGFX12Plus(*STI)) {
-    Ctx.reportError({}, "enable_dx10_clamp=1 is not allowed on GFX12+");
+  if (G_00B848_DX10_CLAMP(Value) && AMDGPU::isGFX1170Plus(*STI)) {
+    Ctx.reportError({}, "enable_dx10_clamp=1 is not allowed on GFX1170+");
     return;
   }
 
-  if (G_00B848_IEEE_MODE(Value) && AMDGPU::isGFX12Plus(*STI)) {
-    Ctx.reportError({}, "enable_ieee_mode=1 is not allowed on GFX12+");
+  if (G_00B848_IEEE_MODE(Value) && AMDGPU::isGFX1170Plus(*STI)) {
+    Ctx.reportError({}, "enable_ieee_mode=1 is not allowed on GFX1170+");
     return;
   }
 

@@ -2457,6 +2457,10 @@ bool getWavegroupEnable(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-enable");
 }
 
+bool getWavegroupRankFunction(const Function &F) {
+  return F.hasFnAttribute("amdgpu-wavegroup-rank-function");
+}
+
 std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F) {
   MDNode *Node = F.getMetadata("reqd_work_group_size");
   if (!Node)
@@ -2636,8 +2640,16 @@ bool isGFX11(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX11);
 }
 
+bool isGFX1170(const MCSubtargetInfo &STI) {
+  return isGFX11(STI) && STI.hasFeature(AMDGPU::FeatureWMMA128bInsts);
+}
+
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
   return isGFX11(STI) || isGFX12Plus(STI);
+}
+
+bool isGFX1170Plus(const MCSubtargetInfo &STI) {
+  return isGFX1170(STI) || isGFX12Plus(STI);
 }
 
 bool isGFX12(const MCSubtargetInfo &STI) {

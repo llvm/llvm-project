@@ -161,7 +161,8 @@ toolchain name, binary file format, etc.
  transformations, in order to display built-in types (int, bool, etc.);
  parameters and arguments used during template instantiation; parent
  name hierarchy; array dimensions information; compiler generated
- elements and the underlying types associated with the types aliases.
+ elements; type sizes and the underlying types associated with the types
+ aliases.
 
  .. code-block:: text
 
@@ -171,6 +172,7 @@ toolchain name, binary file format, etc.
    =encoded: Template arguments encoded in the template name.
    =qualified: The element type include parents in its name.
    =reference: Element declaration and definition references.
+   =size: Sizes for compound and base types.
    =subrange: Subrange encoding information for arrays.
    =typename: Template parameters.
    =underlying: Underlying type for type definitions.
@@ -258,6 +260,7 @@ toolchain name, binary file format, etc.
    =qualified
    =qualifier
    =register
+   =size
    =subrange
    =system
    =typename

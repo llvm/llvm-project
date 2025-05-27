@@ -41,14 +41,16 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
 class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
-              lldb::DynamicValueType use_dynamic,
-              std::shared_ptr<StackFrame> frame_sp);
+              std::shared_ptr<StackFrame> frame_sp,
+              lldb::DynamicValueType use_dynamic, bool use_synthetic,
+              bool fragile_ivar, bool check_ptr_vs_member);
 
   llvm::Expected<lldb::ValueObjectSP> Evaluate(const ASTNode *node);
 
 private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const MemberOfNode *node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const ArraySubscriptNode *node) override;
@@ -57,8 +59,11 @@ private:
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;
   lldb::ValueObjectSP m_scope;
-  lldb::DynamicValueType m_default_dynamic;
   std::shared_ptr<StackFrame> m_exe_ctx_scope;
+  lldb::DynamicValueType m_use_dynamic;
+  bool m_use_synthetic;
+  bool m_fragile_ivar;
+  bool m_check_ptr_vs_member;
 };
 
 } // namespace lldb_private::dil

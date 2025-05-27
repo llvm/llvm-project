@@ -237,6 +237,7 @@ def BF16RT   : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
 def F16X2RT  : RegTyInfo<v2f16, Int32Regs, ?, ?, supports_imm = 0>;
 def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 
+
 // This class provides a basic wrapper around an NVPTXInst that abstracts the
 // specific syntax of most PTX instructions. It automatically handles the
 // construction of the asm string based on the provided dag arguments.
@@ -1622,24 +1623,6 @@ def Hexu32imm : Operand<i32> {
   let PrintMethod = "printHexu32imm";
 }
 
-multiclass PRMT<ValueType T, RegisterClass RC> {
-  def rrr
-    : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, Int32Regs:$b, Int32Regs:$c, PrmtMode:$mode),
-                !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
-                [(set T:$d, (prmt T:$a, T:$b, i32:$c, imm:$mode))]>;
-  def rri
-    : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, Int32Regs:$b, Hexu32imm:$c, PrmtMode:$mode),
-                !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
-                [(set T:$d, (prmt T:$a, T:$b, imm:$c, imm:$mode))]>;
-  def rii
-    : NVPTXInst<(outs RC:$d),
-                (ins RC:$a, i32imm:$b, Hexu32imm:$c, PrmtMode:$mode),
-                !strconcat("prmt.b32${mode}", " \t$d, $a, $b, $c;"),
-                [(set T:$d, (prmt T:$a, imm:$b, imm:$c, imm:$mode))]>;
-}
-
 let hasSideEffects = false in {
   // order is somewhat important here. signed/unsigned variants match
   // the same patterns, so the first one wins. Having unsigned byte extraction
@@ -1653,7 +1636,31 @@ let hasSideEffects = false in {
   defm BFI_B32 : BFI<"bfi.b32", i32, Int32Regs, i32imm>;
   defm BFI_B64 : BFI<"bfi.b64", i64, Int64Regs, i64imm>;
 
-  defm PRMT_B32 : PRMT<i32, Int32Regs>;
+  def PRMT_B32rrr
+    : BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+                (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
+                (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt i32:$a, i32:$b, i32:$c, imm:$mode))]>;
+  def PRMT_B32rri
+    : BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+                (ins Int32Regs:$a, Int32Regs:$b, Hexu32imm:$c),
+                (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt i32:$a, i32:$b, imm:$c, imm:$mode))]>;
+  def PRMT_B32rii
+    : BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+                (ins Int32Regs:$a, i32imm:$b, Hexu32imm:$c),
+                (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt i32:$a, imm:$b, imm:$c, imm:$mode))]>;
+  def PRMT_B32rir
+    : BasicFlagsNVPTXInst<(outs Int32Regs:$d),
+                (ins Int32Regs:$a, i32imm:$b, Int32Regs:$c),
+                (ins PrmtMode:$mode),
+                "prmt.b32$mode",
+                [(set i32:$d, (prmt i32:$a, imm:$b, i32:$c, imm:$mode))]>;
+
 }
 
 
@@ -2056,8 +2063,7 @@ def SDTDeclareScalarParamProfile :
 def SDTLoadParamProfile : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
 def SDTLoadParamV2Profile : SDTypeProfile<2, 2, [SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisInt<3>]>;
 def SDTLoadParamV4Profile : SDTypeProfile<4, 2, [SDTCisInt<4>, SDTCisInt<5>]>;
-def SDTPrintCallProfile : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
-def SDTPrintCallUniProfile : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+def SDTPrintCallProfile : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def SDTStoreParamProfile : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV2Profile : SDTypeProfile<0, 4, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV4Profile : SDTypeProfile<0, 6, [SDTCisInt<0>, SDTCisInt<1>]>;
@@ -2101,10 +2107,10 @@ def PrintConvergentCall :
   SDNode<"NVPTXISD::PrintConvergentCall", SDTPrintCallProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def PrintCallUni :
-  SDNode<"NVPTXISD::PrintCallUni", SDTPrintCallUniProfile,
+  SDNode<"NVPTXISD::PrintCallUni", SDTPrintCallProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def PrintConvergentCallUni :
-  SDNode<"NVPTXISD::PrintConvergentCallUni", SDTPrintCallUniProfile,
+  SDNode<"NVPTXISD::PrintConvergentCallUni", SDTPrintCallProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def StoreParam :
   SDNode<"NVPTXISD::StoreParam", SDTStoreParamProfile,
@@ -2253,31 +2259,9 @@ let mayStore = true in {
 let isCall=1 in {
   multiclass CALL<string OpcStr, SDNode OpNode> {
      def PrintCallNoRetInst : NVPTXInst<(outs), (ins),
-       !strconcat(OpcStr, " "), [(OpNode (i32 0))]>;
+       OpcStr # " ", [(OpNode 0)]>;
      def PrintCallRetInst1 : NVPTXInst<(outs), (ins),
-       !strconcat(OpcStr, " (retval0), "), [(OpNode (i32 1))]>;
-     def PrintCallRetInst2 : NVPTXInst<(outs), (ins),
-       !strconcat(OpcStr, " (retval0, retval1), "), [(OpNode (i32 2))]>;
-     def PrintCallRetInst3 : NVPTXInst<(outs), (ins),
-       !strconcat(OpcStr, " (retval0, retval1, retval2), "), [(OpNode (i32 3))]>;
-     def PrintCallRetInst4 : NVPTXInst<(outs), (ins),
-       !strconcat(OpcStr, " (retval0, retval1, retval2, retval3), "),
-       [(OpNode (i32 4))]>;
-     def PrintCallRetInst5 : NVPTXInst<(outs), (ins),
-       !strconcat(OpcStr, " (retval0, retval1, retval2, retval3, retval4), "),
-       [(OpNode (i32 5))]>;
-     def PrintCallRetInst6 : NVPTXInst<(outs), (ins),
-       !strconcat(OpcStr, " (retval0, retval1, retval2, retval3, retval4, "
-                            "retval5), "),
-       [(OpNode (i32 6))]>;
-     def PrintCallRetInst7 : NVPTXInst<(outs), (ins),
-       !strconcat(OpcStr, " (retval0, retval1, retval2, retval3, retval4, "
-                            "retval5, retval6), "),
-       [(OpNode (i32 7))]>;
-     def PrintCallRetInst8 : NVPTXInst<(outs), (ins),
-       !strconcat(OpcStr, " (retval0, retval1, retval2, retval3, retval4, "
-                            "retval5, retval6, retval7), "),
-       [(OpNode (i32 8))]>;
+       OpcStr # " (retval0), ", [(OpNode 1)]>;
   }
 }
 
@@ -3306,25 +3290,25 @@ include "NVPTXIntrinsics.td"
 
 def : Pat <
   (i32 (bswap i32:$a)),
-  (INT_NVVM_PRMT $a, (i32 0), (i32 0x0123))>;
+  (PRMT_B32rii $a, (i32 0), (i32 0x0123), PrmtNONE)>;
 
 def : Pat <
   (v2i16 (bswap v2i16:$a)),
-  (INT_NVVM_PRMT $a, (i32 0), (i32 0x2301))>;
+  (PRMT_B32rii $a, (i32 0), (i32 0x2301), PrmtNONE)>;
 
 def : Pat <
   (i64 (bswap i64:$a)),
   (V2I32toI64
-    (INT_NVVM_PRMT (I64toI32H_Sink $a), (i32 0), (i32 0x0123)),
-    (INT_NVVM_PRMT (I64toI32L_Sink $a), (i32 0), (i32 0x0123)))>,
+    (PRMT_B32rii (I64toI32H_Sink $a), (i32 0), (i32 0x0123), PrmtNONE),
+    (PRMT_B32rii (I64toI32L_Sink $a), (i32 0), (i32 0x0123), PrmtNONE))>,
   Requires<[hasPTX<71>]>;
 
 // Fall back to the old way if we don't have PTX 7.1.
 def : Pat <
   (i64 (bswap i64:$a)),
   (V2I32toI64
-    (INT_NVVM_PRMT (I64toI32H $a), (i32 0), (i32 0x0123)),
-    (INT_NVVM_PRMT (I64toI32L $a), (i32 0), (i32 0x0123)))>;
+    (PRMT_B32rii (I64toI32H $a), (i32 0), (i32 0x0123), PrmtNONE),
+    (PRMT_B32rii (I64toI32L $a), (i32 0), (i32 0x0123), PrmtNONE))>;
 
 
 ////////////////////////////////////////////////////////////////////////////////

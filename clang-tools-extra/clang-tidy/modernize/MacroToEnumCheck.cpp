@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <string>

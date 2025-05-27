@@ -37,9 +37,16 @@ bool AMDGPUMarkPromotablePrivate::runOnFunction(Function &F) {
   bool Changed = false;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
+      DenseSet<Value *> Pointers;
       if (auto *AI = dyn_cast<AllocaInst>(&I);
-          AI && AMDGPU::IsPromotableToVGPR(*AI, DL)) {
+          AI && AMDGPU::IsPromotableToVGPR(*AI, DL, Pointers)) {
         AI->setMetadata("amdgpu.promotable.to.vgpr", PrivateInVGPRMD);
+        // Set the metadata for all the pointers to this alloca
+        // to facilitate the promotion to VGPR during Instruction selection.
+        for (Value *Ptr : Pointers) {
+          if (auto *Inst = dyn_cast<Instruction>(Ptr))
+            Inst->setMetadata("amdgpu.promotable.to.vgpr", PrivateInVGPRMD);
+        }
         Changed = true;
       }
     }
