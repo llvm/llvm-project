@@ -490,7 +490,7 @@ public:
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Cost(CM), BFI(BFI), PSI(PSI),
         RTChecks(RTChecks), Plan(Plan),
-        VectorPHVPB(Plan.getEntry()->getSingleSuccessor()) {}
+        VectorPHVPB(Plan.getVectorLoopRegion()->getSinglePredecessor()) {}
 
   virtual ~InnerLoopVectorizer() = default;
 
@@ -2366,16 +2366,15 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
 }
 
 void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
+  // Note: The block with the minimum trip-count check is already connected
+  // during earlier VPlan construction.
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   VPBlockBase *PreVectorPH = VectorPHVPB->getSinglePredecessor();
-  if (PreVectorPH->getNumSuccessors() != 1) {
-    assert(PreVectorPH->getNumSuccessors() == 2 && "Expected 2 successors");
-    assert(PreVectorPH->getSuccessors()[0] == ScalarPH &&
-           "Unexpected successor");
-    VPIRBasicBlock *CheckVPIRBB = Plan.createVPIRBasicBlock(CheckIRBB);
-    VPBlockUtils::insertOnEdge(PreVectorPH, VectorPHVPB, CheckVPIRBB);
-    PreVectorPH = CheckVPIRBB;
-  }
+  assert(PreVectorPH->getNumSuccessors() == 2 && "Expected 2 successors");
+  assert(PreVectorPH->getSuccessors()[0] == ScalarPH && "Unexpected successor");
+  VPIRBasicBlock *CheckVPIRBB = Plan.createVPIRBasicBlock(CheckIRBB);
+  VPBlockUtils::insertOnEdge(PreVectorPH, VectorPHVPB, CheckVPIRBB);
+  PreVectorPH = CheckVPIRBB;
   VPBlockUtils::connectBlocks(PreVectorPH, ScalarPH);
   PreVectorPH->swapSuccessors();
 
@@ -2467,8 +2466,9 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
   LoopBypassBlocks.push_back(TCCheckBlock);
 
-  // TODO: Wrap LoopVectorPreHeader in VPIRBasicBlock here.
-  introduceCheckBlockInVPlan(TCCheckBlock);
+  assert(cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock() ==
+             TCCheckBlock &&
+         "Plan's entry must be TCCCheckBlock");
 }
 
 BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
@@ -7667,7 +7667,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
-  VPBasicBlock *VectorPH = cast<VPBasicBlock>(Entry->getSingleSuccessor());
+  VPBasicBlock *VectorPH = cast<VPBasicBlock>(Entry->getSuccessors()[1]);
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   if (VectorizingEpilogue)
     VPlanTransforms::removeDeadRecipes(BestVPlan);
@@ -7899,7 +7899,12 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
 
-  introduceCheckBlockInVPlan(TCCheckBlock);
+  // When vectorizing the main loop, its trip-count check is placed in a new
+  // block, whereas the overall trip-count check is placed in the VPlan entry
+  // block. When vectorizing the epilogue loop, its trip-count check is placed
+  // in the VPlan entry block.
+  if (!ForEpilogue)
+    introduceCheckBlockInVPlan(TCCheckBlock);
   return TCCheckBlock;
 }
 
@@ -8029,7 +8034,6 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   Plan.setEntry(NewEntry);
   // OldEntry is now dead and will be cleaned up when the plan gets destroyed.
 
-  introduceCheckBlockInVPlan(Insert);
   return Insert;
 }
 
@@ -8786,7 +8790,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
                                 DenseMap<VPValue *, VPValue *> &IVEndValues) {
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   auto *ScalarPH = Plan.getScalarPreheader();
-  auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getSinglePredecessor());
+  auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getPredecessors()[0]);
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBuilder VectorPHBuilder(
       cast<VPBasicBlock>(VectorRegion->getSinglePredecessor()));

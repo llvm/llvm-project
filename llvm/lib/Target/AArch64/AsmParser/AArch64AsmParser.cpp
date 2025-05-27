@@ -3499,43 +3499,40 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
 AArch64CC::CondCode
 AArch64AsmParser::parseCondCodeString(StringRef Cond, std::string &Suggestion) {
   AArch64CC::CondCode CC = StringSwitch<AArch64CC::CondCode>(Cond.lower())
-                    .Case("eq", AArch64CC::EQ)
-                    .Case("ne", AArch64CC::NE)
-                    .Case("cs", AArch64CC::HS)
-                    .Case("hs", AArch64CC::HS)
-                    .Case("cc", AArch64CC::LO)
-                    .Case("lo", AArch64CC::LO)
-                    .Case("mi", AArch64CC::MI)
-                    .Case("pl", AArch64CC::PL)
-                    .Case("vs", AArch64CC::VS)
-                    .Case("vc", AArch64CC::VC)
-                    .Case("hi", AArch64CC::HI)
-                    .Case("ls", AArch64CC::LS)
-                    .Case("ge", AArch64CC::GE)
-                    .Case("lt", AArch64CC::LT)
-                    .Case("gt", AArch64CC::GT)
-                    .Case("le", AArch64CC::LE)
-                    .Case("al", AArch64CC::AL)
-                    .Case("nv", AArch64CC::NV)
-                    .Default(AArch64CC::Invalid);
+                               .Case("eq", AArch64CC::EQ)
+                               .Case("ne", AArch64CC::NE)
+                               .Case("cs", AArch64CC::HS)
+                               .Case("hs", AArch64CC::HS)
+                               .Case("cc", AArch64CC::LO)
+                               .Case("lo", AArch64CC::LO)
+                               .Case("mi", AArch64CC::MI)
+                               .Case("pl", AArch64CC::PL)
+                               .Case("vs", AArch64CC::VS)
+                               .Case("vc", AArch64CC::VC)
+                               .Case("hi", AArch64CC::HI)
+                               .Case("ls", AArch64CC::LS)
+                               .Case("ge", AArch64CC::GE)
+                               .Case("lt", AArch64CC::LT)
+                               .Case("gt", AArch64CC::GT)
+                               .Case("le", AArch64CC::LE)
+                               .Case("al", AArch64CC::AL)
+                               .Case("nv", AArch64CC::NV)
+                               // SVE condition code aliases:
+                               .Case("none", AArch64CC::EQ)
+                               .Case("any", AArch64CC::NE)
+                               .Case("nlast", AArch64CC::HS)
+                               .Case("last", AArch64CC::LO)
+                               .Case("first", AArch64CC::MI)
+                               .Case("nfrst", AArch64CC::PL)
+                               .Case("pmore", AArch64CC::HI)
+                               .Case("plast", AArch64CC::LS)
+                               .Case("tcont", AArch64CC::GE)
+                               .Case("tstop", AArch64CC::LT)
+                               .Default(AArch64CC::Invalid);
 
-  if (CC == AArch64CC::Invalid && getSTI().hasFeature(AArch64::FeatureSVE)) {
-    CC = StringSwitch<AArch64CC::CondCode>(Cond.lower())
-                    .Case("none",  AArch64CC::EQ)
-                    .Case("any",   AArch64CC::NE)
-                    .Case("nlast", AArch64CC::HS)
-                    .Case("last",  AArch64CC::LO)
-                    .Case("first", AArch64CC::MI)
-                    .Case("nfrst", AArch64CC::PL)
-                    .Case("pmore", AArch64CC::HI)
-                    .Case("plast", AArch64CC::LS)
-                    .Case("tcont", AArch64CC::GE)
-                    .Case("tstop", AArch64CC::LT)
-                    .Default(AArch64CC::Invalid);
+  if (CC == AArch64CC::Invalid && Cond.lower() == "nfirst")
+    Suggestion = "nfrst";
 
-    if (CC == AArch64CC::Invalid && Cond.lower() == "nfirst")
-      Suggestion = "nfrst";
-  }
   return CC;
 }
 
