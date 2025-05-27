@@ -1056,6 +1056,7 @@ def Xopenmp_target_EQ : JoinedAndSeparate<["-"], "Xopenmp-target=">, Group<Compi
   HelpText<"Pass <arg> to the target offloading toolchain identified by <triple>.">,
   MetaVarName<"<triple> <arg>">;
 def z : Separate<["-"], "z">, Flags<[LinkerInput]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Pass -z <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
 def offload_link : Flag<["--"], "offload-link">, Group<Link_Group>,
@@ -1643,11 +1644,15 @@ defm xl_pragma_pack : BoolFOption<"xl-pragma-pack",
           "Enable IBM XL #pragma pack handling">,
   NegFlag<SetFalse>>;
 def shared_libsan : Flag<["-"], "shared-libsan">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Dynamically link the sanitizer runtime">;
 def static_libsan : Flag<["-"], "static-libsan">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Statically link the sanitizer runtime (Not supported for ASan, TSan or UBSan on darwin)">;
-def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
-def : Flag<["-"], "static-libasan">, Alias<static_libsan>;
+def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def : Flag<["-"], "static-libasan">, Alias<static_libsan>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
 defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
@@ -2374,7 +2379,7 @@ def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
-let Visibility = [ClangOption, CC1Option, CLOption] in {
+let Visibility = [ClangOption, CC1Option, CLOption, FlangOption, FC1Option] in {
 
 def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
                    MetaVarName<"<check>">,
@@ -4744,8 +4749,10 @@ def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
            " or precompiled headers">;
 def gno_modules : Flag <["-"], "gno-modules">, Group<g_flags_Group>;
 def gz_EQ : Joined<["-"], "gz=">, Group<g_flags_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
     HelpText<"DWARF debug sections compression type">;
-def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>;
+def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Embed source text in DWARF debug sections">,
