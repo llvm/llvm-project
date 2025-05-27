@@ -144,24 +144,15 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
 
     llvm::StringRef HeaderRef{Spelling};
 
-    bool IsAngled = false;
-    for (auto &Filter : AngledHeaders) {
-      if (Filter(HeaderRef)) {
-        IsAngled = true;
-        break;
+    bool Angled = HeaderRef.starts_with("<");
+    if (SymbolWithMissingInclude.Providers.front().kind() ==
+        include_cleaner::Header::Kind::Physical) {
+      for (auto &Filter : Angled ? QuotedHeaders : AngledHeaders) {
+        if (Filter(ResolvedPath)) {
+          Angled = !Angled;
+          break;
+        }
       }
-    }
-    bool IsQuoted = false;
-    for (auto &Filter : QuotedHeaders) {
-      if (Filter(HeaderRef)) {
-        IsQuoted = true;
-        break;
-      }
-    }
-    if (IsAngled == IsQuoted) {
-      IsAngled = HeaderRef.starts_with("<");
-    } else if (!IsAngled && IsQuoted) {
-      IsAngled = false;
     }
 
     // We might suggest insertion of an existing include in edge cases, e.g.,
@@ -169,11 +160,11 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
     // turns out to be the same as one of the unresolved includes in the
     // main file.
     std::optional<tooling::Replacement> Replacement = HeaderIncludes.insert(
-        HeaderRef.trim("\"<>"), IsAngled, tooling::IncludeDirective::Include);
+        HeaderRef.trim("\"<>"), Angled, tooling::IncludeDirective::Include);
     if (!Replacement.has_value())
       continue;
 
-    if (IsAngled && Spelling.front() == '\"') {
+    if (Angled && Spelling.front() == '\"') {
       Spelling.front() = '<';
       Spelling.back() = '>';
     }
