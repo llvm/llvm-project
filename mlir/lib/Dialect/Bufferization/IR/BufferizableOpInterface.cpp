@@ -125,6 +125,10 @@ void AnalysisState::resetCache() {
   insideMutuallyExclusiveRegionsCache.clear();
 }
 
+SymbolTableCollection &BufferizationState::getSymbolTables() {
+  return symbolTables;
+}
+
 Region *bufferization::getNextEnclosingRepetitiveRegion(
     Region *region, const BufferizationOptions &options) {
   assert(isRepetitiveRegion(region, options) && "expected repetitive region");

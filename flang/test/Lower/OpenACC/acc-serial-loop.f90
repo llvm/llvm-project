@@ -90,12 +90,12 @@ subroutine acc_serial_loop
   END DO
   !$acc end serial loop
 
-! CHECK:      acc.serial {{.*}} {
+! CHECK:      acc.serial {{.*}} async {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
+! CHECK-NEXT: }
 
   !$acc serial loop async(1)
   DO i = 1, n

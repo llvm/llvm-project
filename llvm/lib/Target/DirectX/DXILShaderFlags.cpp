@@ -32,7 +32,7 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static bool hasUAVsAtEveryStage(DXILResourceMap &DRM,
+static bool hasUAVsAtEveryStage(const DXILResourceMap &DRM,
                                 const ModuleMetadataInfo &MMDI) {
   if (DRM.uavs().empty())
     return false;
@@ -143,7 +143,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   }
 
   if (CSF.LowPrecisionPresent) {
-    if (CanSetNativeLowPrecisionMode)
+    if (CSF.NativeLowPrecisionMode)
       CSF.NativeLowPrecision = true;
     else
       CSF.MinimumPrecision = true;
@@ -207,9 +207,62 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   }
 }
 
+/// Set shader flags that apply to all functions within the module
+ComputedShaderFlags
+ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
+                                           const DXILResourceMap &DRM,
+                                           const ModuleMetadataInfo &MMDI) {
+
+  ComputedShaderFlags CSF;
+
+  // Set DisableOptimizations flag based on the presence of OptimizeNone
+  // attribute of entry functions.
+  if (MMDI.EntryPropertyVec.size() > 0) {
+    CSF.DisableOptimizations = MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
+        llvm::Attribute::OptimizeNone);
+    // Ensure all entry functions have the same optimization attribute
+    for (const auto &EntryFunProps : MMDI.EntryPropertyVec)
+      if (CSF.DisableOptimizations !=
+          EntryFunProps.Entry->hasFnAttribute(llvm::Attribute::OptimizeNone))
+        EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
+            *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
+  }
+
+  CSF.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
+
+  // Set the Max64UAVs flag if the number of UAVs is > 8
+  uint32_t NumUAVs = 0;
+  for (auto &UAV : DRM.uavs())
+    if (MMDI.ValidatorVersion < VersionTuple(1, 6))
+      NumUAVs++;
+    else // MMDI.ValidatorVersion >= VersionTuple(1, 6)
+      NumUAVs += UAV.getBinding().Size;
+  if (NumUAVs > 8)
+    CSF.Max64UAVs = true;
+
+  // Set the module flag that enables native low-precision execution mode.
+  // NativeLowPrecisionMode can only be set when the command line option
+  // -enable-16bit-types is provided. This is indicated by the dx.nativelowprec
+  // module flag being set
+  // This flag is needed even if the module does not use 16-bit types because a
+  // corresponding debug module may include 16-bit types, and tools that use the
+  // debug module may expect it to have the same flags as the original
+  if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("dx.nativelowprec")))
+    if (MMDI.ShaderModelVersion >= VersionTuple(6, 2))
+      CSF.NativeLowPrecisionMode = NativeLowPrec->getValue().getBoolValue();
+
+  // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
+  // are UAVs present globally.
+  if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
+    CSF.ResMayNotAlias = !DRM.uavs().empty();
+
+  return CSF;
+}
+
 /// Construct ModuleShaderFlags for module Module M
 void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
-                                   DXILResourceMap &DRM,
+                                   const DXILResourceMap &DRM,
                                    const ModuleMetadataInfo &MMDI) {
 
   CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
@@ -217,16 +270,10 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
   // flag to 1, thereby disabling the ability to set the ResMayNotAlias flag
   if (auto *ResMayAlias = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("dx.resmayalias")))
-    CanSetResMayNotAlias = !ResMayAlias->getValue().getBoolValue();
+    if (ResMayAlias->getValue().getBoolValue())
+      CanSetResMayNotAlias = false;
 
-  // NativeLowPrecisionMode can only be set when the command line option
-  // -enable-16bit-types is provided. This is indicated by the dx.nativelowprec
-  // module flag being set
-  CanSetNativeLowPrecisionMode = false;
-  if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("dx.nativelowprec")))
-    if (MMDI.ShaderModelVersion >= VersionTuple(6, 2))
-      CanSetNativeLowPrecisionMode = NativeLowPrec->getValue().getBoolValue();
+  ComputedShaderFlags GlobalSFMask = gatherGlobalModuleFlags(M, DRM, MMDI);
 
   CallGraph CG(M);
 
@@ -252,7 +299,7 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         continue;
       }
 
-      ComputedShaderFlags CSF;
+      ComputedShaderFlags CSF = GlobalSFMask;
       for (const auto &BB : *F)
         for (const auto &I : BB)
           updateFunctionFlags(CSF, I, DRTM, MMDI);
@@ -273,43 +320,6 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       // Merge SCCSF with that of F
       FunctionFlags[F].merge(SCCSF);
   }
-
-  // Set DisableOptimizations flag based on the presence of OptimizeNone
-  // attribute of entry functions.
-  if (MMDI.EntryPropertyVec.size() > 0) {
-    CombinedSFMask.DisableOptimizations =
-        MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
-            llvm::Attribute::OptimizeNone);
-    // Ensure all entry functions have the same optimization attribute
-    for (const auto &EntryFunProps : MMDI.EntryPropertyVec)
-      if (CombinedSFMask.DisableOptimizations !=
-          EntryFunProps.Entry->hasFnAttribute(llvm::Attribute::OptimizeNone))
-        EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
-            *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
-  }
-
-  // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
-  // are UAVs present globally.
-  if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
-    CombinedSFMask.ResMayNotAlias = !DRM.uavs().empty();
-
-  // Set the module flag that enables native low-precision execution mode. This
-  // is needed even if the module does not use 16-bit types because a
-  // corresponding debug module may include 16-bit types, and tools that use the
-  // debug module may expect it to have the same flags as the original
-  CombinedSFMask.NativeLowPrecisionMode = CanSetNativeLowPrecisionMode;
-
-  // Set the Max64UAVs flag if the number of UAVs is > 8
-  uint32_t NumUAVs = 0;
-  for (auto &UAV : DRM.uavs())
-    if (MMDI.ValidatorVersion < VersionTuple(1, 6))
-      NumUAVs++;
-    else // MMDI.ValidatorVersion >= VersionTuple(1, 6)
-      NumUAVs += UAV.getBinding().Size;
-  if (NumUAVs > 8)
-    CombinedSFMask.Max64UAVs = true;
-
-  CombinedSFMask.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {

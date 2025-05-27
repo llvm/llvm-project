@@ -17,10 +17,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: cmpxchg_i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (load store monotonic (s8) on %ir.addr)
-    ; CHECK: $w0 = COPY [[ATOMICRMW_ADD]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (load store monotonic (s8) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[ATOMICRMW_ADD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_CONSTANT i8 1
     %2:_(s8) = G_ATOMICRMW_ADD %0, %1 :: (load store monotonic (s8) on %ir.addr)
@@ -35,10 +37,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: cmpxchg_i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (load store monotonic (s16) on %ir.addr)
-    ; CHECK: $w0 = COPY [[ATOMICRMW_ADD]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (load store monotonic (s16) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[ATOMICRMW_ADD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s16) = G_CONSTANT i16 1
     %2:_(s16) = G_ATOMICRMW_ADD %0, %1 :: (load store monotonic (s16) on %ir.addr)
@@ -53,10 +57,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: cmpxchg_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (load store monotonic (s32) on %ir.addr)
-    ; CHECK: $w0 = COPY [[ATOMICRMW_ADD]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (load store monotonic (s32) on %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[ATOMICRMW_ADD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s32) = G_ATOMICRMW_ADD %0, %1 :: (load store monotonic (s32) on %ir.addr)
@@ -70,10 +76,12 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: cmpxchg_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[ATOMICRMW_ADD:%[0-9]+]]:_(s64) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (load store monotonic (s64) on %ir.addr)
-    ; CHECK: $x0 = COPY [[ATOMICRMW_ADD]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[ATOMICRMW_ADD:%[0-9]+]]:_(s64) = G_ATOMICRMW_ADD [[COPY]](p0), [[C]] :: (load store monotonic (s64) on %ir.addr)
+    ; CHECK-NEXT: $x0 = COPY [[ATOMICRMW_ADD]](s64)
     %0:_(p0) = COPY $x0
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(s64) = G_ATOMICRMW_ADD %0, %1 :: (load store monotonic (s64) on %ir.addr)
