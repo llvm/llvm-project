@@ -8,13 +8,19 @@
 
 #include "ARMHazardRecognizer.h"
 #include "ARMBaseInstrInfo.h"
+#include "ARMBaseRegisterInfo.h"
+#include "ARMInstrInfo.h"
 #include "ARMSubtarget.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FormatVariadic.h"
+#include <algorithm>
 
 using namespace llvm;
 
@@ -266,3 +272,183 @@ void ARMBankConflictHazardRecognizer::EmitInstruction(SUnit *SU) {
 void ARMBankConflictHazardRecognizer::AdvanceCycle() { Accesses.clear(); }
 
 void ARMBankConflictHazardRecognizer::RecedeCycle() { Accesses.clear(); }
+
+#define DEBUG_TYPE "cortex-m4-alignment-hazard-rec"
+
+STATISTIC(NumNoops, "Number of noops inserted");
+
+void ARMCortexM4FAlignmentHazardRecognizer::Reset() { Offset = 0; }
+
+ARMCortexM4FAlignmentHazardRecognizer::ARMCortexM4FAlignmentHazardRecognizer(
+    const MCSubtargetInfo &STI, LookaheadCallback CB)
+    : STI(STI), MBB(nullptr), MF(nullptr), Offset(0), Advanced(false),
+      EmittingNoop(false), GetLookahead(CB) {
+  MaxLookAhead = 1;
+}
+
+void ARMCortexM4FAlignmentHazardRecognizer::EmitInstruction(SUnit *SU) {
+  if (!SU->isInstr())
+    return;
+
+  MachineInstr *MI = SU->getInstr();
+  assert(MI);
+  return EmitInstruction(MI);
+}
+
+void ARMCortexM4FAlignmentHazardRecognizer::EmitInstruction(MachineInstr *MI) {
+  if (MI->isDebugInstr())
+    return;
+
+  unsigned Size = MI->getDesc().getSize();
+  Offset += Size;
+
+  // If the previous instruction had a hazard, then we're inserting a nop. Mark
+  // it with an AsmPrinter comment.
+  if (EmittingNoop)
+    if (MachineInstr *Prev = MI->getPrevNode())
+      Prev->setAsmPrinterFlag(ARM::ALIGNMENT_HAZARD);
+
+  EmittingNoop = false;
+}
+
+ScheduleHazardRecognizer::HazardType
+ARMCortexM4FAlignmentHazardRecognizer::getHazardType(SUnit *SU,
+                                                     int /*Ignored*/) {
+  if (!SU->isInstr())
+    return HazardType::NoHazard;
+
+  MachineInstr *MI = SU->getInstr();
+  assert(MI);
+  return getHazardTypeAssumingOffset(MI, Offset);
+}
+
+ScheduleHazardRecognizer::HazardType
+ARMCortexM4FAlignmentHazardRecognizer::getHazardTypeAssumingOffset(
+    MachineInstr *MI, size_t AssumedOffset) {
+  if (Advanced) {
+    Advanced = false;
+    return HazardType::NoHazard;
+  }
+
+  if (AssumedOffset % 4 == 0)
+    return HazardType::NoHazard;
+
+  const MCSchedModel &SCModel = STI.getSchedModel();
+  const MachineFunction *MF = MI->getParent()->getParent();
+  const ARMBaseInstrInfo &TII =
+      *static_cast<const ARMBaseInstrInfo *>(MF->getSubtarget().getInstrInfo());
+  int Latency = SCModel.computeInstrLatency<MCSubtargetInfo, MCInstrInfo,
+                                            InstrItineraryData, MachineInstr>(
+      STI, TII, *MI);
+  if (!Latency)
+    return HazardType::NoHazard;
+
+  const MCInstrDesc &MCID = MI->getDesc();
+  unsigned Domain = MCID.TSFlags & ARMII::DomainMask;
+
+  // https://developer.arm.com/documentation/ka006138/latest
+  //
+  // "A long sequence of T32 single-cycle floating-point instructions aligned on
+  // odd halfword boundaries will experience a performance drop. Specifically,
+  // one stall cycle is inserted for every three instructions executed."
+  bool SingleCycleFP =
+      Latency == 1 && (Domain & (ARMII::DomainNEON | ARMII::DomainVFP));
+  if (SingleCycleFP)
+    return HazardType::NoopHazard;
+
+  // https://documentation-service.arm.com/static/5fce431be167456a35b36ade
+  //
+  // "Neighboring load and store single instructions can pipeline their address
+  // and data phases but in some cases, such as 32- bit opcodes aligned on odd
+  // halfword boundaries, they might not pipeline optimally."
+  if (MCID.getSize() == 4 && (MI->mayLoad() || MI->mayStore()))
+    return HazardType::NoopHazard;
+
+  return HazardType::NoHazard;
+}
+
+void ARMCortexM4FAlignmentHazardRecognizer::AdvanceCycle() { Advanced = true; }
+void ARMCortexM4FAlignmentHazardRecognizer::RecedeCycle() {}
+
+void ARMCortexM4FAlignmentHazardRecognizer::EmitNoop() { Offset += 2; }
+
+unsigned ARMCortexM4FAlignmentHazardRecognizer::PreEmitNoops(SUnit *SU) {
+  if (!SU->isInstr())
+    return 0;
+
+  MachineInstr *MI = SU->getInstr();
+  assert(MI);
+  return PreEmitNoops(MI);
+}
+
+unsigned ARMCortexM4FAlignmentHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
+  const MachineBasicBlock *Parent = MI->getParent();
+  const Function &F = Parent->getParent()->getFunction();
+  if (Parent != MBB) {
+    Offset = 0;
+    MBB = Parent;
+  }
+
+  int MaxLookaheadInsts;
+  int RequiredHazardCount;
+  const MachineLoop *Loop = getLoopFor(MI);
+  GetLookahead(F, Loop, MaxLookaheadInsts, RequiredHazardCount);
+  if (MaxLookaheadInsts < 0)
+    return 0;
+
+  LLVM_DEBUG(MI->dump());
+
+  // Since one stall cycle is inserted for every three such instructions aligned
+  // to an odd-halfword boundary, look for runs of 6 or more, at which point it
+  // becomes profitable to insert the nop:
+  //
+  //   Insts | Bytes | Improvement
+  //  -------+-------+--------------
+  //   1 T2  |   2   |  -1 cycle (slower)
+  //   2 T2  |   2   |  -1 cycle
+  //   3 T2  |   2   |   0 cycle (breakeven)
+  //   4 T2  |   2   |   0 cycle
+  //   5 T2  |   2   |   0 cycle
+  //   6 T2  |   2   |   1 cycle (faster)
+  //
+  MachineBasicBlock::iterator Next = MI->getIterator();
+  MachineBasicBlock::const_iterator End = Parent->end();
+  int LookaheadInsts = 0;
+  int HazardCount = 0;
+  size_t LookaheadOffset = Offset;
+  while (Next != End && LookaheadInsts < MaxLookaheadInsts &&
+         (HazardType::NoopHazard ==
+          getHazardTypeAssumingOffset(&*Next, LookaheadOffset))) {
+    LookaheadOffset += Next->getDesc().getSize();
+    Next++;
+    HazardCount++;
+    LookaheadInsts++;
+  }
+
+  if (RequiredHazardCount <= HazardCount) {
+    EmittingNoop = true;
+    NumNoops++;
+    LLVM_DEBUG(dbgs() << "\toffset=0x" << utohexstr(Offset)
+                      << "\n\thas an alignment hazard, and requires a noop\n");
+    return 1;
+  }
+
+  LLVM_DEBUG(dbgs() << formatv("\toffset=0x{0}\n\tfound only {1} hazards in "
+                               "the next {2} instructions\n",
+                               utohexstr(Offset), HazardCount, LookaheadInsts));
+
+  return 0;
+}
+
+const MachineLoop *
+ARMCortexM4FAlignmentHazardRecognizer::getLoopFor(MachineInstr *MI) {
+  // Calculate and cache the MachineLoopInfo.
+  MachineFunction *ParentMF = MI->getParent()->getParent();
+  if (MF != ParentMF) {
+    MF = ParentMF;
+    MDT = MachineDominatorTree(*MF);
+    MLI.~MachineLoopInfo();
+    new (&MLI) MachineLoopInfo(MDT);
+  }
+  return MLI.getLoopFor(MI->getParent());
+}

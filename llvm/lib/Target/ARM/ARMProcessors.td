@@ -345,7 +345,8 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
-                                                         FeatureHasNoBranchPredictor]>;
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeatureHasCortexM4FAlignmentHazards]>;
 
 def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
                                                          ProcM7,

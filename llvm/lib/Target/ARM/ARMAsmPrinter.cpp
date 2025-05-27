@@ -14,6 +14,7 @@
 #include "ARMAsmPrinter.h"
 #include "ARM.h"
 #include "ARMConstantPoolValue.h"
+#include "ARMInstrInfo.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMTargetMachine.h"
 #include "ARMTargetObjectFile.h"
@@ -1462,6 +1463,9 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
     InConstantPool = false;
   }
+
+  if (MI->getAsmPrinterFlag(MachineInstr::CommentFlag(ARM::ALIGNMENT_HAZARD)))
+    OutStreamer->AddComment("alignment hazard");
 
   // Emit unwinding stuff for frame-related instructions
   if (Subtarget->isTargetEHABICompatible() &&

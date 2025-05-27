@@ -121,6 +121,9 @@ public:
   // Return whether the target has an explicit NOP encoding.
   bool hasNOP() const;
 
+  void insertNoop(MachineBasicBlock &MBB,
+                  MachineBasicBlock::iterator MI) const override;
+
   // Return the non-pre/post incrementing version of 'Opc'. Return 0
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
@@ -142,6 +145,9 @@ public:
   ScheduleHazardRecognizer *
   CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                      const ScheduleDAG *DAG) const override;
+
+  ScheduleHazardRecognizer *
+  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const override;
 
   // Branch analysis.
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,

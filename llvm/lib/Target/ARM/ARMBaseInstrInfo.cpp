@@ -136,6 +136,46 @@ ARMBaseInstrInfo::CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
   return TargetInstrInfo::CreateTargetHazardRecognizer(STI, DAG);
 }
 
+namespace {
+cl::opt<bool> LoopsOnly("cortex-m4-alignment-hazard-rec-loops-only", cl::Hidden,
+                        cl::init(true), cl::desc("Emit nops only in loops"));
+
+cl::opt<bool>
+    InnermostLoopsOnly("cortex-m4-alignment-hazard-rec-innermost-loops-only",
+                       cl::Hidden, cl::init(true),
+                       cl::desc("Emit noops only in innermost loops"));
+
+cl::opt<int> MaxLookaheadInsts(
+    "cortex-m4-alignment-hazard-rec-max-lookahead", cl::Hidden, cl::init(6),
+    cl::desc(
+        "Maximum number of instructions to look ahead for a run of hazards"));
+
+cl::opt<int>
+    RequiredHazardCount("cortex-m4-alignment-hazard-rec-reqd-hazard-count",
+                        cl::Hidden, cl::init(6),
+                        cl::desc("Number of hazards required to be observed in "
+                                 "a run before emitting a nop"));
+
+void cortexM4FHazardLookahead(const Function &F, const MachineLoop *Loop,
+                              int &MaxLookaheadInsts,
+                              int &RequiredHazardCount) {
+  MaxLookaheadInsts = ::MaxLookaheadInsts;
+  RequiredHazardCount = ::RequiredHazardCount;
+
+  // This optimization is likely only critical in loops. Try to save code size
+  // elsewhere by avoiding it when we're not in an innermost loop.
+  if (LoopsOnly && InnermostLoopsOnly && (!Loop || !Loop->isInnermost()))
+    MaxLookaheadInsts = -1;
+
+  if (LoopsOnly && !Loop)
+    MaxLookaheadInsts = -1;
+
+  if (F.hasOptSize())
+    MaxLookaheadInsts = -1;
+}
+
+} // anonymous namespace
+
 // Called during:
 // - pre-RA scheduling
 // - post-RA scheduling when FeatureUseMISched is set
@@ -151,6 +191,11 @@ ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetMIHazardRecognizer(
   if (Subtarget.isCortexM7() && !DAG->hasVRegLiveness())
     MHR->AddHazardRecognizer(
         std::make_unique<ARMBankConflictHazardRecognizer>(DAG, 0x4, true));
+
+  if (Subtarget.hasCortexM4FAlignmentHazards() && !DAG->hasVRegLiveness())
+    MHR->AddHazardRecognizer(
+        std::make_unique<ARMCortexM4FAlignmentHazardRecognizer>(
+            DAG->MF.getSubtarget(), cortexM4FHazardLookahead));
 
   // Not inserting ARMHazardRecognizerFPMLx because that would change
   // legacy behavior
@@ -169,10 +214,24 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
   if (Subtarget.isThumb2() || Subtarget.hasVFP2Base())
     MHR->AddHazardRecognizer(std::make_unique<ARMHazardRecognizerFPMLx>());
 
+  if (Subtarget.hasCortexM4FAlignmentHazards())
+    MHR->AddHazardRecognizer(
+        std::make_unique<ARMCortexM4FAlignmentHazardRecognizer>(
+            DAG->MF.getSubtarget(), cortexM4FHazardLookahead));
+
   auto BHR = TargetInstrInfo::CreateTargetPostRAHazardRecognizer(II, DAG);
   if (BHR)
     MHR->AddHazardRecognizer(std::unique_ptr<ScheduleHazardRecognizer>(BHR));
   return MHR;
+}
+
+ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetPostRAHazardRecognizer(
+    const MachineFunction &MF) const {
+  if (!Subtarget.hasCortexM4FAlignmentHazards())
+    return TargetInstrInfo::CreateTargetPostRAHazardRecognizer(MF);
+
+  return new ARMCortexM4FAlignmentHazardRecognizer(MF.getSubtarget(),
+                                                   cortexM4FHazardLookahead);
 }
 
 MachineInstr *
@@ -5454,6 +5513,21 @@ void ARMBaseInstrInfo::breakPartialRegDependency(
 
 bool ARMBaseInstrInfo::hasNOP() const {
   return Subtarget.hasFeature(ARM::HasV6KOps);
+}
+
+void ARMBaseInstrInfo::insertNoop(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MI) const {
+  DebugLoc DL;
+  if (hasNOP()) {
+    BuildMI(MBB, MI, DL, get(ARM::tHINT)).addImm(0).addImm(ARMCC::AL).addImm(0);
+  } else {
+    BuildMI(MBB, MI, DL, get(ARM::MOVr))
+        .addReg(ARM::R0)
+        .addReg(ARM::R0)
+        .addImm(ARMCC::AL)
+        .addReg(0)
+        .addReg(0);
+  }
 }
 
 bool ARMBaseInstrInfo::isSwiftFastImmShift(const MachineInstr *MI) const {
