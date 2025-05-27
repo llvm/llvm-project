@@ -551,7 +551,7 @@ private:
     auto __found = std::lower_bound(std::begin(__text_encoding_data), std::end(__text_encoding_data), __id_rep(__i));
     return __found != std::end(__text_encoding_data)
              ? __found
-             : __text_encoding_data + 1; // only possible way to get unknown is if 33, 34 are passed
+             : __text_encoding_data + 1; // unknown, should be unreachable
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr __encoding_data __text_encoding_data[] = {
