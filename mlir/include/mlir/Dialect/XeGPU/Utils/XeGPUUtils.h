@@ -77,7 +77,7 @@ LayoutAttr getLayoutAttr(const OpOperand &opr);
 void setLayoutAttr(const OpOperand &opr, const LayoutAttr layout);
 
 /// Set the LayoutAttr for the given OpResult by attching it to the defining op
-void setLayoutAttr(OpResult result, LayoutAttr layout);
+void setLayoutAttr(const OpResult result, const LayoutAttr layout);
 
 /// Set the LayoutAttr for each OpOperand and OpResult of the given operation.
 /// If the operation contains regions, it is also applied recursively to the
