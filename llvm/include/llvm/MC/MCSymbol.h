@@ -90,9 +90,6 @@ protected:
   /// True if this symbol can be redefined.
   unsigned IsRedefinable : 1;
 
-  /// IsUsed - True if this symbol has been used.
-  mutable unsigned IsUsed : 1;
-
   mutable unsigned IsRegistered : 1;
 
   /// True if this symbol is visible outside this translation unit. Note: ELF
@@ -111,6 +108,9 @@ protected:
 
   /// True if we have created a relocation that uses this symbol.
   mutable unsigned IsUsedInReloc : 1;
+
+  /// Used to detect cyclic dependency like `a = a + 1` and `a = b; b = a`.
+  unsigned IsResolving : 1;
 
   /// This is actually a Contents enumerator, but is unsigned to avoid sign
   /// extension and achieve better bitpacking with MSVC.
@@ -162,15 +162,18 @@ protected:
   };
 
   MCSymbol(SymbolKind Kind, const MCSymbolTableEntry *Name, bool isTemporary)
-      : IsTemporary(isTemporary), IsRedefinable(false), IsUsed(false),
-        IsRegistered(false), IsExternal(false), IsPrivateExtern(false),
-        IsWeakExternal(false), Kind(Kind), IsUsedInReloc(false),
+      : IsTemporary(isTemporary), IsRedefinable(false), IsRegistered(false),
+        IsExternal(false), IsPrivateExtern(false), IsWeakExternal(false),
+        Kind(Kind), IsUsedInReloc(false), IsResolving(0),
         SymbolContents(SymContentsUnset), CommonAlignLog2(0), Flags(0) {
     Offset = 0;
     HasName = !!Name;
     if (Name)
       getNameEntryPtr() = Name;
   }
+
+  MCSymbol(const MCSymbol &) = default;
+  MCSymbol &operator=(const MCSymbol &) = delete;
 
   // Provide custom new/delete as we will only allocate space for a name
   // if we need one.
@@ -198,9 +201,6 @@ private:
   }
 
 public:
-  MCSymbol(const MCSymbol &) = delete;
-  MCSymbol &operator=(const MCSymbol &) = delete;
-
   /// getName - Get the symbol name.
   StringRef getName() const {
     if (!HasName)
@@ -221,9 +221,6 @@ public:
   /// isTemporary - Check if this is an assembler temporary symbol.
   bool isTemporary() const { return IsTemporary; }
 
-  /// isUsed - Check if this is used.
-  bool isUsed() const { return IsUsed; }
-
   /// Check if this symbol is redefinable.
   bool isRedefinable() const { return IsRedefinable; }
   /// Mark this symbol as redefinable.
@@ -240,6 +237,9 @@ public:
     }
   }
 
+  bool isResolving() const { return IsResolving; }
+  void setIsResolving(bool V) { IsResolving = V; }
+
   /// @}
   /// \name Associated Sections
   /// @{
@@ -252,7 +252,7 @@ public:
   /// isInSection - Check if this symbol is defined in some section (i.e., it
   /// is defined but not absolute).
   bool isInSection() const {
-    auto *F = getFragment(0);
+    auto *F = getFragment();
     return F && F != AbsolutePseudoFragment;
   }
 
@@ -300,10 +300,9 @@ public:
     return SymbolContents == SymContentsVariable;
   }
 
-  /// getVariableValue - Get the value for variable symbols.
+  /// Get the expression of the variable symbol.
   const MCExpr *getVariableValue(bool SetUsed = true) const {
     assert(isVariable() && "Invalid accessor!");
-    IsUsed |= SetUsed;
     return Value;
   }
 
@@ -393,12 +392,12 @@ public:
     return SymbolContents == SymContentsTargetCommon;
   }
 
-  MCFragment *getFragment(bool SetUsed = false) const {
+  MCFragment *getFragment() const {
     if (Fragment || !isVariable() || isWeakExternal())
       return Fragment;
     // If the symbol is a non-weak alias, get information about
     // the aliasee. (Don't try to resolve weak aliases.)
-    Fragment = getVariableValue(SetUsed)->findAssociatedFragment();
+    Fragment = getVariableValue()->findAssociatedFragment();
     return Fragment;
   }
 
