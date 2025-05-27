@@ -13,7 +13,7 @@ include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
 def ApplyArmSVELowerContractionPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.vector.arm_sve.lower_contraction",
+    : Op<Transform_Dialect, "apply_patterns.arm_sve.vector_contract_to_i8mm",
          [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Indicates that vector contraction-like operations should be lowered to

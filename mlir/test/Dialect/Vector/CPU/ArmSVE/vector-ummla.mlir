@@ -102,9 +102,9 @@ func.func @test_vector_contract_to_ummla(%lhs: vector<4x8xi8>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %module : (!transform.any_op) -> !transform.op<"func.func">
-  
+
     transform.apply_patterns to %func {
-      transform.apply_patterns.vector.arm_sve.lower_contraction
+      transform.apply_patterns.arm_sve.vector_contract_to_i8mm
     } : !transform.op<"func.func">
 
     transform.yield
