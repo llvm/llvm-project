@@ -2205,9 +2205,14 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
   assert(MI.isRegSequence());
   auto Reg = MI.getOperand(0).getReg();
   const TargetRegisterClass *DefRC = MRI->getRegClass(Reg);
+  const MCInstrDesc &MovDesc = TII->get(AMDGPU::V_MOV_B64_PSEUDO);
+  const TargetRegisterClass *RC =
+      TII->getRegClass(MovDesc, 0, TRI, *MI.getMF());
 
   if (!ST->hasMovB64() || !TRI->isVGPR(*MRI, Reg) ||
-      !MRI->hasOneNonDBGUse(Reg) || !TRI->isProperlyAlignedRC(*DefRC))
+      !MRI->hasOneNonDBGUse(Reg) ||
+      (!TRI->getCompatibleSubRegClass(DefRC, RC, AMDGPU::sub0_sub1) &&
+       DefRC != RC))
     return false;
 
   SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
@@ -2216,10 +2221,10 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
 
   // Only attempting to fold immediate materializations.
   if (!Defs.empty() &&
-      !std::all_of(Defs.begin(), Defs.end(),
-                   [](const std::pair<MachineOperand *, unsigned> &Op) {
-                     return Op.first->isImm();
-                   }))
+      std::any_of(Defs.begin(), Defs.end(),
+                  [](const std::pair<MachineOperand *, unsigned> &Op) {
+                    return !Op.first->isImm();
+                  }))
     return false;
 
   SmallVector<uint64_t, 8> ImmVals;
@@ -2245,9 +2250,8 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
   }
 
   // Can only combine REG_SEQUENCE into one 64b immediate materialization mov.
-  if (DefRC == TRI->getVGPR64Class()) {
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-            TII->get(AMDGPU::V_MOV_B64_PSEUDO), Reg)
+  if (DefRC == RC) {
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), MovDesc, Reg)
         .addImm(ImmVals[0]);
     MI.eraseFromParent();
     return true;
@@ -2262,21 +2266,22 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
   for (unsigned i = MI.getNumOperands() - 1; i > 0; --i)
     MI.removeOperand(i);
 
-  for (unsigned i = 0; i < ImmVals.size(); ++i) {
-    const TargetRegisterClass *RC = TRI->getVGPR64Class();
+  unsigned Ch = 0;
+  for (uint64_t Val : ImmVals) {
     Register MovReg = MRI->createVirtualRegister(RC);
     // Duplicate vmov imm materializations (e.g., splatted operands) should get
     // combined by MachineCSE pass.
     BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
             TII->get(AMDGPU::V_MOV_B64_PSEUDO), MovReg)
-        .addImm(ImmVals[i]);
+        .addImm(Val);
 
     // 2 subregs with no overlap (i.e., sub0_sub1, sub2_sub3, etc.).
     unsigned SubReg64B =
-        SIRegisterInfo::getSubRegFromChannel(/*Channel=*/i * 2, /*SubRegs=*/2);
+        SIRegisterInfo::getSubRegFromChannel(/*Channel=*/Ch * 2, /*SubRegs=*/2);
 
     MI.addOperand(MachineOperand::CreateReg(MovReg, /*isDef=*/false));
     MI.addOperand(MachineOperand::CreateImm(SubReg64B));
+    ++Ch;
   }
 
   LLVM_DEBUG(dbgs() << "Folded into " << MI);
