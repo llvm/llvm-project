@@ -1689,12 +1689,10 @@ void DevirtModule::exportConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
 
 Constant *DevirtModule::importGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,
                                      StringRef Name) {
-  Constant *C =
+  GlobalVariable *GV =
       M.getOrInsertGlobal(getGlobalName(Slot, Args, Name), Int8Arr0Ty);
-  auto *GV = dyn_cast<GlobalVariable>(C);
-  if (GV)
-    GV->setVisibility(GlobalValue::HiddenVisibility);
-  return C;
+  GV->setVisibility(GlobalValue::HiddenVisibility);
+  return GV;
 }
 
 Constant *DevirtModule::importConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
