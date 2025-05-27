@@ -672,10 +672,16 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array
         Ty = HandleType->getTypeParameter(0);
-        assert(Ty->isArrayTy() &&
-               "spv_resource_getpointer indexes into an array, so the type of "
-               "the buffer should be an array.");
-        Ty = Ty->getArrayElementType();
+        if (Ty->isArrayTy())
+          Ty = Ty->getArrayElementType();
+        else {
+          TargetExtType *BufferTy = cast<TargetExtType>(Ty);
+          assert(BufferTy->getTargetExtName() == "spirv.Layout");
+          Ty = BufferTy->getTypeParameter(0);
+          assert(Ty && Ty->isStructTy());
+          uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
+          Ty = cast<StructType>(Ty)->getElementType(Index);
+        }
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
