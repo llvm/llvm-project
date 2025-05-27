@@ -24,11 +24,11 @@
 #ifndef LLVM_C_LLJIT_H
 #define LLVM_C_LLJIT_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/Orc.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -115,7 +115,7 @@ LLVM_C_ABI void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
  * and not-yet compiled modules.
  */
 LLVM_C_ABI LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
-                                LLVMOrcLLJITBuilderRef Builder);
+                                           LLVMOrcLLJITBuilderRef Builder);
 
 /**
  * Dispose of an LLJIT instance.
@@ -128,7 +128,8 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcDisposeLLJIT(LLVMOrcLLJITRef J);
  * The ExecutionSession is owned by the LLJIT instance. The client is not
  * responsible for managing its memory.
  */
-LLVM_C_ABI LLVMOrcExecutionSessionRef LLVMOrcLLJITGetExecutionSession(LLVMOrcLLJITRef J);
+LLVM_C_ABI LLVMOrcExecutionSessionRef
+LLVMOrcLLJITGetExecutionSession(LLVMOrcLLJITRef J);
 
 /**
  * Return a reference to the Main JITDylib.
@@ -168,8 +169,8 @@ LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName);
  * Resources associated with the given object will be tracked by the given
  * JITDylib's default resource tracker.
  */
-LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
-                                       LLVMMemoryBufferRef ObjBuffer);
+LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddObjectFile(
+    LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD, LLVMMemoryBufferRef ObjBuffer);
 
 /**
  * Add a buffer representing an object file to the given ResourceTracker's
@@ -180,9 +181,9 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITD
  * Resources associated with the given object will be tracked by ResourceTracker
  * RT.
  */
-LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcLLJITRef J,
-                                             LLVMOrcResourceTrackerRef RT,
-                                             LLVMMemoryBufferRef ObjBuffer);
+LLVM_C_ABI LLVMErrorRef
+LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcLLJITRef J, LLVMOrcResourceTrackerRef RT,
+                                LLVMMemoryBufferRef ObjBuffer);
 
 /**
  * Add an IR module to the given JITDylib in the given LLJIT instance. This
@@ -193,9 +194,8 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcLLJITRef J,
  * Resources associated with the given Module will be tracked by the given
  * JITDylib's default resource tracker.
  */
-LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
-                                         LLVMOrcJITDylibRef JD,
-                                         LLVMOrcThreadSafeModuleRef TSM);
+LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(
+    LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD, LLVMOrcThreadSafeModuleRef TSM);
 
 /**
  * Add an IR module to the given ResourceTracker's JITDylib in the given LLJIT
@@ -206,9 +206,9 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
  * Resources associated with the given Module will be tracked by ResourceTracker
  * RT.
  */
-LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(LLVMOrcLLJITRef J,
-                                               LLVMOrcResourceTrackerRef JD,
-                                               LLVMOrcThreadSafeModuleRef TSM);
+LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(
+    LLVMOrcLLJITRef J, LLVMOrcResourceTrackerRef JD,
+    LLVMOrcThreadSafeModuleRef TSM);
 
 /**
  * Look up the given symbol in the main JITDylib of the given LLJIT instance.
@@ -216,13 +216,14 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(LLVMOrcLLJITRef J,
  * This operation does not take ownership of the Name argument.
  */
 LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
-                                LLVMOrcExecutorAddress *Result,
-                                const char *Name);
+                                           LLVMOrcExecutorAddress *Result,
+                                           const char *Name);
 
 /**
  * Returns a non-owning reference to the LLJIT instance's object linking layer.
  */
-LLVM_C_ABI LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J);
+LLVM_C_ABI LLVMOrcObjectLayerRef
+LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J);
 
 /**
  * Returns a non-owning reference to the LLJIT instance's object linking layer.
@@ -233,7 +234,8 @@ LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J);
 /**
  * Returns a non-owning reference to the LLJIT instance's IR transform layer.
  */
-LLVM_C_ABI LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J);
+LLVM_C_ABI LLVMOrcIRTransformLayerRef
+LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J);
 
 /**
  * Get the LLJIT instance's default data layout string.
