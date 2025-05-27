@@ -247,8 +247,11 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
 
     Expected<llvm::object::SymbolRef::Type> sym_type_or_err =
         symbol_ref.getType();
+    if (!sym_type_or_err) {
+      consumeError(sym_type_or_err.takeError());
+      continue;
+    }
     symbol.SetType(MapSymbolType(sym_type_or_err.get()));
-    printf("%s %d\n", symbol.GetName(), *sym_type_or_err);
 
     lldb_symtab.AddSymbol(symbol);
   }
