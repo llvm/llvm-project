@@ -3080,6 +3080,7 @@ void AMDGPUAsmParser::initializeGprCountSymbol(RegisterKind RegKind) {
   assert(SymbolName && "initializing invalid register kind");
   MCSymbol *Sym = getContext().getOrCreateSymbol(*SymbolName);
   Sym->setVariableValue(MCConstantExpr::create(0, getContext()));
+  Sym->setRedefinable(true);
 }
 
 bool AMDGPUAsmParser::updateGprCountSymbols(RegisterKind RegKind,
