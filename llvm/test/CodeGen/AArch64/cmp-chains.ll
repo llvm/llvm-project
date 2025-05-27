@@ -501,3 +501,47 @@ entry:
   %land.ext = zext i1 %0 to i32
   ret i32 %land.ext
 }
+
+define i32 @compare_with_neg_32(i32 %a, i32 %b, i32 %c) {
+; SDISEL-LABEL: compare_with_neg_32:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmn w1, #31, #8, lt
+; SDISEL-NEXT:    csel w0, w1, w0, ge
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: compare_with_neg_32:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #-32 // =0xffffffe0
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    ccmp w1, w8, #4, lt
+; GISEL-NEXT:    csel w0, w1, w0, gt
+; GISEL-NEXT:    ret
+  %cmp = icmp sgt i32 %b, -32
+  %cmp1 = icmp slt i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %cond = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %cond
+}
+
+define i32 @compare_with_32(i32 %a, i32 %b, i32 %c) {
+; SDISEL-LABEL: compare_with_32:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmp w1, #31, #4, lt
+; SDISEL-NEXT:    csel w0, w1, w0, gt
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: compare_with_32:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #32 // =0x20
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    ccmp w1, w8, #8, lt
+; GISEL-NEXT:    csel w0, w1, w0, ge
+; GISEL-NEXT:    ret
+  %cmp = icmp sge i32 %b, 32
+  %cmp1 = icmp slt i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %cond = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %cond
+}

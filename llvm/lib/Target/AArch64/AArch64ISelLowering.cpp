@@ -3716,6 +3716,55 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
     // Produce a normal comparison if we are first in the chain
     if (!CCOp)
       return emitComparison(LHS, RHS, CC, DL, DAG);
+
+    if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
+      EVT VT = RHS.getValueType();
+      APInt C = RHSC->getAPIntValue();
+      // shouldBeAdjustedToZero is a special case to better fold with
+      // emitComparison().
+      if (C.getZExtValue() == 32 && (CC == ISD::SETLT || CC == ISD::SETGE ||
+                                     CC == ISD::SETULT || CC == ISD::SETUGE)) {
+        switch (CC) {
+        case ISD::SETLT:
+          CC = ISD::SETLE;
+          break;
+        case ISD::SETGE:
+          CC = ISD::SETGT;
+          break;
+        case ISD::SETULT:
+          CC = ISD::SETULE;
+          break;
+        case ISD::SETUGE:
+          CC = ISD::SETUGT;
+          break;
+        default:
+          llvm_unreachable("Should not happen");
+        }
+        RHS = DAG.getConstant(31, DL, VT);
+        OutCC = changeIntCCToAArch64CC(CC);
+      } else if (C.getSExtValue() == -32 &&
+                 (CC == ISD::SETLE || CC == ISD::SETGT || CC == ISD::SETULE ||
+                  CC == ISD::SETUGT)) {
+        switch (CC) {
+        case ISD::SETLE:
+          CC = ISD::SETLT;
+          break;
+        case ISD::SETGT:
+          CC = ISD::SETGE;
+          break;
+        case ISD::SETULE:
+          CC = ISD::SETULT;
+          break;
+        case ISD::SETUGT:
+          CC = ISD::SETUGE;
+          break;
+        default:
+          llvm_unreachable("Should not happen");
+        }
+        RHS = DAG.getConstant((C + 1).getZExtValue(), DL, VT); // -31
+        OutCC = changeIntCCToAArch64CC(CC);
+      }
+    }
     // Otherwise produce a ccmp.
     return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
                                      DAG);
