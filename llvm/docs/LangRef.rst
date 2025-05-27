@@ -5614,6 +5614,8 @@ LoongArch:
 - ``m``: A memory operand whose address is formed by a base register and
   offset that is suitable for use in instructions with the same addressing
   mode as st.w and ld.w.
+- ``q``: A general-purpose register except for $r0 and $r1 (for the csrxchg
+  instruction).
 - ``I``: A signed 12-bit constant (for arithmetic instructions).
 - ``J``: An immediate integer zero.
 - ``K``: An unsigned 12-bit constant (for logic instructions).
