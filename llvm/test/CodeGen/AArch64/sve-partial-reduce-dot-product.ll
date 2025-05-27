@@ -668,28 +668,18 @@ define <vscale x 4 x i32> @not_udot(<vscale x 4 x i32> %acc, <vscale x 8 x i8> %
 ;
 ; CHECK-NEWLOWERING-SVE2-LABEL: not_udot:
 ; CHECK-NEWLOWERING-SVE2:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-SVE2-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEWLOWERING-SVE2-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-NEWLOWERING-SVE2-NEXT:    ptrue p0.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    uunpklo z3.s, z2.h
-; CHECK-NEWLOWERING-SVE2-NEXT:    uunpklo z4.s, z1.h
-; CHECK-NEWLOWERING-SVE2-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEWLOWERING-SVE2-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEWLOWERING-SVE2-NEXT:    mla z0.s, p0/m, z4.s, z3.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalb z0.h, z1.b, z2.b
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalt z0.h, z1.b, z2.b
 ; CHECK-NEWLOWERING-SVE2-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-SME-LABEL: not_udot:
 ; CHECK-NEWLOWERING-SME:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-SME-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEWLOWERING-SME-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-NEWLOWERING-SME-NEXT:    ptrue p0.s
-; CHECK-NEWLOWERING-SME-NEXT:    uunpklo z3.s, z2.h
-; CHECK-NEWLOWERING-SME-NEXT:    uunpklo z4.s, z1.h
-; CHECK-NEWLOWERING-SME-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEWLOWERING-SME-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEWLOWERING-SME-NEXT:    mla z0.s, p0/m, z4.s, z3.s
-; CHECK-NEWLOWERING-SME-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEWLOWERING-SME-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEWLOWERING-SME-NEXT:    umlalb z0.h, z1.b, z2.b
+; CHECK-NEWLOWERING-SME-NEXT:    umlalt z0.h, z1.b, z2.b
 ; CHECK-NEWLOWERING-SME-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
@@ -728,28 +718,18 @@ define <vscale x 2 x i64> @not_udot_wide(<vscale x 2 x i64> %acc, <vscale x 4 x 
 ;
 ; CHECK-NEWLOWERING-SVE2-LABEL: not_udot_wide:
 ; CHECK-NEWLOWERING-SVE2:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-SVE2-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-NEWLOWERING-SVE2-NEXT:    and z2.s, z2.s, #0xffff
-; CHECK-NEWLOWERING-SVE2-NEXT:    ptrue p0.d
-; CHECK-NEWLOWERING-SVE2-NEXT:    uunpklo z3.d, z2.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    uunpklo z4.d, z1.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    mla z0.d, p0/m, z4.d, z3.d
-; CHECK-NEWLOWERING-SVE2-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEWLOWERING-SVE2-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalb z0.h, z1.b, z2.b
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalt z0.h, z1.b, z2.b
 ; CHECK-NEWLOWERING-SVE2-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-SME-LABEL: not_udot_wide:
 ; CHECK-NEWLOWERING-SME:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-SME-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-NEWLOWERING-SME-NEXT:    and z2.s, z2.s, #0xffff
-; CHECK-NEWLOWERING-SME-NEXT:    ptrue p0.d
-; CHECK-NEWLOWERING-SME-NEXT:    uunpklo z3.d, z2.s
-; CHECK-NEWLOWERING-SME-NEXT:    uunpklo z4.d, z1.s
-; CHECK-NEWLOWERING-SME-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-SME-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEWLOWERING-SME-NEXT:    mla z0.d, p0/m, z4.d, z3.d
-; CHECK-NEWLOWERING-SME-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEWLOWERING-SME-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEWLOWERING-SME-NEXT:    umlalb z0.h, z1.b, z2.b
+; CHECK-NEWLOWERING-SME-NEXT:    umlalt z0.h, z1.b, z2.b
 ; CHECK-NEWLOWERING-SME-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 4 x i16> %a to <vscale x 4 x i64>
