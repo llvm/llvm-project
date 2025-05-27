@@ -367,9 +367,8 @@ public:
   }
   // END MCCAS
 
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 
   void bindIndirectSymbols(MCAssembler &Asm);
 

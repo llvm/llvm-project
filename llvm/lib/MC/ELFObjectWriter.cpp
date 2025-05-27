@@ -1322,12 +1322,11 @@ bool ELFObjectWriter::checkRelocation(MCContext &Ctx, SMLoc Loc,
   return true;
 }
 
-void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
-                                       const MCFragment *Fragment,
+void ELFObjectWriter::recordRelocation(const MCFragment &F,
                                        const MCFixup &Fixup, MCValue Target,
                                        uint64_t &FixedValue) {
-  MCAsmBackend &Backend = Asm.getBackend();
-  const MCSectionELF &FixupSection = cast<MCSectionELF>(*Fragment->getParent());
+  MCAsmBackend &Backend = Asm->getBackend();
+  const MCSectionELF &FixupSection = cast<MCSectionELF>(*F.getParent());
   MCContext &Ctx = getContext();
 
   const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
@@ -1350,7 +1349,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
 
   bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
                  MCFixupKindInfo::FKF_IsPCRel;
-  uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
+  uint64_t FixupOffset = Asm->getFragmentOffset(F) + Fixup.getOffset();
   uint64_t Addend = Target.getConstant();
   if (auto *RefB = Target.getSubSym()) {
     const auto &SymB = cast<MCSymbolELF>(*RefB);
@@ -1371,7 +1370,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
 
     assert(!IsPCRel && "should have been folded");
     IsPCRel = true;
-    Addend += FixupOffset - Asm.getSymbolOffset(SymB);
+    Addend += FixupOffset - Asm->getSymbolOffset(SymB);
   }
 
   unsigned Type;
@@ -1383,13 +1382,13 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   bool UseSectionSym =
       SymA && SymA->getBinding() == ELF::STB_LOCAL && !SymA->isUndefined();
   if (UseSectionSym) {
-    UseSectionSym = useSectionSymbol(Asm, Target, SymA, Addend, Type);
+    UseSectionSym = useSectionSymbol(*Asm, Target, SymA, Addend, Type);
 
     // Disable STT_SECTION adjustment for .reloc directives.
     UseSectionSym &= !mc::isRelocRelocation(Fixup.getKind());
 
     if (UseSectionSym)
-      Addend += Asm.getSymbolOffset(*SymA);
+      Addend += Asm->getSymbolOffset(*SymA);
   }
 
   FixedValue = usesRela(Ctx.getTargetOptions(), FixupSection) ? 0 : Addend;
