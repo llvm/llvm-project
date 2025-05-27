@@ -553,25 +553,26 @@ void b1(bool a, bool b) {
 // CIR: [[X:%[0-9]+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
 // CIR: cir.store %[[ARG0]], [[A]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG1]], [[B]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR: [[AVAL:%[0-9]+]] = cir.load [[A]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: [[AVAL:%[0-9]+]] = cir.load align(1) [[A]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: [[RES1:%[0-9]+]] = cir.ternary([[AVAL]], true {
-// CIR: [[BVAL:%[0-9]+]] = cir.load [[B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: [[BVAL:%[0-9]+]] = cir.load align(1) [[B]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: cir.yield [[BVAL]] : !cir.bool
 // CIR: }, false {
 // CIR: [[FALSE:%[0-9]+]] = cir.const #false
 // CIR: cir.yield [[FALSE]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
-// CIR: cir.store [[RES1]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR: [[XVAL:%[0-9]+]] = cir.load [[X]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: cir.store align(1) [[RES1]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR: [[XVAL:%[0-9]+]] = cir.load align(1) [[X]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: [[RES2:%[0-9]+]] = cir.ternary([[XVAL]], true {
 // CIR: [[TRUE:%[0-9]+]] = cir.const #true
 // CIR: cir.yield [[TRUE]] : !cir.bool
 // CIR: }, false {
-// CIR: [[BVAL2:%[0-9]+]] = cir.load [[B]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: [[BVAL2:%[0-9]+]] = cir.load align(1) [[B]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: cir.yield [[BVAL2]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
-// CIR: cir.store [[RES2]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR: cir.store align(1) [[RES2]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: cir.return
+
 
 // LLVM-LABEL: define void @_Z2b1bb(
 // LLVM-SAME: i1 %[[ARG0:[0-9]+]], i1 %[[ARG1:[0-9]+]])
@@ -632,33 +633,34 @@ void b3(int a, int b, int c, int d) {
 // CIR: cir.store %[[ARG1]], [[B]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG2]], [[C]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG3]], [[D]] : !s32i, !cir.ptr<!s32i>
-// CIR: [[AVAL1:%[0-9]+]] = cir.load [[A]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[BVAL1:%[0-9]+]] = cir.load [[B]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[AVAL1:%[0-9]+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[BVAL1:%[0-9]+]] = cir.load align(4) [[B]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[CMP1:%[0-9]+]] = cir.cmp(eq, [[AVAL1]], [[BVAL1]]) : !s32i, !cir.bool
 // CIR: [[AND_RESULT:%[0-9]+]] = cir.ternary([[CMP1]], true {
-// CIR: [[CVAL1:%[0-9]+]] = cir.load [[C]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[DVAL1:%[0-9]+]] = cir.load [[D]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[CVAL1:%[0-9]+]] = cir.load align(4) [[C]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[DVAL1:%[0-9]+]] = cir.load align(4) [[D]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[CMP2:%[0-9]+]] = cir.cmp(eq, [[CVAL1]], [[DVAL1]]) : !s32i, !cir.bool
 // CIR: cir.yield [[CMP2]] : !cir.bool
 // CIR: }, false {
 // CIR: [[FALSE:%[0-9]+]] = cir.const #false
 // CIR: cir.yield [[FALSE]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
-// CIR: cir.store [[AND_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
-// CIR: [[AVAL2:%[0-9]+]] = cir.load [[A]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[BVAL2:%[0-9]+]] = cir.load [[B]] : !cir.ptr<!s32i>, !s32i
+// CIR: cir.store align(1) [[AND_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR: [[AVAL2:%[0-9]+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[BVAL2:%[0-9]+]] = cir.load align(4) [[B]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[CMP3:%[0-9]+]] = cir.cmp(eq, [[AVAL2]], [[BVAL2]]) : !s32i, !cir.bool
 // CIR: [[OR_RESULT:%[0-9]+]] = cir.ternary([[CMP3]], true {
 // CIR: [[TRUE:%[0-9]+]] = cir.const #true
 // CIR: cir.yield [[TRUE]] : !cir.bool
 // CIR: }, false {
-// CIR: [[CVAL2:%[0-9]+]] = cir.load [[C]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[DVAL2:%[0-9]+]] = cir.load [[D]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[CVAL2:%[0-9]+]] = cir.load align(4) [[C]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[DVAL2:%[0-9]+]] = cir.load align(4) [[D]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[CMP4:%[0-9]+]] = cir.cmp(eq, [[CVAL2]], [[DVAL2]]) : !s32i, !cir.bool
 // CIR: cir.yield [[CMP4]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
-// CIR: cir.store [[OR_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR: cir.store align(1) [[OR_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: cir.return
+
 
 // LLVM-LABEL: define void @_Z2b3iiii(
 // LLVM-SAME: i32 %[[ARG0:[0-9]+]], i32 %[[ARG1:[0-9]+]], i32 %[[ARG2:[0-9]+]], i32 %[[ARG3:[0-9]+]])

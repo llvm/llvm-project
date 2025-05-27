@@ -905,7 +905,8 @@ public:
   public:
     ConditionalEvaluation(CIRGenFunction &cgf)
         : cgf(cgf), insertPt(cgf.builder.saveInsertionPoint()) {}
-    ConditionalEvaluation(CIRGenFunction &cgf, mlir::OpBuilder::InsertPoint ip) : cgf(cgf), insertPt(ip) {}
+    ConditionalEvaluation(CIRGenFunction &cgf, mlir::OpBuilder::InsertPoint ip)
+        : cgf(cgf), insertPt(ip) {}
 
     void beginEvaluation() {
       assert(cgf.outermostConditional != this);
@@ -939,9 +940,11 @@ public:
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
-      assert(!cir::MissingFeatures::opLoadStoreAlignment());
-      // TODO(cir): This store needs to use the alignment of addr
-      builder.createStore(value.getLoc(), value, addr.getPointer());
+      builder.createStore(
+          value.getLoc(), value, addr,
+          mlir::IntegerAttr::get(
+              mlir::IntegerType::get(value.getContext(), 64),
+              (uint64_t)addr.getAlignment().getAsAlign().value()));
     }
   }
 

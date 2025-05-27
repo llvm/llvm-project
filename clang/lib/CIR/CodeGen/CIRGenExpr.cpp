@@ -1212,32 +1212,6 @@ static std::optional<LValue> emitLValueOrThrowExpression(CIRGenFunction &cgf,
   return cgf.emitLValue(operand);
 }
 
-// Handle the case where the condition is a constant evaluatable simple integer,
-// which means we don't have to separately handle the true/false blocks.
-static std::optional<LValue> handleConditionalOperatorLValueSimpleCase(
-    CIRGenFunction &cgf, const AbstractConditionalOperator *e) {
-  const Expr *condExpr = e->getCond();
-  bool condExprBool = false;
-  if (cgf.constantFoldsToSimpleInteger(condExpr, condExprBool)) {
-    const Expr *live = e->getTrueExpr(), *dead = e->getFalseExpr();
-    if (!condExprBool)
-      std::swap(live, dead);
-
-    // If there's a label in the "dead" branch we can't eliminate that as it
-    // could be a used jump target.
-    if (!cgf.containsLabel(dead)) {
-      // If the true case is live, we need to track its region.
-      if (condExprBool) {
-        assert(!cir::MissingFeatures::incrementProfileCounter());
-      }
-      // If a throw expression we emit it and return an undefined lvalue
-      // because it can't be used.
-      return emitLValueOrThrowExpression(cgf, live);
-    }
-  }
-  return std::nullopt;
-}
-
 // Create and generate the 3 blocks for a conditional operator.
 // Leaves the 'current block' in the continuation basic block.
 template <typename FuncTy>
