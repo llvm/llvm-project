@@ -15,9 +15,7 @@ extern int AA[];                // incomplete array type
 
 typedef int __attribute__((may_alias)) aliasing_int;
 typedef int __attribute__((may_alias)) aliasing_array[10];
-struct E {
-    aliasing_int x[4]; aliasing_array y;
-};
+struct E { aliasing_int x[4]; aliasing_array y; };
 
 int foo(B *b) {
 // CHECK-LABEL: _Z3fooP1B
