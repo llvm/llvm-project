@@ -42368,6 +42368,20 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
   case X86ISD::VZEXT_MOVL: {
     SDValue N0 = N.getOperand(0);
 
+    // Fold (vzmovl (shift x, y)) -> (shift (vzmovl x), y)
+    // Zeroing out the upper elements means we're just shifting a zero value.
+    // TODO: Try harder to move vzmovl upward towards SCALAR_TO_VECTOR nodes.
+    // TODO: Move this to canonicalizeShuffleWithOp once we add zero handling.
+    if (N0.getOpcode() == X86ISD::VSHL || N0.getOpcode() == X86ISD::VSHLI ||
+        N0.getOpcode() == X86ISD::VSRL || N0.getOpcode() == X86ISD::VSRLI ||
+        N0.getOpcode() == X86ISD::VSRA || N0.getOpcode() == X86ISD::VSRAI) {
+      if (N0.hasOneUse())
+        return DAG.getNode(
+            N0.getOpcode(), DL, VT,
+            DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, N0.getOperand(0)),
+            N0.getOperand(1));
+    }
+
     // If this a vzmovl of a full vector load, replace it with a vzload, unless
     // the load is volatile.
     if (N0.hasOneUse() && ISD::isNormalLoad(N0.getNode())) {
