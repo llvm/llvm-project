@@ -1431,9 +1431,8 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
 
   // See if all arguments are shuffled with the same mask.
   SmallVector<Value *, 4> NewArgs(II->arg_size());
-  NewArgs[0] = X;
   Type *SrcTy = X->getType();
-  for (unsigned i = 1, e = II->arg_size(); i != e; ++i) {
+  for (unsigned i = 0, e = II->arg_size(); i != e; ++i) {
     if (match(II->getArgOperand(i),
               m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))) &&
         X->getType() == SrcTy)

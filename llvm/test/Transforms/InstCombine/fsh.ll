@@ -932,7 +932,7 @@ define <2 x i31> @fsh_unary_shuffle_ops_narrowing(<3 x i31> %x, <3 x i31> %y, <3
 
 define <2 x i32> @fsh_unary_shuffle_ops_1_const(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @fsh_unary_shuffle_ops_1_const(
-; CHECK-NEXT:    [[Y:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[X]], <2 x i32> [[Y1:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> <i32 2, i32 1>, <2 x i32> [[X:%.*]], <2 x i32> [[Y1:%.*]])
 ; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x i32> [[Y]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[B]]
 ;
@@ -944,7 +944,7 @@ define <2 x i32> @fsh_unary_shuffle_ops_1_const(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @fsh_unary_shuffle_ops_2_const(<2 x i32> %x) {
 ; CHECK-LABEL: @fsh_unary_shuffle_ops_2_const(
-; CHECK-NEXT:    [[X:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X1:%.*]], <2 x i32> <i32 2, i32 1>, <2 x i32> [[X1]])
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> <i32 2, i32 1>, <2 x i32> <i32 2, i32 1>, <2 x i32> [[X1:%.*]])
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[X]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[A]]
 ;
@@ -955,7 +955,7 @@ define <2 x i32> @fsh_unary_shuffle_ops_2_const(<2 x i32> %x) {
 
 define <vscale x 2 x i32> @fsh_unary_shuffle_ops_1_const_scalable(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y) {
 ; CHECK-LABEL: @fsh_unary_shuffle_ops_1_const_scalable(
-; CHECK-NEXT:    [[Y:%.*]] = call <vscale x 2 x i32> @llvm.fshr.nxv2i32(<vscale x 2 x i32> [[X:%.*]], <vscale x 2 x i32> [[X]], <vscale x 2 x i32> [[Y1:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call <vscale x 2 x i32> @llvm.fshr.nxv2i32(<vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> [[X:%.*]], <vscale x 2 x i32> [[Y1:%.*]])
 ; CHECK-NEXT:    [[B:%.*]] = shufflevector <vscale x 2 x i32> [[Y]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
 ;
@@ -967,7 +967,7 @@ define <vscale x 2 x i32> @fsh_unary_shuffle_ops_1_const_scalable(<vscale x 2 x 
 
 define <vscale x 2 x i32> @fsh_unary_shuffle_ops_2_const_scalable(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @fsh_unary_shuffle_ops_2_const_scalable(
-; CHECK-NEXT:    [[X:%.*]] = call <vscale x 2 x i32> @llvm.fshr.nxv2i32(<vscale x 2 x i32> [[X1:%.*]], <vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> [[X1]])
+; CHECK-NEXT:    [[X:%.*]] = call <vscale x 2 x i32> @llvm.fshr.nxv2i32(<vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> [[X1:%.*]])
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <vscale x 2 x i32> [[X]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[A]]
 ;
@@ -980,7 +980,7 @@ define <3 x i32> @fsh_unary_shuffle_ops_widening_1_const(<2 x i32> %x, <2 x i32>
 ; CHECK-LABEL: @fsh_unary_shuffle_ops_widening_1_const(
 ; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <3 x i32> <i32 1, i32 0, i32 poison>
 ; CHECK-NEXT:    call void @use_v3(<3 x i32> [[A]])
-; CHECK-NEXT:    [[Y:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X]], <2 x i32> [[X]], <2 x i32> [[Y1:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> splat (i32 42), <2 x i32> [[X]], <2 x i32> [[Y1:%.*]])
 ; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x i32> [[Y]], <2 x i32> poison, <3 x i32> <i32 1, i32 0, i32 poison>
 ; CHECK-NEXT:    ret <3 x i32> [[B]]
 ;
