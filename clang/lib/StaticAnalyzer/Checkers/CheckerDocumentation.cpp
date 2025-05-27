@@ -183,13 +183,19 @@ public:
   ///
   /// This callback can be used to obtain information about potential branching
   /// points or any other constructs that involve traversing a CFG edge.
-  /// Note that when inlining a call, there is no CFG edge between the caller
-  /// and the callee. One will only see the edge between the entry block and
-  /// the body of the function once inlined.
   ///
   /// check::BranchCondition is a similar callback, which is only invoked for
   /// pre-visiting the condition statement of a branch. Prefer that callback if
   /// possible.
+  ///
+  /// \remark There is no CFG edge from the caller to a callee, consequently
+  /// this callback is not invoked for "inlining" a function call.
+  /// \remark Once a function call is inlined, we will start from the imaginary
+  /// "entry" basic block of that CFG. This callback will be invoked for
+  /// entering the real first basic block of the "inlined" function body from
+  /// that "entry" basic block.
+  /// \remark This callback is also invoked for entering the imaginary "exit"
+  /// basic block of the CFG when returning from a function.
   ///
   /// \param E The ProgramPoint that describes the transition.
   ///
