@@ -1,0 +1,28 @@
+name: USI CLI Scanner - Search on PR
+
+on:
+  pull_request: 
+    types: [opened, synchronize, reopened]
+
+jobs:
+  printJob:    
+    name: Print event
+    runs-on:
+      group: sit-usi
+    steps:
+    # todo, remove after testing
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        echo "$GITHUB_CONTEXT"
+  pr_usi_scan:
+    name: PR USI scan
+    uses: AMD-GH-Actions/usi-scanner/.github/workflows/usi-scan-pr-diffs.yml@v1
+    secrets: inherit
+    permissions:
+      contents: read
+    with:
+      ScanMode: NewCommitsOnlyDiffs
+      ExclusionsRepo: ""
+      InclusionsRepo: ""
