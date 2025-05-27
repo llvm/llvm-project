@@ -29,9 +29,76 @@ void a(int A) {
   }
 }
 
+void b(int A) {
+// CHECK: entry:
+// CHECK: store i32 0, ptr %i{{.*}}, !dbg [[bG1R1:!.*]]
+// CHECK: for.cond:
+// CHECK: %cmp = icmp slt i32 %0, %1, !dbg [[bG2R1:!.*]]
+// CHECK: br i1 %cmp, label %for.body, label %for.end, !dbg [[bG3R1:!.*]]
+
+// CHECK: for.body:
+// CHECK-NEXT: %2 = load i32, ptr %A.addr
+// - If stmt atom:
+// CHECK-NEXT: %cmp1 = icmp sgt i32 %2, 1, !dbg [[bG4R2:!.*]]
+// CHECK-NEXT: br i1 %cmp1, label %if.then, label %if.end, !dbg [[bG4R1:!.*]]
+// CHECK: if.then:
+// CHECK-NEXT: br label %if.end
+
+// - For closing brace.
+// CHECK: if.end:
+// CHECK-NEXT: br label %for.inc, !dbg [[bG6R1:!.*]]
+
+// CHECK: for.inc:
+// CHECK: %inc = add{{.*}}, !dbg [[bG5R2:!.*]]
+// CHECK: store i32 %inc, ptr %i{{.*}}, !dbg [[bG5R1:!.*]]
+  for (int i = 0; i < A; ++i) {
+    if (A > 1)
+      ;
+  }
+}
+
+void c(int A) {
+// CHECK: entry:
+// CHECK: for.cond:
+// CHECK-NEXT: %0 = load i32, ptr %A.addr
+// - If stmt atom:
+// CHECK-NEXT: %cmp = icmp sgt i32 %0, 1, !dbg [[cG1R2:!.*]]
+// CHECK-NEXT: br i1 %cmp, label %if.then, label %if.end, !dbg [[cG1R1:!.*]]
+// CHECK: if.then:
+// CHECK-NEXT: br label %if.end
+
+// - For closing brace.
+// CHECK: if.end:
+// CHECK-NEXT: br label %for.inc, !dbg [[cG3R1:!.*]]
+
+// CHECK: for.inc:
+// CHECK-NEXT: %1 = load i32, ptr %A.addr
+// CHECK-NEXT: %inc = add{{.*}}, !dbg [[cG2R2:!.*]]
+// CHECK-NEXT: store i32 %inc, ptr %A.addr{{.*}}, !dbg [[cG2R1:!.*]]
+  for (; /*no cond*/ ; ++A) {
+    if (A > 1)
+      ;
+  }
+}
+
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 // CHECK: [[G5R1]] = !DILocation(line: 29,{{.*}} atomGroup: 5, atomRank: 1)
 // CHECK: [[G4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
+
+// CHECK: [[bG1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
+// CHECK: [[bG2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
+// CHECK: [[bG3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
+// CHECK: [[bG4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
+// CHECK: [[bG4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
+// CHECK: [[bG6R1]] = !DILocation(line: 57,{{.*}} atomGroup: 6, atomRank: 1)
+// CHECK: [[bG5R2]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 2)
+// CHECK: [[bG5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
+
+// CHECK: [[cG1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
+// CHECK: [[cG1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
+// CHECK: [[cG3R1]] = !DILocation(line: 81,{{.*}} atomGroup: 3, atomRank: 1)
+// CHECK: [[cG2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
+// CHECK: [[cG2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
