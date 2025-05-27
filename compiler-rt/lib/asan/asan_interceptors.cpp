@@ -633,11 +633,7 @@ INTERCEPTOR(char*, __strdup, const char *s) {
   GET_STACK_TRACE_MALLOC;
   void *new_mem = asan_malloc(length + 1, &stack);
   if (new_mem) {
-#    if SANITIZER_AIX
-    internal_memcpy(new_mem, s, length + 1);
-#    else
-    REAL(memcpy)(new_mem, s, length + 1);
-#    endif
+    internal_or_real_memcpy(new_mem, s, length + 1);
   }
   return reinterpret_cast<char*>(new_mem);
 }
