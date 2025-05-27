@@ -1110,7 +1110,7 @@ def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_CvtFloatToTF32Op : NVVM_Op<"cvt.float.to.tf32"> {
+def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
   let summary = "Convert the given float input to TF32";
   let description = [{
     This Op converts the given f32 input to tf32.
@@ -1139,24 +1139,24 @@ def NVVM_CvtFloatToTF32Op : NVVM_Op<"cvt.float.to.tf32"> {
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::CvtFloatToTF32Op::getIntrinsicID($rnd, $sat, $relu);
+    auto intId = NVVM::ConvertFloatToTF32Op::getIntrinsicID($rnd, $sat, $relu);
     $res = createIntrinsicCall(builder, intId, {$src});
   }];
 }
 
-def CVTFP6E2M3 : I32EnumAttrCase<"E2M3", 0, "e2m3">;
-def CVTFP6E3M2 : I32EnumAttrCase<"E3M2", 1, "e3m2">;
+def ConvertFP6E2M3 : I32EnumAttrCase<"E2M3", 0, "e2m3">;
+def ConvertFP6E3M2 : I32EnumAttrCase<"E3M2", 1, "e3m2">;
 
-def CVTFP6Type : I32EnumAttr<"CVTFP6Type", "NVVM CVTFP6Type kind",
-  [CVTFP6E2M3, CVTFP6E3M2]> {
+def ConvertFP6Type : I32EnumAttr<"ConvertFP6Type", "NVVM ConvertFP6Type kind",
+  [ConvertFP6E2M3, ConvertFP6E3M2]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-def CVTFP6TypeAttr : EnumAttr<NVVM_Dialect, CVTFP6Type, "cvt_fp6_type"> {
+def ConvertFP6TypeAttr : EnumAttr<NVVM_Dialect, ConvertFP6Type, "convert_fp6_type"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_CvtF32x2ToF6x2Op : NVVM_Op<"cvt.f32x2.to.f6x2"> {
+def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
   let summary = "Convert a pair of float inputs to f6x2";
   let description = [{
     This Op converts each of the given float inputs to the specified fp6 type.
@@ -1176,19 +1176,19 @@ def NVVM_CvtF32x2ToF6x2Op : NVVM_Op<"cvt.f32x2.to.f6x2"> {
 
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins 
-    CVTFP6TypeAttr:$type,
+    ConvertFP6TypeAttr:$type,
     F32:$a,
     F32:$b,
     DefaultValuedAttr<BoolAttr, "false">:$relu);
   let assemblyFormat = "$type $a `,` $b attr-dict `:` type($dst)";
   
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP6Type,
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP6Type,
                                               bool hasRelu);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::CvtF32x2ToF6x2Op::getIntrinsicID($type, $relu);
+    auto intId = NVVM::ConvertF32x2ToF6x2Op::getIntrinsicID($type, $relu);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
@@ -1198,20 +1198,20 @@ def NVVM_CvtF32x2ToF6x2Op : NVVM_Op<"cvt.f32x2.to.f6x2"> {
   }];
 }
 
-def CVTFP8E4M3 : I32EnumAttrCase<"E4M3", 0, "e4m3">;
-def CVTFP8E5M2 : I32EnumAttrCase<"E5M2", 1, "e5m2">;
-def CVTFP8UE8M0 : I32EnumAttrCase<"UE8M0", 2, "ue8m0">;
+def ConvertFP8E4M3 : I32EnumAttrCase<"E4M3", 0, "e4m3">;
+def ConvertFP8E5M2 : I32EnumAttrCase<"E5M2", 1, "e5m2">;
+def ConvertFP8UE8M0 : I32EnumAttrCase<"UE8M0", 2, "ue8m0">;
 
-def CVTFP8Type : I32EnumAttr<"CVTFP8Type", "NVVM CVTFP8Type kind",
-  [CVTFP8E4M3, CVTFP8E5M2, CVTFP8UE8M0]> {
+def ConvertFP8Type : I32EnumAttr<"ConvertFP8Type", "NVVM ConvertFP8Type kind",
+  [ConvertFP8E4M3, ConvertFP8E5M2, ConvertFP8UE8M0]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-def CVTFP8TypeAttr : EnumAttr<NVVM_Dialect, CVTFP8Type, "cvt_fp8_type"> {
+def ConvertFP8TypeAttr : EnumAttr<NVVM_Dialect, ConvertFP8Type, "convert_fp8_type"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_CvtF32x2ToF8x2Op : NVVM_Op<"cvt.f32x2.to.f8x2"> {
+def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   let summary = "Convert a pair of float inputs to f8x2";
   let description = [{
     This Op converts each of the given float inputs to the specified fp8 type.
@@ -1232,7 +1232,7 @@ def NVVM_CvtF32x2ToF8x2Op : NVVM_Op<"cvt.f32x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    CVTFP8TypeAttr:$type,
+    ConvertFP8TypeAttr:$type,
     F32:$a,
     F32:$b,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
@@ -1241,14 +1241,14 @@ def NVVM_CvtF32x2ToF8x2Op : NVVM_Op<"cvt.f32x2.to.f8x2"> {
   let assemblyFormat = "$type $a `,` $b attr-dict `:` type($dst)";
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP8Type to,
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP8Type to,
                                               NVVM::FPRoundingMode rnd,
                                               NVVM::SaturationMode sat,
                                               bool hasRelu);
   }];
   
   string llvmBuilder = [{
-    auto intId = NVVM::CvtF32x2ToF8x2Op::getIntrinsicID($type, $rnd, $sat, $relu);
+    auto intId = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicID($type, $rnd, $sat, $relu);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
@@ -1258,7 +1258,7 @@ def NVVM_CvtF32x2ToF8x2Op : NVVM_Op<"cvt.f32x2.to.f8x2"> {
   }];
 }
 
-def NVVM_CvtF16x2ToF8x2Op : NVVM_Op<"cvt.f16x2.to.f8x2"> {
+def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
   let summary = "Convert an f16x2 input to f8x2";
   let description = [{
     This Op converts the given f16 inputs in an f16x2 vector to the specified 
@@ -1280,18 +1280,18 @@ def NVVM_CvtF16x2ToF8x2Op : NVVM_Op<"cvt.f16x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    CVTFP8TypeAttr:$type,
+    ConvertFP8TypeAttr:$type,
     VectorOfLengthAndType<[2], [F16]>:$a,
     DefaultValuedAttr<BoolAttr, "false">:$relu);
   let assemblyFormat = "$type $a attr-dict `:` type($a) `->` type($dst)";
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP8Type to,
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP8Type to,
                                               bool hasRelu);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::CvtF16x2ToF8x2Op::getIntrinsicID($type, $relu);
+    auto intId = NVVM::ConvertF16x2ToF8x2Op::getIntrinsicID($type, $relu);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
@@ -1301,7 +1301,7 @@ def NVVM_CvtF16x2ToF8x2Op : NVVM_Op<"cvt.f16x2.to.f8x2"> {
   }];
 }
 
-def NVVM_CvtBF16x2ToF8x2Op : NVVM_Op<"cvt.bf16x2.to.f8x2"> {
+def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let summary = "Convert a pair of bf16 inputs to f8x2";
   let description = [{
     This Op converts the given bf16 inputs in a bf16x2 vector to the specified 
@@ -1323,7 +1323,7 @@ def NVVM_CvtBF16x2ToF8x2Op : NVVM_Op<"cvt.bf16x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    CVTFP8TypeAttr:$type,
+    ConvertFP8TypeAttr:$type,
     VectorOfLengthAndType<[2], [BF16]>:$a,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat);
@@ -1335,7 +1335,7 @@ def NVVM_CvtBF16x2ToF8x2Op : NVVM_Op<"cvt.bf16x2.to.f8x2"> {
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::CvtBF16x2ToF8x2Op::getIntrinsicID($rnd, $sat);
+    auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($rnd, $sat);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
