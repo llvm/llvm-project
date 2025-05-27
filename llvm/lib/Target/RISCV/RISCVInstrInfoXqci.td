@@ -1514,6 +1514,10 @@ def : CompressPat<(QC_E_J bare_simm12_lsb0:$offset),
                   (C_J bare_simm12_lsb0:$offset)>;
 def : CompressPat<(QC_E_JAL bare_simm12_lsb0:$offset),
                   (C_JAL bare_simm12_lsb0:$offset)>;
+def : CompressPat<(QC_E_JAL simm21_lsb0_jal:$offset),
+                  (JAL X1, simm21_lsb0_jal:$offset)>;
+def : CompressPat<(QC_E_J simm21_lsb0_jal:$offset),
+                  (JAL X0, simm21_lsb0_jal:$offset)>;
 } // isCompressOnly = true, Predicates = [HasVendorXqcilb, IsRV32]
 
 let Predicates = [HasVendorXqcili, IsRV32] in {
