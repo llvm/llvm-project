@@ -195,7 +195,7 @@ define amdgpu_kernel void @k01() {
 
 define amdgpu_kernel void @k23() {
 ; OPT-LABEL: @k23(
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds) ], !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds) ], !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    call void @f3()
 ; OPT-NEXT:    ret void
@@ -245,12 +245,12 @@ define amdgpu_kernel void @k23() {
 ; Access and allocate three variables
 define amdgpu_kernel void @k123() {
 ; OPT-LABEL: @k123(
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope [[META12:![0-9]+]], !noalias [[META15:![0-9]+]]
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; OPT-NEXT:    call void @f1()
-; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope [[META15]], !noalias [[META12]]
+; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope [[META14]], !noalias [[META11]]
 ; OPT-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 8
-; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope [[META15]], !noalias [[META12]]
+; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope [[META14]], !noalias [[META11]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    ret void
 ;
@@ -312,19 +312,18 @@ define amdgpu_kernel void @k123() {
 ; OPT: !1 = !{i32 4, i32 5}
 ; OPT: !2 = !{i32 8, i32 9}
 ; OPT: !3 = !{i32 1, !"amdhsa_code_object_version", i32 500}
-; OPT: !4 = !{i32 1, !"amdgpu.lowered_lds", i32 1}
-; OPT: !5 = !{i32 1}
-; OPT: !6 = !{!7}
-; OPT: !7 = distinct !{!7, !8}
-; OPT: !8 = distinct !{!8}
-; OPT: !9 = !{!10}
-; OPT: !10 = distinct !{!10, !8}
-; OPT: !11 = !{i32 0}
-; OPT: !12 = !{!13}
-; OPT: !13 = distinct !{!13, !14}
-; OPT: !14 = distinct !{!14}
-; OPT: !15 = !{!16}
-; OPT: !16 = distinct !{!16, !14}
+; OPT: !4 = !{i32 1}
+; OPT: !5 = !{!6}
+; OPT: !6 = distinct !{!6, !7}
+; OPT: !7 = distinct !{!7}
+; OPT: !8 = !{!9}
+; OPT: !9 = distinct !{!9, !7}
+; OPT: !10 = !{i32 0}
+; OPT: !11 = !{!12}
+; OPT: !12 = distinct !{!12, !13}
+; OPT: !13 = distinct !{!13}
+; OPT: !14 = !{!15}
+; OPT: !15 = distinct !{!15, !13}
 
 attributes #0 = { "amdgpu-lds-size"="8" }
 attributes #1 = { "amdgpu-lds-size"="16" }

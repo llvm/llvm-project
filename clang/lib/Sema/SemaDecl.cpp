@@ -62,7 +62,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -8681,7 +8680,8 @@ static bool CheckC23ConstexprVarType(Sema &SemaRef, SourceLocation VarLoc,
 
   if (CanonT->isRecordType()) {
     const RecordDecl *RD = CanonT->getAsRecordDecl();
-    if (llvm::any_of(RD->fields(), [&SemaRef, VarLoc](const FieldDecl *F) {
+    if (!RD->isInvalidDecl() &&
+        llvm::any_of(RD->fields(), [&SemaRef, VarLoc](const FieldDecl *F) {
           return CheckC23ConstexprVarType(SemaRef, VarLoc, F->getType());
         }))
       return true;
@@ -9724,14 +9724,10 @@ static void checkIsValidOpenCLKernelParameter(
   SmallVector<const FieldDecl *, 4> HistoryStack;
   HistoryStack.push_back(nullptr);
 
-  // At this point we already handled everything except of a RecordType or
-  // an ArrayType of a RecordType.
-  assert((PT->isArrayType() || PT->isRecordType()) && "Unexpected type.");
-  const RecordType *RecTy =
-      PT->getPointeeOrArrayElementType()->getAs<RecordType>();
-  const RecordDecl *OrigRecDecl = RecTy->getDecl();
-
-  VisitStack.push_back(RecTy->getDecl());
+  // At this point we already handled everything except of a RecordType.
+  assert(PT->isRecordType() && "Unexpected type.");
+  const RecordDecl *PD = PT->castAs<RecordType>()->getDecl();
+  VisitStack.push_back(PD);
   assert(VisitStack.back() && "First decl null?");
 
   do {
@@ -9796,8 +9792,8 @@ static void checkIsValidOpenCLKernelParameter(
         S.Diag(Param->getLocation(), diag::err_bad_kernel_param_type) << PT;
       }
 
-      S.Diag(OrigRecDecl->getLocation(), diag::note_within_field_of_type)
-          << OrigRecDecl->getDeclName();
+      S.Diag(PD->getLocation(), diag::note_within_field_of_type)
+          << PD->getDeclName();
 
       // We have an error, now let's go back up through history and show where
       // the offending field came from
@@ -14608,6 +14604,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   std::optional<bool> CacheHasConstInit;
   const Expr *CacheCulprit = nullptr;
   auto checkConstInit = [&]() mutable {
+    const Expr *Init = var->getInit();
+    if (Init->isInstantiationDependent())
+      return true;
+
     if (!CacheHasConstInit)
       CacheHasConstInit = var->getInit()->isConstantInitializer(
             Context, var->getType()->isReferenceType(), &CacheCulprit);
@@ -15866,24 +15866,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   // Do not push if it is a lambda because one is already pushed when building
   // the lambda in ActOnStartOfLambdaDefinition().
   if (!isLambdaCallOperator(FD))
-    // [expr.const]/p14.1
-    // An expression or conversion is in an immediate function context if it is
-    // potentially evaluated and either: its innermost enclosing non-block scope
-    // is a function parameter scope of an immediate function.
-    PushExpressionEvaluationContext(
-        FD->isConsteval() ? ExpressionEvaluationContext::ImmediateFunctionContext
-                          : ExprEvalContexts.back().Context);
-
-  // Each ExpressionEvaluationContextRecord also keeps track of whether the
-  // context is nested in an immediate function context, so smaller contexts
-  // that appear inside immediate functions (like variable initializers) are
-  // considered to be inside an immediate function context even though by
-  // themselves they are not immediate function contexts. But when a new
-  // function is entered, we need to reset this tracking, since the entered
-  // function might be not an immediate function.
-  ExprEvalContexts.back().InImmediateFunctionContext = FD->isConsteval();
-  ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
-      getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
+    PushExpressionEvaluationContextForFunction(ExprEvalContexts.back().Context,
+                                               FD);
 
   // Check for defining attributes before the check for redefinition.
   if (const auto *Attr = FD->getAttr<AliasAttr>()) {
@@ -16093,8 +16077,11 @@ void Sema::computeNRVO(Stmt *Body, FunctionScopeInfo *Scope) {
 
   for (unsigned I = 0, E = Scope->Returns.size(); I != E; ++I) {
     if (const VarDecl *NRVOCandidate = Returns[I]->getNRVOCandidate()) {
-      if (!NRVOCandidate->isNRVOVariable())
+      if (!NRVOCandidate->isNRVOVariable()) {
+        Diag(Returns[I]->getRetValue()->getExprLoc(),
+             diag::warn_not_eliding_copy_on_return);
         Returns[I]->setNRVOCandidate(nullptr);
+      }
     }
   }
 }
@@ -20339,7 +20326,7 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
   assert(ED->isCompleteDefinition() && "expected enum definition");
 
-  auto R = FlagBitsCache.insert(std::make_pair(ED, llvm::APInt()));
+  auto R = FlagBitsCache.try_emplace(ED);
   llvm::APInt &FlagBits = R.first->second;
 
   if (R.second) {
