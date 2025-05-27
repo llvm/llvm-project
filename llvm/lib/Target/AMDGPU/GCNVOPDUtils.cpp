@@ -149,8 +149,9 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
 
-  // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
-  bool SkipSrc = ST.getGeneration() >= AMDGPUSubtarget::GFX12 &&
+  // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
+  // source-cache.
+  bool SkipSrc = ST.isGFX1170Plus() &&
                  FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
   bool AllowSameVGPR = ST.hasGFX1250Insts();
