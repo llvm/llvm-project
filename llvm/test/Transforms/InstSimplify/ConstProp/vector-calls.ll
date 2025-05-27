@@ -66,3 +66,19 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @fold_scalable_vector_deinterlea
   %1 = call {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.vector.deinterleave2.v4i32.v8i32(<vscale x 8 x i32> zeroinitializer)
   ret {<vscale x 4 x i32>, <vscale x 4 x i32>} %1
 }
+
+define float @fold_vector_fmin() {
+; CHECK-LABEL: define float @fold_vector_fmin() {
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %1 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>)
+  ret float %1
+}
+
+define float @fold_vector_fmax() {
+; CHECK-LABEL: define float @fold_vector_fmax() {
+; CHECK-NEXT:    ret float 4.000000e+00
+;
+  %1 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>)
+  ret float %1
+}
