@@ -139,9 +139,8 @@ void M68kMCCodeEmitter::encodeRelocImm(const MCInst &MI, unsigned OpIdx,
 
     // Relocatable address
     unsigned InsertByte = getBytePosition<Size>(InsertPos);
-    Fixups.push_back(MCFixup::create(InsertByte, Expr,
-                                     getFixupForSize(Size, /*IsPCRel=*/false),
-                                     MI.getLoc()));
+    Fixups.push_back(MCFixup::create(
+        InsertByte, Expr, MCFixup::getDataKindForSize(Size), MI.getLoc()));
   }
 }
 
