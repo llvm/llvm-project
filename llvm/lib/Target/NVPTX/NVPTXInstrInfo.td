@@ -853,20 +853,6 @@ def TESTINF_f64r : BasicNVPTXInst<(outs Int1Regs:$p), (ins Float64Regs:$a),
 // Integer Arithmetic
 //-----------------------------------
 
-// Template for xor masquerading as int1 arithmetic.
-multiclass ADD_SUB_i1<SDNode OpNode> {
-   def _rr: BasicNVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$a, Int1Regs:$b),
-                      "xor.pred",
-                      [(set i1:$dst, (OpNode i1:$a, i1:$b))]>;
-   def _ri: BasicNVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$a, i1imm:$b),
-                      "xor.pred",
-                      [(set i1:$dst, (OpNode i1:$a, (imm):$b))]>;
-}
-
-// int1 addition and subtraction are both just xor.
-defm ADD_i1 : ADD_SUB_i1<add>;
-defm SUB_i1 : ADD_SUB_i1<sub>;
-
 // int16, int32, and int64 signed addition.  Since nvptx is 2's complement, we
 // also use these for unsigned arithmetic.
 defm ADD : I3<"add.s", add, commutative = true>;
@@ -1438,6 +1424,11 @@ defm XOR : BITWISE<"xor", xor>;
 def : Pat<(mul i1:$a, i1:$b), (ANDb1rr $a, $b)>;
 def : Pat<(mul i1:$a, imm:$b), (ANDb1ri $a, imm:$b)>;
 
+foreach op = [add, sub] in {
+  def : Pat<(op i1:$a, i1:$b), (XORb1rr $a, $b)>;
+  def : Pat<(op i1:$a, imm:$b), (XORb1ri $a, imm:$b)>;
+}
+
 // These transformations were once reliably performed by instcombine, but thanks
 // to poison semantics they are no longer safe for LLVM IR, perform them here
 // instead.
@@ -1446,12 +1437,9 @@ def : Pat<(select i1:$a, 1, i1:$b), (ORb1rr $a, $b)>;
 
 // Lower logical v2i16/v4i8 ops as bitwise ops on b32.
 foreach vt = [v2i16, v4i8] in {
-  def: Pat<(or vt:$a, vt:$b),
-           (ORb32rr $a, $b)>;
-  def: Pat<(xor vt:$a, vt:$b),
-           (XORb32rr $a, $b)>;
-  def: Pat<(and vt:$a, vt:$b),
-           (ANDb32rr $a, $b)>;
+  def : Pat<(or vt:$a, vt:$b), (ORb32rr $a, $b)>;
+  def : Pat<(xor vt:$a, vt:$b), (XORb32rr $a, $b)>;
+  def : Pat<(and vt:$a, vt:$b), (ANDb32rr $a, $b)>;
 
   // The constants get legalized into a bitcast from i32, so that's what we need
   // to match here.
@@ -1689,13 +1677,13 @@ def : Pat<(i16 (sext_inreg (trunc (srl i64:$s,  (i32 imm:$o))), i8)),
 let hasSideEffects = false in {
   multiclass SETP<string TypeStr, RegisterClass RC, Operand ImmCls> {
     def rr :
-      BasicFlagsNVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, RC:$b), (CmpMode:$cmp),
+      BasicFlagsNVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, RC:$b), (ins CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}." # TypeStr>;
     def ri :
-      BasicFlagsNVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, ImmCls:$b), (CmpMode:$cmp),
+      BasicFlagsNVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, ImmCls:$b), (ins CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}." # TypeStr>;
     def ir :
-      BasicFlagsNVPTXInst<(outs Int1Regs:$dst), (ins ImmCls:$a, RC:$b), (CmpMode:$cmp),
+      BasicFlagsNVPTXInst<(outs Int1Regs:$dst), (ins ImmCls:$a, RC:$b), (ins CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}." # TypeStr>;
   }
 }
@@ -1713,24 +1701,24 @@ defm SETP_f32 : SETP<"f32", Float32Regs, f32imm>;
 defm SETP_f64 : SETP<"f64", Float64Regs, f64imm>;
 def SETP_f16rr :
       BasicFlagsNVPTXInst<(outs Int1Regs:$dst),
-                (ins Int16Regs:$a, Int16Regs:$b), (CmpMode:$cmp),
+                (ins Int16Regs:$a, Int16Regs:$b), (ins CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}.f16">,
                 Requires<[useFP16Math]>;
 
 def SETP_f16x2rr :
       BasicFlagsNVPTXInst<(outs Int1Regs:$p, Int1Regs:$q),
-                (ins Int32Regs:$a, Int32Regs:$b), (CmpMode:$cmp),
+                (ins Int32Regs:$a, Int32Regs:$b), (ins CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}.f16x2">,
                 Requires<[useFP16Math]>;
 def SETP_bf16rr :
       BasicFlagsNVPTXInst<(outs Int1Regs:$dst),
-                (ins Int16Regs:$a, Int16Regs:$b), (CmpMode:$cmp),
+                (ins Int16Regs:$a, Int16Regs:$b), (ins CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}.bf16">,
                 Requires<[hasBF16Math, hasPTX<78>, hasSM<90>]>;
 
 def SETP_bf16x2rr :
       BasicFlagsNVPTXInst<(outs Int1Regs:$p, Int1Regs:$q),
-                (ins Int32Regs:$a, Int32Regs:$b), (CmpMode:$cmp),
+                (ins Int32Regs:$a, Int32Regs:$b), (ins CmpMode:$cmp),
                 "setp${cmp:base}${cmp:ftz}.bf16x2">,
                 Requires<[hasBF16Math, hasPTX<78>, hasSM<90>]>;
 
@@ -2348,14 +2336,13 @@ def DeclareScalarRegInst :
             ".reg .b$size param$a;",
             [(DeclareScalarParam (i32 imm:$a), (i32 imm:$size), (i32 1))]>;
 
-class MoveParamSymbolInst<NVPTXRegClass regclass, Operand srcty, ValueType vt,
-                          string asmstr> :
-  NVPTXInst<(outs regclass:$dst), (ins srcty:$src),
-            !strconcat("mov", asmstr, " \t$dst, $src;"),
-            [(set vt:$dst, (MoveParam texternalsym:$src))]>;
+class MoveParamSymbolInst<RegTypeInfo t> :
+  BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
+            "mov.b" # t.Size,
+            [(set t.Ty:$dst, (MoveParam texternalsym:$src))]>;
 
-def MOV64_PARAM : MoveParamSymbolInst<Int64Regs, i64imm, i64, ".b64">;
-def MOV32_PARAM : MoveParamSymbolInst<Int32Regs, i32imm, i32, ".b32">;
+def MOV64_PARAM : MoveParamSymbolInst<I64RT>;
+def MOV32_PARAM : MoveParamSymbolInst<I32RT>;
 
 class PseudoUseParamInst<NVPTXRegClass regclass, ValueType vt> :
   NVPTXInst<(outs), (ins regclass:$src),
@@ -2368,24 +2355,19 @@ def PseudoUseParamI16 : PseudoUseParamInst<Int16Regs, i16>;
 def PseudoUseParamF64 : PseudoUseParamInst<Float64Regs, f64>;
 def PseudoUseParamF32 : PseudoUseParamInst<Float32Regs, f32>;
 
-class ProxyRegInst<string SzStr, ValueType T, NVPTXRegClass regclass> :
+class ProxyRegInst<string SzStr, NVPTXRegClass regclass> :
   BasicNVPTXInst<(outs regclass:$dst), (ins regclass:$src),
-            "mov." # SzStr,
-            [(set T:$dst, (ProxyReg T:$src))]>;
+                 "mov." # SzStr>;
 
-def ProxyRegI1    : ProxyRegInst<"pred", i1, Int1Regs>;
-def ProxyRegI16   : ProxyRegInst<"b16",  i16, Int16Regs>;
-def ProxyRegI32   : ProxyRegInst<"b32",  i32, Int32Regs>;
-def ProxyRegI64   : ProxyRegInst<"b64",  i64, Int64Regs>;
-def ProxyRegF32   : ProxyRegInst<"b32",  f32, Float32Regs>;
-def ProxyRegF64   : ProxyRegInst<"b64",  f64, Float64Regs>;
+def ProxyRegB1    : ProxyRegInst<"pred", Int1Regs>;
+def ProxyRegB16   : ProxyRegInst<"b16",  Int16Regs>;
+def ProxyRegB32   : ProxyRegInst<"b32",  Int32Regs>;
+def ProxyRegB64   : ProxyRegInst<"b64",  Int64Regs>;
 
-foreach vt = [f16, bf16] in {
-  def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI16 $src)>;
-}
-
-foreach vt = [v2f16, v2bf16, v2i16, v4i8] in {
-  def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI32 $src)>;
+foreach rc = [Int1Regs, Int16Regs, Int32Regs, Int64Regs] in {
+  defvar ProxyRegInst = cast<NVPTXInst>(ProxyRegB # rc.Size);
+  foreach vt = rc.RegTypes in
+    def: Pat<(vt (ProxyReg vt:$src)), (ProxyRegInst $src)>;
 }
 
 //
@@ -2503,249 +2485,169 @@ foreach rc = [Int16Regs, Int32Regs, Int64Regs] in
 // and then cvt to floating-point.
 
 // sint -> f16
-def : Pat<(f16 (sint_to_fp i1:$a)),
-          (CVT_f16_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
-def : Pat<(f16 (sint_to_fp Int16Regs:$a)),
-          (CVT_f16_s16 $a, CvtRN)>;
-def : Pat<(f16 (sint_to_fp i32:$a)),
-          (CVT_f16_s32 $a, CvtRN)>;
-def : Pat<(f16 (sint_to_fp i64:$a)),
-          (CVT_f16_s64 $a, CvtRN)>;
+def : Pat<(f16 (sint_to_fp  i1:$a)), (CVT_f16_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
+def : Pat<(f16 (sint_to_fp i16:$a)), (CVT_f16_s16 $a, CvtRN)>;
+def : Pat<(f16 (sint_to_fp i32:$a)), (CVT_f16_s32 $a, CvtRN)>;
+def : Pat<(f16 (sint_to_fp i64:$a)), (CVT_f16_s64 $a, CvtRN)>;
 
 // uint -> f16
-def : Pat<(f16 (uint_to_fp i1:$a)),
-          (CVT_f16_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
-def : Pat<(f16 (uint_to_fp Int16Regs:$a)),
-          (CVT_f16_u16 $a, CvtRN)>;
-def : Pat<(f16 (uint_to_fp i32:$a)),
-          (CVT_f16_u32 $a, CvtRN)>;
-def : Pat<(f16 (uint_to_fp i64:$a)),
-          (CVT_f16_u64 $a, CvtRN)>;
+def : Pat<(f16 (uint_to_fp  i1:$a)), (CVT_f16_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
+def : Pat<(f16 (uint_to_fp i16:$a)), (CVT_f16_u16 $a, CvtRN)>;
+def : Pat<(f16 (uint_to_fp i32:$a)), (CVT_f16_u32 $a, CvtRN)>;
+def : Pat<(f16 (uint_to_fp i64:$a)), (CVT_f16_u64 $a, CvtRN)>;
 
 // sint -> bf16
-def : Pat<(bf16 (sint_to_fp i1:$a)),
-          (CVT_bf16_s32 (SELP_b32ii 1, 0, $a), CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
-def : Pat<(bf16 (sint_to_fp i16:$a)),
-          (CVT_bf16_s16 $a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
-def : Pat<(bf16 (sint_to_fp i32:$a)),
-          (CVT_bf16_s32 $a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
-def : Pat<(bf16 (sint_to_fp i64:$a)),
-          (CVT_bf16_s64 $a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(bf16 (sint_to_fp i1:$a)), (CVT_bf16_s32 (SELP_b32ii 1, 0, $a), CvtRN)>, 
+      Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(bf16 (sint_to_fp i16:$a)), (CVT_bf16_s16 $a, CvtRN)>,
+      Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(bf16 (sint_to_fp i32:$a)), (CVT_bf16_s32 $a, CvtRN)>,
+      Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(bf16 (sint_to_fp i64:$a)), (CVT_bf16_s64 $a, CvtRN)>,
+      Requires<[hasPTX<78>, hasSM<90>]>;
 
 // uint -> bf16
-def : Pat<(bf16 (uint_to_fp i1:$a)),
-          (CVT_bf16_u32 (SELP_b32ii 1, 0, $a), CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
-def : Pat<(bf16 (uint_to_fp i16:$a)),
-          (CVT_bf16_u16 $a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
-def : Pat<(bf16 (uint_to_fp i32:$a)),
-          (CVT_bf16_u32 $a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
-def : Pat<(bf16 (uint_to_fp i64:$a)),
-          (CVT_bf16_u64 $a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(bf16 (uint_to_fp i1:$a)), (CVT_bf16_u32 (SELP_b32ii 1, 0, $a), CvtRN)>,
+      Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(bf16 (uint_to_fp i16:$a)), (CVT_bf16_u16 $a, CvtRN)>,
+      Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(bf16 (uint_to_fp i32:$a)), (CVT_bf16_u32 $a, CvtRN)>,
+      Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(bf16 (uint_to_fp i64:$a)), (CVT_bf16_u64 $a, CvtRN)>,
+      Requires<[hasPTX<78>, hasSM<90>]>;
 
 // sint -> f32
-def : Pat<(f32 (sint_to_fp i1:$a)),
-          (CVT_f32_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
-def : Pat<(f32 (sint_to_fp i16:$a)),
-          (CVT_f32_s16 $a, CvtRN)>;
-def : Pat<(f32 (sint_to_fp i32:$a)),
-          (CVT_f32_s32 $a, CvtRN)>;
-def : Pat<(f32 (sint_to_fp i64:$a)),
-          (CVT_f32_s64 $a, CvtRN)>;
+def : Pat<(f32 (sint_to_fp  i1:$a)), (CVT_f32_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
+def : Pat<(f32 (sint_to_fp i16:$a)), (CVT_f32_s16 $a, CvtRN)>;
+def : Pat<(f32 (sint_to_fp i32:$a)), (CVT_f32_s32 $a, CvtRN)>;
+def : Pat<(f32 (sint_to_fp i64:$a)), (CVT_f32_s64 $a, CvtRN)>;
 
 // uint -> f32
-def : Pat<(f32 (uint_to_fp i1:$a)),
-          (CVT_f32_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
-def : Pat<(f32 (uint_to_fp i16:$a)),
-          (CVT_f32_u16 $a, CvtRN)>;
-def : Pat<(f32 (uint_to_fp i32:$a)),
-          (CVT_f32_u32 $a, CvtRN)>;
-def : Pat<(f32 (uint_to_fp i64:$a)),
-          (CVT_f32_u64 $a, CvtRN)>;
+def : Pat<(f32 (uint_to_fp  i1:$a)), (CVT_f32_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
+def : Pat<(f32 (uint_to_fp i16:$a)), (CVT_f32_u16 $a, CvtRN)>;
+def : Pat<(f32 (uint_to_fp i32:$a)), (CVT_f32_u32 $a, CvtRN)>;
+def : Pat<(f32 (uint_to_fp i64:$a)), (CVT_f32_u64 $a, CvtRN)>;
 
 // sint -> f64
-def : Pat<(f64 (sint_to_fp i1:$a)),
-          (CVT_f64_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
-def : Pat<(f64 (sint_to_fp i16:$a)),
-          (CVT_f64_s16 $a, CvtRN)>;
-def : Pat<(f64 (sint_to_fp i32:$a)),
-          (CVT_f64_s32 $a, CvtRN)>;
-def : Pat<(f64 (sint_to_fp i64:$a)),
-          (CVT_f64_s64 $a, CvtRN)>;
+def : Pat<(f64 (sint_to_fp i1:$a)), (CVT_f64_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
+def : Pat<(f64 (sint_to_fp i16:$a)), (CVT_f64_s16 $a, CvtRN)>;
+def : Pat<(f64 (sint_to_fp i32:$a)), (CVT_f64_s32 $a, CvtRN)>;
+def : Pat<(f64 (sint_to_fp i64:$a)), (CVT_f64_s64 $a, CvtRN)>;
 
 // uint -> f64
-def : Pat<(f64 (uint_to_fp i1:$a)),
-          (CVT_f64_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
-def : Pat<(f64 (uint_to_fp i16:$a)),
-          (CVT_f64_u16 $a, CvtRN)>;
-def : Pat<(f64 (uint_to_fp i32:$a)),
-          (CVT_f64_u32 $a, CvtRN)>;
-def : Pat<(f64 (uint_to_fp i64:$a)),
-          (CVT_f64_u64 $a, CvtRN)>;
+def : Pat<(f64 (uint_to_fp i1:$a)),  (CVT_f64_u32 (SELP_b32ii 1, 0, $a), CvtRN)>;
+def : Pat<(f64 (uint_to_fp i16:$a)), (CVT_f64_u16 $a, CvtRN)>;
+def : Pat<(f64 (uint_to_fp i32:$a)), (CVT_f64_u32 $a, CvtRN)>;
+def : Pat<(f64 (uint_to_fp i64:$a)), (CVT_f64_u64 $a, CvtRN)>;
 
 
 // f16 -> sint
-def : Pat<(i1 (fp_to_sint f16:$a)),
-          (SETP_b16ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_sint f16:$a)),
-          (CVT_s16_f16 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_sint f16:$a)),
-          (CVT_s32_f16 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_sint f16:$a)),
-          (CVT_s64_f16 $a, CvtRZI)>;
+def : Pat<(i1  (fp_to_sint f16:$a)), (SETP_b16ri $a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_sint f16:$a)), (CVT_s16_f16 $a, CvtRZI)>;
+def : Pat<(i32 (fp_to_sint f16:$a)), (CVT_s32_f16 $a, CvtRZI)>;
+def : Pat<(i64 (fp_to_sint f16:$a)), (CVT_s64_f16 $a, CvtRZI)>;
 
 // f16 -> uint
-def : Pat<(i1 (fp_to_uint f16:$a)),
-          (SETP_b16ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_uint f16:$a)),
-          (CVT_u16_f16 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_uint f16:$a)),
-          (CVT_u32_f16 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_uint f16:$a)),
-          (CVT_u64_f16 $a, CvtRZI)>;
+def : Pat<(i1  (fp_to_uint f16:$a)), (SETP_b16ri $a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_uint f16:$a)), (CVT_u16_f16 $a, CvtRZI)>;
+def : Pat<(i32 (fp_to_uint f16:$a)), (CVT_u32_f16 $a, CvtRZI)>;
+def : Pat<(i64 (fp_to_uint f16:$a)), (CVT_u64_f16 $a, CvtRZI)>;
 
 // bf16 -> sint
-def : Pat<(i1 (fp_to_sint bf16:$a)),
-          (SETP_b16ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_sint bf16:$a)),
-          (CVT_s16_bf16 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_sint bf16:$a)),
-          (CVT_s32_bf16 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_sint bf16:$a)),
-          (CVT_s64_bf16 $a, CvtRZI)>;
+def : Pat<(i1  (fp_to_sint bf16:$a)), (SETP_b16ri $a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_sint bf16:$a)), (CVT_s16_bf16 $a, CvtRZI)>;
+def : Pat<(i32 (fp_to_sint bf16:$a)), (CVT_s32_bf16 $a, CvtRZI)>;
+def : Pat<(i64 (fp_to_sint bf16:$a)), (CVT_s64_bf16 $a, CvtRZI)>;
 
 // bf16 -> uint
-def : Pat<(i1 (fp_to_uint bf16:$a)),
-          (SETP_b16ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_uint bf16:$a)),
-          (CVT_u16_bf16 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_uint bf16:$a)),
-          (CVT_u32_bf16 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_uint bf16:$a)),
-          (CVT_u64_bf16 $a, CvtRZI)>;
+def : Pat<(i1 (fp_to_uint bf16:$a)),  (SETP_b16ri $a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_uint bf16:$a)), (CVT_u16_bf16 $a, CvtRZI)>;
+def : Pat<(i32 (fp_to_uint bf16:$a)), (CVT_u32_bf16 $a, CvtRZI)>;
+def : Pat<(i64 (fp_to_uint bf16:$a)), (CVT_u64_bf16 $a, CvtRZI)>;
 // f32 -> sint
-def : Pat<(i1 (fp_to_sint f32:$a)),
-          (SETP_b32ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_sint f32:$a)),
-          (CVT_s16_f32 $a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i16 (fp_to_sint f32:$a)),
-          (CVT_s16_f32 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_sint f32:$a)),
-          (CVT_s32_f32 $a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i32 (fp_to_sint f32:$a)),
-          (CVT_s32_f32 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_sint f32:$a)),
-          (CVT_s64_f32 $a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i64 (fp_to_sint f32:$a)),
-          (CVT_s64_f32 $a, CvtRZI)>;
+def : Pat<(i1 (fp_to_sint f32:$a)), (SETP_b32ri $a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_sint f32:$a)), (CVT_s16_f32 $a, CvtRZI_FTZ)>,
+      Requires<[doF32FTZ]>;
+def : Pat<(i16 (fp_to_sint f32:$a)), (CVT_s16_f32 $a, CvtRZI)>;
+def : Pat<(i32 (fp_to_sint f32:$a)), (CVT_s32_f32 $a, CvtRZI_FTZ)>,
+      Requires<[doF32FTZ]>;
+def : Pat<(i32 (fp_to_sint f32:$a)), (CVT_s32_f32 $a, CvtRZI)>;
+def : Pat<(i64 (fp_to_sint f32:$a)), (CVT_s64_f32 $a, CvtRZI_FTZ)>,
+      Requires<[doF32FTZ]>;
+def : Pat<(i64 (fp_to_sint f32:$a)), (CVT_s64_f32 $a, CvtRZI)>;
 
 // f32 -> uint
-def : Pat<(i1 (fp_to_uint f32:$a)),
-          (SETP_b32ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_uint f32:$a)),
-          (CVT_u16_f32 $a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i16 (fp_to_uint f32:$a)),
-          (CVT_u16_f32 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_uint f32:$a)),
-          (CVT_u32_f32 $a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i32 (fp_to_uint f32:$a)),
-          (CVT_u32_f32 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_uint f32:$a)),
-          (CVT_u64_f32 $a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i64 (fp_to_uint f32:$a)),
-          (CVT_u64_f32 $a, CvtRZI)>;
+def : Pat<(i1  (fp_to_uint f32:$a)), (SETP_b32ri $a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_uint f32:$a)), (CVT_u16_f32 $a, CvtRZI_FTZ)>, 
+      Requires<[doF32FTZ]>;
+def : Pat<(i16 (fp_to_uint f32:$a)), (CVT_u16_f32 $a, CvtRZI)>;
+def : Pat<(i32 (fp_to_uint f32:$a)), (CVT_u32_f32 $a, CvtRZI_FTZ)>,
+      Requires<[doF32FTZ]>;
+def : Pat<(i32 (fp_to_uint f32:$a)), (CVT_u32_f32 $a, CvtRZI)>;
+def : Pat<(i64 (fp_to_uint f32:$a)), (CVT_u64_f32 $a, CvtRZI_FTZ)>,
+      Requires<[doF32FTZ]>;
+def : Pat<(i64 (fp_to_uint f32:$a)), (CVT_u64_f32 $a, CvtRZI)>;
 
 // f64 -> sint
-def : Pat<(i1 (fp_to_sint f64:$a)),
-          (SETP_b64ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_sint f64:$a)),
-          (CVT_s16_f64 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_sint f64:$a)),
-          (CVT_s32_f64 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_sint f64:$a)),
-          (CVT_s64_f64 $a, CvtRZI)>;
+def : Pat<(i1  (fp_to_sint f64:$a)), (SETP_b64ri $a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_sint f64:$a)), (CVT_s16_f64 $a, CvtRZI)>;
+def : Pat<(i32 (fp_to_sint f64:$a)), (CVT_s32_f64 $a, CvtRZI)>;
+def : Pat<(i64 (fp_to_sint f64:$a)), (CVT_s64_f64 $a, CvtRZI)>;
 
 // f64 -> uint
-def : Pat<(i1 (fp_to_uint f64:$a)),
-          (SETP_b64ri $a, 0, CmpEQ)>;
-def : Pat<(i16 (fp_to_uint f64:$a)),
-          (CVT_u16_f64 $a, CvtRZI)>;
-def : Pat<(i32 (fp_to_uint f64:$a)),
-          (CVT_u32_f64 $a, CvtRZI)>;
-def : Pat<(i64 (fp_to_uint f64:$a)),
-          (CVT_u64_f64 $a, CvtRZI)>;
+def : Pat<(i1  (fp_to_uint f64:$a)), (SETP_b64ri $a, 0, CmpEQ)>;
+def : Pat<(i16 (fp_to_uint f64:$a)), (CVT_u16_f64 $a, CvtRZI)>;
+def : Pat<(i32 (fp_to_uint f64:$a)), (CVT_u32_f64 $a, CvtRZI)>;
+def : Pat<(i64 (fp_to_uint f64:$a)), (CVT_u64_f64 $a, CvtRZI)>;
 
 // sext i1
-def : Pat<(i16 (sext i1:$a)),
-          (SELP_b16ii -1, 0, $a)>;
-def : Pat<(i32 (sext i1:$a)),
-          (SELP_b32ii -1, 0, $a)>;
-def : Pat<(i64 (sext i1:$a)),
-          (SELP_b64ii -1, 0, $a)>;
+def : Pat<(i16 (sext i1:$a)), (SELP_b16ii -1, 0, $a)>;
+def : Pat<(i32 (sext i1:$a)), (SELP_b32ii -1, 0, $a)>;
+def : Pat<(i64 (sext i1:$a)), (SELP_b64ii -1, 0, $a)>;
 
 // zext i1
-def : Pat<(i16 (zext i1:$a)),
-          (SELP_b16ii 1, 0, $a)>;
-def : Pat<(i32 (zext i1:$a)),
-          (SELP_b32ii 1, 0, $a)>;
-def : Pat<(i64 (zext i1:$a)),
-          (SELP_b64ii 1, 0, $a)>;
+def : Pat<(i16 (zext i1:$a)), (SELP_b16ii 1, 0, $a)>;
+def : Pat<(i32 (zext i1:$a)), (SELP_b32ii 1, 0, $a)>;
+def : Pat<(i64 (zext i1:$a)), (SELP_b64ii 1, 0, $a)>;
 
 // anyext i1
-def : Pat<(i16 (anyext i1:$a)),
-          (SELP_b16ii -1, 0, $a)>;
-def : Pat<(i32 (anyext i1:$a)),
-          (SELP_b32ii -1, 0, $a)>;
-def : Pat<(i64 (anyext i1:$a)),
-          (SELP_b64ii -1, 0, $a)>;
+def : Pat<(i16 (anyext i1:$a)), (SELP_b16ii -1, 0, $a)>;
+def : Pat<(i32 (anyext i1:$a)), (SELP_b32ii -1, 0, $a)>;
+def : Pat<(i64 (anyext i1:$a)), (SELP_b64ii -1, 0, $a)>;
 
 // sext i16
-def : Pat<(i32 (sext i16:$a)),
-          (CVT_s32_s16 $a, CvtNONE)>;
-def : Pat<(i64 (sext i16:$a)),
-          (CVT_s64_s16 $a, CvtNONE)>;
+def : Pat<(i32 (sext i16:$a)), (CVT_s32_s16 $a, CvtNONE)>;
+def : Pat<(i64 (sext i16:$a)), (CVT_s64_s16 $a, CvtNONE)>;
 
 // zext i16
-def : Pat<(i32 (zext i16:$a)),
-          (CVT_u32_u16 $a, CvtNONE)>;
-def : Pat<(i64 (zext i16:$a)),
-          (CVT_u64_u16 $a, CvtNONE)>;
+def : Pat<(i32 (zext i16:$a)), (CVT_u32_u16 $a, CvtNONE)>;
+def : Pat<(i64 (zext i16:$a)), (CVT_u64_u16 $a, CvtNONE)>;
 
 // anyext i16
-def : Pat<(i32 (anyext i16:$a)),
-          (CVT_u32_u16 $a, CvtNONE)>;
-def : Pat<(i64 (anyext i16:$a)),
-          (CVT_u64_u16 $a, CvtNONE)>;
+def : Pat<(i32 (anyext i16:$a)), (CVT_u32_u16 $a, CvtNONE)>;
+def : Pat<(i64 (anyext i16:$a)), (CVT_u64_u16 $a, CvtNONE)>;
 
 // sext i32
-def : Pat<(i64 (sext i32:$a)),
-          (CVT_s64_s32 $a, CvtNONE)>;
+def : Pat<(i64 (sext i32:$a)), (CVT_s64_s32 $a, CvtNONE)>;
 
 // zext i32
-def : Pat<(i64 (zext i32:$a)),
-          (CVT_u64_u32 $a, CvtNONE)>;
+def : Pat<(i64 (zext i32:$a)), (CVT_u64_u32 $a, CvtNONE)>;
 
 // anyext i32
-def : Pat<(i64 (anyext i32:$a)),
-          (CVT_u64_u32 $a, CvtNONE)>;
+def : Pat<(i64 (anyext i32:$a)), (CVT_u64_u32 $a, CvtNONE)>;
 
 
 // truncate i64
-def : Pat<(i32 (trunc i64:$a)),
-          (CVT_u32_u64 $a, CvtNONE)>;
-def : Pat<(i16 (trunc i64:$a)),
-          (CVT_u16_u64 $a, CvtNONE)>;
-def : Pat<(i1 (trunc i64:$a)),
-          (SETP_b64ri (ANDb64ri $a, 1), 0, CmpNE)>;
+def : Pat<(i32 (trunc i64:$a)), (CVT_u32_u64 $a, CvtNONE)>;
+def : Pat<(i16 (trunc i64:$a)), (CVT_u16_u64 $a, CvtNONE)>;
+def : Pat<(i1  (trunc i64:$a)), (SETP_b64ri (ANDb64ri $a, 1), 0, CmpNE)>;
 
 // truncate i32
-def : Pat<(i16 (trunc i32:$a)),
-          (CVT_u16_u32 $a, CvtNONE)>;
-def : Pat<(i1 (trunc i32:$a)),
-          (SETP_b32ri (ANDb32ri $a, 1), 0, CmpNE)>;
+def : Pat<(i16 (trunc i32:$a)), (CVT_u16_u32 $a, CvtNONE)>;
+def : Pat<(i1  (trunc i32:$a)), (SETP_b32ri (ANDb32ri $a, 1), 0, CmpNE)>;
 
 // truncate i16
-def : Pat<(i1 (trunc i16:$a)),
-          (SETP_b16ri (ANDb16ri $a, 1), 0, CmpNE)>;
+def : Pat<(i1 (trunc i16:$a)), (SETP_b16ri (ANDb16ri $a, 1), 0, CmpNE)>;
 
 // sext_inreg
 def : Pat<(sext_inreg i16:$a, i8), (CVT_INREG_s16_s8 $a)>;
@@ -2920,50 +2822,39 @@ let hasSideEffects = false in {
 }
 
 // fpround f32 -> f16
-def : Pat<(f16 (fpround f32:$a)),
-          (CVT_f16_f32 $a, CvtRN)>;
+def : Pat<(f16 (fpround f32:$a)), (CVT_f16_f32 $a, CvtRN)>;
 
 // fpround f32 -> bf16
-def : Pat<(bf16 (fpround f32:$a)),
-          (CVT_bf16_f32 $a, CvtRN)>, Requires<[hasPTX<70>, hasSM<80>]>;
+def : Pat<(bf16 (fpround f32:$a)), (CVT_bf16_f32 $a, CvtRN)>, 
+      Requires<[hasPTX<70>, hasSM<80>]>;
 
 // fpround f64 -> f16
-def : Pat<(f16 (fpround f64:$a)),
-          (CVT_f16_f64 $a, CvtRN)>;
+def : Pat<(f16 (fpround f64:$a)), (CVT_f16_f64 $a, CvtRN)>;
 
 // fpround f64 -> bf16
-def : Pat<(bf16 (fpround f64:$a)),
-          (CVT_bf16_f64 $a, CvtRN)>, Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(bf16 (fpround f64:$a)), (CVT_bf16_f64 $a, CvtRN)>, 
+      Requires<[hasPTX<78>, hasSM<90>]>;
+
 // fpround f64 -> f32
-def : Pat<(f32 (fpround f64:$a)),
-          (CVT_f32_f64 $a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f32 (fpround f64:$a)),
-          (CVT_f32_f64 $a, CvtRN)>;
+def : Pat<(f32 (fpround f64:$a)), (CVT_f32_f64 $a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
+def : Pat<(f32 (fpround f64:$a)), (CVT_f32_f64 $a, CvtRN)>;
 
 // fpextend f16 -> f32
-def : Pat<(f32 (fpextend f16:$a)),
-          (CVT_f32_f16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f32 (fpextend f16:$a)),
-          (CVT_f32_f16 $a, CvtNONE)>;
+def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
+def : Pat<(f32 (fpextend f16:$a)), (CVT_f32_f16 $a, CvtNONE)>;
 // fpextend bf16 -> f32
-def : Pat<(f32 (fpextend bf16:$a)),
-          (CVT_f32_bf16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f32 (fpextend bf16:$a)),
-          (CVT_f32_bf16 $a, CvtNONE)>, Requires<[hasPTX<71>, hasSM<80>]>;
+def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
+def : Pat<(f32 (fpextend bf16:$a)), (CVT_f32_bf16 $a, CvtNONE)>, Requires<[hasPTX<71>, hasSM<80>]>;
 
 // fpextend f16 -> f64
-def : Pat<(f64 (fpextend f16:$a)),
-          (CVT_f64_f16 $a, CvtNONE)>;
+def : Pat<(f64 (fpextend f16:$a)), (CVT_f64_f16 $a, CvtNONE)>;
 
 // fpextend bf16 -> f64
-def : Pat<(f64 (fpextend bf16:$a)),
-          (CVT_f64_bf16 $a, CvtNONE)>, Requires<[hasPTX<78>, hasSM<90>]>;
+def : Pat<(f64 (fpextend bf16:$a)), (CVT_f64_bf16 $a, CvtNONE)>, Requires<[hasPTX<78>, hasSM<90>]>;
 
 // fpextend f32 -> f64
-def : Pat<(f64 (fpextend f32:$a)),
-          (CVT_f64_f32 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f64 (fpextend f32:$a)),
-          (CVT_f64_f32 $a, CvtNONE)>;
+def : Pat<(f64 (fpextend f32:$a)), (CVT_f64_f32 $a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
+def : Pat<(f64 (fpextend f32:$a)), (CVT_f64_f32 $a, CvtNONE)>;
 
 def retglue : SDNode<"NVPTXISD::RET_GLUE", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue]>;
@@ -2971,16 +2862,11 @@ def retglue : SDNode<"NVPTXISD::RET_GLUE", SDTNone,
 // fceil, ffloor, froundeven, ftrunc.
 
 multiclass CVT_ROUND<SDNode OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
-  def : Pat<(OpNode f16:$a),
-            (CVT_f16_f16 $a, Mode)>;
-  def : Pat<(OpNode bf16:$a),
-            (CVT_bf16_bf16 $a, Mode)>;
-  def : Pat<(OpNode f32:$a),
-            (CVT_f32_f32 $a, ModeFTZ)>, Requires<[doF32FTZ]>;
-  def : Pat<(OpNode f32:$a),
-            (CVT_f32_f32 $a, Mode)>, Requires<[doNoF32FTZ]>;
-  def : Pat<(OpNode f64:$a),
-            (CVT_f64_f64 $a, Mode)>;
+  def : Pat<(OpNode  f16:$a), (CVT_f16_f16 $a, Mode)>;
+  def : Pat<(OpNode bf16:$a), (CVT_bf16_bf16 $a, Mode)>;
+  def : Pat<(OpNode  f32:$a), (CVT_f32_f32 $a, ModeFTZ)>, Requires<[doF32FTZ]>;
+  def : Pat<(OpNode  f32:$a), (CVT_f32_f32 $a, Mode)>, Requires<[doNoF32FTZ]>;
+  def : Pat<(OpNode  f64:$a), (CVT_f64_f64 $a, Mode)>;
 }
 
 defm : CVT_ROUND<fceil, CvtRPI, CvtRPI_FTZ>;

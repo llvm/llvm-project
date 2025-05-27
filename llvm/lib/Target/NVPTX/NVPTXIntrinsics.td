@@ -1862,12 +1862,12 @@ def : Pat<(int_nvvm_f2bf16_rz f32:$a),
 def : Pat<(int_nvvm_f2bf16_rz_relu f32:$a),
           (CVT_bf16_f32 $a, CvtRZ_RELU)>;
 
-def : Pat<(int_nvvm_lohi_i2d i32:$a i32:$b), (V2I32toI64 $a, $b)>;
+def : Pat<(int_nvvm_lohi_i2d i32:$a, i32:$b), (V2I32toI64 $a, $b)>;
 def : Pat<(int_nvvm_d2i_lo f64:$a), (I64toI32L $a)>;
 def : Pat<(int_nvvm_d2i_hi f64:$a), (I64toI32H $a)>;
 
-def : Pat<(int_nvvm_d2i_lo f64:$a), (I64toI32H_Sink i64:$s)>, Requires<[hasPTX<71>]>;
-def : Pat<(int_nvvm_d2i_hi f64:$a), (I64toI32H_Sink i64:$s)>, Requires<[hasPTX<71>]>;
+def : Pat<(int_nvvm_d2i_lo f64:$a), (I64toI32L_Sink $a)>, Requires<[hasPTX<71>]>;
+def : Pat<(int_nvvm_d2i_hi f64:$a), (I64toI32H_Sink $a)>, Requires<[hasPTX<71>]>;
 
 def : Pat<(int_nvvm_f2ll_rn_ftz f32:$a),
           (CVT_s64_f32 $a, CvtRNI_FTZ)>;
