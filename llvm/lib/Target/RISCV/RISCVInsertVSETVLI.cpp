@@ -26,6 +26,7 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -1840,8 +1841,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // any cross block analysis within the dataflow.  We can't have both
   // demanded fields based mutation and non-local analysis in the
   // dataflow at the same time without introducing inconsistencies.
-  for (MachineBasicBlock &MBB : MF)
-    coalesceVSETVLIs(MBB);
+  // We're visiting blocks from the bottom up because a VSETVLI in the
+  // earlier block might become dead when its uses in later blocks are
+  // optimized away.
+  for (MachineBasicBlock *MBB : post_order(&MF))
+    coalesceVSETVLIs(*MBB);
 
   // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
   // of VLEFF/VLSEGFF.
