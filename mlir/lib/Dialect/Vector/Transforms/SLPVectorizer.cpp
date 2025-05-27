@@ -965,13 +965,13 @@ SLPGraph::vectorize(IRRewriter &rewriter,
       }
     };
 
-    auto handleVecSizeMismatch = [&](Value arg) -> Value {
+    auto handleVecSizeMismatch = [&](Value arg, int64_t offset = 0) -> Value {
       auto srcType = cast<VectorType>(arg.getType());
       assert(srcType.getRank() == 1);
       if (srcType.getDimSize(0) == numElements)
         return arg;
 
-      return rewriter.create<vector::ExtractStridedSliceOp>(loc, arg, 0,
+      return rewriter.create<vector::ExtractStridedSliceOp>(loc, arg, offset,
                                                             numElements, 1);
     };
 
@@ -1007,7 +1007,9 @@ SLPGraph::vectorize(IRRewriter &rewriter,
       mapping.map(op->getResults(), newOp->getResults());
       handleNonVectorOutputs(newOp->getResult(0));
     } else if (auto extract = dyn_cast<vector::ExtractOp>(op)) {
-      Value val = handleVecSizeMismatch(extract.getVector());
+      // We alredy verified index is valid during graph construction.
+      int64_t offset = *getExtractIndex(extract);
+      Value val = handleVecSizeMismatch(extract.getVector(), offset);
       mapping.map(extract.getResult(), val);
     } else {
       op->emitError("unsupported operation");
