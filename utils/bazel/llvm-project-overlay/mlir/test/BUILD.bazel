@@ -256,6 +256,34 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "test_irdl_to_cpp_gen",
+    srcs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir"],
+    outs = ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir.cpp.inc"],
+    cmd = "$(location //mlir:irdl-to-cpp) lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir -o $@",
+    tools = ["//mlir:irdl-to-cpp"],
+)
+
+cc_library(
+    name = "TestIRDLToCpp",
+    srcs = glob(["lib/Dialect/TestIRDLToCpp/*.cpp"]) + ["lib/Dialect/TestIRDLToCpp/test_irdl_to_cpp.irdl.mlir.cpp.inc"],
+    hdrs = glob(["lib/Dialect/TestIRDLToCpp/*.h"]),
+    includes = ["lib/Dialect/TestIRDLToCpp"],
+    deps = [
+        ":test_irdl_to_cpp_gen",
+        "//llvm:Support",
+        "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:IR",
+        "//mlir:InferTypeOpInterface",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:Pass",
+        "//mlir:ToLLVMIRTranslation",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+        "//mlir:TranslateLib",
+    ],
+)
+
 td_library(
     name = "TransformDialectTdFiles",
     srcs = glob(["lib/Dialect/Transform/*.td"]),
