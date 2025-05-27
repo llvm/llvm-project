@@ -16853,20 +16853,22 @@ static void knownBitsForSBFE(const MachineInstr &MI, GISelValueTracking &VT,
 
   VT.computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts);
 
-  const uint64_t WidthMask = maskTrailingOnes<uint64_t>(Width);
-  Known.Zero = Known.Zero.shl(Offset) & WidthMask;
-  Known.One = Known.One.shl(Offset) & WidthMask;
+  Known.Zero = Known.Zero.lshr(Offset);
+  Known.One = Known.One.lshr(Offset);
+
+  Known = Known.trunc(Width);
 
   if (SExt)
-    Known.sextInReg(Width);
+    Known = Known.sext(BFEWidth);
   else
-    Known.Zero |= maskLeadingOnes<unsigned>(BFEWidth - Width);
+    Known = Known.zext(BFEWidth);
 }
 
 void SITargetLowering::computeKnownBitsForTargetInstr(
     GISelValueTracking &VT, Register R, KnownBits &Known,
     const APInt &DemandedElts, const MachineRegisterInfo &MRI,
     unsigned Depth) const {
+  Known.resetAll();
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
   case AMDGPU::S_BFE_I32:
