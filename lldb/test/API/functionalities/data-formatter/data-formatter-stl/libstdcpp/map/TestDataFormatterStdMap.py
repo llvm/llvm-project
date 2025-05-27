@@ -27,15 +27,10 @@ class StdMapDataFormatterTestCase(TestBase):
         build_args = {"CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
         self.with_run_command("__debug::", build_args)
 
-    def with_run_command(self, namespace: str, dictionary: dict):
+    def with_run_command(self, namespace: str, dictionary: Optional[dict] = None):
         """Test that that file and class static variables display correctly."""
-        self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
         self.build(dictionary=dictionary)
-        artifact_name = dictionary.get("EXE", "a.out")
-        self.runCmd(
-            "file " + self.getBuildArtifact(artifact_name), CURRENT_EXECUTABLE_SET
-        )
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_source_regexp(self, "Set break point at this line.")
 
@@ -61,9 +56,8 @@ class StdMapDataFormatterTestCase(TestBase):
 
         self.runCmd("frame variable ii --show-types")
 
-        match = f"std::{namespace}map<"
         self.runCmd(
-            f'type summary add -x "{match}" --summary-string "map has ${{svar%#}} items" -e'
+            f'type summary add -x "std::{namespace}map<" --summary-string "map has ${{svar%#}} items" -e'
         )
 
         self.expect("frame variable ii", substrs=["map has 0 items", "{}"])

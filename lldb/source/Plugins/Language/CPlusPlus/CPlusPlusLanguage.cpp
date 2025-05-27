@@ -1739,8 +1739,8 @@ lldb::TypeCategoryImplSP CPlusPlusLanguage::GetFormatters() {
     if (g_category) {
       // NOTE: the libstdcpp formatters are loaded after libcxx formatters
       // because we don't want to the libcxx formatters to match the potential
-      // `__debug` inline namespace that libstdcpp may use. since LLDB
-      // prioritizes the last loaded matching formatter.
+      // `__debug` inline namespace that libstdcpp may use.
+      // LLDB prioritizes the last loaded matching formatter.
       LoadLibCxxFormatters(g_category);
       LoadLibStdcppFormatters(g_category);
       LoadSystemFormatters(g_category);

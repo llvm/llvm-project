@@ -3,6 +3,7 @@ Test lldb data formatter subsystem.
 """
 
 
+from typing import Optional
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -19,7 +20,7 @@ class StdVectorDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
     def test_with_run_command(self):
-        self.with_run_command({})
+        self.with_run_command()
 
     @add_test_categories(["libstdcxx"])
     @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
@@ -27,13 +28,10 @@ class StdVectorDataFormatterTestCase(TestBase):
         build_args = {"CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
         self.with_run_command(build_args)
 
-    def with_run_command(self, dictionary: dict):
+    def with_run_command(self, dictionary: Optional[dict] = None):
         """Test that that file and class static variables display correctly."""
         self.build(dictionary=dictionary)
-        artifact_name = "a.out"
-        self.runCmd(
-            "file " + self.getBuildArtifact(artifact_name), CURRENT_EXECUTABLE_SET
-        )
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_source_regexp(self, "Set break point at this line.")
 
