@@ -165,16 +165,16 @@ void xegpu::setLayoutAttr(OpResult result, LayoutAttr layout) {
     owner->setAttr(name, layout);
 }
 
-void xegpu::setLayoutAttrs(Operation *mod,
+void xegpu::setLayoutAttrs(Operation *op,
                            function_ref<LayoutAttr(Value)> getLayoutImpl) {
-  mod->walk([&](Operation *op) {
-    for (OpResult result : op->getOpResults()) {
-      auto layout = getLayoutImpl(result);
-      setLayoutAttr(result, layout);
-    }
-    for (OpOperand &opr : op->getOpOperands()) {
+  op->walk([&](Operation *nestOp) {
+    for (OpOperand &opr : nestOp->getOpOperands()) {
       auto layout = getLayoutImpl(opr.get());
       setLayoutAttr(opr, layout);
+    }
+    for (OpResult result : nestOp->getOpResults()) {
+      auto layout = getLayoutImpl(result);
+      setLayoutAttr(result, layout);
     }
   });
 }
