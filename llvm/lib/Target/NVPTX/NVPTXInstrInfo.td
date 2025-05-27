@@ -208,6 +208,9 @@ class ValueToRegClass<ValueType T> {
 
 class OneUse1<SDPatternOperator operator>
     : PatFrag<(ops node:$A), (operator node:$A), [{ return N->hasOneUse(); }]>;
+class OneUse2<SDPatternOperator operator>
+    : PatFrag<(ops node:$A, node:$B), (operator node:$A, node:$B), [{ return N->hasOneUse(); }]>;
+
 
 class fpimm_pos_inf<ValueType vt>
     : FPImmLeaf<vt, [{ return Imm.isPosInfinity(); }]>;
@@ -1071,9 +1074,7 @@ def : Pat<(mul (zext i16:$a), (i32 UInt16Const:$b)),
 //
 // Integer multiply-add
 //
-def mul_oneuse : PatFrag<(ops node:$a, node:$b), (mul node:$a, node:$b), [{
-  return N->hasOneUse();
-}]>;
+def mul_oneuse : OneUse2<mul>;
 
 multiclass MAD<string Ptx, ValueType VT, NVPTXRegClass Reg, Operand Imm> {
   def rrr:
@@ -1784,14 +1785,16 @@ let hasSideEffects = false, isAsCheapAsAMove = true in {
 }
 
 def IMOV1r : MOVr<Int1Regs, "pred">;
-def IMOV1i : MOVi<Int1Regs, "pred", i1, i1imm, imm>;
 def MOV16r : MOVr<Int16Regs, "b16">;
-def IMOV16i : MOVi<Int16Regs, "b16", i16, i16imm, imm>;
 def IMOV32r : MOVr<Int32Regs, "b32">;
-def IMOV32i : MOVi<Int32Regs, "b32", i32, i32imm, imm>;
 def IMOV64r : MOVr<Int64Regs, "b64">;
-def IMOV64i : MOVi<Int64Regs, "b64", i64, i64imm, imm>;
 def IMOV128r : MOVr<Int128Regs, "b128">;
+
+
+def IMOV1i : MOVi<Int1Regs, "pred", i1, i1imm, imm>;
+def IMOV16i : MOVi<Int16Regs, "b16", i16, i16imm, imm>;
+def IMOV32i : MOVi<Int32Regs, "b32", i32, i32imm, imm>;
+def IMOV64i : MOVi<Int64Regs, "b64", i64, i64imm, imm>;
 def FMOV16i : MOVi<Int16Regs, "b16", f16, f16imm, fpimm>;
 def BFMOV16i : MOVi<Int16Regs, "b16", bf16, bf16imm, fpimm>;
 def FMOV32i : MOVi<Float32Regs, "b32", f32, f32imm, fpimm>;
@@ -2336,7 +2339,7 @@ def DeclareScalarRegInst :
             ".reg .b$size param$a;",
             [(DeclareScalarParam (i32 imm:$a), (i32 imm:$size), (i32 1))]>;
 
-class MoveParamSymbolInst<RegTypeInfo t> :
+class MoveParamSymbolInst<RegTyInfo t> :
   BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
             "mov.b" # t.Size,
             [(set t.Ty:$dst, (MoveParam texternalsym:$src))]>;
@@ -2355,20 +2358,17 @@ def PseudoUseParamI16 : PseudoUseParamInst<Int16Regs, i16>;
 def PseudoUseParamF64 : PseudoUseParamInst<Float64Regs, f64>;
 def PseudoUseParamF32 : PseudoUseParamInst<Float32Regs, f32>;
 
-class ProxyRegInst<string SzStr, NVPTXRegClass regclass> :
-  BasicNVPTXInst<(outs regclass:$dst), (ins regclass:$src),
+multiclass ProxyRegInst<string SzStr, NVPTXRegClass rc> {
+  def NAME : BasicNVPTXInst<(outs rc:$dst), (ins rc:$src),
                  "mov." # SzStr>;
-
-def ProxyRegB1    : ProxyRegInst<"pred", Int1Regs>;
-def ProxyRegB16   : ProxyRegInst<"b16",  Int16Regs>;
-def ProxyRegB32   : ProxyRegInst<"b32",  Int32Regs>;
-def ProxyRegB64   : ProxyRegInst<"b64",  Int64Regs>;
-
-foreach rc = [Int1Regs, Int16Regs, Int32Regs, Int64Regs] in {
-  defvar ProxyRegInst = cast<NVPTXInst>(ProxyRegB # rc.Size);
   foreach vt = rc.RegTypes in
-    def: Pat<(vt (ProxyReg vt:$src)), (ProxyRegInst $src)>;
+    def : Pat<(vt (ProxyReg vt:$src)), (!cast<NVPTXInst>(NAME) $src)>;
 }
+
+defm ProxyRegB1  : ProxyRegInst<"pred", Int1Regs>;
+defm ProxyRegB16 : ProxyRegInst<"b16",  Int16Regs>;
+defm ProxyRegB32 : ProxyRegInst<"b32",  Int32Regs>;
+defm ProxyRegB64 : ProxyRegInst<"b64",  Int64Regs>;
 
 //
 // Load / Store Handling
@@ -2745,13 +2745,10 @@ foreach vt = [v2f16, v2bf16, v2i16] in {
 
   def : Pat<(extractelt vt:$src, 0), (I32toI16L $src)>;
   def : Pat<(extractelt vt:$src, 1), (I32toI16H $src)>;
+
+  def : Pat<(vt (build_vector vt.ElementType:$a, vt.ElementType:$b)), 
+            (V2I16toI32 $a, $b)>;
 }
-def : Pat<(v2f16 (build_vector f16:$a, f16:$b)),
-          (V2I16toI32 $a, $b)>;
-def : Pat<(v2bf16 (build_vector bf16:$a, bf16:$b)),
-          (V2I16toI32 $a, $b)>;
-def : Pat<(v2i16 (build_vector i16:$a, i16:$b)),
-          (V2I16toI32 $a, $b)>;
 
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
          (CVT_u32_u16 $a, CvtNONE)>;
