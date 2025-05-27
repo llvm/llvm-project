@@ -1384,7 +1384,8 @@ public:
 
   /// Return the maximum number of waves per SIMD for kernels using \p VGPRs
   /// VGPRs
-  unsigned getOccupancyWithNumVGPRs(unsigned VGPRs, bool IsDynamicVGPR) const;
+  unsigned getOccupancyWithNumVGPRs(unsigned VGPRs,
+                                    unsigned DynamicVGPRBlockSize) const;
 
   /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
   /// be achieved when the only function running on a CU is \p F, each workgroup
@@ -1537,8 +1538,8 @@ public:
   unsigned getMaxNumSGPRs(const Function &F) const;
 
   /// \returns VGPR allocation granularity supported by the subtarget.
-  unsigned getVGPRAllocGranule(bool IsDynamicVGPR) const {
-    return AMDGPU::IsaInfo::getVGPRAllocGranule(this, IsDynamicVGPR);
+  unsigned getVGPRAllocGranule(unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getVGPRAllocGranule(this, DynamicVGPRBlockSize);
   }
 
   /// \returns VGPR encoding granularity supported by the subtarget.
@@ -1558,20 +1559,24 @@ public:
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
-  unsigned getAddressableNumVGPRs(bool IsDynamicVGPR) const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this, IsDynamicVGPR);
+  unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this, DynamicVGPRBlockSize);
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
   /// the specified number of waves \p WavesPerEU.
-  unsigned getMinNumVGPRs(unsigned WavesPerEU, bool IsDynamicVGPR) const {
-    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU, IsDynamicVGPR);
+  unsigned getMinNumVGPRs(unsigned WavesPerEU,
+                          unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU,
+                                           DynamicVGPRBlockSize);
   }
 
   /// \returns the maximum number of VGPRs that can be used and still achieved
   /// at least the specified number of waves \p WavesPerEU.
-  unsigned getMaxNumVGPRs(unsigned WavesPerEU, bool IsDynamicVGPR) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU, IsDynamicVGPR);
+  unsigned getMaxNumVGPRs(unsigned WavesPerEU,
+                          unsigned DynamicVGPRBlockSize) const {
+    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU,
+                                           DynamicVGPRBlockSize);
   }
 
   /// \returns max num VGPRs. This is the common utility function
@@ -1674,6 +1679,9 @@ public:
   }
 
   bool isDynamicVGPREnabled() const { return DynamicVGPR; }
+  unsigned getDynamicVGPRBlockSize() const {
+    return DynamicVGPRBlockSize32 ? 32 : 16;
+  }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated

@@ -68,5 +68,5 @@ define void @default() #0 {
 
 declare amdgpu_gfx void @callee(i32) #0
 
-attributes #0 = { nounwind "amdgpu-dynamic-vgpr" = "true" }
+attributes #0 = { nounwind "amdgpu-dynamic-vgpr-block-size" = "16" }
 

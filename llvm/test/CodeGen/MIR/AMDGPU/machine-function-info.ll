@@ -54,7 +54,7 @@
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''
 ; CHECK-NEXT: hasInitWholeWave: false
-; CHECK-NEXT: isDynamicVGPREnabled: false
+; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
@@ -103,7 +103,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''
 ; CHECK-NEXT: hasInitWholeWave: false
-; CHECK-NEXT: isDynamicVGPREnabled: false
+; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: body:
 define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
@@ -176,7 +176,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''
 ; CHECK-NEXT: hasInitWholeWave: false
-; CHECK-NEXT: isDynamicVGPREnabled: false
+; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: body:
 define void @function() {
@@ -231,7 +231,7 @@ define void @function() {
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: ''
 ; CHECK-NEXT: hasInitWholeWave: false
-; CHECK-NEXT: isDynamicVGPREnabled: false
+; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: body:
 define void @function_nsz() #0 {

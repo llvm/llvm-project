@@ -1748,10 +1748,14 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-promote-alloca-to-vector-vgpr-ratio"     Ratio of VGPRs to budget for promoting alloca to vectors.
 
-     "amdgpu-dynamic-vgpr"                            Represents the "Dynamic VGPR" hardware mode, introduced in GFX12.
+     "amdgpu-dynamic-vgpr-block-size"                 Represents the size of a VGPR block in the "Dynamic VGPR" hardware mode,
+                                                      introduced in GFX12.
+                                                      A value of 0 (default) means that dynamic VGPRs are not enabled.
+                                                      Valid values for GFX12+ are 16 and 32.
                                                       Waves launched in this mode may allocate or deallocate the VGPRs
                                                       using dedicated instructions, but may not send the DEALLOC_VGPRS
-                                                      message. If a shader has this attribute, then all its callees must also have it.
+                                                      message. If a shader has this attribute, then all its callees must
+                                                      match its value.
 
      ================================================ ==========================================================
 

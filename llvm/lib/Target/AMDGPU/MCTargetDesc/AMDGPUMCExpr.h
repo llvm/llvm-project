@@ -95,7 +95,7 @@ public:
 
   static const AMDGPUMCExpr *
   createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
-                  const MCExpr *NumVGPRs, bool IsDynamicVGPR,
+                  const MCExpr *NumVGPRs, unsigned DynamicVGPRBlockSize,
                   const GCNSubtarget &STM, MCContext &Ctx);
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }

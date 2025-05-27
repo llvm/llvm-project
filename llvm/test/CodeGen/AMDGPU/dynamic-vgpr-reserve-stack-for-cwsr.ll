@@ -366,6 +366,6 @@ define void @default() #0 {
 
 declare amdgpu_gfx void @callee(i32) #0
 
-attributes #0 = { nounwind "amdgpu-dynamic-vgpr"="true" }
-attributes #1 = { nounwind "frame-pointer"="none" "amdgpu-dynamic-vgpr"="true" }
-attributes #2 = { nounwind "frame-pointer"="all" "amdgpu-dynamic-vgpr"="true" }
+attributes #0 = { nounwind "amdgpu-dynamic-vgpr-block-size"="16" }
+attributes #1 = { nounwind "frame-pointer"="none" "amdgpu-dynamic-vgpr-block-size"="16" }
+attributes #2 = { nounwind "frame-pointer"="all" "amdgpu-dynamic-vgpr-block-size"="16" }

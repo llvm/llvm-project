@@ -76,10 +76,11 @@ struct GCNRegPressure {
                                                          Value[AGPR_TUPLE]); }
   unsigned getSGPRTuplesWeight() const { return Value[SGPR_TUPLE]; }
 
-  unsigned getOccupancy(const GCNSubtarget &ST, bool IsDynamicVGPR) const {
+  unsigned getOccupancy(const GCNSubtarget &ST,
+                        unsigned DynamicVGPRBlockSize) const {
     return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
                     ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()),
-                                                IsDynamicVGPR));
+                                                DynamicVGPRBlockSize));
   }
 
   void inc(unsigned Reg,
@@ -88,8 +89,9 @@ struct GCNRegPressure {
            const MachineRegisterInfo &MRI);
 
   bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
-                       bool IsDynamicVGPR) const {
-    return getOccupancy(ST, IsDynamicVGPR) > O.getOccupancy(ST, IsDynamicVGPR);
+                       unsigned DynamicVGPRBlockSize) const {
+    return getOccupancy(ST, DynamicVGPRBlockSize) >
+           O.getOccupancy(ST, DynamicVGPRBlockSize);
   }
 
   /// Compares \p this GCNRegpressure to \p O, returning true if \p this is
@@ -138,7 +140,7 @@ private:
                             const GCNRegPressure &P2);
 
   friend Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST,
-                         bool IsDynamicVGPR);
+                         unsigned DynamicVGPRBlockSize);
 };
 
 inline GCNRegPressure max(const GCNRegPressure &P1, const GCNRegPressure &P2) {
@@ -408,7 +410,7 @@ bool isEqual(const GCNRPTracker::LiveRegSet &S1,
              const GCNRPTracker::LiveRegSet &S2);
 
 Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr,
-                bool IsDynamicVGPR = false);
+                unsigned DynamicVGPRBlockSize = 0);
 
 Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
                 const MachineRegisterInfo &MRI);

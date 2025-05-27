@@ -99,19 +99,20 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
 
   if (!KnownExcessRP) {
-    VGPRCriticalLimit =
-        std::min(ST.getMaxNumVGPRs(TargetOccupancy, MFI.isDynamicVGPREnabled()),
-                 VGPRExcessLimit);
+    VGPRCriticalLimit = std::min(
+        ST.getMaxNumVGPRs(TargetOccupancy, MFI.getDynamicVGPRBlockSize()),
+        VGPRExcessLimit);
   } else {
     // This is similar to ST.getMaxNumVGPRs(TargetOccupancy) result except
     // returns a reasonably small number for targets with lots of VGPRs, such
     // as GFX10 and GFX11.
     LLVM_DEBUG(dbgs() << "Region is known to spill, use alternative "
                          "VGPRCriticalLimit calculation method.\n");
-    bool IsDynamicVGPR = MFI.isDynamicVGPREnabled();
-    unsigned Granule = AMDGPU::IsaInfo::getVGPRAllocGranule(&ST, IsDynamicVGPR);
+    unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
+    unsigned Granule =
+        AMDGPU::IsaInfo::getVGPRAllocGranule(&ST, DynamicVGPRBlockSize);
     unsigned Addressable =
-        AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST, IsDynamicVGPR);
+        AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST, DynamicVGPRBlockSize);
     unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
@@ -1143,7 +1144,7 @@ void UnclusteredHighRPStage::finalizeGCNSchedStage() {
     for (unsigned IDX = 0; IDX < DAG.Pressure.size(); ++IDX)
       DAG.RegionsWithMinOcc[IDX] =
           DAG.Pressure[IDX].getOccupancy(
-              DAG.ST, DAG.MFI.isDynamicVGPREnabled()) == DAG.MinOccupancy;
+              DAG.ST, DAG.MFI.getDynamicVGPRBlockSize()) == DAG.MinOccupancy;
 
     LLVM_DEBUG(dbgs() << StageID
                       << " stage successfully increased occupancy to "
@@ -1284,13 +1285,14 @@ void GCNSchedStage::checkScheduling() {
   LLVM_DEBUG(dbgs() << "Pressure after scheduling: " << print(PressureAfter));
   LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
 
-  bool IsDynamicVGPR = DAG.MFI.isDynamicVGPREnabled();
+  unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
 
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
       PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) <= S.VGPRCriticalLimit) {
     DAG.Pressure[RegionIdx] = PressureAfter;
     DAG.RegionsWithMinOcc[RegionIdx] =
-        PressureAfter.getOccupancy(ST, IsDynamicVGPR) == DAG.MinOccupancy;
+        PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize) ==
+        DAG.MinOccupancy;
 
     // Early out if we have achieved the occupancy target.
     LLVM_DEBUG(dbgs() << "Pressure in desired limits, done.\n");
@@ -1299,10 +1301,10 @@ void GCNSchedStage::checkScheduling() {
 
   unsigned TargetOccupancy = std::min(
       S.getTargetOccupancy(), ST.getOccupancyWithWorkGroupSizes(MF).second);
-  unsigned WavesAfter =
-      std::min(TargetOccupancy, PressureAfter.getOccupancy(ST, IsDynamicVGPR));
-  unsigned WavesBefore =
-      std::min(TargetOccupancy, PressureBefore.getOccupancy(ST, IsDynamicVGPR));
+  unsigned WavesAfter = std::min(
+      TargetOccupancy, PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize));
+  unsigned WavesBefore = std::min(
+      TargetOccupancy, PressureBefore.getOccupancy(ST, DynamicVGPRBlockSize));
   LLVM_DEBUG(dbgs() << "Occupancy before scheduling: " << WavesBefore
                     << ", after " << WavesAfter << ".\n");
 
@@ -1352,7 +1354,8 @@ void GCNSchedStage::checkScheduling() {
   } else {
     DAG.Pressure[RegionIdx] = PressureAfter;
     DAG.RegionsWithMinOcc[RegionIdx] =
-        PressureAfter.getOccupancy(ST, IsDynamicVGPR) == DAG.MinOccupancy;
+        PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize) ==
+        DAG.MinOccupancy;
   }
 }
 
@@ -1477,9 +1480,11 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, DAG.MFI.isDynamicVGPREnabled(), PressureBefore.getVGPRNum(false));
+        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
+        PressureBefore.getVGPRNum(false));
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        &ST, DAG.MFI.isDynamicVGPREnabled(), PressureAfter.getVGPRNum(false));
+        &ST, DAG.MFI.getDynamicVGPRBlockSize(),
+        PressureAfter.getVGPRNum(false));
     if (BlocksAfter > BlocksBefore)
       return true;
   }
@@ -1526,9 +1531,9 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
   ScheduleMetrics MAfter = getScheduleMetrics(DAG);
   unsigned OldMetric = MBefore.getMetric();
   unsigned NewMetric = MAfter.getMetric();
-  unsigned WavesBefore =
-      std::min(S.getTargetOccupancy(),
-               PressureBefore.getOccupancy(ST, DAG.MFI.isDynamicVGPREnabled()));
+  unsigned WavesBefore = std::min(
+      S.getTargetOccupancy(),
+      PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize()));
   unsigned Profit =
       ((WavesAfter * ScheduleMetrics::ScaleFactor) / WavesBefore *
        ((OldMetric + ScheduleMetricBias) * ScheduleMetrics::ScaleFactor) /
@@ -1582,7 +1587,7 @@ bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
 
 void GCNSchedStage::revertScheduling() {
   DAG.RegionsWithMinOcc[RegionIdx] =
-      PressureBefore.getOccupancy(ST, DAG.MFI.isDynamicVGPREnabled()) ==
+      PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize()) ==
       DAG.MinOccupancy;
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
   DAG.RescheduleRegions[RegionIdx] =
@@ -1864,8 +1869,8 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   // occupancy, or regions with VGPR spilling) to a model of their excess RP.
   DenseMap<unsigned, ExcessRP> OptRegions;
   const Function &F = MF.getFunction();
-  bool IsDynamicVGPR =
-      MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
+  unsigned DynamicVGPRBlockSize =
+      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
 
   std::pair<unsigned, unsigned> WavesPerEU = ST.getWavesPerEU(F);
   const unsigned MaxSGPRsNoSpill = ST.getMaxNumSGPRs(F);
@@ -1873,7 +1878,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   const unsigned MaxSGPRsIncOcc =
       ST.getMaxNumSGPRs(DAG.MinOccupancy + 1, false);
   const unsigned MaxVGPRsIncOcc =
-      ST.getMaxNumVGPRs(DAG.MinOccupancy + 1, IsDynamicVGPR);
+      ST.getMaxNumVGPRs(DAG.MinOccupancy + 1, DynamicVGPRBlockSize);
   IncreaseOccupancy = WavesPerEU.second > DAG.MinOccupancy;
 
   auto ClearOptRegionsIf = [&](bool Cond) -> bool {
@@ -2187,9 +2192,8 @@ void PreRARematStage::rematerialize() {
     }
     DAG.Pressure[I] = RP;
     AchievedOcc = std::min(
-        AchievedOcc,
-        RP.getOccupancy(
-            ST, MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled()));
+        AchievedOcc, RP.getOccupancy(ST, MF.getInfo<SIMachineFunctionInfo>()
+                                             ->getDynamicVGPRBlockSize()));
   }
   REMAT_DEBUG(dbgs() << "Achieved occupancy " << AchievedOcc << "\n");
 }

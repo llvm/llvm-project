@@ -199,7 +199,7 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
   unsigned Occupancy = MaxPressure.getOccupancy(
       *ST,
-      MI.getMF()->getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled());
+      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
 
   // Don't push over half the register budget. We don't want to introduce
   // spilling just to form a soft clause.

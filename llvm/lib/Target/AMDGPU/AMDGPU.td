@@ -1270,6 +1270,7 @@ def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "Enable dynamic VGPR mode"
 >;
 
+// FIXME: Remove after all users are migrated to attribute.
 def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
   "DynamicVGPRBlockSize32",
   "true",

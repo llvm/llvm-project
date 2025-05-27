@@ -450,16 +450,17 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
       unsigned MaxWaves = MFI.getMaxWavesPerEU();
       uint64_t TotalNumVgpr =
           getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
-      uint64_t NumVGPRsForWavesPerEU = std::max(
-          {TotalNumVgpr, (uint64_t)1,
-           (uint64_t)STM.getMinNumVGPRs(MaxWaves, MFI.isDynamicVGPREnabled())});
+      uint64_t NumVGPRsForWavesPerEU =
+          std::max({TotalNumVgpr, (uint64_t)1,
+                    (uint64_t)STM.getMinNumVGPRs(
+                        MaxWaves, MFI.getDynamicVGPRBlockSize())});
       uint64_t NumSGPRsForWavesPerEU = std::max(
           {NumSgpr, (uint64_t)1, (uint64_t)STM.getMinNumSGPRs(MaxWaves)});
       const MCExpr *OccupancyExpr = AMDGPUMCExpr::createOccupancy(
           STM.getOccupancyWithWorkGroupSizes(*MF).second,
           MCConstantExpr::create(NumSGPRsForWavesPerEU, OutContext),
           MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext),
-          MFI.isDynamicVGPREnabled(), STM, OutContext);
+          MFI.getDynamicVGPRBlockSize(), STM, OutContext);
       uint64_t Occupancy;
 
       const auto [MinWEU, MaxWEU] = AMDGPU::getIntegerPairAttribute(
@@ -1079,10 +1080,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, CreateExpr(1ul),
                                CreateExpr(STM.getMinNumSGPRs(MaxWaves))},
                               Ctx);
-  ProgInfo.NumVGPRsForWavesPerEU = AMDGPUMCExpr::createMax(
-      {ProgInfo.NumVGPR, CreateExpr(1ul),
-       CreateExpr(STM.getMinNumVGPRs(MaxWaves, MFI->isDynamicVGPREnabled()))},
-      Ctx);
+  ProgInfo.NumVGPRsForWavesPerEU =
+      AMDGPUMCExpr::createMax({ProgInfo.NumVGPR, CreateExpr(1ul),
+                               CreateExpr(STM.getMinNumVGPRs(
+                                   MaxWaves, MFI->getDynamicVGPRBlockSize()))},
+                              Ctx);
 
   if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
       STM.hasSGPRInitBug()) {
@@ -1256,7 +1258,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,
       ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU,
-      MFI->isDynamicVGPREnabled(), STM, Ctx);
+      MFI->getDynamicVGPRBlockSize(), STM, Ctx);
 
   const auto [MinWEU, MaxWEU] =
       AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
@@ -1406,7 +1408,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
 static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
                                   const SIProgramInfo &CurrentProgramInfo,
                                   CallingConv::ID CC, const GCNSubtarget &ST,
-                                  bool IsDynamicVGPR) {
+                                  unsigned DynamicVGPRBlockSize) {
   if (ST.hasIEEEMode())
     MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
 
@@ -1418,7 +1420,7 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
                    (bool)CurrentProgramInfo.TrapHandlerEnable);
     MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
 
-    if (IsDynamicVGPR)
+    if (DynamicVGPRBlockSize != 0)
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
   }
 
@@ -1472,7 +1474,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
     MD->setHwStage(CC, ".scratch_en", msgpack::Type::Boolean,
                    CurrentProgramInfo.ScratchEnable);
     EmitPALMetadataCommon(MD, CurrentProgramInfo, CC, STM,
-                          MFI->isDynamicVGPREnabled());
+                          MFI->getDynamicVGPRBlockSize());
   }
 
   // ScratchSize is in bytes, 16 aligned.
@@ -1545,7 +1547,7 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   } else {
     EmitPALMetadataCommon(
         MD, CurrentProgramInfo, CallingConv::AMDGPU_CS, ST,
-        MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled());
+        MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
   }
 
   // Set optional info

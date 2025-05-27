@@ -366,10 +366,11 @@ unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
                                                    getGeneration());
 }
 
-unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs,
-                                                bool IsDynamicVGPR) const {
+unsigned
+GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs,
+                                       unsigned DynamicVGPRBlockSize) const {
   return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(this, NumVGPRs,
-                                                       IsDynamicVGPR);
+                                                       DynamicVGPRBlockSize);
 }
 
 unsigned
@@ -405,11 +406,15 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
 std::pair<unsigned, unsigned>
 GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                unsigned NumSGPRs, unsigned NumVGPRs) const {
-  bool IsDynamicVGPR = AMDGPU::hasDynamicVGPR(F);
+  unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  // Temporarily check both the attribute and the subtarget feature until the
+  // latter is removed.
+  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
 
   auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
   unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
-  unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, IsDynamicVGPR);
+  unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize);
 
   // Maximum occupancy may be further limited by high SGPR/VGPR usage.
   MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
@@ -518,11 +523,14 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
   // Temporarily check both the attribute and the subtarget feature, until the
   // latter is removed.
-  bool IsDynamicVGPR = isDynamicVGPREnabled() || AMDGPU::hasDynamicVGPR(F);
+  unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
 
   std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
-  return getBaseMaxNumVGPRs(F, {getMinNumVGPRs(Waves.second, IsDynamicVGPR),
-                                getMaxNumVGPRs(Waves.first, IsDynamicVGPR)});
+  return getBaseMaxNumVGPRs(
+      F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
+          getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize)});
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {

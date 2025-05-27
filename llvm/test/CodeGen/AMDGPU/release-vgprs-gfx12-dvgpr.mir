@@ -21,8 +21,8 @@
   define amdgpu_ps void @image_atomic() #0 { ret void }
   define amdgpu_ps void @global_store_optnone() #1 { ret void }
 
-  attributes #0 = { "amdgpu-dynamic-vgpr" = "true" }
-  attributes #1 = { "amdgpu-dynamic-vgpr" = "true" noinline optnone }
+  attributes #0 = { "amdgpu-dynamic-vgpr-block-size" = "16" }
+  attributes #1 = { "amdgpu-dynamic-vgpr-block-size" = "16" noinline optnone }
 ...
 
 ---

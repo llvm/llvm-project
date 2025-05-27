@@ -297,7 +297,7 @@ define amdgpu_gfx float @simple_lds_recurse(float %arg0) #0 {
   ret float %res
 }
 
-attributes #0 = { nounwind "amdgpu-dynamic-vgpr"="true" }
+attributes #0 = { nounwind "amdgpu-dynamic-vgpr-block-size"="16" }
 
 !amdgpu.pal.metadata.msgpack = !{!0}
 
