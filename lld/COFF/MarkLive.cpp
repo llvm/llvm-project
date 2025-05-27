@@ -10,9 +10,7 @@
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/Timer.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <vector>
 
 namespace lld::coff {
 

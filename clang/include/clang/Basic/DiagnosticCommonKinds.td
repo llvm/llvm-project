@@ -181,6 +181,8 @@ def err_opencl_unknown_type_specifier : Error<
 
 def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
+def warn_unknown_attribute_ignored_suggestion : Warning<
+  "unknown attribute %0 ignored; did you mean '%1'?">, InGroup<UnknownAttributes>;
 def warn_attribute_ignored : Warning<"%0 attribute ignored">,
   InGroup<IgnoredAttributes>;
 def err_keyword_not_supported_on_target : Error<

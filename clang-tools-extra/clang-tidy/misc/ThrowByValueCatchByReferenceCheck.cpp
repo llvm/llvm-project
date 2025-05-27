@@ -8,7 +8,6 @@
 
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/OperationKinds.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;

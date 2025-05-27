@@ -4470,7 +4470,7 @@ GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
 
-  auto [GCPI, Inserted] = GCMetadataPrinters.insert({&S, nullptr});
+  auto [GCPI, Inserted] = GCMetadataPrinters.try_emplace(&S);
   if (!Inserted)
     return GCPI->second.get();
 

@@ -270,6 +270,18 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
       result =
           rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
     }
+  } else if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts())) {
+    // TODO(cir): this diverges from traditional lowering. Normally the string
+    // would be a global constant that is memcopied.
+    auto arrayTy = mlir::dyn_cast<cir::ArrayType>(strAttr.getType());
+    assert(arrayTy && "String attribute must have an array type");
+    mlir::Type eltTy = arrayTy.getElementType();
+    for (auto [idx, elt] : llvm::enumerate(strAttr)) {
+      auto init = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, converter->convertType(eltTy), elt);
+      result =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+    }
   } else {
     llvm_unreachable("unexpected ConstArrayAttr elements");
   }
@@ -530,10 +542,18 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
                                                         llvmSrcVal);
     return mlir::success();
   }
-  case cir::CastKind::bitcast:
+  case cir::CastKind::bitcast: {
+    mlir::Type dstTy = castOp.getType();
+    mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
+
     assert(!MissingFeatures::cxxABI());
     assert(!MissingFeatures::dataMemberType());
-    break;
+
+    mlir::Value llvmSrcVal = adaptor.getOperands().front();
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
+                                                       llvmSrcVal);
+    return mlir::success();
+  }
   case cir::CastKind::ptr_to_bool: {
     mlir::Value llvmSrcVal = adaptor.getOperands().front();
     mlir::Value zeroPtr = rewriter.create<mlir::LLVM::ZeroOp>(
@@ -708,8 +728,9 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   const mlir::Type llvmTy = convertTypeForMemory(
       *getTypeConverter(), dataLayout, op.getResult().getType());
   assert(!cir::MissingFeatures::opLoadStoreMemOrder());
-  assert(!cir::MissingFeatures::opLoadStoreAlignment());
-  unsigned alignment = (unsigned)dataLayout.getTypeABIAlignment(llvmTy);
+  std::optional<size_t> opAlign = op.getAlignment();
+  unsigned alignment =
+      (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmTy));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -733,10 +754,11 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
     cir::StoreOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   assert(!cir::MissingFeatures::opLoadStoreMemOrder());
-  assert(!cir::MissingFeatures::opLoadStoreAlignment());
   const mlir::Type llvmTy =
       getTypeConverter()->convertType(op.getValue().getType());
-  unsigned alignment = (unsigned)dataLayout.getTypeABIAlignment(llvmTy);
+  std::optional<size_t> opAlign = op.getAlignment();
+  unsigned alignment =
+      (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmTy));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -948,8 +970,7 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   const bool isDsoLocal = true;
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
-  assert(!cir::MissingFeatures::opGlobalAlignment());
-  const uint64_t alignment = 0;
+  const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
 
@@ -1004,8 +1025,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const bool isDsoLocal = true;
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
-  assert(!cir::MissingFeatures::opGlobalAlignment());
-  const uint64_t alignment = 0;
+  const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
   SmallVector<mlir::NamedAttribute> attributes;
@@ -1042,6 +1062,33 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       alignment, addrSpace, isDsoLocal, isThreadLocal,
       /*comdat=*/mlir::SymbolRefAttr(), attributes);
 
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
+    cir::SwitchFlatOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+
+  llvm::SmallVector<mlir::APInt, 8> caseValues;
+  for (mlir::Attribute val : op.getCaseValues()) {
+    auto intAttr = cast<cir::IntAttr>(val);
+    caseValues.push_back(intAttr.getValue());
+  }
+
+  llvm::SmallVector<mlir::Block *, 8> caseDestinations;
+  llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
+
+  for (mlir::Block *x : op.getCaseDestinations())
+    caseDestinations.push_back(x);
+
+  for (mlir::OperandRange x : op.getCaseOperands())
+    caseOperands.push_back(x);
+
+  // Set switch op to branch to the newly created blocks.
+  rewriter.setInsertionPoint(op);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
+      op, adaptor.getCondition(), op.getDefaultDestination(),
+      op.getDefaultOperands(), caseValues, caseDestinations, caseOperands);
   return mlir::success();
 }
 
@@ -1661,6 +1708,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,
                CIRToLLVMSelectOpLowering,
+               CIRToLLVMSwitchFlatOpLowering,
                CIRToLLVMShiftOpLowering,
                CIRToLLVMStackSaveOpLowering,
                CIRToLLVMStackRestoreOpLowering,
@@ -1668,7 +1716,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMUnaryOpLowering,
                CIRToLLVMVecCreateOpLowering,
                CIRToLLVMVecExtractOpLowering,
-               CIRToLLVMVecInsertOpLowering
+               CIRToLLVMVecInsertOpLowering,
+               CIRToLLVMVecCmpOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1790,6 +1839,35 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
       op, adaptor.getVec(), adaptor.getValue(), adaptor.getIndex());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
+    cir::VecCmpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(mlir::isa<cir::VectorType>(op.getType()) &&
+         mlir::isa<cir::VectorType>(op.getLhs().getType()) &&
+         mlir::isa<cir::VectorType>(op.getRhs().getType()) &&
+         "Vector compare with non-vector type");
+  mlir::Type elementType = elementTypeIfVector(op.getLhs().getType());
+  mlir::Value bitResult;
+  if (auto intType = mlir::dyn_cast<cir::IntType>(elementType)) {
+    bitResult = rewriter.create<mlir::LLVM::ICmpOp>(
+        op.getLoc(),
+        convertCmpKindToICmpPredicate(op.getKind(), intType.isSigned()),
+        adaptor.getLhs(), adaptor.getRhs());
+  } else if (mlir::isa<cir::CIRFPTypeInterface>(elementType)) {
+    bitResult = rewriter.create<mlir::LLVM::FCmpOp>(
+        op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
+        adaptor.getLhs(), adaptor.getRhs());
+  } else {
+    return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
+  }
+
+  // LLVM IR vector comparison returns a vector of i1. This one-bit vector
+  // must be sign-extended to the correct result type.
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
+      op, typeConverter->convertType(op.getType()), bitResult);
   return mlir::success();
 }
 

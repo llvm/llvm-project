@@ -395,7 +395,8 @@ def GetLocal : AccessOpcode { let HasCustomEval = 1; }
 // [] -> [Pointer]
 def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 
-def Kill : Opcode;
+def EndLifetimePop : Opcode;
+def EndLifetime : Opcode;
 def StartLifetime : Opcode;
 
 def CheckDecl : Opcode {

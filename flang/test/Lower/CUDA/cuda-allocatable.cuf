@@ -186,7 +186,7 @@ attributes(global) subroutine sub8()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub8() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
-! CHECK: %[[DESC:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub8Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[DESC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QFsub8Ea"}
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[DESC]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub8Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK: %[[HEAP:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {fir.must_be_heap = true, uniq_name = "_QFsub8Ea.alloc"}
 ! CHECK: %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>

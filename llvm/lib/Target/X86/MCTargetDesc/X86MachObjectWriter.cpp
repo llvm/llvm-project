@@ -152,16 +152,15 @@ void X86MachObjectWriter::RecordX86_64Relocation(
 
     // Neither symbol can be modified.
     if (Target.getSpecifier()) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "unsupported relocation of modified symbol");
+      reportError(Fixup.getLoc(), "unsupported relocation of modified symbol");
       return;
     }
 
     // We don't support PCrel relocations of differences. Darwin 'as' doesn't
     // implement most of these correctly.
     if (IsPCRel) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "unsupported pc-relative relocation of difference");
+      reportError(Fixup.getLoc(),
+                  "unsupported pc-relative relocation of difference");
       return;
     }
 
@@ -176,8 +175,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     // single SIGNED relocation); reject it for now.  Except the case where both
     // symbols don't have a base, equal but both NULL.
     if (A_Base == B_Base && A_Base) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "unsupported relocation with identical base");
+      reportError(Fixup.getLoc(), "unsupported relocation with identical base");
       return;
     }
 
@@ -185,16 +183,17 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     // non-relocatable expression.
     if (A->isUndefined() || B->isUndefined()) {
       StringRef Name = A->isUndefined() ? A->getName() : B->getName();
-      Asm.getContext().reportError(Fixup.getLoc(),
-        "unsupported relocation with subtraction expression, symbol '" +
-        Name + "' can not be undefined in a subtraction expression");
+      reportError(
+          Fixup.getLoc(),
+          "unsupported relocation with subtraction expression, symbol '" +
+              Name + "' can not be undefined in a subtraction expression");
       return;
     }
 
-    Value += Writer->getSymbolAddress(*A, Asm) -
-             (!A_Base ? 0 : Writer->getSymbolAddress(*A_Base, Asm));
-    Value -= Writer->getSymbolAddress(*B, Asm) -
-             (!B_Base ? 0 : Writer->getSymbolAddress(*B_Base, Asm));
+    Value += Writer->getSymbolAddress(*A) -
+             (!A_Base ? 0 : Writer->getSymbolAddress(*A_Base));
+    Value -= Writer->getSymbolAddress(*B) -
+             (!B_Base ? 0 : Writer->getSymbolAddress(*B_Base));
 
     if (!A_Base)
       Index = A->getFragment()->getParent()->getOrdinal() + 1;
@@ -241,17 +240,17 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     } else if (Symbol->isInSection() && !Symbol->isVariable()) {
       // The index is the section ordinal (1-based).
       Index = Symbol->getFragment()->getParent()->getOrdinal() + 1;
-      Value += Writer->getSymbolAddress(*Symbol, Asm);
+      Value += Writer->getSymbolAddress(*Symbol);
 
       if (IsPCRel)
         Value -= FixupAddress + (1 << Log2Size);
     } else if (Symbol->isVariable()) {
-      FixedValue = Writer->getSymbolAddress(*Symbol, Asm);
+      FixedValue = Writer->getSymbolAddress(*Symbol);
       return;
     } else {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "unsupported relocation of undefined symbol '" +
-                              Symbol->getName() + "'");
+      reportError(Fixup.getLoc(),
+                  "unsupported relocation of undefined symbol '" +
+                      Symbol->getName() + "'");
       return;
     }
 
@@ -269,8 +268,8 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         } else if (Specifier == X86MCExpr::VK_TLVP) {
           Type = MachO::X86_64_RELOC_TLV;
         } else if (Specifier) {
-          Asm.getContext().reportError(
-              Fixup.getLoc(), "unsupported symbol modifier in relocation");
+          reportError(Fixup.getLoc(),
+                      "unsupported symbol modifier in relocation");
           return;
         } else {
           Type = MachO::X86_64_RELOC_SIGNED;
@@ -297,9 +296,8 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         }
       } else {
         if (Specifier) {
-          Asm.getContext().reportError(
-              Fixup.getLoc(),
-              "unsupported symbol modifier in branch relocation");
+          reportError(Fixup.getLoc(),
+                      "unsupported symbol modifier in branch relocation");
           return;
         }
 
@@ -316,17 +314,17 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         Type = MachO::X86_64_RELOC_GOT;
         IsPCRel = 1;
       } else if (Specifier == X86MCExpr::VK_TLVP) {
-        Asm.getContext().reportError(
-            Fixup.getLoc(), "TLVP symbol modifier should have been rip-rel");
+        reportError(Fixup.getLoc(),
+                    "TLVP symbol modifier should have been rip-rel");
         return;
       } else if (Specifier) {
-        Asm.getContext().reportError(
-            Fixup.getLoc(), "unsupported symbol modifier in relocation");
+        reportError(Fixup.getLoc(),
+                    "unsupported symbol modifier in relocation");
         return;
       } else {
         Type = MachO::X86_64_RELOC_UNSIGNED;
         if (Fixup.getTargetKind() == X86::reloc_signed_4byte) {
-          Asm.getContext().reportError(
+          reportError(
               Fixup.getLoc(),
               "32-bit absolute addressing is not supported in 64-bit mode");
           return;
@@ -362,24 +360,22 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
   const MCSymbol *A = Target.getAddSym();
 
   if (!A->getFragment()) {
-    Asm.getContext().reportError(
-        Fixup.getLoc(),
-        "symbol '" + A->getName() +
-            "' can not be undefined in a subtraction expression");
+    reportError(Fixup.getLoc(),
+                "symbol '" + A->getName() +
+                    "' can not be undefined in a subtraction expression");
     return false;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, Asm);
+  uint32_t Value = Writer->getSymbolAddress(*A);
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
 
   if (const MCSymbol *SB = Target.getSubSym()) {
     if (!SB->getFragment()) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(),
-          "symbol '" + SB->getName() +
-              "' can not be undefined in a subtraction expression");
+      reportError(Fixup.getLoc(),
+                  "symbol '" + SB->getName() +
+                      "' can not be undefined in a subtraction expression");
       return false;
     }
 
@@ -390,7 +386,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
     // pedantic compatibility with 'as'.
     Type = A->isExternal() ? (unsigned)MachO::GENERIC_RELOC_SECTDIFF
                            : (unsigned)MachO::GENERIC_RELOC_LOCAL_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(*SB, Asm);
+    Value2 = Writer->getSymbolAddress(*SB);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -402,11 +398,11 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
     if (FixupOffset > 0xffffff) {
       char Buffer[32];
       format("0x%x", FixupOffset).print(Buffer, sizeof(Buffer));
-      Asm.getContext().reportError(Fixup.getLoc(),
-                         Twine("Section too large, can't encode "
-                                "r_address (") + Buffer +
-                         ") into 24 bits of scattered "
-                         "relocation entry.");
+      reportError(Fixup.getLoc(), Twine("Section too large, can't encode "
+                                        "r_address (") +
+                                      Buffer +
+                                      ") into 24 bits of scattered "
+                                      "relocation entry.");
       return false;
     }
 
@@ -466,8 +462,8 @@ void X86MachObjectWriter::recordTLVPRelocation(MachObjectWriter *Writer,
     uint32_t FixupAddress =
         Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset();
     IsPCRel = 1;
-    FixedValue = FixupAddress - Writer->getSymbolAddress(*SymB, Asm) +
-                 Target.getConstant();
+    FixedValue =
+        FixupAddress - Writer->getSymbolAddress(*SymB) + Target.getConstant();
     FixedValue += 1ULL << Log2Size;
   } else {
     FixedValue = 0;
@@ -543,8 +539,8 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
       int64_t Res = Val.getConstant();
       bool isAbs = Val.isAbsolute();
       if (Relocatable && Val.getAddSym() && Val.getSubSym()) {
-        Res += Writer->getSymbolAddress(*Val.getAddSym(), Asm) -
-               Writer->getSymbolAddress(*Val.getSubSym(), Asm);
+        Res += Writer->getSymbolAddress(*Val.getAddSym()) -
+               Writer->getSymbolAddress(*Val.getSubSym());
         isAbs = true;
       }
       if (isAbs) {

@@ -37,7 +37,7 @@ jobs:
   stage1:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-self-hosted-linux
-    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
+    container: ghcr.io/llvm/libcxx-linux-builder:b060022103f551d8ca1dad84122ef73927c86512
     continue-on-error: false
     strategy:
       fail-fast: false

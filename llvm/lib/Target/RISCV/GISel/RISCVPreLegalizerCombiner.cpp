@@ -121,8 +121,7 @@ RISCVPreLegalizerCombiner::RISCVPreLegalizerCombiner()
 }
 
 bool RISCVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
   auto &TPC = getAnalysis<TargetPassConfig>();
 

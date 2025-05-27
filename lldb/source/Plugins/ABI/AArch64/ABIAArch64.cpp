@@ -177,8 +177,8 @@ void ABIAArch64::AugmentRegisterInfo(
                       lldb::eFormatHex);
 
   auto bool_predicate = [](const auto &reg_num) { return bool(reg_num); };
-  bool saw_v_regs = std::any_of(v_regs.begin(), v_regs.end(), bool_predicate);
-  bool saw_z_regs = std::any_of(z_regs.begin(), z_regs.end(), bool_predicate);
+  bool saw_v_regs = llvm::any_of(v_regs, bool_predicate);
+  bool saw_z_regs = llvm::any_of(z_regs, bool_predicate);
 
   // Sn/Dn for Vn.
   if (saw_v_regs) {

@@ -7858,8 +7858,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         if (!isInt<16>(Offset))
           continue;
 
-        ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
-                                            ImmOpnd.getValueType());
+        ImmOpnd = CurDAG->getSignedTargetConstant(Offset, SDLoc(ImmOpnd),
+                                                  ImmOpnd.getValueType());
       } else if (Offset != 0) {
         // This optimization is performed for non-TOC-based local-[exec|dynamic]
         // accesses.

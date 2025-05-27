@@ -16,6 +16,7 @@
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
@@ -756,6 +757,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
     auto MemProfData = Reader->takeMemProfData();
 
+    auto DataAccessProfData = Reader->takeDataAccessProfData();
+
     // Check for the empty input in case the YAML file is invalid.
     if (MemProfData.Records.empty()) {
       WC->Errors.emplace_back(
@@ -764,6 +767,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     }
 
     WC->Writer.addMemProfData(std::move(MemProfData), MemProfError);
+    WC->Writer.addDataAccessProfData(std::move(DataAccessProfData));
     return;
   }
 

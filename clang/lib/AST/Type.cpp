@@ -3797,13 +3797,13 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
       ExtraBits.EffectsHaveConditions = true;
       auto *DestConds = getTrailingObjects<EffectConditionExpr>();
       llvm::uninitialized_copy(SrcConds, DestConds);
-      assert(std::any_of(SrcConds.begin(), SrcConds.end(),
-                         [](const EffectConditionExpr &EC) {
-                           if (const Expr *E = EC.getCondition())
-                             return E->isTypeDependent() ||
-                                    E->isValueDependent();
-                           return false;
-                         }) &&
+      assert(llvm::any_of(SrcConds,
+                          [](const EffectConditionExpr &EC) {
+                            if (const Expr *E = EC.getCondition())
+                              return E->isTypeDependent() ||
+                                     E->isValueDependent();
+                            return false;
+                          }) &&
              "expected a dependent expression among the conditions");
       addDependence(TypeDependence::DependentInstantiation);
     }

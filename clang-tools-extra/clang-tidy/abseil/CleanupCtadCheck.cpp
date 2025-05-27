@@ -8,13 +8,10 @@
 
 #include "CleanupCtadCheck.h"
 #include "../utils/TransformerClangTidyCheck.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace ::clang::ast_matchers;
 using namespace ::clang::transformer;

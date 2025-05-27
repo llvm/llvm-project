@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -265,6 +265,9 @@
       ]
     },
     "breakpoints": [
+      {
+        "language": "lldb.disassembly"
+      },
       {
         "language": "ada"
       },

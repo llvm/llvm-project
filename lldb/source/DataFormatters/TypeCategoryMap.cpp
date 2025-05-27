@@ -112,9 +112,10 @@ void TypeCategoryMap::EnableAllCategories() {
       continue;
     auto pos = iter->second->GetLastEnabledPosition();
     if (pos >= sorted_categories.size()) {
-      auto iter = std::find_if(
-          sorted_categories.begin(), sorted_categories.end(),
-          [](const TypeCategoryImplSP &sp) -> bool { return sp.get() == nullptr; });
+      auto iter = llvm::find_if(sorted_categories,
+                                [](const TypeCategoryImplSP &sp) -> bool {
+                                  return sp.get() == nullptr;
+                                });
       pos = std::distance(sorted_categories.begin(), iter);
     }
     sorted_categories.at(pos) = iter->second;

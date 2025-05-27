@@ -14,7 +14,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0x1458
 # CHECK-INST-RELAX:         qc.beqi     a0, 0xa, 0x8
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L1
    qc.bnei a0, 10, .L1
 .fill 1300, 4, 0
 .L1:
@@ -24,7 +23,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0x28b2
 # CHECK-INST-RELAX:         qc.bnei     a0, 0x6, 0x1462
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L2
    qc.beqi a0, 6, .L2
 .fill 1300, 4, 0
 .L2:
@@ -34,7 +32,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0x3d0c
 # CHECK-INST-RELAX:         qc.bgei     a0, 0xd, 0x28bc
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L3
    qc.blti a0, 13, .L3
 .fill 1300, 4, 0
 .L3:
@@ -44,7 +41,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0x5166
 # CHECK-INST-RELAX:         qc.blti     a0, 0x1, 0x3d16
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L4
    qc.bgei a0, 1, .L4
 .fill 1300, 4, 0
 .L4:
@@ -54,7 +50,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0x65c0
 # CHECK-INST-RELAX:         qc.bgeui    a0, 0x5, 0x5170
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L5
    qc.bltui a0, 5, .L5
 .fill 1300, 4, 0
 .L5:
@@ -64,7 +59,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0x7a1a
 # CHECK-INST-RELAX:         qc.bltui    a0, 0xc, 0x65ca
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L6
    qc.bgeui a0, 12, .L6
 .fill 1300, 4, 0
 .L6:
@@ -74,7 +68,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0x8e76
 # CHECK-INST-RELAX:         qc.e.beqi    a0, 0x1, 0x7a26
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L7
    qc.e.bnei a0, 1, .L7
 .fill 1300, 4, 0
 .L7:
@@ -84,7 +77,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0xa2d2
 # CHECK-INST-RELAX:         qc.e.bnei    a0, 0x2, 0x8e82
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L8
    qc.e.beqi a0, 2, .L8
 .fill 1300, 4, 0
 .L8:
@@ -94,7 +86,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0xb72e
 # CHECK-INST-RELAX:         qc.e.bgei    a0, 0x3, 0xa2de
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L9
    qc.e.blti a0, 3, .L9
 .fill 1300, 4, 0
 .L9:
@@ -104,7 +95,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0xcb8a
 # CHECK-INST-RELAX:         qc.e.blti    a0, 0x4, 0xb73a
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L10
    qc.e.bgei a0, 4, .L10
 .fill 1300, 4, 0
 .L10:
@@ -114,7 +104,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0xdfe6
 # CHECK-INST-RELAX:         qc.e.bgeui    a0, 0x5, 0xcb96
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L11
    qc.e.bltui a0, 5, .L11
 .fill 1300, 4, 0
 .L11:
@@ -124,7 +113,6 @@ test:
 # CHECK-INST-NEXT:    jal     zero, 0xf442
 # CHECK-INST-RELAX:         qc.e.bltui    a0, 0x6, 0xdff2
 # CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-# CHECK-INST-RELAX-NEXT:    R_RISCV_JAL .L12
    qc.e.bgeui a0, 6, .L12
 .fill 1300, 4, 0
 .L12:

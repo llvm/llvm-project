@@ -448,7 +448,7 @@ static Error applyLibraryLinkModifiers(Session &S, LinkGraph &G) {
   if (!S.HiddenArchives.empty()) {
     StringRef ObjName(G.getName());
     if (ObjName.ends_with(')')) {
-      auto LibName = ObjName.split('(').first;
+      auto LibName = ObjName.split('[').first;
       if (S.HiddenArchives.count(LibName)) {
         for (auto *Sym : G.defined_symbols())
           Sym->setScope(std::max(Sym->getScope(), Scope::Hidden));
@@ -2279,8 +2279,26 @@ static Error addLibraries(Session &S,
 
     auto &LinkLayer = S.getLinkLayer(LazyLinkIdxs.count(LL.Position));
 
+    std::set<std::string> ImportedDynamicLibraries;
     StaticLibraryDefinitionGenerator::VisitMembersFunction VisitMembers;
-    if (AllLoad)
+
+    // COFF gets special handling due to import libraries.
+    if (S.ES.getTargetTriple().isOSBinFormatCOFF()) {
+      if (AllLoad) {
+        VisitMembers =
+            [ImportScanner = COFFImportFileScanner(ImportedDynamicLibraries),
+             LoadAll =
+                 StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
+                     LinkLayer, JD)](object::Archive &A,
+                                     MemoryBufferRef MemberBuf,
+                                     size_t Index) mutable -> Expected<bool> {
+          if (!ImportScanner(A, MemberBuf, Index))
+            return false;
+          return LoadAll(A, MemberBuf, Index);
+        };
+      } else
+        VisitMembers = COFFImportFileScanner(ImportedDynamicLibraries);
+    } else if (AllLoad)
       VisitMembers = StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
           LinkLayer, JD);
     else if (S.ES.getTargetTriple().isOSBinFormatMachO() && ForceLoadObjC)
@@ -2294,7 +2312,7 @@ static Error addLibraries(Session &S,
 
     // Push additional dynamic libraries to search.
     // Note that this mechanism only happens in COFF.
-    for (auto FileName : (*G)->getImportedDynamicLibraries()) {
+    for (auto FileName : ImportedDynamicLibraries) {
       LibraryLoad NewLL;
       auto FileNameRef = StringRef(FileName);
       if (!FileNameRef.ends_with_insensitive(".dll"))

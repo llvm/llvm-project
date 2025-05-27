@@ -5305,9 +5305,16 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
     else if (Info.fallbackAddressSpace)
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
-    Result = DAG.getMemIntrinsicNode(
-        Info.opc, getCurSDLoc(), VTs, Ops, Info.memVT, MPI, Info.align,
-        Info.flags, LocationSize::precise(Info.size), I.getAAMetadata());
+    EVT MemVT = Info.memVT;
+    LocationSize Size = LocationSize::precise(Info.size);
+    if (Size.hasValue() && !Size.getValue())
+      Size = LocationSize::precise(MemVT.getStoreSize());
+    Align Alignment = Info.align.value_or(DAG.getEVTAlign(MemVT));
+    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+        MPI, Info.flags, Size, Alignment, I.getAAMetadata(), /*Ranges=*/nullptr,
+        Info.ssid, Info.order, Info.failureOrder);
+    Result =
+        DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs, Ops, MemVT, MMO);
   } else if (!HasChain) {
     Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
   } else if (!I.getType()->isVoidTy()) {
@@ -8191,11 +8198,20 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_interleave3:
     visitVectorInterleave(I, 3);
     return;
+  case Intrinsic::vector_interleave4:
+    visitVectorInterleave(I, 4);
+    return;
   case Intrinsic::vector_interleave5:
     visitVectorInterleave(I, 5);
     return;
+  case Intrinsic::vector_interleave6:
+    visitVectorInterleave(I, 6);
+    return;
   case Intrinsic::vector_interleave7:
     visitVectorInterleave(I, 7);
+    return;
+  case Intrinsic::vector_interleave8:
+    visitVectorInterleave(I, 8);
     return;
   case Intrinsic::vector_deinterleave2:
     visitVectorDeinterleave(I, 2);
@@ -8203,11 +8219,20 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_deinterleave3:
     visitVectorDeinterleave(I, 3);
     return;
+  case Intrinsic::vector_deinterleave4:
+    visitVectorDeinterleave(I, 4);
+    return;
   case Intrinsic::vector_deinterleave5:
     visitVectorDeinterleave(I, 5);
     return;
+  case Intrinsic::vector_deinterleave6:
+    visitVectorDeinterleave(I, 6);
+    return;
   case Intrinsic::vector_deinterleave7:
     visitVectorDeinterleave(I, 7);
+    return;
+  case Intrinsic::vector_deinterleave8:
+    visitVectorDeinterleave(I, 8);
     return;
   case Intrinsic::experimental_vector_compress:
     setValue(&I, DAG.getNode(ISD::VECTOR_COMPRESS, sdl,

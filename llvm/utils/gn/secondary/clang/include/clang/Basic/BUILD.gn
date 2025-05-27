@@ -130,6 +130,11 @@ clang_tablegen("CXX11AttributeInfo") {
   td_file = "../Basic/Attr.td"
 }
 
+clang_tablegen("AttributeSpellingList") {
+  args = [ "-gen-attribute-spelling-list" ]
+  td_file = "Attr.td"
+}
+
 clang_tablegen("Builtins") {
   args = [ "-gen-clang-builtins" ]
 }

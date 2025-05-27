@@ -1882,3 +1882,11 @@ llvm.mlir.global internal constant @bad_array_attr_simple_type() : !llvm.array<2
   %0 = llvm.mlir.constant([2.5, 7.4]) : !llvm.array<2 x f64>
   llvm.return %0 : !llvm.array<2 x f64>
 }
+
+// ----
+
+llvm.func @inlineAsmMustTail(%arg0: i32, %arg1 : !llvm.ptr) {
+  // expected-error@+1 {{op tail call kind 'musttail' is not supported}}
+  %8 = llvm.inline_asm tail_call_kind = <musttail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+  llvm.return
+}

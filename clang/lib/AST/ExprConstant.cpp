@@ -8468,10 +8468,11 @@ public:
 
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
+    SourceLocation Loc = E->getExprLoc();
 
-    if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body) ||
-        !HandleFunctionCall(E->getExprLoc(), Definition, This, E, Args, Call,
-                            Body, Info, Result, ResultSlot))
+    if (!CheckConstexprFunction(Info, Loc, FD, Definition, Body) ||
+        !HandleFunctionCall(Loc, Definition, This, E, Args, Call, Body, Info,
+                            Result, ResultSlot))
       return false;
 
     if (!CovariantAdjustmentPath.empty() &&

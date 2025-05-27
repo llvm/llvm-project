@@ -175,8 +175,6 @@ void DIEBuilder::updateReferences() {
     LocExpr.Die.replaceValue(getState().DIEAlloc, LocExpr.Attr, LocExpr.Form,
                              Value);
   }
-
-  return;
 }
 
 uint32_t DIEBuilder::allocDIE(const DWARFUnit &DU, const DWARFDie &DDie,

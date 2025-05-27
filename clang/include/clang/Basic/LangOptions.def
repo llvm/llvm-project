@@ -398,11 +398,11 @@ BENIGN_LANGOPT(HalfNoSemanticInterposition, 1, 0,
                "Like -fno-semantic-interposition but don't use local aliases")
 ENUM_LANGOPT(StackProtector, StackProtectorMode, 2, SSPOff,
              "stack protector mode")
-ENUM_LANGOPT(TrivialAutoVarInit, TrivialAutoVarInitKind, 2, TrivialAutoVarInitKind::Uninitialized,
+BENIGN_ENUM_LANGOPT(TrivialAutoVarInit, TrivialAutoVarInitKind, 2, TrivialAutoVarInitKind::Uninitialized,
              "trivial automatic variable initialization")
-VALUE_LANGOPT(TrivialAutoVarInitStopAfter, 32, 0,
+BENIGN_VALUE_LANGOPT(TrivialAutoVarInitStopAfter, 32, 0,
              "stop trivial automatic variable initialization after the specified number of instances. Must be greater than 0.")
-VALUE_LANGOPT(TrivialAutoVarInitMaxSize, 32, 0,
+BENIGN_VALUE_LANGOPT(TrivialAutoVarInitMaxSize, 32, 0,
              "stop trivial automatic variable initialization if var size exceeds the specified size (in bytes). Must be greater than 0.")
 ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 2, SOB_Undefined,
              "signed integer overflow handling")

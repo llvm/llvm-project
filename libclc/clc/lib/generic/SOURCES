@@ -2,6 +2,7 @@ common/clc_degrees.cl
 common/clc_radians.cl
 common/clc_sign.cl
 common/clc_smoothstep.cl
+common/clc_step.cl
 geometric/clc_cross.cl
 geometric/clc_distance.cl
 geometric/clc_dot.cl

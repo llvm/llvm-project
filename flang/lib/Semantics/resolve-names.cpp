@@ -9376,7 +9376,7 @@ static void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol) {
   if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
     auto *object{symbol.detailsIf<ObjectEntityDetails>()};
     if (!object->cudaDataAttr() && !IsValue(symbol) &&
-        (IsDummy(symbol) || object->IsArray())) {
+        !IsFunctionResult(symbol)) {
       // Implicitly set device attribute if none is set in device context.
       object->set_cudaDataAttr(common::CUDADataAttr::Device);
     }

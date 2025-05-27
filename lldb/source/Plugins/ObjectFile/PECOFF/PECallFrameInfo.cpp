@@ -455,27 +455,26 @@ bool PECallFrameInfo::GetAddressRange(Address addr, AddressRange &range) {
   return true;
 }
 
-bool PECallFrameInfo::GetUnwindPlan(const Address &addr,
-                                    UnwindPlan &unwind_plan) {
-  return GetUnwindPlan(AddressRange(addr, 1), unwind_plan);
-}
-
-bool PECallFrameInfo::GetUnwindPlan(const AddressRange &range,
-                                    UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-
-  unwind_plan.SetSourceName("PE EH info");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolYes);
-  unwind_plan.SetRegisterKind(eRegisterKindLLDB);
+std::unique_ptr<UnwindPlan> PECallFrameInfo::GetUnwindPlan(
+    llvm::ArrayRef<lldb_private::AddressRange> ranges,
+    const lldb_private::Address &addr) {
+  // Only continuous functions are supported.
+  if (ranges.size() != 1)
+    return nullptr;
+  const AddressRange &range = ranges[0];
 
   const RuntimeFunction *runtime_function =
       FindRuntimeFunctionIntersectsWithRange(range);
   if (!runtime_function)
-    return false;
+    return nullptr;
+
+  auto plan_up = std::make_unique<UnwindPlan>(eRegisterKindLLDB);
+  plan_up->SetSourceName("PE EH info");
+  plan_up->SetSourcedFromCompiler(eLazyBoolYes);
 
   EHProgramBuilder builder(m_object_file, runtime_function->UnwindInfoOffset);
   if (!builder.Build())
-    return false;
+    return nullptr;
 
   std::vector<UnwindPlan::Row> rows;
 
@@ -493,14 +492,14 @@ bool PECallFrameInfo::GetUnwindPlan(const AddressRange &range,
   }
 
   for (auto it = rows.rbegin(); it != rows.rend(); ++it)
-    unwind_plan.AppendRow(std::move(*it));
+    plan_up->AppendRow(std::move(*it));
 
-  unwind_plan.SetPlanValidAddressRanges({AddressRange(
+  plan_up->SetPlanValidAddressRanges({AddressRange(
       m_object_file.GetAddress(runtime_function->StartAddress),
       runtime_function->EndAddress - runtime_function->StartAddress)});
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_up->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
 
-  return true;
+  return plan_up;
 }
 
 const RuntimeFunction *PECallFrameInfo::FindRuntimeFunctionIntersectsWithRange(

@@ -1907,7 +1907,8 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
   void handleMutexHeldEndOfScope(StringRef Kind, Name LockName,
                                  SourceLocation LocLocked,
                                  SourceLocation LocEndOfScope,
-                                 LockErrorKind LEK) override {
+                                 LockErrorKind LEK,
+                                 bool ReentrancyMismatch) override {
     unsigned DiagID = 0;
     switch (LEK) {
       case LEK_LockedSomePredecessors:
@@ -1926,8 +1927,9 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     if (LocEndOfScope.isInvalid())
       LocEndOfScope = FunEndLocation;
 
-    PartialDiagnosticAt Warning(LocEndOfScope, S.PDiag(DiagID) << Kind
-                                                               << LockName);
+    PartialDiagnosticAt Warning(LocEndOfScope, S.PDiag(DiagID)
+                                                   << Kind << LockName
+                                                   << ReentrancyMismatch);
     Warnings.emplace_back(std::move(Warning),
                           makeLockedHereNote(LocLocked, Kind));
   }

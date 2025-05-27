@@ -301,9 +301,13 @@ struct PragmaMSRuntimeChecksHandler : public EmptyPragmaHandler {
 };
 
 struct PragmaMSIntrinsicHandler : public PragmaHandler {
-  PragmaMSIntrinsicHandler() : PragmaHandler("intrinsic") {}
+  PragmaMSIntrinsicHandler(Sema &Actions)
+      : PragmaHandler("intrinsic"), Actions(Actions) {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &FirstToken) override;
+
+private:
+  Sema &Actions;
 };
 
 // "\#pragma fenv_access (on)".
@@ -517,7 +521,7 @@ void Parser::initializePragmaHandlers() {
     PP.AddPragmaHandler(MSOptimize.get());
     MSRuntimeChecks = std::make_unique<PragmaMSRuntimeChecksHandler>();
     PP.AddPragmaHandler(MSRuntimeChecks.get());
-    MSIntrinsic = std::make_unique<PragmaMSIntrinsicHandler>();
+    MSIntrinsic = std::make_unique<PragmaMSIntrinsicHandler>(Actions);
     PP.AddPragmaHandler(MSIntrinsic.get());
     MSFenvAccess = std::make_unique<PragmaMSFenvAccessHandler>();
     PP.AddPragmaHandler(MSFenvAccess.get());
@@ -3793,7 +3797,15 @@ void PragmaMSIntrinsicHandler::HandlePragma(Preprocessor &PP,
     if (!II->getBuiltinID())
       PP.Diag(Tok.getLocation(), diag::warn_pragma_intrinsic_builtin)
           << II << SuggestIntrinH;
-
+    // If the builtin hasn't already been declared, declare it now.
+    DeclarationNameInfo NameInfo(II, Tok.getLocation());
+    LookupResult Previous(Actions, NameInfo, Sema::LookupOrdinaryName,
+                          Actions.forRedeclarationInCurContext());
+    Actions.LookupName(Previous, Actions.getCurScope(),
+                       /*CreateBuiltins*/ false);
+    if (Previous.empty())
+      Actions.LazilyCreateBuiltin(II, II->getBuiltinID(), Actions.getCurScope(),
+                                  /*ForRedeclaration*/ true, Tok.getLocation());
     PP.Lex(Tok);
     if (Tok.isNot(tok::comma))
       break;
