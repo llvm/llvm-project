@@ -65,7 +65,8 @@ public:
       const MCSymbol *NumExplicitSGPR, const MCSymbol *NumNamedBarrier,
       const MCSymbol *PrivateSegmentSize, const MCSymbol *UsesVCC,
       const MCSymbol *UsesFlatScratch, const MCSymbol *HasDynamicallySizedStack,
-      const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) {};
+      const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall,
+      const MCSymbol *NumVGPRRankSum) {};
 
   virtual void EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
                                       const MCSymbol *MaxAGPR,
@@ -146,7 +147,8 @@ public:
       const MCSymbol *NumExplicitSGPR, const MCSymbol *NumNamedBarrier,
       const MCSymbol *PrivateSegmentSize, const MCSymbol *UsesVCC,
       const MCSymbol *UsesFlatScratch, const MCSymbol *HasDynamicallySizedStack,
-      const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) override;
+      const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall,
+      const MCSymbol *NumVGPRRankSum) override;
 
   void EmitMCResourceMaximums(const MCSymbol *MaxVGPR, const MCSymbol *MaxAGPR,
                               const MCSymbol *MaxSGPR) override;

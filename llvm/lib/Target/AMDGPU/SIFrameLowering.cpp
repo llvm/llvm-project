@@ -707,6 +707,8 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
+  // No worry about Wavegroup rank-function here because it skips this
+  // emitEntryFunctionPrologue.
   const bool WavegroupEnable = AMDGPU::getWavegroupEnable(MF.getFunction());
   LiveRegUnits LiveUnits;
   Register PreloadedPrivateSegmentSizeReg;
@@ -1311,6 +1313,14 @@ void SIFrameLowering::emitCSRSpillRestores(
 
 void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
+  // A wavegroup rank-function uses its wavegroup-entry kernel's
+  // prologue and frame.
+  if (AMDGPU::getWavegroupRankFunction(MF.getFunction())) {
+    // however it is not an entry function in terms of idx0-usage
+    finalizeIdx0SaveRestores(MF, false, false);
+    return;
+  }
+
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   if (FuncInfo->isEntryFunction()) {
     emitEntryFunctionPrologue(MF, MBB);
@@ -1808,6 +1818,9 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // convention and it doesn't contain any calls to llvm.amdgcn.cs.chain, then
   // we don't need to save and restore anything.
   if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
+    return;
+
+  if (AMDGPU::getWavegroupRankFunction(MF.getFunction()))
     return;
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);

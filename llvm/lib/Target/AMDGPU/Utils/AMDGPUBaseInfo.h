@@ -1430,6 +1430,8 @@ bool getHasDepthExport(const Function &F);
 
 bool getWavegroupEnable(const Function &F);
 
+bool getWavegroupRankFunction(const Function &F);
+
 std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F);
 
 LLVM_READNONE

@@ -37,7 +37,8 @@ public:
     RIK_UsesFlatScratch,
     RIK_HasDynSizedStack,
     RIK_HasRecursion,
-    RIK_HasIndirectCall
+    RIK_HasIndirectCall,
+    RIK_NumVGPRRankSum
   };
 
 private:

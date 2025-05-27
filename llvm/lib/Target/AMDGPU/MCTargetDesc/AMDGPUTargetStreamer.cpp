@@ -301,7 +301,8 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
     const MCSymbol *NumExplicitSGPR, const MCSymbol *NumNamedBarrier,
     const MCSymbol *PrivateSegmentSize, const MCSymbol *UsesVCC,
     const MCSymbol *UsesFlatScratch, const MCSymbol *HasDynamicallySizedStack,
-    const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) {
+    const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall,
+    const MCSymbol *NumVGPRRankSum) {
 #define PRINT_RES_INFO(ARG)                                                    \
   OS << "\t.set ";                                                             \
   ARG->print(OS, getContext().getAsmInfo());                                   \
@@ -319,6 +320,7 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
   PRINT_RES_INFO(HasDynamicallySizedStack);
   PRINT_RES_INFO(HasRecursion);
   PRINT_RES_INFO(HasIndirectCall);
+  PRINT_RES_INFO(NumVGPRRankSum);
 #undef PRINT_RES_INFO
 }
 

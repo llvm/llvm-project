@@ -216,6 +216,9 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return;
 
+  if (AMDGPU::getWavegroupRankFunction(MF->getFunction()))
+    return;
+
   auto &Streamer = getTargetStreamer()->getStreamer();
   auto &Context = Streamer.getContext();
   auto &ObjectFileInfo = *Context.getObjectFileInfo();
@@ -704,8 +707,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         if (Op.isTargetIndex() && Op.getIndex() == AMDGPU::TI_NUM_VGPRS) {
           Op.ChangeToMCSymbol(RI.getSymbol(MF.getName(),
                                            MCResourceInfo::RIK_NumVGPR,
-                                           OutContext,
-                                           IsLocal),
+                                           OutContext, IsLocal),
                               SIInstrInfo::MO_NUM_VGPRS);
           Found = true;
           break;
@@ -714,6 +716,19 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       if (Found)
         break;
     }
+    // We need to change the source of "s_add_gpr_idx idx0, callee".
+    // Do this only after RI.gatherResourceInfo(...).
+    for (auto MI : Info.WavegroupRankCalls) {
+      MachineOperand &Op = MI->getOperand(1);
+      auto Callee =
+          cast<Function>(Op.getGlobal()->stripPointerCastsAndAliases());
+
+      Op.ChangeToMCSymbol(RI.getSymbol(Callee->getName(),
+                                       MCResourceInfo::RIK_NumVGPR, OutContext,
+                                       Callee->hasLocalLinkage()),
+                          SIInstrInfo::MO_NUM_VGPRS);
+    }
+
   }
 
   DumpCodeInstEmitter = nullptr;
@@ -743,8 +758,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                      IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumSGPR, OutContext,
                      IsLocal),
-        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumNamedBarrier, OutContext,
-                     IsLocal),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumNamedBarrier,
+                     OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
                      OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesVCC, OutContext,
@@ -756,6 +771,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasRecursion, OutContext,
                      IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasIndirectCall,
+                     OutContext, IsLocal),
+        RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPRRankSum,
                      OutContext, IsLocal));
   }
 
@@ -764,7 +781,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         Context.getELFSection(".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
     OutStreamer->switchSection(CommentSection);
 
-    if (!MFI->isEntryFunction()) {
+    if (!MFI->isEntryFunction() ||
+        AMDGPU::getWavegroupRankFunction(MF.getFunction())) {
       using RIK = MCResourceInfo::ResourceInfoKind;
       OutStreamer->emitRawComment(" Function info:", false);
 
@@ -986,9 +1004,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
       ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
 
-
   uint32_t NumWavesPerVGPRAlloc = 1;
-  if (AMDGPU::getWavegroupEnable(MF.getFunction())) {
+  if (AMDGPU::getWavegroupEnable(MF.getFunction()) &&
+      !AMDGPU::getWavegroupRankFunction(MF.getFunction())) {
+    // WaveGroupTotalVGPR = NumLanesharedVGPR +
+    //     max(NumWaves*NumVGPR, sum(rank-callee-NumVGPR)).
     const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     auto WorkGroupSize = getReqdWorkGroupSize(MF.getFunction()).value();
     NumWavesPerVGPRAlloc =
@@ -998,10 +1018,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     const MCExpr *NumWavesPerVGPRAllocExpr = MCConstantExpr::create(NumWavesPerVGPRAlloc, Ctx);
     const MCExpr *NumLaneSharedVGPRsExpr = MCConstantExpr::create(NumLaneSharedVGPRs, Ctx);
 
+    const MCExpr *TmpRankSumVGPRExpr = AMDGPUMCExpr::createMax(
+        {MCBinaryExpr::createMul(NumWavesPerVGPRAllocExpr, ProgInfo.NumVGPR,
+                                 Ctx),
+         GetSymRefExpr(RIK::RIK_NumVGPRRankSum)},
+        Ctx);
     const MCExpr *TmpNumVGPRExpr = MCBinaryExpr::createAdd(
-        MCBinaryExpr::createMul(NumWavesPerVGPRAllocExpr, ProgInfo.NumVGPR,
-                                Ctx),
-        NumLaneSharedVGPRsExpr, Ctx);
+        TmpRankSumVGPRExpr, NumLaneSharedVGPRsExpr, Ctx);
 
     ProgInfo.NumArchVGPR = TmpNumVGPRExpr;
     ProgInfo.NumVGPR = TmpNumVGPRExpr;

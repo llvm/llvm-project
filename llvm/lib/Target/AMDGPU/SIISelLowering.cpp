@@ -6593,13 +6593,22 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::WAVEGROUP_RANK_CALL: {
     const DebugLoc &DL = MI.getDebugLoc();
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    MachineBasicBlock *SplitBB = BB->splitAt(MI, false /*UpdateLiveIns*/);
+    MachineBasicBlock *SplitBB = BB->splitAt(MI, true /*UpdateLiveIns*/);
     MachineBasicBlock *RankCallBB = MF->CreateMachineBasicBlock();
     MachineFunction::iterator MBBI(SplitBB);
     MF->insert(MBBI, RankCallBB);
     BB->addSuccessor(RankCallBB);
     RankCallBB->addSuccessor(SplitBB);
 
+    bool FoundRankCallMarker =
+        std::any_of(BB->instr_begin(), BB->instr_end(), [&](MachineInstr &DI) {
+          return SIInstrInfo::isWaveGroupRankCallMarker(DI);
+        });
+    // Initialize IDX0 before the 1st rank-call.
+    if (!FoundRankCallMarker) {
+      BuildMI(*BB, &MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX0)
+          .addTargetIndex(AMDGPU::TI_NUM_VGPRS_LANESHARED);
+    }
     int Rank = MI.getOperand(0).getImm();
     assert(Rank < 8);
     // Set up conditional branch.
@@ -6614,14 +6623,21 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addImm(Rank);
     BuildMI(*BB, &MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC0)).addMBB(SplitBB);
     // Call inside the conditional branch.
-    Register Callee = MI.getOperand(1).getReg();
+    Register CalleeAddrReg = MI.getOperand(1).getReg();
     BuildMI(*RankCallBB, RankCallBB->end(), DL, TII->get(AMDGPU::S_SETPC_B64))
-        .addReg(Callee);
-    // Update IDX0 for the next rank-call.
+        .addReg(CalleeAddrReg);
+    // Update IDX0 for the next rank-call. Use the global address of the rank
+    // callee as the source. In AsmPrinter, it will be replaced with the
+    // MCSymbol representing the number of VGPRs of that callee.
+    auto CalleeAddrDef =  MRI.getVRegDef(CalleeAddrReg);
+    assert(CalleeAddrDef->getOpcode() == AMDGPU::SI_PC_ADD_REL_OFFSET64);
     BuildMI(*SplitBB, SplitBB->begin(), DL, TII->get(AMDGPU::S_ADD_GPR_IDX_U32),
             AMDGPU::IDX0)
-        .addTargetIndex(AMDGPU::TI_NUM_VGPRS_RANK0 + Rank)
+        .addGlobalAddress(CalleeAddrDef->getOperand(1).getGlobal(), 0,
+                          SIInstrInfo::MO_NUM_VGPRS)
         .addReg(AMDGPU::IDX0);
+    SplitBB->addLiveIn(AMDGPU::IDX0);
+    RankCallBB->addLiveIn(AMDGPU::IDX0);
     MI.eraseFromParent();
     return SplitBB;
   }

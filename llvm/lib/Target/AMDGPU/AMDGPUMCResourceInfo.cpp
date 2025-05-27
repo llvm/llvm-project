@@ -53,6 +53,8 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
     return GOCS(".has_recursion");
   case RIK_HasIndirectCall:
     return GOCS(".has_indirect_call");
+  case RIK_NumVGPRRankSum:
+    return GOCS(".num_vgpr_rank_sum");
   }
   llvm_unreachable("Unexpected ResourceInfoKind.");
 }
@@ -310,6 +312,44 @@ void MCResourceInfo::gatherResourceInfo(
                ResourceInfoKind::RIK_HasDynSizedStack);
     SetToLocal(FRI.HasRecursion, ResourceInfoKind::RIK_HasRecursion);
     SetToLocal(FRI.HasIndirectCall, ResourceInfoKind::RIK_HasIndirectCall);
+  }
+
+  const MCExpr *RankSumExpr = MCConstantExpr::create(0, OutContext);
+  SmallVector<const MCExpr *, 8> PrivSegExprs;
+  for (auto MI : FRI.WavegroupRankCalls) {
+    auto Callee = MI->getOperand(1).getGlobal();
+    auto CalleeSym = TM.getSymbol(Callee);
+    // VGPR formula, take the sum.
+    MCSymbol *CalleeVGPRSym = getSymbol(CalleeSym->getName(), RIK_NumVGPR,
+                                        OutContext, Callee->hasLocalLinkage());
+    RankSumExpr = MCBinaryExpr::createAdd(
+        RankSumExpr, MCSymbolRefExpr::create(CalleeVGPRSym, OutContext),
+        OutContext);
+    // Private segment size formula, take the max.
+    MCSymbol *CalleePrivSegSym =
+        getSymbol(CalleeSym->getName(), RIK_PrivateSegSize, OutContext,
+                  Callee->hasLocalLinkage());
+    PrivSegExprs.push_back(
+        MCSymbolRefExpr::create(CalleePrivSegSym, OutContext));
+  }
+  MCSymbol *RankSumSym =
+      getSymbol(FnSym->getName(), RIK_NumVGPRRankSum, OutContext, IsLocal);
+  RankSumSym->setVariableValue(RankSumExpr);
+  // Adjust the PrivateSegSize.
+  if (!PrivSegExprs.empty()) {
+    const MCExpr *LocalConstExpr =
+        MCConstantExpr::create(FRI.PrivateSegmentSize, OutContext);
+    const AMDGPUMCExpr *TransitiveExpr =
+        AMDGPUMCExpr::createMax(PrivSegExprs, OutContext);
+    LocalConstExpr =
+        MCBinaryExpr::createAdd(LocalConstExpr, TransitiveExpr, OutContext);
+    // Take the max between the regular-callee-based expr and rank-callee-based
+    // expr.
+    MCSymbol *Sym =
+        getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext, IsLocal);
+    const MCExpr *MaxExpr = Sym->getVariableValue(false);
+    MaxExpr = AMDGPUMCExpr::createMax({MaxExpr, LocalConstExpr}, OutContext);
+    Sym->setVariableValue(MaxExpr);
   }
 }
 

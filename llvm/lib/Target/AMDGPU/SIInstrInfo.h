@@ -1571,6 +1571,17 @@ public:
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, AMDGPU::OpName OpName) const;
+
+  // This marks the end of one rank-call and potientially the begnning of the
+  // next rank-call. Its special semantics is implemented during MC Emission by
+  // changing operand#1.
+  static bool isWaveGroupRankCallMarker(const MachineInstr &MI) {
+    return MI.getOpcode() == AMDGPU::S_ADD_GPR_IDX_U32 &&
+           MI.getOperand(0).isReg() &&
+           MI.getOperand(0).getReg() == AMDGPU::IDX0 &&
+           MI.getOperand(1).isGlobal() &&
+           MI.getOperand(1).getTargetFlags() == MO_NUM_VGPRS;
+  }
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class
