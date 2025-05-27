@@ -275,14 +275,14 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
 
       for (DXContainerYAML::RootParameterLocationYaml &L :
            P.RootSignature->Parameters.Locations) {
-        dxbc::RootParameterHeader Header{L.Header.Type, L.Header.Visibility,
+        dxbc::RTS0::v1::RootParameterHeader Header{L.Header.Type, L.Header.Visibility,
                                          L.Header.Offset};
 
         switch (L.Header.Type) {
         case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
           const DXContainerYAML::RootConstantsYaml &ConstantYaml =
               P.RootSignature->Parameters.getOrInsertConstants(L);
-          dxbc::RootConstants Constants;
+          dxbc::RTS0::v1::RootConstants Constants;
           Constants.Num32BitValues = ConstantYaml.Num32BitValues;
           Constants.RegisterSpace = ConstantYaml.RegisterSpace;
           Constants.ShaderRegister = ConstantYaml.ShaderRegister;

@@ -47,7 +47,7 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   RootSigDesc.RootParametersOffset = Data.getRootParametersOffset();
 
   uint32_t Flags = Data.getFlags();
-  for (const dxbc::RootParameterHeader &PH : Data.param_headers()) {
+  for (const dxbc::RTS0::v1::RootParameterHeader &PH : Data.param_headers()) {
 
     if (!dxbc::isValidParameterType(PH.ParameterType))
       return createStringError(std::errc::invalid_argument,
@@ -70,7 +70,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     object::DirectX::RootParameterView ParamView = ParamViewOrErr.get();
 
     if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
-      llvm::Expected<dxbc::RootConstants> ConstantsOrErr = RCV->read();
+      llvm::Expected<dxbc::RTS0::v1::RootConstants> ConstantsOrErr =
+          RCV->read();
       if (Error E = ConstantsOrErr.takeError())
         return std::move(E);
 
