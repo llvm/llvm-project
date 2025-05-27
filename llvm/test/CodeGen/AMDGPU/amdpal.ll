@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tahiti | FileCheck --check-prefixes=PAL,CI --enable-var-scope %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefixes=PAL,VI --enable-var-scope %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tahiti -disable-promote-alloca-to-vector | FileCheck --check-prefixes=PAL,CI --enable-var-scope %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga -disable-promote-alloca-to-vector | FileCheck --check-prefixes=PAL,VI --enable-var-scope %s
 
 ; PAL-NOT: .AMDGPU.config
 ; PAL-LABEL: {{^}}simple:
@@ -51,18 +51,17 @@ entry:
   ret void
 }
 
-; After the change that **promotes the alloca to a vector** (GEP‑of‑GEP
-; promotion), no scratch buffer is needed, so the descriptor load should
-; disappear.
+; Check code sequence for amdpal use of scratch for alloca in a compute shader.
+; The scratch descriptor is loaded from offset 0x10 of the GIT, rather than offset
+; 0 in a graphics shader.
+; Prior to GCN3 s_load_dword offsets are dwords, so the offset will be 0x4.
 
 ; PAL-LABEL: {{^}}scratch2_cs:
-; CI: v_add_i32_e32 v0, vcc, 1, v6
-; VI: v_add_u32_e32 v0, vcc, 1, v6
-; PAL: v_cmp_eq_u32_e32 vcc, 1, v0
-; PAL: v_cndmask_b32_e32 v1, v5, v3, vcc
-; PAL: v_cmp_eq_u32_e32 vcc, 2, v0
-; PAL: v_cndmask_b32_e32 v0, v1, v4, vcc
-; PAL: buffer_store{{.*}}, s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}
+; PAL: s_movk_i32 s{{[0-9]+}}, 0x1234
+; PAL: s_mov_b32 s[[GITPTR:[0-9]+]], s0
+; CI: s_load_dwordx4 s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s[[[GITPTR]]:{{[0-9]+\]}}, 0x4
+; VI: s_load_dwordx4 s[[[SCRATCHDESC:[0-9]+]]:{{[0-9]+]}}, s[[[GITPTR]]:{{[0-9]+\]}}, 0x10
+; PAL: buffer_store{{.*}}, s[[[SCRATCHDESC]]:
 
 define amdgpu_cs void @scratch2_cs(i32 inreg, i32 inreg, i32 inreg, <3 x i32> inreg, i32 inreg, <3 x i32> %coord, <2 x i32> %in, i32 %extra, i32 %idx) #0 {
 entry:
@@ -89,6 +88,6 @@ declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32,
 ; PAL-NEXT:       .cs:
 ; PAL-NEXT:         .entry_point:    _amdgpu_cs_main
 ; PAL-NEXT:         .entry_point_symbol:    scratch2_cs
-; PAL-NEXT:         .scratch_memory_size: 0
+; PAL-NEXT:         .scratch_memory_size: 0x10
 ; PAL-NEXT:         .sgpr_count:     0x
 ; PAL-NEXT:         .vgpr_count:     0x

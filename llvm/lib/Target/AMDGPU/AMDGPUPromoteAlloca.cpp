@@ -451,7 +451,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   // Combine both GEP operations in a single pass, producing:
   //   BasePtr      = %0
   //   ConstOffset  = 4
-  //   VarOffsets   = { %j → element_size(<2 x i32>) }
+  //   VarOffsets   = { %j -> element_size(<2 x i32>) }
   //
   // That lets us emit a single buffer_load directly into a VGPR, without ever
   // allocating scratch memory for the intermediate pointer.
