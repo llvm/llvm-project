@@ -68,7 +68,7 @@ public:
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI);
   bool visitCastInst(CastInst &CI) { return false; }
   bool visitBitCastInst(BitCastInst &BCI) { return false; }
-  bool visitInsertElementInst(InsertElementInst &IEI) { return false; }
+  bool visitInsertElementInst(InsertElementInst &IEI);
   bool visitExtractElementInst(ExtractElementInst &EEI);
   bool visitShuffleVectorInst(ShuffleVectorInst &SVI) { return false; }
   bool visitPHINode(PHINode &PHI) { return false; }
@@ -170,6 +170,38 @@ bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
       SI.setOperand(I, NewGlobal);
   }
   return false;
+}
+
+bool DataScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
+  Value *Vec = IEI.getOperand(0);
+  Value *Val = IEI.getOperand(1);
+  Value *Index = IEI.getOperand(2);
+  Type *IndexTy = Index->getType();
+
+  // If the index is a constant then we don't need to scalarize it
+  if (isa<ConstantInt>(Index))
+    return false;
+
+  IRBuilder<> Builder(&IEI);
+  Type *VecTy = Vec->getType();
+
+  Type *ArrTy = equivalentArrayTypeFromVector(VecTy);
+  Value *ArrAlloca = Builder.CreateAlloca(ArrTy);
+
+  for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
+    Value *EE = Builder.CreateExtractElement(Vec, I);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        ArrTy, ArrAlloca,
+        {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, I)});
+    Builder.CreateStore(EE, GEP);
+  }
+
+  Value *GEP = Builder.CreateInBoundsGEP(ArrTy, ArrAlloca,
+                                         {ConstantInt::get(IndexTy, 0), Index});
+  Builder.CreateStore(Val, GEP);
+
+  IEI.eraseFromParent();
+  return true;
 }
 
 bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
