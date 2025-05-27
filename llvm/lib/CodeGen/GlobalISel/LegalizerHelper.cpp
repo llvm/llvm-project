@@ -9394,7 +9394,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
       MIRBuilder.buildConstant(
           Ty, APInt::getSignedMaxValue(Ty.getScalarSizeInBits())));
 
-  MI.eraseFromParent();
+    MI.eraseFromParent();
   return Legalized;
 }
 
