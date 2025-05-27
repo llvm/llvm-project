@@ -601,8 +601,8 @@ static Decomposition decompose(Value *V,
       Decomposition PHIResult(BasePtr);
       Decomposition IdxResult =
           decompose(Index, Preconditions, IsSigned, State);
-      IdxResult.mul(Scale);
-      PHIResult.add(IdxResult);
+      (void)IdxResult.mul(Scale);
+      (void)PHIResult.add(IdxResult);
       return PHIResult;
     }
 
