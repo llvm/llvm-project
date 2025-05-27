@@ -1165,6 +1165,9 @@ static void printrWithDepthHelper(raw_ostream &OS, const SDNode *N,
     // Don't follow chain operands.
     if (Op.getValueType() == MVT::Other)
       continue;
+    // Don't print children that were fully rendered inline.
+    if (shouldPrintInline(*Op.getNode(), G))
+      continue;
     OS << '\n';
     printrWithDepthHelper(OS, Op.getNode(), G, depth - 1, indent + 2);
   }
