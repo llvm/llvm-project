@@ -426,10 +426,11 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
         }
       }
       if (FoundLowPC) {
-        if (CurrentLowPC == MaxAddress)
+        if (CurrentLowPC == getTombstoneAddress())
           CurrentElement->setIsDiscarded();
-        // Consider the case of WebAssembly.
-        CurrentLowPC += WasmCodeSectionOffset;
+        else
+          // Consider the case of WebAssembly.
+          CurrentLowPC += WasmCodeSectionOffset;
         if (CurrentElement->isCompileUnit())
           setCUBaseAddress(CurrentLowPC);
       }
@@ -483,7 +484,8 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
       DWARFAddressRangesVector Ranges = RangesOrError.get();
       for (DWARFAddressRange &Range : Ranges) {
         // This seems to be a tombstone for empty ranges.
-        if (Range.LowPC == Range.HighPC)
+        if ((Range.LowPC == Range.HighPC) ||
+            (Range.LowPC = getTombstoneAddress()))
           continue;
         // Store the real upper limit for the address range.
         if (UpdateHighAddress && Range.HighPC > 0)
@@ -840,6 +842,11 @@ Error LVDWARFReader::createScopes() {
       DwarfContext->getNumCompileUnits() ? DwarfContext->compile_units()
                                          : DwarfContext->dwo_compile_units();
   for (const std::unique_ptr<DWARFUnit> &CU : CompileUnits) {
+
+    // Take into account the address byte size for a correct 'tombstone'
+    // value identification.
+    setTombstoneAddress(
+        dwarf::computeTombstoneAddress(CU->getAddressByteSize()));
 
     // Deduction of index used for the line records.
     //
