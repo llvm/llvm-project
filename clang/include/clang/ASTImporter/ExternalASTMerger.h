@@ -13,9 +13,9 @@
 #ifndef LLVM_CLANG_AST_EXTERNALASTMERGER_H
 #define LLVM_CLANG_AST_EXTERNALASTMERGER_H
 
-#include "clang/AST/ASTImporter.h"
-#include "clang/AST/ASTImporterSharedState.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/ASTImporter/ASTImporter.h"
+#include "clang/ASTImporter/ASTImporterSharedState.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {

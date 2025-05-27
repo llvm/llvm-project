@@ -12,6 +12,7 @@ add_clang_executable(clang-import-test
 
 set(CLANG_IMPORT_TEST_LIB_DEPS
   clangAST
+  clangASTImporter
   clangBasic
   clangCodeGen
   clangDriver

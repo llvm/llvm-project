@@ -37,6 +37,7 @@ add_clang_library(clangInterpreter
 
   LINK_LIBS
   clangAST
+  clangASTImporter
   clangAnalysis
   clangBasic
   clangCodeGen

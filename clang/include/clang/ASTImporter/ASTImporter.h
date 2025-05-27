@@ -11,16 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_ASTIMPORTER_H
-#define LLVM_CLANG_AST_ASTIMPORTER_H
+#ifndef LLVM_CLANG_ASTIMPORTER_ASTIMPORTER_H
+#define LLVM_CLANG_ASTIMPORTER_ASTIMPORTER_H
 
-#include "clang/AST/ASTImportError.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/ASTImporter/ASTImportError.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -597,4 +597,4 @@ class TypeSourceInfo;
 
 } // namespace clang
 
-#endif // LLVM_CLANG_AST_ASTIMPORTER_H
+#endif // LLVM_CLANG_ASTIMPORTER_ASTIMPORTER_H

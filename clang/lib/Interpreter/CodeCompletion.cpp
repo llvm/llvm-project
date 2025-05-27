@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Interpreter/CodeCompletion.h"
-#include "clang/AST/ASTImporter.h"
 #include "clang/AST/DeclLookups.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/ASTImporter/ASTImporter.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"

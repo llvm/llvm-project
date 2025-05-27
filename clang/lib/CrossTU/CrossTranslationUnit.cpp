@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/CrossTU/CrossTranslationUnit.h"
-#include "clang/AST/ASTImporter.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/ASTImporter/ASTImporter.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTUDiagnostic.h"
 #include "clang/Frontend/ASTUnit.h"

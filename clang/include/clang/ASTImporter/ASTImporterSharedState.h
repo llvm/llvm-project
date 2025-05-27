@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_ASTIMPORTERSHAREDSTATE_H
-#define LLVM_CLANG_AST_ASTIMPORTERSHAREDSTATE_H
+#ifndef LLVM_CLANG_ASTIMPORTER_ASTIMPORTERSHAREDSTATE_H
+#define LLVM_CLANG_ASTIMPORTER_ASTIMPORTERSHAREDSTATE_H
 
-#include "clang/AST/ASTImportError.h"
-#include "clang/AST/ASTImporterLookupTable.h"
 #include "clang/AST/Decl.h"
+#include "clang/ASTImporter/ASTImportError.h"
+#include "clang/ASTImporter/ASTImporterLookupTable.h"
 #include "llvm/ADT/DenseMap.h"
 #include <optional>
 
@@ -84,4 +84,4 @@ public:
 };
 
 } // namespace clang
-#endif // LLVM_CLANG_AST_ASTIMPORTERSHAREDSTATE_H
+#endif // LLVM_CLANG_ASTIMPORTER_ASTIMPORTERSHAREDSTATE_H

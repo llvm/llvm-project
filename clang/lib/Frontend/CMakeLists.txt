@@ -50,6 +50,7 @@ add_clang_library(clangFrontend
   LINK_LIBS
   clangAPINotes
   clangAST
+  clangASTImporter
   clangBasic
   clangDriver
   clangEdit

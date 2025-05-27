@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTImporter.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/ExternalASTMerger.h"
+#include "clang/ASTImporter/ASTImporter.h"
+#include "clang/ASTImporter/ExternalASTMerger.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_ASTIMPORTERLOOKUPTABLE_H
-#define LLVM_CLANG_AST_ASTIMPORTERLOOKUPTABLE_H
+#ifndef LLVM_CLANG_ASTIMPORTER_ASTIMPORTERLOOKUPTABLE_H
+#define LLVM_CLANG_ASTIMPORTER_ASTIMPORTERLOOKUPTABLE_H
 
 #include "clang/AST/DeclBase.h" // lookup_result
 #include "clang/AST/DeclarationName.h"
@@ -90,4 +90,4 @@ public:
 
 } // namespace clang
 
-#endif // LLVM_CLANG_AST_ASTIMPORTERLOOKUPTABLE_H
+#endif // LLVM_CLANG_ASTIMPORTER_ASTIMPORTERLOOKUPTABLE_H
