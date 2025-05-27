@@ -371,10 +371,10 @@ class LowerMatrixIntrinsics {
         if (auto *CDV = dyn_cast<ConstantDataVector>(Constant)) {
           unsigned Width = SI.getStride();
           size_t EltSize = EltTy->getPrimitiveSizeInBits() / 8;
-          StringRef Data = CDV->getRawDataValues().substr(
-              J * Width * EltSize, Width * EltSize);
-          addVector(ConstantDataVector::getRaw(Data, Width,
-                                               CDV->getElementType()));
+          StringRef Data = CDV->getRawDataValues().substr(J * Width * EltSize,
+                                                          Width * EltSize);
+          addVector(
+              ConstantDataVector::getRaw(Data, Width, CDV->getElementType()));
         } else if (isa<PoisonValue>(Constant))
           addVector(PoisonValue::get(RowTy));
         else if (isa<UndefValue>(Constant))
