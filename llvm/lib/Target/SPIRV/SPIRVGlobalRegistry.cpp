@@ -974,7 +974,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(
 
   for (const auto &Elem : Ty->elements()) {
     SPIRVType *ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder, AccQual,
-                                      Decorator != nullptr, EmitIR);
+                                      /* ExplicitLayoutRequired= */ Decorator != nullptr, EmitIR);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
