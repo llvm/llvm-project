@@ -50,10 +50,9 @@ static inline bool isFnEntryBlock(Block *block) {
 
 spirv::Deserializer::Deserializer(ArrayRef<uint32_t> binary,
                                   MLIRContext *context,
-                                  bool enableControlFlowStructurization)
+                                  const spirv::DeserializationOptions &options)
     : binary(binary), context(context), unknownLoc(UnknownLoc::get(context)),
-      module(createModuleOp()), opBuilder(module->getRegion()),
-      enableControlFlowStructurization(enableControlFlowStructurization)
+      module(createModuleOp()), opBuilder(module->getRegion()), options(options)
 #ifndef NDEBUG
       ,
       logger(llvm::dbgs())
@@ -2363,7 +2362,7 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
 }
 
 LogicalResult spirv::Deserializer::structurizeControlFlow() {
-  if (!enableControlFlowStructurization) {
+  if (!options.enableControlFlowStructurization) {
     LLVM_DEBUG(
         {
           logger.startLine()

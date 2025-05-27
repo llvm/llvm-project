@@ -38,7 +38,7 @@ using namespace mlir;
 // `inputFilename` and returns a module containing the SPIR-V module.
 static OwningOpRef<Operation *>
 deserializeModule(const llvm::MemoryBuffer *input, MLIRContext *context,
-                  bool enableControlFlowStructurization) {
+                  const spirv::DeserializationOptions &options) {
   context->loadDialect<spirv::SPIRVDialect>();
 
   // Make sure the input stream can be treated as a stream of SPIR-V words
@@ -52,16 +52,18 @@ deserializeModule(const llvm::MemoryBuffer *input, MLIRContext *context,
 
   auto binary = llvm::ArrayRef(reinterpret_cast<const uint32_t *>(start),
                                size / sizeof(uint32_t));
-  return spirv::deserialize(binary, context, enableControlFlowStructurization);
+  return spirv::deserialize(binary, context, options);
 }
 
 namespace mlir {
 void registerFromSPIRVTranslation() {
-  static llvm::cl::opt<bool> noControlFlowStructurization(
-      "spirv-no-control-flow-structurization",
-      llvm::cl::desc("Disable control flow structurization to enable "
-                     "deserialization of early exits (see #138688)"),
-      llvm::cl::init(false));
+  static llvm::cl::opt<bool> enableControlFlowStructurization(
+      "spirv-structurize-control-flow",
+      llvm::cl::desc(
+          "Enable control flow structurization into `spirv.mlir.selection` and "
+          "`spirv.mlir.loop`. This may need to be disabled to support "
+          "deserialization of early exits (see #138688)"),
+      llvm::cl::init(true));
 
   TranslateToMLIRRegistration fromBinary(
       "deserialize-spirv", "deserializes the SPIR-V module",
@@ -69,7 +71,7 @@ void registerFromSPIRVTranslation() {
         assert(sourceMgr.getNumBuffers() == 1 && "expected one buffer");
         return deserializeModule(
             sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), context,
-            !noControlFlowStructurization);
+            {enableControlFlowStructurization});
       });
 }
 } // namespace mlir

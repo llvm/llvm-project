@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Target/SPIRV/Deserialization.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -121,10 +122,8 @@ class Deserializer {
 public:
   /// Creates a deserializer for the given SPIR-V `binary` module.
   /// The SPIR-V ModuleOp will be created into `context.
-  /// `enableControlFlowStructurization` is used to enable control flow
-  /// structurization.
   explicit Deserializer(ArrayRef<uint32_t> binary, MLIRContext *context,
-                        bool enableControlFlowStructurization);
+                        const DeserializationOptions &options);
 
   /// Deserializes the remembered SPIR-V binary module.
   LogicalResult deserialize();
@@ -625,8 +624,8 @@ private:
   /// A list of all structs which have unresolved member types.
   SmallVector<DeferredStructTypeInfo, 0> deferredStructTypesInfos;
 
-  /// A flag to enable or disable structurizer
-  bool enableControlFlowStructurization;
+  /// Deserialization options.
+  DeserializationOptions options;
 
 #ifndef NDEBUG
   /// A logger used to emit information during the deserialzation process.

@@ -14,8 +14,8 @@ using namespace mlir;
 
 OwningOpRef<spirv::ModuleOp>
 spirv::deserialize(ArrayRef<uint32_t> binary, MLIRContext *context,
-                   bool enableControlFlowStructurization) {
-  Deserializer deserializer(binary, context, enableControlFlowStructurization);
+                   const DeserializationOptions &options) {
+  Deserializer deserializer(binary, context, options);
 
   if (failed(deserializer.deserialize()))
     return nullptr;
