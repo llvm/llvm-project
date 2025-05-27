@@ -42369,7 +42369,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     SDValue N0 = N.getOperand(0);
 
     // Fold (vzmovl (shift x, y)) -> (shift (vzmovl x), y)
-    // Zeroing out the upper elements means we're just shifting them by zero.
+    // Zeroing out the upper elements means we're just shifting a zero value.
     // TODO: Try harder to move vzmovl upward towards SCALAR_TO_VECTOR nodes.
     // TODO: Move this to canonicalizeShuffleWithOp once we add zero handling.
     if (N0.getOpcode() == X86ISD::VSHL || N0.getOpcode() == X86ISD::VSHLI ||
