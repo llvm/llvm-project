@@ -24,7 +24,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -50,11 +49,11 @@ bool CheckerManager::hasPathSensitiveCheckers() const {
 }
 
 void CheckerManager::reportInvalidCheckerOptionValue(
-    const CheckerBase *C, CheckerPartIdx Idx, StringRef OptionName,
+    const CheckerFrontend *Checker, StringRef OptionName,
     StringRef ExpectedValueDesc) const {
 
   getDiagnostics().Report(diag::err_analyzer_checker_option_invalid_input)
-      << (llvm::Twine(C->getName(Idx)) + ":" + OptionName).str()
+      << (llvm::Twine(Checker->getName()) + ":" + OptionName).str()
       << ExpectedValueDesc;
 }
 
@@ -135,12 +134,11 @@ static void expandGraphWithCheckers(CHECK_CTX checkCtx,
 
 namespace {
 
-std::string checkerScopeName(StringRef Name, const CheckerBase *Checker) {
+std::string checkerScopeName(StringRef Name, const CheckerBackend *Checker) {
   if (!llvm::timeTraceProfilerEnabled())
     return "";
-  StringRef CheckerName =
-      Checker ? static_cast<StringRef>(Checker->getName()) : "<unknown>";
-  return (Name + ":" + CheckerName).str();
+  StringRef CheckerTag = Checker ? Checker->getDebugTag() : "<unknown>";
+  return (Name + ":" + CheckerTag).str();
 }
 
   struct CheckStmtContext {
@@ -690,7 +688,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
                                             ExprEngine &Eng,
                                             const EvalCallOptions &CallOpts) {
   for (auto *const Pred : Src) {
-    std::optional<CheckerNameRef> evaluatorChecker;
+    std::optional<StringRef> evaluatorChecker;
 
     ExplodedNodeSet checkDst;
     NodeBuilder B(Pred, checkDst, Eng.getBuilderContext());
@@ -722,12 +720,12 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
             "while the {2} checker also tried to evaluate the same call. At "
             "most one checker supposed to evaluate a call.",
             toString(Call), evaluatorChecker,
-            EvalCallChecker.Checker->getName());
+            EvalCallChecker.Checker->getDebugTag());
         llvm_unreachable(AssertionMessage.c_str());
       }
 #endif
       if (evaluated) {
-        evaluatorChecker = EvalCallChecker.Checker->getName();
+        evaluatorChecker = EvalCallChecker.Checker->getDebugTag();
         Dst.insert(checkDst);
 #ifdef NDEBUG
         break; // on release don't check that no other checker also evals.
@@ -798,7 +796,7 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
     if (TempBuf.empty())
       continue;
 
-    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CT.second->getName()
+    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CT.second->getDebugTag()
                               << "\", \"messages\": [" << NL;
     Indent(Out, InnerSpace, IsDot)
         << '\"' << TempBuf.str().trim() << '\"' << NL;
