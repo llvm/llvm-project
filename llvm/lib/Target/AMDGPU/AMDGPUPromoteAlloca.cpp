@@ -457,12 +457,8 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   // allocating scratch memory for the intermediate pointer.
   Value *CurPtr = GEP;
   SmallMapVector<Value *, APInt, 4> LocalVarsOffsets;
-  APInt LocalConstOffset(BW, 0);
   while (auto *CurGEP = dyn_cast<GetElementPtrInst>(CurPtr)) {
-    LocalVarsOffsets.clear();
-    LocalConstOffset = APInt(BW, 0);
-
-    if (!CurGEP->collectOffset(DL, BW, LocalVarsOffsets, LocalConstOffset))
+    if (!CurGEP->collectOffset(DL, BW, LocalVarsOffsets, ConstOffset))
       return nullptr;
 
     // Merge any variable-index contributions into the accumulated VarOffsets
@@ -481,8 +477,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
         Existing->second += Offset;
     }
 
-    ConstOffset += LocalConstOffset;
-
+    LocalVarsOffsets.clear();
     // Move to the next outer pointer
     CurPtr = CurGEP->getPointerOperand();
   }
