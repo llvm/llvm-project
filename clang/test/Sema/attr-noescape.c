@@ -8,5 +8,5 @@ int *global_var __attribute((noescape)); // expected-warning{{'noescape' attribu
 
 void foo(__attribute__((noescape)) int *int_ptr,
          __attribute__((noescape)) int (^block)(int),
-         __attribute((noescape)) int integer) { // expected-warning{{'noescape' attribute only applies to a pointer, reference, class, struct, or union (0 is invalid)}}
+         __attribute((noescape)) int integer) { // expected-warning{{'noescape' attribute only applies to a pointer, reference, class, struct, or union ('int' is invalid)}}
 }

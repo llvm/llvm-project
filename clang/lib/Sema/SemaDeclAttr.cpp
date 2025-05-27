@@ -1349,7 +1349,7 @@ static void handleNoEscapeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!isValidPointerAttrType(T, /* RefOkay */ true) && !T->isRecordType()) {
     S.Diag(AL.getLoc(),
            diag::warn_attribute_pointer_or_reference_or_record_only)
-        << AL << AL.getRange() << 0;
+        << AL << AL.getRange() << T;
     return;
   }
 
