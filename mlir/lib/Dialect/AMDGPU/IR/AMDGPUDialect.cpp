@@ -54,6 +54,12 @@ LogicalResult PackedTrunc2xFp8Op::verify() {
   return success();
 }
 
+LogicalResult PackedScaledTrunc2xFp8Op::verify() {
+  if (getExisting() && getExisting().getType() != getResult().getType())
+    return emitOpError("existing values must have same type as result");
+  return success();
+}
+
 LogicalResult PackedStochRoundFp8Op::verify() {
   if (getExisting() && getExisting().getType() != getResult().getType())
     return emitOpError("existing values must have same type as result");
