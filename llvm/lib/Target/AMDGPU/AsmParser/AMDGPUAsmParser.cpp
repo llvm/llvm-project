@@ -1519,6 +1519,8 @@ public:
     return AMDGPU::isGFX11Plus(getSTI());
   }
 
+  bool isGFX1170() const { return AMDGPU::isGFX1170(getSTI()); }
+
   bool isGFX12() const { return AMDGPU::isGFX12(getSTI()); }
 
   bool isGFX12Plus() const { return AMDGPU::isGFX12Plus(getSTI()); }
@@ -3080,6 +3082,7 @@ void AMDGPUAsmParser::initializeGprCountSymbol(RegisterKind RegKind) {
   assert(SymbolName && "initializing invalid register kind");
   MCSymbol *Sym = getContext().getOrCreateSymbol(*SymbolName);
   Sym->setVariableValue(MCConstantExpr::create(0, getContext()));
+  Sym->setRedefinable(true);
 }
 
 bool AMDGPUAsmParser::updateGprCountSymbols(RegisterKind RegKind,
@@ -3814,8 +3817,11 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
                : MCRegister();
   };
 
-  // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
-  bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12;
+  // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
+  // source-cache.
+  bool SkipSrc = (isGFX1170() &&
+                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx11) ||
+                 Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12;
 
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
   auto InvalidCompOprIdx =
@@ -5789,14 +5795,16 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_dx10_clamp") {
-      if (IVersion.Major >= 12)
-        return Error(IDRange.Start, "directive unsupported on gfx12+", IDRange);
+      if ((IVersion.Major == 11 && IVersion.Minor >= 7) || IVersion.Major >= 12)
+        return Error(IDRange.Start, "directive unsupported on gfx1170+",
+                     IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, ExprVal,
                        ValRange);
     } else if (ID == ".amdhsa_ieee_mode") {
-      if (IVersion.Major >= 12)
-        return Error(IDRange.Start, "directive unsupported on gfx12+", IDRange);
+      if ((IVersion.Major == 11 && IVersion.Minor >= 7) || IVersion.Major >= 12)
+        return Error(IDRange.Start, "directive unsupported on gfx1170+",
+                     IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
                        COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, ExprVal,
                        ValRange);
@@ -9242,8 +9250,7 @@ bool AMDGPUAsmParser::parseDimId(unsigned &Encoding) {
   Token += Suffix;
 
   StringRef DimId = Token;
-  if (DimId.starts_with("SQ_RSRC_IMG_"))
-    DimId = DimId.drop_front(12);
+  DimId.consume_front("SQ_RSRC_IMG_");
 
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByAsmSuffix(DimId);
   if (!DimInfo)

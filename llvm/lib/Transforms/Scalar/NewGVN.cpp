@@ -1529,6 +1529,15 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
     }
   }
 
+  if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+      auto *LifetimePtr = II->getOperand(1);
+      if (LoadPtr == lookupOperandLeader(LifetimePtr) ||
+          AA->isMustAlias(LoadPtr, LifetimePtr))
+        return createConstantExpression(UndefValue::get(LoadType));
+    }
+  }
+
   // All of the below are only true if the loaded pointer is produced
   // by the dependent instruction.
   if (LoadPtr != lookupOperandLeader(DepInst) &&
@@ -1540,12 +1549,6 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   // that the result of the allocation is pointer equal to the load ptr.
   if (isa<AllocaInst>(DepInst)) {
     return createConstantExpression(UndefValue::get(LoadType));
-  }
-  // If this load occurs either right after a lifetime begin,
-  // then the loaded value is undefined.
-  else if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-      return createConstantExpression(UndefValue::get(LoadType));
   } else if (auto *InitVal =
                  getInitialValueOfAllocation(DepInst, TLI, LoadType))
       return createConstantExpression(InitVal);
@@ -2380,7 +2383,7 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
     EClass = TOPClass;
   }
   if (!EClass) {
-    auto lookupResult = ExpressionToClass.insert({E, nullptr});
+    auto lookupResult = ExpressionToClass.try_emplace(E);
 
     // If it's not in the value table, create a new congruence class.
     if (lookupResult.second) {
