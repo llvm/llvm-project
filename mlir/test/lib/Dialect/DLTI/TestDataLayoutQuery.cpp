@@ -101,7 +101,7 @@ struct TestDataLayoutQuery
                                     : functionPointerAlignment),
            builder.getNamedAttr("legal_int_widths",
                                 legalIntWidths == Attribute()
-                                    ? ArrayAttr::get(builder.getContext(), {})
+                                    ? builder.getDenseI32ArrayAttr({})
                                     : legalIntWidths)
 
           });

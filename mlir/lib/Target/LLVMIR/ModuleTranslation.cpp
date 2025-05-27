@@ -255,12 +255,8 @@ translateDataLayout(DataLayoutSpecInterface attribute,
     if (key.getValue() == DLTIDialect::kDataLayoutLegalIntWidthsKey) {
       layoutStream << "-n";
       llvm::interleave(
-          cast<ArrayAttr>(entry.getValue()).getAsValueRange<IntegerAttr>(),
-          layoutStream,
-          [&](const llvm::APInt &intWidth) {
-            layoutStream << intWidth.getZExtValue();
-          },
-          ":");
+          cast<DenseI32ArrayAttr>(entry.getValue()).asArrayRef(), layoutStream,
+          [&](int32_t val) { layoutStream << val; }, ":");
       continue;
     }
     emitError(*loc) << "unsupported data layout key " << key;

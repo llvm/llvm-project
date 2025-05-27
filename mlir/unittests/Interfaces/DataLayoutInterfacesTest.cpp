@@ -611,7 +611,7 @@ TEST(DataLayout, SpecWithEntries) {
   #dlti.dl_entry<"dltest.mangling_mode", "o">,
   #dlti.dl_entry<"dltest.function_pointer_alignment",
                  #dlti.function_pointer_alignment<64, function_dependent = true>>,
-  #dlti.dl_entry<"dltest.legal_int_widths", [64 : i32]>
+  #dlti.dl_entry<"dltest.legal_int_widths", array<i32: 64>>
 > } : () -> ()
   )MLIR";
 
@@ -654,7 +654,7 @@ TEST(DataLayout, SpecWithEntries) {
       layout.getFunctionPointerAlignment(),
       FunctionPointerAlignmentAttr::get(&ctx, 64, /*function_dependent=*/true));
   EXPECT_EQ(layout.getLegalIntWidths(),
-            ArrayAttr::get(&ctx, {Builder(&ctx).getI32IntegerAttr(64)}));
+            Builder(&ctx).getDenseI32ArrayAttr({64}));
 }
 
 TEST(DataLayout, SpecWithTargetSystemDescEntries) {
