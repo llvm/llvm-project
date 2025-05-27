@@ -5,8 +5,11 @@
 ; Function Attrs: mustprogress noinline optnone uwtable
 define i32 @_Z3fooiii(i32 %x, i32 %y, i32 %z) !type !3 {
 entry:
-  ; CHECK: callSites:
-  ; CHECK-NOT: calleeTypeIds:  
+  ;; Test that `calleeTypeIds` field is not present in `callSites`
+  ; CHECK-LABEL: callSites:
+  ; CHECK-NEXT: - { bb: {{[0-9]+}}, offset: {{[0-9]+}}, fwdArgRegs: [] }
+  ; CHECK-NEXT: - { bb: {{[0-9]+}}, offset: {{[0-9]+}}, fwdArgRegs: [] }
+  ; CHECK-NEXT: - { bb: {{[0-9]+}}, offset: {{[0-9]+}}, fwdArgRegs: [] }
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
   %z.addr = alloca i32, align 4
