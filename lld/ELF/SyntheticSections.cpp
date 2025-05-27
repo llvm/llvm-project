@@ -322,14 +322,27 @@ GnuPropertySection::GnuPropertySection(Ctx &ctx)
                        ctx.arg.wordsize) {}
 
 void GnuPropertySection::writeTo(uint8_t *buf) {
+  uint32_t featureAndType;
+  switch (ctx.arg.emachine) {
+  case EM_386:
+  case EM_X86_64:
+    featureAndType = GNU_PROPERTY_X86_FEATURE_1_AND;
+    break;
+  case EM_AARCH64:
+    featureAndType = GNU_PROPERTY_AARCH64_FEATURE_1_AND;
+    break;
+  case EM_RISCV:
+    featureAndType = GNU_PROPERTY_RISCV_FEATURE_1_AND;
+    break;
+  default:
+    llvm_unreachable(
+        "target machine does not support .note.gnu.property section");
+  }
+
   write32(ctx, buf, 4);                          // Name size
   write32(ctx, buf + 4, getSize() - 16);         // Content size
   write32(ctx, buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
   memcpy(buf + 12, "GNU", 4);               // Name string
-
-  uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
-                                ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
-                                : GNU_PROPERTY_X86_FEATURE_1_AND;
 
   unsigned offset = 16;
   if (ctx.arg.andFeatures != 0) {
