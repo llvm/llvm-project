@@ -3763,15 +3763,21 @@ static Constant *ConstantFoldFixedVectorCall(
     unsigned NumElements = FVTy->getNumElements();
     unsigned VecNumElements =
         cast<FixedVectorType>(Vec->getType())->getNumElements();
+    unsigned StartingIndex = Idx->getZExtValue();
     // Extracting entire vector is nop
-    if (NumElements == VecNumElements)
+    if (NumElements == VecNumElements && StartingIndex == 0)
       return Vec;
 
-    unsigned StartingIndex = Idx->getZExtValue();
-    assert(StartingIndex + NumElements <= VecNumElements &&
-           "Cannot extract more elements than exist in the vector");
-    for (unsigned I = 0; I != NumElements; ++I)
-      Result[I] = Vec->getAggregateElement(StartingIndex + I);
+    const unsigned NonPoisonNumElements =
+        std::min(StartingIndex + NumElements, VecNumElements);
+    for (unsigned I = StartingIndex; I < NonPoisonNumElements; ++I)
+      Result[I - StartingIndex] = Vec->getAggregateElement(I);
+
+    // Remaining elements are poison since they are out of bounds.
+    for (unsigned I = NonPoisonNumElements, E = StartingIndex + NumElements;
+         I < E; ++I)
+      Result[I - StartingIndex] = PoisonValue::get(FVTy->getElementType());
+
     return ConstantVector::get(Result);
   }
   case Intrinsic::vector_insert: {
@@ -3787,8 +3793,14 @@ static Constant *ConstantFoldFixedVectorCall(
         cast<FixedVectorType>(Vec->getType())->getNumElements();
     unsigned IdxN = Idx->getZExtValue();
     // Replacing entire vector with a subvec is nop
-    if (SubVecNumElements == VecNumElements)
+    if (SubVecNumElements == VecNumElements && IdxN == 0)
       return SubVec;
+
+    // Make sure indices are in the range [0, VecNumElements), otherwise the
+    // result is a poison value.
+    if (IdxN >= VecNumElements || IdxN + SubVecNumElements > VecNumElements ||
+        (IdxN && (SubVecNumElements % IdxN) != 0))
+      return PoisonValue::get(FVTy);
 
     unsigned I = 0;
     for (; I < IdxN; ++I)
@@ -3980,7 +3992,8 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
       return nullptr;
 
     unsigned NumElements =
-        cast<FixedVectorType>(Vec->getType())->getNumElements() / 2;
+        cast<VectorType>(Vec->getType())->getElementCount().getKnownMinValue() /
+        2;
     SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
     for (unsigned I = 0; I < NumElements; ++I) {
       Res0[I] = Vec->getAggregateElement(2 * I);
