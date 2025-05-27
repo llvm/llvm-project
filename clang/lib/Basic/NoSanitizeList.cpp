@@ -44,7 +44,18 @@ bool NoSanitizeList::containsFunction(SanitizerMask Mask,
 
 bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
                                   StringRef Category) const {
-  return SSCL->inSection(Mask, "src", FileName, Category);
+  auto [NoSanFileIdx, NoSanLine] =
+      SSCL->inSectionBlame(Mask, "src", FileName, Category);
+  if (NoSanLine == 0)
+    return false;
+  auto [SanFileIdx, SanLine] =
+      SSCL->inSectionBlame(Mask, "src", FileName, "sanitize");
+  // If we have two cases such as `src:a.cpp=sanitize` and `src:a.cpp`, the
+  // current entry override the previous entry.
+  if (SanLine > 0)
+    return std::make_pair(NoSanFileIdx, NoSanLine) >
+           std::make_pair(SanFileIdx, SanLine);
+  return true;
 }
 
 bool NoSanitizeList::containsMainFile(SanitizerMask Mask, StringRef FileName,

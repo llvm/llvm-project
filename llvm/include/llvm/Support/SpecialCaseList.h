@@ -18,6 +18,7 @@
 #include "llvm/Support/Regex.h"
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -93,17 +94,17 @@ public:
   LLVM_ABI bool inSection(StringRef Section, StringRef Prefix, StringRef Query,
                           StringRef Category = StringRef()) const;
 
-  /// Returns the line number corresponding to the special case list entry if
-  /// the special case list contains a line
+  /// Returns the file index and the line numebr <FileIdx, LineNo> corresponding
+  /// to the special case list entry if the special case list contains a line
   /// \code
   ///   @Prefix:<E>=@Category
   /// \endcode
   /// where @Query satisfies the glob <E> in a given @Section.
-  /// Returns zero if there is no exclusion entry corresponding to this
+  /// Returns (zero, zero) if there is no exclusion entry corresponding to this
   /// expression.
-  LLVM_ABI unsigned inSectionBlame(StringRef Section, StringRef Prefix,
-                                   StringRef Query,
-                                   StringRef Category = StringRef()) const;
+  LLVM_ABI std::pair<unsigned, unsigned>
+  inSectionBlame(StringRef Section, StringRef Prefix, StringRef Query,
+                 StringRef Category = StringRef()) const;
 
 protected:
   // Implementations of the create*() functions that can also be used by derived
@@ -145,12 +146,14 @@ protected:
     Section(std::unique_ptr<Matcher> M) : SectionMatcher(std::move(M)) {};
     Section() : Section(std::make_unique<Matcher>()) {};
 
+    unsigned FileIdx;
     std::unique_ptr<Matcher> SectionMatcher;
     SectionEntries Entries;
     std::string SectionStr;
   };
 
   std::vector<Section> Sections;
+  unsigned currFileIdx;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr, unsigned LineNo,
                                           bool UseGlobs = true);
