@@ -3,6 +3,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCFIAnalysis/ExtendedMCInstrAnalysis.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
@@ -68,19 +69,18 @@ CFIAnalysis::CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
     : Context(Context), MCII(MCII), MCRI(Context.getRegisterInfo()) {
   EMCIA.reset(new ExtendedMCInstrAnalysis(Context, MCII, MCIA));
 
-  MCPhysReg StackPointer = EMCIA->getStackPointer();
-
-  // TODO check what should be passed as EH?
-  State = CFIState(MCRI->getDwarfRegNum(StackPointer, false), 0);
+  // TODO check what should be passed as EH? I am putting false everywhere.
   for (auto &&[Reg, RegClass] : getAllSuperRegs()) {
     if (MCRI->get(Reg).IsArtificial || MCRI->get(Reg).IsConstant)
       continue;
 
-    if (Reg == StackPointer)
-      State.CFAOffset = RegClass->getSizeInBits() / 8;
-
     DWARFRegType DwarfReg = MCRI->getDwarfRegNum(Reg, false);
     State.RegisterCFIStates[DwarfReg] = RegisterCFIState::createSameValue();
+  }
+
+  for (auto &&InitialFrameStateCFIDirective :
+       Context.getAsmInfo()->getInitialFrameState()) {
+    State.apply(InitialFrameStateCFIDirective);
   }
 
   // TODO these are temporay added to make things work.
@@ -89,7 +89,7 @@ CFIAnalysis::CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
                                                false)] =
       RegisterCFIState::createUndefined(); // TODO for now, we don't care
                                            // about the PC
-  State.RegisterCFIStates[MCRI->getDwarfRegNum(StackPointer,
+  State.RegisterCFIStates[MCRI->getDwarfRegNum(State.CFARegister,
                                                false)] =
       RegisterCFIState::createOffsetFromCFAVal(0); // sp's old value is CFA
 

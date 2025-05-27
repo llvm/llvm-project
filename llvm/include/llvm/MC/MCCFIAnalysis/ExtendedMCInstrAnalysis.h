@@ -19,7 +19,6 @@ public:
 
   /// Extra semantic information needed from MC layer:
 
-  MCPhysReg getStackPointer() const { return 61; }
   MCPhysReg getFlagsReg() const { return 57; }
 };
 
