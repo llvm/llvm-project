@@ -300,19 +300,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *NonUniform =
         llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
 
-    Intrinsic::ID IID =
+    auto [IntrinsicID, HasNameArg] =
         CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
-    // SPIR-V intrinsic does not have include the resource name
-    if (IID == Intrinsic::spv_resource_handlefrombinding)
-      return Builder.CreateIntrinsic(
-          HandleTy, IID,
-          ArrayRef<Value *>{SpaceOp, RegisterOp, RangeOp, IndexOp, NonUniform});
-
-    Value *NameOp = EmitScalarExpr(E->getArg(5));
-    return Builder.CreateIntrinsic(HandleTy, IID,
-                                   ArrayRef<Value *>{SpaceOp, RegisterOp,
-                                                     RangeOp, IndexOp,
-                                                     NonUniform, NameOp});
+    if (HasNameArg) {
+      Value *NameOp = EmitScalarExpr(E->getArg(5));
+      return Builder.CreateIntrinsic(HandleTy, IntrinsicID,
+                                     ArrayRef<Value *>{SpaceOp, RegisterOp,
+                                                       RangeOp, IndexOp,
+                                                       NonUniform, NameOp});
+    }
+    return Builder.CreateIntrinsic(
+        HandleTy, IntrinsicID,
+        ArrayRef<Value *>{SpaceOp, RegisterOp, RangeOp, IndexOp, NonUniform});
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
@@ -325,19 +324,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *NonUniform =
         llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
 
-    Intrinsic::ID IID =
+    auto [IntrinsicID, HasNameArg] =
         CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
-    // SPIR-V intrinsic does not include the resource name
-    if (IID == Intrinsic::spv_resource_handlefromimplicitbinding)
-      return Builder.CreateIntrinsic(
-          HandleTy, IID,
-          ArrayRef<Value *>{OrderID, SpaceOp, RangeOp, IndexOp, NonUniform});
-
-    Value *NameOp = EmitScalarExpr(E->getArg(5));
-    return Builder.CreateIntrinsic(HandleTy, IID,
-                                   ArrayRef<Value *>{OrderID, SpaceOp, RangeOp,
-                                                     IndexOp, NonUniform,
-                                                     NameOp});
+    if (HasNameArg) {
+      Value *NameOp = EmitScalarExpr(E->getArg(5));
+      return Builder.CreateIntrinsic(HandleTy, IntrinsicID,
+                                     ArrayRef<Value *>{OrderID, SpaceOp,
+                                                       RangeOp, IndexOp,
+                                                       NonUniform, NameOp});
+    }
+    return Builder.CreateIntrinsic(
+        HandleTy, IntrinsicID,
+        ArrayRef<Value *>{OrderID, SpaceOp, RangeOp, IndexOp, NonUniform});
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

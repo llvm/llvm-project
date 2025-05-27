@@ -34,6 +34,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -232,6 +233,35 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
       }
     }
     Layout.push_back(Offset);
+  }
+}
+
+std::pair<llvm::Intrinsic::ID, bool>
+CGHLSLRuntime::getCreateHandleFromBindingIntrinsic() {
+  switch (getArch()) {
+  case llvm::Triple::dxil:
+    return std::pair(llvm::Intrinsic::dx_resource_handlefrombinding, true);
+  case llvm::Triple::spirv:
+    return std::pair(llvm::Intrinsic::spv_resource_handlefrombinding, false);
+  default:
+    llvm_unreachable("Intrinsic resource_handlefrombinding not supported by "
+                     "target architecture");
+  }
+}
+
+std::pair<llvm::Intrinsic::ID, bool>
+CGHLSLRuntime::getCreateHandleFromImplicitBindingIntrinsic() {
+  switch (getArch()) {
+  case llvm::Triple::dxil:
+    return std::pair(llvm::Intrinsic::dx_resource_handlefromimplicitbinding,
+                     true);
+  case llvm::Triple::spirv:
+    return std::pair(llvm::Intrinsic::spv_resource_handlefromimplicitbinding,
+                     false);
+  default:
+    llvm_unreachable(
+        "Intrinsic resource_handlefromimplicitbinding not supported by "
+        "target architecture");
   }
 }
 
@@ -564,35 +594,35 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
       llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
   Value *Name = nullptr;
 
-  // DXIL intrinsic includes resource name
-  if (getArch() == Triple::dxil) {
-    std::string Str = std::string(BufDecl->getName());
-    std::string GlobalName = Str + ".str";
+  auto [IntrinsicID, HasNameArg] =
+      RBA->hasRegisterSlot()
+          ? CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic()
+          : CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
+
+  if (HasNameArg) {
+    std::string Str(BufDecl->getName());
+    std::string GlobalName(Str + ".str");
     Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
   }
 
   // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
-    Intrinsic::ID Intr =
-        CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
     if (Name)
-      initializeBuffer(CGM, GV, Intr,
+      initializeBuffer(CGM, GV, IntrinsicID,
                        {Space, RegSlot, RangeSize, Index, NonUniform, Name});
     else
-      initializeBuffer(CGM, GV, Intr,
+      initializeBuffer(CGM, GV, IntrinsicID,
                        {Space, RegSlot, RangeSize, Index, NonUniform});
   } else {
     // buffer with implicit binding
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
-    Intrinsic::ID Intr =
-        CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
     if (Name)
-      initializeBuffer(CGM, GV, Intr,
+      initializeBuffer(CGM, GV, IntrinsicID,
                        {OrderID, Space, RangeSize, Index, NonUniform, Name});
     else
-      initializeBuffer(CGM, GV, Intr,
+      initializeBuffer(CGM, GV, IntrinsicID,
                        {OrderID, Space, RangeSize, Index, NonUniform});
   }
 }
