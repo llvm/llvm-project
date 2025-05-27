@@ -14,6 +14,7 @@
 #ifndef LLVM_C_LINKER_H
 #define LLVM_C_LINKER_H
 
+#include "llvm-c/Visibility.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 
@@ -38,7 +39,7 @@ typedef enum {
  * The return value is true if an error occurred, false otherwise.
  * Use the diagnostic handler to get any diagnostic message.
 */
-LLVMBool LLVMLinkModules2(LLVMModuleRef Dest, LLVMModuleRef Src);
+LLVM_C_ABI LLVMBool LLVMLinkModules2(LLVMModuleRef Dest, LLVMModuleRef Src);
 
 LLVM_C_EXTERN_C_END
 
