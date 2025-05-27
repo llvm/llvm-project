@@ -898,7 +898,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
-    ComputeFindLastIVResult,
+    ComputeFindIVResult,
     ComputeReductionResult,
     // Extracts the last lane from its operand if it is a vector, or the last
     // part if scalar. In the latter case, the recipe will be removed during

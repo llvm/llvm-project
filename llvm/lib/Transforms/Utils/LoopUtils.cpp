@@ -1244,12 +1244,16 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
                                        Value *Start,
                                        const RecurrenceDescriptor &Desc) {
-  assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-             Desc.getRecurrenceKind()) &&
-         "Unexpected reduction kind");
+  assert(
+      RecurrenceDescriptor::isFindIVRecurrenceKind(Desc.getRecurrenceKind()) &&
+      "Unexpected reduction kind");
   Value *Sentinel = Desc.getSentinelValue();
   Value *MaxRdx = Src->getType()->isVectorTy()
-                      ? Builder.CreateIntMaxReduce(Src, true)
+                      ? (Desc.getRecurrenceKind() == RecurKind::FindLastIV
+                             ? Builder.CreateIntMaxReduce(Src, true)
+                             : Builder.CreateIntMinReduce(
+                                   Src, Desc.getRecurrenceKind() ==
+                                            RecurKind::FindFirstIVSMin))
                       : Src;
   // Correct the final reduction result back to the start value if the maximum
   // reduction is sentinel value.
@@ -1345,8 +1349,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
                                    RecurKind Kind) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
-         "AnyOf or FindLastIV reductions are not supported.");
+         !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+         "AnyOf, FindFirstIV and FindLastIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
