@@ -48,6 +48,9 @@ public:
     bool HasRecursion = false;
     bool HasIndirectCall = false;
     SmallVector<const Function *, 16> Callees;
+#if LLPC_BUILD_NPI
+    SmallVector<MachineInstr *, 8> WavegroupRankCalls;
+#endif /* LLPC_BUILD_NPI */
   };
 
   AMDGPUResourceUsageAnalysis() : MachineFunctionPass(ID) {}

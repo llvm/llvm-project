@@ -324,8 +324,8 @@ namespace {
 
       // FIXME: This is quadratic if we have lots of reuses of the same
       // attributed type.
-      for (auto It = std::partition_point(
-               AttrsForTypes.begin(), AttrsForTypes.end(),
+      for (auto It = llvm::partition_point(
+               AttrsForTypes,
                [=](const TypeAttrPair &A) { return A.first < AT; });
            It != AttrsForTypes.end() && It->first == AT; ++It) {
         if (It->second) {
@@ -8788,9 +8788,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::UnknownAttribute:
       if (attr.isStandardAttributeSyntax()) {
-        state.getSema().Diag(attr.getLoc(),
-                             diag::warn_unknown_attribute_ignored)
-            << attr << attr.getRange();
+        state.getSema().DiagnoseUnknownAttribute(attr);
         // Mark the attribute as invalid so we don't emit the same diagnostic
         // multiple times.
         attr.setInvalid();

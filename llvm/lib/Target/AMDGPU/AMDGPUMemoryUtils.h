@@ -78,8 +78,9 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 #if LLPC_BUILD_NPI
 
 /// Check if the passed global variable or private alloca can be allocated
-/// in VGPRs.
-bool IsPromotableToVGPR(const Value &V, const DataLayout &DL);
+/// in VGPRs. If so, the set of pointers is filled in with all derived pointers.
+bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
+                        DenseSet<Value *> &Pointers);
 #endif /* LLPC_BUILD_NPI */
 
 } // end namespace AMDGPU

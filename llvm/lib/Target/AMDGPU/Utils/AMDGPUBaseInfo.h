@@ -1553,6 +1553,8 @@ bool getHasDepthExport(const Function &F);
 #if LLPC_BUILD_NPI
 bool getWavegroupEnable(const Function &F);
 
+bool getWavegroupRankFunction(const Function &F);
+
 std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F);
 
 #endif /* LLPC_BUILD_NPI */
@@ -1620,11 +1622,9 @@ bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGFX11(const MCSubtargetInfo &STI);
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
 bool isGFX1170(const MCSubtargetInfo &STI);
-#endif /* LLPC_BUILD_NPI */
 bool isGFX11Plus(const MCSubtargetInfo &STI);
+bool isGFX1170Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
 #if LLPC_BUILD_NPI

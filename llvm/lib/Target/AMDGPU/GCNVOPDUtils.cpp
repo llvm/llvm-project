@@ -171,10 +171,12 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
 #if LLPC_BUILD_NPI
   // On GFX12+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
-#else /* LLPC_BUILD_NPI */
-  // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
-#endif /* LLPC_BUILD_NPI */
   bool SkipSrc = ST.getGeneration() >= AMDGPUSubtarget::GFX12 &&
+#else /* LLPC_BUILD_NPI */
+  // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
+  // source-cache.
+  bool SkipSrc = ST.isGFX1170Plus() &&
+#endif /* LLPC_BUILD_NPI */
                  FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
 #if LLPC_BUILD_NPI

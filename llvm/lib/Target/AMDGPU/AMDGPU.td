@@ -914,8 +914,6 @@ def FeatureCvtFP8VOP1Bug : SubtargetFeature<"cvt-fp8-vop1-bug",
   [FeatureFP8ConversionInsts]
 >;
 
-#ifdef LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
 def FeatureWMMA256bInsts : SubtargetFeature<"wmma-256b-insts",
   "HasWMMA256bInsts",
   "true",
@@ -928,7 +926,6 @@ def FeatureWMMA128bInsts : SubtargetFeature<"wmma-128b-insts",
   "Has WMMA instructions where A and B matrices do not have duplicated data"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -2038,7 +2035,6 @@ def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureDot5Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureDot9Insts,
@@ -2056,9 +2052,9 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureVcmpxPermlaneHazard,
    FeatureMemoryAtomicFAddF32DenormalSupport]>;
 
-// There are few workarounds that need to be
-// added to all targets. This pessimizes codegen
-// a bit on the generic GFX11 target.
+// There are few workarounds that need to be added to all targets. This
+// pessimizes codegen a bit on the generic GFX11 target. This generic target
+// does not include GFX1170 due to incompatible changes.
 def FeatureISAVersion11_Generic: FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
@@ -2067,24 +2063,18 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6,
-#ifdef LLPC_BUILD_NPI
-     FeatureRequiredExportPriority])>;
-#else /* LLPC_BUILD_NPI */
      FeatureRequiredExportPriority,
+     FeatureDot5Insts,
      FeatureWMMA256bInsts])>;
-#endif /* LLPC_BUILD_NPI */
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureMADIntraFwdBug,
-#ifdef LLPC_BUILD_NPI
-     FeaturePrivEnabledTrap2NopBug])>;
-#else /* LLPC_BUILD_NPI */
      FeaturePrivEnabledTrap2NopBug,
+     FeatureDot5Insts,
      FeatureWMMA256bInsts])>;
-#endif /* LLPC_BUILD_NPI */
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -2103,53 +2093,30 @@ def FeatureISAVersion11_0_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
     [])>;
 
-def FeatureISAVersion11_5_0 : FeatureSet<
+def FeatureISAVersion11_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
-#ifdef LLPC_BUILD_NPI
-     FeaturePointSampleAccel])>;
-#else /* LLPC_BUILD_NPI */
-     FeaturePointSampleAccel,
+     FeatureDot5Insts,
      FeatureWMMA256bInsts])>;
-#endif /* LLPC_BUILD_NPI */
+
+def FeatureISAVersion11_5_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_5_Common.Features,
+    [FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts,
-     FeatureDPPSrc1SGPR,
-     Feature1_5xVGPRs,
-     FeatureRequiredExportPriority,
-#ifdef LLPC_BUILD_NPI
+  !listconcat(FeatureISAVersion11_5_Common.Features,
+    [Feature1_5xVGPRs,
      FeaturePointSampleAccel])>;
-#else /* LLPC_BUILD_NPI */
-     FeaturePointSampleAccel,
-     FeatureWMMA256bInsts])>;
-#endif /* LLPC_BUILD_NPI */
 
 def FeatureISAVersion11_5_2 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts,
-     FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority,
-#ifdef LLPC_BUILD_NPI
-     FeaturePointSampleAccel])>;
-#else /* LLPC_BUILD_NPI */
-     FeaturePointSampleAccel,
-     FeatureWMMA256bInsts])>;
-#endif /* LLPC_BUILD_NPI */
+  !listconcat(FeatureISAVersion11_5_Common.Features,
+    [FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_3 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts,
-     FeatureDPPSrc1SGPR,
-#ifdef LLPC_BUILD_NPI
-     FeatureRequiredExportPriority])>;
-#else /* LLPC_BUILD_NPI */
-     FeatureRequiredExportPriority,
-     FeatureWMMA256bInsts])>;
-#endif /* LLPC_BUILD_NPI */
+  !listconcat(FeatureISAVersion11_5_Common.Features,
+    [])>;
 
 def FeatureISAVersion11_7_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
@@ -2157,12 +2124,8 @@ def FeatureISAVersion11_7_0 : FeatureSet<
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
      FeatureFP8ConversionInsts,
-#ifdef LLPC_BUILD_NPI
-     FeatureDot11Insts])>;
-#else /* LLPC_BUILD_NPI */
      FeatureDot11Insts,
      FeatureWMMA128bInsts])>;
-#endif /* LLPC_BUILD_NPI */
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -2193,10 +2156,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureImageInsts,
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
-#ifdef LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
    FeatureWMMA128bInsts,
-#endif /* LLPC_BUILD_NPI */
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -2357,6 +2317,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBVHDualAndBVH8Insts,
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
+   FeatureWMMA128bInsts,
 ]>;
 
 #endif /* LLPC_BUILD_NPI */
@@ -3077,18 +3038,16 @@ def HasFP8ConversionInsts : Predicate<"Subtarget->hasFP8ConversionInsts()">,
 #ifdef LLPC_BUILD_NPI
 def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
-#else /* LLPC_BUILD_NPI */
-def HasWMMA256bInsts : Predicate<"Subtarget->hasWMMA256bInsts()">,
-  AssemblerPredicate<(all_of FeatureWMMA256bInsts)>;
-#endif /* LLPC_BUILD_NPI */
 
-#ifdef LLPC_BUILD_NPI
 def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
-#else /* LLPC_BUILD_NPI */
+
+#endif /* LLPC_BUILD_NPI */
+def HasWMMA256bInsts : Predicate<"Subtarget->hasWMMA256bInsts()">,
+  AssemblerPredicate<(all_of FeatureWMMA256bInsts)>;
+
 def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA128bInsts)>;
-#endif /* LLPC_BUILD_NPI */
 
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;

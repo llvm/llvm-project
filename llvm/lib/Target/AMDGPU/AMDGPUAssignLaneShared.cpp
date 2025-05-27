@@ -41,8 +41,11 @@ public:
   bool runOnModule(Module &M);
 };
 
-static void recordLaneSharedAbsoluteAddress(Module *M, GlobalVariable *GV,
-                                            uint32_t Address) {
+static void
+recordLaneSharedAbsoluteAddress(Module *M, GlobalVariable *GV, uint32_t Offset,
+                                DenseSet<Value *> *PtrSet = nullptr) {
+  // Use the 28th bit to indicate VGPR.
+  uint32_t Address = PtrSet ? (Offset | (1 << 28)) : Offset;
   // Write the specified address into metadata where it can be retrieved by
   // the assembler. Format is a half open range, [Address Address+1)
   LLVMContext &Ctx = M->getContext();
@@ -51,6 +54,15 @@ static void recordLaneSharedAbsoluteAddress(Module *M, GlobalVariable *GV,
   auto *MaxC = ConstantAsMetadata::get(ConstantInt::get(IntTy, Address + 1));
   GV->setMetadata(LLVMContext::MD_absolute_symbol,
                   MDNode::get(Ctx, {MinC, MaxC}));
+  if (PtrSet) {
+    // Set the metadata for all the pointers to this GV
+    // to facilitate the VGPR-promotion during Instruction selection.
+    MDNode *EmptyMD = MDNode::get(Ctx, {});
+    for (Value *Ptr : *PtrSet) {
+      if (auto *Inst = dyn_cast<Instruction>(Ptr))
+        Inst->setMetadata("lane-shared-in-vgpr", EmptyMD);
+    }
+  }
 }
 
 static Function *findUseFunction(User *U) {
@@ -106,7 +118,7 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
     }
   }
 
-  // Collect variables that are used by functions whose address has escaped
+  // Collect variables that are used by functions whose address has escaped.
   DenseSet<GlobalVariable *> FuzzyUsedGVs;
   for (auto &K : Func2GVs) {
     Function *F = K.first;
@@ -129,7 +141,7 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
     return false;
   };
   // If the function makes any unknown call, assume the worst case that it can
-  // access all variables accessed by functions whose address escaped
+  // access all variables accessed by functions whose address escaped.
   for (auto &K : Func2GVs) {
     Function *F = K.first;
     if (FunctionMakesUnknownCall(F))
@@ -158,13 +170,17 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
       }
     }
   }
-  // Find lane-shared GVs that can be promoted into VGPRs
+  // Find lane-shared GVs that can be promoted into VGPRs.
   SmallVector<GlobalVariable *> GVsInVGPR;
   SmallVector<GlobalVariable *> GVsInOverflow;
   SmallVector<GlobalVariable *> GVsInScratch;
+  DenseMap<GlobalVariable *, DenseSet<Value *>> GVPtrSets;
   for (auto *GV : LaneSharedGlobals) {
-    if (MaxLaneSharedVGPRs > 0 && IsPromotableToVGPR(*GV, M.getDataLayout())) {
+    DenseSet<Value *> Pointers;
+    if (MaxLaneSharedVGPRs > 0 &&
+        IsPromotableToVGPR(*GV, M.getDataLayout(), Pointers)) {
       GVsInVGPR.push_back(GV);
+      GVPtrSets[GV] = std::move(Pointers);
     } else {
       GVsInScratch.push_back(GV);
     }
@@ -184,8 +200,7 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
       GVsInOverflow.push_back(GV);
       continue;
     }
-    // Use the 28th bit to indicate VGPR
-    recordLaneSharedAbsoluteAddress(&M, GV, (1 << 28) | LaneSharedVGPRSize);
+    recordLaneSharedAbsoluteAddress(&M, GV, LaneSharedVGPRSize, &GVPtrSets[GV]);
 
     LaneSharedVGPRSize = alignTo(LaneSharedVGPRSize + GVBytes, 4u);
   }
@@ -204,15 +219,15 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
       GVsInOverflow.push_back(GV);
       continue;
     }
-    // Use the 28th bit to indicate VGPR
-    recordLaneSharedAbsoluteAddress(&M, GV, (1 << 28) | Kernel2Offset[Kernel]);
+    recordLaneSharedAbsoluteAddress(&M, GV, Kernel2Offset[Kernel],
+                                    &GVPtrSets[GV]);
 
     Kernel2Offset[Kernel] = alignTo(Kernel2Offset[Kernel] + GVBytes, 4u);
   }
 
   GVsInOverflow.insert(GVsInOverflow.end(), GVsInScratch.begin(),
                        GVsInScratch.end());
-  // perform the similar assignment for GVsInOverflow to scratch
+  // Perform the similar assignment for GVsInOverflow to scratch.
   unsigned LaneSharedScratchSize = 0;
   Kernel2Offset.clear();
   for (auto *GV : GVsInOverflow) {

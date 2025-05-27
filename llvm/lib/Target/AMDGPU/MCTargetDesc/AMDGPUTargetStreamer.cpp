@@ -317,7 +317,8 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
     const MCSymbol *NumExplicitSGPR, const MCSymbol *NumNamedBarrier,
     const MCSymbol *PrivateSegmentSize, const MCSymbol *UsesVCC,
     const MCSymbol *UsesFlatScratch, const MCSymbol *HasDynamicallySizedStack,
-    const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall) {
+    const MCSymbol *HasRecursion, const MCSymbol *HasIndirectCall,
+    const MCSymbol *NumVGPRRankSum) {
 #else /* LLPC_BUILD_NPI */
     const MCSymbol *NumExplicitSGPR, const MCSymbol *PrivateSegmentSize,
     const MCSymbol *UsesVCC, const MCSymbol *UsesFlatScratch,
@@ -343,6 +344,9 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
   PRINT_RES_INFO(HasDynamicallySizedStack);
   PRINT_RES_INFO(HasRecursion);
   PRINT_RES_INFO(HasIndirectCall);
+#if LLPC_BUILD_NPI
+  PRINT_RES_INFO(NumVGPRRankSum);
+#endif /* LLPC_BUILD_NPI */
 #undef PRINT_RES_INFO
 }
 
@@ -631,7 +635,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64_SHIFT,
              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
              ".amdhsa_float_denorm_mode_16_64");
-  if (IVersion.Major < 12) {
+  if (IVersion.Major < 11 || (IVersion.Major == 11 && IVersion.Minor < 7)) {
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP,

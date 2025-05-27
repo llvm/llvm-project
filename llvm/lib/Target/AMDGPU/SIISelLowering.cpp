@@ -6794,13 +6794,22 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::WAVEGROUP_RANK_CALL: {
     const DebugLoc &DL = MI.getDebugLoc();
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    MachineBasicBlock *SplitBB = BB->splitAt(MI, false /*UpdateLiveIns*/);
+    MachineBasicBlock *SplitBB = BB->splitAt(MI, true /*UpdateLiveIns*/);
     MachineBasicBlock *RankCallBB = MF->CreateMachineBasicBlock();
     MachineFunction::iterator MBBI(SplitBB);
     MF->insert(MBBI, RankCallBB);
     BB->addSuccessor(RankCallBB);
     RankCallBB->addSuccessor(SplitBB);
 
+    bool FoundRankCallMarker =
+        std::any_of(BB->instr_begin(), BB->instr_end(), [&](MachineInstr &DI) {
+          return SIInstrInfo::isWaveGroupRankCallMarker(DI);
+        });
+    // Initialize IDX0 before the 1st rank-call.
+    if (!FoundRankCallMarker) {
+      BuildMI(*BB, &MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX0)
+          .addTargetIndex(AMDGPU::TI_NUM_VGPRS_LANESHARED);
+    }
     int Rank = MI.getOperand(0).getImm();
     assert(Rank < 8);
     // Set up conditional branch.
@@ -6815,14 +6824,21 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addImm(Rank);
     BuildMI(*BB, &MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC0)).addMBB(SplitBB);
     // Call inside the conditional branch.
-    Register Callee = MI.getOperand(1).getReg();
+    Register CalleeAddrReg = MI.getOperand(1).getReg();
     BuildMI(*RankCallBB, RankCallBB->end(), DL, TII->get(AMDGPU::S_SETPC_B64))
-        .addReg(Callee);
-    // Update IDX0 for the next rank-call.
+        .addReg(CalleeAddrReg);
+    // Update IDX0 for the next rank-call. Use the global address of the rank
+    // callee as the source. In AsmPrinter, it will be replaced with the
+    // MCSymbol representing the number of VGPRs of that callee.
+    auto CalleeAddrDef =  MRI.getVRegDef(CalleeAddrReg);
+    assert(CalleeAddrDef->getOpcode() == AMDGPU::SI_PC_ADD_REL_OFFSET64);
     BuildMI(*SplitBB, SplitBB->begin(), DL, TII->get(AMDGPU::S_ADD_GPR_IDX_U32),
             AMDGPU::IDX0)
-        .addTargetIndex(AMDGPU::TI_NUM_VGPRS_RANK0 + Rank)
+        .addGlobalAddress(CalleeAddrDef->getOperand(1).getGlobal(), 0,
+                          SIInstrInfo::MO_NUM_VGPRS)
         .addReg(AMDGPU::IDX0);
+    SplitBB->addLiveIn(AMDGPU::IDX0);
+    RankCallBB->addLiveIn(AMDGPU::IDX0);
     MI.eraseFromParent();
     return SplitBB;
   }
@@ -15590,10 +15606,34 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
   if (K0->getValueAPF() > K1->getValueAPF())
     return SDValue();
 
+  // med3 with a nan input acts like
+  // v_min_f32(v_min_f32(S0.f32, S1.f32), S2.f32)
+  //
+  // So the result depends on whether the IEEE mode bit is enabled or not with a
+  // signaling nan input.
+  // ieee=1
+  // s0 snan: yields s2
+  // s1 snan: yields s2
+  // s2 snan: qnan
+
+  // s0 qnan: min(s1, s2)
+  // s1 qnan: min(s0, s2)
+  // s2 qnan: min(s0, s1)
+
+  // ieee=0
+  // s0 snan: min(s1, s2)
+  // s1 snan: min(s0, s2)
+  // s2 snan: qnan
+
+  // s0 qnan: min(s1, s2)
+  // s1 qnan: min(s0, s2)
+  // s2 qnan: min(s0, s1)
   const MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
-  // TODO: Check IEEE bit enabled?
+  // TODO: Check IEEE bit enabled. We can form fmed3 with IEEE=0 regardless of
+  // whether the input is a signaling nan if op0 is fmaximum or fmaximumnum. We
+  // can only form if op0 is fmaxnum_ieee if IEEE=1.
   EVT VT = Op0.getValueType();
   if (Info->getMode().DX10Clamp) {
     // If dx10_clamp is enabled, NaNs clamp to 0.0. This is the same as the
@@ -15717,9 +15757,14 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
       return Med3;
   }
 
-  // fminnum(fmaxnum(x, K0), K1), K0 < K1 && !is_snan(x) -> fmed3(x, K0, K1)
+  // if !is_snan(x):
+  //   fminnum(fmaxnum(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fminnum_ieee(fmaxnum_ieee(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fminnumnum(fmaxnumnum(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fmin_legacy(fmax_legacy(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
   if (((Opc == ISD::FMINNUM && Op0.getOpcode() == ISD::FMAXNUM) ||
        (Opc == ISD::FMINNUM_IEEE && Op0.getOpcode() == ISD::FMAXNUM_IEEE) ||
+       (Opc == ISD::FMINIMUMNUM && Op0.getOpcode() == ISD::FMAXIMUMNUM) ||
        (Opc == AMDGPUISD::FMIN_LEGACY &&
         Op0.getOpcode() == AMDGPUISD::FMAX_LEGACY)) &&
       (VT == MVT::f32 || VT == MVT::f64 ||

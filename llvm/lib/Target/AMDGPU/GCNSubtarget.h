@@ -173,10 +173,9 @@ protected:
   bool HasFP8ConversionInsts = false;
 #if LLPC_BUILD_NPI
   bool HasFP8E5M3Insts = false;
-#else /* LLPC_BUILD_NPI */
+#endif /* LLPC_BUILD_NPI */
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
@@ -962,11 +961,17 @@ public:
 
 #if LLPC_BUILD_NPI
   bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
-#else /* LLPC_BUILD_NPI */
+
+#endif /* LLPC_BUILD_NPI */
   bool hasWMMA256bInsts() const { return HasWMMA256bInsts; }
 
   bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
-#endif /* LLPC_BUILD_NPI */
+
+  bool isGFX1170() const {
+    return getGeneration() == GFX11 && hasWMMA128bInsts();
+  }
+
+  bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
 
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
@@ -1676,10 +1681,10 @@ public:
   bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
 
   // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
-  bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
+  bool hasDX10ClampMode() const { return !isGFX1170Plus(); }
 
   // \returns true if the target has IEEE kernel descriptor mode bit
-  bool hasIEEEMode() const { return getGeneration() < GFX12; }
+  bool hasIEEEMode() const { return !isGFX1170Plus(); }
 
   // \returns true if the target has IEEE fminimum/fmaximum instructions
   bool hasIEEEMinMax() const { return getGeneration() >= GFX12; }

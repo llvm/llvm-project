@@ -866,6 +866,8 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
 #if LLPC_BUILD_NPI
+  // No worry about Wavegroup rank-function here because it skips this
+  // emitEntryFunctionPrologue.
   const bool WavegroupEnable = AMDGPU::getWavegroupEnable(MF.getFunction());
   LiveRegUnits LiveUnits;
   Register PreloadedPrivateSegmentSizeReg;
@@ -1487,6 +1489,16 @@ void SIFrameLowering::emitCSRSpillRestores(
 
 void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
+#if LLPC_BUILD_NPI
+  // A wavegroup rank-function uses its wavegroup-entry kernel's
+  // prologue and frame.
+  if (AMDGPU::getWavegroupRankFunction(MF.getFunction())) {
+    // however it is not an entry function in terms of idx0-usage
+    finalizeIdx0SaveRestores(MF, false, false);
+    return;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   if (FuncInfo->isEntryFunction()) {
     emitEntryFunctionPrologue(MF, MBB);
@@ -1988,6 +2000,11 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
     return;
 
+#if LLPC_BUILD_NPI
+  if (AMDGPU::getWavegroupRankFunction(MF.getFunction()))
+    return;
+
+#endif /* LLPC_BUILD_NPI */
   TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();

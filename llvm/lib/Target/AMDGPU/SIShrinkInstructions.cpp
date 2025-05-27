@@ -417,8 +417,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
     return;
 
   // There is no advantage to doing this pre-RA.
-  if (!MF->getProperties().hasProperty(
-          MachineFunctionProperties::Property::NoVRegs))
+  if (!MF->getProperties().hasNoVRegs())
     return;
 
   if (TII->hasAnyModifiersSet(MI))
@@ -963,8 +962,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       if (TII->isMIMG(MI.getOpcode()) &&
           ST->getGeneration() >= AMDGPUSubtarget::GFX10 &&
-          MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::NoVRegs)) {
+          MF.getProperties().hasNoVRegs()) {
         shrinkMIMG(MI);
         continue;
       }
@@ -1084,13 +1082,12 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 #if LLPC_BUILD_NPI
       // However, if 64-bit literals are allowed we still need to shrink it
       // for such literal to be able to fold.
-#endif /* LLPC_BUILD_NPI */
       if (ST->hasVOP3Literal() &&
-#if LLPC_BUILD_NPI
           (!ST->has64BitLiterals() || AMDGPU::isTrue16Inst(MI.getOpcode())) &&
+	  !MF.getProperties().hasNoVRegs())
+#else /* LLPC_BUILD_NPI */
+      if (ST->hasVOP3Literal() && !MF.getProperties().hasNoVRegs())
 #endif /* LLPC_BUILD_NPI */
-          !MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::NoVRegs))
         continue;
 
       if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&

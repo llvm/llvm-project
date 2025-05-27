@@ -39,7 +39,12 @@ public:
     RIK_UsesFlatScratch,
     RIK_HasDynSizedStack,
     RIK_HasRecursion,
+#if LLPC_BUILD_NPI
+    RIK_HasIndirectCall,
+    RIK_NumVGPRRankSum
+#else /* LLPC_BUILD_NPI */
     RIK_HasIndirectCall
+#endif /* LLPC_BUILD_NPI */
   };
 
 private:
