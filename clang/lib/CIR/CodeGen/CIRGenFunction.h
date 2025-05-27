@@ -777,8 +777,6 @@ public:
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
 
-  LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
-
   void emitDecl(const clang::Decl &d);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
@@ -901,20 +899,21 @@ public:
 
   /// An object to manage conditionally-evaluated expressions.
   class ConditionalEvaluation {
+    CIRGenFunction &cgf;
     mlir::OpBuilder::InsertPoint insertPt;
 
   public:
     ConditionalEvaluation(CIRGenFunction &cgf)
-        : insertPt(cgf.builder.saveInsertionPoint()) {}
-    ConditionalEvaluation(mlir::OpBuilder::InsertPoint ip) : insertPt(ip) {}
+        : cgf(cgf), insertPt(cgf.builder.saveInsertionPoint()) {}
+    ConditionalEvaluation(CIRGenFunction &cgf, mlir::OpBuilder::InsertPoint ip) : cgf(cgf), insertPt(ip) {}
 
-    void begin(CIRGenFunction &cgf) {
+    void beginEvaluation() {
       assert(cgf.outermostConditional != this);
       if (!cgf.outermostConditional)
         cgf.outermostConditional = this;
     }
 
-    void end(CIRGenFunction &cgf) {
+    void endEvaluation() {
       assert(cgf.outermostConditional != nullptr);
       if (cgf.outermostConditional == this)
         cgf.outermostConditional = nullptr;

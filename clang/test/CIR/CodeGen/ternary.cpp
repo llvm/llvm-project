@@ -15,35 +15,23 @@ int x(int y) {
 // CIR: [[YVAL:%[0-9]+]] = cir.load [[Y]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[ZERO:%[0-9]+]] = cir.const #cir.int<0> : !s32i
 // CIR: [[CMP:%[0-9]+]] = cir.cmp(gt, [[YVAL]], [[ZERO]]) : !s32i, !cir.bool
-// CIR: [[TERNARY_RES:%[0-9]+]] = cir.ternary([[CMP]], true {
 // CIR: [[THREE:%[0-9]+]] = cir.const #cir.int<3> : !s32i
-// CIR: cir.yield [[THREE]] : !s32i
-// CIR: }, false {
 // CIR: [[FIVE:%[0-9]+]] = cir.const #cir.int<5> : !s32i
-// CIR: cir.yield [[FIVE]] : !s32i
-// CIR: }) : (!cir.bool) -> !s32i
-// CIR: cir.store [[TERNARY_RES]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR: [[SELECT_RES:%[0-9]+]] = cir.select if [[CMP]] then [[THREE]] else [[FIVE]] : (!cir.bool, !s32i, !s32i) -> !s32i
+// CIR: cir.store [[SELECT_RES]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[RETVAL_VAL:%[0-9]+]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return [[RETVAL_VAL]] : !s32i
 
 // LLVM-LABEL: define i32 @_Z1xi(
-// LLVM-SAME: i32 %[[ARG0:.*]])
-// LLVM: %[[Y:.*]] = alloca i32
-// LLVM: %[[RETVAL:.*]] = alloca i32
-// LLVM: store i32 %[[ARG0]], ptr %[[Y]]
-// LLVM: %[[YVAL:.*]] = load i32, ptr %[[Y]]
+// LLVM-SAME: i32 %[[ARG0:[0-9]+]])
+// LLVM: %[[Y:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[RETVAL:.*]] = alloca i32, i64 1, align 4
+// LLVM: store i32 %[[ARG0]], ptr %[[Y]], align 4
+// LLVM: %[[YVAL:.*]] = load i32, ptr %[[Y]], align 4
 // LLVM: %[[CMP:.*]] = icmp sgt i32 %[[YVAL]], 0
-// LLVM: br i1 %[[CMP]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
-// LLVM: [[TRUE_BB]]:
-// LLVM: br label %[[MERGE_BB:.*]]
-// LLVM: [[FALSE_BB]]:
-// LLVM: br label %[[MERGE_BB]]
-// LLVM: [[MERGE_BB]]:
-// LLVM: %[[PHI:.*]] = phi i32 [ 5, %[[FALSE_BB]] ], [ 3, %[[TRUE_BB]] ]
-// LLVM: br label %[[FINAL_BB:.*]]
-// LLVM: [[FINAL_BB]]:
-// LLVM: store i32 %[[PHI]], ptr %[[RETVAL]]
-// LLVM: %[[RESULT:.*]] = load i32, ptr %[[RETVAL]]
+// LLVM: %[[SELECT:.*]] = select i1 %[[CMP]], i32 3, i32 5
+// LLVM: store i32 %[[SELECT]], ptr %[[RETVAL]], align 4
+// LLVM: %[[RESULT:.*]] = load i32, ptr %[[RETVAL]], align 4
 // LLVM: ret i32 %[[RESULT]]
 
 int foo(int a, int b) {

@@ -276,22 +276,6 @@ public:
     return createCast(loc, cir::CastKind::bitcast, src, newTy);
   }
 
-  // TODO(cir): the following function was introduced to keep in sync with LLVM
-  // codegen. CIR does not have "zext" operations. It should eventually be
-  // renamed or removed. For now, we just add whatever cast is required here.
-  mlir::Value createZExtOrBitCast(mlir::Location loc, mlir::Value src,
-                                  mlir::Type newTy) {
-    mlir::Type srcTy = src.getType();
-
-    if (srcTy == newTy)
-      return src;
-
-    if (mlir::isa<cir::BoolType>(srcTy) && mlir::isa<cir::IntType>(newTy))
-      return createBoolToInt(src, newTy);
-
-    llvm_unreachable("unhandled extension cast");
-  }
-
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -314,6 +298,24 @@ public:
 
   mlir::Value createOr(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return createBinop(loc, lhs, cir::BinOpKind::Or, rhs);
+  }
+
+  mlir::Value createSelect(mlir::Location loc, mlir::Value condition,
+                           mlir::Value trueValue, mlir::Value falseValue) {
+    assert(trueValue.getType() == falseValue.getType() &&
+           "trueValue and falseValue should have the same type");
+    return create<cir::SelectOp>(loc, trueValue.getType(), condition, trueValue,
+                                 falseValue);
+  }
+
+  mlir::Value createLogicalAnd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    return createSelect(loc, lhs, rhs, getBool(false, loc));
+  }
+
+  mlir::Value createLogicalOr(mlir::Location loc, mlir::Value lhs,
+                              mlir::Value rhs) {
+    return createSelect(loc, lhs, getBool(true, loc), rhs);
   }
 
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,

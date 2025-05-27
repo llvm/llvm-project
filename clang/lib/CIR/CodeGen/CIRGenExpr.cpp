@@ -1197,36 +1197,6 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
   return Address(ptr, addr.getAlignment());
 }
 
-// Handle the case where the condition is a constant evaluatable simple integer,
-// which means we don't have to separately handle the true/false blocks.
-static std::optional<LValue> handleConditionalOperatorLValueSimpleCase(
-    CIRGenFunction &cgf, const AbstractConditionalOperator *e) {
-  const Expr *condExpr = e->getCond();
-  bool condExprBool = false;
-  if (cgf.constantFoldsToSimpleInteger(condExpr, condExprBool)) {
-    const Expr *live = e->getTrueExpr(), *dead = e->getFalseExpr();
-    if (!condExprBool)
-      std::swap(live, dead);
-
-    if (!cgf.containsLabel(dead)) {
-      // If the true case is live, we need to track its region.
-      if (condExprBool) {
-        assert(!cir::MissingFeatures::incrementProfileCounter());
-      }
-      // If a throw expression we emit it and return an undefined lvalue
-      // because it can't be used.
-      if (isa<CXXThrowExpr>(live->IgnoreParens())) {
-        assert(!cir::MissingFeatures::throwOp());
-        cgf.cgm.errorNYI(live->getSourceRange(),
-                         "throw expressions in conditional operator");
-        return std::nullopt;
-      }
-      return cgf.emitLValue(live);
-    }
-  }
-  return std::nullopt;
-}
-
 /// Emit the operand of a glvalue conditional operator. This is either a glvalue
 /// or a (possibly-parenthesized) throw-expression. If this is a throw, no
 /// LValue is returned and the current block has been terminated.
@@ -1242,6 +1212,32 @@ static std::optional<LValue> emitLValueOrThrowExpression(CIRGenFunction &cgf,
   return cgf.emitLValue(operand);
 }
 
+// Handle the case where the condition is a constant evaluatable simple integer,
+// which means we don't have to separately handle the true/false blocks.
+static std::optional<LValue> handleConditionalOperatorLValueSimpleCase(
+    CIRGenFunction &cgf, const AbstractConditionalOperator *e) {
+  const Expr *condExpr = e->getCond();
+  bool condExprBool = false;
+  if (cgf.constantFoldsToSimpleInteger(condExpr, condExprBool)) {
+    const Expr *live = e->getTrueExpr(), *dead = e->getFalseExpr();
+    if (!condExprBool)
+      std::swap(live, dead);
+
+    // If there's a label in the "dead" branch we can't eliminate that as it
+    // could be a used jump target.
+    if (!cgf.containsLabel(dead)) {
+      // If the true case is live, we need to track its region.
+      if (condExprBool) {
+        assert(!cir::MissingFeatures::incrementProfileCounter());
+      }
+      // If a throw expression we emit it and return an undefined lvalue
+      // because it can't be used.
+      return emitLValueOrThrowExpression(cgf, live);
+    }
+  }
+  return std::nullopt;
+}
+
 // Create and generate the 3 blocks for a conditional operator.
 // Leaves the 'current block' in the continuation basic block.
 template <typename FuncTy>
@@ -1252,7 +1248,6 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
   CIRGenFunction &cgf = *this;
   ConditionalEvaluation eval(cgf);
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
-  CIRGenBuilderTy &builder = cgf.getBuilder();
   Expr *trueExpr = e->getTrueExpr();
   Expr *falseExpr = e->getFalseExpr();
 
@@ -1266,10 +1261,10 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
     cgf.curLexScope->setAsTernary();
 
     assert(!cir::MissingFeatures::incrementProfileCounter());
-    eval.begin(cgf);
+    eval.beginEvaluation();
     branchInfo = branchGenFunc(cgf, expr);
     mlir::Value branch = branchInfo->getPointer();
-    eval.end(cgf);
+    eval.endEvaluation();
 
     if (branch) {
       yieldTy = branch.getType();
@@ -1313,47 +1308,6 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
     }
   }
   return info;
-}
-
-LValue CIRGenFunction::emitConditionalOperatorLValue(
-    const AbstractConditionalOperator *expr) {
-  if (!expr->isGLValue()) {
-    // ?: here should be an aggregate.
-    assert(hasAggregateEvaluationKind(expr->getType()) &&
-           "Unexpected conditional operator!");
-    return emitAggExprToLValue(expr);
-  }
-
-  OpaqueValueMapping binding(*this, expr);
-  if (std::optional<LValue> res =
-          handleConditionalOperatorLValueSimpleCase(*this, expr))
-    return *res;
-
-  ConditionalInfo info =
-      emitConditionalBlocks(expr, [](CIRGenFunction &cgf, const Expr *e) {
-        return emitLValueOrThrowExpression(cgf, e);
-      });
-
-  if ((info.lhs && !info.lhs->isSimple()) ||
-      (info.rhs && !info.rhs->isSimple())) {
-    cgm.errorNYI(expr->getSourceRange(), "unsupported conditional operator");
-    return {};
-  }
-
-  if (info.lhs && info.rhs) {
-    Address lhsAddr = info.lhs->getAddress();
-    Address rhsAddr = info.rhs->getAddress();
-    Address result(info.result, lhsAddr.getElementType(),
-                   std::min(lhsAddr.getAlignment(), rhsAddr.getAlignment()));
-    AlignmentSource alignSource =
-        std::max(info.lhs->getBaseInfo().getAlignmentSource(),
-                 info.rhs->getBaseInfo().getAlignmentSource());
-    assert(!cir::MissingFeatures::opTBAA());
-    return makeAddrLValue(result, expr->getType(), LValueBaseInfo(alignSource));
-  }
-  assert((info.lhs || info.rhs) &&
-         "both operands of glvalue conditional are throw-expressions?");
-  return info.lhs ? *info.lhs : *info.rhs;
 }
 
 /// Emit an `if` on a boolean condition, filling `then` and `else` into
