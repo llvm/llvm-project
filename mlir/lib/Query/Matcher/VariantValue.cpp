@@ -46,11 +46,9 @@ public:
 
   std::string getTypeAsString() const override {
     std::string inner;
-    for (size_t i = 0, e = args.size(); i != e; ++i) {
-      if (i != 0)
-        inner += "&";
-      inner += args[i].getTypeAsString();
-    }
+    llvm::interleave(
+        args, [&](auto const &arg) { inner += arg.getTypeAsString(); },
+        [&] { inner += " & "; });
     return inner;
   }
 
