@@ -401,6 +401,7 @@ COFFPlatform::COFFPlatform(
   }
   VCRuntimeBootstrap = std::move(*VCRT);
 
+  std::set<std::string> DylibsToPreload;
   for (auto &Lib : OrcRuntimeGenerator->getImportedDynamicLibraries())
     DylibsToPreload.insert(Lib);
 

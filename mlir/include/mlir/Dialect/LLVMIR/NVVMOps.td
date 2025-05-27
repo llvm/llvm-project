@@ -535,8 +535,13 @@ def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
 
-def NVVM_Barrier0Op : NVVM_IntrOp<"barrier0"> {
+def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
+  string llvmBuilder = [{
+      createIntrinsicCall(
+          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all,
+          {builder.getInt32(0)});
+  }];
 }
 
 def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
@@ -544,15 +549,14 @@ def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
     Optional<I32>:$barrierId,
     Optional<I32>:$numberOfThreads);
   string llvmBuilder = [{
-    if ($numberOfThreads && $barrierId) {
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier,
-                {$barrierId, $numberOfThreads});
-    } else if($barrierId) {
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
-                {$barrierId});   
-    } else {
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
-    }
+    llvm::Value *id = $barrierId ? $barrierId : builder.getInt32(0);
+    if ($numberOfThreads)
+      createIntrinsicCall(
+          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count,
+          {id, $numberOfThreads});
+    else
+      createIntrinsicCall(
+          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all, {id});
   }];
   let hasVerifier = 1;
 
@@ -2337,6 +2341,49 @@ def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap",
     std::string $cppClass::getPtx() { 
       return std::string("prefetch.tensormap [%0];");
     }
+  }];
+}
+
+def NVVM_CpAsyncBulkPrefetchOp : NVVM_Op<"cp.async.bulk.prefetch"> {
+  let summary = "Async bulk prefetch from global memory to L2 cache";
+  let description = [{
+    Initiates an asynchronous prefetch of data from the location
+    specified by `srcMem` to the L2 cache.
+
+    The `l2CacheHint` operand is optional, and it is used to specify cache
+    eviction policy that may be used during the memory access.
+
+    Example:
+    ```mlir
+      nvvm.cp.async.bulk.prefetch %src, %size : !llvm.ptr<1>
+
+      // with l2_cache_hint
+      nvvm.cp.async.bulk.prefetch %src, %size l2_cache_hint = %ch : !llvm.ptr<1>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-prefetch)
+  }];
+
+  let arguments = (ins
+    LLVM_PointerGlobal:$srcMem,
+    I32:$size,
+    Optional<I64>:$l2CacheHint);
+
+  let assemblyFormat = [{
+    $srcMem `,` $size (`l2_cache_hint` `=` $l2CacheHint^ )?
+    attr-dict  `:` type($srcMem)
+  }];
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 

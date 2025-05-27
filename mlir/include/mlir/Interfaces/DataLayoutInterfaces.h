@@ -101,6 +101,10 @@ Attribute getDefaultGlobalMemorySpace(DataLayoutEntryInterface entry);
 /// DataLayoutInterface if specified, otherwise returns the default.
 uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
+/// Default handler for the function pointer alignment request. Dispatches to
+/// the DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultFunctionPointerAlignment(DataLayoutEntryInterface entry);
+
 /// Returns the value of the property from the specified DataLayoutEntry. If the
 /// property is missing from the entry, returns std::nullopt.
 std::optional<Attribute> getDevicePropertyValue(DataLayoutEntryInterface entry);
@@ -259,6 +263,9 @@ public:
   /// unspecified.
   uint64_t getStackAlignment() const;
 
+  /// Returns function pointer alignment.
+  Attribute getFunctionPointerAlignment() const;
+
   /// Returns the value of the specified property if the property is defined for
   /// the given device ID, otherwise returns std::nullopt.
   std::optional<Attribute>
@@ -303,6 +310,8 @@ private:
 
   /// Cache for stack alignment.
   mutable std::optional<uint64_t> stackAlignment;
+  /// Cache for function pointer alignment.
+  mutable std::optional<Attribute> functionPointerAlignment;
 };
 
 } // namespace mlir
