@@ -758,7 +758,7 @@ public:
 /// DataTag::Factory should be friend for every derived class.
 class DataTag : public ProgramPointTag {
 public:
-  StringRef getTagDescription() const override { return "Data Tag"; }
+  StringRef getDebugTag() const override { return "Data Tag"; }
 
   // Manage memory for DataTag objects.
   class Factory {
@@ -809,7 +809,7 @@ public:
     return std::move(Msg);
   }
 
-  StringRef getTagDescription() const override {
+  StringRef getDebugTag() const override {
     // TODO: Remember a few examples of generated messages
     // and display them in the ExplodedGraph dump by
     // returning them from this function.

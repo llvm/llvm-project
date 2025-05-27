@@ -24,7 +24,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -138,7 +137,7 @@ namespace {
 std::string checkerScopeName(StringRef Name, const CheckerBackend *Checker) {
   if (!llvm::timeTraceProfilerEnabled())
     return "";
-  StringRef CheckerTag = Checker ? Checker->getTagDescription() : "<unknown>";
+  StringRef CheckerTag = Checker ? Checker->getDebugTag() : "<unknown>";
   return (Name + ":" + CheckerTag).str();
 }
 
@@ -721,12 +720,12 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
             "while the {2} checker also tried to evaluate the same call. At "
             "most one checker supposed to evaluate a call.",
             toString(Call), evaluatorChecker,
-            EvalCallChecker.Checker->getTagDescription());
+            EvalCallChecker.Checker->getDebugTag());
         llvm_unreachable(AssertionMessage.c_str());
       }
 #endif
       if (evaluated) {
-        evaluatorChecker = EvalCallChecker.Checker->getTagDescription();
+        evaluatorChecker = EvalCallChecker.Checker->getDebugTag();
         Dst.insert(checkDst);
 #ifdef NDEBUG
         break; // on release don't check that no other checker also evals.
@@ -797,9 +796,8 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
     if (TempBuf.empty())
       continue;
 
-    Indent(Out, Space, IsDot)
-        << "{ \"checker\": \"" << CT.second->getTagDescription()
-        << "\", \"messages\": [" << NL;
+    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CT.second->getDebugTag()
+                              << "\", \"messages\": [" << NL;
     Indent(Out, InnerSpace, IsDot)
         << '\"' << TempBuf.str().trim() << '\"' << NL;
     Indent(Out, Space, IsDot) << "]}";
