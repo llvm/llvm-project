@@ -13,6 +13,8 @@
 #ifndef MLIR_TARGET_SPIRV_SERIALIZATION_H
 #define MLIR_TARGET_SPIRV_SERIALIZATION_H
 
+#include <cstdint>
+
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {

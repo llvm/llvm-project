@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_AFFINE_IR_VALUEBOUNDSOPINTERFACEIMPL_H
 #define MLIR_DIALECT_AFFINE_IR_VALUEBOUNDSOPINTERFACEIMPL_H
 
+#include <cstdint>
+
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {

@@ -13,6 +13,8 @@
 #ifndef MLIR_TARGET_SPIRV_DESERIALIZATION_H
 #define MLIR_TARGET_SPIRV_DESERIALIZATION_H
 
+#include <cstdint>
+
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Support/LLVM.h"
 
