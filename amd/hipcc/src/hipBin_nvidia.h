@@ -37,7 +37,7 @@ class HipBinNvidia : public HipBinBase {
 
  public:
   HipBinNvidia();
-  virtual ~HipBinNvidia() = default;
+  ~HipBinNvidia() override = default;
   virtual bool detectPlatform();
   virtual void constructCompilerPath();
   virtual const string& getCompilerPath() const;
