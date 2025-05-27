@@ -939,6 +939,10 @@ public:
     return uintptr_t(0);
   }
 
+  StringRef getStringTable() const {
+    return StringRef(StringTable, StringTableSize);
+  }
+
   uint16_t getMachine() const {
     if (COFFHeader) {
       if (CHPEMetadata) {
