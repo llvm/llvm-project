@@ -386,12 +386,10 @@ using namespace llvm;
 static const Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
 
-namespace llvm {
-cl::opt<bool> PrintPipelinePasses(
+cl::opt<bool> llvm::PrintPipelinePasses(
     "print-pipeline-passes",
     cl::desc("Print a '-passes' compatible string describing the pipeline "
              "(best-effort only)."));
-} // namespace llvm
 
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;
@@ -429,7 +427,7 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     // Intentionally break the Module by creating an alias without setting the
     // aliasee.
-    auto *PtrTy = llvm::PointerType::getUnqual(M.getContext());
+    auto *PtrTy = PointerType::getUnqual(M.getContext());
     GlobalAlias::create(PtrTy, PtrTy->getAddressSpace(),
                         GlobalValue::LinkageTypes::InternalLinkage,
                         "__bad_alias", nullptr, &M);
