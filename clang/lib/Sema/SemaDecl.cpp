@@ -14088,9 +14088,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // special case code.
 
   // C++ 8.5p11:
-  // The form of initialization (using parentheses or '=') is generally
-  // insignificant, but does matter when the entity being initialized has a
-  // class type.
+  // The form of initialization (using parentheses or '=') matters
+  // when the entity being initialized has class type.
   if (InitializedFromParenListExpr) {
     assert(DirectInit && "Call-style initializer must be direct init.");
     VDecl->setInitStyle(IsParenListInit ? VarDecl::ParenListInit
