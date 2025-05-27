@@ -16,6 +16,8 @@
 #ifndef LLVM_IR_ASSEMBLYANNOTATIONWRITER_H
 #define LLVM_IR_ASSEMBLYANNOTATIONWRITER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class Function;

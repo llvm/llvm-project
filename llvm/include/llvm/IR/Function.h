@@ -792,8 +792,8 @@ public:
 
 private:
   // These need access to the underlying BB list.
-  friend void BasicBlock::removeFromParent();
-  friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
+  LLVM_ABI_FRIEND friend void BasicBlock::removeFromParent();
+  LLVM_ABI_FRIEND friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
   template <class BB_t, class BB_i_t, class BI_t, class II_t>
   friend class InstIterator;
   friend class llvm::SymbolTableListTraits<llvm::BasicBlock>;

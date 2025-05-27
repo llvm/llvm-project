@@ -351,7 +351,7 @@ LLVM_ABI bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Spec
 class PassInstrumentationAnalysis
     : public AnalysisInfoMixin<PassInstrumentationAnalysis> {
   friend AnalysisInfoMixin<PassInstrumentationAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   PassInstrumentationCallbacks *Callbacks;
 

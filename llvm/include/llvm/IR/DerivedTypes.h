@@ -702,9 +702,9 @@ public:
 
   /// This constructs a pointer to an object of the specified type in a numbered
   /// address space.
-  LLVM_ABI [[deprecated("PointerType::get with pointee type is pending removal. Use "
+  [[deprecated("PointerType::get with pointee type is pending removal. Use "
                "Context overload.")]]
-  static PointerType *get(Type *ElementType, unsigned AddressSpace);
+  LLVM_ABI static PointerType *get(Type *ElementType, unsigned AddressSpace);
   /// This constructs an opaque pointer to an object in a numbered address
   /// space.
   LLVM_ABI static PointerType *get(LLVMContext &C, unsigned AddressSpace);

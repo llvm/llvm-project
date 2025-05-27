@@ -108,7 +108,7 @@ LLVM_ABI FunctionPass *createVerifierPass(bool FatalErrors = true);
 class VerifierAnalysis : public AnalysisInfoMixin<VerifierAnalysis> {
   friend AnalysisInfoMixin<VerifierAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   struct Result {
