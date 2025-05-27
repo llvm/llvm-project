@@ -101,12 +101,13 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
-std::string xegpu::getLayoutName(OpOperand &opr) {
+std::string xegpu::getLayoutName(const OpOperand &opr) {
   const StringRef prefix("layout_operand_");
-  return llvm::formatv("{0}{1}", prefix, opr.getOperandNumber()).str();
+  unsigned idx = const_cast<OpOperand &>(opr).getOperandNumber();
+  return llvm::formatv("{0}{1}", prefix, idx).str();
 }
 
-std::string xegpu::getLayoutName(OpResult res) {
+std::string xegpu::getLayoutName(const OpResult res) {
   const StringRef prefix = "layout_result_";
   return llvm::formatv("{0}{1}", prefix, res.getResultNumber()).str();
 }
@@ -143,7 +144,7 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
   return nullptr;
 }
 
-xegpu::LayoutAttr xegpu::getLayoutAttr(OpOperand &opr) {
+xegpu::LayoutAttr xegpu::getLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))

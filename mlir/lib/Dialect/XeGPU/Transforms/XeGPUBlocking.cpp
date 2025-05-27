@@ -91,15 +91,14 @@ public:
   void runOnOperation() override;
 
 private:
-  // Get the tile shape for a given operand by examining the layout attribute.
-  // If layout is not present or is not a subgroup level layout, it returns
-  // std::nullopt.
-  std::optional<SmallVector<int64_t>> getTileShape(OpOperand &operand) const;
-
-  // Get the tile shape for a given result by examining the layout attribute.
-  // If layout is not present or is not a subgroup level layout, it returns
-  // std::nullopt.
-  std::optional<SmallVector<int64_t>> getTileShape(OpResult result) const;
+  // Get the tile shape for a given OpOperand or OpResult by examining the
+  // corresponding layout attribute. If layout is not present or is not a
+  // subgroup level layout, it returns std::nullopt.
+  template <typename T,
+            typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                        std::is_same_v<T, OpResult>>>
+  std::optional<SmallVector<int64_t>>
+  getTileShape(const T &operandOrResult) const;
 
   // Get the tile shape for a given operation.
   std::optional<SmallVector<int64_t>> getTileShape(Operation *op) const;
@@ -111,31 +110,24 @@ private:
 };
 } // namespace
 
+template <typename T, typename>
 std::optional<SmallVector<int64_t>>
-XeGPUBlockingPass::getTileShape(OpOperand &operand) const {
-  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operand);
+XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
+  Value value;
+  if constexpr (std::is_same_v<T, OpOperand>)
+    value = operandOrResult.get();
+  else
+    value = (Value)operandOrResult;
+
+  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operandOrResult);
   if (layout && layout.isSgLayout()) {
     if (auto inst_data = layout.getInstData())
       return llvm::to_vector_of<int64_t>(inst_data.asArrayRef());
 
-    if (auto type = dyn_cast<ShapedType>(operand.get().getType()))
+    if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
   }
-  LDBG("failed to getTileShape for operand: " << operand.get());
-  return std::nullopt;
-}
-
-std::optional<SmallVector<int64_t>>
-XeGPUBlockingPass::getTileShape(OpResult result) const {
-  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
-  if (layout && layout.isSgLayout()) {
-    if (auto inst_data = layout.getInstData())
-      return llvm::to_vector_of<int64_t>(inst_data.asArrayRef());
-
-    if (auto type = dyn_cast<ShapedType>(result.getType()))
-      return llvm::to_vector(type.getShape());
-  }
-  LDBG("failed to getTileShape for result: " << result);
+  LDBG("failed to getTileShape for: " << value);
   return std::nullopt;
 }
 
