@@ -81,6 +81,18 @@ void c(int A) {
   }
 }
 
+void d() {
+// - Check the `for` keyword gets an atom group.
+// CHECK: entry:
+// CHECK-NEXT: br label %for.cond
+
+// CHECK: for.cond:
+// CHECK: br label %for.cond, !dbg [[dG1R1:!.*]], !llvm.loop
+  for ( ; ; )
+  {
+  }
+}
+
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
@@ -102,3 +114,5 @@ void c(int A) {
 // CHECK: [[cG3R1]] = !DILocation(line: 81,{{.*}} atomGroup: 3, atomRank: 1)
 // CHECK: [[cG2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
 // CHECK: [[cG2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
+
+// CHECK: [[dG1R1]] = !DILocation(line: 91, column: 3, scope: ![[#]], atomGroup: 1, atomRank: 1)
