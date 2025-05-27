@@ -6,7 +6,7 @@
 ; RUN: llc --call-graph-section -mtriple riscv64 < %s -stop-after=finalize-isel -o - | FileCheck %s
 ; RUN: llc --call-graph-section -mtriple riscv32 < %s -stop-after=finalize-isel -o - | FileCheck %s
 
-define i32 @_Z13call_indirectPFicEc(ptr %func, i8 %x) local_unnamed_addr !type !0 {
+define i32 @_Z13call_indirectPFicEc(ptr %func, i8 %x) !type !0 {
 entry:
   ; CHECK: callSites:
   ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeIds:
