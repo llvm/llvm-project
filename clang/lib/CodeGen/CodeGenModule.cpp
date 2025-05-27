@@ -971,6 +971,7 @@ void CodeGenModule::Release() {
         getModule(), Int8Ty, false, llvm::GlobalValue::ExternalLinkage,
         llvm::Constant::getNullValue(Int8Ty),
         "__hip_cuid_" + getContext().getCUIDHash());
+    getSanitizerMetadata()->disableSanitizerForGlobal(GV);
     addCompilerUsedGlobal(GV);
   }
   emitLLVMUsed();
