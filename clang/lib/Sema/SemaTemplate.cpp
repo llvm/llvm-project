@@ -3234,6 +3234,59 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
   }
 }
 
+static bool isInVkNamespace(const RecordType *RT) {
+  DeclContext *DC = RT->getDecl()->getDeclContext();
+  if (!DC)
+    return false;
+
+  NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC);
+  if (!ND)
+    return false;
+
+  return ND->getQualifiedNameAsString() == "hlsl::vk";
+}
+
+static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
+                                              QualType OperandArg,
+                                              SourceLocation Loc) {
+  if (auto *RT = OperandArg->getAs<RecordType>()) {
+    bool Literal = false;
+    SourceLocation LiteralLoc;
+    if (isInVkNamespace(RT) && RT->getDecl()->getName() == "Literal") {
+      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+      assert(SpecDecl);
+
+      const TemplateArgumentList &LiteralArgs = SpecDecl->getTemplateArgs();
+      QualType ConstantType = LiteralArgs[0].getAsType();
+      RT = ConstantType->getAs<RecordType>();
+      Literal = true;
+      LiteralLoc = SpecDecl->getSourceRange().getBegin();
+    }
+
+    if (RT && isInVkNamespace(RT) &&
+        RT->getDecl()->getName() == "integral_constant") {
+      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+      assert(SpecDecl);
+
+      const TemplateArgumentList &ConstantArgs = SpecDecl->getTemplateArgs();
+
+      QualType ConstantType = ConstantArgs[0].getAsType();
+      llvm::APInt Value = ConstantArgs[1].getAsIntegral();
+
+      if (Literal)
+        return SpirvOperand::createLiteral(Value);
+      return SpirvOperand::createConstant(ConstantType, Value);
+    } else if (Literal) {
+      SemaRef.Diag(LiteralLoc, diag::err_hlsl_vk_literal_must_contain_constant);
+      return SpirvOperand();
+    }
+  }
+  if (SemaRef.RequireCompleteType(Loc, OperandArg,
+                                  diag::err_call_incomplete_argument))
+    return SpirvOperand();
+  return SpirvOperand::createType(OperandArg);
+}
+
 static QualType
 checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
                            ArrayRef<TemplateArgument> Converted,
@@ -3333,6 +3386,36 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     }
     QualType HasNoTypeMember = Converted[2].getAsType();
     return HasNoTypeMember;
+  }
+
+  case BTK__hlsl_spirv_type: {
+    assert(Converted.size() == 4);
+
+    if (!Context.getTargetInfo().getTriple().isSPIRV()) {
+      SemaRef.Diag(TemplateLoc, diag::err_hlsl_spirv_only) << BTD;
+    }
+
+    if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
+      return QualType();
+
+    uint64_t Opcode = Converted[0].getAsIntegral().getZExtValue();
+    uint64_t Size = Converted[1].getAsIntegral().getZExtValue();
+    uint64_t Alignment = Converted[2].getAsIntegral().getZExtValue();
+
+    ArrayRef<TemplateArgument> OperandArgs = Converted[3].getPackAsArray();
+
+    llvm::SmallVector<SpirvOperand> Operands;
+
+    for (auto &OperandTA : OperandArgs) {
+      QualType OperandArg = OperandTA.getAsType();
+      auto Operand = checkHLSLSpirvTypeOperand(SemaRef, OperandArg,
+                                               TemplateArgs[3].getLocation());
+      if (!Operand.isValid())
+        return QualType();
+      Operands.push_back(Operand);
+    }
+
+    return Context.getHLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
   }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
@@ -6249,6 +6332,15 @@ bool UnnamedLocalNoLinkageFinder::VisitHLSLAttributedResourceType(
   if (T->hasContainedType() && Visit(T->getContainedType()))
     return true;
   return Visit(T->getWrappedType());
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitHLSLInlineSpirvType(
+    const HLSLInlineSpirvType *T) {
+  for (auto &Operand : T->getOperands())
+    if (Operand.isConstant() && Operand.isLiteral())
+      if (Visit(Operand.getResultType()))
+        return true;
+  return false;
 }
 
 bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo) {
