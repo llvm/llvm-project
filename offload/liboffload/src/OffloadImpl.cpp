@@ -230,6 +230,12 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   // Find the info if it exists under any of the given names
   auto GetInfo = [&](std::vector<std::string> Names) {
     InfoQueueTy DevInfo;
+    if (Device == HostDevice())
+      return std::string("Host");
+
+    if (!Device->Device)
+      return std::string("");
+
     if (auto Err = Device->Device->obtainInfoImpl(DevInfo))
       return std::string("");
 
