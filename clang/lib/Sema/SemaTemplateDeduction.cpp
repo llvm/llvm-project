@@ -2946,6 +2946,7 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
       LocalInstantiationScope Scope(S);
       MultiLevelTemplateArgumentList Args(Template, CTAI.SugaredConverted,
                                           /*Final=*/true);
+      Sema::ArgPackSubstIndexRAII OnlySubstNonPackExpansion(S, std::nullopt);
 
       if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,

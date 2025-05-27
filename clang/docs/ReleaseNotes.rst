@@ -798,6 +798,7 @@ Bug Fixes to C++ Support
 - Fix instantiation of default-initialized variable template specialization. (#GH140632) (#GH140622)
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
+- Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
