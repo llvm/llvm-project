@@ -27,3 +27,10 @@ functions:
     return_type: wint_t
     arguments:
       - type: int
+  - name: wcschr
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments: 
+      - type: const wchar_t *
+      - type: wchar_t
