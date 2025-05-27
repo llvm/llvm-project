@@ -30,23 +30,26 @@ using namespace mlir;
 using namespace mlir::arm_sve;
 
 namespace {
-// Get the LHS or RHS side operand of a vector contract. Handle two cases
-//   * if the operand is a sign- or zero- extend operation of type `T` from i8
-//     to i32, return the value before the extension, otherwise
-//   * if the operand is of i8 type and the operation is sign-extend, return the
-//     operand itself.
+// Get the operand of a `vector.contract`. This function is intended to abstract
+// away from the particular way a value is extended before feeding it into the
+// `vector.contract` - via zero-extend or an explicit or implicit sign-extend
+// (for implicit sign-extension see `vector.contract` documentation).
 //
-// This way we handle both explicit sign- or zero- extension or implicit
-// sign-extension.
-template <typename T>
+// The template parameter `Op` indicates the extension operation (explicir or
+// implicit) for which we are checking.
+//
+// Return success only for extensions from `i8` to `i32`.
+template <typename Op>
 std::optional<Value> getExtOperand(Value v, Type i8Ty, Type i32Ty) {
 
-  static_assert(llvm::is_one_of<T, arith::ExtSIOp, arith::ExtUIOp>::value,
+  static_assert(llvm::is_one_of<Op, arith::ExtSIOp, arith::ExtUIOp>::value,
                 "Must be instantiated with either sign- or zero- extension op");
 
-  auto extOp = dyn_cast_or_null<T>(v.getDefiningOp());
+  // If the operand is not defined by an explicit extend operation of the
+  // accepted operation type allow for an implicit sign-extension.
+  auto extOp = dyn_cast_or_null<Op>(v.getDefiningOp());
   if (!extOp) {
-    if constexpr (std::is_same<T, arith::ExtSIOp>::value) {
+    if constexpr (std::is_same<Op, arith::ExtSIOp>::value) {
       auto vTy = cast<VectorType>(v.getType());
       if (vTy.getElementType() != i8Ty)
         return {};
@@ -55,6 +58,8 @@ std::optional<Value> getExtOperand(Value v, Type i8Ty, Type i32Ty) {
     return {};
   }
 
+  // If the operand is defined by an explicit extend operation of the accepted
+  // operation type, check it's extented from `i8` to `i32`.
   auto inOp = extOp.getIn();
   auto inTy = dyn_cast<VectorType>(inOp.getType());
   if (!inTy || inTy.getElementType() != i8Ty)
@@ -93,37 +98,38 @@ Value createMMLA(PatternRewriter &rewriter, MMLA op, Location loc,
   }
 }
 
-// Lower a contraction operation that performs a matrix multiplication
-// of two 8-bit integer matrix tiles with logical dimensions <Mx8> and <8x[N]>
-// for the left-hand side and the right-hand side, respectively,
-// yielding a <Mx[N]> 32-bit integer result.
-//
-// The operands shapes are such that the operands can be evenly split into
-// sub-tiles with dimensions as expected by the targeted FEAT_I8MM instructions.
-// The intent is that M and N are chosen (by higher level transforms) in such a
-// way as to maximise register usage. The main use case we envision as of now is
-// MMT4D, thus the RHS operand is expected pre-transposed.
-//
-// The matrix multiplication is performed by unrolling the usual tiled matrix
-// multiplication algorithm using sub-tiles with dimensions <2x8> for the LHS,
-// <8x[2]> for the RHS, and <2x[2]> for the result and the input accumulator.
-//
-// One way to illustrate the operation is as follows:
-//
-// RHS<8x[N]>:       <8x[2]> <8x[2]> ... <8x[2]>
-//                 +-----------------------------
-// LHS<Mx8>: <2x8> | <2x[2]> <2x[2]> ... <2x[2]>
-//           <2x8> | <2x[2]> <2x[2]> ... <2x[2]>
-//            ...  |   ...     ...   ...   ...
-//           <2x8> | <2x[2]> <2x[2]> ... <2x[2]>
-//
-// The RHS operand is unpacked into N/2 values, each representing a sequence of
-// VSCALE number of sub-tiles with dimensions <8x2>.
-// The LHS operand is initially unpacked into M/2 values, each representing a
-// sub-tile with dimensions <2x8>, and then each such sub-tile is replicated
-// VSCALE times.
-// Multiplying thus replicated LHS sub-tile by the corresposponing RHS sub-tile
-// correctly computes an entire result sub-tile.
+/// Lower a contraction operation that performs a matrix multiplication
+/// of two 8-bit integer matrix tiles with logical dimensions <Mx8> and <8x[N]>
+/// for the left-hand side and the right-hand side, respectively,
+/// yielding a <Mx[N]> 32-bit integer result.
+///
+/// The operands' shapes are such that the operands can be evenly split into
+/// sub-tiles with dimensions as expected by the targeted FEAT_I8MM
+/// instructions. The intent is that M and N are chosen (by higher level
+/// transforms) in such a way as to maximise register usage. The main use case
+/// we envision as of now is MMT4D, thus the RHS operand is expected
+/// pre-transposed.
+///
+/// The matrix multiplication is performed by unrolling the usual tiled matrix
+/// multiplication algorithm using sub-tiles with dimensions <2x8> for the LHS,
+/// <8x[2]> for the RHS, and <2x[2]> for the result and the input accumulator.
+///
+/// One way to illustrate the operation is as follows:
+///
+/// RHS<8x[N]>:       <8x[2]> <8x[2]> ... <8x[2]>
+///                 +-----------------------------
+/// LHS<Mx8>: <2x8> | <2x[2]> <2x[2]> ... <2x[2]>
+///           <2x8> | <2x[2]> <2x[2]> ... <2x[2]>
+///            ...  |   ...     ...   ...   ...
+///           <2x8> | <2x[2]> <2x[2]> ... <2x[2]>
+///
+/// The RHS operand is unpacked into N/2 values, each representing a sequence of
+/// VSCALE number of sub-tiles with dimensions <8x2>.
+/// The LHS operand is initially unpacked into M/2 values, each representing a
+/// sub-tile with dimensions <2x8>, and then each such sub-tile is replicated
+/// VSCALE times.
+/// Multiplying thus replicated LHS sub-tile by the corresposponing RHS sub-tile
+/// correctly computes an entire result sub-tile.
 class LowerContractionToSVEI8MMPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
@@ -135,27 +141,30 @@ public:
     mlir::VectorType lhsType = op.getLhsType();
     mlir::VectorType rhsType = op.getRhsType();
 
-    // Check the operands have the expected shape. M and N dimensions must be
-    // even and at least 2.
-    if (lhsType.getRank() != 2 || rhsType.getRank() != 2 ||
-        lhsType.isScalable() || !rhsType.isScalable())
+    // Check the rank the types so we can safely examine their dimensions.
+    if (lhsType.getRank() != 2 || rhsType.getRank() != 2)
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
-    // M, N, and K are the conventional names for matrix dimensions in the
-    // context of matrix multiplication.
     auto M = lhsType.getDimSize(0);
     auto N = rhsType.getDimSize(0);
     auto K = rhsType.getDimSize(1);
 
-    if (lhsType.getDimSize(1) != K || K != 8 || M < 2 || M % 2 != 0 || N < 2 ||
-        N % 2 != 0 || !rhsType.getScalableDims()[0])
+    // Check the operands have the expected shape:
+    //  * for LHS: fixed vector MxK
+    //  * for RHS: scalable vector [N]xK
+    //  * K == 8
+    //  * M and N even and at least 2
+    if (lhsType.isScalable() || !rhsType.getScalableDims()[0] ||
+        rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != K || K != 8 ||
+        M < 2 || M % 2 != 0 || N < 2 || N % 2 != 0 ||
+        !rhsType.getScalableDims()[0])
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
     // Check permutation maps. For now only accept
     //   lhs: (d0, d1, d2) -> (d0, d2)
     //   rhs: (d0, d1, d2) -> (d1, d2)
     //   acc: (d0, d1, d2) -> (d0, d1)
-    // Note: RHS is transposed.
+    // This corresponds to matrix multiplication with transposed RHS.
     if (op.getIndexingMapsArray()[0] !=
             AffineMap::getMultiDimMapWithTargets(3, ArrayRef{0u, 2u},
                                                  op.getContext()) ||
@@ -245,7 +254,7 @@ public:
     }
 
     // "Flatten" the RHS tile from <[N]x8> to <[8*N]>.
-    auto RHS = rewriter.create<vector::ShapeCastOp>(
+    auto rhs = rewriter.create<vector::ShapeCastOp>(
         maybeRhs->getLoc(),
         VectorType::get(/*shape=*/8 * N, rewriter.getI8Type(),
                         /*scalableDims=*/{true}),
@@ -255,7 +264,7 @@ public:
     SmallVector<Value> rhsTile;
     for (int64_t j = 0; j < N; j += 2)
       rhsTile.push_back(
-          rewriter.create<vector::ScalableExtractOp>(loc, nxv16i8, RHS, j * 8));
+          rewriter.create<vector::ScalableExtractOp>(loc, nxv16i8, rhs, j * 8));
 
     // Handy types for packing/unpacking of the accumulator tile.
     auto accRowTy = VectorType::get(/*shape=*/N, rewriter.getI32Type(),
