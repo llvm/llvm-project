@@ -188,7 +188,71 @@ AddressClass ObjectFileXCOFF::GetAddressClass(addr_t file_addr) {
   return AddressClass::eUnknown;
 }
 
-void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {}
+lldb::SymbolType MapSymbolType(llvm::object::SymbolRef::Type sym_type) {
+  if (sym_type == llvm::object::SymbolRef::ST_Function)
+    return lldb::eSymbolTypeCode;
+  else if (sym_type == llvm::object::SymbolRef::ST_Data)
+    return lldb::eSymbolTypeData;
+  else if (sym_type == llvm::object::SymbolRef::ST_File)
+    return lldb::eSymbolTypeSourceFile;
+  return lldb::eSymbolTypeInvalid;
+}
+
+void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
+  SectionList *sectionList = GetSectionList();
+
+  for (const auto &symbol_ref : m_binary->symbols()) {
+    llvm::object::XCOFFSymbolRef xcoff_sym_ref(symbol_ref);
+    llvm::Expected<llvm::StringRef> name_or_err = xcoff_sym_ref.getName();
+    if (!name_or_err) {
+      consumeError(name_or_err.takeError());
+      continue;
+    }
+    llvm::StringRef symbolName = name_or_err.get();
+    // Remove the dot prefix for demangle
+    llvm::StringRef symbol_name =
+        symbolName.starts_with(".") ? symbolName.drop_front() : symbolName;
+    auto storageClass = xcoff_sym_ref.getStorageClass();
+    if (storageClass == XCOFF::C_HIDEXT && symbolName != "TOC") {
+      if (xcoff_sym_ref.getNumberOfAuxEntries() != 1)
+        continue;
+      auto aux_csect_or_err = xcoff_sym_ref.getXCOFFCsectAuxRef();
+      if (!aux_csect_or_err) {
+        consumeError(aux_csect_or_err.takeError());
+        continue;
+      }
+      const llvm::object::XCOFFCsectAuxRef csect_aux = aux_csect_or_err.get();
+      if (csect_aux.getStorageMappingClass() != XCOFF::XMC_PR ||
+          (m_binary->is64Bit() ? (csect_aux.getAuxType64() != XCOFF::AUX_CSECT)
+                               : false))
+        continue;
+    }
+
+    Symbol symbol;
+    symbol.GetMangled().SetValue(ConstString(symbol_name));
+
+    int16_t sectionNumber = xcoff_sym_ref.getSectionNumber();
+    size_t sectionIndex = static_cast<size_t>(sectionNumber - 1);
+    if (sectionNumber > 0 && sectionIndex < sectionList->GetSize()) {
+      lldb::SectionSP section_sp =
+          sectionList->GetSectionAtIndex(sectionNumber - 1);
+      if (!section_sp || section_sp->GetFileAddress() == LLDB_INVALID_ADDRESS)
+        continue;
+      lldb::addr_t file_addr = section_sp->GetFileAddress();
+      lldb::addr_t symbolValue = xcoff_sym_ref.getValue();
+      if (symbolValue < file_addr)
+        continue;
+      symbol.GetAddressRef() = Address(section_sp, symbolValue - file_addr);
+    }
+
+    Expected<llvm::object::SymbolRef::Type> sym_type_or_err =
+        symbol_ref.getType();
+    symbol.SetType(MapSymbolType(sym_type_or_err.get()));
+    printf("%s %d\n", symbol.GetName(), *sym_type_or_err);
+
+    lldb_symtab.AddSymbol(symbol);
+  }
+}
 
 bool ObjectFileXCOFF::IsStripped() { return false; }
 
