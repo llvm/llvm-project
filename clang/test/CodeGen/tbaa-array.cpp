@@ -13,6 +13,12 @@ struct C { int i; int x[3]; };
 struct D { int n; int arr[]; }; // flexible array member
 extern int AA[];                // incomplete array type
 
+typedef int __attribute__((may_alias)) aliasing_int;
+typedef int __attribute__((may_alias)) aliasing_array[10];
+struct E {
+    aliasing_int x[4]; aliasing_array y;
+};
+
 int foo(B *b) {
 // CHECK-LABEL: _Z3fooP1B
 // CHECK: load i32, {{.*}}, !tbaa [[TAG_A_i:!.*]]
@@ -54,6 +60,18 @@ int bar5(int j) {
     return AA[2] + AA[j];
 }
 
+int bar6(E *e, int j) {
+// CHECK-NEW-LABEL: _Z4bar6P1Ei
+// CHECK-NEW: load i32, {{.*}}, !tbaa [[TAG_E_x:!.*]]
+    return e->x[j];
+}
+
+int bar7(E *e, int j) {
+// CHECK-NEW-LABEL: _Z4bar7P1Ei
+// CHECK-NEW: load i32, {{.*}}, !tbaa [[TAG_E_y:!.*]]
+    return e->y[j];
+}
+
 // CHECK-DAG: [[TAG_A_i]] = !{[[TYPE_A:!.*]], [[TYPE_int:!.*]], i64 0}
 // CHECK-DAG: [[TYPE_A]] = !{!"_ZTS1A", !{{.*}}, i64 0}
 // CHECK-DAG: [[TYPE_int]] = !{!"int", !{{.*}}, i64 0}
@@ -64,5 +82,8 @@ int bar5(int j) {
 // CHECK-NEW-DAG: [[TYPE_A:!.*]] = !{[[TYPE_char]], i64 4, !"_ZTS1A", [[TYPE_int]], i64 0, i64 4}
 // CHECK-NEW-DAG: [[TAG_A_i]] = !{[[TYPE_A]], [[TYPE_int]], i64 0, i64 4}
 // CHECK-NEW-DAG: [[TYPE_C:!.*]] = !{[[TYPE_char]], i64 16, !"_ZTS1C", [[TYPE_int]], i64 0, i64 4, [[TYPE_int]], i64 4, i64 12}
-// CHECK-NEW-DAG: [[TAG_C_i]] = !{[[TYPE_C:!.*]], [[TYPE_int:!.*]], i64 0, i64 4}
-// CHECK-NEW-DAG: [[TAG_C_x]] = !{[[TYPE_C:!.*]], [[TYPE_int:!.*]], i64 4, i64 4}
+// CHECK-NEW-DAG: [[TAG_C_i]] = !{[[TYPE_C]], [[TYPE_int]], i64 0, i64 4}
+// CHECK-NEW-DAG: [[TAG_C_x]] = !{[[TYPE_C]], [[TYPE_int]], i64 4, i64 4}
+// CHECK-NEW-DAG: [[TYPE_E:!.*]] = !{[[TYPE_char]], i64 56, !"_ZTS1E", [[TYPE_char]], i64 0, i64 16, [[TYPE_char]], i64 16, i64 40}
+// CHECK-NEW-DAG: [[TAG_E_x]] = !{[[TYPE_E]], [[TYPE_char]], i64 0, i64 4}
+// CHECK-NEW-DAG: [[TAG_E_y]] = !{[[TYPE_E]], [[TYPE_char]], i64 16, i64 4}

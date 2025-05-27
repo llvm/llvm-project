@@ -4524,11 +4524,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       // If the array lvalue had no base type, there is no point trying to
       // generate one, since an array itself is not a valid base type.
 
-      // The access size must be updated to the size of an individual element.
-      // We also reset the access type using the original element type: in case
-      // of type decoration on the element type they may have been lost when
-      // the array type was canonicalized.
-      EltTBAAInfo.AccessType = CGM.getTBAATypeInfo(E->getType());
+      // We also retain the access type from the base lvalue, but the access
+      // size must be updated to the size of an individual element.
       EltTBAAInfo.Size =
           getContext().getTypeSizeInChars(E->getType()).getQuantity();
     }
