@@ -2445,8 +2445,8 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   // (sve.ld1.gather.index Mask BasePtr (sve.index IndexBase 1))
   // => (masked.load (gep BasePtr IndexBase) Align Mask zeroinitializer)
   Value *IndexBase;
-  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
-                       m_Value(IndexBase), m_SpecificInt(1)))) {
+  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(m_Value(IndexBase),
+                                                             m_One()))) {
     Align Alignment =
         BasePtr->getPointerAlignment(II.getDataLayout());
 
@@ -2473,8 +2473,8 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
   // (sve.st1.scatter.index Value Mask BasePtr (sve.index IndexBase 1))
   // => (masked.store Value (gep BasePtr IndexBase) Align Mask)
   Value *IndexBase;
-  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
-                       m_Value(IndexBase), m_SpecificInt(1)))) {
+  if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(m_Value(IndexBase),
+                                                             m_One()))) {
     Align Alignment =
         BasePtr->getPointerAlignment(II.getDataLayout());
 
@@ -3017,7 +3017,7 @@ bool AArch64TTIImpl::isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
   // m_ZExtOrSExt matched.
   Instruction *Ex1, *Ex2;
   if (!(match(Add, m_c_Add(m_Instruction(Ex1),
-                           m_c_Add(m_Instruction(Ex2), m_SpecificInt(1))))))
+                           m_c_Add(m_Instruction(Ex2), m_One())))))
     return false;
 
   // Ensure both extends are of the same type

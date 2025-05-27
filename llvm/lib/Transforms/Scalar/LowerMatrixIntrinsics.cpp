@@ -1395,7 +1395,7 @@ public:
                   m_Load(m_Value()),
                   m_CombineOr(m_Intrinsic<Intrinsic::matrix_transpose>(),
                               m_Intrinsic<Intrinsic::matrix_column_major_load>(
-                                  m_Value(), m_SpecificInt(1))))));
+                                  m_Value(), m_One())))));
     };
     // Returns the cost benefit of using \p Op with the dot product lowering. If
     // the returned cost is < 0, the argument is cheaper to use in the

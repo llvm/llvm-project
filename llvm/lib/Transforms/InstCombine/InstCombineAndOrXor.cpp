@@ -940,7 +940,7 @@ static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
   CmpPredicate Pred0, Pred1;
   Value *X;
   if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                          m_SpecificInt(1))) ||
+                          m_One())) ||
       !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())))
     return nullptr;
 
@@ -991,7 +991,7 @@ static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
       match(Cmp0, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(X), m_ZeroInt())) &&
       match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_UGT,
                                  m_Intrinsic<Intrinsic::ctpop>(m_Specific(X)),
-                                 m_SpecificInt(1)))) {
+                                 m_One()))) {
     auto *CtPop = cast<Instruction>(Cmp1->getOperand(0));
     // Drop range attributes and re-infer them in the next iteration.
     CtPop->dropPoisonGeneratingAnnotations();
