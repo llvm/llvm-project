@@ -3574,26 +3574,20 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
           CGF.EmitIgnoredExpr(E->getArgumentExpr());
         }
 
+        // For _Countof, we just want to return the size of a single dimension.
+        if (Kind == UETT_CountOf)
+          return CGF.getVLAElements1D(VAT).NumElts;
+
         // For sizeof and __datasizeof, we need to scale the number of elements
-        // by the size of the array element type. For _Countof, we just want to
-        // return the size directly.
-        llvm::Value *Size;
-        if (Kind != UETT_CountOf) {
-          auto VlaSize = CGF.getVLASize(VAT);
-          Size = VlaSize.NumElts;
+        // by the size of the array element type.
+        auto VlaSize = CGF.getVLASize(VAT);
 
-          // Scale the number of non-VLA elements by the non-VLA element size.
-          CharUnits eltSize = CGF.getContext().getTypeSizeInChars(VlaSize.Type);
-          if (!eltSize.isOne())
-            Size = CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize), Size);
-        } else {
-          // For _Countof, we don't want the size of the entire VLA, just the
-          // single dimension we're currently looking at.
-          auto VlaSize = CGF.getVLAElements1D(VAT);
-          Size = VlaSize.NumElts;
-        }
-
-        return Size;
+        // Scale the number of non-VLA elements by the non-VLA element size.
+        CharUnits eltSize = CGF.getContext().getTypeSizeInChars(VlaSize.Type);
+        if (!eltSize.isOne())
+          return CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize),
+                                          VlaSize.NumElts);
+        return VlaSize.NumElts;
       }
     }
   } else if (E->getKind() == UETT_OpenMPRequiredSimdAlign) {
