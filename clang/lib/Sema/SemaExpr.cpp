@@ -1874,9 +1874,11 @@ ExprResult Sema::CreateGenericSelectionExpr(
 
         if (D != 0) {
           Diag(Types[i]->getTypeLoc().getBeginLoc(), D)
-            << Types[i]->getTypeLoc().getSourceRange()
-            << Types[i]->getType();
-          TypeErrorFound = true;
+              << Types[i]->getTypeLoc().getSourceRange() << Types[i]->getType();
+          if (getDiagnostics().getDiagnosticLevel(
+                  D, Types[i]->getTypeLoc().getBeginLoc()) >=
+              DiagnosticsEngine::Error)
+            TypeErrorFound = true;
         }
 
         // C11 6.5.1.1p2 "No two generic associations in the same generic
