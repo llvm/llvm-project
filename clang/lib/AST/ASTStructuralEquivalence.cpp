@@ -458,7 +458,7 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
   // If either declaration has an attribute on it, we treat the declarations
   // as not being structurally equivalent.
   // FIXME: this should be handled on a case-by-case basis via tablegen in
-  // Attr.td. There are multiple cases to consider: one declation with the
+  // Attr.td. There are multiple cases to consider: one declaration with the
   // attribute, another without it; different attribute syntax|spellings for
   // the same semantic attribute, differences in attribute arguments, order
   // in which attributes are applied, how to merge attributes if the types are
@@ -1155,6 +1155,23 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (cast<HLSLAttributedResourceType>(T1)->getAttrs() !=
         cast<HLSLAttributedResourceType>(T2)->getAttrs())
       return false;
+    break;
+
+  case Type::HLSLInlineSpirv:
+    if (cast<HLSLInlineSpirvType>(T1)->getOpcode() !=
+            cast<HLSLInlineSpirvType>(T2)->getOpcode() ||
+        cast<HLSLInlineSpirvType>(T1)->getSize() !=
+            cast<HLSLInlineSpirvType>(T2)->getSize() ||
+        cast<HLSLInlineSpirvType>(T1)->getAlignment() !=
+            cast<HLSLInlineSpirvType>(T2)->getAlignment())
+      return false;
+    for (size_t I = 0; I < cast<HLSLInlineSpirvType>(T1)->getOperands().size();
+         I++) {
+      if (cast<HLSLInlineSpirvType>(T1)->getOperands()[I] !=
+          cast<HLSLInlineSpirvType>(T2)->getOperands()[I]) {
+        return false;
+      }
+    }
     break;
 
   case Type::Paren:
