@@ -1949,8 +1949,8 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   // Run this after foldInstOperand to avoid turning scalar additions into
   // vector additions when the result scalar result could just be folded into
   // the user(s).
-  return (OpToFold.isReg() &&
-          foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI));
+  return OpToFold.isReg() &&
+         foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI);
 }
 
 // Clamp patterns are canonically selected to v_max_* instructions, so only
