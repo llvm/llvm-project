@@ -113,7 +113,7 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
-    ; GFX6-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX6-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX6-NEXT: $m0 = S_MOV_B32 -1
     ; GFX6-NEXT: [[DS_READ_U8_:%[0-9]+]]:vgpr_32 = DS_READ_U8 [[V_ADD_CO_U32_e64_]], 0, 0, implicit $m0, implicit $exec :: (load (s8), addrspace 3)
     ; GFX6-NEXT: $vgpr0 = COPY [[DS_READ_U8_]]

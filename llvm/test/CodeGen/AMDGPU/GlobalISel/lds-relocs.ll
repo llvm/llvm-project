@@ -5,7 +5,7 @@
 @lds.defined = unnamed_addr addrspace(3) global [8 x i32] poison, align 8
 
 ; GCN-LABEL: {{^}}test_basic:
-; GCN: s_add_u32 s0, lds.defined@abs32@lo, s0 ; encoding: [0xff,0x00,0x00,0x80,A,A,A,A]
+; GCN: s_add_i32 s0, s0, lds.defined@abs32@lo  ; encoding: [0x00,0xff,0x00,0x81,A,A,A,A]
 ; GCN: v_mov_b32_e32 v2, s0 ; encoding: [0x00,0x02,0x04,0x7e]
 
 ; GCN: .globl lds.external

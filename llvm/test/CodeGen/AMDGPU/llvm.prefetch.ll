@@ -59,21 +59,14 @@ define amdgpu_ps void @prefetch_data_sgpr_min_offset(ptr addrspace(4) inreg %ptr
 ; NOSPREFETCH:       ; %bb.0: ; %entry
 ; NOSPREFETCH-NEXT:    s_endpgm
 ;
-; SPREFETCH-SDAG-LABEL: prefetch_data_sgpr_min_offset:
-; SPREFETCH-SDAG:       ; %bb.0: ; %entry
-; SPREFETCH-SDAG-NEXT:    s_mov_b32 s2, 0xff800000
-; SPREFETCH-SDAG-NEXT:    s_mov_b32 s3, -1
-; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
-; SPREFETCH-SDAG-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
-; SPREFETCH-SDAG-NEXT:    s_endpgm
-;
-; SPREFETCH-GISEL-LABEL: prefetch_data_sgpr_min_offset:
-; SPREFETCH-GISEL:       ; %bb.0: ; %entry
-; SPREFETCH-GISEL-NEXT:    s_add_co_u32 s0, s0, 0xff800000
-; SPREFETCH-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, -1
-; SPREFETCH-GISEL-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
-; SPREFETCH-GISEL-NEXT:    s_endpgm
+; SPREFETCH-LABEL: prefetch_data_sgpr_min_offset:
+; SPREFETCH:       ; %bb.0: ; %entry
+; SPREFETCH-NEXT:    s_mov_b32 s2, 0xff800000
+; SPREFETCH-NEXT:    s_mov_b32 s3, -1
+; SPREFETCH-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; SPREFETCH-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(4) %ptr, i32 -8388608
   tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 1)
@@ -85,18 +78,11 @@ define amdgpu_ps void @prefetch_data_sgpr_too_large_offset(ptr addrspace(4) inre
 ; NOSPREFETCH:       ; %bb.0: ; %entry
 ; NOSPREFETCH-NEXT:    s_endpgm
 ;
-; SPREFETCH-SDAG-LABEL: prefetch_data_sgpr_too_large_offset:
-; SPREFETCH-SDAG:       ; %bb.0: ; %entry
-; SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
-; SPREFETCH-SDAG-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
-; SPREFETCH-SDAG-NEXT:    s_endpgm
-;
-; SPREFETCH-GISEL-LABEL: prefetch_data_sgpr_too_large_offset:
-; SPREFETCH-GISEL:       ; %bb.0: ; %entry
-; SPREFETCH-GISEL-NEXT:    s_add_co_u32 s0, s0, 0x800000
-; SPREFETCH-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
-; SPREFETCH-GISEL-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
-; SPREFETCH-GISEL-NEXT:    s_endpgm
+; SPREFETCH-LABEL: prefetch_data_sgpr_too_large_offset:
+; SPREFETCH:       ; %bb.0: ; %entry
+; SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
+; SPREFETCH-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; SPREFETCH-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(4) %ptr, i32 8388608
   tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 1)
@@ -232,21 +218,14 @@ define amdgpu_ps void @prefetch_inst_sgpr_min_offset(ptr addrspace(4) inreg %ptr
 ; NOSPREFETCH:       ; %bb.0: ; %entry
 ; NOSPREFETCH-NEXT:    s_endpgm
 ;
-; SPREFETCH-SDAG-LABEL: prefetch_inst_sgpr_min_offset:
-; SPREFETCH-SDAG:       ; %bb.0: ; %entry
-; SPREFETCH-SDAG-NEXT:    s_mov_b32 s2, 0xff800000
-; SPREFETCH-SDAG-NEXT:    s_mov_b32 s3, -1
-; SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
-; SPREFETCH-SDAG-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
-; SPREFETCH-SDAG-NEXT:    s_endpgm
-;
-; SPREFETCH-GISEL-LABEL: prefetch_inst_sgpr_min_offset:
-; SPREFETCH-GISEL:       ; %bb.0: ; %entry
-; SPREFETCH-GISEL-NEXT:    s_add_co_u32 s0, s0, 0xff800000
-; SPREFETCH-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, -1
-; SPREFETCH-GISEL-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
-; SPREFETCH-GISEL-NEXT:    s_endpgm
+; SPREFETCH-LABEL: prefetch_inst_sgpr_min_offset:
+; SPREFETCH:       ; %bb.0: ; %entry
+; SPREFETCH-NEXT:    s_mov_b32 s2, 0xff800000
+; SPREFETCH-NEXT:    s_mov_b32 s3, -1
+; SPREFETCH-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; SPREFETCH-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
+; SPREFETCH-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(4) %ptr, i32 -8388608
   tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 0)
@@ -258,18 +237,11 @@ define amdgpu_ps void @prefetch_inst_sgpr_too_large_offset(ptr addrspace(4) inre
 ; NOSPREFETCH:       ; %bb.0: ; %entry
 ; NOSPREFETCH-NEXT:    s_endpgm
 ;
-; SPREFETCH-SDAG-LABEL: prefetch_inst_sgpr_too_large_offset:
-; SPREFETCH-SDAG:       ; %bb.0: ; %entry
-; SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
-; SPREFETCH-SDAG-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
-; SPREFETCH-SDAG-NEXT:    s_endpgm
-;
-; SPREFETCH-GISEL-LABEL: prefetch_inst_sgpr_too_large_offset:
-; SPREFETCH-GISEL:       ; %bb.0: ; %entry
-; SPREFETCH-GISEL-NEXT:    s_add_co_u32 s0, s0, 0x800000
-; SPREFETCH-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
-; SPREFETCH-GISEL-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
-; SPREFETCH-GISEL-NEXT:    s_endpgm
+; SPREFETCH-LABEL: prefetch_inst_sgpr_too_large_offset:
+; SPREFETCH:       ; %bb.0: ; %entry
+; SPREFETCH-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
+; SPREFETCH-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
+; SPREFETCH-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(4) %ptr, i32 8388608
   tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 0)
@@ -282,3 +254,6 @@ declare void @llvm.prefetch.p3(ptr addrspace(3) nocapture readonly, i32, i32, i3
 declare void @llvm.prefetch.p4(ptr addrspace(4) nocapture readonly, i32, i32, i32)
 declare void @llvm.prefetch.p5(ptr addrspace(5) nocapture readonly, i32, i32, i32)
 declare void @llvm.prefetch.p6(ptr addrspace(6) nocapture readonly, i32, i32, i32)
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; SPREFETCH-GISEL: {{.*}}
+; SPREFETCH-SDAG: {{.*}}

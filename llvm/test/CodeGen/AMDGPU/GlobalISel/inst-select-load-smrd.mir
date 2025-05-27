@@ -46,25 +46,13 @@ regBankSelected: true
 
 # Max immediate for CI
 # SIVI: [[K:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 17179869180
-# SIVI-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
-# SIVI-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
-# SIVI-DAG: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
-# SIVI-DAG: [[K_SUB1:%[0-9]+]]:sreg_32 = COPY [[K]].sub1
-# SIVI-DAG: [[PTR_HI:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub1
-# SIVI: [[ADD_PTR_HI:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
-# SIVI: [[ADD_PTR:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[ADD_PTR_LO]], %subreg.sub0, [[ADD_PTR_HI]], %subreg.sub1
+# SIVI-DAG: [[ADD_PTR:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[PTR]], [[K]]
 # SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 4294967295, 0
 
 # Immediate overflow for CI
 # GCN: [[K:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 17179869184
-# GCN-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
-# GCN-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
-# GCN-DAG: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
-# GCN-DAG: [[K_SUB1:%[0-9]+]]:sreg_32 = COPY [[K]].sub1
-# GCN-DAG: [[PTR_HI:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub1
-# GCN: [[ADD_PTR_HI:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
-# GCN: [[ADD_PTR:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[ADD_PTR_LO]], %subreg.sub0, [[ADD_PTR_HI]], %subreg.sub1
+# GCN-DAG: [[ADD_PTR:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[PTR]], [[K]]
 # GCN: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 
 # Max 32-bit byte offset
@@ -74,13 +62,7 @@ regBankSelected: true
 
 # Overflow 32-bit byte offset
 # SIVI: [[K:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4294967296
-# SIVI-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
-# SIVI-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
-# SIVI-DAG: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
-# SIVI-DAG: [[K_SUB1:%[0-9]+]]:sreg_32 = COPY [[K]].sub1
-# SIVI-DAG: [[PTR_HI:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub1
-# SIVI: [[ADD_PTR_HI:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[PTR_HI]], [[K_SUB1]]
-# SIVI: [[ADD_PTR:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[ADD_PTR_LO]], %subreg.sub0, [[ADD_PTR_HI]], %subreg.sub1
+# SIVI-DAG: [[ADD_PTR:%[0-9]+]]:sreg_64 = S_ADD_U64_PSEUDO [[PTR]], [[K]]
 # SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741824, 0
 

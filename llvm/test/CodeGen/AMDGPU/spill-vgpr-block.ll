@@ -57,10 +57,9 @@ define amdgpu_kernel void @entry_func(i32 %x) {
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    s_nop
 ; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    s_add_co_u32 s8, s4, 4
 ; GISEL-NEXT:    s_mov_b32 s0, non_entry_func@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s1, non_entry_func@abs32@hi
-; GISEL-NEXT:    s_add_co_ci_u32 s9, s5, 0
+; GISEL-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 4
 ; GISEL-NEXT:    s_mov_b64 s[4:5], s[12:13]
 ; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0

@@ -103,38 +103,38 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_spill(<24 x i32> inreg %sgprs, <24 
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX11-NEXT:    s_mov_b32 s32, 0
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v32, v8 :: v_dual_mov_b32 v33, v9
-; GISEL-GFX11-NEXT:    s_add_u32 s24, s32, 4
+; GISEL-GFX11-NEXT:    s_add_i32 s24, s32, 4
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v16, s32
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v17, s24
-; GISEL-GFX11-NEXT:    s_add_u32 s24, s32, 8
-; GISEL-GFX11-NEXT:    s_add_u32 s25, s32, 12
+; GISEL-GFX11-NEXT:    s_add_i32 s24, s32, 8
+; GISEL-GFX11-NEXT:    s_add_i32 s25, s32, 12
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v18, s24
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v19, s25
-; GISEL-GFX11-NEXT:    s_add_u32 s24, s32, 16
-; GISEL-GFX11-NEXT:    s_add_u32 s25, s32, 20
+; GISEL-GFX11-NEXT:    s_add_i32 s24, s32, 16
+; GISEL-GFX11-NEXT:    s_add_i32 s25, s32, 20
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v20, s24
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v21, s25
-; GISEL-GFX11-NEXT:    s_add_u32 s24, s32, 24
-; GISEL-GFX11-NEXT:    s_add_u32 s25, s32, 28
+; GISEL-GFX11-NEXT:    s_add_i32 s24, s32, 24
+; GISEL-GFX11-NEXT:    s_add_i32 s25, s32, 28
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v22, s24
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v23, s25
-; GISEL-GFX11-NEXT:    s_add_u32 s24, s32, 32
-; GISEL-GFX11-NEXT:    s_add_u32 s25, s32, 36
+; GISEL-GFX11-NEXT:    s_add_i32 s24, s32, 32
+; GISEL-GFX11-NEXT:    s_add_i32 s25, s32, 36
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v24, s24
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v25, s25
-; GISEL-GFX11-NEXT:    s_add_u32 s24, s32, 40
+; GISEL-GFX11-NEXT:    s_add_i32 s24, s32, 40
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v34, v10 :: v_dual_mov_b32 v35, v11
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v36, v12 :: v_dual_mov_b32 v37, v13
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v38, v14 :: v_dual_mov_b32 v39, v15
-; GISEL-GFX11-NEXT:    s_add_u32 s25, s32, 44
+; GISEL-GFX11-NEXT:    s_add_i32 s25, s32, 44
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v26, s24
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v27, s25
-; GISEL-GFX11-NEXT:    s_add_u32 s24, s32, 48
-; GISEL-GFX11-NEXT:    s_add_u32 s25, s32, 52
+; GISEL-GFX11-NEXT:    s_add_i32 s24, s32, 48
+; GISEL-GFX11-NEXT:    s_add_i32 s25, s32, 52
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v28, s24
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v29, s25
-; GISEL-GFX11-NEXT:    s_add_u32 s24, s32, 56
-; GISEL-GFX11-NEXT:    s_add_u32 s25, s32, 60
+; GISEL-GFX11-NEXT:    s_add_i32 s24, s32, 56
+; GISEL-GFX11-NEXT:    s_add_i32 s25, s32, 60
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v30, s24
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v31, s25
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1

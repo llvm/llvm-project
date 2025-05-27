@@ -149,9 +149,9 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(ptr addrspace(1) %out.ptr, ptr
 ; GCN-NEXT:    v_mov_b32_e32 v0, s51
 ; GCN-NEXT:    s_lshl_b32 s4, s4, 2
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:252
-; GCN-NEXT:    v_mov_b32_e32 v0, s24
-; GCN-NEXT:    v_mov_b32_e32 v1, s4
-; GCN-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    v_mov_b32_e32 v1, s24
+; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:4

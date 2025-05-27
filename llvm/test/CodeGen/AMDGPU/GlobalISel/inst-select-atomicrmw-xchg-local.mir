@@ -24,6 +24,7 @@ body:             |
     ; GFX6-NEXT: $m0 = S_MOV_B32 -1
     ; GFX6-NEXT: [[DS_WRXCHG_RTN_B32_:%[0-9]+]]:vgpr_32 = DS_WRXCHG_RTN_B32 [[COPY]], [[COPY1]], 0, 0, implicit $m0, implicit $exec :: (load store seq_cst (s32), addrspace 3)
     ; GFX6-NEXT: $vgpr0 = COPY [[DS_WRXCHG_RTN_B32_]]
+    ;
     ; GFX7-LABEL: name: atomicrmw_xchg_s32_local
     ; GFX7: liveins: $vgpr0, $vgpr1
     ; GFX7-NEXT: {{  $}}
@@ -32,6 +33,7 @@ body:             |
     ; GFX7-NEXT: $m0 = S_MOV_B32 -1
     ; GFX7-NEXT: [[DS_WRXCHG_RTN_B32_:%[0-9]+]]:vgpr_32 = DS_WRXCHG_RTN_B32 [[COPY]], [[COPY1]], 0, 0, implicit $m0, implicit $exec :: (load store seq_cst (s32), addrspace 3)
     ; GFX7-NEXT: $vgpr0 = COPY [[DS_WRXCHG_RTN_B32_]]
+    ;
     ; GFX9-LABEL: name: atomicrmw_xchg_s32_local
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -61,10 +63,11 @@ body:             |
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
-    ; GFX6-NEXT: %3:vgpr_32, dead %5:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX6-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[COPY]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX6-NEXT: $m0 = S_MOV_B32 -1
-    ; GFX6-NEXT: [[DS_WRXCHG_RTN_B32_:%[0-9]+]]:vgpr_32 = DS_WRXCHG_RTN_B32 %3, [[COPY1]], 0, 0, implicit $m0, implicit $exec :: (load store seq_cst (s32), addrspace 3)
+    ; GFX6-NEXT: [[DS_WRXCHG_RTN_B32_:%[0-9]+]]:vgpr_32 = DS_WRXCHG_RTN_B32 [[V_ADD_CO_U32_e64_]], [[COPY1]], 0, 0, implicit $m0, implicit $exec :: (load store seq_cst (s32), addrspace 3)
     ; GFX6-NEXT: $vgpr0 = COPY [[DS_WRXCHG_RTN_B32_]]
+    ;
     ; GFX7-LABEL: name: atomicrmw_xchg_s32_local_gep4
     ; GFX7: liveins: $vgpr0, $vgpr1
     ; GFX7-NEXT: {{  $}}
@@ -73,6 +76,7 @@ body:             |
     ; GFX7-NEXT: $m0 = S_MOV_B32 -1
     ; GFX7-NEXT: [[DS_WRXCHG_RTN_B32_:%[0-9]+]]:vgpr_32 = DS_WRXCHG_RTN_B32 [[COPY]], [[COPY1]], 4, 0, implicit $m0, implicit $exec :: (load store seq_cst (s32), addrspace 3)
     ; GFX7-NEXT: $vgpr0 = COPY [[DS_WRXCHG_RTN_B32_]]
+    ;
     ; GFX9-LABEL: name: atomicrmw_xchg_s32_local_gep4
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
