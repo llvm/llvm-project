@@ -10,8 +10,6 @@
 
 #include "clang/Lex/LiteralSupport.h"
 
-#include "llvm/Support/raw_ostream.h"
-
 using namespace llvm::hlsl::rootsig;
 
 namespace clang {

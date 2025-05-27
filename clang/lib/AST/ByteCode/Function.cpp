@@ -10,7 +10,6 @@
 #include "Program.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/Basic/Builtins.h"
 
 using namespace clang;
 using namespace clang::interp;

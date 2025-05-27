@@ -692,12 +692,10 @@ ArrayRef<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
 /// Return information for registered operations by dialect.
 ArrayRef<RegisteredOperationName>
 MLIRContext::getRegisteredOperationsByDialect(StringRef dialectName) {
-  auto lowerBound =
-      std::lower_bound(impl->sortedRegisteredOperations.begin(),
-                       impl->sortedRegisteredOperations.end(), dialectName,
-                       [](auto &lhs, auto &rhs) {
-                         return lhs.getDialect().getNamespace().compare(rhs);
-                       });
+  auto lowerBound = llvm::lower_bound(
+      impl->sortedRegisteredOperations, dialectName, [](auto &lhs, auto &rhs) {
+        return lhs.getDialect().getNamespace().compare(rhs);
+      });
 
   if (lowerBound == impl->sortedRegisteredOperations.end() ||
       lowerBound->getDialect().getNamespace() != dialectName)
