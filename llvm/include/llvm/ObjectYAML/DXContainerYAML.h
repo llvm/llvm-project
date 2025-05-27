@@ -104,7 +104,8 @@ struct RootParameterLocationYaml {
   std::optional<size_t> IndexInSignature;
 
   RootParameterLocationYaml(){};
-  explicit RootParameterLocationYaml(RootParameterHeaderYaml Header) : Header(Header) {}
+  explicit RootParameterLocationYaml(RootParameterHeaderYaml Header)
+      : Header(Header) {}
 };
 
 struct RootParameterYamlDesc {
@@ -113,26 +114,27 @@ struct RootParameterYamlDesc {
   SmallVector<RootConstantsYaml> Constants;
   SmallVector<RootDescriptorYaml> Descriptors;
 
-    template <typename T>
-    T &getOrInsertImpl(RootParameterLocationYaml &ParamDesc,
-                      SmallVectorImpl<T> &Container) {
-      if (!ParamDesc.IndexInSignature) {
-        ParamDesc.IndexInSignature = Container.size();
-        Container.emplace_back();
-      }
-      return Container[*ParamDesc.IndexInSignature];
+  template <typename T>
+  T &getOrInsertImpl(RootParameterLocationYaml &ParamDesc,
+                     SmallVectorImpl<T> &Container) {
+    if (!ParamDesc.IndexInSignature) {
+      ParamDesc.IndexInSignature = Container.size();
+      Container.emplace_back();
     }
+    return Container[*ParamDesc.IndexInSignature];
+  }
 
-  RootConstantsYaml &getOrInsertConstants(RootParameterLocationYaml &ParamDesc) {
+  RootConstantsYaml &
+  getOrInsertConstants(RootParameterLocationYaml &ParamDesc) {
     return getOrInsertImpl(ParamDesc, Constants);
   }
 
-  RootDescriptorYaml &getOrInsertDescriptor(RootParameterLocationYaml &ParamDesc) {
+  RootDescriptorYaml &
+  getOrInsertDescriptor(RootParameterLocationYaml &ParamDesc) {
     return getOrInsertImpl(ParamDesc, Descriptors);
   }
 
-  void insertLocation
-  (RootParameterLocationYaml &Location) {
+  void insertLocation(RootParameterLocationYaml &Location) {
     Locations.push_back(Location);
   }
 };
@@ -333,11 +335,13 @@ template <> struct MappingTraits<DXContainerYAML::RootSignatureYamlDesc> {
                       DXContainerYAML::RootSignatureYamlDesc &RootSignature);
 };
 
-  template <>
-  struct MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
-                              DXContainerYAML::RootSignatureYamlDesc> {
-    static void mapping(IO &IO, llvm::DXContainerYAML::RootParameterLocationYaml &L, DXContainerYAML::RootSignatureYamlDesc &S);
-  };
+template <>
+struct MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
+                            DXContainerYAML::RootSignatureYamlDesc> {
+  static void mapping(IO &IO,
+                      llvm::DXContainerYAML::RootParameterLocationYaml &L,
+                      DXContainerYAML::RootSignatureYamlDesc &S);
+};
 
 template <> struct MappingTraits<llvm::DXContainerYAML::RootConstantsYaml> {
   static void mapping(IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C);
