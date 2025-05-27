@@ -17,7 +17,9 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -3333,6 +3335,31 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     }
     QualType HasNoTypeMember = Converted[2].getAsType();
     return HasNoTypeMember;
+  }
+  case BTK__builtin_dedup_types: {
+    assert(Converted.size() == 2 &&
+           "__builtin_dedup_types expects 2 arguments");
+    TemplateArgument Tmpl = Converted[0];
+    TemplateArgument Ts = Converted[1];
+    assert(Tmpl.getKind() == clang::TemplateArgument::Template);
+    assert(Ts.getKind() == clang::TemplateArgument::Pack);
+    // Delay the computation until we can compute the final result. We choose
+    // not to remove the duplicates upfront before substitution to keep the code
+    // simple.
+    if (Tmpl.isDependent() || Ts.isDependent())
+      return QualType();
+    TemplateArgumentListInfo OutArgs;
+    llvm::SmallDenseSet<QualType> Seen;
+    // Synthesize a new template argument list, removing duplicates.
+    for (auto T : Ts.getPackAsArray()) {
+      assert(T.getKind() == clang::TemplateArgument::Type);
+      if (!Seen.insert(T.getAsType().getCanonicalType()).second)
+        continue;
+      OutArgs.addArgument(TemplateArgumentLoc(
+          T, SemaRef.Context.getTrivialTypeSourceInfo(T.getAsType())));
+    }
+    return SemaRef.CheckTemplateIdType(Tmpl.getAsTemplate(), TemplateLoc,
+                                       OutArgs);
   }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
