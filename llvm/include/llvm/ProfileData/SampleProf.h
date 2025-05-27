@@ -407,6 +407,7 @@ public:
   uint64_t getSamples() const { return NumSamples; }
   const CallTargetMap &getCallTargets() const { return CallTargets; }
   const TypeMap &getTypes() const { return TypeCounts; }
+  TypeMap &getTypes() { return TypeCounts; }
   const SortedCallTargetSet getSortedCallTargets() const {
     return sortCallTargets(CallTargets);
   }
@@ -809,9 +810,20 @@ public:
         Func, Num, Weight);
   }
 
+  sampleprof_error addTypeSamples(uint32_t LineOffset, uint32_t Discriminator,
+                                  FunctionId Func, uint64_t Num,
+                                  uint64_t Weight = 1) {
+    return BodySamples[LineLocation(LineOffset, Discriminator)].addTypeCount(
+        Func, Num, Weight);
+  }
+
   sampleprof_error addTypeSamples(const LineLocation &Loc, FunctionId Func,
                                   uint64_t Num, uint64_t Weight = 1) {
     return BodySamples[Loc].addTypeCount(Func, Num, Weight);
+  }
+
+  TypeMap &getTypeSamples(const LineLocation &Loc) {
+    return BodySamples[Loc].getTypes();
   }
 
   sampleprof_error addSampleRecord(LineLocation Location,
@@ -1061,13 +1073,26 @@ public:
       const LineLocation &Loc = I.first;
       const SampleRecord &Rec = I.second;
       mergeSampleProfErrors(Result, BodySamples[Loc].merge(Rec, Weight));
+      // const auto &OtherTypeCountMap = Rec.getTypes();
+      // for (const auto &[Type, Count] : OtherTypeCountMap) {
+      //   mergeSampleProfErrors(Result, addTypeSamples(Loc, Type, Count,
+      //   Weight));
+      // }
     }
+
     for (const auto &I : Other.getCallsiteSamples()) {
       const LineLocation &Loc = I.first;
       FunctionSamplesMap &FSMap = functionSamplesAt(Loc);
       for (const auto &Rec : I.second)
         mergeSampleProfErrors(Result,
                               FSMap[Rec.first].merge(Rec.second, Weight));
+    }
+    for (const auto &[Loc, TypeCountMap] : Other.getCallsiteTypes()) {
+      TypeMap &TypeCounts = getTypeSamplesAt(Loc);
+      for (const auto &[Type, Count] : TypeCountMap) {
+        TypeCounts[Type] =
+            SaturatingMultiplyAdd(Count, Weight, TypeCounts[Type]);
+      }
     }
     return Result;
   }

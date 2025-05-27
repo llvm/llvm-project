@@ -489,7 +489,10 @@ SampleProfileWriterExtBinary::SampleProfileWriterExtBinary(
     std::unique_ptr<raw_ostream> &OS)
     : SampleProfileWriterExtBinaryBase(OS) {
   // Initialize the section header layout.
+
   WriteVTableProf = ExtBinaryWriteVTableTypeProf;
+
+  errs() << "writeVTableProf value: " << WriteVTableProf << "\n";
 }
 
 std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
@@ -604,15 +607,25 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     for (const auto &J : Sample.getSortedCallTargets())
       OS << " " << J.first << ":" << J.second;
     OS << "\n";
+
+    if (!Sample.getTypes().empty()) {
+      OS.indent(Indent + 1);
+      Loc.print(OS);
+      OS << ": ";
+      for (const auto &Type : Sample.getTypes()) {
+        OS << Type.first << ":" << Type.second << " ";
+      }
+      OS << " // CallTargetVtables\n";
+    }
     LineCount++;
   }
 
   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
       S.getCallsiteSamples());
   Indent += 1;
-  for (const auto &I : SortedCallsiteSamples.get())
+  for (const auto &I : SortedCallsiteSamples.get()) {
+    LineLocation Loc = I->first;
     for (const auto &FS : I->second) {
-      LineLocation Loc = I->first;
       const FunctionSamples &CalleeSamples = FS.second;
       OS.indent(Indent);
       if (Loc.Discriminator == 0)
@@ -622,6 +635,19 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       if (std::error_code EC = writeSample(CalleeSamples))
         return EC;
     }
+
+    if (const TypeMap *Map = S.findTypeSamplesAt(Loc); Map && !Map->empty()) {
+      OS.indent(Indent);
+      Loc.print(OS);
+      OS << ": ";
+      for (const auto &Type : *Map) {
+        OS << Type.first << ":" << Type.second << " ";
+      }
+      OS << " // CallSiteVtables\n";
+      LineCount++;
+    }
+  }
+
   Indent -= 1;
 
   if (FunctionSamples::ProfileIsProbeBased) {
@@ -828,6 +854,8 @@ std::error_code SampleProfileWriterExtBinary::writeTypeMap(const TypeMap &Map,
                                                            raw_ostream &OS) {
   encodeULEB128(Map.size(), OS);
   for (const auto &[TypeName, TypeSamples] : Map) {
+    errs() << "TypeName: " << TypeName << "\t" << "TypeSamples: " << TypeSamples
+           << "\n";
     if (std::error_code EC = writeNameIdx(TypeName))
       return EC;
     encodeULEB128(TypeSamples, OS);
@@ -840,8 +868,6 @@ std::error_code SampleProfileWriterExtBinary::writeSampleRecordVTableProf(
   if (!WriteVTableProf)
     return sampleprof_error::success;
 
-  // TODO: Unify this with SampleProfileWriterBinary::writeBody with a
-  // pre-commit refactor.
   return writeTypeMap(Record.getTypes(), OS);
 }
 
@@ -851,7 +877,6 @@ std::error_code SampleProfileWriterExtBinary::writeCallsiteType(
     return sampleprof_error::success;
 
   const CallsiteTypeMap &CallsiteTypeMap = FunctionSample.getCallsiteTypes();
-
   encodeULEB128(CallsiteTypeMap.size(), OS);
   for (const auto &[Loc, TypeMap] : CallsiteTypeMap) {
     encodeULEB128(Loc.LineOffset, OS);

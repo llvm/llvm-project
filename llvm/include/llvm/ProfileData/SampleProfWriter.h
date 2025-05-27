@@ -431,7 +431,7 @@ protected:
                                     raw_ostream &OS) override;
 
   void addTypeNames(const TypeMap &M) override {
-    if (WriteVTableProf)
+    if (!WriteVTableProf)
       return;
     // Add type name to TypeNameTable.
     for (const auto &[Type, Cnt] : M) {
