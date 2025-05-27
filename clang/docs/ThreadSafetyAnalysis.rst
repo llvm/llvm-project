@@ -536,6 +536,7 @@ Warning flags
 * ``-Wthread-safety-pointer``: Checks when passing or returning pointers to
   guarded variables, or pointers to guarded data, as function argument or
   return value respectively.
+* ``-Wthread-safety-pedantic``: Contradictory usage patterns.
 
 :ref:`negative` are an experimental feature, which are enabled with:
 

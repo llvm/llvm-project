@@ -256,22 +256,27 @@ static bool checkRecordDeclForAttr(const RecordDecl *RD) {
   return false;
 }
 
-static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
+static std::optional<TypeDecl *> checkRecordTypeForCapability(Sema &S,
+                                                              QualType Ty) {
   const RecordType *RT = getRecordType(Ty);
 
   if (!RT)
-    return false;
+    return std::nullopt;
 
   // Don't check for the capability if the class hasn't been defined yet.
   if (RT->isIncompleteType())
-    return true;
+    return {nullptr};
 
   // Allow smart pointers to be used as capability objects.
   // FIXME -- Check the type that the smart pointer points to.
   if (threadSafetyCheckIsSmartPointer(S, RT))
-    return true;
+    return {nullptr};
 
-  return checkRecordDeclForAttr<CapabilityAttr>(RT->getDecl());
+  RecordDecl *RD = RT->getDecl();
+  if (checkRecordDeclForAttr<CapabilityAttr>(RD))
+    return {RD};
+
+  return std::nullopt;
 }
 
 static bool checkRecordTypeForScopedCapability(Sema &S, QualType Ty) {
@@ -287,51 +292,76 @@ static bool checkRecordTypeForScopedCapability(Sema &S, QualType Ty) {
   return checkRecordDeclForAttr<ScopedLockableAttr>(RT->getDecl());
 }
 
-static bool checkTypedefTypeForCapability(QualType Ty) {
+static std::optional<TypeDecl *> checkTypedefTypeForCapability(QualType Ty) {
   const auto *TD = Ty->getAs<TypedefType>();
   if (!TD)
-    return false;
+    return std::nullopt;
 
   TypedefNameDecl *TN = TD->getDecl();
   if (!TN)
-    return false;
+    return std::nullopt;
 
-  return TN->hasAttr<CapabilityAttr>();
+  if (TN->hasAttr<CapabilityAttr>())
+    return {TN};
+
+  return std::nullopt;
 }
 
-static bool typeHasCapability(Sema &S, QualType Ty) {
-  if (checkTypedefTypeForCapability(Ty))
-    return true;
-
-  if (checkRecordTypeForCapability(S, Ty))
-    return true;
-
-  return false;
+/// Returns capability TypeDecl if defined, nullptr if not yet defined (maybe
+/// capability), and nullopt if it definitely is not a capability.
+static std::optional<TypeDecl *> checkTypeForCapability(Sema &S, QualType Ty) {
+  if (auto TD = checkTypedefTypeForCapability(Ty))
+    return TD;
+  if (auto TD = checkRecordTypeForCapability(S, Ty))
+    return TD;
+  return std::nullopt;
 }
 
-static bool isCapabilityExpr(Sema &S, const Expr *Ex) {
+static bool validateCapabilityExpr(Sema &S, const ParsedAttr &AL,
+                                   const Expr *Ex, bool Neg = false) {
   // Capability expressions are simple expressions involving the boolean logic
   // operators &&, || or !, a simple DeclRefExpr, CastExpr or a ParenExpr. Once
   // a DeclRefExpr is found, its type should be checked to determine whether it
   // is a capability or not.
 
   if (const auto *E = dyn_cast<CastExpr>(Ex))
-    return isCapabilityExpr(S, E->getSubExpr());
+    return validateCapabilityExpr(S, AL, E->getSubExpr(), Neg);
   else if (const auto *E = dyn_cast<ParenExpr>(Ex))
-    return isCapabilityExpr(S, E->getSubExpr());
+    return validateCapabilityExpr(S, AL, E->getSubExpr(), Neg);
   else if (const auto *E = dyn_cast<UnaryOperator>(Ex)) {
-    if (E->getOpcode() == UO_LNot || E->getOpcode() == UO_AddrOf ||
-        E->getOpcode() == UO_Deref)
-      return isCapabilityExpr(S, E->getSubExpr());
-    return false;
+    switch (E->getOpcode()) {
+    case UO_LNot:
+      Neg = !Neg;
+      [[fallthrough]];
+    case UO_AddrOf:
+    case UO_Deref:
+      return validateCapabilityExpr(S, AL, E->getSubExpr(), Neg);
+    default:
+      return false;
+    }
   } else if (const auto *E = dyn_cast<BinaryOperator>(Ex)) {
     if (E->getOpcode() == BO_LAnd || E->getOpcode() == BO_LOr)
-      return isCapabilityExpr(S, E->getLHS()) &&
-             isCapabilityExpr(S, E->getRHS());
+      return validateCapabilityExpr(S, AL, E->getLHS(), Neg) &&
+             validateCapabilityExpr(S, AL, E->getRHS(), Neg);
     return false;
+  } else if (const auto *E = dyn_cast<CXXOperatorCallExpr>(Ex)) {
+    if (E->getOperator() == OO_Exclaim && E->getNumArgs() == 1) {
+      // operator!(this) - return type is the expression to check below.
+      Neg = !Neg;
+    }
   }
 
-  return typeHasCapability(S, Ex->getType());
+  // Base case: check the inner type for capability.
+  QualType Ty = Ex->getType();
+  if (auto TD = checkTypeForCapability(S, Ty)) {
+    if (Neg && *TD != nullptr && (*TD)->hasAttr<ReentrantCapabilityAttr>()) {
+      S.Diag(AL.getLoc(), diag::warn_thread_reentrant_with_negative_capability)
+          << Ty.getUnqualifiedType();
+    }
+    return true;
+  }
+
+  return false;
 }
 
 /// Checks that all attribute arguments, starting from Sidx, resolve to
@@ -420,11 +450,12 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
       }
     }
 
-    // If the type does not have a capability, see if the components of the
-    // expression have capabilities. This allows for writing C code where the
+    // If ArgTy is not a capability, this also checks if components of the
+    // expression are capabilities. This allows for writing C code where the
     // capability may be on the type, and the expression is a capability
     // boolean logic expression. Eg) requires_capability(A || B && !C)
-    if (!typeHasCapability(S, ArgTy) && !isCapabilityExpr(S, ArgExp))
+    if (!validateCapabilityExpr(S, AL, ArgExp) &&
+        !checkTypeForCapability(S, ArgTy))
       S.Diag(AL.getLoc(), diag::warn_thread_attribute_argument_not_lockable)
           << AL << ArgTy;
 
@@ -496,7 +527,7 @@ static bool checkAcquireOrderAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 
   // Check that this attribute only applies to lockable types.
   QualType QT = cast<ValueDecl>(D)->getType();
-  if (!QT->isDependentType() && !typeHasCapability(S, QT)) {
+  if (!QT->isDependentType() && !checkTypeForCapability(S, QT)) {
     S.Diag(AL.getLoc(), diag::warn_thread_attribute_decl_not_lockable) << AL;
     return false;
   }

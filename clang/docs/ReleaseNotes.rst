@@ -494,6 +494,9 @@ Improvements to Clang's diagnostics
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
 - The :doc:`ThreadSafetyAnalysis` now supports reentrant capabilities.
+- New warning group ``-Wthread-safety-pedantic`` warns about contradictory
+  :doc:`ThreadSafetyAnalysis` usage patterns; currently warns about use of a
+  reentrant capability as a negative capability.
 - Clang will now do a better job producing common nested names, when producing
   common types for ternary operator, template argument deduction and multiple return auto deduction.
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers

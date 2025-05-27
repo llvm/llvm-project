@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-pedantic -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-pedantic -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-pedantic -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-pedantic -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -7209,12 +7209,14 @@ void testReentrantTypedef() {
   bit_unlock(bl);
 }
 
+// Negative + reentrant capability tests.
 class TestNegativeWithReentrantMutex {
   ReentrantMutex rmu;
   int a GUARDED_BY(rmu);
 
 public:
-  void baz() EXCLUSIVE_LOCKS_REQUIRED(!rmu) {
+  void baz() EXCLUSIVE_LOCKS_REQUIRED(!rmu) { // \
+    // expected-warning{{'ReentrantMutex' is marked reentrant but used as a negative capability; this may be contradictory}}
     rmu.Lock();
     rmu.Lock();
     a = 0;
@@ -7222,5 +7224,11 @@ public:
     rmu.Unlock();
   }
 };
+
+typedef int __attribute__((capability("role"), reentrant_capability)) ThreadRole;
+ThreadRole FlightControl1, FlightControl2;
+void dispatch_log(const char *msg) __attribute__((requires_capability(!FlightControl1 && !FlightControl2))) {} // \
+  // expected-warning{{'ThreadRole' (aka 'int') is marked reentrant but used as a negative capability; this may be contradictory}} \
+  // expected-warning{{'ThreadRole' (aka 'int') is marked reentrant but used as a negative capability; this may be contradictory}}
 
 } // namespace Reentrancy

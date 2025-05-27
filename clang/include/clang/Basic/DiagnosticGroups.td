@@ -1272,6 +1272,7 @@ def Most : DiagGroup<"most", [
 def ThreadSafetyAttributes : DiagGroup<"thread-safety-attributes">;
 def ThreadSafetyAnalysis   : DiagGroup<"thread-safety-analysis">;
 def ThreadSafetyPrecise    : DiagGroup<"thread-safety-precise">;
+def ThreadSafetyPedantic   : DiagGroup<"thread-safety-pedantic">;
 def ThreadSafetyReferenceReturn  : DiagGroup<"thread-safety-reference-return">;
 def ThreadSafetyReference  : DiagGroup<"thread-safety-reference",
                                              [ThreadSafetyReferenceReturn]>;

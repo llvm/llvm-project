@@ -4254,6 +4254,11 @@ def warn_fun_requires_lock_precise :
   InGroup<ThreadSafetyPrecise>, DefaultIgnore;
 def note_found_mutex_near_match : Note<"found near match '%0'">;
 
+// Pedantic thread safety warnings
+def warn_thread_reentrant_with_negative_capability : Warning<
+  "%0 is marked reentrant but used as a negative capability; this may be contradictory">,
+  InGroup<ThreadSafetyPedantic>, DefaultIgnore;
+
 // Verbose thread safety warnings
 def warn_thread_safety_verbose : Warning<"thread safety verbose warning">,
   InGroup<ThreadSafetyVerbose>, DefaultIgnore;
