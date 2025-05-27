@@ -13,11 +13,11 @@
 #ifndef LLVM_IR_VFABIDEMANGLER_H
 #define LLVM_IR_VFABIDEMANGLER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
@@ -182,7 +182,7 @@ static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 /// it needs to be derived from the widest element types of vector arguments
 /// or return values.
 LLVM_ABI std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
-                                          const FunctionType *FTy);
+                                                   const FunctionType *FTy);
 
 /// Retrieve the `VFParamKind` from a string token.
 LLVM_ABI VFParamKind getVFParamKindFromString(const StringRef Token);
@@ -195,8 +195,9 @@ static constexpr char const *MappingsAttrName = "vector-function-abi-variant";
 /// vector-function-abi-variant attribute, we return without populating
 /// VariantMappings, i.e. callers of getVectorVariantNames need not check for
 /// the presence of the attribute (see InjectTLIMappings).
-LLVM_ABI void getVectorVariantNames(const CallInst &CI,
-                           SmallVectorImpl<std::string> &VariantMappings);
+LLVM_ABI void
+getVectorVariantNames(const CallInst &CI,
+                      SmallVectorImpl<std::string> &VariantMappings);
 
 /// Constructs a FunctionType by applying vector function information to the
 /// type of a matching scalar function.
@@ -206,11 +207,12 @@ LLVM_ABI void getVectorVariantNames(const CallInst &CI,
 /// stored in \p Info.
 /// \returns a pointer to a newly created vector FunctionType
 LLVM_ABI FunctionType *createFunctionType(const VFInfo &Info,
-                                 const FunctionType *ScalarFTy);
+                                          const FunctionType *ScalarFTy);
 
 /// Overwrite the Vector Function ABI variants attribute with the names provide
 /// in \p VariantMappings.
-LLVM_ABI void setVectorVariantNames(CallInst *CI, ArrayRef<std::string> VariantMappings);
+LLVM_ABI void setVectorVariantNames(CallInst *CI,
+                                    ArrayRef<std::string> VariantMappings);
 
 } // end namespace VFABI
 

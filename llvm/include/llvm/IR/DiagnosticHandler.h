@@ -12,8 +12,8 @@
 #ifndef LLVM_IR_DIAGNOSTICHANDLER_H
 #define LLVM_IR_DIAGNOSTICHANDLER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class DiagnosticInfo;

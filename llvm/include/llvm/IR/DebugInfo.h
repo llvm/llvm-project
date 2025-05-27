@@ -16,7 +16,6 @@
 #ifndef LLVM_IR_DEBUGINFO_H
 #define LLVM_IR_DEBUGINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -28,6 +27,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -89,8 +89,9 @@ LLVM_ABI bool stripNonLineTableDebugInfo(Module &M);
 /// to the instruction \p I, if one exists. \p Updater is applied to Metadata
 /// operand in the MD_loop metadata: the returned value is included in the
 /// updated loop metadata node if it is non-null.
-LLVM_ABI void updateLoopMetadataDebugLocations(
-    Instruction &I, function_ref<Metadata *(Metadata *)> Updater);
+LLVM_ABI void
+updateLoopMetadataDebugLocations(Instruction &I,
+                                 function_ref<Metadata *(Metadata *)> Updater);
 
 /// Return Debug Info Metadata Version by checking module flags.
 LLVM_ABI unsigned getDebugMetadataVersionFromModule(const Module &M);
@@ -263,18 +264,21 @@ LLVM_ABI void deleteAll(Function *F);
 /// variable size) in DAI.
 ///
 /// Result contains a zero-sized fragment if there's no intersect.
-LLVM_ABI bool calculateFragmentIntersect(
-    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DbgAssign,
-    std::optional<DIExpression::FragmentInfo> &Result);
-LLVM_ABI bool calculateFragmentIntersect(
-    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgVariableRecord *DVRAssign,
-    std::optional<DIExpression::FragmentInfo> &Result);
+LLVM_ABI bool
+calculateFragmentIntersect(const DataLayout &DL, const Value *Dest,
+                           uint64_t SliceOffsetInBits, uint64_t SliceSizeInBits,
+                           const DbgAssignIntrinsic *DbgAssign,
+                           std::optional<DIExpression::FragmentInfo> &Result);
+LLVM_ABI bool
+calculateFragmentIntersect(const DataLayout &DL, const Value *Dest,
+                           uint64_t SliceOffsetInBits, uint64_t SliceSizeInBits,
+                           const DbgVariableRecord *DVRAssign,
+                           std::optional<DIExpression::FragmentInfo> &Result);
 
 /// Replace DIAssignID uses and attachments with IDs from \p Map.
 /// If an ID is unmapped a new ID is generated and added to \p Map.
-LLVM_ABI void remapAssignID(DenseMap<DIAssignID *, DIAssignID *> &Map, Instruction &I);
+LLVM_ABI void remapAssignID(DenseMap<DIAssignID *, DIAssignID *> &Map,
+                            Instruction &I);
 
 /// Helper struct for trackAssignments, below. We don't use the similar
 /// DebugVariable class because trackAssignments doesn't (yet?) understand
@@ -332,8 +336,8 @@ using StorageToVarsMap =
 /// Track assignments to \p Vars between \p Start and \p End.
 
 LLVM_ABI void trackAssignments(Function::iterator Start, Function::iterator End,
-                      const StorageToVarsMap &Vars, const DataLayout &DL,
-                      bool DebugPrints = false);
+                               const StorageToVarsMap &Vars,
+                               const DataLayout &DL, bool DebugPrints = false);
 
 /// Describes properties of a store that has a static size and offset into a
 /// some base storage. Used by the getAssignmentInfo functions.
@@ -352,11 +356,11 @@ struct AssignmentInfo {
 };
 
 LLVM_ABI std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
-                                                const MemIntrinsic *I);
+                                                         const MemIntrinsic *I);
 LLVM_ABI std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
-                                                const StoreInst *SI);
+                                                         const StoreInst *SI);
 LLVM_ABI std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
-                                                const AllocaInst *AI);
+                                                         const AllocaInst *AI);
 
 } // end namespace at
 

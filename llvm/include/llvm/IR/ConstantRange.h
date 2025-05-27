@@ -90,7 +90,8 @@ public:
   /// Initialize a range based on a known bits constraint. The IsSigned flag
   /// indicates whether the constant range should not wrap in the signed or
   /// unsigned domain.
-  LLVM_ABI static ConstantRange fromKnownBits(const KnownBits &Known, bool IsSigned);
+  LLVM_ABI static ConstantRange fromKnownBits(const KnownBits &Known,
+                                              bool IsSigned);
 
   /// Split the ConstantRange into positive and negative components, ignoring
   /// zero values.
@@ -104,8 +105,8 @@ public:
   /// proper superset of the above.
   ///
   /// Example: Pred = ult and Other = i8 [2, 5) returns Result = [0, 4)
-  LLVM_ABI static ConstantRange makeAllowedICmpRegion(CmpInst::Predicate Pred,
-                                             const ConstantRange &Other);
+  LLVM_ABI static ConstantRange
+  makeAllowedICmpRegion(CmpInst::Predicate Pred, const ConstantRange &Other);
 
   /// Produce the largest range such that all values in the returned range
   /// satisfy the given predicate with all values contained within Other.
@@ -115,8 +116,8 @@ public:
   /// will be a proper subset of the above.
   ///
   /// Example: Pred = ult and Other = i8 [2, 5) returns [0, 2)
-  LLVM_ABI static ConstantRange makeSatisfyingICmpRegion(CmpInst::Predicate Pred,
-                                                const ConstantRange &Other);
+  LLVM_ABI static ConstantRange
+  makeSatisfyingICmpRegion(CmpInst::Predicate Pred, const ConstantRange &Other);
 
   /// Produce the exact range such that all values in the returned range satisfy
   /// the given predicate with any value contained within Other. Formally, this
@@ -126,7 +127,7 @@ public:
   ///
   /// Example: Pred = ult and Other = i8 3 returns [0, 3)
   LLVM_ABI static ConstantRange makeExactICmpRegion(CmpInst::Predicate Pred,
-                                           const APInt &Other);
+                                                    const APInt &Other);
 
   /// Does the predicate \p Pred hold between ranges this and \p Other?
   /// NOTE: false does not mean that inverse predicate holds!
@@ -170,20 +171,21 @@ public:
   ///  MGNR(Add, [i8 -1, 6), OBO::NoSignedWrap) == [INT_MIN+1, INT_MAX-4)
   ///  MGNR(Sub, [i8 1, 2), OBO::NoSignedWrap) == [-127, 128)
   ///  MGNR(Sub, [i8 1, 2), OBO::NoUnsignedWrap) == [1, 0)
-  LLVM_ABI static ConstantRange makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
-                                                  const ConstantRange &Other,
-                                                  unsigned NoWrapKind);
+  LLVM_ABI static ConstantRange
+  makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
+                             const ConstantRange &Other, unsigned NoWrapKind);
 
   /// Produce the range that contains X if and only if "X BinOp Other" does
   /// not wrap.
-  LLVM_ABI static ConstantRange makeExactNoWrapRegion(Instruction::BinaryOps BinOp,
-                                             const APInt &Other,
-                                             unsigned NoWrapKind);
+  LLVM_ABI static ConstantRange
+  makeExactNoWrapRegion(Instruction::BinaryOps BinOp, const APInt &Other,
+                        unsigned NoWrapKind);
 
   /// Initialize a range containing all values X that satisfy `(X & Mask)
   /// != C`. Note that the range returned may contain values where `(X & Mask)
   /// == C` holds, making it less precise, but still conservative.
-  LLVM_ABI static ConstantRange makeMaskNotEqualRange(const APInt &Mask, const APInt &C);
+  LLVM_ABI static ConstantRange makeMaskNotEqualRange(const APInt &Mask,
+                                                      const APInt &C);
 
   /// Returns true if ConstantRange calculations are supported for intrinsic
   /// with \p IntrinsicID.
@@ -191,7 +193,7 @@ public:
 
   /// Compute range of intrinsic result for the given operand ranges.
   LLVM_ABI static ConstantRange intrinsic(Intrinsic::ID IntrinsicID,
-                                 ArrayRef<ConstantRange> Ops);
+                                          ArrayRef<ConstantRange> Ops);
 
   /// Set up \p Pred and \p RHS such that
   /// ConstantRange::makeExactICmpRegion(Pred, RHS) == *this.  Return true if
@@ -200,8 +202,8 @@ public:
 
   /// Set up \p Pred, \p RHS and \p Offset such that (V + Offset) Pred RHS
   /// is true iff V is in the range. Prefers using Offset == 0 if possible.
-  LLVM_ABI void
-  getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS, APInt &Offset) const;
+  LLVM_ABI void getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS,
+                                  APInt &Offset) const;
 
   /// Return the lower value for this range.
   const APInt &getLower() const { return Lower; }
@@ -333,8 +335,8 @@ public:
   /// Return the range that results from the intersection of this range with
   /// another range. If the intersection is disjoint, such that two results
   /// are possible, the preferred range is determined by the PreferredRangeType.
-  LLVM_ABI ConstantRange intersectWith(const ConstantRange &CR,
-                              PreferredRangeType Type = Smallest) const;
+  LLVM_ABI ConstantRange intersectWith(
+      const ConstantRange &CR, PreferredRangeType Type = Smallest) const;
 
   /// Return the range that results from the union of this range
   /// with another range.  The resultant range is guaranteed to include the
@@ -342,7 +344,7 @@ public:
   /// [12,15) is [3, 15), which includes 9, 10, and 11, which were not included
   /// in either set before.
   LLVM_ABI ConstantRange unionWith(const ConstantRange &CR,
-                          PreferredRangeType Type = Smallest) const;
+                                   PreferredRangeType Type = Smallest) const;
 
   /// Intersect the two ranges and return the result if it can be represented
   /// exactly, otherwise return std::nullopt.
@@ -351,7 +353,8 @@ public:
 
   /// Union the two ranges and return the result if it can be represented
   /// exactly, otherwise return std::nullopt.
-  LLVM_ABI std::optional<ConstantRange> exactUnionWith(const ConstantRange &CR) const;
+  LLVM_ABI std::optional<ConstantRange>
+  exactUnionWith(const ConstantRange &CR) const;
 
   /// Return a new range representing the possible values resulting
   /// from an application of the specified cast operator to this range. \p
@@ -360,7 +363,7 @@ public:
   /// which do change bitwidth, the bitwidth must be consistent with the
   /// requested cast and source bitwidth.
   LLVM_ABI ConstantRange castOp(Instruction::CastOps CastOp,
-                       uint32_t BitWidth) const;
+                                uint32_t BitWidth) const;
 
   /// Return a new range in the specified integer type, which must
   /// be strictly larger than the current type.  The returned range will
@@ -392,15 +395,15 @@ public:
   /// from an application of the specified binary operator to an left hand side
   /// of this range and a right hand side of \p Other.
   LLVM_ABI ConstantRange binaryOp(Instruction::BinaryOps BinOp,
-                         const ConstantRange &Other) const;
+                                  const ConstantRange &Other) const;
 
   /// Return a new range representing the possible values resulting
   /// from an application of the specified overflowing binary operator to a
   /// left hand side of this range and a right hand side of \p Other given
   /// the provided knowledge about lack of wrapping \p NoWrapKind.
   LLVM_ABI ConstantRange overflowingBinaryOp(Instruction::BinaryOps BinOp,
-                                    const ConstantRange &Other,
-                                    unsigned NoWrapKind) const;
+                                             const ConstantRange &Other,
+                                             unsigned NoWrapKind) const;
 
   /// Return a new range representing the possible values resulting
   /// from an addition of a value in this range and a value in \p Other.
@@ -411,8 +414,9 @@ public:
   /// range and a value in \p Other.
   /// If the result range is disjoint, the preferred range is determined by the
   /// \p PreferredRangeType.
-  LLVM_ABI ConstantRange addWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
-                              PreferredRangeType RangeType = Smallest) const;
+  LLVM_ABI ConstantRange
+  addWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                PreferredRangeType RangeType = Smallest) const;
 
   /// Return a new range representing the possible values resulting
   /// from a subtraction of a value in this range and a value in \p Other.
@@ -423,8 +427,9 @@ public:
   /// range and a value in \p Other.
   /// If the result range is disjoint, the preferred range is determined by the
   /// \p PreferredRangeType.
-  LLVM_ABI ConstantRange subWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
-                              PreferredRangeType RangeType = Smallest) const;
+  LLVM_ABI ConstantRange
+  subWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                PreferredRangeType RangeType = Smallest) const;
 
   /// Return a new range representing the possible values resulting
   /// from a multiplication of a value in this range and a value in \p Other,
@@ -510,8 +515,9 @@ public:
   /// range and a value in \p Other.
   /// If the result range is disjoint, the preferred range is determined by the
   /// \p PreferredRangeType.
-  LLVM_ABI ConstantRange shlWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
-                              PreferredRangeType RangeType = Smallest) const;
+  LLVM_ABI ConstantRange
+  shlWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                PreferredRangeType RangeType = Smallest) const;
 
   /// Return a new range representing the possible values resulting from a
   /// logical right shift of a value in this range and a value in \p Other.
@@ -580,19 +586,24 @@ public:
   };
 
   /// Return whether unsigned add of the two ranges always/never overflows.
-  LLVM_ABI OverflowResult unsignedAddMayOverflow(const ConstantRange &Other) const;
+  LLVM_ABI OverflowResult
+  unsignedAddMayOverflow(const ConstantRange &Other) const;
 
   /// Return whether signed add of the two ranges always/never overflows.
-  LLVM_ABI OverflowResult signedAddMayOverflow(const ConstantRange &Other) const;
+  LLVM_ABI OverflowResult
+  signedAddMayOverflow(const ConstantRange &Other) const;
 
   /// Return whether unsigned sub of the two ranges always/never overflows.
-  LLVM_ABI OverflowResult unsignedSubMayOverflow(const ConstantRange &Other) const;
+  LLVM_ABI OverflowResult
+  unsignedSubMayOverflow(const ConstantRange &Other) const;
 
   /// Return whether signed sub of the two ranges always/never overflows.
-  LLVM_ABI OverflowResult signedSubMayOverflow(const ConstantRange &Other) const;
+  LLVM_ABI OverflowResult
+  signedSubMayOverflow(const ConstantRange &Other) const;
 
   /// Return whether unsigned mul of the two ranges always/never overflows.
-  LLVM_ABI OverflowResult unsignedMulMayOverflow(const ConstantRange &Other) const;
+  LLVM_ABI OverflowResult
+  unsignedMulMayOverflow(const ConstantRange &Other) const;
 
   /// Return known bits for values in this range.
   LLVM_ABI KnownBits toKnownBits() const;

@@ -102,8 +102,8 @@ public:
   // \p ReturnTy    The return type of the operation.
   // \p VecOpArray  The operand list.
   LLVM_ABI Value *createVectorInstruction(unsigned Opcode, Type *ReturnTy,
-                                 ArrayRef<Value *> VecOpArray,
-                                 const Twine &Name = Twine());
+                                          ArrayRef<Value *> VecOpArray,
+                                          const Twine &Name = Twine());
 
   /// Emit a VP reduction intrinsic call for recurrence kind.
   /// \param RdxID       The intrinsic ID of llvm.vector.reduce.*
@@ -111,8 +111,8 @@ public:
   ///                    performed.
   /// \param VecOpArray  The operand list.
   LLVM_ABI Value *createSimpleReduction(Intrinsic::ID RdxID, Type *ValTy,
-                               ArrayRef<Value *> VecOpArray,
-                               const Twine &Name = Twine());
+                                        ArrayRef<Value *> VecOpArray,
+                                        const Twine &Name = Twine());
 };
 
 } // namespace llvm

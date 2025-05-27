@@ -18,9 +18,9 @@
 #ifndef LLVM_IR_MEMORYMODELRELAXATIONANNOTATIONS_H
 #define LLVM_IR_MEMORYMODELRELAXATIONANNOTATIONS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <tuple> // for std::pair
 
 namespace llvm {
@@ -63,14 +63,14 @@ public:
   /// Combines \p A and \p B according to MMRA semantics.
   /// \returns !mmra metadata for the combined MMRAs.
   LLVM_ABI static MDNode *combine(LLVMContext &Ctx, const MMRAMetadata &A,
-                         const MMRAMetadata &B);
+                                  const MMRAMetadata &B);
 
   /// Creates !mmra metadata for a single tag.
   ///
   /// !mmra metadata can either be a single tag, or a MDTuple containing
   /// multiple tags.
   LLVM_ABI static MDTuple *getTagMD(LLVMContext &Ctx, StringRef Prefix,
-                           StringRef Suffix);
+                                    StringRef Suffix);
   static MDTuple *getTagMD(LLVMContext &Ctx, const TagT &T) {
     return getTagMD(Ctx, T.first, T.second);
   }

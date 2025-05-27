@@ -15,10 +15,10 @@
 #ifndef LLVM_IR_PROFDATAUTILS_H
 #define LLVM_IR_PROFDATAUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -76,17 +76,17 @@ LLVM_ABI unsigned getNumBranchWeights(const MDNode &ProfileData);
 /// \returns True if weights were extracted, False otherwise. When false Weights
 /// will be cleared.
 LLVM_ABI bool extractBranchWeights(const MDNode *ProfileData,
-                          SmallVectorImpl<uint32_t> &Weights);
+                                   SmallVectorImpl<uint32_t> &Weights);
 
 /// Faster version of extractBranchWeights() that skips checks and must only
 /// be called with "branch_weights" metadata nodes. Supports uint32_t.
 LLVM_ABI void extractFromBranchWeightMD32(const MDNode *ProfileData,
-                                 SmallVectorImpl<uint32_t> &Weights);
+                                          SmallVectorImpl<uint32_t> &Weights);
 
 /// Faster version of extractBranchWeights() that skips checks and must only
 /// be called with "branch_weights" metadata nodes. Supports uint64_t.
 LLVM_ABI void extractFromBranchWeightMD64(const MDNode *ProfileData,
-                                 SmallVectorImpl<uint64_t> &Weights);
+                                          SmallVectorImpl<uint64_t> &Weights);
 
 /// Extract branch weights attatched to an Instruction
 ///
@@ -95,7 +95,7 @@ LLVM_ABI void extractFromBranchWeightMD64(const MDNode *ProfileData,
 /// \returns True if weights were extracted, False otherwise. When false Weights
 /// will be cleared.
 LLVM_ABI bool extractBranchWeights(const Instruction &I,
-                          SmallVectorImpl<uint32_t> &Weights);
+                                   SmallVectorImpl<uint32_t> &Weights);
 
 /// Extract branch weights from a conditional branch or select Instruction.
 ///
@@ -105,7 +105,7 @@ LLVM_ABI bool extractBranchWeights(const Instruction &I,
 /// \returns True on success with profile weights filled in. False if no
 /// metadata or invalid metadata was found.
 LLVM_ABI bool extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
-                          uint64_t &FalseVal);
+                                   uint64_t &FalseVal);
 
 /// Retrieve the total of all weights from MD_prof data.
 ///
@@ -113,7 +113,8 @@ LLVM_ABI bool extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
 /// \param [out] TotalWeights input variable to fill with total weights
 /// \returns True on success with profile total weights filled in. False if no
 /// metadata was found.
-LLVM_ABI bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalWeights);
+LLVM_ABI bool extractProfTotalWeight(const MDNode *ProfileData,
+                                     uint64_t &TotalWeights);
 
 /// Retrieve the total of all weights from an instruction.
 ///
@@ -121,7 +122,8 @@ LLVM_ABI bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalW
 /// \param [out] TotalWeights input variable to fill with total weights
 /// \returns True on success with profile total weights filled in. False if no
 /// metadata was found.
-LLVM_ABI bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalWeights);
+LLVM_ABI bool extractProfTotalWeight(const Instruction &I,
+                                     uint64_t &TotalWeights);
 
 /// Create a new `branch_weights` metadata node and add or overwrite
 /// a `prof` metadata reference to instruction `I`.
@@ -129,7 +131,7 @@ LLVM_ABI bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalWeight
 /// \param Weights an array of weights to set on instruction I.
 /// \param IsExpected were these weights added from an llvm.expect* intrinsic.
 LLVM_ABI void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
-                      bool IsExpected);
+                               bool IsExpected);
 
 /// Scaling the profile data attached to 'I' using the ratio of S/T.
 LLVM_ABI void scaleProfData(Instruction &I, uint64_t S, uint64_t T);

@@ -15,8 +15,8 @@
 #ifndef LLVM_IR_INTRINSICS_H
 #define LLVM_IR_INTRINSICS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 #include <string>
@@ -67,7 +67,7 @@ namespace Intrinsic {
   /// the StringRef version. If one of the types is based on an unnamed type, a
   /// function type will be computed. Providing FT will avoid this computation.
   LLVM_ABI std::string getName(ID Id, ArrayRef<Type *> Tys, Module *M,
-                      FunctionType *FT = nullptr);
+                               FunctionType *FT = nullptr);
 
   /// Return the LLVM name for an intrinsic. This is a special version only to
   /// be used by LLVMIntrinsicCopyOverloadedName. It only supports overloads
@@ -75,7 +75,8 @@ namespace Intrinsic {
   LLVM_ABI std::string getNameNoUnnamedTypes(ID Id, ArrayRef<Type *> Tys);
 
   /// Return the function type for an intrinsic.
-  LLVM_ABI FunctionType *getType(LLVMContext &Context, ID id, ArrayRef<Type *> Tys = {});
+  LLVM_ABI FunctionType *getType(LLVMContext &Context, ID id,
+                                 ArrayRef<Type *> Tys = {});
 
   /// Returns true if the intrinsic can be overloaded.
   LLVM_ABI bool isOverloaded(ID id);
@@ -100,7 +101,8 @@ namespace Intrinsic {
   /// using iAny, fAny, vAny, or pAny).  For a declaration of an overloaded
   /// intrinsic, Tys must provide exactly one type for each overloaded type in
   /// the intrinsic.
-  LLVM_ABI Function *getOrInsertDeclaration(Module *M, ID id, ArrayRef<Type *> Tys = {});
+  LLVM_ABI Function *getOrInsertDeclaration(Module *M, ID id,
+                                            ArrayRef<Type *> Tys = {});
 
   LLVM_DEPRECATED("Use getOrInsertDeclaration instead",
                   "getOrInsertDeclaration")
@@ -114,14 +116,17 @@ namespace Intrinsic {
   LLVM_ABI Function *getDeclarationIfExists(const Module *M, ID id);
 
   /// This version supports overloaded intrinsics.
-  LLVM_ABI Function *getDeclarationIfExists(Module *M, ID id, ArrayRef<Type *> Tys,
-                                   FunctionType *FT = nullptr);
+  LLVM_ABI Function *getDeclarationIfExists(Module *M, ID id,
+                                            ArrayRef<Type *> Tys,
+                                            FunctionType *FT = nullptr);
 
   /// Map a Clang builtin name to an intrinsic ID.
-  LLVM_ABI ID getIntrinsicForClangBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
+  LLVM_ABI ID getIntrinsicForClangBuiltin(StringRef TargetPrefix,
+                                          StringRef BuiltinName);
 
   /// Map a MS builtin name to an intrinsic ID.
-  LLVM_ABI ID getIntrinsicForMSBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
+  LLVM_ABI ID getIntrinsicForMSBuiltin(StringRef TargetPrefix,
+                                       StringRef BuiltinName);
 
   /// Returns true if the intrinsic ID is for one of the "Constrained
   /// Floating-Point Intrinsics".
@@ -233,7 +238,8 @@ namespace Intrinsic {
 
   /// Return the IIT table descriptor for the specified intrinsic into an array
   /// of IITDescriptors.
-  LLVM_ABI void getIntrinsicInfoTableEntries(ID id, SmallVectorImpl<IITDescriptor> &T);
+  LLVM_ABI void getIntrinsicInfoTableEntries(ID id,
+                                             SmallVectorImpl<IITDescriptor> &T);
 
   enum MatchIntrinsicTypesResult {
     MatchIntrinsicTypes_Match = 0,
@@ -255,7 +261,8 @@ namespace Intrinsic {
   /// be called after all the fixed arguments have been matched first.
   ///
   /// This method returns true on error.
-  LLVM_ABI bool matchIntrinsicVarArg(bool isVarArg, ArrayRef<IITDescriptor> &Infos);
+  LLVM_ABI bool matchIntrinsicVarArg(bool isVarArg,
+                                     ArrayRef<IITDescriptor> &Infos);
 
   /// Gets the type arguments of an intrinsic call by matching type contraints
   /// specified by the .td file. The overloaded types are pushed into the
@@ -264,10 +271,11 @@ namespace Intrinsic {
   /// Returns false if the given ID and function type combination is not a
   /// valid intrinsic call.
   LLVM_ABI bool getIntrinsicSignature(Intrinsic::ID, FunctionType *FT,
-                             SmallVectorImpl<Type *> &ArgTys);
+                                      SmallVectorImpl<Type *> &ArgTys);
 
   /// Same as previous, but accepts a Function instead of ID and FunctionType.
-  LLVM_ABI bool getIntrinsicSignature(Function *F, SmallVectorImpl<Type *> &ArgTys);
+  LLVM_ABI bool getIntrinsicSignature(Function *F,
+                                      SmallVectorImpl<Type *> &ArgTys);
 
   // Checks if the intrinsic name matches with its signature and if not
   // returns the declaration with the same signature and remangled name.

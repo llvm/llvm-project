@@ -13,8 +13,8 @@
 #ifndef LLVM_IR_AUTOUPGRADE_H
 #define LLVM_IR_AUTOUPGRADE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
@@ -37,8 +37,9 @@ namespace llvm {
   /// for upgrading, and returns true if it requires upgrading. It may return
   /// null in NewFn if the all calls to the original intrinsic function
   /// should be transformed to non-function-call instructions.
-  LLVM_ABI bool UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
-                                bool CanUpgradeDebugIntrinsicsToRecords = true);
+  LLVM_ABI bool
+  UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
+                           bool CanUpgradeDebugIntrinsicsToRecords = true);
 
   /// This is the complement to the above, replacing a specific call to an
   /// intrinsic function with a call to the specified new function.
@@ -52,7 +53,7 @@ namespace llvm {
   /// which need to have both the function updated as well as all calls updated
   /// to the new function. This should only be run in a post-processing fashion
   /// so that it can update all calls to the old function.
-  LLVM_ABI void UpgradeCallsToIntrinsic(Function* F);
+  LLVM_ABI void UpgradeCallsToIntrinsic(Function *F);
 
   /// This checks for global variables which should be upgraded. If it requires
   /// upgrading, returns a pointer to the upgraded variable.
@@ -83,12 +84,13 @@ namespace llvm {
   /// This is an auto-upgrade for bitcast between pointers with different
   /// address spaces: the instruction is replaced by a pair ptrtoint+inttoptr.
   LLVM_ABI Instruction *UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
-                                  Instruction *&Temp);
+                                           Instruction *&Temp);
 
   /// This is an auto-upgrade for bitcast constant expression between pointers
   /// with different address spaces: the instruction is replaced by a pair
   /// ptrtoint+inttoptr.
-  LLVM_ABI Constant *UpgradeBitCastExpr(unsigned Opc, Constant *C, Type *DestTy);
+  LLVM_ABI Constant *UpgradeBitCastExpr(unsigned Opc, Constant *C,
+                                        Type *DestTy);
 
   /// Check the debug info version number, if it is out-dated, drop the debug
   /// info. Return true if module is modified.
@@ -110,7 +112,8 @@ namespace llvm {
   LLVM_ABI void UpgradeAttributes(AttrBuilder &B);
 
   /// Upgrade operand bundles (without knowing about their user instruction).
-  LLVM_ABI void UpgradeOperandBundles(std::vector<OperandBundleDef> &OperandBundles);
+  LLVM_ABI void
+  UpgradeOperandBundles(std::vector<OperandBundleDef> &OperandBundles);
 
 } // End llvm namespace
 

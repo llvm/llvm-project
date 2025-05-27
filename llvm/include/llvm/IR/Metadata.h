@@ -15,7 +15,6 @@
 #ifndef LLVM_IR_METADATA_H
 #define LLVM_IR_METADATA_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -29,6 +28,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstddef>
@@ -123,9 +123,9 @@ public:
   /// otherwise, pointer addresses are substituted.
   /// @{
   LLVM_ABI void print(raw_ostream &OS, const Module *M = nullptr,
-             bool IsForDebug = false) const;
-  LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST, const Module *M = nullptr,
-             bool IsForDebug = false) const;
+                      bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST,
+                      const Module *M = nullptr, bool IsForDebug = false) const;
   /// @}
 
   /// Print as operand.
@@ -135,9 +135,10 @@ public:
   /// If \c M is provided, metadata nodes will be numbered canonically;
   /// otherwise, pointer addresses are substituted.
   /// @{
-  LLVM_ABI void printAsOperand(raw_ostream &OS, const Module *M = nullptr) const;
+  LLVM_ABI void printAsOperand(raw_ostream &OS,
+                               const Module *M = nullptr) const;
   LLVM_ABI void printAsOperand(raw_ostream &OS, ModuleSlotTracker &MST,
-                      const Module *M = nullptr) const;
+                               const Module *M = nullptr) const;
   /// @}
 
   /// Metadata IDs that may generate poison.
@@ -193,7 +194,8 @@ public:
   LLVM_ABI ~MetadataAsValue();
 
   LLVM_ABI static MetadataAsValue *get(LLVMContext &Context, Metadata *MD);
-  LLVM_ABI static MetadataAsValue *getIfExists(LLVMContext &Context, Metadata *MD);
+  LLVM_ABI static MetadataAsValue *getIfExists(LLVMContext &Context,
+                                               Metadata *MD);
 
   Metadata *getMetadata() const { return MD; }
 
@@ -408,8 +410,8 @@ public:
   ///
   /// Replace all uses of this with \c MD, which is allowed to be null.
   LLVM_ABI void replaceAllUsesWith(Metadata *MD);
-   /// Replace all uses of the constant with Undef in debug info metadata
-  LLVM_ABI static void SalvageDebugInfo(const Constant &C); 
+  /// Replace all uses of the constant with Undef in debug info metadata
+  LLVM_ABI static void SalvageDebugInfo(const Constant &C);
   /// Returns the list of all DIArgList users of this.
   LLVM_ABI SmallVector<Metadata *> getAllArgListUsers();
   /// Returns the list of all DbgVariableRecord users of this.
@@ -850,7 +852,7 @@ struct AAMDNodes {
   /// Finally, !tbaa.struct is zeroed out.
   LLVM_ABI AAMDNodes adjustForAccess(unsigned AccessSize);
   LLVM_ABI AAMDNodes adjustForAccess(size_t Offset, Type *AccessTy,
-                            const DataLayout &DL);
+                                     const DataLayout &DL);
   LLVM_ABI AAMDNodes adjustForAccess(size_t Offset, unsigned AccessSize);
 };
 
@@ -1179,7 +1181,7 @@ class MDNode : public Metadata {
 
 protected:
   LLVM_ABI MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {});
+                  ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {});
   ~MDNode() = default;
 
   LLVM_ABI void *operator new(size_t Size, size_t NumOps, StorageType Storage);
@@ -1319,7 +1321,7 @@ public:
   /// @{
   LLVM_ABI void printTree(raw_ostream &OS, const Module *M = nullptr) const;
   LLVM_ABI void printTree(raw_ostream &OS, ModuleSlotTracker &MST,
-                 const Module *M = nullptr) const;
+                          const Module *M = nullptr) const;
   /// @}
 
   /// User-friendly dump in tree shape.
@@ -1456,12 +1458,13 @@ public:
   LLVM_ABI static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
-  LLVM_ABI static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A,
+                                                                   MDNode *B);
   /// Merge !prof metadata from two instructions.
   /// Currently only implemented with direct callsites with branch weights.
   LLVM_ABI static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
-                                       const Instruction *AInstr,
-                                       const Instruction *BInstr);
+                                                const Instruction *AInstr,
+                                                const Instruction *BInstr);
   LLVM_ABI static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
 };
@@ -1485,8 +1488,10 @@ class MDTuple : public MDNode {
   void setHash(unsigned Hash) { SubclassData32 = Hash; }
   void recalculateHash();
 
-  LLVM_ABI static MDTuple *getImpl(LLVMContext &Context, ArrayRef<Metadata *> MDs,
-                          StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static MDTuple *getImpl(LLVMContext &Context,
+                                   ArrayRef<Metadata *> MDs,
+                                   StorageType Storage,
+                                   bool ShouldCreate = true);
 
   TempMDTuple cloneImpl() const {
     ArrayRef<MDOperand> Operands = operands();
@@ -1808,7 +1813,7 @@ public:
   LLVM_ABI StringRef getName() const;
   LLVM_ABI void print(raw_ostream &ROS, bool IsForDebug = false) const;
   LLVM_ABI void print(raw_ostream &ROS, ModuleSlotTracker &MST,
-             bool IsForDebug = false) const;
+                      bool IsForDebug = false) const;
   LLVM_ABI void dump() const;
 
   // ---------------------------------------------------------------------------

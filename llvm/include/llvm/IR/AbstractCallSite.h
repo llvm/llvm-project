@@ -14,11 +14,11 @@
 #ifndef LLVM_IR_ABSTRACTCALLSITE_H
 #define LLVM_IR_ABSTRACTCALLSITE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {
@@ -103,8 +103,9 @@ public:
   ///
   /// All uses added to \p CallbackUses can be used to create abstract call
   /// sites for which AbstractCallSite::isCallbackCall() will return true.
-  LLVM_ABI static void getCallbackUses(const CallBase &CB,
-                              SmallVectorImpl<const Use *> &CallbackUses);
+  LLVM_ABI static void
+  getCallbackUses(const CallBase &CB,
+                  SmallVectorImpl<const Use *> &CallbackUses);
 
   /// Conversion operator to conveniently check for a valid/initialized ACS.
   explicit operator bool() const { return CB != nullptr; }

@@ -14,7 +14,6 @@
 #ifndef LLVM_IR_DIAGNOSTICINFO_H
 #define LLVM_IR_DIAGNOSTICINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TypeSize.h"
@@ -237,7 +237,8 @@ public:
 };
 
 /// Diagnostic information for stripping invalid debug metadata.
-class LLVM_ABI DiagnosticInfoIgnoringInvalidDebugMetadata : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoIgnoringInvalidDebugMetadata
+    : public DiagnosticInfo {
 private:
   /// The module that is concerned by this debug metadata version diagnostic.
   const Module &M;
@@ -382,7 +383,8 @@ private:
   DiagnosticLocation Loc;
 };
 
-class LLVM_ABI DiagnosticInfoGenericWithLoc : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoGenericWithLoc
+    : public DiagnosticInfoWithLocationBase {
 private:
   /// Message to be reported.
   const Twine &MsgStr;
@@ -407,7 +409,8 @@ public:
   }
 };
 
-class LLVM_ABI DiagnosticInfoRegAllocFailure : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoRegAllocFailure
+    : public DiagnosticInfoWithLocationBase {
 private:
   /// Message to be reported.
   const Twine &MsgStr;
@@ -435,7 +438,8 @@ public:
 
 /// Diagnostic information for stack size etc. reporting.
 /// This is basically a function and a size.
-class LLVM_ABI DiagnosticInfoResourceLimit : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoResourceLimit
+    : public DiagnosticInfoWithLocationBase {
 private:
   /// The function that is concerned by this resource limit diagnostic.
   const Function &Fn;
@@ -490,7 +494,8 @@ public:
 
 /// Common features for diagnostics dealing with optimization remarks
 /// that are used by both IR and MIR passes.
-class LLVM_ABI DiagnosticInfoOptimizationBase : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoOptimizationBase
+    : public DiagnosticInfoWithLocationBase {
 public:
   /// Used to set IsVerbose via the stream interface.
   struct setIsVerbose {};
@@ -664,7 +669,8 @@ operator<<(RemarkT &&R,
 
 /// Common features for diagnostics dealing with optimization remarks
 /// that are used by IR passes.
-class LLVM_ABI DiagnosticInfoIROptimization : public DiagnosticInfoOptimizationBase {
+class LLVM_ABI DiagnosticInfoIROptimization
+    : public DiagnosticInfoOptimizationBase {
   void anchor() override;
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. \p
@@ -820,7 +826,8 @@ private:
 };
 
 /// Diagnostic information for optimization analysis remarks.
-class LLVM_ABI OptimizationRemarkAnalysis : public DiagnosticInfoIROptimization {
+class LLVM_ABI OptimizationRemarkAnalysis
+    : public DiagnosticInfoIROptimization {
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
@@ -892,7 +899,8 @@ private:
 
 /// Diagnostic information for optimization analysis remarks related to
 /// floating-point non-commutativity.
-class LLVM_ABI OptimizationRemarkAnalysisFPCommute : public OptimizationRemarkAnalysis {
+class LLVM_ABI OptimizationRemarkAnalysisFPCommute
+    : public OptimizationRemarkAnalysis {
   void anchor() override;
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
@@ -934,7 +942,8 @@ private:
 
 /// Diagnostic information for optimization analysis remarks related to
 /// pointer aliasing.
-class LLVM_ABI OptimizationRemarkAnalysisAliasing : public OptimizationRemarkAnalysis {
+class LLVM_ABI OptimizationRemarkAnalysisAliasing
+    : public OptimizationRemarkAnalysis {
   void anchor() override;
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
@@ -1031,7 +1040,8 @@ public:
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DiagnosticInfo, LLVMDiagnosticInfoRef)
 
 /// Diagnostic information for optimization failures.
-class LLVM_ABI DiagnosticInfoOptimizationFailure : public DiagnosticInfoIROptimization {
+class LLVM_ABI DiagnosticInfoOptimizationFailure
+    : public DiagnosticInfoIROptimization {
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
   /// the location information to use in the diagnostic. If line table
@@ -1062,7 +1072,8 @@ public:
 };
 
 /// Diagnostic information for unsupported feature in backend.
-class LLVM_ABI DiagnosticInfoUnsupported : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoUnsupported
+    : public DiagnosticInfoWithLocationBase {
 private:
   const Twine &Msg;
 

@@ -120,7 +120,7 @@ public:
   /// Put differently, \p NoDetails prints the type as if
   /// inlined with the operands when printing an instruction.
   LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false,
-             bool NoDetails = false) const;
+                      bool NoDetails = false) const;
 
   LLVM_ABI void dump() const;
 
@@ -469,7 +469,8 @@ public:
     }
     llvm_unreachable("Unsupported type in Type::getScalarTy");
   }
-  LLVM_ABI static Type *getFloatingPointTy(LLVMContext &C, const fltSemantics &S);
+  LLVM_ABI static Type *getFloatingPointTy(LLVMContext &C,
+                                           const fltSemantics &S);
 
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types.
@@ -481,13 +482,14 @@ public:
   /// PointerType::get(Ctx, AddrSpace).
   /// TODO: Remove this after opaque pointer transition is complete.
   LLVM_ABI LLVM_DEPRECATED("Use PointerType::get instead", "PointerType::get")
-  PointerType *getPointerTo(unsigned AddrSpace = 0) const;
+      PointerType *getPointerTo(unsigned AddrSpace = 0) const;
 
 private:
   /// Derived types like structures and arrays are sized iff all of the members
   /// of the type are sized as well. Since asking for their size is relatively
   /// uncommon, move this operation out-of-line.
-  LLVM_ABI bool isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited = nullptr) const;
+  LLVM_ABI bool
+  isSizedDerivedType(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 };
 
 // Printing of types.

@@ -1796,8 +1796,9 @@ public:
   /// Returns the first GlobalValueSummary for \p ValueGUID, asserting that
   /// there
   /// is only one if \p PerModuleIndex.
-  LLVM_ABI GlobalValueSummary *getGlobalValueSummary(GlobalValue::GUID ValueGUID,
-                                            bool PerModuleIndex = true) const;
+  LLVM_ABI GlobalValueSummary *
+  getGlobalValueSummary(GlobalValue::GUID ValueGUID,
+                        bool PerModuleIndex = true) const;
 
   /// Table of modules, containing module hash and id.
   const StringMap<ModuleHash> &modulePaths() const {
@@ -1925,8 +1926,9 @@ public:
 
   /// Collect for the given module the list of functions it defines
   /// (GUID -> Summary).
-  LLVM_ABI void collectDefinedFunctionsForModule(StringRef ModulePath,
-                                        GVSummaryMapTy &GVSummaryMap) const;
+  LLVM_ABI void
+  collectDefinedFunctionsForModule(StringRef ModulePath,
+                                   GVSummaryMapTy &GVSummaryMap) const;
 
   /// Collect for each module the list of Summaries it defines (GUID ->
   /// Summary).
@@ -1956,15 +1958,17 @@ public:
   LLVM_ABI void dumpSCCs(raw_ostream &OS);
 
   /// Do the access attribute and DSOLocal propagation in combined index.
-  LLVM_ABI void propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
+  LLVM_ABI void
+  propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
 
   /// Checks if we can import global variable from another module.
-  LLVM_ABI bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs) const;
+  LLVM_ABI bool canImportGlobalVar(const GlobalValueSummary *S,
+                                   bool AnalyzeRefs) const;
 
   /// Same as above but checks whether the global var is importable as a
   /// declaration.
-  LLVM_ABI bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs,
-                          bool &CanImportDecl) const;
+  LLVM_ABI bool canImportGlobalVar(const GlobalValueSummary *S,
+                                   bool AnalyzeRefs, bool &CanImportDecl) const;
 };
 
 /// GraphTraits definition to build SCC for the index

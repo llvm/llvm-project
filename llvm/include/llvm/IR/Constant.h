@@ -13,10 +13,10 @@
 #ifndef LLVM_IR_CONSTANT_H
 #define LLVM_IR_CONSTANT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -187,12 +187,12 @@ public:
   ///
   LLVM_ABI void handleOperandChange(Value *, Value *);
 
-  LLVM_ABI static Constant *getNullValue(Type* Ty);
+  LLVM_ABI static Constant *getNullValue(Type *Ty);
 
   /// @returns the value for an integer or vector of integer constant of the
   /// given type that has all its bits set to true.
   /// Get the all ones value
-  LLVM_ABI static Constant *getAllOnesValue(Type* Ty);
+  LLVM_ABI static Constant *getAllOnesValue(Type *Ty);
 
   /// Return the value for an integer or pointer constant, or a vector thereof,
   /// with the given scalar value.
@@ -227,7 +227,8 @@ public:
 
   /// Try to replace undefined constant C or undefined elements in C with
   /// Replacement. If no changes are made, the constant C is returned.
-  LLVM_ABI static Constant *replaceUndefsWith(Constant *C, Constant *Replacement);
+  LLVM_ABI static Constant *replaceUndefsWith(Constant *C,
+                                              Constant *Replacement);
 
   /// Merges undefs of a Constant with another Constant, along with the
   /// undefs already present. Other doesn't have to be the same type as C, but

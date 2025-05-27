@@ -17,12 +17,12 @@
 #ifndef LLVM_IR_GLOBALIFUNC_H
 #define LLVM_IR_GLOBALIFUNC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -47,8 +47,8 @@ public:
   /// If a parent module is specified, the ifunc is automatically inserted into
   /// the end of the specified module's ifunc list.
   LLVM_ABI static GlobalIFunc *create(Type *Ty, unsigned AddressSpace,
-                             LinkageTypes Linkage, const Twine &Name,
-                             Constant *Resolver, Module *Parent);
+                                      LinkageTypes Linkage, const Twine &Name,
+                                      Constant *Resolver, Module *Parent);
 
   // allocate space for exactly one operand
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -97,7 +97,8 @@ public:
   // is already a global object, then apply the operation to it directly. If
   // target is a GlobalExpr or a GlobalAlias, evaluate it to its base object and
   // apply the operation for the base object and all aliases along the path.
-  LLVM_ABI void applyAlongResolverPath(function_ref<void(const GlobalValue &)> Op) const;
+  LLVM_ABI void
+  applyAlongResolverPath(function_ref<void(const GlobalValue &)> Op) const;
 };
 
 template <>

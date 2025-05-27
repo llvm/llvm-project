@@ -17,13 +17,13 @@
 #ifndef LLVM_IR_GLOBALVALUE_H
 #define LLVM_IR_GLOBALVALUE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -580,9 +580,9 @@ public:
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
   /// The value's original name is \c Name and has linkage of type
   /// \c Linkage. The value is defined in module \c FileName.
-  LLVM_ABI static std::string getGlobalIdentifier(StringRef Name,
-                                         GlobalValue::LinkageTypes Linkage,
-                                         StringRef FileName);
+  LLVM_ABI static std::string
+  getGlobalIdentifier(StringRef Name, GlobalValue::LinkageTypes Linkage,
+                      StringRef FileName);
 
 private:
   /// Return the modified name for this global value suitable to be
@@ -616,7 +616,7 @@ public:
   /// Make sure this GlobalValue is fully read.
   LLVM_ABI Error materialize();
 
-/// @}
+  /// @}
 
   /// Return true if the primary definition of this global value is outside of
   /// the current translation unit.

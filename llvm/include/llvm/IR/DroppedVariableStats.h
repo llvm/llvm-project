@@ -14,9 +14,9 @@
 #ifndef LLVM_CODEGEN_DROPPEDVARIABLESTATS_H
 #define LLVM_CODEGEN_DROPPEDVARIABLESTATS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <tuple>
 
 namespace llvm {
@@ -76,21 +76,21 @@ protected:
   SmallVector<DenseMap<StringRef, DenseMap<VarID, DILocation *>>> InlinedAts;
   /// Calculate the number of dropped variables in an llvm::Function or
   /// llvm::MachineFunction and print the relevant information to stdout.
-  LLVM_ABI void calculateDroppedStatsAndPrint(DebugVariables &DbgVariables,
-                                     StringRef FuncName, StringRef PassID,
-                                     StringRef FuncOrModName,
-                                     StringRef PassLevel, const Function *Func);
+  LLVM_ABI void calculateDroppedStatsAndPrint(
+      DebugVariables &DbgVariables, StringRef FuncName, StringRef PassID,
+      StringRef FuncOrModName, StringRef PassLevel, const Function *Func);
 
   /// Check if a \p Var has been dropped or is a false positive. Also update the
   /// \p DroppedCount if a debug variable is dropped.
   LLVM_ABI bool updateDroppedCount(DILocation *DbgLoc, const DIScope *Scope,
-                          const DIScope *DbgValScope,
-                          DenseMap<VarID, DILocation *> &InlinedAtsMap,
-                          VarID Var, unsigned &DroppedCount);
+                                   const DIScope *DbgValScope,
+                                   DenseMap<VarID, DILocation *> &InlinedAtsMap,
+                                   VarID Var, unsigned &DroppedCount);
 
   /// Run code to populate relevant data structures over an llvm::Function or
   /// llvm::MachineFunction.
-  LLVM_ABI void run(DebugVariables &DbgVariables, StringRef FuncName, bool Before);
+  LLVM_ABI void run(DebugVariables &DbgVariables, StringRef FuncName,
+                    bool Before);
 
   /// Populate the VarIDSet and InlinedAtMap with the relevant information
   /// needed for before and after pass analysis to determine dropped variable

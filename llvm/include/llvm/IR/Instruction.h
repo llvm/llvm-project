@@ -14,7 +14,6 @@
 #ifndef LLVM_IR_INSTRUCTION_H
 #define LLVM_IR_INSTRUCTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,6 +23,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <utility>
 
@@ -54,8 +54,8 @@ class InsertPosition {
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
   LLVM_ABI LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                  "BasicBlock::iterator")
-  InsertPosition(Instruction *InsertBefore);
+                           "BasicBlock::iterator")
+      InsertPosition(Instruction *InsertBefore);
   LLVM_ABI InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
   operator InstListType::iterator() const { return InsertAt; }
@@ -109,7 +109,8 @@ public:
   /// Return an iterator to the position of the "Next" DbgRecord after this
   /// instruction, or std::nullopt. This is the position to pass to
   /// BasicBlock::reinsertInstInDbgRecords when re-inserting an instruction.
-  LLVM_ABI std::optional<simple_ilist<DbgRecord>::iterator> getDbgReinsertionPosition();
+  LLVM_ABI std::optional<simple_ilist<DbgRecord>::iterator>
+  getDbgReinsertionPosition();
 
   /// Returns true if any DbgRecords are attached to this instruction.
   LLVM_ABI bool hasDbgRecords() const;
@@ -118,7 +119,7 @@ public:
   /// by simply adopting the sequence of DbgRecords (which is efficient) if
   /// possible, by merging two sequences otherwise.
   LLVM_ABI void adoptDbgRecords(BasicBlock *BB, InstListType::iterator It,
-                       bool InsertAtHead);
+                                bool InsertAtHead);
 
   /// Erase any DbgRecords attached to this instruction.
   LLVM_ABI void dropDbgRecords();
@@ -212,8 +213,8 @@ public:
   /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
   /// insertBefore without unwrapping/rewrapping. For all other positions, call
   /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions", "")
-  void insertBefore(Instruction *InsertPos);
+  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
+                           "") void insertBefore(Instruction *InsertPos);
 
   /// Insert an unlinked instruction into a basic block immediately before
   /// the specified position.
@@ -230,7 +231,7 @@ public:
   /// Inserts an unlinked instruction into \p ParentBB at position \p It and
   /// returns the iterator of the inserted instruction.
   LLVM_ABI InstListType::iterator insertInto(BasicBlock *ParentBB,
-                                    InstListType::iterator It);
+                                             InstListType::iterator It);
 
   LLVM_ABI void insertBefore(BasicBlock &BB, InstListType::iterator InsertPos);
 
@@ -241,8 +242,8 @@ public:
   /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
   /// moveBefore without unwrapping/rewrapping. For all other positions, call
   /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions", "")
-  void moveBefore(Instruction *MovePos);
+  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
+                           "") void moveBefore(Instruction *MovePos);
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
@@ -264,8 +265,8 @@ public:
   ///
   /// Deprecated in favour of the iterator-accepting flavour of
   /// moveBeforePreserving, as all insertions should be at iterator positions.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions", "")
-  void moveBeforePreserving(Instruction *MovePos);
+  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
+                           "") void moveBeforePreserving(Instruction *MovePos);
 
 private:
   /// RemoveDIs project: all other moves implemented with this method,
@@ -463,7 +464,7 @@ public:
   /// specifies the list of meta data that needs to be copied. If \p WL is
   /// empty, all meta data will be copied.
   LLVM_ABI void copyMetadata(const Instruction &SrcInst,
-                    ArrayRef<unsigned> WL = ArrayRef<unsigned>());
+                             ArrayRef<unsigned> WL = ArrayRef<unsigned>());
 
   /// Erase all metadata that matches the predicate.
   LLVM_ABI void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
@@ -579,7 +580,8 @@ public:
   /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and
   /// return attributes that can cause undefined behaviour. Both of these should
   /// be done by passes which move instructions in IR.
-  LLVM_ABI void dropUBImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
+  LLVM_ABI void
+  dropUBImplyingAttrsAndUnknownMetadata(ArrayRef<unsigned> KnownIDs = {});
 
   /// Drop any attributes or metadata that can cause immediate undefined
   /// behavior. Retain other attributes/metadata on a best-effort basis.
@@ -721,7 +723,8 @@ public:
   /// SourceInstructions does then the merged one will be attached to
   /// it. However, instructions without attachments in \p SourceInstructions
   /// are not modified.
-  LLVM_ABI void mergeDIAssignID(ArrayRef<const Instruction *> SourceInstructions);
+  LLVM_ABI void
+  mergeDIAssignID(ArrayRef<const Instruction *> SourceInstructions);
 
 private:
   // These are all implemented in Metadata.cpp.
@@ -826,7 +829,8 @@ public:
   /// If IncludePhaseOneUnwind is set, this will also include cases where
   /// phase one unwinding may unwind past this frame due to skipping of
   /// cleanup landingpads.
-  LLVM_ABI bool mayThrow(bool IncludePhaseOneUnwind = false) const LLVM_READONLY;
+  LLVM_ABI bool
+  mayThrow(bool IncludePhaseOneUnwind = false) const LLVM_READONLY;
 
   /// Return true if this instruction behaves like a memory fence: it can load
   /// or store to memory location without being given a memory location.
@@ -955,7 +959,8 @@ public:
   /// @returns true if the specified instruction is the same operation as
   /// the current one.
   /// Determine if one instruction is the same operation as another.
-  LLVM_ABI bool isSameOperationAs(const Instruction *I, unsigned flags = 0) const LLVM_READONLY;
+  LLVM_ABI bool isSameOperationAs(const Instruction *I,
+                                  unsigned flags = 0) const LLVM_READONLY;
 
   /// This function determines if the speficied instruction has the same
   /// "special" characteristics as the current one. This means that opcode
@@ -965,8 +970,9 @@ public:
   /// @returns true if the specific instruction has the same opcde specific
   /// characteristics as the current one. Determine if one instruction has the
   /// same state as another.
-  LLVM_ABI bool hasSameSpecialState(const Instruction *I2, bool IgnoreAlignment = false,
-                           bool IntersectAttrs = false) const LLVM_READONLY;
+  LLVM_ABI bool
+  hasSameSpecialState(const Instruction *I2, bool IgnoreAlignment = false,
+                      bool IntersectAttrs = false) const LLVM_READONLY;
 
   /// Return true if there are any uses of this instruction in blocks other than
   /// the specified block. Note that PHI nodes are considered to evaluate their
@@ -1085,7 +1091,7 @@ protected:
   }
 
   LLVM_ABI Instruction(Type *Ty, unsigned iType, AllocInfo AllocInfo,
-              InsertPosition InsertBefore = nullptr);
+                       InsertPosition InsertBefore = nullptr);
 
 private:
   /// Create a copy of this instruction.

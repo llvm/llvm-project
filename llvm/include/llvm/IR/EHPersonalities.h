@@ -9,9 +9,9 @@
 #ifndef LLVM_IR_EHPERSONALITIES_H
 #define LLVM_IR_EHPERSONALITIES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class BasicBlock;

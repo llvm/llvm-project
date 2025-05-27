@@ -13,7 +13,6 @@
 #ifndef LLVM_IR_BASICBLOCK_H
 #define LLVM_IR_BASICBLOCK_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/Types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
@@ -25,6 +24,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -138,7 +138,8 @@ public:
   LLVM_ABI void insertDbgRecordAfter(DbgRecord *DR, Instruction *I);
 
   /// Insert a DbgRecord into a block at the position given by \p Here.
-  LLVM_ABI void insertDbgRecordBefore(DbgRecord *DR, InstListType::iterator Here);
+  LLVM_ABI void insertDbgRecordBefore(DbgRecord *DR,
+                                      InstListType::iterator Here);
 
   /// Eject any debug-info trailing at the end of a block. DbgRecords can
   /// transiently be located "off the end" of a block if the blocks terminator
@@ -151,8 +152,9 @@ public:
   /// happens in RemoveDIs debug-info mode, some special patching-up needs to
   /// occur: inserting into the middle of a sequence of dbg.value intrinsics
   /// does not have an equivalent with DbgRecords.
-  LLVM_ABI void reinsertInstInDbgRecords(Instruction *I,
-                                std::optional<DbgRecord::self_iterator> Pos);
+  LLVM_ABI void
+  reinsertInstInDbgRecords(Instruction *I,
+                           std::optional<DbgRecord::self_iterator> Pos);
 
 private:
   void setParent(Function *parent);
@@ -163,8 +165,8 @@ private:
   /// inserted at either the end of the function (if InsertBefore is null), or
   /// before the specified basic block.
   LLVM_ABI explicit BasicBlock(LLVMContext &C, const Twine &Name = "",
-                      Function *Parent = nullptr,
-                      BasicBlock *InsertBefore = nullptr);
+                               Function *Parent = nullptr,
+                               BasicBlock *InsertBefore = nullptr);
 
 public:
   BasicBlock(const BasicBlock &) = delete;
@@ -236,8 +238,8 @@ public:
   /// Requires the basic block to have a parent module.
   LLVM_ABI const DataLayout &getDataLayout() const;
 
-  /// Returns the terminator instruction if the block is well formed or null
-  /// if the block is not well formed.
+  /// Returns the terminator instruction if the block is well formed or
+  /// null if the block is not well formed.
   const Instruction *getTerminator() const LLVM_READONLY {
     if (InstList.empty() || !InstList.back().isTerminator())
       return nullptr;
@@ -285,11 +287,11 @@ public:
   ///
   /// Deprecated in favour of getFirstNonPHIIt, which returns an iterator that
   /// preserves some debugging information.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions", "getFirstNonPHIIt")
-  const Instruction *getFirstNonPHI() const;
+  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
+                           "getFirstNonPHIIt") const
+      Instruction *getFirstNonPHI() const;
   LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions instead",
-                  "getFirstNonPHIIt")
-  Instruction *getFirstNonPHI();
+                           "getFirstNonPHIIt") Instruction *getFirstNonPHI();
 
   /// Returns an iterator to the first instruction in this block that is not a
   /// PHINode instruction.
@@ -363,7 +365,8 @@ public:
   /// Return a const iterator range over the instructions in the block, skipping
   /// any debug instructions. Skip any pseudo operations as well if \c
   /// SkipPseudoOp is true.
-  LLVM_ABI iterator_range<filter_iterator<BasicBlock::const_iterator,
+  LLVM_ABI
+  iterator_range<filter_iterator<BasicBlock::const_iterator,
                                  std::function<bool(const Instruction &)>>>
   instructionsWithoutDebug(bool SkipPseudoOp = true) const;
 
@@ -375,7 +378,8 @@ public:
   instructionsWithoutDebug(bool SkipPseudoOp = true);
 
   /// Return the size of the basic block ignoring debug instructions
-  LLVM_ABI filter_iterator<BasicBlock::const_iterator,
+  LLVM_ABI
+  filter_iterator<BasicBlock::const_iterator,
                   std::function<bool(const Instruction &)>>::difference_type
   sizeWithoutDebug() const;
 
@@ -404,7 +408,8 @@ public:
   /// provided, inserts before that basic block, otherwise inserts at the end.
   ///
   /// \pre \a getParent() is \c nullptr.
-  LLVM_ABI void insertInto(Function *Parent, BasicBlock *InsertBefore = nullptr);
+  LLVM_ABI void insertInto(Function *Parent,
+                           BasicBlock *InsertBefore = nullptr);
 
   /// Return the predecessor of this block if it has a single predecessor
   /// block. Otherwise return a null pointer.
@@ -455,8 +460,8 @@ public:
   /// Print the basic block to an output stream with an optional
   /// AssemblyAnnotationWriter.
   LLVM_ABI void print(raw_ostream &OS, AssemblyAnnotationWriter *AAW = nullptr,
-             bool ShouldPreserveUseListOrder = false,
-             bool IsForDebug = false) const;
+                      bool ShouldPreserveUseListOrder = false,
+                      bool IsForDebug = false) const;
 
   //===--------------------------------------------------------------------===//
   /// Instruction iterator methods
@@ -610,7 +615,8 @@ public:
   /// If \p KeepOneInputPHIs is true then don't remove PHIs that are left with
   /// zero or one incoming values, and don't simplify PHIs with all incoming
   /// values the same.
-  LLVM_ABI void removePredecessor(BasicBlock *Pred, bool KeepOneInputPHIs = false);
+  LLVM_ABI void removePredecessor(BasicBlock *Pred,
+                                  bool KeepOneInputPHIs = false);
 
   LLVM_ABI bool canSplitPredecessors() const;
 
@@ -633,7 +639,7 @@ public:
   /// Also note that this doesn't preserve any passes. To split blocks while
   /// keeping loop information consistent, use the SplitBlock utility function.
   LLVM_ABI BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "",
-                              bool Before = false);
+                                       bool Before = false);
   BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "",
                               bool Before = false) {
     return splitBasicBlock(I->getIterator(), BBName, Before);
@@ -656,7 +662,8 @@ public:
   /// Also note that this doesn't preserve any passes. To split blocks while
   /// keeping loop information consistent, use the SplitBlockBefore utility
   /// function.
-  LLVM_ABI BasicBlock *splitBasicBlockBefore(iterator I, const Twine &BBName = "");
+  LLVM_ABI BasicBlock *splitBasicBlockBefore(iterator I,
+                                             const Twine &BBName = "");
   BasicBlock *splitBasicBlockBefore(Instruction *I, const Twine &BBName = "") {
     return splitBasicBlockBefore(I->getIterator(), BBName);
   }
@@ -680,12 +687,13 @@ public:
   /// Transfer a range of instructions that belong to \p FromBB from \p
   /// FromBeginIt to \p FromEndIt, to this basic block at \p ToIt.
   LLVM_ABI void splice(BasicBlock::iterator ToIt, BasicBlock *FromBB,
-              BasicBlock::iterator FromBeginIt, BasicBlock::iterator FromEndIt);
+                       BasicBlock::iterator FromBeginIt,
+                       BasicBlock::iterator FromEndIt);
 
   /// Erases a range of instructions from \p FromIt to (not including) \p ToIt.
   /// \Returns \p ToIt.
   LLVM_ABI BasicBlock::iterator erase(BasicBlock::iterator FromIt,
-                             BasicBlock::iterator ToIt);
+                                      BasicBlock::iterator ToIt);
 
   /// Returns true if there are any uses of this basic block other than
   /// direct branches, switches, etc. to it.

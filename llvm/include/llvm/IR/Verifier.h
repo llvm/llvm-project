@@ -20,9 +20,9 @@
 #ifndef LLVM_IR_VERIFIER_H
 #define LLVM_IR_VERIFIER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
@@ -99,7 +99,7 @@ LLVM_ABI bool verifyFunction(const Function &F, raw_ostream *OS = nullptr);
 /// error and instead *BrokenDebugInfo will be set to true. Debug
 /// info errors can be "recovered" from by stripping the debug info.
 LLVM_ABI bool verifyModule(const Module &M, raw_ostream *OS = nullptr,
-                  bool *BrokenDebugInfo = nullptr);
+                           bool *BrokenDebugInfo = nullptr);
 
 LLVM_ABI FunctionPass *createVerifierPass(bool FatalErrors = true);
 

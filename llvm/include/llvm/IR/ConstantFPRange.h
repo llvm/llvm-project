@@ -23,9 +23,9 @@
 #ifndef LLVM_IR_CONSTANTFPRANGE_H
 #define LLVM_IR_CONSTANTFPRANGE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -63,7 +63,7 @@ public:
   /// Note: If \p LowerVal is greater than \p UpperVal, please use the canonical
   /// form [Inf, -Inf].
   LLVM_ABI ConstantFPRange(APFloat LowerVal, APFloat UpperVal, bool MayBeQNaN,
-                  bool MayBeSNaN);
+                           bool MayBeSNaN);
 
   /// Create empty constant range with the given semantics.
   static ConstantFPRange getEmpty(const fltSemantics &Sem) {
@@ -94,8 +94,8 @@ public:
   }
 
   /// Create a range which only contains NaNs.
-  LLVM_ABI static ConstantFPRange getNaNOnly(const fltSemantics &Sem, bool MayBeQNaN,
-                                    bool MayBeSNaN);
+  LLVM_ABI static ConstantFPRange getNaNOnly(const fltSemantics &Sem,
+                                             bool MayBeQNaN, bool MayBeSNaN);
 
   /// Produce the smallest range such that all values that may satisfy the given
   /// predicate with any value contained within Other is contained in the
@@ -105,8 +105,8 @@ public:
   /// a proper superset of the above.
   ///
   /// Example: Pred = ole and Other = float [2, 5] returns Result = [-inf, 5]
-  LLVM_ABI static ConstantFPRange makeAllowedFCmpRegion(FCmpInst::Predicate Pred,
-                                               const ConstantFPRange &Other);
+  LLVM_ABI static ConstantFPRange
+  makeAllowedFCmpRegion(FCmpInst::Predicate Pred, const ConstantFPRange &Other);
 
   /// Produce the largest range such that all values in the returned range
   /// satisfy the given predicate with all values contained within Other.
@@ -116,8 +116,9 @@ public:
   /// will be a proper subset of the above.
   ///
   /// Example: Pred = ole and Other = float [2, 5] returns [-inf, 2]
-  LLVM_ABI static ConstantFPRange makeSatisfyingFCmpRegion(FCmpInst::Predicate Pred,
-                                                  const ConstantFPRange &Other);
+  LLVM_ABI static ConstantFPRange
+  makeSatisfyingFCmpRegion(FCmpInst::Predicate Pred,
+                           const ConstantFPRange &Other);
 
   /// Produce the exact range such that all values in the returned range satisfy
   /// the given predicate with any value contained within Other. Formally, this
@@ -131,7 +132,8 @@ public:
 
   /// Does the predicate \p Pred hold between ranges this and \p Other?
   /// NOTE: false does not mean that inverse predicate holds!
-  LLVM_ABI bool fcmp(FCmpInst::Predicate Pred, const ConstantFPRange &Other) const;
+  LLVM_ABI bool fcmp(FCmpInst::Predicate Pred,
+                     const ConstantFPRange &Other) const;
 
   /// Return the lower value for this range.
   const APFloat &getLower() const { return Lower; }

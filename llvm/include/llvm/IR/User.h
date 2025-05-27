@@ -106,13 +106,15 @@ protected:
   /// Allocate a User with the operands co-allocated.
   ///
   /// This is used for subclasses which have a fixed number of operands.
-  LLVM_ABI void *operator new(size_t Size, IntrusiveOperandsAllocMarker allocTrait);
+  LLVM_ABI void *operator new(size_t Size,
+                              IntrusiveOperandsAllocMarker allocTrait);
 
   /// Allocate a User with the operands co-allocated.  If DescBytes is non-zero
   /// then allocate an additional DescBytes bytes before the operands. These
   /// bytes can be accessed by calling getDescriptor.
-  LLVM_ABI void *operator new(size_t Size,
-                     IntrusiveOperandsAndDescriptorAllocMarker allocTrait);
+  LLVM_ABI void *
+  operator new(size_t Size,
+               IntrusiveOperandsAndDescriptorAllocMarker allocTrait);
 
   User(Type *ty, unsigned vty, AllocInfo AllocInfo) : Value(ty, vty) {
     assert(AllocInfo.NumOps < (1u << NumUserOperandsBits) &&

@@ -27,14 +27,14 @@ class Pass;
 
 /// Create and return a pass that writes the module to the specified
 /// \c raw_ostream.
-LLVM_ABI ModulePass *createPrintModulePass(raw_ostream &OS,
-                                  const std::string &Banner = "",
-                                  bool ShouldPreserveUseListOrder = false);
+LLVM_ABI ModulePass *
+createPrintModulePass(raw_ostream &OS, const std::string &Banner = "",
+                      bool ShouldPreserveUseListOrder = false);
 
 /// Create and return a pass that prints functions to the specified
 /// \c raw_ostream as they are processed.
 LLVM_ABI FunctionPass *createPrintFunctionPass(raw_ostream &OS,
-                                      const std::string &Banner = "");
+                                               const std::string &Banner = "");
 
 /// Print out a name of an LLVM value without any prefixes.
 ///

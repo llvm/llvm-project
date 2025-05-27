@@ -15,10 +15,10 @@
 #ifndef LLVM_IR_COMDAT_H
 #define LLVM_IR_COMDAT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/Types.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

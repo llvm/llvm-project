@@ -14,11 +14,11 @@
 #ifndef LLVM_IR_GLOBALALIAS_H
 #define LLVM_IR_GLOBALALIAS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -41,22 +41,22 @@ public:
   /// If a parent module is specified, the alias is automatically inserted into
   /// the end of the specified module's alias list.
   LLVM_ABI static GlobalAlias *create(Type *Ty, unsigned AddressSpace,
-                             LinkageTypes Linkage, const Twine &Name,
-                             Constant *Aliasee, Module *Parent);
+                                      LinkageTypes Linkage, const Twine &Name,
+                                      Constant *Aliasee, Module *Parent);
 
   // Without the Aliasee.
   LLVM_ABI static GlobalAlias *create(Type *Ty, unsigned AddressSpace,
-                             LinkageTypes Linkage, const Twine &Name,
-                             Module *Parent);
+                                      LinkageTypes Linkage, const Twine &Name,
+                                      Module *Parent);
 
   // The module is taken from the Aliasee.
   LLVM_ABI static GlobalAlias *create(Type *Ty, unsigned AddressSpace,
-                             LinkageTypes Linkage, const Twine &Name,
-                             GlobalValue *Aliasee);
+                                      LinkageTypes Linkage, const Twine &Name,
+                                      GlobalValue *Aliasee);
 
   // Type, Parent and AddressSpace taken from the Aliasee.
   LLVM_ABI static GlobalAlias *create(LinkageTypes Linkage, const Twine &Name,
-                             GlobalValue *Aliasee);
+                                      GlobalValue *Aliasee);
 
   // Linkage, Type, Parent and AddressSpace taken from the Aliasee.
   LLVM_ABI static GlobalAlias *create(const Twine &Name, GlobalValue *Aliasee);

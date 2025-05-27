@@ -15,10 +15,10 @@
 #ifndef LLVM_IR_ASSUMPTIONS_H
 #define LLVM_IR_ASSUMPTIONS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -51,12 +51,12 @@ private:
 
 /// Return true if \p F has the assumption \p AssumptionStr attached.
 LLVM_ABI bool hasAssumption(const Function &F,
-                   const KnownAssumptionString &AssumptionStr);
+                            const KnownAssumptionString &AssumptionStr);
 
 /// Return true if \p CB or the callee has the assumption \p AssumptionStr
 /// attached.
 LLVM_ABI bool hasAssumption(const CallBase &CB,
-                   const KnownAssumptionString &AssumptionStr);
+                            const KnownAssumptionString &AssumptionStr);
 
 /// Return the set of all assumptions for the function \p F.
 LLVM_ABI DenseSet<StringRef> getAssumptions(const Function &F);
@@ -65,10 +65,12 @@ LLVM_ABI DenseSet<StringRef> getAssumptions(const Function &F);
 LLVM_ABI DenseSet<StringRef> getAssumptions(const CallBase &CB);
 
 /// Appends the set of assumptions \p Assumptions to \F.
-LLVM_ABI bool addAssumptions(Function &F, const DenseSet<StringRef> &Assumptions);
+LLVM_ABI bool addAssumptions(Function &F,
+                             const DenseSet<StringRef> &Assumptions);
 
 /// Appends the set of assumptions \p Assumptions to \CB.
-LLVM_ABI bool addAssumptions(CallBase &CB, const DenseSet<StringRef> &Assumptions);
+LLVM_ABI bool addAssumptions(CallBase &CB,
+                             const DenseSet<StringRef> &Assumptions);
 
 } // namespace llvm
 
