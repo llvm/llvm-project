@@ -107,14 +107,6 @@ void addBranchConditionTester(AnalysisASTConsumer &AnalysisConsumer,
   });
 }
 
-/// Add this to the \c runChecker template arguments to enable dumping the CFG
-/// and the ExplodedGraph for debugging a failing test case.
-[[maybe_unused]] void dumpCFGAndEgraph(AnalysisASTConsumer &AnalysisConsumer,
-                                       AnalyzerOptions &AnOpts) {
-  AnOpts.CheckersAndPackages.emplace_back("debug.DumpCFG", true);
-  AnOpts.CheckersAndPackages.emplace_back("debug.ViewExplodedGraph", true);
-}
-
 llvm::SmallVector<StringRef> parseEachDiag(StringRef Diags) {
   llvm::SmallVector<StringRef> Fragments;
   llvm::SplitString(Diags, Fragments, "\n");
@@ -137,6 +129,19 @@ bool runChecker(const std::string &Code, std::string &Diags) {
   return Res;
 }
 
+[[maybe_unused]] void dumpCFGAndEgraph(AnalysisASTConsumer &AnalysisConsumer,
+                                       AnalyzerOptions &AnOpts) {
+  AnOpts.CheckersAndPackages.emplace_back("debug.DumpCFG", true);
+  AnOpts.CheckersAndPackages.emplace_back("debug.ViewExplodedGraph", true);
+}
+
+/// Use this instead of \c runChecker to enable the debugging a test case.
+template <AddCheckerFn... Fns>
+[[maybe_unused]] bool debugChecker(const std::string &Code,
+                                   std::string &Diags) {
+  return runChecker<dumpCFGAndEgraph, Fns...>(Code, Diags);
+}
+
 std::string expected(SmallVector<StringRef> Diags) {
   llvm::sort(Diags);
   std::string Result;
@@ -152,6 +157,7 @@ TEST(BlockEntranceTester, FromEntryToExit) {
   })cpp";
 
   std::string Diags;
+  // Use "debugChecker" instead of "runChecker" for debugging.
   EXPECT_TRUE(runChecker(Code, Diags));
   EXPECT_EQ(expected({"Within 'top' B1 -> B0"}), Diags);
 }
@@ -170,6 +176,7 @@ TEST(BlockEntranceTester, SingleOpaqueIfCondition) {
   })cpp";
 
   std::string Diags;
+  // Use "debugChecker" instead of "runChecker" for debugging.
   EXPECT_TRUE(runChecker(Code, Diags));
   EXPECT_EQ(expected({
                 "Within 'top' B1 -> B0",
@@ -203,6 +210,7 @@ TEST(BlockEntranceTester, TrivialIfCondition) {
   })cpp";
 
   std::string Diags;
+  // Use "debugChecker" instead of "runChecker" for debugging.
   EXPECT_TRUE(runChecker(Code, Diags));
   EXPECT_EQ(expected({
                 "Within 'top' B1 -> B0",
@@ -227,6 +235,7 @@ TEST(BlockEntranceTester, AcrossFunctions) {
   })cpp";
 
   std::string Diags;
+  // Use "debugChecker" instead of "runChecker" for debugging.
   EXPECT_TRUE(runChecker(Code, Diags));
   EXPECT_EQ(
       expected({
@@ -273,6 +282,7 @@ TEST(BlockEntranceTester, ShortCircuitingLogicalOperator) {
   //                            (v = x): false
 
   std::string Diags;
+  // Use "debugChecker" instead of "runChecker" for debugging.
   EXPECT_TRUE(runChecker(Code, Diags));
   EXPECT_EQ(expected({
                 "Within 'top' B1 -> B0",
@@ -313,6 +323,7 @@ TEST(BlockEntranceTester, Switch) {
   //            +----+
 
   std::string Diags;
+  // Use "debugChecker" instead of "runChecker" for debugging.
   EXPECT_TRUE(runChecker(Code, Diags));
   EXPECT_EQ(expected({
                 "Within 'top' B1 -> B0",
@@ -341,6 +352,7 @@ TEST(BlockEntranceTester, BlockEntranceVSBranchCondition) {
     return v;
   })cpp";
   std::string Diags;
+  // Use "debugChecker" instead of "runChecker" for debugging.
   EXPECT_TRUE((runChecker<addBlockEntranceTester, addBranchConditionTester>(
       Code, Diags)));
   EXPECT_EQ(expected({
