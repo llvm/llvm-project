@@ -234,6 +234,7 @@ def S8I  : Store_II8<0x04, "s8i", truncstorei8, addr_ish1, mem8>;
 def S16I : Store_II8<0x05, "s16i", truncstorei16, addr_ish2, mem16>;
 def S32I : Store_II8<0x06, "s32i", store, addr_ish4, mem32>;
 
+let AddedComplexity = 10 in
 def L32R : RI16_Inst<0x01, (outs AR:$t), (ins L32Rtarget:$label),
                     "l32r\t$t, $label", [(set AR:$t, (load (Xtensa_pcrel_wrapper tconstpool:$label)))]> {
   bits<16> label;
@@ -1318,6 +1319,7 @@ def WFR : RRR_Inst<0x00, 0x0A, 0x0f, (outs FPR:$r), (ins AR:$s),
   let t = 0x05;
 }
 
+let AddedComplexity = 10 in
 def : Pat<(f32 (load (Xtensa_pcrel_wrapper tconstpool:$in))),
           (WFR (L32R tconstpool:$in))>;
 
