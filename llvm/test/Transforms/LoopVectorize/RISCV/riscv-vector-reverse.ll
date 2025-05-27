@@ -62,7 +62,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
-; CHECK-NEXT:  Successor(s): vector.ph
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + vp<[[VEC_TC]]> * ir<-1>
@@ -94,6 +94,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
 ; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
@@ -103,9 +106,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
@@ -310,7 +310,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
-; CHECK-NEXT:  Successor(s): vector.ph
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + vp<[[VEC_TC]]> * ir<-1>
@@ -342,6 +342,9 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
 ; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
@@ -351,9 +354,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
