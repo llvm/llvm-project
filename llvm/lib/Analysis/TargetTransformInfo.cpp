@@ -1085,7 +1085,7 @@ InstructionCost TargetTransformInfo::getCmpSelInstrCost(
 
 InstructionCost TargetTransformInfo::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Op0, Value *Op1) const {
+    const Value *Op0, const Value *Op1) const {
   assert((Opcode == Instruction::InsertElement ||
           Opcode == Instruction::ExtractElement) &&
          "Expecting Opcode to be insertelement/extractelement.");
@@ -1395,9 +1395,8 @@ bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
   return TTIImpl->preferAlternateOpcodeVectorization();
 }
 
-bool TargetTransformInfo::preferPredicatedReductionSelect(unsigned Opcode,
-                                                          Type *Ty) const {
-  return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty);
+bool TargetTransformInfo::preferPredicatedReductionSelect() const {
+  return TTIImpl->preferPredicatedReductionSelect();
 }
 
 bool TargetTransformInfo::preferEpilogueVectorization() const {

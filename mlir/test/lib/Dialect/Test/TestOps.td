@@ -13,6 +13,7 @@ include "TestDialect.td"
 include "TestInterfaces.td"
 include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
+include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -243,16 +244,6 @@ def FloatElementsAttrOp : TEST_Op<"float_elements_attr"> {
   );
 }
 
-def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
-  let arguments = (ins NestedPolynomialAttr:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
-def ContainingIntPolynomialAttr2Op : TEST_Op<"containing_int_polynomial_attr2"> {
-  let arguments = (ins NestedPolynomialAttr2:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -332,6 +323,10 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
    `i32attr` `=` $i32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
    `f64attr` `=` $f64attr `emptyattr` `=` $emptyattr attr-dict
   }];
+}
+
+def SlashAttrOp : TEST_Op<"slash_attr"> {
+  let arguments = (ins SlashAttr:$attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1850,6 +1845,20 @@ def : Pat<
   (MixedVOperandOp5 $input2a, $input2b, $input1b, $attr1,
                     ConstantStrAttr<StrAttr, "MatchMultiVariadicSubSymbol">)>;
 
+def MixedVOperandOp7 : TEST_Op<"mixed_variadic_optional_in7",
+                               [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<I32>:$input1,
+    Optional<I32>:$input2,
+    I32Attr:$attr1
+  );
+}
+
+def : Pat<
+  (MixedVOperandOp7 $input1, $input2, ConstantAttr<I32Attr, "2">:$attr1),
+  (MixedVOperandOp6 $input1, (variadic $input2), $attr1),
+  [(Constraint<CPred<"$0 != Value()">> $input2)]>;
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (either)
 //===----------------------------------------------------------------------===//
@@ -1864,6 +1873,11 @@ def TestEitherOpB : TEST_Op<"either_op_b"> {
   let results = (outs I32:$output);
 }
 
+def TestEitherOpC : TEST_Op<"either_op_c"> {
+  let arguments = (ins AnyI32Attr:$attr, AnyInteger:$arg0, AnyInteger:$arg1);
+  let results = (outs I32:$output);
+}
+
 def : Pat<(TestEitherOpA (either I32:$arg1, I16:$arg2), $x),
           (TestEitherOpB $arg2, $x)>;
 
@@ -1874,6 +1888,9 @@ def : Pat<(TestEitherOpA (either (TestEitherOpB I32:$arg1, $_),
                                  (TestEitherOpB I16:$arg2, $_)),
                           $x),
           (TestEitherOpB $arg2, $x)>;
+
+def : Pat<(TestEitherOpC ConstantAttr<I32Attr, "0">, (either $arg1, I32:$arg2)),
+          (TestEitherOpB $arg1, $arg2)>;
 
 def TestEitherHelperOpA : TEST_Op<"either_helper_op_a"> {
   let arguments = (ins I32:$arg0);
@@ -2793,6 +2810,28 @@ def TestLinalgFillOp :
 }
 
 //===----------------------------------------------------------------------===//
+// Test NVVM RequiresSM trait.
+//===----------------------------------------------------------------------===//
+
+def TestNVVMRequiresSMOp :
+    TEST_Op<"nvvm_requires_sm_80", [NVVMRequiresSM<80>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMArchCondOp :
+    TEST_Op<"nvvm_requires_sm_90a", [NVVMRequiresSMa<[90]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequirestSMArchCondMultiOp : 
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // Test Ops with Default-Valued String Attributes
 //===----------------------------------------------------------------------===//
 
@@ -3155,6 +3194,20 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins
     MyStructProperty:$prop
+  );
+}
+
+// Same as above, but without a custom `hashProperty` field, checking
+// that ADL is correctly working.
+def MyStructProperty2 : Property<"MyPropStruct"> {
+  let convertToAttribute = "return $_storage.asAttribute($_ctxt);";
+  let convertFromAttribute = "return MyPropStruct::setFromAttr($_storage, $_attr, $_diag);";
+}
+
+def TestOpWithWrappedProperties2 : TEST_Op<"with_wrapped_properties2"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins
+    MyStructProperty2:$prop
   );
 }
 

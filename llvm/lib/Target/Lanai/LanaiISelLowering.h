@@ -20,47 +20,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
-namespace LanaiISD {
-enum {
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-
-  ADJDYNALLOC,
-
-  // Return with a glue operand. Operand 0 is the chain operand.
-  RET_GLUE,
-
-  // CALL - These operations represent an abstract call instruction, which
-  // includes a bunch of information.
-  CALL,
-
-  // SELECT_CC - Operand 0 and operand 1 are selection variable, operand 3
-  // is condition code and operand 4 is flag operand.
-  SELECT_CC,
-
-  // SETCC - Store the conditional code to a register.
-  SETCC,
-
-  // SET_FLAG - Set flag compare.
-  SET_FLAG,
-
-  // SUBBF - Subtract with borrow that sets flags.
-  SUBBF,
-
-  // BR_CC - Used to glue together a conditional branch and comparison
-  BR_CC,
-
-  // Wrapper - A wrapper node for TargetConstantPool, TargetExternalSymbol,
-  // and TargetGlobalAddress.
-  Wrapper,
-
-  // Get the Higher/Lower 16 bits from a 32-bit immediate.
-  HI,
-  LO,
-
-  // Small 21-bit immediate in global memory.
-  SMALL
-};
-} // namespace LanaiISD
 
 class LanaiSubtarget;
 
@@ -70,10 +29,6 @@ public:
 
   // LowerOperation - Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
-
-  // getTargetNodeName - This method returns the name of a target specific
-  // DAG node.
-  const char *getTargetNodeName(unsigned Opcode) const override;
 
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;

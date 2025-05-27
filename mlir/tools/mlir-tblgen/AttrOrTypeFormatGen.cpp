@@ -583,7 +583,7 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
   for (FormatElement *arg : el->getElements()) {
     ParameterElement *param = getEncapsulatedParameterElement(arg);
     os.getStream().printReindented(strfmt(checkParamKey, param->getName()));
-    if (auto realParam = dyn_cast<ParameterElement>(arg))
+    if (isa<ParameterElement>(arg))
       genVariableParser(param, ctx, os.indent());
     else if (auto custom = dyn_cast<CustomDirective>(arg))
       genCustomParser(custom, ctx, os.indent());

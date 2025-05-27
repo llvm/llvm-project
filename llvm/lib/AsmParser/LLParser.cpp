@@ -5321,20 +5321,22 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
 
 /// parseDILocationFields:
 ///   ::= !DILocation(line: 43, column: 8, scope: !5, inlinedAt: !6,
-///   isImplicitCode: true)
+///   isImplicitCode: true, atomGroup: 1, atomRank: 1)
 bool LLParser::parseDILocation(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(column, ColumnField, );                                             \
   REQUIRED(scope, MDField, (/* AllowNull */ false));                           \
   OPTIONAL(inlinedAt, MDField, );                                              \
-  OPTIONAL(isImplicitCode, MDBoolField, (false));
+  OPTIONAL(isImplicitCode, MDBoolField, (false));                              \
+  OPTIONAL(atomGroup, MDUnsignedField, (0, UINT64_MAX));                       \
+  OPTIONAL(atomRank, MDUnsignedField, (0, UINT8_MAX));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result =
-      GET_OR_DISTINCT(DILocation, (Context, line.Val, column.Val, scope.Val,
-                                   inlinedAt.Val, isImplicitCode.Val));
+  Result = GET_OR_DISTINCT(
+      DILocation, (Context, line.Val, column.Val, scope.Val, inlinedAt.Val,
+                   isImplicitCode.Val, atomGroup.Val, atomRank.Val));
   return false;
 }
 
@@ -7466,8 +7468,8 @@ bool LLParser::parseSwitch(Instruction *&Inst, PerFunctionState &PFS) {
   Lex.Lex();  // Eat the ']'.
 
   SwitchInst *SI = SwitchInst::Create(Cond, DefaultBB, Table.size());
-  for (unsigned i = 0, e = Table.size(); i != e; ++i)
-    SI->addCase(Table[i].first, Table[i].second);
+  for (const auto &[OnVal, Dest] : Table)
+    SI->addCase(OnVal, Dest);
   Inst = SI;
   return false;
 }
@@ -8162,8 +8164,8 @@ int LLParser::parsePHI(Instruction *&Inst, PerFunctionState &PFS) {
   }
 
   PHINode *PN = PHINode::Create(Ty, PHIVals.size());
-  for (unsigned i = 0, e = PHIVals.size(); i != e; ++i)
-    PN->addIncoming(PHIVals[i].first, PHIVals[i].second);
+  for (const auto &[Val, BB] : PHIVals)
+    PN->addIncoming(Val, BB);
   Inst = PN;
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
@@ -8867,6 +8869,8 @@ bool LLParser::parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts) {
 //===----------------------------------------------------------------------===//
 bool LLParser::sortUseListOrder(Value *V, ArrayRef<unsigned> Indexes,
                                 SMLoc Loc) {
+  if (!V->hasUseList())
+    return false;
   if (V->use_empty())
     return error(Loc, "value has no uses");
 
@@ -10777,12 +10781,15 @@ bool LLParser::parseMemProfs(std::vector<MIBInfo> &MIBs) {
       return true;
 
     SmallVector<unsigned> StackIdIndices;
-    do {
-      uint64_t StackId = 0;
-      if (parseUInt64(StackId))
-        return true;
-      StackIdIndices.push_back(Index->addOrGetStackIdIndex(StackId));
-    } while (EatIfPresent(lltok::comma));
+    // Combined index alloc records may not have a stack id list.
+    if (Lex.getKind() != lltok::rparen) {
+      do {
+        uint64_t StackId = 0;
+        if (parseUInt64(StackId))
+          return true;
+        StackIdIndices.push_back(Index->addOrGetStackIdIndex(StackId));
+      } while (EatIfPresent(lltok::comma));
+    }
 
     if (parseToken(lltok::rparen, "expected ')' in stackIds"))
       return true;

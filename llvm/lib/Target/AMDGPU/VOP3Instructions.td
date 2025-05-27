@@ -593,6 +593,7 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasExtVOP3DPP = 1;
   let HasOpSel = 1;
   let HasFP8DstByteSel = 1;
+  let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
   let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
                             getAsmVOP3OpSel<3, HasClamp, HasOMod,
                                             HasSrc0FloatMods, HasSrc1FloatMods,
@@ -605,19 +606,8 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
 
 class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT> :
   VOP3_Profile<VOPProfile<[i32, SrcVT, i32, untyped]>> {
-  let IsFP8DstByteSel = 1;
   let HasFP8DstByteSel = 1;
   let HasClamp = 0;
-  defvar bytesel = (ins VGPR_32:$vdst_in, ByteSel:$byte_sel);
-  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                            HasClamp, HasModifiers, HasSrc2Mods,
-                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   bytesel);
-  let InsVOP3Base = !con(
-    getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
-                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
-                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel>.ret,
-    bytesel);
 }
 
 def IsPow2Plus1: PatLeaf<(i32 imm), [{
@@ -1049,7 +1039,7 @@ class VOP3_CVT_SCALE_SR_PK_F4_F32_TiedInput_Profile<VOPProfile P>
 
   let Src0RC64 = !if(!gt(P.Src0VT.Size, 32), getVOP3VRegSrcForVT<P.Src0VT>.ret,
                      getVOP3SrcForVT<P.Src0VT>.ret);
-  let InsVOP3OpSel = (ins PackedF32InputMods: $src0_modifiers, Src0RC64:$src0,
+  let InsVOP3OpSel = (ins PackedVGPRF32InputMods: $src0_modifiers, Src0RC64:$src0,
                           Int32InputMods:     $src1_modifiers, Src1RC64:$src1,
                           FP32InputMods:      $src2_modifiers, Src2RC64:$src2,
                           VGPR_32:$vdst_in,   op_sel0:$op_sel);

@@ -12714,6 +12714,13 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyGoogleFormat("SomeType* absl_nullable s{InitValue};");
   verifyGoogleFormat("SomeType* absl_nullability_unknown s(InitValue);");
   verifyGoogleFormat("SomeType* absl_nullability_unknown s{InitValue};");
+
+  auto Style = getLLVMStyleWithColumns(60);
+  Style.AttributeMacros.push_back("my_fancy_attr");
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("void foo(const MyLongTypeNameeeeeeeeeeeee* my_fancy_attr\n"
+               "             testttttttttt);",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
@@ -14259,6 +14266,8 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyNoCrash("struct Foo {\n"
                 "  operator foo(bar\n"
                 "};");
+  verifyNoCrash("decltype( {\n"
+                "  {");
 }
 
 TEST_F(FormatTest, IncorrectUnbalancedBracesInMacrosWithUnicode) {
@@ -15082,6 +15091,13 @@ TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
                "  int foo() { bar(); }\n"
                "#endif\n"
                "};",
+               MergeInlineOnly);
+
+  MergeInlineOnly.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  verifyFormat("#define Foo                \\\n"
+               "  struct S {               \\\n"
+               "    void foo() { return; } \\\n"
+               "  }",
                MergeInlineOnly);
 
   // Also verify behavior when BraceWrapping.AfterFunction = true
@@ -17287,6 +17303,12 @@ TEST_F(FormatTest, CalculatesOriginalColumn) {
                "  inttt qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\\\n"
                "wwww; /* some\n"
                "         comment */");
+}
+
+TEST_F(FormatTest, SpaceAfterOperatorKeyword) {
+  auto SpaceAfterOperatorKeyword = getLLVMStyle();
+  SpaceAfterOperatorKeyword.SpaceAfterOperatorKeyword = true;
+  verifyFormat("bool operator ++(int a);", SpaceAfterOperatorKeyword);
 }
 
 TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
@@ -28453,6 +28475,8 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("return ((... && std::is_convertible_v<TArgsLocal, TArgs>));",
                "return (((... && std::is_convertible_v<TArgsLocal, TArgs>)));",
                Style);
+  verifyFormat("MOCK_METHOD(void, Function, (), override);",
+               "MOCK_METHOD(void, Function, (), (override));", Style);
 
   Style.RemoveParentheses = FormatStyle::RPS_ReturnStatement;
   verifyFormat("#define Return0 return (0);", Style);

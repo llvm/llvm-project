@@ -946,8 +946,8 @@ bool llvm::computeUnrollCount(
   // case it's not permitted to also specify an explicit unroll count.
   if (PP.PeelCount) {
     if (UnrollCount.getNumOccurrences() > 0) {
-      report_fatal_error("Cannot specify both explicit peel count and "
-                         "explicit unroll count", /*GenCrashDiag=*/false);
+      reportFatalUsageError("Cannot specify both explicit peel count and "
+                            "explicit unroll count");
     }
     UP.Count = 1;
     UP.Runtime = false;
@@ -1014,7 +1014,7 @@ bool llvm::computeUnrollCount(
   }
 
   // 5th priority is loop peeling.
-  computePeelCount(L, LoopSize, PP, TripCount, DT, SE, AC, UP.Threshold);
+  computePeelCount(L, LoopSize, PP, TripCount, DT, SE, TTI, AC, UP.Threshold);
   if (PP.PeelCount) {
     UP.Runtime = false;
     UP.Count = 1;
@@ -1314,7 +1314,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     });
 
     ValueToValueMapTy VMap;
-    if (peelLoop(L, PP.PeelCount, LI, &SE, DT, &AC, PreserveLCSSA, VMap)) {
+    if (peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
+                 VMap)) {
       simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, nullptr);
       // If the loop was peeled, we already "used up" the profile information
       // we had, so we don't want to unroll or peel again.

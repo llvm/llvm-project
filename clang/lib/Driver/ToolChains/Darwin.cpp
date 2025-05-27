@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Darwin.h"
-#include "Arch/AArch64.h"
 #include "Arch/ARM.h"
 #include "CommonArgs.h"
 #include "clang/Basic/AlignedAllocation.h"
@@ -15,7 +14,6 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -23,7 +21,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -1411,8 +1408,8 @@ StringRef Darwin::getSDKName(StringRef isysroot) {
   auto EndSDK = llvm::sys::path::rend(isysroot);
   for (auto IT = BeginSDK; IT != EndSDK; ++IT) {
     StringRef SDK = *IT;
-    if (SDK.ends_with(".sdk"))
-        return SDK.slice(0, SDK.size() - 4);
+    if (SDK.consume_back(".sdk"))
+      return SDK;
   }
   return "";
 }
@@ -1627,7 +1624,7 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
           CmdArgs,
           llvm::memprof::getMemprofOptionsSymbolDarwinLinkageName().data());
 
-  const XRayArgs &XRay = getXRayArgs();
+  const XRayArgs &XRay = getXRayArgs(Args);
   if (XRay.needsXRayRt()) {
     AddLinkRuntimeLib(Args, CmdArgs, "xray");
     AddLinkRuntimeLib(Args, CmdArgs, "xray-basic");
@@ -2575,6 +2572,26 @@ void AppleMachO::AddClangSystemIncludeArgs(
     llvm::sys::path::append(P, "usr", "include");
     addExternCSystemInclude(DriverArgs, CC1Args, P.str());
   }
+}
+
+void DarwinClang::AddClangSystemIncludeArgs(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  AppleMachO::AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+
+  if (DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc))
+    return;
+
+  llvm::SmallString<128> Sysroot = GetEffectiveSysroot(DriverArgs);
+
+  // Add <sysroot>/System/Library/Frameworks
+  // Add <sysroot>/System/Library/SubFrameworks
+  // Add <sysroot>/Library/Frameworks
+  SmallString<128> P1(Sysroot), P2(Sysroot), P3(Sysroot);
+  llvm::sys::path::append(P1, "System", "Library", "Frameworks");
+  llvm::sys::path::append(P2, "System", "Library", "SubFrameworks");
+  llvm::sys::path::append(P3, "Library", "Frameworks");
+  addSystemFrameworkIncludes(DriverArgs, CC1Args, {P1, P2, P3});
 }
 
 bool DarwinClang::AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,

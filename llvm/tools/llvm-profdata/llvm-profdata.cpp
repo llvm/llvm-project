@@ -16,6 +16,7 @@
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
@@ -336,7 +337,8 @@ static cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     cl::desc("Specify the version of the memprof format to use"),
     cl::init(memprof::Version3),
     cl::values(clEnumValN(memprof::Version2, "2", "version 2"),
-               clEnumValN(memprof::Version3, "3", "version 3")));
+               clEnumValN(memprof::Version3, "3", "version 3"),
+               clEnumValN(memprof::Version4, "4", "version 4")));
 
 static cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
@@ -755,6 +757,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
     auto MemProfData = Reader->takeMemProfData();
 
+    auto DataAccessProfData = Reader->takeDataAccessProfData();
+
     // Check for the empty input in case the YAML file is invalid.
     if (MemProfData.Records.empty()) {
       WC->Errors.emplace_back(
@@ -763,6 +767,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     }
 
     WC->Writer.addMemProfData(std::move(MemProfData), MemProfError);
+    WC->Writer.addDataAccessProfData(std::move(DataAccessProfData));
     return;
   }
 
