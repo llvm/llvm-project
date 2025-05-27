@@ -115,7 +115,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
 
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(MatchedExpr)) {
     // Case: a[i]
-    auto LeftBracket = SourceRange(OCE->getCallee()->getBeginLoc(),
+    const auto LeftBracket = SourceRange(OCE->getCallee()->getBeginLoc(),
                                    OCE->getCallee()->getBeginLoc());
     const auto RightBracket =
         SourceRange(OCE->getOperatorLoc(), OCE->getOperatorLoc());
