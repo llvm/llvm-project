@@ -306,6 +306,8 @@ Error ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
   std::set<BinaryFunction *> NeedsValidation;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
+    if (Function.isIgnored())
+      continue;
     for (BinaryBasicBlock &BB : Function) {
       for (MCInst &Inst : BB) {
         if (getInternalCallTarget(Function, Inst)) {
