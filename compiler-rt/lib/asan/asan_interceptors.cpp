@@ -56,11 +56,11 @@ namespace __asan {
 #  define ASAN_READ_STRING(ctx, s, n) \
     ASAN_READ_STRING_OF_LEN((ctx), (s), internal_strlen(s), (n))
 
-static inline uptr internal_or_real_memcpy(void *new_mem, const char *s, uptr length) {
+static inline void internal_or_real_memcpy(void *new_mem, const char *s, uptr length) {
 #if SANITIZER_INTERCEPT_MEMCPY
-  return REAL(memcpy)(new_mem, s, length + 1);
+  REAL(memcpy)(new_mem, s, length + 1);
 #else
-  return internal_memcpy(new_mem, s, length + 1);
+  internal_memcpy(new_mem, s, length + 1);
 #endif
 }
 
