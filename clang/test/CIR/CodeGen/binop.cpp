@@ -556,93 +556,64 @@ void b1(bool a, bool b) {
 // CIR: [[AVAL:%[0-9]+]] = cir.load [[A]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: [[RES1:%[0-9]+]] = cir.ternary([[AVAL]], true {
 // CIR: [[BVAL:%[0-9]+]] = cir.load [[B]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR: [[INNER1:%[0-9]+]] = cir.ternary([[BVAL]], true {
-// CIR: {{%[0-9]+}} = cir.const #true
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
+// CIR: cir.yield [[BVAL]] : !cir.bool
 // CIR: }, false {
-// CIR: {{%[0-9]+}} = cir.const #false
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
-// CIR: }) : (!cir.bool) -> !cir.bool
-// CIR: cir.yield [[INNER1]] : !cir.bool
-// CIR: }, false {
-// CIR: {{%[0-9]+}} = cir.const #false
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
+// CIR: [[FALSE:%[0-9]+]] = cir.const #false
+// CIR: cir.yield [[FALSE]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
 // CIR: cir.store [[RES1]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: [[XVAL:%[0-9]+]] = cir.load [[X]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: [[RES2:%[0-9]+]] = cir.ternary([[XVAL]], true {
-// CIR: {{%[0-9]+}} = cir.const #true
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
+// CIR: [[TRUE:%[0-9]+]] = cir.const #true
+// CIR: cir.yield [[TRUE]] : !cir.bool
 // CIR: }, false {
 // CIR: [[BVAL2:%[0-9]+]] = cir.load [[B]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR: [[INNER2:%[0-9]+]] = cir.ternary([[BVAL2]], true {
-// CIR: {{%[0-9]+}} = cir.const #true
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
-// CIR: }, false {
-// CIR: {{%[0-9]+}} = cir.const #false
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
-// CIR: }) : (!cir.bool) -> !cir.bool
-// CIR: cir.yield [[INNER2]] : !cir.bool
+// CIR: cir.yield [[BVAL2]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
 // CIR: cir.store [[RES2]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: cir.return
 
 // LLVM-LABEL: define void @_Z2b1bb(
-// LLVM-SAME: i1 %[[ARG0:.*]], i1 %[[ARG1:.*]])
-// LLVM: %[[A_ADDR:.*]] = alloca i8
-// LLVM: %[[B_ADDR:.*]] = alloca i8
-// LLVM: %[[X:.*]] = alloca i8
+// LLVM-SAME: i1 %[[ARG0:[0-9]+]], i1 %[[ARG1:[0-9]+]])
+// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1
+// LLVM: %[[B_ADDR:.*]] = alloca i8, i64 1
+// LLVM: %[[X:.*]] = alloca i8, i64 1
 // LLVM: %[[ZEXT0:.*]] = zext i1 %[[ARG0]] to i8
 // LLVM: store i8 %[[ZEXT0]], ptr %[[A_ADDR]]
 // LLVM: %[[ZEXT1:.*]] = zext i1 %[[ARG1]] to i8
 // LLVM: store i8 %[[ZEXT1]], ptr %[[B_ADDR]]
 // LLVM: %[[A_VAL:.*]] = load i8, ptr %[[A_ADDR]]
 // LLVM: %[[A_BOOL:.*]] = trunc i8 %[[A_VAL]] to i1
-// LLVM: br i1 %[[A_BOOL]], label %[[AND_LHS_TRUE:.*]], label %[[AND_END:.*]]
-// LLVM: [[AND_LHS_TRUE]]:
+// LLVM: br i1 %[[A_BOOL]], label %[[AND_TRUE:[0-9]+]], label %[[AND_FALSE:[0-9]+]]
+// LLVM: [[AND_TRUE]]:
 // LLVM: %[[B_VAL:.*]] = load i8, ptr %[[B_ADDR]]
 // LLVM: %[[B_BOOL:.*]] = trunc i8 %[[B_VAL]] to i1
-// LLVM: br i1 %[[B_BOOL]], label %[[B_TRUE:.*]], label %[[B_FALSE:.*]]
-// LLVM: [[B_TRUE]]:
-// LLVM: br label %[[AND_RHS_END:.*]]
-// LLVM: [[B_FALSE]]:
-// LLVM: br label %[[AND_RHS_END]]
-// LLVM: [[AND_RHS_END]]:
-// LLVM: %[[RHS_PHI:.*]] = phi i1 [ false, %[[B_FALSE]] ], [ true, %[[B_TRUE]] ]
-// LLVM: br label %[[AND_DONE:.*]]
-// LLVM: [[AND_DONE]]:
-// LLVM: br label %[[MERGE_BB:.*]]
-// LLVM: [[AND_END]]:
-// LLVM: %[[AND_RESULT:.*]] = phi i1 [ false, %[[PRED1:.*]] ], [ %[[RHS_PHI]], %[[PRED2:.*]] ]
-// LLVM: br label %[[STORE_X:.*]]
-// LLVM: [[STORE_X]]:
-// LLVM: %[[ZEXT_AND:.*]] = zext i1 %[[AND_RESULT]] to i8
+// LLVM: br label %[[AND_MERGE:[0-9]+]]
+// LLVM: [[AND_FALSE]]:
+// LLVM: br label %[[AND_MERGE]]
+// LLVM: [[AND_MERGE]]:
+// LLVM: %[[AND_PHI:.*]] = phi i1 [ false, %[[AND_FALSE]] ], [ %[[B_BOOL]], %[[AND_TRUE]] ]
+// LLVM: br label %[[AND_CONT:[0-9]+]]
+// LLVM: [[AND_CONT]]:
+// LLVM: %[[ZEXT_AND:.*]] = zext i1 %[[AND_PHI]] to i8
 // LLVM: store i8 %[[ZEXT_AND]], ptr %[[X]]
 // LLVM: %[[X_VAL:.*]] = load i8, ptr %[[X]]
 // LLVM: %[[X_BOOL:.*]] = trunc i8 %[[X_VAL]] to i1
-// LLVM: br i1 %[[X_BOOL]], label %[[OR_TRUE:.*]], label %[[OR_RHS:.*]]
+// LLVM: br i1 %[[X_BOOL]], label %[[OR_TRUE:[0-9]+]], label %[[OR_FALSE:[0-9]+]]
 // LLVM: [[OR_TRUE]]:
-// LLVM: br label %[[OR_END:.*]]
-// LLVM: [[OR_RHS]]:
+// LLVM: br label %[[OR_MERGE:[0-9]+]]
+// LLVM: [[OR_FALSE]]:
 // LLVM: %[[B_VAL2:.*]] = load i8, ptr %[[B_ADDR]]
 // LLVM: %[[B_BOOL2:.*]] = trunc i8 %[[B_VAL2]] to i1
-// LLVM: br i1 %[[B_BOOL2]], label %[[B_TRUE2:.*]], label %[[B_FALSE2:.*]]
-// LLVM: [[B_TRUE2]]:
-// LLVM: br label %[[OR_RHS_END:.*]]
-// LLVM: [[B_FALSE2]]:
-// LLVM: br label %[[OR_RHS_END]]
-// LLVM: [[OR_RHS_END]]:
-// LLVM: %[[RHS_PHI2:.*]] = phi i1 [ false, %[[B_FALSE2]] ], [ true, %[[B_TRUE2]] ]
-// LLVM: br label %[[OR_RHS_DONE:.*]]
-// LLVM: [[OR_RHS_DONE]]:
-// LLVM: br label %[[OR_END]]
-// LLVM: [[OR_END]]:
-// LLVM: %[[OR_RESULT:.*]] = phi i1 [ %[[RHS_PHI2]], %[[OR_RHS_DONE]] ], [ true, %[[OR_TRUE]] ]
-// LLVM: br label %[[FINAL_STORE:.*]]
-// LLVM: [[FINAL_STORE]]:
-// LLVM: %[[ZEXT_OR:.*]] = zext i1 %[[OR_RESULT]] to i8
+// LLVM: br label %[[OR_MERGE]]
+// LLVM: [[OR_MERGE]]:
+// LLVM: %[[OR_PHI:.*]] = phi i1 [ %[[B_BOOL2]], %[[OR_FALSE]] ], [ true, %[[OR_TRUE]] ]
+// LLVM: br label %[[OR_CONT:[0-9]+]]
+// LLVM: [[OR_CONT]]:
+// LLVM: %[[ZEXT_OR:.*]] = zext i1 %[[OR_PHI]] to i8
 // LLVM: store i8 %[[ZEXT_OR]], ptr %[[X]]
 // LLVM: ret void
+
 
 
 void b3(int a, int b, int c, int d) {
@@ -668,48 +639,34 @@ void b3(int a, int b, int c, int d) {
 // CIR: [[CVAL1:%[0-9]+]] = cir.load [[C]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[DVAL1:%[0-9]+]] = cir.load [[D]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[CMP2:%[0-9]+]] = cir.cmp(eq, [[CVAL1]], [[DVAL1]]) : !s32i, !cir.bool
-// CIR: [[INNER1:%[0-9]+]] = cir.ternary([[CMP2]], true {
-// CIR: {{%[0-9]+}} = cir.const #true
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
+// CIR: cir.yield [[CMP2]] : !cir.bool
 // CIR: }, false {
-// CIR: {{%[0-9]+}} = cir.const #false
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
-// CIR: }) : (!cir.bool) -> !cir.bool
-// CIR: cir.yield [[INNER1]] : !cir.bool
-// CIR: }, false {
-// CIR: {{%[0-9]+}} = cir.const #false
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
+// CIR: [[FALSE:%[0-9]+]] = cir.const #false
+// CIR: cir.yield [[FALSE]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
 // CIR: cir.store [[AND_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: [[AVAL2:%[0-9]+]] = cir.load [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[BVAL2:%[0-9]+]] = cir.load [[B]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[CMP3:%[0-9]+]] = cir.cmp(eq, [[AVAL2]], [[BVAL2]]) : !s32i, !cir.bool
 // CIR: [[OR_RESULT:%[0-9]+]] = cir.ternary([[CMP3]], true {
-// CIR: {{%[0-9]+}} = cir.const #true
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
+// CIR: [[TRUE:%[0-9]+]] = cir.const #true
+// CIR: cir.yield [[TRUE]] : !cir.bool
 // CIR: }, false {
 // CIR: [[CVAL2:%[0-9]+]] = cir.load [[C]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[DVAL2:%[0-9]+]] = cir.load [[D]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[CMP4:%[0-9]+]] = cir.cmp(eq, [[CVAL2]], [[DVAL2]]) : !s32i, !cir.bool
-// CIR: [[INNER2:%[0-9]+]] = cir.ternary([[CMP4]], true {
-// CIR: {{%[0-9]+}} = cir.const #true
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
-// CIR: }, false {
-// CIR: {{%[0-9]+}} = cir.const #false
-// CIR: cir.yield {{%[0-9]+}} : !cir.bool
-// CIR: }) : (!cir.bool) -> !cir.bool
-// CIR: cir.yield [[INNER2]] : !cir.bool
+// CIR: cir.yield [[CMP4]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
 // CIR: cir.store [[OR_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: cir.return
 
 // LLVM-LABEL: define void @_Z2b3iiii(
-// LLVM-SAME: i32 %[[ARG0:.*]], i32 %[[ARG1:.*]], i32 %[[ARG2:.*]], i32 %[[ARG3:.*]])
-// LLVM: %[[A_ADDR:.*]] = alloca i32
-// LLVM: %[[B_ADDR:.*]] = alloca i32
-// LLVM: %[[C_ADDR:.*]] = alloca i32
-// LLVM: %[[D_ADDR:.*]] = alloca i32
-// LLVM: %[[X:.*]] = alloca i8
+// LLVM-SAME: i32 %[[ARG0:[0-9]+]], i32 %[[ARG1:[0-9]+]], i32 %[[ARG2:[0-9]+]], i32 %[[ARG3:[0-9]+]])
+// LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1
+// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1
+// LLVM: %[[C_ADDR:.*]] = alloca i32, i64 1
+// LLVM: %[[D_ADDR:.*]] = alloca i32, i64 1
+// LLVM: %[[X:.*]] = alloca i8, i64 1
 // LLVM: store i32 %[[ARG0]], ptr %[[A_ADDR]]
 // LLVM: store i32 %[[ARG1]], ptr %[[B_ADDR]]
 // LLVM: store i32 %[[ARG2]], ptr %[[C_ADDR]]
@@ -717,51 +674,35 @@ void b3(int a, int b, int c, int d) {
 // LLVM: %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]]
 // LLVM: %[[B_VAL:.*]] = load i32, ptr %[[B_ADDR]]
 // LLVM: %[[CMP1:.*]] = icmp eq i32 %[[A_VAL]], %[[B_VAL]]
-// LLVM: br i1 %[[CMP1]], label %[[AND_LHS_TRUE:.*]], label %[[AND_END:.*]]
-// LLVM: [[AND_LHS_TRUE]]:
+// LLVM: br i1 %[[CMP1]], label %[[AND_TRUE:[0-9]+]], label %[[AND_FALSE:[0-9]+]]
+// LLVM: [[AND_TRUE]]:
 // LLVM: %[[C_VAL:.*]] = load i32, ptr %[[C_ADDR]]
 // LLVM: %[[D_VAL:.*]] = load i32, ptr %[[D_ADDR]]
 // LLVM: %[[CMP2:.*]] = icmp eq i32 %[[C_VAL]], %[[D_VAL]]
-// LLVM: br i1 %[[CMP2]], label %[[CD_TRUE:.*]], label %[[CD_FALSE:.*]]
-// LLVM: [[CD_TRUE]]:
-// LLVM: br label %[[AND_RHS_END:.*]]
-// LLVM: [[CD_FALSE]]:
-// LLVM: br label %[[AND_RHS_END]]
-// LLVM: [[AND_RHS_END]]:
-// LLVM: %[[RHS_PHI:.*]] = phi i1 [ false, %[[CD_FALSE]] ], [ true, %[[CD_TRUE]] ]
-// LLVM: br label %[[AND_DONE:.*]]
-// LLVM: [[AND_DONE]]:
-// LLVM: br label %[[MERGE_BB2:.*]]
-// LLVM: [[AND_END]]:
-// LLVM: %[[AND_RESULT:.*]] = phi i1 [ false, %[[AND_END]] ], [ %[[RHS_PHI]], %[[AND_DONE]] ]
-// LLVM: br label %[[STORE_X:.*]]
-// LLVM: [[STORE_X]]:
-// LLVM: %[[ZEXT_AND:.*]] = zext i1 %[[AND_RESULT]] to i8
+// LLVM: br label %[[AND_MERGE:[0-9]+]]
+// LLVM: [[AND_FALSE]]:
+// LLVM: br label %[[AND_MERGE]]
+// LLVM: [[AND_MERGE]]:
+// LLVM: %[[AND_PHI:.*]] = phi i1 [ false, %[[AND_FALSE]] ], [ %[[CMP2]], %[[AND_TRUE]] ]
+// LLVM: br label %[[AND_CONT:[0-9]+]]
+// LLVM: [[AND_CONT]]:
+// LLVM: %[[ZEXT_AND:.*]] = zext i1 %[[AND_PHI]] to i8
 // LLVM: store i8 %[[ZEXT_AND]], ptr %[[X]]
 // LLVM: %[[A_VAL2:.*]] = load i32, ptr %[[A_ADDR]]
 // LLVM: %[[B_VAL2:.*]] = load i32, ptr %[[B_ADDR]]
 // LLVM: %[[CMP3:.*]] = icmp eq i32 %[[A_VAL2]], %[[B_VAL2]]
-// LLVM: br i1 %[[CMP3]], label %[[OR_TRUE:.*]], label %[[OR_RHS:.*]]
+// LLVM: br i1 %[[CMP3]], label %[[OR_TRUE:[0-9]+]], label %[[OR_FALSE:[0-9]+]]
 // LLVM: [[OR_TRUE]]:
-// LLVM: br label %[[OR_END:.*]]
-// LLVM: [[OR_RHS]]:
+// LLVM: br label %[[OR_MERGE:[0-9]+]]
+// LLVM: [[OR_FALSE]]:
 // LLVM: %[[C_VAL2:.*]] = load i32, ptr %[[C_ADDR]]
 // LLVM: %[[D_VAL2:.*]] = load i32, ptr %[[D_ADDR]]
 // LLVM: %[[CMP4:.*]] = icmp eq i32 %[[C_VAL2]], %[[D_VAL2]]
-// LLVM: br i1 %[[CMP4]], label %[[CD_TRUE2:.*]], label %[[CD_FALSE2:.*]]
-// LLVM: [[CD_TRUE2]]:
-// LLVM: br label %[[OR_RHS_END:.*]]
-// LLVM: [[CD_FALSE2]]:
-// LLVM: br label %[[OR_RHS_END]]
-// LLVM: [[OR_RHS_END]]:
-// LLVM: %[[RHS_PHI2:.*]] = phi i1 [ false, %[[CD_FALSE2]] ], [ true, %[[CD_TRUE2]] ]
-// LLVM: br label %[[OR_RHS_DONE:.*]]
-// LLVM: [[OR_RHS_DONE]]:
-// LLVM: br label %[[OR_END]]
-// LLVM: [[OR_END]]:
-// LLVM: %[[OR_RESULT:.*]] = phi i1 [ %[[RHS_PHI2]], %[[OR_RHS_DONE]] ], [ true, %[[OR_TRUE]] ]
-// LLVM: br label %[[FINAL_STORE:.*]]
-// LLVM: [[FINAL_STORE]]:
-// LLVM: %[[ZEXT_OR:.*]] = zext i1 %[[OR_RESULT]] to i8
+// LLVM: br label %[[OR_MERGE]]
+// LLVM: [[OR_MERGE]]:
+// LLVM: %[[OR_PHI:.*]] = phi i1 [ %[[CMP4]], %[[OR_FALSE]] ], [ true, %[[OR_TRUE]] ]
+// LLVM: br label %[[OR_CONT:[0-9]+]]
+// LLVM: [[OR_CONT]]:
+// LLVM: %[[ZEXT_OR:.*]] = zext i1 %[[OR_PHI]] to i8
 // LLVM: store i8 %[[ZEXT_OR]], ptr %[[X]]
 // LLVM: ret void
