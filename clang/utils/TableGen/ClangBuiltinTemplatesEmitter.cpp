@@ -22,7 +22,7 @@ using namespace llvm;
 static std::string TemplateNameList;
 static std::string CreateBuiltinTemplateParameterList;
 
-static llvm::StringSet BuiltinClasses;
+static llvm::StringSet<> BuiltinClasses;
 
 namespace {
 struct ParserState {
