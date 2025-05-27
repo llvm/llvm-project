@@ -1519,6 +1519,8 @@ public:
     return AMDGPU::isGFX11Plus(getSTI());
   }
 
+  bool isGFX1170() const { return AMDGPU::isGFX1170(getSTI()); }
+
   bool isGFX12() const { return AMDGPU::isGFX12(getSTI()); }
 
   bool isGFX12Plus() const { return AMDGPU::isGFX12Plus(getSTI()); }
@@ -3815,8 +3817,11 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
                : MCRegister();
   };
 
-  // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
-  bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12;
+  // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
+  // source-cache.
+  bool SkipSrc = (isGFX1170() &&
+                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx11) ||
+                 Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12;
 
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
   auto InvalidCompOprIdx =
