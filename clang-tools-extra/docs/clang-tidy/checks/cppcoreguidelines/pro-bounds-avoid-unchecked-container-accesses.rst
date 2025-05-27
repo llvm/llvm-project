@@ -36,9 +36,10 @@ Options
 
 .. option:: ExcludeClasses
 
-    Semicolon-delimited list of class names that should additionally be
-    excluded from this check. Default is empty string.
-
+    Semicolon-delimited list of class names for overwriting the default
+    exclusion list. The default is:
+    ``::std::map;::std::unordered_map;::std::flat_map``.
+    
 .. option:: FixMode
 
     Determines what fixes are suggested. Either `none` (default), `at` (use 
