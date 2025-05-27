@@ -4,8 +4,6 @@
 ; RUN: llc --mtriple=loongarch64 -mattr=+d --verify-machineinstrs < %s | \
 ; RUN:   FileCheck %s --check-prefix=LA64
 
-;; TODO: Testing for LA32 architecture will be added later
-
 define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA32-LABEL: atomicrmw_umax_i8_acquire:
 ; LA32:       # %bb.0:
