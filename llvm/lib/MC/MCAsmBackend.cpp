@@ -24,9 +24,6 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation)
-    : Endian(Endian), LinkerRelaxation(LinkerRelaxation) {}
-
 MCAsmBackend::~MCAsmBackend() = default;
 
 MCContext &MCAsmBackend::getContext() const { return Asm->getContext(); }
@@ -111,8 +108,7 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Builtins[Kind - FK_NONE];
 }
 
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                                const MCFixup &Fixup,
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                 const MCValue &, uint64_t Value,
                                                 bool Resolved) const {
   if (!Resolved)
@@ -126,7 +122,7 @@ bool MCAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;
   if (!IsResolved)
-    Asm->getWriter().recordRelocation(*Asm, &F, Fixup, Target, FixedValue);
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
   return IsResolved;
 }
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCExpr.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -319,12 +320,11 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
   // When layout is available, we can generally compute the difference using the
   // getSymbolOffset path, which also avoids the possible slow fragment walk.
   // However, linker relaxation may cause incorrect fold of A-B if A and B are
-  // separated by a linker-relaxable instruction. If the section contains
-  // instructions and InSet is false (not expressions in directive like
-  // .size/.fill), disable the fast path.
+  // separated by a linker-relaxable fragment. If the section contains
+  // linker-relaxable instruction and InSet is false (not expressions in
+  // directive like .size/.fill), disable the fast path.
   bool Layout = Asm->hasLayout();
-  if (Layout && (InSet || !SecA.hasInstructions() ||
-                 !Asm->getBackend().allowLinkerRelaxation())) {
+  if (Layout && (InSet || !SecA.isLinkerRelaxable())) {
     // If both symbols are in the same fragment, return the difference of their
     // offsets. canGetFragmentOffset(FA) may be false.
     if (FA == FB && !SA.isVariable() && !SB.isVariable()) {
@@ -479,13 +479,6 @@ static bool canExpand(const MCSymbol &Sym, bool InSet) {
   if (Sym.isWeakExternal())
     return false;
 
-  const MCExpr *Expr = Sym.getVariableValue();
-  const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
-  if (Inner) {
-    if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF)
-      return false;
-  }
-
   if (InSet)
     return true;
   return !Sym.isInSection();
@@ -503,13 +496,24 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
   case SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
+    MCSymbol &Sym = const_cast<MCSymbol &>(SRE->getSymbol());
     const auto Kind = SRE->getKind();
     bool Layout = Asm && Asm->hasLayout();
 
     // Evaluate recursively if this is a variable.
+    if (Sym.isResolving()) {
+      if (Asm && Asm->hasFinalLayout()) {
+        Asm->getContext().reportError(
+            Sym.getVariableValue()->getLoc(),
+            "cyclic dependency detected for symbol '" + Sym.getName() + "'");
+        Sym.setVariableValue(MCConstantExpr::create(0, Asm->getContext()));
+      }
+      return false;
+    }
     if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
         canExpand(Sym, InSet)) {
+      Sym.setIsResolving(true);
+      auto _ = make_scope_exit([&] { Sym.setIsResolving(false); });
       bool IsMachO =
           Asm && Asm->getContext().getAsmInfo()->hasSubsectionsViaSymbols();
       if (Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
@@ -544,6 +548,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         // Allows aliases with zero offset.
         if (Res.getConstant() == 0 && (!A || !B))
           return true;
+      } else {
+        return false;
       }
     }
 
@@ -713,9 +719,16 @@ MCFragment *MCExpr::findAssociatedFragment() const {
     return MCSymbol::AbsolutePseudoFragment;
 
   case SymbolRef: {
-    const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
-    return Sym.getFragment();
+    auto &Sym =
+        const_cast<MCSymbol &>(cast<MCSymbolRefExpr>(this)->getSymbol());
+    if (Sym.Fragment)
+      return Sym.Fragment;
+    if (Sym.isResolving())
+      return MCSymbol::AbsolutePseudoFragment;
+    Sym.setIsResolving(true);
+    auto *F = Sym.getFragment();
+    Sym.setIsResolving(false);
+    return F;
   }
 
   case Unary:

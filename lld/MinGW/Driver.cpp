@@ -31,7 +31,6 @@
 #include "lld/Common/Driver.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
