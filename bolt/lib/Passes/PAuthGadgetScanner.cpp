@@ -152,6 +152,8 @@ public:
 //    in the gadgets to be reported. This information is used in the second run
 //    to also track which instructions last wrote to those registers.
 
+typedef SmallPtrSet<const MCInst *, 4> SetOfRelatedInsts;
+
 /// A state representing which registers are safe to use by an instruction
 /// at a given program point.
 ///
@@ -195,7 +197,7 @@ struct SrcState {
   /// pac-ret analysis, the expectation is that almost all return instructions
   /// only use register `X30`, and therefore, this vector will probably have
   /// length 1 in the second run.
-  std::vector<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg;
+  std::vector<SetOfRelatedInsts> LastInstWritingReg;
 
   /// Construct an empty state.
   SrcState() {}
@@ -231,7 +233,7 @@ struct SrcState {
 };
 
 static void printInstsShort(raw_ostream &OS,
-                            ArrayRef<SmallPtrSet<const MCInst *, 4>> Insts) {
+                            ArrayRef<SetOfRelatedInsts> Insts) {
   OS << "Insts: ";
   for (unsigned I = 0; I < Insts.size(); ++I) {
     auto &Set = Insts[I];
@@ -322,13 +324,12 @@ protected:
   DenseMap<const MCInst *, std::pair<MCPhysReg, const MCInst *>>
       CheckerSequenceInfo;
 
-  SmallPtrSet<const MCInst *, 4> &lastWritingInsts(SrcState &S,
-                                                   MCPhysReg Reg) const {
+  SetOfRelatedInsts &lastWritingInsts(SrcState &S, MCPhysReg Reg) const {
     unsigned Index = RegsToTrackInstsFor.getIndex(Reg);
     return S.LastInstWritingReg[Index];
   }
-  const SmallPtrSet<const MCInst *, 4> &lastWritingInsts(const SrcState &S,
-                                                         MCPhysReg Reg) const {
+  const SetOfRelatedInsts &lastWritingInsts(const SrcState &S,
+                                            MCPhysReg Reg) const {
     unsigned Index = RegsToTrackInstsFor.getIndex(Reg);
     return S.LastInstWritingReg[Index];
   }
@@ -742,8 +743,8 @@ SrcSafetyAnalysis::create(BinaryFunction &BF,
 /// A state representing which registers are safe to be used as the destination
 /// operand of an authentication instruction.
 ///
-/// Similar to SrcState, it is the analysis that should take register aliasing
-/// into account.
+/// Similar to SrcState, it is the responsibility of the analysis to take
+/// register aliasing into account.
 ///
 /// Depending on the implementation, it may be possible that an authentication
 /// instruction returns an invalid pointer on failure instead of terminating
@@ -777,9 +778,9 @@ struct DstState {
   /// instructions should only be written to such registers.
   BitVector CannotEscapeUnchecked;
 
-  std::vector<SmallPtrSet<const MCInst *, 4>> FirstInstLeakingReg;
+  std::vector<SetOfRelatedInsts> FirstInstLeakingReg;
 
-  /// Construct an empty state.
+  /// Constructs an empty state.
   DstState() {}
 
   DstState(unsigned NumRegs, unsigned NumRegsToTrack)
@@ -882,13 +883,12 @@ protected:
   /// operates on separate instructions.
   DenseMap<const MCInst *, MCPhysReg> RegCheckedAt;
 
-  SmallPtrSet<const MCInst *, 4> &firstLeakingInsts(DstState &S,
-                                                    MCPhysReg Reg) const {
+  SetOfRelatedInsts &firstLeakingInsts(DstState &S, MCPhysReg Reg) const {
     unsigned Index = RegsToTrackInstsFor.getIndex(Reg);
     return S.FirstInstLeakingReg[Index];
   }
-  const SmallPtrSet<const MCInst *, 4> &firstLeakingInsts(const DstState &S,
-                                                          MCPhysReg Reg) const {
+  const SetOfRelatedInsts &firstLeakingInsts(const DstState &S,
+                                             MCPhysReg Reg) const {
     unsigned Index = RegsToTrackInstsFor.getIndex(Reg);
     return S.FirstInstLeakingReg[Index];
   }
@@ -899,6 +899,9 @@ protected:
     return DstState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
   }
 
+  /// Returns the set of registers that can be leaked by this instruction.
+  /// This is computed similar to the set of clobbered registers, but taking
+  /// input operands instead of outputs.
   BitVector getLeakedRegs(const MCInst &Inst) const {
     BitVector Leaked(NumRegs);
 
@@ -1067,6 +1070,8 @@ public:
       : DstSafetyAnalysis(BF, RegsToTrackInstsFor), DFParent(BF, AllocId) {}
 
   const DstState &getStateAfter(const MCInst &Inst) const override {
+    // The dataflow analysis base class iterates backwards over the
+    // instructions, thus "after" vs. "before" difference.
     return DFParent::getStateBefore(Inst).get();
   }
 
