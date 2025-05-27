@@ -188,7 +188,10 @@ include_directories(BEFORE
   )
 
 add_subdirectory(Common)
-add_subdirectory(tools/lld)
+
+if (LLD_BUILD_TOOLS)
+    add_subdirectory(tools/lld)
+endif()
 
 if (LLVM_INCLUDE_TESTS)
   add_custom_target(LLDUnitTests)
