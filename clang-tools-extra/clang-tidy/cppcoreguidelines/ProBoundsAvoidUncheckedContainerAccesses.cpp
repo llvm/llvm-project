@@ -16,20 +16,17 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static constexpr std::array<llvm::StringRef, 3> DefaultExclusions = {
-    llvm::StringRef("::std::map"), llvm::StringRef("::std::unordered_map"),
-    llvm::StringRef("::std::flat_map")};
+static constexpr llvm::StringRef DefaultExclusionStr =
+    "::std::map;::std::unordered_map;::std::flat_map";
 
 ProBoundsAvoidUncheckedContainerAccesses::
     ProBoundsAvoidUncheckedContainerAccesses(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
 
-  ExcludedClassesStr = Options.get("ExcludeClasses", "");
+  ExcludedClassesStr = Options.get("ExcludeClasses", DefaultExclusionStr);
   ExcludedClasses =
       clang::tidy::utils::options::parseStringList(ExcludedClassesStr);
-  ExcludedClasses.insert(ExcludedClasses.end(), DefaultExclusions.begin(),
-                         DefaultExclusions.end());
   FixMode = Options.get("FixMode", None);
   FixFunction = Options.get("FixFunction", "gsl::at");
 }
@@ -39,11 +36,6 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
 
   Options.store(Opts, "FixFunction", FixFunction);
   Options.store(Opts, "FixMode", FixMode);
-  if (ExcludedClasses.size() == DefaultExclusions.size()) {
-    Options.store(Opts, "ExcludeClasses", "");
-    return;
-  }
-
   Options.store(Opts, "ExcludeClasses", ExcludedClassesStr);
 }
 
