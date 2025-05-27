@@ -17,8 +17,8 @@
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Regex.h"
 #include <memory>
-#include <utility>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
