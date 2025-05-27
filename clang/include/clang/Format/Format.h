@@ -2528,6 +2528,10 @@ struct FormatStyle {
   /// \version 5
   bool CompactNamespaces;
 
+  /// Specify the absolute or relative path of another config file to process.
+  /// \version 20
+  std::string ConfigFile;
+
   /// This option is **deprecated**. See ``CurrentLine`` of
   /// ``PackConstructorInitializers``.
   /// \version 3.7
@@ -5371,6 +5375,7 @@ struct FormatStyle {
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
            CompactNamespaces == R.CompactNamespaces &&
+           ConfigFile == R.ConfigFile &&
            ConstructorInitializerIndentWidth ==
                R.ConstructorInitializerIndentWidth &&
            ContinuationIndentWidth == R.ContinuationIndentWidth &&
