@@ -38,7 +38,7 @@ Options
 
     Semicolon-delimited list of class names for overwriting the default
     exclusion list. The default is:
-    ``::std::map;::std::unordered_map;::std::flat_map``.
+    `::std::map;::std::unordered_map;::std::flat_map`.
     
 .. option:: FixMode
 
