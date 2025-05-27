@@ -61,6 +61,8 @@ C++ Specific Potentially Breaking Changes
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
 
+- Added ``!nonnull/!align`` metadata to load of references for better codegen.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -445,6 +447,7 @@ Improvements to Clang's diagnostics
   as function arguments or return value respectively. Note that
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
+- The :doc:`ThreadSafetyAnalysis` now supports reentrant capabilities.
 - Clang will now do a better job producing common nested names, when producing
   common types for ternary operator, template argument deduction and multiple return auto deduction.
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers
