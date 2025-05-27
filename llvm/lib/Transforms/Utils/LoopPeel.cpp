@@ -922,7 +922,7 @@ static void cloneLoopBlocks(
     // InsertTop, using the incoming value from the preheader for the original
     // preheader (when skipping the main loop) and the incoming value from the
     // latch for the latch (when continuing from the main loop).
-    IRBuilder<> B(InsertTop->getTerminator());
+    IRBuilder<> B(InsertTop, InsertTop->getFirstNonPHIIt());
     for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
       PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
       PHINode *PN = B.CreatePHI(NewPHI->getType(), 2);
