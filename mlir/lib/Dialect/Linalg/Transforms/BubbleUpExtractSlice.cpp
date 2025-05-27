@@ -42,7 +42,9 @@ namespace {
 /// ```
 ///
 /// This results in the reduce computation of the linalg operation.
-///
+/// In case linalg op has multiple uses we optimize only if each
+/// use is a small portion of the result i.e. each use is an
+/// extract_slice.
 struct BubbleUpExtractSliceOpPattern
     : OpRewritePattern<tensor::ExtractSliceOp> {
   using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
@@ -56,13 +58,6 @@ struct BubbleUpExtractSliceOpPattern
                                          "expected source to be linalg op");
     }
 
-    // TODO: we might relax this if we want heuristics to detect that all uses
-    // are small portion of the output.
-    if (!linalgOp->hasOneUse()) {
-      return rewriter.notifyMatchFailure(sliceOp,
-                                         "expected single use of linalg op");
-    }
-
     if (linalgOp.getNumDpsInits() != 1) {
       return rewriter.notifyMatchFailure(sliceOp,
                                          "expected single output of linalg op");
@@ -73,11 +68,20 @@ struct BubbleUpExtractSliceOpPattern
                                          "expected tensor of linalg op");
     }
 
-    if (!sliceOp.hasUnitStride())
-      return rewriter.notifyMatchFailure(sliceOp, "expected unit stride");
+    // Check that all uses (including sliceOp) are small portion of output
+    // and satisfy the constraints.
+    for (Operation *user : linalgOp->getResult(0).getUsers()) {
+      auto sliceOpOther = dyn_cast<tensor::ExtractSliceOp>(user);
+      if (!sliceOpOther)
+        return rewriter.notifyMatchFailure(sliceOp,
+                                           "expected single use of linalg op");
+      if (!sliceOpOther.hasUnitStride())
+        return rewriter.notifyMatchFailure(sliceOpOther, "expected unit stride");
 
-    if (sliceOp.getType().getRank() != sliceOp.getSourceType().getRank()) {
-      return rewriter.notifyMatchFailure(sliceOp, "expected no rank reduction");
+      if (sliceOpOther.getType().getRank() !=
+          sliceOpOther.getSourceType().getRank())
+        return rewriter.notifyMatchFailure(sliceOpOther,
+                                           "expected no rank reduction");
     }
 
     OpOperand *outOperand = linalgOp.getDpsInitOperand(0);
