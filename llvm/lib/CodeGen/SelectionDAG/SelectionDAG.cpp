@@ -65,7 +65,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -75,7 +74,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
-#include <deque>
 #include <limits>
 #include <optional>
 #include <set>
@@ -2625,16 +2623,19 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
       continue;
     }
     MachinePointerInfo PtrInfo;
+    SDValue LoadResult =
+        getLoad(Node->getValueType(ResNo), DL, CallChain, ResultPtr, PtrInfo);
+    SDValue OutChain = LoadResult.getValue(1);
+
     if (StoreSDNode *ST = ResultStores[ResNo]) {
       // Replace store with the library call.
-      ReplaceAllUsesOfValueWith(SDValue(ST, 0), CallChain);
+      ReplaceAllUsesOfValueWith(SDValue(ST, 0), OutChain);
       PtrInfo = ST->getPointerInfo();
     } else {
       PtrInfo = MachinePointerInfo::getFixedStack(
           getMachineFunction(), cast<FrameIndexSDNode>(ResultPtr)->getIndex());
     }
-    SDValue LoadResult =
-        getLoad(Node->getValueType(ResNo), DL, CallChain, ResultPtr, PtrInfo);
+
     Results.push_back(LoadResult);
   }
 

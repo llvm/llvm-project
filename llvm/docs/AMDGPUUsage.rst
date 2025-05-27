@@ -1222,7 +1222,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    argument should be wavefront-uniform; the global pointer need not be.
                                                    The LDS pointer is implicitly offset by 4 * lane_id bytes for sies <= 4 bytes
                                                    and 16 * lane_id bytes for larger sizes. This lowers to `global_load_lds`,
-                                                   `buffer_load_* ... lds`, or `global_load__* ... lds` depnedening on address
+                                                   `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
                                                    space and architecture. `amdgcn.global.load.lds` has the same semantics as
                                                    `amdgcn.load.to.lds.p1`.
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
@@ -1354,7 +1354,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
                                                    - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
                                                    - 0x0080: All DS instructions may be scheduled across sched_barrier.
-                                                   - 0x0100: All DS read instructions may be scheduled accoss sched_barrier.
+                                                   - 0x0100: All DS read instructions may be scheduled across sched_barrier.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
 
@@ -1383,7 +1383,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    |  ``__builtin_amdgcn_sched_group_barrier(8, 5, 0)``
 
   llvm.amdgcn.iglp.opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
-                                                   implements predefined intruction scheduling orderings. The intrinsic applies to the
+                                                   implements predefined instruction scheduling orderings. The intrinsic applies to the
                                                    surrounding scheduling region. The intrinsic takes a value that specifies the
                                                    strategy.  The compiler implements two strategies.
 
