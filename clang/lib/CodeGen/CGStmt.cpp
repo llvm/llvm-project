@@ -1370,8 +1370,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // match existing loop stepping behaviour. FIXME: We could have the branch
     // as the backup location for the condition, which would probably be a
     // better experience (no jumping to the brace).
-    if (auto *I = dyn_cast<llvm::Instruction>(BoolCondVal))
-      addInstToNewSourceAtom(I, nullptr);
+    if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(CondI, nullptr);
     addInstToNewSourceAtom(I, nullptr);
 
     if (ExitBlock != LoopExit.getBlock()) {
