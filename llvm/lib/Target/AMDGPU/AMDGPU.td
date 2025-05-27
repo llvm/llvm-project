@@ -1948,7 +1948,8 @@ def FeatureISAVersion11_0_Common : FeatureSet<
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
      FeatureDot5Insts,
-     FeatureWMMA256bInsts])>;
+     FeatureWMMA256bInsts,
+     FeatureRealTrue16Insts])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
