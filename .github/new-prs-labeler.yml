@@ -702,11 +702,15 @@ mlgo:
   - llvm/unittests/CodeGen/ML*
   - llvm/test/CodeGen/MLRegAlloc/**
   - llvm/utils/mlgo-utils/**
+  - llvm/docs/MLGO.rst
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
   - llvm/test/tools/llvm-exegesis/**
   - llvm/unittests/tools/llvm-exegesis/**
+
+tools:llvm-reduce:
+  - llvm/tools/llvm-reduce/**
 
 platform:windows:
   - lld/COFF/**
