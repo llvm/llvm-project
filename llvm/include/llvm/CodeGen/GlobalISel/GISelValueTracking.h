@@ -106,13 +106,14 @@ public:
   /// that are all less than the element bit-width of the shift node, return the
   /// valid constant range.
   std::optional<ConstantRange>
-  getValidShiftAmountRange(Register R, const APInt &DemandedElts,
-                           unsigned Depth);
+  getValidShiftAmountRange(Register R, unsigned BitWidth,
+                           const APInt &DemandedElts, unsigned Depth);
 
   /// If a G_SHL/G_ASHR/G_LSHR node with shift operand \p R has shift amounts
   /// that are all less than the element bit-width of the shift node, return the
   /// minimum possible value.
   std::optional<uint64_t> getValidMinimumShiftAmount(Register R,
+                                                     unsigned BitWidth,
                                                      const APInt &DemandedElts,
                                                      unsigned Depth = 0);
 

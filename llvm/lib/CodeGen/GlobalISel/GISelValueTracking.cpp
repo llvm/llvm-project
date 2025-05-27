@@ -1861,7 +1861,8 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     Register Src1 = MI.getOperand(1).getReg();
     Register Src2 = MI.getOperand(2).getReg();
     FirstAnswer = computeNumSignBits(Src1, DemandedElts, Depth + 1);
-    if (auto C = getValidMinimumShiftAmount(Src2, DemandedElts, Depth + 1))
+    if (auto C =
+            getValidMinimumShiftAmount(Src2, TyBits, DemandedElts, Depth + 1))
       FirstAnswer = std::min<uint64_t>(FirstAnswer + *C, TyBits);
     break;
   }
@@ -2012,13 +2013,12 @@ unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {
 }
 
 std::optional<ConstantRange> GISelValueTracking::getValidShiftAmountRange(
-    Register R, const APInt &DemandedElts, unsigned Depth) {
+    Register R, unsigned BitWidth, const APInt &DemandedElts, unsigned Depth) {
   // Shifting more than the bitwidth is not valid.
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
 
   LLT Ty = MRI.getType(R);
-  unsigned BitWidth = Ty.getScalarSizeInBits();
 
   if (Opcode == TargetOpcode::G_CONSTANT) {
     const APInt &ShAmt = MI.getOperand(1).getCImm()->getValue();
@@ -2062,9 +2062,9 @@ std::optional<ConstantRange> GISelValueTracking::getValidShiftAmountRange(
 }
 
 std::optional<uint64_t> GISelValueTracking::getValidMinimumShiftAmount(
-    Register R, const APInt &DemandedElts, unsigned Depth) {
+    Register R, unsigned BitWidth, const APInt &DemandedElts, unsigned Depth) {
   if (std::optional<ConstantRange> AmtRange =
-          getValidShiftAmountRange(R, DemandedElts, Depth))
+          getValidShiftAmountRange(R, BitWidth, DemandedElts, Depth))
     return AmtRange->getUnsignedMin().getZExtValue();
   return std::nullopt;
 }
