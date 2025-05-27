@@ -13,6 +13,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; SDAG-GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[6:7]
+; SDAG-GFX11-TRUE16-NEXT:    s_clause 0x1
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -26,6 +27,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; SDAG-GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[6:7]
+; SDAG-GFX11-FAKE16-NEXT:    s_clause 0x1
 ; SDAG-GFX11-FAKE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; SDAG-GFX11-FAKE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -39,6 +41,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; GISEL-GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[6:7]
+; GISEL-GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GISEL-GFX11-TRUE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GISEL-GFX11-TRUE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -52,6 +55,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16(
 ; GISEL-GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[6:7]
+; GISEL-GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GISEL-GFX11-FAKE16-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GISEL-GFX11-FAKE16-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -76,6 +80,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16_dpp(
 ; SDAG-GFX11-TRUE16:       ; %bb.0: ; %entry
 ; SDAG-GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-GFX11-TRUE16-NEXT:    s_clause 0x2
 ; SDAG-GFX11-TRUE16-NEXT:    scratch_load_b32 v1, off, s1
 ; SDAG-GFX11-TRUE16-NEXT:    scratch_load_b32 v2, off, s2
 ; SDAG-GFX11-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s3
@@ -91,6 +96,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16_dpp(
 ; SDAG-GFX11-FAKE16:       ; %bb.0: ; %entry
 ; SDAG-GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-GFX11-FAKE16-NEXT:    s_clause 0x2
 ; SDAG-GFX11-FAKE16-NEXT:    scratch_load_b32 v0, off, s2
 ; SDAG-GFX11-FAKE16-NEXT:    scratch_load_u16 v1, off, s3
 ; SDAG-GFX11-FAKE16-NEXT:    scratch_load_b32 v2, off, s1
@@ -103,6 +109,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16_dpp(
 ; GISEL-GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GISEL-GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GISEL-GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-GFX11-TRUE16-NEXT:    s_clause 0x2
 ; GISEL-GFX11-TRUE16-NEXT:    scratch_load_b32 v1, off, s1
 ; GISEL-GFX11-TRUE16-NEXT:    scratch_load_b32 v2, off, s2
 ; GISEL-GFX11-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s3
@@ -118,6 +125,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f16_f16_dpp(
 ; GISEL-GFX11-FAKE16:       ; %bb.0: ; %entry
 ; GISEL-GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GISEL-GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-GFX11-FAKE16-NEXT:    s_clause 0x2
 ; GISEL-GFX11-FAKE16-NEXT:    scratch_load_b32 v0, off, s1
 ; GISEL-GFX11-FAKE16-NEXT:    scratch_load_b32 v1, off, s2
 ; GISEL-GFX11-FAKE16-NEXT:    scratch_load_u16 v2, off, s3

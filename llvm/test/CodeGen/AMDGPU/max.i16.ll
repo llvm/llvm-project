@@ -114,13 +114,13 @@ define amdgpu_kernel void @v_test_imax_sge_v3i16(ptr addrspace(1) %out, ptr addr
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s4, v6
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
-; VI-NEXT:    v_add_u32_e32 v4, vcc, 4, v0
-; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 4, v2
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
+; VI-NEXT:    flat_load_dword v7, v[0:1]
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_ushort v4, v[4:5]
-; VI-NEXT:    flat_load_dword v5, v[0:1]
-; VI-NEXT:    flat_load_dword v7, v[2:3]
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v2
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; VI-NEXT:    flat_load_dword v5, v[2:3]
 ; VI-NEXT:    flat_load_ushort v8, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v6
@@ -128,11 +128,11 @@ define amdgpu_kernel void @v_test_imax_sge_v3i16(ptr addrspace(1) %out, ptr addr
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(1)
-; VI-NEXT:    v_max_i16_e32 v6, v5, v7
-; VI-NEXT:    v_max_i16_sdwa v5, v5, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_or_b32_e32 v5, v6, v5
+; VI-NEXT:    v_max_i16_e32 v6, v7, v5
+; VI-NEXT:    v_max_i16_sdwa v5, v7, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_max_i16_e32 v4, v4, v8
+; VI-NEXT:    v_max_i16_e32 v4, v8, v4
+; VI-NEXT:    v_or_b32_e32 v5, v6, v5
 ; VI-NEXT:    flat_store_short v[2:3], v4
 ; VI-NEXT:    flat_store_dword v[0:1], v5
 ; VI-NEXT:    s_endpgm

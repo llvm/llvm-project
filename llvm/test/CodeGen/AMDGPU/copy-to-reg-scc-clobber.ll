@@ -10,18 +10,19 @@ define protected amdgpu_kernel void @sccClobber(ptr addrspace(1) %a, ptr addrspa
 ; RRLIST-NEXT:    v_mov_b32_e32 v2, 0
 ; RRLIST-NEXT:    s_waitcnt lgkmcnt(0)
 ; RRLIST-NEXT:    s_load_dword s16, s[12:13], 0x0
-; RRLIST-NEXT:    s_load_dwordx2 s[0:1], s[10:11], 0x0
-; RRLIST-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
+; RRLIST-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; RRLIST-NEXT:    s_load_dwordx2 s[2:3], s[10:11], 0x0
 ; RRLIST-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x44
-; RRLIST-NEXT:    s_load_dword s17, s[14:15], 0x0
+; RRLIST-NEXT:    s_nop 0
+; RRLIST-NEXT:    s_load_dword s8, s[14:15], 0x0
 ; RRLIST-NEXT:    s_waitcnt lgkmcnt(0)
-; RRLIST-NEXT:    s_min_i32 s8, s16, 0
-; RRLIST-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; RRLIST-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[0:1]
+; RRLIST-NEXT:    s_min_i32 s9, s16, 0
+; RRLIST-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; RRLIST-NEXT:    v_cmp_lt_i64_e32 vcc, s[0:1], v[0:1]
 ; RRLIST-NEXT:    s_and_b64 s[4:5], vcc, exec
-; RRLIST-NEXT:    s_cselect_b32 s4, s16, s17
-; RRLIST-NEXT:    s_cmp_eq_u64 s[2:3], s[0:1]
-; RRLIST-NEXT:    s_cselect_b32 s0, s8, s4
+; RRLIST-NEXT:    s_cselect_b32 s4, s16, s8
+; RRLIST-NEXT:    s_cmp_eq_u64 s[0:1], s[2:3]
+; RRLIST-NEXT:    s_cselect_b32 s0, s9, s4
 ; RRLIST-NEXT:    v_mov_b32_e32 v0, s0
 ; RRLIST-NEXT:    global_store_dword v2, v0, s[6:7]
 ; RRLIST-NEXT:    s_endpgm
@@ -29,16 +30,16 @@ define protected amdgpu_kernel void @sccClobber(ptr addrspace(1) %a, ptr addrspa
 ; FAST-LABEL: sccClobber:
 ; FAST:       ; %bb.0: ; %entry
 ; FAST-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
+; FAST-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x44
 ; FAST-NEXT:    v_mov_b32_e32 v2, 0
 ; FAST-NEXT:    s_waitcnt lgkmcnt(0)
-; FAST-NEXT:    s_load_dword s16, s[12:13], 0x0
 ; FAST-NEXT:    s_load_dwordx2 s[0:1], s[10:11], 0x0
-; FAST-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
-; FAST-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x44
+; FAST-NEXT:    s_load_dword s16, s[12:13], 0x0
 ; FAST-NEXT:    s_load_dword s17, s[14:15], 0x0
+; FAST-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; FAST-NEXT:    s_waitcnt lgkmcnt(0)
-; FAST-NEXT:    s_min_i32 s8, s16, 0
 ; FAST-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
+; FAST-NEXT:    s_min_i32 s8, s16, 0
 ; FAST-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[0:1]
 ; FAST-NEXT:    s_and_b64 s[4:5], vcc, exec
 ; FAST-NEXT:    s_cselect_b32 s4, s16, s17

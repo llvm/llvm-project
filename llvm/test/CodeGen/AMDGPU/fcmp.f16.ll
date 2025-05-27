@@ -2521,6 +2521,7 @@ define amdgpu_kernel void @fcmp_v2f16_lt(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -2551,6 +2552,7 @@ define amdgpu_kernel void @fcmp_v2f16_lt(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -2581,6 +2583,7 @@ define amdgpu_kernel void @fcmp_v2f16_lt(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -2612,6 +2615,7 @@ define amdgpu_kernel void @fcmp_v2f16_lt(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -2716,6 +2720,7 @@ define amdgpu_kernel void @fcmp_v2f16_eq(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -2746,6 +2751,7 @@ define amdgpu_kernel void @fcmp_v2f16_eq(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -2776,6 +2782,7 @@ define amdgpu_kernel void @fcmp_v2f16_eq(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -2807,6 +2814,7 @@ define amdgpu_kernel void @fcmp_v2f16_eq(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -2910,6 +2918,7 @@ define amdgpu_kernel void @fcmp_v2f16_le(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -2940,6 +2949,7 @@ define amdgpu_kernel void @fcmp_v2f16_le(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -2970,6 +2980,7 @@ define amdgpu_kernel void @fcmp_v2f16_le(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3001,6 +3012,7 @@ define amdgpu_kernel void @fcmp_v2f16_le(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3104,6 +3116,7 @@ define amdgpu_kernel void @fcmp_v2f16_gt(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3134,6 +3147,7 @@ define amdgpu_kernel void @fcmp_v2f16_gt(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3164,6 +3178,7 @@ define amdgpu_kernel void @fcmp_v2f16_gt(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3195,6 +3210,7 @@ define amdgpu_kernel void @fcmp_v2f16_gt(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3299,6 +3315,7 @@ define amdgpu_kernel void @fcmp_v2f16_lg(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3329,6 +3346,7 @@ define amdgpu_kernel void @fcmp_v2f16_lg(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3359,6 +3377,7 @@ define amdgpu_kernel void @fcmp_v2f16_lg(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3390,6 +3409,7 @@ define amdgpu_kernel void @fcmp_v2f16_lg(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3494,6 +3514,7 @@ define amdgpu_kernel void @fcmp_v2f16_ge(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3524,6 +3545,7 @@ define amdgpu_kernel void @fcmp_v2f16_ge(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3554,6 +3576,7 @@ define amdgpu_kernel void @fcmp_v2f16_ge(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3585,6 +3608,7 @@ define amdgpu_kernel void @fcmp_v2f16_ge(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3689,6 +3713,7 @@ define amdgpu_kernel void @fcmp_v2f16_o(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3719,6 +3744,7 @@ define amdgpu_kernel void @fcmp_v2f16_o(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3749,6 +3775,7 @@ define amdgpu_kernel void @fcmp_v2f16_o(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3780,6 +3807,7 @@ define amdgpu_kernel void @fcmp_v2f16_o(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3884,6 +3912,7 @@ define amdgpu_kernel void @fcmp_v2f16_u(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3914,6 +3943,7 @@ define amdgpu_kernel void @fcmp_v2f16_u(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -3944,6 +3974,7 @@ define amdgpu_kernel void @fcmp_v2f16_u(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -3975,6 +4006,7 @@ define amdgpu_kernel void @fcmp_v2f16_u(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4078,6 +4110,7 @@ define amdgpu_kernel void @fcmp_v2f16_nge(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4108,6 +4141,7 @@ define amdgpu_kernel void @fcmp_v2f16_nge(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4138,6 +4172,7 @@ define amdgpu_kernel void @fcmp_v2f16_nge(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4169,6 +4204,7 @@ define amdgpu_kernel void @fcmp_v2f16_nge(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4272,6 +4308,7 @@ define amdgpu_kernel void @fcmp_v2f16_nlg(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4302,6 +4339,7 @@ define amdgpu_kernel void @fcmp_v2f16_nlg(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4332,6 +4370,7 @@ define amdgpu_kernel void @fcmp_v2f16_nlg(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4363,6 +4402,7 @@ define amdgpu_kernel void @fcmp_v2f16_nlg(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4467,6 +4507,7 @@ define amdgpu_kernel void @fcmp_v2f16_ngt(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4497,6 +4538,7 @@ define amdgpu_kernel void @fcmp_v2f16_ngt(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4527,6 +4569,7 @@ define amdgpu_kernel void @fcmp_v2f16_ngt(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4558,6 +4601,7 @@ define amdgpu_kernel void @fcmp_v2f16_ngt(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4661,6 +4705,7 @@ define amdgpu_kernel void @fcmp_v2f16_nle(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4691,6 +4736,7 @@ define amdgpu_kernel void @fcmp_v2f16_nle(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4721,6 +4767,7 @@ define amdgpu_kernel void @fcmp_v2f16_nle(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4752,6 +4799,7 @@ define amdgpu_kernel void @fcmp_v2f16_nle(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4855,6 +4903,7 @@ define amdgpu_kernel void @fcmp_v2f16_neq(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4885,6 +4934,7 @@ define amdgpu_kernel void @fcmp_v2f16_neq(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -4915,6 +4965,7 @@ define amdgpu_kernel void @fcmp_v2f16_neq(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -4946,6 +4997,7 @@ define amdgpu_kernel void @fcmp_v2f16_neq(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -5049,6 +5101,7 @@ define amdgpu_kernel void @fcmp_v2f16_nlt(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -5079,6 +5132,7 @@ define amdgpu_kernel void @fcmp_v2f16_nlt(
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], 0
 ; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], 0
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
@@ -5109,6 +5163,7 @@ define amdgpu_kernel void @fcmp_v2f16_nlt(
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-TRUE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
@@ -5140,6 +5195,7 @@ define amdgpu_kernel void @fcmp_v2f16_nlt(
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v0, off, s[4:7], null
 ; GFX12-FAKE16-NEXT:    buffer_load_b32 v1, off, s[12:15], null
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0

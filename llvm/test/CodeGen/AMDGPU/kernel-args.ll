@@ -4706,10 +4706,10 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
 define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, i8, <{i32, i64}> %arg1) {
 ; SI-LABEL: packed_struct_argument_alignment:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0x9
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xa
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    buffer_load_ubyte v4, off, s[4:7], 0 offset:49
 ; SI-NEXT:    buffer_load_ubyte v5, off, s[4:7], 0 offset:50
 ; SI-NEXT:    buffer_load_ubyte v6, off, s[4:7], 0 offset:51
@@ -4754,11 +4754,11 @@ define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, 
 ; VI-NEXT:    v_mov_b32_e32 v7, s1
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_mov_b32_e32 v6, s0
+; VI-NEXT:    s_add_u32 s0, s4, 53
 ; VI-NEXT:    flat_load_ubyte v8, v[0:1]
 ; VI-NEXT:    flat_load_ubyte v9, v[2:3]
 ; VI-NEXT:    flat_load_ubyte v10, v[4:5]
 ; VI-NEXT:    flat_load_ubyte v6, v[6:7]
-; VI-NEXT:    s_add_u32 s0, s4, 53
 ; VI-NEXT:    s_addc_u32 s1, s5, 0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1

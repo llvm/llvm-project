@@ -134,6 +134,7 @@ define amdgpu_kernel void @s_test_add_v2i16(ptr addrspace(1) %out, ptr addrspace
 ; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dword s4, s[2:3], 0x0
 ; GFX10-NEXT:    s_load_dword s5, s[6:7], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -148,6 +149,7 @@ define amdgpu_kernel void @s_test_add_v2i16(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

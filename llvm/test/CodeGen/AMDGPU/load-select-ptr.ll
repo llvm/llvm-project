@@ -20,12 +20,12 @@ define amdgpu_kernel void @select_ptr_crash_i64_flat(i32 %tmp, [8 x i32], ptr %p
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    s_add_u32 s0, s0, 4
-; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GCN-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    flat_load_dword v0, v[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v2, s1
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    flat_load_dword v1, v[1:2]
+; GCN-NEXT:    flat_load_dword v1, v[2:3]
 ; GCN-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN-NEXT:    v_mov_b32_e32 v3, s5
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

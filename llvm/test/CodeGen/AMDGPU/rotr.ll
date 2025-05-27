@@ -301,13 +301,13 @@ define void @test_rotr_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr add
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 48, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
-; GFX8-NEXT:    flat_load_ushort v2, v[2:3]
 ; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX8-NEXT:    flat_load_ushort v1, v[2:3]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_lshrrev_b16_e32 v1, v2, v0
-; GFX8-NEXT:    v_sub_u16_e32 v2, 0, v2
-; GFX8-NEXT:    v_lshlrev_b16_e32 v0, v2, v0
-; GFX8-NEXT:    v_or_b32_e32 v2, v1, v0
+; GFX8-NEXT:    v_lshrrev_b16_e32 v2, v1, v0
+; GFX8-NEXT:    v_sub_u16_e32 v1, 0, v1
+; GFX8-NEXT:    v_lshlrev_b16_e32 v0, v1, v0
+; GFX8-NEXT:    v_or_b32_e32 v2, v2, v0
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 8, v4
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
 ; GFX8-NEXT:    flat_store_short v[0:1], v2
@@ -317,6 +317,7 @@ define void @test_rotr_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr add
 ; GFX10-LABEL: test_rotr_i16:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_ushort v6, v[2:3], off offset:48
 ; GFX10-NEXT:    global_load_ushort v7, v[0:1], off offset:32
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -331,6 +332,7 @@ define void @test_rotr_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr add
 ; GFX11-TRUE16-LABEL: test_rotr_i16:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v2, v[2:3], off offset:48
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off offset:32
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
@@ -346,6 +348,7 @@ define void @test_rotr_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr add
 ; GFX11-FAKE16-LABEL: test_rotr_i16:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_u16 v2, v[2:3], off offset:48
 ; GFX11-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off offset:32
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)

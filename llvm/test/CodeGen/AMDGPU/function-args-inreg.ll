@@ -543,25 +543,25 @@ define void @void_func_v32i32_inreg(<32 x i32> inreg %arg0) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v15, v1 :: v_dual_mov_b32 v14, v0
-; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[10:13], off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[6:9], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX11-NEXT:    v_dual_mov_b32 v12, s28 :: v_dual_mov_b32 v13, s29
-; GFX11-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
-; GFX11-NEXT:    v_dual_mov_b32 v2, s26 :: v_dual_mov_b32 v3, s27
-; GFX11-NEXT:    v_dual_mov_b32 v4, s20 :: v_dual_mov_b32 v5, s21
-; GFX11-NEXT:    v_dual_mov_b32 v6, s22 :: v_dual_mov_b32 v7, s23
-; GFX11-NEXT:    v_dual_mov_b32 v8, s16 :: v_dual_mov_b32 v9, s17
-; GFX11-NEXT:    v_dual_mov_b32 v10, s18 :: v_dual_mov_b32 v11, s19
-; GFX11-NEXT:    v_dual_mov_b32 v16, s0 :: v_dual_mov_b32 v17, s1
-; GFX11-NEXT:    v_dual_mov_b32 v18, s2 :: v_dual_mov_b32 v19, s3
-; GFX11-NEXT:    s_clause 0x4
+; GFX11-NEXT:    v_dual_mov_b32 v6, s24 :: v_dual_mov_b32 v7, s25
+; GFX11-NEXT:    v_dual_mov_b32 v8, s26 :: v_dual_mov_b32 v9, s27
+; GFX11-NEXT:    v_dual_mov_b32 v16, s20 :: v_dual_mov_b32 v17, s21
+; GFX11-NEXT:    v_dual_mov_b32 v18, s22 :: v_dual_mov_b32 v19, s23
+; GFX11-NEXT:    v_dual_mov_b32 v20, s16 :: v_dual_mov_b32 v21, s17
+; GFX11-NEXT:    v_dual_mov_b32 v22, s18 :: v_dual_mov_b32 v23, s19
+; GFX11-NEXT:    v_dual_mov_b32 v24, s0 :: v_dual_mov_b32 v25, s1
+; GFX11-NEXT:    v_dual_mov_b32 v26, s2 :: v_dual_mov_b32 v27, s3
+; GFX11-NEXT:    s_clause 0x5
+; GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[6:9], off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[16:19], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[20:23], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[24:27], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <32 x i32> %arg0, ptr addrspace(1) poison
   ret void
@@ -779,25 +779,25 @@ define void @void_func_v16i64_inreg(<16 x i64> inreg %arg0) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v15, v1 :: v_dual_mov_b32 v14, v0
-; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[10:13], off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[6:9], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX11-NEXT:    v_dual_mov_b32 v12, s28 :: v_dual_mov_b32 v13, s29
-; GFX11-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
-; GFX11-NEXT:    v_dual_mov_b32 v2, s26 :: v_dual_mov_b32 v3, s27
-; GFX11-NEXT:    v_dual_mov_b32 v4, s20 :: v_dual_mov_b32 v5, s21
-; GFX11-NEXT:    v_dual_mov_b32 v6, s22 :: v_dual_mov_b32 v7, s23
-; GFX11-NEXT:    v_dual_mov_b32 v8, s16 :: v_dual_mov_b32 v9, s17
-; GFX11-NEXT:    v_dual_mov_b32 v10, s18 :: v_dual_mov_b32 v11, s19
-; GFX11-NEXT:    v_dual_mov_b32 v16, s0 :: v_dual_mov_b32 v17, s1
-; GFX11-NEXT:    v_dual_mov_b32 v18, s2 :: v_dual_mov_b32 v19, s3
-; GFX11-NEXT:    s_clause 0x4
+; GFX11-NEXT:    v_dual_mov_b32 v6, s24 :: v_dual_mov_b32 v7, s25
+; GFX11-NEXT:    v_dual_mov_b32 v8, s26 :: v_dual_mov_b32 v9, s27
+; GFX11-NEXT:    v_dual_mov_b32 v16, s20 :: v_dual_mov_b32 v17, s21
+; GFX11-NEXT:    v_dual_mov_b32 v18, s22 :: v_dual_mov_b32 v19, s23
+; GFX11-NEXT:    v_dual_mov_b32 v20, s16 :: v_dual_mov_b32 v21, s17
+; GFX11-NEXT:    v_dual_mov_b32 v22, s18 :: v_dual_mov_b32 v23, s19
+; GFX11-NEXT:    v_dual_mov_b32 v24, s0 :: v_dual_mov_b32 v25, s1
+; GFX11-NEXT:    v_dual_mov_b32 v26, s2 :: v_dual_mov_b32 v27, s3
+; GFX11-NEXT:    s_clause 0x5
+; GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[6:9], off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[16:19], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[20:23], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[24:27], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <16 x i64> %arg0, ptr addrspace(1) poison
   ret void
@@ -1243,25 +1243,25 @@ define void @void_func_v16f64_inreg(<16 x double> inreg %arg0) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v15, v1 :: v_dual_mov_b32 v14, v0
-; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[10:13], off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[6:9], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX11-NEXT:    v_dual_mov_b32 v12, s28 :: v_dual_mov_b32 v13, s29
-; GFX11-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
-; GFX11-NEXT:    v_dual_mov_b32 v2, s26 :: v_dual_mov_b32 v3, s27
-; GFX11-NEXT:    v_dual_mov_b32 v4, s20 :: v_dual_mov_b32 v5, s21
-; GFX11-NEXT:    v_dual_mov_b32 v6, s22 :: v_dual_mov_b32 v7, s23
-; GFX11-NEXT:    v_dual_mov_b32 v8, s16 :: v_dual_mov_b32 v9, s17
-; GFX11-NEXT:    v_dual_mov_b32 v10, s18 :: v_dual_mov_b32 v11, s19
-; GFX11-NEXT:    v_dual_mov_b32 v16, s0 :: v_dual_mov_b32 v17, s1
-; GFX11-NEXT:    v_dual_mov_b32 v18, s2 :: v_dual_mov_b32 v19, s3
-; GFX11-NEXT:    s_clause 0x4
+; GFX11-NEXT:    v_dual_mov_b32 v6, s24 :: v_dual_mov_b32 v7, s25
+; GFX11-NEXT:    v_dual_mov_b32 v8, s26 :: v_dual_mov_b32 v9, s27
+; GFX11-NEXT:    v_dual_mov_b32 v16, s20 :: v_dual_mov_b32 v17, s21
+; GFX11-NEXT:    v_dual_mov_b32 v18, s22 :: v_dual_mov_b32 v19, s23
+; GFX11-NEXT:    v_dual_mov_b32 v20, s16 :: v_dual_mov_b32 v21, s17
+; GFX11-NEXT:    v_dual_mov_b32 v22, s18 :: v_dual_mov_b32 v23, s19
+; GFX11-NEXT:    v_dual_mov_b32 v24, s0 :: v_dual_mov_b32 v25, s1
+; GFX11-NEXT:    v_dual_mov_b32 v26, s2 :: v_dual_mov_b32 v27, s3
+; GFX11-NEXT:    s_clause 0x5
+; GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
-; GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[6:9], off
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[16:19], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[20:23], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[24:27], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store <16 x double> %arg0, ptr addrspace(1) poison
   ret void

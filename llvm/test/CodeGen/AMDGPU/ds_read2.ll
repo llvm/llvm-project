@@ -1235,19 +1235,19 @@ define amdgpu_kernel void @ds_read_diff_base_interleaving(
 ; CI-NEXT:    v_add_i32_e32 v3, vcc, s1, v0
 ; CI-NEXT:    v_add_i32_e32 v4, vcc, s2, v1
 ; CI-NEXT:    v_add_i32_e32 v6, vcc, s3, v0
-; CI-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
-; CI-NEXT:    ds_read2_b32 v[2:3], v3 offset1:4
+; CI-NEXT:    ds_read2_b32 v[0:1], v3 offset1:4
+; CI-NEXT:    ds_read2_b32 v[2:3], v2 offset1:1
 ; CI-NEXT:    ds_read2_b32 v[4:5], v4 offset1:1
 ; CI-NEXT:    ds_read2_b32 v[6:7], v6 offset1:4
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(2)
-; CI-NEXT:    v_mul_f32_e32 v0, v0, v2
+; CI-NEXT:    v_mul_f32_e32 v0, v2, v0
 ; CI-NEXT:    v_add_f32_e32 v0, 2.0, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mul_f32_e32 v2, v4, v6
 ; CI-NEXT:    v_sub_f32_e32 v0, v0, v2
-; CI-NEXT:    v_mul_f32_e32 v1, v1, v3
+; CI-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; CI-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; CI-NEXT:    v_mul_f32_e32 v1, v5, v7
 ; CI-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -1265,17 +1265,17 @@ define amdgpu_kernel void @ds_read_diff_base_interleaving(
 ; GFX9-NEXT:    v_add_u32_e32 v3, s1, v0
 ; GFX9-NEXT:    v_add_u32_e32 v4, s2, v1
 ; GFX9-NEXT:    v_add_u32_e32 v6, s3, v0
-; GFX9-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
-; GFX9-NEXT:    ds_read2_b32 v[2:3], v3 offset1:4
+; GFX9-NEXT:    ds_read2_b32 v[0:1], v3 offset1:4
+; GFX9-NEXT:    ds_read2_b32 v[2:3], v2 offset1:1
 ; GFX9-NEXT:    ds_read2_b32 v[4:5], v4 offset1:1
 ; GFX9-NEXT:    ds_read2_b32 v[6:7], v6 offset1:4
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mul_f32_e32 v0, v0, v2
+; GFX9-NEXT:    v_mul_f32_e32 v0, v2, v0
 ; GFX9-NEXT:    v_add_f32_e32 v0, 2.0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v4, v6
 ; GFX9-NEXT:    v_sub_f32_e32 v0, v0, v2
-; GFX9-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX9-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX9-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v5, v7
 ; GFX9-NEXT:    v_sub_f32_e32 v0, v0, v1

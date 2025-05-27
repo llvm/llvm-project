@@ -55,6 +55,7 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX12-NEXT:    s_sext_i32_i16 s13, s13
 ; GFX12-NEXT:    s_add_co_u32 s12, s12, wobble@gotpcrel32@lo+8
 ; GFX12-NEXT:    s_add_co_ci_u32 s13, s13, wobble@gotpcrel32@hi+16
+; GFX12-NEXT:    s_clause 0x2
 ; GFX12-NEXT:    s_load_u8 s14, s[4:5], 0x0
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[6:7], 0x0
 ; GFX12-NEXT:    s_load_b64 s[6:7], s[12:13], 0x0

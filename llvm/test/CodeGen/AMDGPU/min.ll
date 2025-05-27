@@ -2613,6 +2613,7 @@ define amdgpu_kernel void @v_test_umin_ult_i32_multi_use(ptr addrspace(1) %out0,
 ; GFX10-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dword s8, s[4:5], 0x0
 ; GFX10-NEXT:    s_load_dword s9, s[6:7], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2631,6 +2632,7 @@ define amdgpu_kernel void @v_test_umin_ult_i32_multi_use(ptr addrspace(1) %out0,
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b32 s4, s[4:5], 0x0
 ; GFX11-NEXT:    s_load_b32 s5, s[6:7], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

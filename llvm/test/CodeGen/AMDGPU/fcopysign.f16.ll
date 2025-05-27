@@ -962,8 +962,9 @@ define amdgpu_kernel void @v_copysign_out_f32_mag_f16_sign_f32(ptr addrspace(1) 
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v1, s[2:3]
-; GFX9-NEXT:    s_brev_b32 s2, -2
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    global_load_dword v0, v0, s[6:7]
+; GFX9-NEXT:    s_brev_b32 s2, -2
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -976,13 +977,15 @@ define amdgpu_kernel void @v_copysign_out_f32_mag_f16_sign_f32(ptr addrspace(1) 
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_and_b32 v1, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_b32 v1, v1, s[4:5]
+; GFX11-TRUE16-NEXT:    s_clause 0x1
+; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_b32 v1, v2, s[4:5]
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1001,6 +1004,7 @@ define amdgpu_kernel void @v_copysign_out_f32_mag_f16_sign_f32(ptr addrspace(1) 
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 1, v0
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_u16 v1, v1, s[2:3]
 ; GFX11-FAKE16-NEXT:    global_load_b32 v0, v0, s[4:5]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1101,6 +1105,7 @@ define amdgpu_kernel void @v_copysign_out_f64_mag_f16_sign_f64(ptr addrspace(1) 
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_lshlrev_b32 v0, 1, v1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 3, v1
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
 ; GFX11-TRUE16-NEXT:    global_load_b64 v[1:2], v1, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1121,6 +1126,7 @@ define amdgpu_kernel void @v_copysign_out_f64_mag_f16_sign_f64(ptr addrspace(1) 
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_u16 v2, v1, s[2:3]
 ; GFX11-FAKE16-NEXT:    global_load_b64 v[0:1], v0, s[4:5]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
@@ -1202,10 +1208,11 @@ define amdgpu_kernel void @v_copysign_out_f32_mag_f32_sign_f16(ptr addrspace(1) 
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v1, s[6:7]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    global_load_dword v0, v0, s[2:3]
 ; GFX9-NEXT:    s_brev_b32 s2, -2
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_bfi_b32 v0, s2, v0, v1
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
@@ -1221,6 +1228,7 @@ define amdgpu_kernel void @v_copysign_out_f32_mag_f32_sign_f16(ptr addrspace(1) 
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[6:7]
 ; GFX11-TRUE16-NEXT:    global_load_b32 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1241,6 +1249,7 @@ define amdgpu_kernel void @v_copysign_out_f32_mag_f32_sign_f16(ptr addrspace(1) 
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 1, v0
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_u16 v1, v1, s[6:7]
 ; GFX11-FAKE16-NEXT:    global_load_b32 v0, v0, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1342,6 +1351,7 @@ define amdgpu_kernel void @v_copysign_out_f64_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_lshlrev_b32 v0, 1, v1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 3, v1
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[6:7]
 ; GFX11-TRUE16-NEXT:    global_load_b64 v[1:2], v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1362,6 +1372,7 @@ define amdgpu_kernel void @v_copysign_out_f64_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_u16 v2, v1, s[6:7]
 ; GFX11-FAKE16-NEXT:    global_load_b64 v[0:1], v0, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1444,10 +1455,11 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f16_sign_f32(ptr addrspace(1) 
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v1, v1, s[6:7]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    global_load_ushort v0, v0, s[2:3]
 ; GFX9-NEXT:    s_movk_i32 s2, 0x7fff
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_bfi_b32 v0, s2, v0, v1
 ; GFX9-NEXT:    global_store_short v2, v0, s[0:1]
@@ -1463,6 +1475,7 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f16_sign_f32(ptr addrspace(1) 
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_b32 v1, v1, s[6:7]
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1484,6 +1497,7 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f16_sign_f32(ptr addrspace(1) 
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 2, v0
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_b32 v1, v1, s[6:7]
 ; GFX11-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1582,6 +1596,7 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f16_sign_f64(ptr addrspace(1) 
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_b64 v[0:1], v0, s[6:7]
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1602,6 +1617,7 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f16_sign_f64(ptr addrspace(1) 
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_b64 v[0:1], v0, s[6:7]
 ; GFX11-FAKE16-NEXT:    global_load_u16 v0, v2, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1686,8 +1702,9 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f32_sign_f16(ptr addrspace(1) 
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v1, v1, s[2:3]
-; GFX9-NEXT:    s_movk_i32 s2, 0x7fff
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    global_load_ushort v0, v0, s[6:7]
+; GFX9-NEXT:    s_movk_i32 s2, 0x7fff
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1705,6 +1722,7 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f32_sign_f16(ptr addrspace(1) 
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_load_b32 v1, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[4:5]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
@@ -1726,6 +1744,7 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f32_sign_f16(ptr addrspace(1) 
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 2, v0
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    global_load_b32 v1, v1, s[2:3]
 ; GFX11-FAKE16-NEXT:    global_load_u16 v0, v0, s[4:5]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(1)

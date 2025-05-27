@@ -47,6 +47,11 @@ namespace llvm::AMDGPU {
 #include "AMDGPUGenSearchableTables.inc"
 } // namespace llvm::AMDGPU
 
+static cl::opt<bool> EnableDiffBasePtrMemClustering(
+    "amdgpu-enable-diff-baseptr-mem-clustering",
+    cl::desc("Enable clustering memory ops with different base pointers"),
+    cl::init(true), cl::Hidden);
+
 // Must be at least 4 to be able to branch over minimum unconditional branch
 // code. This is only for making it possible to write reasonably small tests for
 // long branches.
@@ -522,6 +527,22 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   return false;
 }
 
+static bool memOpsHaveSameAddrspace(const MachineInstr &MI1,
+                                    ArrayRef<const MachineOperand *> BaseOps1,
+                                    const MachineInstr &MI2,
+                                    ArrayRef<const MachineOperand *> BaseOps2) {
+  // If base is identical, assume identical addrspace
+  if (BaseOps1.front()->isIdenticalTo(*BaseOps2.front()))
+    return true;
+
+  if (!MI1.hasOneMemOperand() || !MI2.hasOneMemOperand())
+    return false;
+
+  auto *MO1 = *MI1.memoperands_begin();
+  auto *MO2 = *MI2.memoperands_begin();
+  return MO1->getAddrSpace() == MO2->getAddrSpace();
+}
+
 static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
                                   ArrayRef<const MachineOperand *> BaseOps1,
                                   const MachineInstr &MI2,
@@ -559,14 +580,25 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       int64_t Offset2, bool OffsetIsScalable2,
                                       unsigned ClusterSize,
                                       unsigned NumBytes) const {
-  // If the mem ops (to be clustered) do not have the same base ptr, then they
-  // should not be clustered
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
   if (!BaseOps1.empty() && !BaseOps2.empty()) {
     const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
     const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
-    if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
-      return false;
+
+    if (EnableDiffBasePtrMemClustering) {
+      // Only consider memory ops from same addrspace for clustering
+      if (!memOpsHaveSameAddrspace(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
+        return false;
+
+      // Don't cluster scalar and vector memory ops
+      if (isVMEM(FirstLdSt) != isVMEM(SecondLdSt))
+        return false;
+    } else {
+      // If the mem ops (to be clustered) do not have the same base ptr, then
+      // they should not be clustered
+      if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
+        return false;
+    }
 
     const SIMachineFunctionInfo *MFI =
         FirstLdSt.getMF()->getInfo<SIMachineFunctionInfo>();

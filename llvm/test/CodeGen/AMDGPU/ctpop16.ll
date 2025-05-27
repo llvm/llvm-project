@@ -1205,15 +1205,15 @@ define amdgpu_kernel void @v_ctpop_i16_add_vvar_inv(ptr addrspace(1) noalias %ou
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_ushort v3, v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    v_add_u32_e32 v0, vcc, s4, v2
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; VI-NEXT:    v_mov_b32_e32 v3, s5
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s4, v2
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; VI-NEXT:    flat_load_ushort v0, v[0:1]
+; VI-NEXT:    flat_load_ushort v1, v[2:3]
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_bcnt_u32_b32 v0, v3, v0
+; VI-NEXT:    v_bcnt_u32_b32 v0, v0, v1
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -1292,7 +1292,7 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB14_4:
-; SI-NEXT:                    ; implicit-def: $vgpr0
+; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_branch .LBB14_2
 ;
 ; VI-LABEL: ctpop_i16_in_br:
