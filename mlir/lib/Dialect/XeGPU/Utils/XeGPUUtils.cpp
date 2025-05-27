@@ -112,7 +112,7 @@ std::string xegpu::getLayoutName(const OpResult res) {
   return llvm::formatv("{0}{1}", prefix, res.getResultNumber()).str();
 }
 
-xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
+xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
 
@@ -152,14 +152,14 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const OpOperand &opr) {
   return getLayoutAttr(opr.get());
 }
 
-void xegpu::setLayoutAttr(OpOperand &opr, LayoutAttr layout) {
+void xegpu::setLayoutAttr(const OpOperand &opr, const LayoutAttr layout) {
   auto owner = opr.getOwner();
   std::string name = xegpu::getLayoutName(opr);
   if (layout && !owner->hasAttrOfType<LayoutAttr>(name))
     owner->setAttr(name, layout);
 }
 
-void xegpu::setLayoutAttr(OpResult result, LayoutAttr layout) {
+void xegpu::setLayoutAttr(const OpResult result, const LayoutAttr layout) {
   Operation *owner = result.getOwner();
   std::string name = xegpu::getLayoutName(result);
   if (layout && !owner->hasAttr(name))

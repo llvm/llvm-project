@@ -66,7 +66,7 @@ std::string getLayoutName(const OpResult res);
 /// values, the LayoutAttr is extracted from the TensorDescType itself. For
 /// other values, it is obtained from the attributes of the defining operation.
 /// Returns nullptr if no LayoutAttr is found.
-LayoutAttr getLayoutAttr(Value value);
+LayoutAttr getLayoutAttr(const Value value);
 
 /// Retrieves the LayoutAttr associated with a given OpOperand. It will
 /// first check the operand_layout_{id} of the owner operation. If not found,
@@ -74,7 +74,7 @@ LayoutAttr getLayoutAttr(Value value);
 LayoutAttr getLayoutAttr(const OpOperand &opr);
 
 /// Sets the LayoutAttr for a given OpOperand by attaching it to the owner
-void setLayoutAttr(OpOperand &opr, LayoutAttr layout);
+void setLayoutAttr(const OpOperand &opr, const LayoutAttr layout);
 
 /// Set the LayoutAttr for the given OpResult by attching it to the defining op
 void setLayoutAttr(OpResult result, LayoutAttr layout);
