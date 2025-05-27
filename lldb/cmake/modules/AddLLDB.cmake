@@ -45,7 +45,6 @@ function(add_lldb_library name)
     "INSTALL_PREFIX;ENTITLEMENTS"
     "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS;CLANG_LIBS"
     ${ARGN})
-  llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
   list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
 
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
@@ -77,7 +76,6 @@ function(add_lldb_library name)
     list(GET split_path -1 dir)
     file(GLOB_RECURSE headers
       ../../include/lldb${dir}/*.h)
-    set(srcs ${srcs} ${headers})
   endif()
   if (PARAM_MODULE)
     set(libkind MODULE)
@@ -101,7 +99,8 @@ function(add_lldb_library name)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
   endif()
 
-  llvm_add_library(${name} ${libkind} ${srcs}
+  llvm_add_library(${name} ${libkind} ${headers}
+    ${PARAM_UNPARSED_ARGUMENTS}
     LINK_LIBS ${PARAM_LINK_LIBS}
     DEPENDS ${PARAM_DEPENDS}
     ${pass_ENTITLEMENTS}
