@@ -24,6 +24,7 @@
 #ifndef LLVM_C_LLJIT_H
 #define LLVM_C_LLJIT_H
 
+#include "llvm-c/Visibility.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/Orc.h"
 #include "llvm-c/TargetMachine.h"
@@ -71,14 +72,14 @@ typedef struct LLVMOrcOpaqueLLJIT *LLVMOrcLLJITRef;
  * The client owns the resulting LLJITBuilder and should dispose of it using
  * LLVMOrcDisposeLLJITBuilder once they are done with it.
  */
-LLVMOrcLLJITBuilderRef LLVMOrcCreateLLJITBuilder(void);
+LLVM_C_ABI LLVMOrcLLJITBuilderRef LLVMOrcCreateLLJITBuilder(void);
 
 /**
  * Dispose of an LLVMOrcLLJITBuilderRef. This should only be called if ownership
  * has not been passed to LLVMOrcCreateLLJIT (e.g. because some error prevented
  * that function from being called).
  */
-void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder);
+LLVM_C_ABI void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder);
 
 /**
  * Set the JITTargetMachineBuilder to be used when constructing the LLJIT
@@ -89,13 +90,13 @@ void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder);
  * This function takes ownership of the JTMB argument: clients should not
  * dispose of the JITTargetMachineBuilder after calling this function.
  */
-void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
+LLVM_C_ABI void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
     LLVMOrcLLJITBuilderRef Builder, LLVMOrcJITTargetMachineBuilderRef JTMB);
 
 /**
  * Set an ObjectLinkingLayer creator function for this LLJIT instance.
  */
-void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
+LLVM_C_ABI void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
     LLVMOrcLLJITBuilderRef Builder,
     LLVMOrcLLJITBuilderObjectLinkingLayerCreatorFunction F, void *Ctx);
 
@@ -113,13 +114,13 @@ void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
  * LLJIT instance will free all memory managed by the JIT, including JIT'd code
  * and not-yet compiled modules.
  */
-LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
+LLVM_C_ABI LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
                                 LLVMOrcLLJITBuilderRef Builder);
 
 /**
  * Dispose of an LLJIT instance.
  */
-LLVMErrorRef LLVMOrcDisposeLLJIT(LLVMOrcLLJITRef J);
+LLVM_C_ABI LLVMErrorRef LLVMOrcDisposeLLJIT(LLVMOrcLLJITRef J);
 
 /**
  * Get a reference to the ExecutionSession for this LLJIT instance.
@@ -127,7 +128,7 @@ LLVMErrorRef LLVMOrcDisposeLLJIT(LLVMOrcLLJITRef J);
  * The ExecutionSession is owned by the LLJIT instance. The client is not
  * responsible for managing its memory.
  */
-LLVMOrcExecutionSessionRef LLVMOrcLLJITGetExecutionSession(LLVMOrcLLJITRef J);
+LLVM_C_ABI LLVMOrcExecutionSessionRef LLVMOrcLLJITGetExecutionSession(LLVMOrcLLJITRef J);
 
 /**
  * Return a reference to the Main JITDylib.
@@ -135,18 +136,18 @@ LLVMOrcExecutionSessionRef LLVMOrcLLJITGetExecutionSession(LLVMOrcLLJITRef J);
  * The JITDylib is owned by the LLJIT instance. The client is not responsible
  * for managing its memory.
  */
-LLVMOrcJITDylibRef LLVMOrcLLJITGetMainJITDylib(LLVMOrcLLJITRef J);
+LLVM_C_ABI LLVMOrcJITDylibRef LLVMOrcLLJITGetMainJITDylib(LLVMOrcLLJITRef J);
 
 /**
  * Return the target triple for this LLJIT instance. This string is owned by
  * the LLJIT instance and should not be freed by the client.
  */
-const char *LLVMOrcLLJITGetTripleString(LLVMOrcLLJITRef J);
+LLVM_C_ABI const char *LLVMOrcLLJITGetTripleString(LLVMOrcLLJITRef J);
 
 /**
  * Returns the global prefix character according to the LLJIT's DataLayout.
  */
-char LLVMOrcLLJITGetGlobalPrefix(LLVMOrcLLJITRef J);
+LLVM_C_ABI char LLVMOrcLLJITGetGlobalPrefix(LLVMOrcLLJITRef J);
 
 /**
  * Mangles the given string according to the LLJIT instance's DataLayout, then
@@ -155,7 +156,7 @@ char LLVMOrcLLJITGetGlobalPrefix(LLVMOrcLLJITRef J);
  * decrement the ref-count on the pool entry once they are finished with this
  * value.
  */
-LLVMOrcSymbolStringPoolEntryRef
+LLVM_C_ABI LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName);
 
 /**
@@ -167,7 +168,7 @@ LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName);
  * Resources associated with the given object will be tracked by the given
  * JITDylib's default resource tracker.
  */
-LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
+LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
                                        LLVMMemoryBufferRef ObjBuffer);
 
 /**
@@ -179,7 +180,7 @@ LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
  * Resources associated with the given object will be tracked by ResourceTracker
  * RT.
  */
-LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcLLJITRef J,
+LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcLLJITRef J,
                                              LLVMOrcResourceTrackerRef RT,
                                              LLVMMemoryBufferRef ObjBuffer);
 
@@ -192,7 +193,7 @@ LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcLLJITRef J,
  * Resources associated with the given Module will be tracked by the given
  * JITDylib's default resource tracker.
  */
-LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
+LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
                                          LLVMOrcJITDylibRef JD,
                                          LLVMOrcThreadSafeModuleRef TSM);
 
@@ -205,7 +206,7 @@ LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
  * Resources associated with the given Module will be tracked by ResourceTracker
  * RT.
  */
-LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(LLVMOrcLLJITRef J,
+LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(LLVMOrcLLJITRef J,
                                                LLVMOrcResourceTrackerRef JD,
                                                LLVMOrcThreadSafeModuleRef TSM);
 
@@ -214,25 +215,25 @@ LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(LLVMOrcLLJITRef J,
  *
  * This operation does not take ownership of the Name argument.
  */
-LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
+LLVM_C_ABI LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
                                 LLVMOrcExecutorAddress *Result,
                                 const char *Name);
 
 /**
  * Returns a non-owning reference to the LLJIT instance's object linking layer.
  */
-LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J);
+LLVM_C_ABI LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J);
 
 /**
  * Returns a non-owning reference to the LLJIT instance's object linking layer.
  */
-LLVMOrcObjectTransformLayerRef
+LLVM_C_ABI LLVMOrcObjectTransformLayerRef
 LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J);
 
 /**
  * Returns a non-owning reference to the LLJIT instance's IR transform layer.
  */
-LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J);
+LLVM_C_ABI LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J);
 
 /**
  * Get the LLJIT instance's default data layout string.
@@ -240,7 +241,7 @@ LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J);
  * This string is owned by the LLJIT instance and does not need to be freed
  * by the caller.
  */
-const char *LLVMOrcLLJITGetDataLayoutStr(LLVMOrcLLJITRef J);
+LLVM_C_ABI const char *LLVMOrcLLJITGetDataLayoutStr(LLVMOrcLLJITRef J);
 
 /**
  * @}
