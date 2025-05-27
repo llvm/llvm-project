@@ -107,6 +107,8 @@ void addBranchConditionTester(AnalysisASTConsumer &AnalysisConsumer,
   });
 }
 
+/// Add this to the \c runChecker template arguments to enable dumping the CFG
+/// and the ExplodedGraph for debugging a failing test case.
 [[maybe_unused]] void dumpCFGAndEgraph(AnalysisASTConsumer &AnalysisConsumer,
                                        AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages.emplace_back("debug.DumpCFG", true);
