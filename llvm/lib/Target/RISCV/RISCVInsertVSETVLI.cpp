@@ -26,7 +26,7 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -896,8 +896,7 @@ private:
 
   bool canMutatePriorConfig(const MachineInstr &PrevMI, const MachineInstr &MI,
                             const DemandedFields &Used) const;
-  void coalesceVSETVLIs(SetVector<MachineBasicBlock *> &Worklist,
-                        MachineBasicBlock &MBB) const;
+  void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
 
   VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) const;
   VSETVLIInfo computeInfoForInstr(const MachineInstr &MI) const;
@@ -1644,8 +1643,7 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
   return areCompatibleVTYPEs(PriorVType, VType, Used);
 }
 
-void RISCVInsertVSETVLI::coalesceVSETVLIs(
-    SetVector<MachineBasicBlock *> &Worklist, MachineBasicBlock &MBB) const {
+void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   MachineInstr *NextMI = nullptr;
   // We can have arbitrary code in successors, so VL and VTYPE
   // must be considered demanded.
@@ -1664,18 +1662,9 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(
       LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
 
     MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
-    if (VLOpDef && MRI->use_nodbg_empty(OldVLReg)) {
-      if (TII->isAddImmediate(*VLOpDef, OldVLReg))
-        ToDelete.push_back(VLOpDef);
-      // If the destination register of a vset* instruction becomes dead because
-      // of this, there might be a chance to eliminate it. Put into the worklist
-      // so that we can revisit it.
-      // Note that since this is a virtual register, the definition instruction
-      // is always placed earlier in the program order. Thus, we avoid
-      // enqueuing blocks in cycle and therefore guarantee to terminate.
-      if (RISCVInstrInfo::isVectorConfigInstr(*VLOpDef))
-        Worklist.insert(VLOpDef->getParent());
-    }
+    if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
+        MRI->use_nodbg_empty(OldVLReg))
+      ToDelete.push_back(VLOpDef);
   };
 
   for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
@@ -1852,14 +1841,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // any cross block analysis within the dataflow.  We can't have both
   // demanded fields based mutation and non-local analysis in the
   // dataflow at the same time without introducing inconsistencies.
-  using BBPtrIterator = pointer_iterator<MachineFunction::iterator>;
-  SetVector<MachineBasicBlock *> Worklist(BBPtrIterator(MF.begin()),
-                                          BBPtrIterator(MF.end()));
-  while (!Worklist.empty()) {
-    MachineBasicBlock *MBB = Worklist.front();
-    Worklist.erase(Worklist.begin());
-    coalesceVSETVLIs(Worklist, *MBB);
-  }
+  // We're visiting blocks from the bottom up because a VSETVLI in the
+  // earlier block might become dead when its uses in later blocks are
+  // optimized away.
+  for (MachineBasicBlock *MBB : post_order(&MF))
+    coalesceVSETVLIs(*MBB);
 
   // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
   // of VLEFF/VLSEGFF.
