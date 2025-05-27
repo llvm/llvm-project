@@ -27576,12 +27576,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
     if (SDValue Res = LowerVECTOR_COMPRESS(SDValue(N, 0), DAG))
       Results.push_back(Res);
     return;
-  case ISD::PARTIAL_REDUCE_UMLA:
-  case ISD::PARTIAL_REDUCE_SMLA: {
-    if (SDValue Res = LowerPARTIAL_REDUCE_MLA(SDValue(N, 0), DAG))
-      Results.push_back(Res);
-    return;
-  }
   case ISD::ADD:
   case ISD::FADD:
     ReplaceAddWithADDP(N, Results, DAG, Subtarget);
