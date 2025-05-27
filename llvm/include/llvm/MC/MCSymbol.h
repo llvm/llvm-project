@@ -258,7 +258,7 @@ public:
   /// isInSection - Check if this symbol is defined in some section (i.e., it
   /// is defined but not absolute).
   bool isInSection() const {
-    auto *F = getFragment(0);
+    auto *F = getFragment();
     return F && F != AbsolutePseudoFragment;
   }
 
@@ -399,12 +399,12 @@ public:
     return SymbolContents == SymContentsTargetCommon;
   }
 
-  MCFragment *getFragment(bool SetUsed = false) const {
+  MCFragment *getFragment() const {
     if (Fragment || !isVariable() || isWeakExternal())
       return Fragment;
     // If the symbol is a non-weak alias, get information about
     // the aliasee. (Don't try to resolve weak aliases.)
-    Fragment = getVariableValue(SetUsed)->findAssociatedFragment();
+    Fragment = getVariableValue(false)->findAssociatedFragment();
     return Fragment;
   }
 
