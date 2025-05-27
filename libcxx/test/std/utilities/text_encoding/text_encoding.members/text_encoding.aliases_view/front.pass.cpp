@@ -10,11 +10,7 @@
 
 // REQUIRES: std-at-least-c++26
 
-// UNSUPPORTED: no-localization
-
-// class text_encoding
-
-// text_encoding text_encoding::environment();
+// struct text_encoding::aliases_view
 
 // Concerns:
 // 1. An aliases_view from a single text_encoding object returns the same front()

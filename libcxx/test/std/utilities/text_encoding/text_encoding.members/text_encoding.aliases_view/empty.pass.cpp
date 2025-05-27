@@ -10,11 +10,7 @@
 
 // REQUIRES: std-at-least-c++26
 
-// UNSUPPORTED: no-localization
-
-// class text_encoding
-
-// text_encoding text_encoding::environment();
+// struct text_encoding::aliases_view
 
 // Concerns:
 // 1. An alias_view of a text_encoding object for "other" is empty

@@ -9,11 +9,10 @@
 // <text_encoding>
 
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: no-localization
 
 // class text_encoding
 
-// text_encoding text_encoding::environment();
+// text_encoding text_encoding::aliases();
 
 // Concerns:
 // 1. Verify that text_encoding::aliases_view satisfies ranges::forward_range, copyable, view,
@@ -22,7 +21,6 @@
 #include <concepts>
 #include <ranges>
 #include <text_encoding>
-#include <type_traits>
 
 #include "platform_support.h"
 #include "test_macros.h"

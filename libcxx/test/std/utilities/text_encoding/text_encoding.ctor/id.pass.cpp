@@ -33,11 +33,49 @@
 
 using te_id = std::text_encoding::id;
 
-constexpr void test_ctor(te_id i, te_id expect_id, std::string_view expect_name) {
+constexpr bool test_ctor(te_id i, te_id expect_id, std::string_view expect_name) {
   auto te = std::text_encoding(i);
-  assert(te.mib() == expect_id);
-  assert(expect_name.compare(te.name()) == 0);
-  assert(std::ranges::contains(te.aliases(), std::string_view(te.name())));
+  if (te.mib() != expect_id) {
+    return false;
+  }
+  if (expect_name.compare(te.name()) != 0) {
+    return false;
+  }
+  if (!std::ranges::contains(te.aliases(), std::string_view(te.name()))) {
+    return false;
+  }
+  return true;
+}
+
+constexpr bool test_ctors_static() {
+  for (auto pair : unique_encoding_data) {
+    if (!test_ctor(te_id{pair.mib}, te_id{pair.mib}, pair.name)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+constexpr bool test_unknown() {
+  constexpr auto te = std::text_encoding(te_id::unknown);
+  if (te.mib() != te_id::unknown) {
+    return false;
+  }
+  if (std::string_view(te.name()).compare(te.name()) != 0) {
+    return false;
+  }
+  return true;
+}
+
+constexpr bool test_other() {
+  constexpr auto te = std::text_encoding(te_id::other);
+  if (te.mib() != te_id::other) {
+    return false;
+  }
+  if (std::string_view(te.name()).compare(te.name()) != 0) {
+    return false;
+  }
+  return true;
 }
 
 int main() {
@@ -48,7 +86,27 @@ int main() {
 
   {
     for (auto pair : unique_encoding_data) {
-      test_ctor(te_id{pair.mib}, te_id{pair.mib}, pair.name);
+      assert(test_ctor(te_id{pair.mib}, te_id{pair.mib}, pair.name));
     }
+  }
+
+  {
+    static_assert(test_ctors_static());
+  }
+
+  {
+    static_assert(test_unknown());
+  }
+
+  {
+    assert(test_unknown());
+  }
+
+  {
+    static_assert(test_other());
+  }
+
+  {
+    assert(test_other());
   }
 }

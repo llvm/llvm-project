@@ -25,7 +25,6 @@
 
 #include <cassert>
 #include <text_encoding>
-#include <type_traits>
 
 #include "test_macros.h"
 #include "test_text_encoding.h"

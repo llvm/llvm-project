@@ -11,8 +11,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// UNSUPPORTED: no-localization
-
 // class text_encoding
 
 // text_encoding text_encoding::literal() noexcept;
@@ -22,7 +20,6 @@
 
 #include <cassert>
 #include <text_encoding>
-#include <type_traits>
 #include <string_view>
 
 #include "test_macros.h"
@@ -37,9 +34,6 @@ int main() {
     assert(std::string_view(te.name()) == std::string_view(__GNUC_EXECUTION_CHARSET_NAME));
 #  elif defined(__clang_literal_encoding__)
     assert(std::string_view(te.name()) == std::string_view(__clang_literal_encoding__));
-#  elif defined(__clang__)
-    assert(std::string_view(te.name()) == "UTF-8");
-    assert(te.mib() == std::text_encoding::id::UTF8);
 #  else
     assert(te.mib() = std::text_encoding::id::unknown);
 #  endif

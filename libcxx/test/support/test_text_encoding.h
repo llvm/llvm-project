@@ -10,6 +10,7 @@
 #define SUPPORT_TEST_TEXT_ENCODING_H
 
 #include "test_macros.h"
+#include <array>
 #include <cstdint>
 
 struct encoding_pair {
@@ -17,7 +18,8 @@ struct encoding_pair {
   const char* name;
 };
 
-constexpr encoding_pair all_encoding_data[] = {
+constexpr std::array<const encoding_pair, 882> all_encoding_data{ {
+
     {1, ""},
     {2, ""},
     {3, "ANSI_X3.4-1968"},
@@ -900,9 +902,10 @@ constexpr encoding_pair all_encoding_data[] = {
     {2259, "csTIS620"},
     {2260, "CP50220"},
     {2260, "csCP50220"},
+  }
 };
 
-constexpr encoding_pair unique_encoding_data[] = {
+constexpr std::array<const encoding_pair, 256> unique_encoding_data{{
     {3, "ANSI_X3.4-1968"},
     {4, "ISO-8859-1"},
     {5, "ISO-8859-2"},
@@ -1159,6 +1162,6 @@ constexpr encoding_pair unique_encoding_data[] = {
     {2258, "windows-1258"},
     {2259, "TIS-620"},
     {2260, "CP50220"},
-};
+}};
 
 #endif // SUPPORT_TEST_TEXT_ENCODING_H

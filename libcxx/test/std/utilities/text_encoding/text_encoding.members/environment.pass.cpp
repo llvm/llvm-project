@@ -14,9 +14,6 @@
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: windows
 
-// libc++ is not built with C++26, and the implementation for this function is in a source file.
-// XFAIL: *
-
 // class text_encoding
 
 // text_encoding text_encoding::environment();
