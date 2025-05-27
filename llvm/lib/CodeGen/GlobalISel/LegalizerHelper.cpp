@@ -124,6 +124,9 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
 
   if (isa<GIntrinsic>(MI))
     return LI.legalizeIntrinsic(*this, MI) ? Legalized : UnableToLegalize;
+  if (isa<GInsertSubvector>(MI))
+    return LI.legalizeCustom(*this, MI, LocObserver) ? Legalized
+                                                 : UnableToLegalize;
   auto Step = LI.getAction(MI, MRI);
   switch (Step.Action) {
   case Legal:
