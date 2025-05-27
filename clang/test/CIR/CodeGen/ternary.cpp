@@ -9,10 +9,10 @@ int x(int y) {
 
 // CIR-LABEL: cir.func @_Z1xi(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> !s32i {
-// CIR: [[Y:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
-// CIR: [[RETVAL:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: [[Y:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
+// CIR: [[RETVAL:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
-// CIR: [[YVAL:%[0-9]+]] = cir.load [[Y]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[YVAL:%[0-9]+]] = cir.load align(4) [[Y]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[ZERO:%[0-9]+]] = cir.const #cir.int<0> : !s32i
 // CIR: [[CMP:%[0-9]+]] = cir.cmp(gt, [[YVAL]], [[ZERO]]) : !s32i, !cir.bool
 // CIR: [[THREE:%[0-9]+]] = cir.const #cir.int<3> : !s32i
@@ -42,20 +42,20 @@ int foo(int a, int b) {
 
 // CIR-LABEL: cir.func @_Z3fooii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> !s32i {
-// CIR: [[A:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: [[B:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR: [[RETVAL:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: [[A:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+// CIR: [[B:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
+// CIR: [[RETVAL:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR: cir.store %[[ARG0]], [[A]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG1]], [[B]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
-// CIR: [[ALOAD:%[0-9]+]] = cir.load [[A]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[BLOAD:%[0-9]+]] = cir.load [[B]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[ALOAD:%[0-9]+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[BLOAD:%[0-9]+]] = cir.load align(4) [[B]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[CMP:%[0-9]+]] = cir.cmp(lt, [[ALOAD]], [[BLOAD]]) : !s32i, !cir.bool
 // CIR: [[TERNARY_RES:%[0-9]+]] = cir.ternary([[CMP]], true {
 // CIR: [[ZERO:%[0-9]+]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.yield [[ZERO]] : !s32i
 // CIR: }, false {
-// CIR: [[ALOAD2:%[0-9]+]] = cir.load [[A]] : !cir.ptr<!s32i>, !s32i
+// CIR: [[ALOAD2:%[0-9]+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.yield [[ALOAD2]] : !s32i
 // CIR: }) : (!cir.bool) -> !s32i
 // CIR: [[CAST:%[0-9]+]] = cir.cast(int_to_bool, [[TERNARY_RES]] : !s32i), !cir.bool
