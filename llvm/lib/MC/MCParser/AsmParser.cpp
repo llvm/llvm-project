@@ -6348,12 +6348,12 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
     //
     // FIXME: Diagnostics. Note the location of the definition as a label.
     // FIXME: Diagnose assignment to protected identifier (e.g., register name).
-    if (Sym->isUndefined() && !Sym->isUsed() && !Sym->isVariable())
+    if (!Sym->isUnset() && (!allow_redef || !Sym->isRedefinable()))
+      return Parser.Error(EqualLoc, "redefinition of '" + Name + "'");
+    else if (Sym->isUndefined() && !Sym->isUsed() && !Sym->isVariable())
       ; // Allow redefinitions of undefined symbols only used in directives.
     else if (Sym->isVariable() && !Sym->isUsed() && allow_redef)
       ; // Allow redefinitions of variables that haven't yet been used.
-    else if (!Sym->isUndefined() && (!Sym->isVariable() || !allow_redef))
-      return Parser.Error(EqualLoc, "redefinition of '" + Name + "'");
     else if (!Sym->isVariable())
       return Parser.Error(EqualLoc, "invalid assignment to '" + Name + "'");
     else if (!isa<MCConstantExpr>(Sym->getVariableValue()))
