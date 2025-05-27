@@ -1313,7 +1313,9 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         // nocapture only guarantees that no copies outlive the function, not
         // that the value cannot be locally captured.
         if (!RequiresNoCaptureBefore ||
-            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false, I, &DT))
+            !capturesAnything(PointerMayBeCapturedBefore(
+                A, /*ReturnCaptures=*/false, I, &DT, /*IncludeI=*/false,
+                CaptureComponents::Provenance)))
           NoAliases.push_back(NewScopes[A]);
       }
 
@@ -1819,16 +1821,23 @@ static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
                                DenseMap<const MDNode *, MDNode *> &IANodes) {
   auto IA = DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes);
   return DILocation::get(Ctx, OrigDL.getLine(), OrigDL.getCol(),
-                         OrigDL.getScope(), IA);
+                         OrigDL.getScope(), IA, OrigDL.isImplicitCode(),
+                         OrigDL->getAtomGroup(), OrigDL->getAtomRank());
 }
 
 /// Update inlined instructions' line numbers to
 /// to encode location where these instructions are inlined.
 static void fixupLineNumbers(Function *Fn, Function::iterator FI,
                              Instruction *TheCall, bool CalleeHasDebugInfo) {
-  const DebugLoc &TheCallDL = TheCall->getDebugLoc();
-  if (!TheCallDL)
+  if (!TheCall->getDebugLoc())
     return;
+
+  // Don't propagate the source location atom from the call to inlined nodebug
+  // instructions, and avoid putting it in the InlinedAt field of inlined
+  // not-nodebug instructions. FIXME: Possibly worth transferring/generating
+  // an atom for the returned value, otherwise we miss stepping on inlined
+  // nodebug functions (which is different to existing behaviour).
+  DebugLoc TheCallDL = TheCall->getDebugLoc()->getWithoutAtom();
 
   auto &Ctx = Fn->getContext();
   DILocation *InlinedAtNode = TheCallDL;

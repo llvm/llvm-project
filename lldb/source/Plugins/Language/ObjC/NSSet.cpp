@@ -389,10 +389,13 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::~NSSetISyntheticFrontEnd() {
 llvm::Expected<size_t>
 lldb_private::formatters::NSSetISyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx == UINT32_MAX ||
-      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  uint32_t idx = *optional_idx;
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   return idx;
@@ -524,10 +527,13 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::NSCFSetSyntheticFrontEnd(
 llvm::Expected<size_t>
 lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  const char *item_name = name.GetCString();
-  const uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx == UINT32_MAX ||
-      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  uint32_t idx = *optional_idx;
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   return idx;
@@ -660,10 +666,13 @@ lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<D32, D64>::
 template <typename D32, typename D64>
 llvm::Expected<size_t> lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<
     D32, D64>::GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx == UINT32_MAX ||
-      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
+  auto optional_idx = ExtractIndexFromString(name.AsCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  uint32_t idx = *optional_idx;
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
                                    name.AsCString());
   return idx;

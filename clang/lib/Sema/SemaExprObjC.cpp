@@ -1980,6 +1980,7 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
     SourceLocation SuperLoc, QualType SuperType, bool Super) {
   ASTContext &Context = getASTContext();
   const ObjCInterfaceType *IFaceT = OPT->getInterfaceType();
+  assert(IFaceT && "Expected an Interface");
   ObjCInterfaceDecl *IFace = IFaceT->getDecl();
 
   if (!MemberName.isIdentifier()) {
@@ -2103,7 +2104,8 @@ ExprResult SemaObjC::HandleExprPropertyRefExpr(
   DeclFilterCCC<ObjCPropertyDecl> CCC{};
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           DeclarationNameInfo(MemberName, MemberLoc), Sema::LookupOrdinaryName,
-          nullptr, nullptr, CCC, Sema::CTK_ErrorRecovery, IFace, false, OPT)) {
+          nullptr, nullptr, CCC, CorrectTypoKind::ErrorRecovery, IFace, false,
+          OPT)) {
     DeclarationName TypoResult = Corrected.getCorrection();
     if (TypoResult.isIdentifier() &&
         TypoResult.getAsIdentifierInfo() == Member) {
@@ -2353,7 +2355,7 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
   ObjCInterfaceOrSuperCCC CCC(SemaRef.getCurMethodDecl());
   if (TypoCorrection Corrected = SemaRef.CorrectTypo(
           Result.getLookupNameInfo(), Result.getLookupKind(), S, nullptr, CCC,
-          Sema::CTK_ErrorRecovery, nullptr, false, nullptr, false)) {
+          CorrectTypoKind::ErrorRecovery, nullptr, false, nullptr, false)) {
     if (Corrected.isKeyword()) {
       // If we've found the keyword "super" (the only keyword that would be
       // returned by CorrectTypo), this is a send to super.

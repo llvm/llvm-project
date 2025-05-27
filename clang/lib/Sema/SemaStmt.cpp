@@ -39,7 +39,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -521,12 +520,12 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
       // constant expression of the promoted type of the switch condition.
       llvm::APSInt TempVal;
       return CheckConvertedConstantExpression(E, CondType, TempVal,
-                                              CCEK_CaseValue);
+                                              CCEKind::CaseValue);
     }
 
     ExprResult ER = E;
     if (!E->isValueDependent())
-      ER = VerifyIntegerConstantExpression(E, AllowFold);
+      ER = VerifyIntegerConstantExpression(E, AllowFoldKind::Allow);
     if (!ER.isInvalid())
       ER = DefaultLvalueConversion(ER.get());
     if (!ER.isInvalid())
@@ -1667,8 +1666,12 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         // Don't warn about omitted unavailable EnumConstantDecls.
         switch (EI->second->getAvailability()) {
         case AR_Deprecated:
-          // Omitting a deprecated constant is ok; it should never materialize.
+          // Deprecated enumerators need to be handled: they may be deprecated,
+          // but can still occur.
+          break;
+
         case AR_Unavailable:
+          // Omitting an unavailable enumerator is ok; it should never occur.
           continue;
 
         case AR_NotYetIntroduced:
@@ -3169,13 +3172,11 @@ static void DiagnoseForRangeVariableCopies(Sema &SemaRef,
   if (SemaRef.inTemplateInstantiation())
     return;
 
+  SourceLocation Loc = ForStmt->getBeginLoc();
   if (SemaRef.Diags.isIgnored(
-          diag::warn_for_range_const_ref_binds_temp_built_from_ref,
-          ForStmt->getBeginLoc()) &&
-      SemaRef.Diags.isIgnored(diag::warn_for_range_ref_binds_ret_temp,
-                              ForStmt->getBeginLoc()) &&
-      SemaRef.Diags.isIgnored(diag::warn_for_range_copy,
-                              ForStmt->getBeginLoc())) {
+          diag::warn_for_range_const_ref_binds_temp_built_from_ref, Loc) &&
+      SemaRef.Diags.isIgnored(diag::warn_for_range_ref_binds_ret_temp, Loc) &&
+      SemaRef.Diags.isIgnored(diag::warn_for_range_copy, Loc)) {
     return;
   }
 

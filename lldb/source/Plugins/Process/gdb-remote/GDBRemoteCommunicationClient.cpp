@@ -2151,7 +2151,6 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
       llvm::StringRef value;
       uint32_t cpu = LLDB_INVALID_CPUTYPE;
       uint32_t sub = 0;
-      std::string arch_name;
       std::string os_name;
       std::string environment;
       std::string vendor_name;

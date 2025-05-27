@@ -321,6 +321,7 @@ function(create_libc_unittest fq_target_name)
       ${fq_target_name}
       COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
+      DEPENDS ${fq_build_target_name}
     )
   endif()
 

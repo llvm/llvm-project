@@ -1133,9 +1133,6 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
-  /// Return true if this is a trivially relocatable type.
-  bool isTriviallyRelocatableType(const ASTContext &Context) const;
-
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -2524,6 +2521,7 @@ public:
   bool isChar16Type() const;
   bool isChar32Type() const;
   bool isAnyCharacterType() const;
+  bool isUnicodeCharacterType() const;
   bool isIntegralType(const ASTContext &Ctx) const;
 
   /// Determine whether this type is an integral or enumeration type.
@@ -2563,7 +2561,9 @@ public:
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
   bool isPointerOrReferenceType() const;
-  bool isSignableType() const;
+  bool isSignableType(const ASTContext &Ctx) const;
+  bool isSignablePointerType() const;
+  bool isSignableIntegerType(const ASTContext &Ctx) const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isBlockPointerType() const;
@@ -2691,6 +2691,7 @@ public:
   bool isHLSLSpecificType() const; // Any HLSL specific type
   bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
   bool isHLSLAttributedResourceType() const;
+  bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
@@ -3602,6 +3603,9 @@ public:
   }
 
   NestedNameSpecifier *getQualifier() const { return Qualifier; }
+  /// Note: this can trigger extra deserialization when external AST sources are
+  /// used. Prefer `getCXXRecordDecl()` unless you really need the most recent
+  /// decl.
   CXXRecordDecl *getMostRecentCXXRecordDecl() const;
 
   bool isSugared() const;
@@ -3610,7 +3614,10 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getPointeeType(), getQualifier(), getMostRecentCXXRecordDecl());
+    // FIXME: `getMostRecentCXXRecordDecl()` should be possible to use here,
+    // however when external AST sources are used it causes nondeterminism
+    // issues (see https://github.com/llvm/llvm-project/pull/137910).
+    Profile(ID, getPointeeType(), getQualifier(), getCXXRecordDecl());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
@@ -3620,6 +3627,9 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == MemberPointer;
   }
+
+private:
+  CXXRecordDecl *getCXXRecordDecl() const;
 };
 
 /// Capture whether this is a normal array (e.g. int X[4])
@@ -5970,7 +5980,6 @@ class PackIndexingType final
       private llvm::TrailingObjects<PackIndexingType, QualType> {
   friend TrailingObjects;
 
-  const ASTContext &Context;
   QualType Pattern;
   Expr *IndexExpr;
 
@@ -5981,9 +5990,8 @@ class PackIndexingType final
 
 protected:
   friend class ASTContext; // ASTContext creates these.
-  PackIndexingType(const ASTContext &Context, QualType Canonical,
-                   QualType Pattern, Expr *IndexExpr, bool FullySubstituted,
-                   ArrayRef<QualType> Expansions = {});
+  PackIndexingType(QualType Canonical, QualType Pattern, Expr *IndexExpr,
+                   bool FullySubstituted, ArrayRef<QualType> Expansions = {});
 
 public:
   Expr *getIndexExpr() const { return IndexExpr; }
@@ -6018,14 +6026,10 @@ public:
     return T->getTypeClass() == PackIndexing;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    if (hasSelectedType())
-      getSelectedType().Profile(ID);
-    else
-      Profile(ID, Context, getPattern(), getIndexExpr(), isFullySubstituted());
-  }
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Pattern, Expr *E, bool FullySubstituted);
+                      QualType Pattern, Expr *E, bool FullySubstituted,
+                      ArrayRef<QualType> Expansions);
 
 private:
   const QualType *getExpansionsPtr() const {
@@ -6359,6 +6363,143 @@ public:
   // Returns handle type from HLSL resource, if the type is a resource
   static const HLSLAttributedResourceType *
   findHandleTypeOnResource(const Type *RT);
+};
+
+/// Instances of this class represent operands to a SPIR-V type instruction.
+class SpirvOperand {
+public:
+  enum SpirvOperandKind : unsigned char {
+    Invalid,    ///< Uninitialized.
+    ConstantId, ///< Integral value to represent as a SPIR-V OpConstant
+                ///< instruction ID.
+    Literal,    ///< Integral value to represent as an immediate literal.
+    TypeId,     ///< Type to represent as a SPIR-V type ID.
+
+    Max,
+  };
+
+private:
+  SpirvOperandKind Kind = Invalid;
+
+  QualType ResultType;
+  llvm::APInt Value; // Signedness of constants is represented by ResultType.
+
+public:
+  SpirvOperand() : Kind(Invalid), ResultType(), Value() {}
+
+  SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
+      : Kind(Kind), ResultType(ResultType), Value(Value) {}
+
+  SpirvOperand(const SpirvOperand &Other) { *this = Other; }
+  ~SpirvOperand() {}
+
+  SpirvOperand &operator=(const SpirvOperand &Other) {
+    this->Kind = Other.Kind;
+    this->ResultType = Other.ResultType;
+    this->Value = Other.Value;
+    return *this;
+  }
+
+  bool operator==(const SpirvOperand &Other) const {
+    return Kind == Other.Kind && ResultType == Other.ResultType &&
+           Value == Other.Value;
+  }
+
+  bool operator!=(const SpirvOperand &Other) const { return !(*this == Other); }
+
+  SpirvOperandKind getKind() const { return Kind; }
+
+  bool isValid() const { return Kind != Invalid && Kind < Max; }
+  bool isConstant() const { return Kind == ConstantId; }
+  bool isLiteral() const { return Kind == Literal; }
+  bool isType() const { return Kind == TypeId; }
+
+  llvm::APInt getValue() const {
+    assert((isConstant() || isLiteral()) &&
+           "This is not an operand with a value!");
+    return Value;
+  }
+
+  QualType getResultType() const {
+    assert((isConstant() || isType()) &&
+           "This is not an operand with a result type!");
+    return ResultType;
+  }
+
+  static SpirvOperand createConstant(QualType ResultType, llvm::APInt Val) {
+    return SpirvOperand(ConstantId, ResultType, Val);
+  }
+
+  static SpirvOperand createLiteral(llvm::APInt Val) {
+    return SpirvOperand(Literal, QualType(), Val);
+  }
+
+  static SpirvOperand createType(QualType T) {
+    return SpirvOperand(TypeId, T, llvm::APSInt());
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    ID.AddInteger(Kind);
+    ID.AddPointer(ResultType.getAsOpaquePtr());
+    Value.Profile(ID);
+  }
+};
+
+/// Represents an arbitrary, user-specified SPIR-V type instruction.
+class HLSLInlineSpirvType final
+    : public Type,
+      public llvm::FoldingSetNode,
+      private llvm::TrailingObjects<HLSLInlineSpirvType, SpirvOperand> {
+  friend class ASTContext; // ASTContext creates these
+  friend TrailingObjects;
+
+private:
+  uint32_t Opcode;
+  uint32_t Size;
+  uint32_t Alignment;
+  size_t NumOperands;
+
+  HLSLInlineSpirvType(uint32_t Opcode, uint32_t Size, uint32_t Alignment,
+                      ArrayRef<SpirvOperand> Operands)
+      : Type(HLSLInlineSpirv, QualType(), TypeDependence::None), Opcode(Opcode),
+        Size(Size), Alignment(Alignment), NumOperands(Operands.size()) {
+    for (size_t I = 0; I < NumOperands; I++) {
+      // Since Operands are stored as a trailing object, they have not been
+      // initialized yet. Call the constructor manually.
+      auto *Operand =
+          new (&getTrailingObjects<SpirvOperand>()[I]) SpirvOperand();
+      *Operand = Operands[I];
+    }
+  }
+
+public:
+  uint32_t getOpcode() const { return Opcode; }
+  uint32_t getSize() const { return Size; }
+  uint32_t getAlignment() const { return Alignment; }
+  ArrayRef<SpirvOperand> getOperands() const {
+    return {getTrailingObjects<SpirvOperand>(), NumOperands};
+  }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, Opcode, Size, Alignment, getOperands());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, uint32_t Opcode,
+                      uint32_t Size, uint32_t Alignment,
+                      ArrayRef<SpirvOperand> Operands) {
+    ID.AddInteger(Opcode);
+    ID.AddInteger(Size);
+    ID.AddInteger(Alignment);
+    for (auto &Operand : Operands)
+      Operand.Profile(ID);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == HLSLInlineSpirv;
+  }
 };
 
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
@@ -8216,7 +8357,13 @@ inline bool Type::isAnyPointerType() const {
   return isPointerType() || isObjCObjectPointerType();
 }
 
-inline bool Type::isSignableType() const { return isPointerType(); }
+inline bool Type::isSignableType(const ASTContext &Ctx) const {
+  return isSignablePointerType() || isSignableIntegerType(Ctx);
+}
+
+inline bool Type::isSignablePointerType() const {
+  return isPointerType() || isObjCClassType() || isObjCQualifiedClassType();
+}
 
 inline bool Type::isBlockPointerType() const {
   return isa<BlockPointerType>(CanonicalType);
@@ -8486,11 +8633,16 @@ inline bool Type::isHLSLBuiltinIntangibleType() const {
 }
 
 inline bool Type::isHLSLSpecificType() const {
-  return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType();
+  return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType() ||
+         isHLSLInlineSpirvType();
 }
 
 inline bool Type::isHLSLAttributedResourceType() const {
   return isa<HLSLAttributedResourceType>(this);
+}
+
+inline bool Type::isHLSLInlineSpirvType() const {
+  return isa<HLSLInlineSpirvType>(this);
 }
 
 inline bool Type::isTemplateTypeParmType() const {
@@ -8574,8 +8726,7 @@ bool IsEnumDeclScoped(EnumDecl *);
 
 inline bool Type::isIntegerType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Int128;
+    return BT->isInteger();
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
     // FIXME: In C++, enum types are never integer types.
@@ -8649,8 +8800,7 @@ inline bool Type::isScalarType() const {
 
 inline bool Type::isIntegralOrEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Int128;
+    return BT->isInteger();
 
   // Check for a complete enum type; incomplete enum types are not properly an
   // enumeration type in the sense required here.

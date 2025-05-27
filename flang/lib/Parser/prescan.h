@@ -159,6 +159,11 @@ private:
   }
 
   bool InCompilerDirective() const { return directiveSentinel_ != nullptr; }
+  bool InOpenMPConditionalLine() const {
+    return directiveSentinel_ && directiveSentinel_[0] == '$' &&
+        !directiveSentinel_[1];
+    ;
+  }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
   }
