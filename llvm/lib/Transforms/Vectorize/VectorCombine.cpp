@@ -1022,22 +1022,26 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
 /// inserted scalar operand and convert to scalar op/cmp/intrinsic followed
 /// by insertelement.
 bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
-  if (!isa<UnaryOperator, BinaryOperator, CmpInst, IntrinsicInst>(I))
+  auto *UO = dyn_cast<UnaryOperator>(&I);
+  auto *BO = dyn_cast<BinaryOperator>(&I);
+  auto *CI = dyn_cast<CmpInst>(&I);
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!UO && !BO && !CI && !II)
     return false;
 
   // TODO: Allow intrinsics with different argument types
   // TODO: Allow intrinsics with scalar arguments
-  if (auto *II = dyn_cast<IntrinsicInst>(&I))
-    if (!isTriviallyVectorizable(II->getIntrinsicID()) ||
-        !all_of(II->args(),
-                [&II](Value *Arg) { return Arg->getType() == II->getType(); }))
-      return false;
+  if (II && (!isTriviallyVectorizable(II->getIntrinsicID()) ||
+             !all_of(II->args(), [&II](Value *Arg) {
+               return Arg->getType() == II->getType();
+             })))
+    return false;
 
   // Do not convert the vector condition of a vector select into a scalar
   // condition. That may cause problems for codegen because of differences in
   // boolean formats and register-file transfers.
   // TODO: Can we account for that in the cost model?
-  if (isa<CmpInst>(I))
+  if (CI)
     for (User *U : I.users())
       if (match(U, m_Select(m_Specific(&I), m_Value(), m_Value())))
         return false;
@@ -1048,8 +1052,7 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   SmallVector<Value *> ScalarOps;
   std::optional<uint64_t> Index;
 
-  auto Ops = isa<IntrinsicInst>(I) ? cast<IntrinsicInst>(I).args()
-                                   : I.operand_values();
+  auto Ops = II ? II->args() : I.operand_values();
   for (Value *Op : Ops) {
     Constant *VecC;
     Value *V;
@@ -1089,17 +1092,16 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
 
   unsigned Opcode = I.getOpcode();
   InstructionCost ScalarOpCost, VectorOpCost;
-  if (isa<CmpInst>(I)) {
-    CmpInst::Predicate Pred = cast<CmpInst>(I).getPredicate();
+  if (CI) {
+    CmpInst::Predicate Pred = CI->getPredicate();
     ScalarOpCost = TTI.getCmpSelInstrCost(
         Opcode, ScalarTy, CmpInst::makeCmpResultType(ScalarTy), Pred, CostKind);
     VectorOpCost = TTI.getCmpSelInstrCost(
         Opcode, VecTy, CmpInst::makeCmpResultType(VecTy), Pred, CostKind);
-  } else if (isa<UnaryOperator, BinaryOperator>(I)) {
+  } else if (UO || BO) {
     ScalarOpCost = TTI.getArithmeticInstrCost(Opcode, ScalarTy, CostKind);
     VectorOpCost = TTI.getArithmeticInstrCost(Opcode, VecTy, CostKind);
   } else {
-    auto *II = cast<IntrinsicInst>(&I);
     IntrinsicCostAttributes ScalarICA(
         II->getIntrinsicID(), ScalarTy,
         SmallVector<Type *>(II->arg_size(), ScalarTy));
@@ -1113,20 +1115,16 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   // Fold the vector constants in the original vectors into a new base vector to
   // get more accurate cost modelling.
   Value *NewVecC = nullptr;
-  if (auto *CI = dyn_cast<CmpInst>(&I))
+  if (CI)
     NewVecC = ConstantFoldCompareInstOperands(CI->getPredicate(), VecCs[0],
                                               VecCs[1], *DL);
-  else if (isa<UnaryOperator>(I))
-    NewVecC = ConstantFoldUnaryOpOperand((Instruction::UnaryOps)Opcode,
-                                         VecCs[0], *DL);
-  else if (isa<BinaryOperator>(I))
-    NewVecC = ConstantFoldBinaryOpOperands((Instruction::BinaryOps)Opcode,
-                                           VecCs[0], VecCs[1], *DL);
-  else if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-    if (II->arg_size() == 2)
-      NewVecC = ConstantFoldBinaryIntrinsic(II->getIntrinsicID(), VecCs[0],
-                                            VecCs[1], II->getType(), II);
-  }
+  else if (UO)
+    NewVecC = ConstantFoldUnaryOpOperand(Opcode, VecCs[0], *DL);
+  else if (BO)
+    NewVecC = ConstantFoldBinaryOpOperands(Opcode, VecCs[0], VecCs[1], *DL);
+  else if (II->arg_size() == 2)
+    NewVecC = ConstantFoldBinaryIntrinsic(II->getIntrinsicID(), VecCs[0],
+                                          VecCs[1], II->getType(), II);
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
@@ -1149,11 +1147,11 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
 
   // vec_op (inselt VecC0, V0, Index), (inselt VecC1, V1, Index) -->
   // inselt NewVecC, (scalar_op V0, V1), Index
-  if (isa<CmpInst>(I))
+  if (CI)
     ++NumScalarCmp;
-  else if (isa<UnaryOperator, BinaryOperator>(I))
+  else if (UO || BO)
     ++NumScalarOps;
-  else if (isa<IntrinsicInst>(I))
+  else
     ++NumScalarIntrinsic;
 
   // For constant cases, extract the scalar element, this should constant fold.
@@ -1163,13 +1161,12 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
           cast<Constant>(VecC), Builder.getInt64(*Index));
 
   Value *Scalar;
-  if (auto *CI = dyn_cast<CmpInst>(&I))
+  if (CI)
     Scalar = Builder.CreateCmp(CI->getPredicate(), ScalarOps[0], ScalarOps[1]);
-  else if (isa<UnaryOperator, BinaryOperator>(I))
+  else if (UO || BO)
     Scalar = Builder.CreateNAryOp(Opcode, ScalarOps);
   else
-    Scalar = Builder.CreateIntrinsic(
-        ScalarTy, cast<IntrinsicInst>(I).getIntrinsicID(), ScalarOps);
+    Scalar = Builder.CreateIntrinsic(ScalarTy, II->getIntrinsicID(), ScalarOps);
 
   Scalar->setName(I.getName() + ".scalar");
 
@@ -1183,13 +1180,13 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
     SmallVector<Value *> VecCValues;
     VecCValues.reserve(VecCs.size());
     append_range(VecCValues, VecCs);
-    if (auto *CI = dyn_cast<CmpInst>(&I))
+    if (CI)
       NewVecC = Builder.CreateCmp(CI->getPredicate(), VecCs[0], VecCs[1]);
-    else if (isa<UnaryOperator, BinaryOperator>(I))
+    else if (UO || BO)
       NewVecC = Builder.CreateNAryOp(Opcode, VecCValues);
     else
-      NewVecC = Builder.CreateIntrinsic(
-          VecTy, cast<IntrinsicInst>(I).getIntrinsicID(), VecCValues);
+      NewVecC =
+          Builder.CreateIntrinsic(VecTy, II->getIntrinsicID(), VecCValues);
   }
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);
