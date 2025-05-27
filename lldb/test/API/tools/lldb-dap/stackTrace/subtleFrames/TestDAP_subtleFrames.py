@@ -1,12 +1,9 @@
 """
-Test lldb-dap stack trace response
+Test lldb-dap stackTrace request for frames without sources.
 """
 
-
-import dap_server
-from lldbsuite.test.decorators import *
-
 import lldbdap_testcase
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
@@ -14,7 +11,8 @@ class TestDAP_subtleFrames(lldbdap_testcase.DAPTestCaseBase):
     @add_test_categories(["libc++"])
     def test_subtleFrames(self):
         """
-        Internal stack frames (such as the ones used by `std::function`) are marked as "subtle".
+        Test that internal stack frames (such as the ones used by
+        `std::function`) are marked as "subtle".
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)

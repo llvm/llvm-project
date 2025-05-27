@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "llvm/Support/Error.h"
@@ -20,12 +21,15 @@ namespace lldb_dap {
 /// Disconnect request; value of command field is 'disconnect'.
 Error DisconnectRequestHandler::Run(
     const std::optional<DisconnectArguments> &arguments) const {
-  bool terminateDebuggee = dap.is_attach ? false : true;
+  bool terminate_debuggee = dap.is_attach ? false : true;
+  bool keep_suspend = false;
 
-  if (arguments && arguments->terminateDebuggee)
-    terminateDebuggee = *arguments->terminateDebuggee;
+  if (arguments) {
+    terminate_debuggee = arguments->terminateDebuggee;
+    keep_suspend = !arguments->suspendDebuggee;
+  }
 
-  if (Error error = dap.Disconnect(terminateDebuggee))
+  if (Error error = dap.Disconnect(terminate_debuggee, keep_suspend))
     return error;
 
   return Error::success();

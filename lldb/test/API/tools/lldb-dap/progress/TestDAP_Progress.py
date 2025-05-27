@@ -1,14 +1,11 @@
 """
-Test lldb-dap output events
+Test lldb-dap progress events.
 """
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import json
 import os
-import time
 import re
-
 import lldbdap_testcase
 
 
@@ -52,7 +49,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.progress_events.clear()
 
     @skipIfWindows
-    def test(self):
+    def test_progress(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, stopOnEntry=True)
         progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")

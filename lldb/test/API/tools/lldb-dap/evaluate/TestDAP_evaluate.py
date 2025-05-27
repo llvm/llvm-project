@@ -3,7 +3,6 @@ Test lldb-dap completions request
 """
 
 import re
-
 import lldbdap_testcase
 from lldbsuite.test.decorators import skipIfWindows
 from lldbsuite.test.lldbtest import line_number

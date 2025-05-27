@@ -1,25 +1,14 @@
 """
-Test lldb-dap RestartRequest.
+Test lldb-dap restart request.
 """
 
-import os
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 import lldbdap_testcase
 
 
+@skipIfBuildType(["debug"])
 class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
-    def isTestSupported(self):
-        try:
-            # We skip this test for debug builds because it takes too long
-            # parsing lldb's own debug info. Release builds are fine.
-            # Checking the size of the lldb-dap binary seems to be a decent
-            # proxy for a quick detection. It should be far less than 1 MB in
-            # Release builds.
-            return os.path.getsize(os.environ["LLDBDAP_EXEC"]) < 1000000
-        except:
-            return False
-
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm"])  # Always times out on buildbot
     def test_basic_functionality(self):
@@ -27,8 +16,6 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         Test basic restarting functionality when the process is running in
         a terminal.
         """
-        if not self.isTestSupported():
-            return
         line_A = line_number("main.c", "// breakpoint A")
         line_B = line_number("main.c", "// breakpoint B")
 
@@ -61,19 +48,14 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIf(oslist=["linux"], archs=["arm"])  # Always times out on buildbot
     def test_stopOnEntry(self):
         """
         Check that stopOnEntry works correctly when using runInTerminal.
         """
-        if not self.isTestSupported():
-            return
-        line_A = line_number("main.c", "// breakpoint A")
-        line_B = line_number("main.c", "// breakpoint B")
-
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, runInTerminal=True, stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
+        self.dap_server.request_configurationDone()
 
         # When using stopOnEntry, configurationDone doesn't result in a running
         # process, we should immediately get a stopped event instead.

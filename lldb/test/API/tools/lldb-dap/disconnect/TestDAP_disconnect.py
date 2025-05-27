@@ -3,7 +3,6 @@ Test lldb-dap disconnect request
 """
 
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil

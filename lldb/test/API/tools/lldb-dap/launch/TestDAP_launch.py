@@ -1,15 +1,12 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap launch request
 """
 
-import dap_server
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
-import time
 import os
 import re
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+import lldbdap_testcase
 
 # Many tests are skipped on Windows because get_stdout() returns None there.
 # Despite the test program printing correctly. See
@@ -339,7 +336,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         launch.
 
         "initCommands" are a list of LLDB commands that get executed
-        before the targt is created.
+        before the target is created.
         "preRunCommands" are a list of LLDB commands that get executed
         after the target has been created and before the launch.
         "stopCommands" are a list of LLDB commands that get executed each
@@ -425,7 +422,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         first_line = line_number(source, "// breakpoint 1")
         second_line = line_number(source, "// breakpoint 2")
         # Set target binary and 2 breakpoints
-        # then we can varify the "launchCommands" get run
+        # then we can verify the "launchCommands" get run
         # also we can verify that "stopCommands" get run as the
         # breakpoints get hit
         launchCommands = [
@@ -508,12 +505,12 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "initCommands" and the "preRunCommands".
         output = self.get_console()
-        # Verify all "initCommands" were found in console output
+        # Verify all "initCommands" are found in console output
         self.verify_commands("initCommands", output, initCommands)
-        # Verify all "preRunCommands" were found in console output
+        # Verify all "preRunCommands" are found in console output
         self.verify_commands("preRunCommands", output, preRunCommands)
 
-        # Verify all "launchCommands" were founc in console output
+        # Verify all "launchCommands" are found in console output
         # The launch should fail due to the invalid command.
         self.verify_commands("launchCommands", output, launchCommands)
         self.assertRegex(output, re.escape(bad_path) + r".*does not exist")

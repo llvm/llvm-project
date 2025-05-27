@@ -1,21 +1,16 @@
 """
-Test lldb-dap runInTerminal reverse request
+Test lldb-dap runInTerminal reverse request.
 """
 
-
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
-import time
 import os
 import subprocess
-import shutil
 import json
-from threading import Thread
 
 
+@skipIfBuildType(["debug"])
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     def readPidMessage(self, fifo_file):
         with open(fifo_file, "r") as file:
@@ -29,28 +24,12 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         with open(fifo_file, "r") as file:
             return file.readline()
 
-    def isTestSupported(self):
-        # For some strange reason, this test fails on python3.6
-        if not (sys.version_info.major == 3 and sys.version_info.minor >= 7):
-            return False
-        try:
-            # We skip this test for debug builds because it takes too long parsing lldb's own
-            # debug info. Release builds are fine.
-            # Checking the size of the lldb-dap binary seems to be a decent proxy for a quick
-            # detection. It should be far less than 1 MB in Release builds.
-            if os.path.getsize(os.environ["LLDBDAP_EXEC"]) < 1000000:
-                return True
-        except:
-            return False
-
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminal(self):
-        if not self.isTestSupported():
-            return
         """
-            Tests the "runInTerminal" reverse request. It makes sure that the IDE can
-            launch the inferior with the correct environment variables and arguments.
+        Tests the "runInTerminal" reverse request. It makes sure that the IDE can
+        launch the inferior with the correct environment variables and arguments.
         """
         program = self.getBuildArtifact("a.out")
         source = "main.c"
@@ -92,11 +71,9 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminalWithObjectEnv(self):
-        if not self.isTestSupported():
-            return
         """
-            Tests the "runInTerminal" reverse request. It makes sure that the IDE can
-            launch the inferior with the correct environment variables using an object.
+        Tests the "runInTerminal" reverse request. It makes sure that the IDE can
+        launch the inferior with the correct environment variables using an object.
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, runInTerminal=True, env={"FOO": "BAR"})
@@ -113,11 +90,15 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("FOO", request_envs)
         self.assertEqual("BAR", request_envs["FOO"])
 
+        # Ensure we can continue to a breakpoint.
+        source = "main.c"
+        breakpoint_line = line_number(source, "// breakpoint")
+        self.set_source_breakpoints(source, [breakpoint_line])
+        self.continue_to_next_stop()
+
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_runInTerminalInvalidTarget(self):
-        if not self.isTestSupported():
-            return
         self.build_and_create_debug_adapter()
         response = self.launch(
             "INVALIDPROGRAM",
@@ -135,8 +116,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_missingArgInRunInTerminalLauncher(self):
-        if not self.isTestSupported():
-            return
         proc = subprocess.run(
             [self.lldbDAPExec, "--launch-target", "INVALIDPROGRAM"],
             capture_output=True,
@@ -150,8 +129,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithInvalidProgram(self):
-        if not self.isTestSupported():
-            return
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
 
@@ -177,8 +154,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
-        if not self.isTestSupported():
-            return
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
 
@@ -204,8 +179,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherAndCheckEnvironment(self):
-        if not self.isTestSupported():
-            return
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
 
@@ -225,8 +198,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_NonAttachedRunInTerminalLauncher(self):
-        if not self.isTestSupported():
-            return
         comm_file = os.path.join(self.getBuildDir(), "comm-file")
         os.mkfifo(comm_file)
 

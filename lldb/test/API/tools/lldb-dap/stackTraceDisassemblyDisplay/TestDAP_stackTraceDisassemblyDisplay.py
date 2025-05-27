@@ -1,5 +1,5 @@
 """
-Test lldb-dap stack trace when some of the source paths are missing
+Test lldb-dap stackTrace when some of the source paths are missing.
 """
 
 from lldbsuite.test.lldbtest import line_number

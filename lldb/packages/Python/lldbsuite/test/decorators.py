@@ -1,5 +1,6 @@
 # System modules
 from functools import wraps
+from typing import Optional
 from packaging import version
 import ctypes
 import locale

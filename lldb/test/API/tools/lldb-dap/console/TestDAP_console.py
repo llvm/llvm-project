@@ -1,26 +1,23 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap console output
 """
 
-import dap_server
 import lldbdap_testcase
-from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-def get_subprocess(root_process, process_name):
-    queue = [root_process]
-    while queue:
-        process = queue.pop()
-        if process.name() == process_name:
-            return process
-        queue.extend(process.children())
-
-    self.assertTrue(False, "No subprocess with name %s found" % process_name)
-
-
 class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
+    def get_subprocess(self, root_process, process_name):
+        queue = [root_process]
+        while queue:
+            process = queue.pop()
+            if process.name() == process_name:
+                return process
+            queue.extend(process.children())
+
+        self.assertTrue(False, "No subprocess with name %s found" % process_name)
+
     def check_lldb_command(
         self, lldb_command, contains_string, assert_msg, command_escape_prefix="`"
     ):
@@ -134,7 +131,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
                 file=sys.stderr,
             )
             return
-        process = get_subprocess(psutil.Process(os.getpid()), process_name)
+        process = self.get_subprocess(psutil.Process(os.getpid()), process_name)
         process.terminate()
         process.wait()
 

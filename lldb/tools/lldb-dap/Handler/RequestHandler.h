@@ -283,7 +283,8 @@ public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "disconnect"; }
   FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureTerminateDebuggee};
+    return {protocol::eAdapterFeatureTerminateDebuggee,
+            protocol::eAdapterFeatureSuspendDebuggee};
   }
   llvm::Error
   Run(const std::optional<protocol::DisconnectArguments> &args) const override;

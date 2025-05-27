@@ -142,9 +142,8 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
   auto line_entry = addr.GetLineEntry();
   // If the line number is 0 then the entry represents a compiler generated
   // location.
-
-  if (line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
-      line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0) {
+  if (line_entry.IsValid() && line_entry.GetFileSpec().IsValid() &&
+      line_entry.GetLine() != 0) {
     auto source = CreateSource(line_entry);
     disassembled_inst.location = std::move(source);
 

@@ -12,7 +12,6 @@ import lldbdap_testcase
 import os
 
 
-@skip("Temporarily disable the breakpoint tests")
 class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     def setUp(self):
         lldbdap_testcase.DAPTestCaseBase.setUp(self)

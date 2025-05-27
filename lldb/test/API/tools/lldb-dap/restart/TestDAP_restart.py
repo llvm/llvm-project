@@ -1,5 +1,5 @@
 """
-Test lldb-dap RestartRequest.
+Test lldb-dap restart request.
 """
 
 from lldbsuite.test.decorators import *

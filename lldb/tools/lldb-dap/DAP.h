@@ -279,7 +279,7 @@ struct DAP {
   lldb::SBTarget CreateTarget(lldb::SBError &error);
 
   /// Set given target object as a current target for lldb-dap and start
-  /// listeing for its breakpoint events.
+  /// listening for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
   bool HandleObject(const protocol::Message &M);
@@ -287,8 +287,9 @@ struct DAP {
   /// Disconnect the DAP session.
   llvm::Error Disconnect();
 
-  /// Disconnect the DAP session and optionally terminate the debuggee.
-  llvm::Error Disconnect(bool terminateDebuggee);
+  /// Disconnect the DAP session and determine how to handle the target, if it
+  /// is still running.
+  llvm::Error Disconnect(bool terminateDebuggee, bool suspendDebuggee);
 
   /// Send a "terminated" event to indicate the process is done being debugged.
   void SendTerminatedEvent();

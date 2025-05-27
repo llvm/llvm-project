@@ -2,9 +2,6 @@
 Test lldb-dap source request
 """
 
-
-import os
-
 import lldbdap_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

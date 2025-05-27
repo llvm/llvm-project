@@ -1,32 +1,26 @@
+"""
+Test lldb-dap setInstructionBreakpoints request
+"""
+
+import os
 from dap_server import Source
-import shutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
-import os
-import lldb
 
 
 class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
-        lldbdap_testcase.DAPTestCaseBase.setUp(self)
+        super().setUp()
 
         self.main_basename = "main-copy.cpp"
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
     @skipIfWindows
     def test_instruction_breakpoint(self):
-        self.build()
-        self.instruction_breakpoint_test()
-
-    def instruction_breakpoint_test(self):
         """Sample test to ensure SBFrame::Disassemble produces SOME output"""
-        # Create a target by the debugger.
-        target = self.createTestTarget()
-
         main_line = line_number("main.cpp", "breakpoint 1")
 
         program = self.getBuildArtifact("a.out")
@@ -51,15 +45,15 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         )
         other_breakpoint_id = breakpoint["id"]
 
-        # Continue and then verifiy the breakpoint
+        # Continue and then verify the breakpoint
         self.dap_server.request_continue()
         self.verify_breakpoint_hit([other_breakpoint_id])
 
         # now we check the stack trace making sure that we got mapped source paths
         frames = self.dap_server.request_stackTrace()["body"]["stackFrames"]
-        intstructionPointerReference = []
-        setIntstructionBreakpoints = []
-        intstructionPointerReference.append(frames[0]["instructionPointerReference"])
+        instructionPointerReference = []
+        setInstructionBreakpoints = []
+        instructionPointerReference.append(frames[0]["instructionPointerReference"])
         self.assertEqual(
             frames[0]["source"]["name"], self.main_basename, "incorrect source name"
         )
@@ -71,20 +65,20 @@ class TestDAP_InstructionBreakpointTestCase(lldbdap_testcase.DAPTestCaseBase):
         disassembled_instructions, instruction = self.disassemble(frameIndex=0)
         self.assertEqual(
             instruction["address"],
-            intstructionPointerReference[0],
-            "current breakpoint reference is not in the disaasembly view",
+            instructionPointerReference[0],
+            "current breakpoint reference is not in the disassembly view",
         )
 
         # Get next instruction address to set instruction breakpoint
         instruction_addr_list = list(disassembled_instructions.keys())
-        index = instruction_addr_list.index(intstructionPointerReference[0])
+        index = instruction_addr_list.index(instructionPointerReference[0])
         if len(instruction_addr_list) >= (index + 1):
             next_inst_addr = instruction_addr_list[index + 1]
             if len(next_inst_addr) > 2:
-                setIntstructionBreakpoints.append(next_inst_addr)
+                setInstructionBreakpoints.append(next_inst_addr)
                 instruction_breakpoint_response = (
                     self.dap_server.request_setInstructionBreakpoints(
-                        setIntstructionBreakpoints
+                        setInstructionBreakpoints
                     )
                 )
                 inst_breakpoints = instruction_breakpoint_response["body"][

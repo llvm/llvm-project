@@ -1,10 +1,9 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap threads request.
 """
 
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
 
 

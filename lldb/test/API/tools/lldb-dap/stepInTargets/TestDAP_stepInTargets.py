@@ -2,19 +2,20 @@
 Test lldb-dap stepInTargets request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
-from lldbsuite.test import lldbutil
 
 
 class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
-    @expectedFailureAll(oslist=["windows"])
-    @skipIf(archs=no_match(["x86_64"]))
     # InstructionControlFlowKind for ARM is not supported yet.
     # On Windows, lldb-dap seems to ignore targetId when stepping into functions.
     # For more context, see https://github.com/llvm/llvm-project/issues/98509.
+    @expectedFailureAll(oslist=["windows"])
+    @skipIf(
+        archs=no_match(["x86_64"]),
+        bugnumber="github.com/llvm/llvm-project/issues/98509",
+    )
     def test_basic(self):
         """
         Tests the basic stepping in targets with directly calls.
