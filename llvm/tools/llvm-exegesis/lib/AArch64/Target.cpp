@@ -11,7 +11,7 @@
 
 #if defined(__aarch64__) && defined(__linux__)
 #include <errno.h>
-#include <sys/prctl.h>   // For PR_PAC_* constants 
+#include <sys/prctl.h> // For PR_PAC_* constants
 #ifndef PR_PAC_SET_ENABLED_KEYS
 #define PR_PAC_SET_ENABLED_KEYS 60
 #endif
