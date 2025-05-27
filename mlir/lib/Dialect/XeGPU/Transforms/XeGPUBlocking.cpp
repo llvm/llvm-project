@@ -60,10 +60,7 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
           builder, castOp.getLoc(), inputs, shape);
       castOp->replaceAllUsesWith(ValueRange(result));
       castOp->erase();
-    }
-
-    // pack
-    if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
+    } else if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
       ArrayRef<int64_t> tileShape = outputTy.getShape();
       SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
           builder, castOp.getLoc(), inputs[0], tileShape);

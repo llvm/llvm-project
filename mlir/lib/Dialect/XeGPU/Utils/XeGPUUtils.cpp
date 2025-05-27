@@ -360,10 +360,8 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
           auto isTensorTy = [&](Type type) {
             return isa<RankedTensorType>(type);
           };
-          if (llvm::any_of(op->getOperandTypes(), isTensorTy) ||
-              llvm::any_of(op->getResultTypes(), isTensorTy))
-            return false;
-          return true;
+          return llvm::none_of(op->getOperandTypes(), isTensorTy) &&
+                 llvm::none_of(op->getResultTypes(), isTensorTy);
         });
     mlir::RewritePatternSet patterns(context);
     patterns.insert<UnrealizedConversionCastOpPattern>(context);
