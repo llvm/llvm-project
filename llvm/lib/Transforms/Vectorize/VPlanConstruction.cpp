@@ -556,6 +556,8 @@ void VPlanTransforms::prepareForVectorization(
   // with the middle block already connected to the exit block.
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
   // Also connect the entry block to the scalar preheader.
+  // TODO: Also introduce a branch recipe together with the minimum trip count
+  // check.
   VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
   Plan.getEntry()->swapSuccessors();
 

@@ -2366,6 +2366,8 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
 }
 
 void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
+  // Note: The block with the minimum trip-count check is already connected
+  // during earlier VPlan construction.
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
   VPBlockBase *PreVectorPH = VectorPHVPB->getSinglePredecessor();
   assert(PreVectorPH->getNumSuccessors() == 2 && "Expected 2 successors");
@@ -2463,6 +2465,10 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
   LoopBypassBlocks.push_back(TCCheckBlock);
+
+  assert(cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock() ==
+             TCCheckBlock &&
+         "Plan's entry must be TCCCheckBlock");
 }
 
 BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
@@ -7893,8 +7899,10 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
 
-  // Only generate add a new block for the trip-count check for the main loop.
-  // The epilogue will use the already existing VPlan entry block.
+  // When vectorizing the main loop, its trip-count check is placed in a new
+  // block, whereas the overall trip-count check is placed in the VPlan entry
+  // block. When vectorizing the epilogue loop, its trip-count check is placed
+  // in the VPlan entry block.
   if (!ForEpilogue)
     introduceCheckBlockInVPlan(TCCheckBlock);
   return TCCheckBlock;
