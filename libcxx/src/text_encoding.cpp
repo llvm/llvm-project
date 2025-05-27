@@ -15,8 +15,6 @@
 #include <__locale_dir/locale_base_api.h>
 #include <text_encoding>
 
-#if _LIBCPP_STD_VER >= 26
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 text_encoding text_encoding::environment() {
@@ -36,5 +34,3 @@ text_encoding text_encoding::environment() {
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_STD_VER > 26
