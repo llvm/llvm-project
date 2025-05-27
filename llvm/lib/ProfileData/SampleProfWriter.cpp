@@ -580,12 +580,8 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     LineLocation Loc = I->first;
     const SampleRecord &Sample = I->second;
     OS.indent(Indent + 1);
-    if (Loc.Discriminator == 0)
-      OS << Loc.LineOffset << ": ";
-    else
-      OS << Loc.LineOffset << "." << Loc.Discriminator << ": ";
-
-    OS << Sample.getSamples();
+    Loc.print(OS);
+    OS << ": " << Sample.getSamples();
 
     for (const auto &J : Sample.getSortedCallTargets())
       OS << " " << J.first << ":" << J.second;
