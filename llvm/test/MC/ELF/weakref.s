@@ -105,4 +105,10 @@ alias:
 .weakref alias2, target
 .set alias2, 1
 
+.weakref cycle0, cycle1
+.weakref cycle1, cycle0
+call cycle0
+# ERR: <unknown>:0: error: cyclic dependency detected for symbol 'cycle0'
+# ERR: [[#@LINE-2]]:1: error: expected relocatable expression
+
 .endif
