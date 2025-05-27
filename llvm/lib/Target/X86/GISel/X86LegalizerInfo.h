@@ -48,6 +48,9 @@ private:
 
   bool legalizeNarrowingStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                               LegalizerHelper &Helper) const;
+
+  bool legalizeFPExtAndTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif
