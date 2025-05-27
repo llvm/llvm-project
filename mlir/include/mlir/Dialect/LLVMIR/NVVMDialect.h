@@ -42,6 +42,8 @@ enum NVVMMemorySpace {
   kSharedMemorySpace = 3,
   /// Constant memory space identifier.
   kConstantMemorySpace = 4,
+  /// Local memory space identifier.
+  kLocalMemorySpace = 5,
   /// Tensor memory space identifier.
   /// Tensor memory is available only in arch-accelerated
   /// variants from sm100 onwards.

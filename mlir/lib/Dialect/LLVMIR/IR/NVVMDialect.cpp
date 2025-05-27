@@ -1205,6 +1205,20 @@ LogicalResult NVVM::VoteSyncOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::PrefetchL2Op::verify() {
+  auto evictPriority = getEvictPriority();
+  if (evictPriority &&
+      (llvm::cast<LLVM::LLVMPointerType>(getAddr().getType())
+           .getAddressSpace() != NVVM::NVVMMemorySpace::kGlobalMemorySpace))
+    return emitOpError(
+        "prefetch with cache eviction priority requires a global pointer");
+  if (evictPriority &&
+      *evictPriority != NVVM::CacheEvictionPriority::EvictNormal &&
+      *evictPriority != NVVM::CacheEvictionPriority::EvictLast)
+    return emitOpError("invalid cache eviction priority");
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -1710,6 +1724,46 @@ NVVM::IDArgPair DotAccumulate4WayOp::getIntrinsicIDAndArgs(
       llvm::Intrinsic::nvvm_idp4a_s_s,
   };
   return {ids[type], args};
+}
+
+llvm::Intrinsic::ID PrefetchL1Op::getIntrinsicID(Operation &op) {
+  auto curOp = llvm::cast<NVVM::PrefetchL1Op>(op);
+  switch (llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+              .getAddressSpace()) {
+  case 0:
+    return llvm::Intrinsic::nvvm_prefetch_L1;
+  case NVVM::NVVMMemorySpace::kGlobalMemorySpace:
+    return llvm::Intrinsic::nvvm_prefetch_global_L1;
+  case NVVM::NVVMMemorySpace::kLocalMemorySpace:
+    return llvm::Intrinsic::nvvm_prefetch_local_L1;
+  default:
+    llvm_unreachable("Invalid pointer address space");
+  }
+}
+
+llvm::Intrinsic::ID PrefetchL2Op::getIntrinsicID(Operation &op) {
+  auto curOp = llvm::cast<NVVM::PrefetchL2Op>(op);
+  auto evictPriority = curOp.getEvictPriority();
+
+  switch (llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+              .getAddressSpace()) {
+  case 0:
+    return llvm::Intrinsic::nvvm_prefetch_L2;
+  case NVVM::NVVMMemorySpace::kGlobalMemorySpace:
+    if (evictPriority) {
+      if (*evictPriority == NVVM::CacheEvictionPriority::EvictLast)
+        return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_last;
+      else if (*evictPriority == NVVM::CacheEvictionPriority::EvictNormal)
+        return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_normal;
+      else
+        llvm_unreachable("Invalid cache eviction priority");
+    }
+    return llvm::Intrinsic::nvvm_prefetch_global_L2;
+  case NVVM::NVVMMemorySpace::kLocalMemorySpace:
+    return llvm::Intrinsic::nvvm_prefetch_local_L2;
+  default:
+    llvm_unreachable("Invalid pointer address space");
+  }
 }
 
 //===----------------------------------------------------------------------===//

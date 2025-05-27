@@ -248,3 +248,19 @@ llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_rounding(%src : vector<2xbf16>) {
   %res = nvvm.convert.bf16x2.to.f8x2 <ue8m0> %src {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16> -> i16
   llvm.return
 }
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_evict_invalid_addr_space(%local_ptr: !llvm.ptr<5>) {
+  // expected-error @below {{prefetch with cache eviction priority requires a global pointer}}
+  nvvm.prefetch.L2 %local_ptr, evict_priority = evict_last : !llvm.ptr<5>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_evict_invalid_evict_priority(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{invalid cache eviction priority}}
+  nvvm.prefetch.L2 %global_ptr, evict_priority = evict_first : !llvm.ptr<1>
+  llvm.return
+}

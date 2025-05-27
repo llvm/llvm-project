@@ -587,6 +587,29 @@ func.func @dot_accumulate_4way(%a_vec: vector<4xi8>, %b_vec: vector<4xi8>, %c: i
   return
 }
 
+// CHECK-LABEL: @prefetch
+func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: !llvm.ptr<1>) {
+  // CHECK:   nvvm.prefetch.L1 %{{.*}}
+  nvvm.prefetch.L1 %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch.L1 %{{.*}}
+  nvvm.prefetch.L1 %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch.L1 %{{.*}}
+  nvvm.prefetch.L1 %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch.L2 %{{.*}}
+  nvvm.prefetch.L2 %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch.L2 %{{.*}}
+  nvvm.prefetch.L2 %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch.L2 %{{.*}}
+  nvvm.prefetch.L2 %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch.L2 %{{.*}}
+  nvvm.prefetch.L2 %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch.L2 %{{.*}}
+  nvvm.prefetch.L2 %global_ptr, evict_priority = evict_normal : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch.L1.uniform %{{.*}}
+  nvvm.prefetch.L1.uniform %gen_ptr : !llvm.ptr
+  return
+}
+
 // -----
 
 // Just check these don't emit errors.
