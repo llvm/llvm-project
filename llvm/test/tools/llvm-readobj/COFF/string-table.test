@@ -1,57 +1,26 @@
 # RUN: yaml2obj %s -o %t.obj
 # RUN: llvm-readobj --string-table %t.obj | FileCheck %s
+# RUN: llvm-readobj --string-table %p/Inputs/zero-string-table.obj.coff-i386 | FileCheck %s --check-prefix=ZERO-STRING-TABLE
 
-# CHECK: StringTable {
-# CHECK:   Length: 49
-# CHECK:   [     4] .debug_str
-# CHECK:   [     f] ?x@@3HA_test_test
-# CHECK:   [    21] _main_test_test
-# CHECK: }
+# CHECK:      StringTable {
+# CHECK-NEXT:   Length: 31
+# CHECK-NEXT:   [     4] .debug_str
+# CHECK-NEXT:   [     f] _main_test_test
+# CHECK-NEXT: }
+
+# ZERO-STRING-TABLE:      StringTable {
+# ZERO-STRING-TABLE-NEXT:   Length: 4
+# ZERO-STRING-TABLE-NEXT: }
 
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
-  Characteristics: []
 sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
-    Alignment:       16
-    SectionData:     508D0500000000C70424000000005AC3
   - Name:            .debug_str
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
-    Alignment:       1
-    SectionData:     ''
 symbols:
-  - Name:            .text
-    Value:           0
-    SectionNumber:   1
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition:
-      Length:          16
-      NumberOfRelocations: 1
-      NumberOfLinenumbers: 0
-      CheckSum:        0
-      Number:          1
-  - Name:            .debug_str
-    Value:           0
-    SectionNumber:   2
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition:
-      Length:          0
-      NumberOfRelocations: 0
-      NumberOfLinenumbers: 0
-      CheckSum:        0
-      Number:          2
-  - Name:            '?x@@3HA_test_test'
-    Value:           0
-    SectionNumber:   1
-    SimpleType:      IMAGE_SYM_TYPE_NULL
-    ComplexType:     IMAGE_SYM_DTYPE_NULL
-    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
   - Name:            _main_test_test
     Value:           0
     SectionNumber:   1

@@ -159,6 +159,8 @@ public:
 
   // Only implemented for XCOFF/COFF.
   virtual void printStringTable() {}
+
+  // Only implemented for XCOFF.
   virtual void printAuxiliaryHeader() {}
   virtual void printExceptionSection() {}
   virtual void printLoaderSection(bool PrintHeader, bool PrintSymbols,
