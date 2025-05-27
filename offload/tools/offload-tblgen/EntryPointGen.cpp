@@ -44,7 +44,7 @@ static void EmitValidationFunc(const FunctionRec &F, raw_ostream &OS) {
         OS << formatv(TAB_2 "if ({0}) {{\n", ConditionString);
         OS << formatv(TAB_3 "return createOffloadError(error::ErrorCode::{0}, "
                             "\"validation failure: {1}\");\n",
-                      Return.getEtorValue(), ConditionString);
+                      Return.getUnprefixedValue(), ConditionString);
         OS << TAB_2 "}\n\n";
       }
     }

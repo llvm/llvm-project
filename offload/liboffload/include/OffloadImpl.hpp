@@ -72,9 +72,9 @@ ErrSetT &errors();
 namespace {
 ol_errc_t GetErrorCode(std::error_code Code) {
   if (Code.category() ==
-      error::make_error_code(error::ErrorCode::SUCCESS).category()) {
+      error::make_error_code(error::ErrorCode::SUCCESS).category())
     return static_cast<ol_errc_t>(Code.value());
-  }
+
   return OL_ERRC_UNKNOWN;
 }
 } // namespace

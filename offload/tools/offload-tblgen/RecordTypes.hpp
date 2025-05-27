@@ -186,7 +186,7 @@ public:
   StringRef getValue() const { return rec->getValueAsString("value"); }
   // Strip the "OL_ERRC_" from the value, resulting in just "FOO" from
   // "OL_ERRC_FOO"
-  StringRef getEtorValue() const {
+  StringRef getUnprefixedValue() const {
     constexpr const char *ERRC = "ERRC_";
     auto Start = getValue().find(ERRC) + strlen(ERRC);
     return getValue().substr(Start);
