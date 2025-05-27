@@ -56,6 +56,13 @@ enum class RecurKind {
   FindLastIV, ///< FindLast reduction with select(cmp(),x,y) where one of
               ///< (x,y) is increasing loop induction, and both x and y are
               ///< integer type.
+  FindFirstIVUMin, /// FindFirst reduction with select(icmp(),x,y) where one of
+                   ///< (x,y) is a decreasing loop induction, and both x and y
+                   ///< are integer type.
+  FindFirstIVSMin /// FindFirst reduction with select(icmp(),x,y) where one of
+                  ///< (x,y) is a decreasing loop induction, and both x and y
+                  ///< are integer type.
+
   // clang-format on
   // TODO: Any_of and FindLast reduction need not be restricted to integer type
   // only.
@@ -160,12 +167,13 @@ public:
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
   ///   Select(FCmp(A, B), X, Y)
-  /// where one of (X, Y) is an increasing loop induction variable, and the
-  /// other is a PHI value.
+  /// where one of (X, Y) is an increasing (FindLast) or decreasing (FindFirst)
+  /// loop induction variable, and the other is a PHI value.
   // TODO: Support non-monotonic variable. FindLast does not need be restricted
   // to increasing loop induction variables.
-  static InstDesc isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
-                                      Instruction *I, ScalarEvolution &SE);
+  static InstDesc isFindIVPattern(RecurKind Kind, Loop *TheLoop,
+                                  PHINode *OrigPhi, Instruction *I,
+                                  ScalarEvolution &SE);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
@@ -259,18 +267,36 @@ public:
     return Kind == RecurKind::FindLastIV;
   }
 
+  /// Returns true if the recurrence kind is of the form
+  ///   select(cmp(),x,y) where one of (x,y) is an increasing or decreasing loop
+  ///   induction.
+  static bool isFindIVRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FindLastIV ||
+           Kind == RecurKind::FindFirstIVUMin ||
+           Kind == RecurKind::FindFirstIVSMin;
+  }
+
   /// Returns the type of the recurrence. This type can be narrower than the
   /// actual type of the Phi if the recurrence has been type-promoted.
   Type *getRecurrenceType() const { return RecurrenceType; }
 
-  /// Returns the sentinel value for FindLastIV recurrences to replace the start
-  /// value.
+  /// Returns the sentinel value for FindFirstIV &FindLastIV recurrences to
+  /// replace the start value.
   Value *getSentinelValue() const {
-    assert(isFindLastIVRecurrenceKind(Kind) && "Unexpected recurrence kind");
     Type *Ty = StartValue->getType();
-    return ConstantInt::get(Ty,
-                            APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+    if (isFindLastIVRecurrenceKind(Kind)) {
+      return ConstantInt::get(
+          Ty, APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+    } else if (Kind == RecurKind::FindFirstIVSMin) {
+      return ConstantInt::get(
+          Ty, APInt::getSignedMaxValue(Ty->getIntegerBitWidth()));
+    } else {
+      assert(Kind == RecurKind::FindFirstIVUMin);
+      return ConstantInt::get(Ty, APInt::getMaxValue(Ty->getIntegerBitWidth()));
+    }
   }
+
+  void setKind(RecurKind NewKind) { Kind = NewKind; }
 
   /// Returns a reference to the instructions used for type-promoting the
   /// recurrence.
@@ -302,6 +328,10 @@ public:
   /// If there is such a store in the loop then, after successfull run of
   /// AddReductionVar method, this field will be assigned the last met store.
   StoreInst *IntermediateStore = nullptr;
+
+  /// True if this recurrence is used by another recurrence in the loop. Users
+  /// need to ensure that the final code-gen accounts for the use in the loop.
+  bool IsUsedByOtherRecurrence = false;
 
 private:
   // The starting value of the recurrence.

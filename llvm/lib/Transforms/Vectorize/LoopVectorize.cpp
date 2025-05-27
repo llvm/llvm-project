@@ -5176,7 +5176,7 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
           const RecurrenceDescriptor &RdxDesc = Reduction.second;
           RecurKind RK = RdxDesc.getRecurrenceKind();
           return RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-                 RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK);
+                 RecurrenceDescriptor::isFindIVRecurrenceKind(RK);
         });
     if (HasSelectCmpReductions) {
       LLVM_DEBUG(dbgs() << "LV: Not interleaving select-cmp reductions.\n");
@@ -7549,7 +7549,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   auto *EpiRedResult = dyn_cast<VPInstruction>(R);
   if (!EpiRedResult ||
       (EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult &&
-       EpiRedResult->getOpcode() != VPInstruction::ComputeFindLastIVResult))
+       EpiRedResult->getOpcode() != VPInstruction::ComputeFindIVResult))
     return;
 
   auto *EpiRedHeaderPhi =
@@ -7567,7 +7567,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
            "AnyOf expected to start by comparing main resume value to original "
            "start value");
     MainResumeValue = Cmp->getOperand(0);
-  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+  } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(
                  RdxDesc.getRecurrenceKind())) {
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
@@ -8499,7 +8499,7 @@ bool VPRecipeBuilder::getScaledReductions(
     Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
     SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains) {
 
-  if (!CM.TheLoop->contains(RdxExitInstr))
+  if (!RdxExitInstr || !CM.TheLoop->contains(RdxExitInstr))
     return false;
 
   auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
@@ -9360,7 +9360,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     RecurKind Kind = RdxDesc.getRecurrenceKind();
     assert(
         !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-        !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
+        !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
         "AnyOf and FindLast reductions are not allowed for in-loop reductions");
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
@@ -9517,7 +9517,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                (cast<VPInstruction>(&U)->getOpcode() ==
                     VPInstruction::ComputeReductionResult ||
                 cast<VPInstruction>(&U)->getOpcode() ==
-                    VPInstruction::ComputeFindLastIVResult);
+                    VPInstruction::ComputeFindIVResult);
       });
       if (CM.usePredicatedReductionSelect())
         PhiR->setOperand(1, NewExitingVPV);
@@ -9562,11 +9562,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
-    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+    if (RecurrenceDescriptor::isFindIVRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
       VPValue *Start = PhiR->getStartValue();
       FinalReductionResult =
-          Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
+          Builder.createNaryOp(VPInstruction::ComputeFindIVResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
     } else {
       FinalReductionResult = Builder.createNaryOp(
@@ -9613,13 +9613,82 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
     }
 
-    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+    if (RecurrenceDescriptor::isFindIVRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
-      // Adjust the start value for FindLastIV recurrences to use the sentinel
-      // value after generating the ResumePhi recipe, which uses the original
-      // start value.
+      // Adjust the start value for FindFirstIV/FindLastIV recurrences to use
+      // the sentinel value after generating the ResumePhi recipe, which uses
+      // the original start value.
       PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
     }
+  }
+
+  // Check if any reduction is used by another reduction, by starting from
+  // ComputeReductionResults and checking if the recurrence descriptor is marked
+  // has having another recurrence user.
+  for (auto &R : *MiddleVPBB) {
+    auto *MinMaxResult = dyn_cast<VPInstruction>(&R);
+    if (!MinMaxResult ||
+        MinMaxResult->getOpcode() != VPInstruction::ComputeReductionResult)
+      continue;
+    auto *MinMaxPhiR = cast<VPReductionPHIRecipe>(MinMaxResult->getOperand(0));
+    auto &MinMaxRdxDesc = MinMaxPhiR->getRecurrenceDescriptor();
+    if (!MinMaxRdxDesc.IsUsedByOtherRecurrence)
+      continue;
+
+    assert(RecurrenceDescriptor::isMinMaxRecurrenceKind(
+               MinMaxRdxDesc.getRecurrenceKind()) &&
+           "only min/max reductions can be used by other recurrences");
+
+    SmallVector<VPUser *> Worklist;
+    append_range(Worklist, MinMaxPhiR->users());
+    VPReductionPHIRecipe *FindIVPhiR = nullptr;
+    // Starting from MinMaxPhiR's users, find the other reduction phi using
+    // MinMaxPhiR.
+    while (!Worklist.empty()) {
+      VPUser *Cur = Worklist.pop_back_val();
+      if (isa<VPHeaderPHIRecipe>(Cur)) {
+        if (Cur != MinMaxPhiR) {
+          assert(!FindIVPhiR &&
+                 "Only the starting MinMaxPhiR or another reduction "
+                 "phi must be reachable");
+          FindIVPhiR = cast<VPReductionPHIRecipe>(Cur);
+        }
+        continue;
+      }
+      // Skip recipes outside any region.
+      if (!cast<VPSingleDefRecipe>(Cur)->getParent()->getParent())
+        continue;
+      append_range(Worklist, cast<VPSingleDefRecipe>(Cur)->users());
+    }
+
+    // Find the  recipe computing the result of the other reduction.
+    VPInstruction *FindIVResult = nullptr;
+    for (auto *U : FindIVPhiR->users()) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindIVResult)
+        continue;
+      FindIVResult = VPI;
+    }
+    assert(FindIVResult && "must find a matching ComputeFindIVResult");
+
+    // The reduction using MinMaxPhiR needs adjusting to compute the correct
+    // result:
+    //  1. We need to find the first IV for which the condition based on the
+    //  min/max recurrence is true,
+    //  2. Compare the partial min/max reduction result to its final value and,
+    //  3. Select the lanes of the partial FindLastIV reductions which
+    //  correspond to the lanes matching the min/max reduction result.
+    FindIVResult->moveAfter(MinMaxResult);
+    VPBuilder B(FindIVResult);
+    const_cast<RecurrenceDescriptor &>(FindIVPhiR->getRecurrenceDescriptor())
+        .setKind(RecurKind::FindFirstIVUMax);
+    auto *Cmp = B.createICmp(CmpInst::ICMP_EQ, MinMaxResult->getOperand(1),
+                             MinMaxResult);
+    auto *Sel = B.createSelect(
+        Cmp, FindIVResult->getOperand(2),
+        Plan->getOrAddLiveIn(
+            FindIVPhiR->getRecurrenceDescriptor().getSentinelValue()));
+    FindIVResult->setOperand(2, Sel);
   }
   for (VPRecipeBase *R : ToDelete)
     R->eraseFromParent();
@@ -9985,18 +10054,18 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   VPlanTransforms::runPass(VPlanTransforms::removeDeadRecipes, MainPlan);
 
   using namespace VPlanPatternMatch;
-  // When vectorizing the epilogue, FindLastIV reductions can introduce multiple
-  // uses of undef/poison. If the reduction start value may be undef or poison
-  // it needs to be frozen and the frozen start has to be used when computing
-  // the reduction result. We also need to use the frozen value in the resume
-  // phi generated by the main vector loop, as this is also used to compute the
-  // reduction result after the epilogue vector loop.
+  // When vectorizing the epilogue, FindFirstIV & FindLastIV reductions can
+  // introduce multiple uses of undef/poison. If the reduction start value may
+  // be undef or poison it needs to be frozen and the frozen start has to be
+  // used when computing the reduction result. We also need to use the frozen
+  // value in the resume phi generated by the main vector loop, as this is also
+  // used to compute the reduction result after the epilogue vector loop.
   auto AddFreezeForFindLastIVReductions = [](VPlan &Plan,
                                              bool UpdateResumePhis) {
     VPBuilder Builder(Plan.getEntry());
     for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
       auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindLastIVResult)
+      if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindIVResult)
         continue;
       VPValue *OrigStart = VPI->getOperand(1);
       if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
@@ -10107,17 +10176,17 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         IRBuilder<> Builder(PBB, PBB->getFirstNonPHIIt());
         ResumeV =
             Builder.CreateICmpNE(ResumeV, RdxDesc.getRecurrenceStartValue());
-      } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+      } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
         ToFrozen[RdxDesc.getRecurrenceStartValue()] =
             cast<PHINode>(ResumeV)->getIncomingValueForBlock(
                 EPI.MainLoopIterationCountCheck);
 
-        // VPReductionPHIRecipe for FindLastIV reductions requires an adjustment
-        // to the resume value. The resume value is adjusted to the sentinel
-        // value when the final value from the main vector loop equals the start
-        // value. This ensures correctness when the start value might not be
-        // less than the minimum value of a monotonically increasing induction
-        // variable.
+        // VPReductionPHIRecipe for FindFirstIV/FindLastIV reductions requires
+        // an adjustment to the resume value. The resume value is adjusted to
+        // the sentinel value when the final value from the main vector loop
+        // equals the start value. This ensures correctness when the start value
+        // might not be less than the minimum value of a monotonically
+        // increasing induction variable.
         BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
         IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
         Value *Cmp = Builder.CreateICmpEQ(
