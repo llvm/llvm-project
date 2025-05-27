@@ -18,6 +18,7 @@
 
 #define GET_SDNODE_ENUM
 #include "AArch64GenSDNodeInfo.inc"
+#undef GET_SDNODE_ENUM
 
 namespace llvm {
 
