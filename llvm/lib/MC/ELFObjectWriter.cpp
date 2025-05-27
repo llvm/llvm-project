@@ -446,8 +446,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
     // needs. MCBinaryExpr is not handled.
     const MCSymbolELF *Sym = &Symbol;
     while (Sym->isVariable()) {
-      if (auto *Expr =
-              dyn_cast<MCSymbolRefExpr>(Sym->getVariableValue(false))) {
+      if (auto *Expr = dyn_cast<MCSymbolRefExpr>(Sym->getVariableValue())) {
         Sym = cast<MCSymbolELF>(&Expr->getSymbol());
         if (!Sym->getSize())
           continue;
