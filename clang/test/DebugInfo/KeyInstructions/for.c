@@ -4,10 +4,10 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions -x c %s -debug-info-kind=line-tables-only -emit-llvm -o -  \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// Perennial quesiton: should the inc be its own source atom or not
+// Perennial question: should the inc be its own source atom or not
 // (currently it is).
 
-// FIXME: See do.c and while.c regarding cmp and cond br groups.
+// TODO: See do.c and while.c regarding cmp and cond br groups.
 
 void a(int A) {
 // CHECK: entry:
@@ -16,10 +16,9 @@ void a(int A) {
 // CHECK: %cmp = icmp slt i32 %0, %1, !dbg [[G2R1:!.*]]
 // CHECK: br i1 %cmp, label %for.body, label %for.end, !dbg [[G3R1:!.*]]
 
-// FIXME: Added uncond br group here which is useful for O0, which we're
-// no longer targeting. With optimisations loop rotate puts the condition
-// into for.inc and simplifycfg smooshes that and for.body together, so
-// it's not clear whether it adds any value.
+// TODO: The unconditional br is given an atom group here which is useful for
+// O0. Since we're no longer targeting O0 we should reevaluate whether this
+// adds any value.
 // CHECK: for.body:
 // CHECK: br label %for.inc, !dbg [[G5R1:!.*]]
 
