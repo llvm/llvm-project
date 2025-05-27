@@ -737,15 +737,11 @@ def : StPat<store, SW_INX, GPRF32, f32>;
 } // Predicates = [HasStdExtZfinx]
 
 /// Floating-point environment
-multiclass FPEnvironmentOps<Predicate HasFloatExt> {
-  let Predicates = [HasFloatExt] in {
-    def : Pat<(XLenVT (get_fpenv)), (CSRRS SysRegFCSR.Encoding, (XLenVT X0))>;
-    def : Pat<(set_fpenv (XLenVT GPR:$rs)), (CSRRW SysRegFCSR.Encoding, GPR:$rs)>;
-    def : Pat<(reset_fpenv), (CSRRW SysRegFCSR.Encoding, (XLenVT X0))>;
-  }
+let Predicates = [HasStdExtFOrZfinx] in {
+def : Pat<(XLenVT (get_fpenv)), (CSRRS SysRegFCSR.Encoding, (XLenVT X0))>;
+def : Pat<(set_fpenv (XLenVT GPR:$rs)), (CSRRW SysRegFCSR.Encoding, GPR:$rs)>;
+def : Pat<(reset_fpenv), (CSRRW SysRegFCSR.Encoding, (XLenVT X0))>;
 }
-defm : FPEnvironmentOps<HasStdExtF>;
-defm : FPEnvironmentOps<HasStdExtZfinx>;
 
 let Predicates = [HasStdExtF, IsRV32] in {
 // Moves (no conversion)
