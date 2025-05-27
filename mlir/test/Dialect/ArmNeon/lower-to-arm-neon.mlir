@@ -360,7 +360,7 @@ module attributes {transform.with_named_sequence} {
     %func = transform.structured.match ops{["func.func"]} in %module : (!transform.any_op) -> !transform.op<"func.func">
 
     transform.apply_patterns to %func {
-      transform.apply_patterns.vector.arm_neon.contraction_to_i8mm
+      transform.apply_patterns.arm_neon.vector_contract_to_i8mm
     } : !transform.op<"func.func">
 
     transform.yield

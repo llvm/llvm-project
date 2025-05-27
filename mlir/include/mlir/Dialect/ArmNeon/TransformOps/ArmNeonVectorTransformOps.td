@@ -14,7 +14,7 @@ include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
 def ApplyArmNeonContractionToI8MMPatternsOp
     : Op<Transform_Dialect,
-         "apply_patterns.vector.arm_neon.contraction_to_i8mm",
+         "apply_patterns.arm_neon.vector_contract_to_i8mm",
          [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Indicates that vector.contract operations should be lowered to
