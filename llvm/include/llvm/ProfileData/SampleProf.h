@@ -201,6 +201,9 @@ enum class SecProfSummaryFlags : uint32_t {
   /// SecFlagIsPreInlined means this profile contains ShouldBeInlined
   /// contexts thus this is CS preinliner computed.
   SecFlagIsPreInlined = (1 << 4),
+
+  /// SecFlagHasVTableTypeProf means this profile contains vtable type profiles.
+  SecFlagHasVTableTypeProf = (1 << 5),
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
@@ -312,16 +315,19 @@ struct LineLocationHash {
 
 raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
+using TypeMap = std::map<FunctionId, uint64_t>;
+
 /// Representation of a single sample record.
 ///
 /// A sample record is represented by a positive integer value, which
 /// indicates how frequently was the associated line location executed.
 ///
 /// Additionally, if the associated location contains a function call,
-/// the record will hold a list of all the possible called targets. For
-/// direct calls, this will be the exact function being invoked. For
-/// indirect calls (function pointers, virtual table dispatch), this
-/// will be a list of one or more functions.
+/// the record will hold a list of all the possible called targets and the types
+/// for virtual table dispatches. For direct calls, this will be the exact
+/// function being invoked. For indirect calls (function pointers, virtual table
+/// dispatch), this will be a list of one or more functions. For virtual table
+/// dispatches, this record will also hold the type of the object.
 class SampleRecord {
 public:
   using CallTarget = std::pair<FunctionId, uint64_t>;
@@ -336,6 +342,7 @@ public:
 
   using SortedCallTargetSet = std::set<CallTarget, CallTargetComparator>;
   using CallTargetMap = std::unordered_map<FunctionId, uint64_t>;
+
   SampleRecord() = default;
 
   /// Increment the number of samples for this record by \p S.
@@ -374,6 +381,14 @@ public:
                       : sampleprof_error::success;
   }
 
+  sampleprof_error addTypeCount(FunctionId F, uint64_t S, uint64_t Weight = 1) {
+    uint64_t &Samples = TypeCounts[F];
+    bool Overflowed;
+    Samples = SaturatingMultiplyAdd(S, Weight, Samples, &Overflowed);
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
+  }
+
   /// Remove called function from the call target map. Return the target sample
   /// count of the called function.
   uint64_t removeCalledTarget(FunctionId F) {
@@ -391,6 +406,8 @@ public:
 
   uint64_t getSamples() const { return NumSamples; }
   const CallTargetMap &getCallTargets() const { return CallTargets; }
+  const TypeMap &getTypes() const { return TypeCounts; }
+  TypeMap &getTypes() { return TypeCounts; }
   const SortedCallTargetSet getSortedCallTargets() const {
     return sortCallTargets(CallTargets);
   }
@@ -439,6 +456,7 @@ public:
 private:
   uint64_t NumSamples = 0;
   CallTargetMap CallTargets;
+  TypeMap TypeCounts;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
@@ -734,6 +752,7 @@ using BodySampleMap = std::map<LineLocation, SampleRecord>;
 // memory, which is *very* significant for large profiles.
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
+using CallsiteTypeMap = std::map<LineLocation, TypeMap>;
 using LocToLocMap =
     std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
 
@@ -789,6 +808,22 @@ public:
                                           uint64_t Weight = 1) {
     return BodySamples[LineLocation(LineOffset, Discriminator)].addCalledTarget(
         Func, Num, Weight);
+  }
+
+  sampleprof_error addTypeSamples(uint32_t LineOffset, uint32_t Discriminator,
+                                  FunctionId Func, uint64_t Num,
+                                  uint64_t Weight = 1) {
+    return BodySamples[LineLocation(LineOffset, Discriminator)].addTypeCount(
+        Func, Num, Weight);
+  }
+
+  sampleprof_error addTypeSamples(const LineLocation &Loc, FunctionId Func,
+                                  uint64_t Num, uint64_t Weight = 1) {
+    return BodySamples[Loc].addTypeCount(Func, Num, Weight);
+  }
+
+  TypeMap &getTypeSamples(const LineLocation &Loc) {
+    return BodySamples[Loc].getTypes();
   }
 
   sampleprof_error addSampleRecord(LineLocation Location,
@@ -916,6 +951,13 @@ public:
     return &Iter->second;
   }
 
+  const TypeMap *findTypeSamplesAt(const LineLocation &Loc) const {
+    auto Iter = VirtualCallsiteTypes.find(mapIRLocToProfileLoc(Loc));
+    if (Iter == VirtualCallsiteTypes.end())
+      return nullptr;
+    return &Iter->second;
+  }
+
   /// Returns a pointer to FunctionSamples at the given callsite location
   /// \p Loc with callee \p CalleeName. If no callsite can be found, relax
   /// the restriction to return the FunctionSamples at callsite location
@@ -977,6 +1019,14 @@ public:
     return CallsiteSamples;
   }
 
+  const CallsiteTypeMap &getCallsiteTypes() const {
+    return VirtualCallsiteTypes;
+  }
+
+  TypeMap& getTypeSamplesAt(const LineLocation &Loc) {
+    return VirtualCallsiteTypes[mapIRLocToProfileLoc(Loc)];
+  }
+
   /// Return the maximum of sample counts in a function body. When SkipCallSite
   /// is false, which is the default, the return count includes samples in the
   /// inlined functions. When SkipCallSite is true, the return count only
@@ -1023,13 +1073,26 @@ public:
       const LineLocation &Loc = I.first;
       const SampleRecord &Rec = I.second;
       mergeSampleProfErrors(Result, BodySamples[Loc].merge(Rec, Weight));
+      // const auto &OtherTypeCountMap = Rec.getTypes();
+      // for (const auto &[Type, Count] : OtherTypeCountMap) {
+      //   mergeSampleProfErrors(Result, addTypeSamples(Loc, Type, Count,
+      //   Weight));
+      // }
     }
+
     for (const auto &I : Other.getCallsiteSamples()) {
       const LineLocation &Loc = I.first;
       FunctionSamplesMap &FSMap = functionSamplesAt(Loc);
       for (const auto &Rec : I.second)
         mergeSampleProfErrors(Result,
                               FSMap[Rec.first].merge(Rec.second, Weight));
+    }
+    for (const auto &[Loc, TypeCountMap] : Other.getCallsiteTypes()) {
+      TypeMap &TypeCounts = getTypeSamplesAt(Loc);
+      for (const auto &[Type, Count] : TypeCountMap) {
+        TypeCounts[Type] =
+            SaturatingMultiplyAdd(Count, Weight, TypeCounts[Type]);
+      }
     }
     return Result;
   }
@@ -1273,6 +1336,8 @@ private:
   /// in the call to bar() at line offset 1, the other for all the samples
   /// collected in the call to baz() at line offset 8.
   CallsiteSampleMap CallsiteSamples;
+
+  CallsiteTypeMap VirtualCallsiteTypes;
 
   /// IR to profile location map generated by stale profile matching.
   ///

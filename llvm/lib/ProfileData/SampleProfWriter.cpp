@@ -41,6 +41,10 @@
 using namespace llvm;
 using namespace sampleprof;
 
+static cl::opt<bool> ExtBinaryWriteVTableTypeProf(
+    "extbinary-write-vtable-type-prof", cl::init(true), cl::Hidden,
+    cl::desc("Write vtable type profile in ext-binary sample profile writer"));
+
 namespace llvm {
 namespace support {
 namespace endian {
@@ -435,6 +439,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagIsPreInlined);
   if (Type == SecProfSummary && FunctionSamples::ProfileIsFS)
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFSDiscriminator);
+  if (Type == SecProfSummary && ExtBinaryWriteVTableTypeProf)
+    addSectionFlag(SecProfSummary,
+                   SecProfSummaryFlags::SecFlagHasVTableTypeProf);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {
@@ -476,6 +483,16 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   if (std::error_code EC = addNewSection(Type, LayoutIdx, SectionStart))
     return EC;
   return sampleprof_error::success;
+}
+
+SampleProfileWriterExtBinary::SampleProfileWriterExtBinary(
+    std::unique_ptr<raw_ostream> &OS)
+    : SampleProfileWriterExtBinaryBase(OS) {
+  // Initialize the section header layout.
+
+  WriteVTableProf = ExtBinaryWriteVTableTypeProf;
+
+  errs() << "writeVTableProf value: " << WriteVTableProf << "\n";
 }
 
 std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
@@ -586,15 +603,25 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     for (const auto &J : Sample.getSortedCallTargets())
       OS << " " << J.first << ":" << J.second;
     OS << "\n";
+
+    if (!Sample.getTypes().empty()) {
+      OS.indent(Indent + 1);
+      Loc.print(OS);
+      OS << ": ";
+      for (const auto &Type : Sample.getTypes()) {
+        OS << Type.first << ":" << Type.second << " ";
+      }
+      OS << " // CallTargetVtables\n";
+    }
     LineCount++;
   }
 
   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
       S.getCallsiteSamples());
   Indent += 1;
-  for (const auto &I : SortedCallsiteSamples.get())
+  for (const auto &I : SortedCallsiteSamples.get()) {
+    LineLocation Loc = I->first;
     for (const auto &FS : I->second) {
-      LineLocation Loc = I->first;
       const FunctionSamples &CalleeSamples = FS.second;
       OS.indent(Indent);
       Loc.print(OS);
@@ -602,6 +629,19 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       if (std::error_code EC = writeSample(CalleeSamples))
         return EC;
     }
+
+    if (const TypeMap *Map = S.findTypeSamplesAt(Loc); Map && !Map->empty()) {
+      OS.indent(Indent);
+      Loc.print(OS);
+      OS << ": ";
+      for (const auto &Type : *Map) {
+        OS << Type.first << ":" << Type.second << " ";
+      }
+      OS << " // CallSiteVtables\n";
+      LineCount++;
+    }
+  }
+
   Indent -= 1;
 
   if (FunctionSamples::ProfileIsProbeBased) {
@@ -652,7 +692,12 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
     const SampleRecord &Sample = I.second;
     for (const auto &J : Sample.getCallTargets())
       addName(J.first);
+    addTypeNames(Sample.getTypes());
   }
+
+  // Add all the names in callsite types.
+  for (const auto &CallsiteTypeSamples : S.getCallsiteTypes())
+    addTypeNames(CallsiteTypeSamples.second);
 
   // Recursively add all the names for inlined callsites.
   for (const auto &J : S.getCallsiteSamples())
@@ -799,6 +844,44 @@ std::error_code SampleProfileWriterExtBinaryBase::writeHeader(
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileWriterExtBinary::writeTypeMap(const TypeMap &Map,
+                                                           raw_ostream &OS) {
+  encodeULEB128(Map.size(), OS);
+  for (const auto &[TypeName, TypeSamples] : Map) {
+    errs() << "TypeName: " << TypeName << "\t" << "TypeSamples: " << TypeSamples
+           << "\n";
+    if (std::error_code EC = writeNameIdx(TypeName))
+      return EC;
+    encodeULEB128(TypeSamples, OS);
+  }
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileWriterExtBinary::writeSampleRecordVTableProf(
+    const SampleRecord &Record, raw_ostream &OS) {
+  if (!WriteVTableProf)
+    return sampleprof_error::success;
+
+  return writeTypeMap(Record.getTypes(), OS);
+}
+
+std::error_code SampleProfileWriterExtBinary::writeCallsiteType(
+    const FunctionSamples &FunctionSample, raw_ostream &OS) {
+  if (!WriteVTableProf)
+    return sampleprof_error::success;
+
+  const CallsiteTypeMap &CallsiteTypeMap = FunctionSample.getCallsiteTypes();
+  encodeULEB128(CallsiteTypeMap.size(), OS);
+  for (const auto &[Loc, TypeMap] : CallsiteTypeMap) {
+    encodeULEB128(Loc.LineOffset, OS);
+    encodeULEB128(Loc.Discriminator, OS);
+    if (std::error_code EC = writeTypeMap(TypeMap, OS))
+      return EC;
+  }
+
+  return sampleprof_error::success;
+}
+
 std::error_code SampleProfileWriterBinary::writeSummary() {
   auto &OS = *OutputStream;
   encodeULEB128(Summary->getTotalCount(), OS);
@@ -838,6 +921,8 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
         return EC;
       encodeULEB128(CalleeSamples, OS);
     }
+    if (std::error_code EC = writeSampleRecordVTableProf(Sample, OS))
+      return EC;
   }
 
   // Recursively emit all the callsite samples.
@@ -845,7 +930,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   for (const auto &J : S.getCallsiteSamples())
     NumCallsites += J.second.size();
   encodeULEB128(NumCallsites, OS);
-  for (const auto &J : S.getCallsiteSamples())
+  for (const auto &J : S.getCallsiteSamples()) {
     for (const auto &FS : J.second) {
       LineLocation Loc = J.first;
       const FunctionSamples &CalleeSamples = FS.second;
@@ -854,8 +939,9 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
       if (std::error_code EC = writeBody(CalleeSamples))
         return EC;
     }
+  }
 
-  return sampleprof_error::success;
+  return writeCallsiteType(S, OS);
 }
 
 /// Write samples of a top-level function to a binary file.

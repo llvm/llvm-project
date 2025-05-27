@@ -6,10 +6,12 @@ main:184019:0
  6: 2080
  7: 534
  9: 2064 _Z3bari:1471 _Z3fooi:631
+ 9: vtable_bar:1471 vtable_foo:630  // CallTargetVtables
  10: inline1:1000
   1: 1000
  10: inline2:2000
   1: 2000
+ 10: inline1_vtable:1000 inline2_vtable:2000  // CallSiteVtables
 _Z3bari:20301:1437
  1: 1437
 _Z3fooi:7711:610

@@ -701,6 +701,17 @@ protected:
   /// otherwise same as readStringFromTable, also return its hash value.
   ErrorOr<std::pair<SampleContext, uint64_t>> readSampleContextFromTable();
 
+  /// Overridden by SampleProfileReaderExtBinary to read the vtable profile.
+  virtual std::error_code readVTableProf(const LineLocation &Loc,
+                                         FunctionSamples &FProfile) {
+    return sampleprof_error::success;
+  }
+
+  virtual std::error_code readCallsiteVTableProf(FunctionSamples &FProfile) {
+    return sampleprof_error::success;
+  }
+
+
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
 
@@ -814,6 +825,8 @@ protected:
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
 
+  bool ReadVTableProf = false;
+
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
                                    LLVMContext &C, SampleProfileFormat Format)
@@ -854,6 +867,12 @@ private:
     return sampleprof_error::success;
   };
 
+  std::error_code readVTableProf(const LineLocation &Loc,
+                                 FunctionSamples &FProfile) override;
+
+  std::error_code readCallsiteVTableProf(FunctionSamples &FProfile) override;
+
+   std::error_code readTypeMap(TypeMap& M);
 public:
   SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
                                SampleProfileFormat Format = SPF_Ext_Binary)

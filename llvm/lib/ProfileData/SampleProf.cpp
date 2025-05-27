@@ -123,6 +123,9 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
+  for (const auto &[TypeName, Count] : Other.getTypes()) {
+    mergeSampleProfErrors(Result, addTypeCount(TypeName, Count, Weight));
+  }
   return Result;
 }
 
@@ -136,6 +139,11 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
   if (hasCalls()) {
     OS << ", calls:";
     for (const auto &I : getSortedCallTargets())
+      OS << " " << I.first << ":" << I.second;
+  }
+  if (!TypeCounts.empty()) {
+    OS << ", types:";
+    for (const auto &I : TypeCounts)
       OS << " " << I.first << ":" << I.second;
   }
   OS << "\n";
@@ -179,11 +187,21 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
     for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto &FS : CS->second) {
+      for (const auto &[FuncId, FuncSample] : CS->second) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FS.second.getFunction()
+        OS << CS->first << ": inlined callee: " << FuncSample.getFunction()
            << ": ";
-        FS.second.print(OS, Indent + 4);
+        FuncSample.print(OS, Indent + 4);
+      }
+      const LineLocation &Loc = CS->first;
+      auto TypeSamplesIter = VirtualCallsiteTypes.find(Loc);
+      if (TypeSamplesIter != VirtualCallsiteTypes.end()) {
+        OS.indent(Indent + 2);
+        OS << Loc << ": vtables: ";
+        for (const auto &TypeSample : TypeSamplesIter->second) {
+          OS << TypeSample.first << ":" << TypeSample.second << " ";
+        }
+        OS << "\n";
       }
     }
     OS.indent(Indent);

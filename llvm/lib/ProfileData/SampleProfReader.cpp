@@ -197,7 +197,30 @@ enum class LineType {
   CallSiteProfile,
   BodyProfile,
   Metadata,
+  CallTargetTypeProfile,
+  CallSiteTypeProfile,
 };
+
+static bool parseTypeCountMap(StringRef Input,
+                              DenseMap<StringRef, uint64_t> &TypeCountMap) {
+  for (size_t Index = Input.find_first_not_of(' '); Index != StringRef::npos;) {
+    size_t n1 = Input.find(':', Index);
+    if (n1 == StringRef::npos)
+      return false; // No colon found, invalid format.
+    StringRef TypeName = Input.substr(Index, n1 - Index);
+    // n2 is the start index of count.
+    size_t n2 = n1 + 1;
+    // n3 is the start index after the 'target:count' pair.
+    size_t n3 = Input.find_first_of(' ', n2);
+    uint64_t Count;
+    if (Input.substr(n2, n3 - n2).getAsInteger(10, Count))
+      return false; // Invalid count.
+    TypeCountMap[TypeName] = Count;
+    Index = (n3 == StringRef::npos) ? StringRef::npos
+                                    : Input.find_first_not_of(' ', n3);
+  }
+  return true;
+}
 
 /// Parse \p Input as line sample.
 ///
@@ -215,6 +238,7 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
                       uint64_t &NumSamples, uint32_t &LineOffset,
                       uint32_t &Discriminator, StringRef &CalleeName,
                       DenseMap<StringRef, uint64_t> &TargetCountMap,
+                      DenseMap<StringRef, uint64_t> &TypeCountMap,
                       uint64_t &FunctionHash, uint32_t &Attributes,
                       bool &IsFlat) {
   for (Depth = 0; Input[Depth] == ' '; Depth++)
@@ -289,6 +313,7 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
         n4 = AfterColon.find_first_of(' ');
         n4 = (n4 != StringRef::npos) ? n3 + n4 + 1 : Rest.size();
         StringRef WordAfterColon = Rest.substr(n3 + 1, n4 - n3 - 1);
+        // Break the loop if parsing integer succeeded.
         if (!WordAfterColon.getAsInteger(10, count))
           break;
 
@@ -306,6 +331,16 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
       // Change n3 to the next blank space after colon + integer pair.
       n3 = n4;
     }
+  } else if (Rest.ends_with("// CallTargetVtables")) {
+    LineTy = LineType::CallTargetTypeProfile;
+    return parseTypeCountMap(
+        Rest.substr(0, Rest.size() - strlen("// CallTargetVtables")),
+        TypeCountMap);
+  } else if (Rest.ends_with("// CallSiteVtables")) {
+    LineTy = LineType::CallSiteTypeProfile;
+    return parseTypeCountMap(
+        Rest.substr(0, Rest.size() - strlen("// CallSiteVtables")),
+        TypeCountMap);
   } else {
     LineTy = LineType::CallSiteProfile;
     size_t n3 = Rest.find_last_of(':');
@@ -374,14 +409,15 @@ std::error_code SampleProfileReaderText::readImpl() {
       uint64_t NumSamples;
       StringRef FName;
       DenseMap<StringRef, uint64_t> TargetCountMap;
+      DenseMap<StringRef, uint64_t> TypeCountMap;
       uint32_t Depth, LineOffset, Discriminator;
       LineType LineTy;
       uint64_t FunctionHash = 0;
       uint32_t Attributes = 0;
       bool IsFlat = false;
       if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
-                     Discriminator, FName, TargetCountMap, FunctionHash,
-                     Attributes, IsFlat)) {
+                     Discriminator, FName, TargetCountMap, TypeCountMap,
+                     FunctionHash, Attributes, IsFlat)) {
         reportError(LineIt.line_number(),
                     "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
                         *LineIt);
@@ -410,6 +446,29 @@ std::error_code SampleProfileReaderText::readImpl() {
         DepthMetadata = 0;
         break;
       }
+
+      case LineType::CallSiteTypeProfile: {
+        TypeMap &Map = InlineStack.back()->getTypeSamplesAt(
+            LineLocation(LineOffset, Discriminator));
+        for (const auto [Type, Count] : TypeCountMap)
+          Map[FunctionId(Type)] += Count;
+        break;
+      }
+
+      case LineType::CallTargetTypeProfile: {
+        while (InlineStack.size() > Depth) {
+          InlineStack.pop_back();
+        }
+        FunctionSamples &FProfile = *InlineStack.back();
+        for (const auto &name_count : TypeCountMap) {
+          mergeSampleProfErrors(
+              Result, FProfile.addTypeSamples(LineOffset, Discriminator,
+                                              FunctionId(name_count.first),
+                                              name_count.second));
+        }
+        break;
+      }
+
       case LineType::BodyProfile: {
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TargetCountMap) {
@@ -591,6 +650,68 @@ SampleProfileReaderBinary::readSampleContextFromTable() {
   return std::make_pair(Context, Hash);
 }
 
+std::error_code SampleProfileReaderExtBinary::readTypeMap(TypeMap &M) {
+  auto NumVTableTypes = readNumber<uint32_t>();
+  if (std::error_code EC = NumVTableTypes.getError())
+    return EC;
+
+  for (uint32_t I = 0; I < *NumVTableTypes; ++I) {
+    auto VTableType(readStringFromTable());
+    if (std::error_code EC = VTableType.getError())
+      return EC;
+
+    auto VTableSamples = readNumber<uint64_t>();
+    if (std::error_code EC = VTableSamples.getError())
+      return EC;
+
+    errs() << "readTypeMap\t" << *VTableType << "\t" << *VTableSamples << "\n";
+    M.insert(std::make_pair(*VTableType, *VTableSamples));
+  }
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderExtBinary::readVTableProf(const LineLocation &Loc,
+                                             FunctionSamples &FProfile) {
+  if (!ReadVTableProf)
+    return sampleprof_error::success;
+
+  return readTypeMap(FProfile.getTypeSamples(Loc));
+}
+
+std::error_code SampleProfileReaderExtBinary::readCallsiteVTableProf(
+    FunctionSamples &FProfile) {
+  if (!ReadVTableProf)
+    return sampleprof_error::success;
+
+  // Read the vtable type profile for the callsite.
+  auto NumCallsites = readNumber<uint32_t>();
+  if (std::error_code EC = NumCallsites.getError())
+    return EC;
+
+  for (uint32_t I = 0; I < *NumCallsites; ++I) {
+    auto LineOffset = readNumber<uint64_t>();
+    if (std::error_code EC = LineOffset.getError())
+      return EC;
+
+    auto Discriminator = readNumber<uint64_t>();
+    if (std::error_code EC = Discriminator.getError())
+      return EC;
+
+    // Here we handle FS discriminators:
+    uint32_t DiscriminatorVal = (*Discriminator) & getDiscriminatorMask();
+
+    if (!isOffsetLegal(*LineOffset)) {
+      return std::error_code();
+    }
+
+    if (std::error_code EC = readTypeMap(FProfile.getTypeSamplesAt(
+            LineLocation(*LineOffset, DiscriminatorVal))))
+      return EC;
+  }
+  return sampleprof_error::success;
+}
+
 std::error_code
 SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
   auto NumSamples = readNumber<uint64_t>();
@@ -640,6 +761,11 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
                                       *CalledFunction, *CalledFunctionSamples);
     }
 
+    // read vtable type profiles.
+    if (std::error_code EC = readVTableProf(
+            LineLocation(*LineOffset, DiscriminatorVal), FProfile))
+      return EC;
+
     FProfile.addBodySamples(*LineOffset, DiscriminatorVal, *NumSamples);
   }
 
@@ -671,7 +797,10 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
   }
 
-  return sampleprof_error::success;
+  std::error_code EC = readCallsiteVTableProf(FProfile);
+  errs() << "readFunctionSample\t";
+  FProfile.print(errs(), 2);
+  return EC;
 }
 
 std::error_code
@@ -733,6 +862,10 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       FunctionSamples::ProfileIsPreInlined = ProfileIsPreInlined = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagHasVTableTypeProf)) {
+      errs() << "SampleProfileReaderExtBinaryBase::readVTableProf\n";
+      ReadVTableProf = true;
+    }
     break;
   case SecNameTable: {
     bool FixedLengthMD5 =
