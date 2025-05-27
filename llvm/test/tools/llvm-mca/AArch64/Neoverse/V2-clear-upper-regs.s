@@ -107,17 +107,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ldr	b0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	b0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	b0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	b0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,1]     DPPPPPPPeeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -186,17 +193,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ldr	h0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	h0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	h0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	h0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,1]     DPPPPPPPeeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -265,17 +279,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ldr	s0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	s0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	s0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	s0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,1]     DPPPPPPPeeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -344,17 +365,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ldr	d0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	d0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	d0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	d0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,1]     DPPPPPPPeeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -423,17 +451,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ldr	q0, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [1,0]     DeeeeeeE--R.   ldr	q0, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ldr	q0, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ldr	q0, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,1]     DPPPPPPPeeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -502,17 +537,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.8b }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,1]     DPPPPPPPeeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -581,17 +623,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.4h }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,1]     DPPPPPPPeeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -660,17 +709,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.2s }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,1]     DPPPPPPPeeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -739,17 +795,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER ..   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [0,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [1,0]     DeeeeeeE--R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [1,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [2,0]     DeeeeeeE--R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [2,1]     D======eeER.   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [2,1]     DPPPPPPeeER.   add	z0.d, z0.d, z0.d
 # CHECK-NEXT: [3,0]     D=eeeeeeE-R.   ld1	{ v0.1d }, [sp]
-# CHECK-NEXT: [3,1]     D=======eeER   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [3,1]     DPPPPPPPeeER   add	z0.d, z0.d, z0.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -818,17 +881,24 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.33    -     0.33   0.34   add	z0.s, z0.s, z0.s
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          01234
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    .    .    .    .   .   insr	z0.s, w0
-# CHECK-NEXT: [0,1]     D======eeER    .    .    .    .   .   add	z0.s, z0.s, z0.s
-# CHECK-NEXT: [1,0]     D========eeeeeeER   .    .    .   .   insr	z0.s, w0
-# CHECK-NEXT: [1,1]     D==============eeER .    .    .   .   add	z0.s, z0.s, z0.s
-# CHECK-NEXT: [2,0]     D================eeeeeeER.    .   .   insr	z0.s, w0
-# CHECK-NEXT: [2,1]     D======================eeER   .   .   add	z0.s, z0.s, z0.s
-# CHECK-NEXT: [3,0]     D========================eeeeeeER .   insr	z0.s, w0
-# CHECK-NEXT: [3,1]     D==============================eeER   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [0,1]     DPPPPPPeeER    .    .    .    .   .   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [1,0]     DPPPPPPPPeeeeeeER   .    .    .   .   insr	z0.s, w0
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPeeER .    .    .   .   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [2,0]     DPPPPPPPPPPPPPPPPeeeeeeER.    .   .   insr	z0.s, w0
+# CHECK-NEXT: [2,1]     DPPPPPPPPPPPPPPPPPPPPPPeeER   .   .   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [3,0]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER .   insr	z0.s, w0
+# CHECK-NEXT: [3,1]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeER   add	z0.s, z0.s, z0.s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

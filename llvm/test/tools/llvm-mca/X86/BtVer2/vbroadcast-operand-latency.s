@@ -52,15 +52,22 @@ vbroadcastss (%rax), %ymm0
 # CHECK-NEXT:  -      -      -     2.00   2.00   1.00   1.00   1.00    -      -      -      -      -      -     vbroadcastss	(%rax), %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    .   .   leaq	8(%rsp,%rdi,2), %rax
-# CHECK-NEXT: [0,1]     .D=eeeeeeER   .   vbroadcastss	(%rax), %ymm0
+# CHECK-NEXT: [0,1]     .DPeeeeeeER   .   vbroadcastss	(%rax), %ymm0
 # CHECK-NEXT: [1,0]     . DeeE----R   .   leaq	8(%rsp,%rdi,2), %rax
-# CHECK-NEXT: [1,1]     .  D=eeeeeeER .   vbroadcastss	(%rax), %ymm0
+# CHECK-NEXT: [1,1]     .  DPeeeeeeER .   vbroadcastss	(%rax), %ymm0
 # CHECK-NEXT: [2,0]     .   DeeE----R .   leaq	8(%rsp,%rdi,2), %rax
-# CHECK-NEXT: [2,1]     .    D=eeeeeeER   vbroadcastss	(%rax), %ymm0
+# CHECK-NEXT: [2,1]     .    DPeeeeeeER   vbroadcastss	(%rax), %ymm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

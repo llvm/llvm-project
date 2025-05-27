@@ -95,11 +95,18 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 3.00    -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    ..   imulq	%rax, %rax
-# CHECK-NEXT: [0,1]     .D==eeeeeeeeeeeER   cmpxchgq	%rcx, (%rdx)
+# CHECK-NEXT: [0,1]     .DPPeeeeeeeeeeeER   cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -162,11 +169,18 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 3.00    -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeER .    ..   imulq	%rcx, %rcx
-# CHECK-NEXT: [0,1]     .D==eeeeeeeeeeeER   cmpxchgq	%rcx, (%rdx)
+# CHECK-NEXT: [0,1]     .DPPeeeeeeeeeeeER   cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -229,11 +243,18 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 3.00    -      -      -      -      -      -     17.00   -     17.00   -      -      -      -     lock		cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeER .    .    . .   imulq	%rax, %rax
-# CHECK-NEXT: [0,1]     .D==eeeeeeeeeeeeeeeeeER   lock		cmpxchgq	%rcx, (%rdx)
+# CHECK-NEXT: [0,1]     .DPPeeeeeeeeeeeeeeeeeER   lock		cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -296,11 +317,18 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 3.00    -      -      -      -      -      -     17.00   -     17.00   -      -      -      -     lock		cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012
 
 # CHECK:      [0,0]     DeeeeeeER .    .    . .   imulq	%rcx, %rcx
-# CHECK-NEXT: [0,1]     .D==eeeeeeeeeeeeeeeeeER   lock		cmpxchgq	%rcx, (%rdx)
+# CHECK-NEXT: [0,1]     .DPPeeeeeeeeeeeeeeeeeER   lock		cmpxchgq	%rcx, (%rdx)
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -365,7 +393,14 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 3.00    -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     cmpxchg8b	(%rsp)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER    .   .   imull	%eax, %eax
@@ -436,7 +471,14 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 6.00    -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     cmpxchg16b	(%rsp)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012345
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012345
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    .    .   imull	%eax, %eax
@@ -507,7 +549,14 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 3.00    -      -      -      -      -      -     19.00   -     19.00   -      -      -      -     lock		cmpxchg8b	(%rsp)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012
 
 # CHECK:      [0,0]     DeeeER    .    .    . .   imull	%ebx, %ebx
@@ -578,7 +627,14 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 6.00    -      -      -      -      -      -     38.00   -     38.00   -      -      -      -     lock		cmpxchg16b	(%rsp)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          01
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    .    .    ..   imull	%ebx, %ebx

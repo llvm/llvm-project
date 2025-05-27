@@ -47,7 +47,14 @@ fdiv.s f1, f2, f3
 # CHECK-NEXT: 26.00   -      -     1.00    -      -      -      -     fdiv.s	ft1, ft2, ft3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeE   div	a0, a1, a2

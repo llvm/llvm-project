@@ -49,7 +49,14 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     nop
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          012
 
 # CHECK:      [0,0]     DeeeeER   .    .    .    .    .    .    . .   pop	{r3, r4, r5, r6, r7, pc}
@@ -59,19 +66,19 @@
 # CHECK-NEXT: [2,0]     .    .D==eeeeER.    .    .    .    .    . .   pop	{r3, r4, r5, r6, r7, pc}
 # CHECK-NEXT: [2,1]     .    .  DE----R.    .    .    .    .    . .   nop
 # CHECK-NEXT: [3,0]     .    .   D===eeeeER .    .    .    .    . .   pop	{r3, r4, r5, r6, r7, pc}
-# CHECK-NEXT: [3,1]     .    .    .D=E----R .    .    .    .    . .   nop
-# CHECK-NEXT: [4,0]     .    .    . D====eeeeER  .    .    .    . .   pop	{r3, r4, r5, r6, r7, pc}
-# CHECK-NEXT: [4,1]     .    .    .   D==E----R  .    .    .    . .   nop
-# CHECK-NEXT: [5,0]     .    .    .    D=====eeeeER   .    .    . .   pop	{r3, r4, r5, r6, r7, pc}
-# CHECK-NEXT: [5,1]     .    .    .    . D===E----R   .    .    . .   nop
-# CHECK-NEXT: [6,0]     .    .    .    .  D======eeeeER    .    . .   pop	{r3, r4, r5, r6, r7, pc}
-# CHECK-NEXT: [6,1]     .    .    .    .    D====E----R    .    . .   nop
-# CHECK-NEXT: [7,0]     .    .    .    .    .D=======eeeeER.    . .   pop	{r3, r4, r5, r6, r7, pc}
-# CHECK-NEXT: [7,1]     .    .    .    .    .  D=====E----R.    . .   nop
-# CHECK-NEXT: [8,0]     .    .    .    .    .   D========eeeeER . .   pop	{r3, r4, r5, r6, r7, pc}
-# CHECK-NEXT: [8,1]     .    .    .    .    .    .D======E----R . .   nop
-# CHECK-NEXT: [9,0]     .    .    .    .    .    . D=========eeeeER   pop	{r3, r4, r5, r6, r7, pc}
-# CHECK-NEXT: [9,1]     .    .    .    .    .    .   D=======E----R   nop
+# CHECK-NEXT: [3,1]     .    .    .DPE----R .    .    .    .    . .   nop
+# CHECK-NEXT: [4,0]     .    .    . DP===eeeeER  .    .    .    . .   pop	{r3, r4, r5, r6, r7, pc}
+# CHECK-NEXT: [4,1]     .    .    .   DPPE----R  .    .    .    . .   nop
+# CHECK-NEXT: [5,0]     .    .    .    DPP===eeeeER   .    .    . .   pop	{r3, r4, r5, r6, r7, pc}
+# CHECK-NEXT: [5,1]     .    .    .    . DPPPE----R   .    .    . .   nop
+# CHECK-NEXT: [6,0]     .    .    .    .  DPPP===eeeeER    .    . .   pop	{r3, r4, r5, r6, r7, pc}
+# CHECK-NEXT: [6,1]     .    .    .    .    DPPPPE----R    .    . .   nop
+# CHECK-NEXT: [7,0]     .    .    .    .    .DPPPP===eeeeER.    . .   pop	{r3, r4, r5, r6, r7, pc}
+# CHECK-NEXT: [7,1]     .    .    .    .    .  DPPPPPE----R.    . .   nop
+# CHECK-NEXT: [8,0]     .    .    .    .    .   DPPPPP===eeeeER . .   pop	{r3, r4, r5, r6, r7, pc}
+# CHECK-NEXT: [8,1]     .    .    .    .    .    .DPPPPPPE----R . .   nop
+# CHECK-NEXT: [9,0]     .    .    .    .    .    . DPPPPPP===eeeeER   pop	{r3, r4, r5, r6, r7, pc}
+# CHECK-NEXT: [9,1]     .    .    .    .    .    .   DPPPPPPPE----R   nop
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

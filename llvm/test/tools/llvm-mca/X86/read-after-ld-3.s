@@ -35,7 +35,14 @@ addl    (%rdi), %esi
 # SKYLAKE-NEXT: Block RThroughput: 0.5
 
 # ALL:          Timeline view:
-# ALL-NEXT:     Index     012345678
+# ALL-NEXT:     D: Instruction dispatched
+# ALL-NEXT:     e: Instruction executing
+# ALL-NEXT:     E: Instruction executed (write-back stage)
+# ALL-NEXT:     P: Instruction waiting for data dependency
+# ALL-NEXT:     =: Instruction waiting for available HW resource
+# ALL-NEXT:     -: Instruction executed, waiting to retire in order.
+
+# ALL:          Index     012345678
 
 # ALL:          [0,0]     DeER .  .   addl	%edi, %esi
 # ALL-NEXT:     [0,1]     DeeeeeeER   addl	(%rdi), %esi

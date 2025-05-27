@@ -67,7 +67,14 @@ vsub.vv v12, v12, v12
 # CHECK-NEXT:  -      -      -      -     9.00   1.00    -      -     vsub.vv	v12, v12, v12
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeE .    .    .    .    .  .   vsetvli	zero, a0, e8, m1, tu, mu

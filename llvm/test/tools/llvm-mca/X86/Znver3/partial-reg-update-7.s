@@ -33,11 +33,18 @@ addq  %rcx, %rdx
 # CHECK-NEXT:  1      1     0.25                        addq	%rcx, %rdx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234567
 
 # CHECK:      [0,0]     DeeeER .   imulq	%rax, %rcx
-# CHECK-NEXT: [0,1]     D===eER.   addl	%edx, %ecx
-# CHECK-NEXT: [0,2]     D====eER   addq	%rcx, %rdx
+# CHECK-NEXT: [0,1]     DPPPeER.   addl	%edx, %ecx
+# CHECK-NEXT: [0,2]     DPPPPeER   addq	%rcx, %rdx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

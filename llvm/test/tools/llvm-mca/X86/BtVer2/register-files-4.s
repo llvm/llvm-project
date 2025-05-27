@@ -53,12 +53,19 @@ idiv %eax
 # CHECK-NEXT:    Max number of mappings used:      63
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0123456789          01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789          0123456789          01234567
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .    .    .    .    .    . .   idivl	%eax
-# CHECK-NEXT: [1,0]     .D========================eeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    . .   idivl	%eax
-# CHECK-NEXT: [2,0]     . D================================================eeeeeeeeeeeeeeeeeeeeeeeeeER   idivl	%eax
+# CHECK-NEXT: [1,0]     .DPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    . .   idivl	%eax
+# CHECK-NEXT: [2,0]     . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeeeeeeeeeeeeeeeeeeeeER   idivl	%eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

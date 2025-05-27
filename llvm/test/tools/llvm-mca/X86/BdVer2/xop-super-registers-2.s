@@ -73,21 +73,28 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     1.00    -      -      -      -      -      -      -      -     vaddps	%ymm4, %ymm5, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    . .   vmulps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: [0,1]     D=eeeE-R  .    .    .    .    . .   vpermil2pd	$15, %xmm3, %xmm5, %xmm1, %xmm2
-# CHECK-NEXT: [0,2]     .D===eeeeeER   .    .    .    . .   vmulps	%ymm2, %ymm3, %ymm4
-# CHECK-NEXT: [0,3]     .D========eeeeeER   .    .    . .   vaddps	%ymm4, %ymm5, %ymm6
-# CHECK-NEXT: [0,4]     . D============eeeeeER   .    . .   vmulps	%ymm6, %ymm3, %ymm4
-# CHECK-NEXT: [0,5]     . D=================eeeeeER   . .   vaddps	%ymm4, %ymm5, %ymm0
-# CHECK-NEXT: [1,0]     .  D=====================eeeeeER.   vmulps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: [0,2]     .DPPPeeeeeER   .    .    .    . .   vmulps	%ymm2, %ymm3, %ymm4
+# CHECK-NEXT: [0,3]     .DPPPPPPPPeeeeeER   .    .    . .   vaddps	%ymm4, %ymm5, %ymm6
+# CHECK-NEXT: [0,4]     . DPPPPPPPPPPPPeeeeeER   .    . .   vmulps	%ymm6, %ymm3, %ymm4
+# CHECK-NEXT: [0,5]     . DPPPPPPPPPPPPPPPPPeeeeeER   . .   vaddps	%ymm4, %ymm5, %ymm0
+# CHECK-NEXT: [1,0]     .  DPPPPPPPPPPPPPPPPPPPPPeeeeeER.   vmulps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: [1,1]     .  DeeeE-----------------------R.   vpermil2pd	$15, %xmm3, %xmm5, %xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .   D==eeeeeE------------------R.   vmulps	%ymm2, %ymm3, %ymm4
-# CHECK-NEXT: [1,3]     .   D=======eeeeeE-------------R.   vaddps	%ymm4, %ymm5, %ymm6
-# CHECK-NEXT: [1,4]     .    D===========eeeeeE---------R   vmulps	%ymm6, %ymm3, %ymm4
-# CHECK-NEXT: [1,5]     .    D================eeeeeE----R   vaddps	%ymm4, %ymm5, %ymm0
+# CHECK-NEXT: [1,2]     .   DPPeeeeeE------------------R.   vmulps	%ymm2, %ymm3, %ymm4
+# CHECK-NEXT: [1,3]     .   DPPPPPPPeeeeeE-------------R.   vaddps	%ymm4, %ymm5, %ymm6
+# CHECK-NEXT: [1,4]     .    DPPPPPPPPPPPeeeeeE---------R   vmulps	%ymm6, %ymm3, %ymm4
+# CHECK-NEXT: [1,5]     .    DPPPPPPPPPPPPPPPPeeeeeE----R   vaddps	%ymm4, %ymm5, %ymm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -220,7 +220,14 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovaps	%ymm15, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234567
 
 # CHECK:      [0,0]     DR   .    .    .    .    . .   vmovaps	%ymm0, %ymm1
@@ -514,7 +521,14 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovups	%ymm15, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234567
 
 # CHECK:      [0,0]     DR   .    .    .    .    . .   vmovups	%ymm0, %ymm1
@@ -808,7 +822,14 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovapd	%ymm15, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234567
 
 # CHECK:      [0,0]     DR   .    .    .    .    . .   vmovapd	%ymm0, %ymm1
@@ -1102,7 +1123,14 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovupd	%ymm15, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234567
 
 # CHECK:      [0,0]     DR   .    .    .    .    . .   vmovupd	%ymm0, %ymm1
@@ -1396,7 +1424,14 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqa	%ymm15, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234567
 
 # CHECK:      [0,0]     DR   .    .    .    .    . .   vmovdqa	%ymm0, %ymm1
@@ -1690,7 +1725,14 @@ vmovdqu %ymm15, %ymm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovdqu	%ymm15, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234567
 
 # CHECK:      [0,0]     DR   .    .    .    .    . .   vmovdqu	%ymm0, %ymm1

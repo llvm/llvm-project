@@ -56,17 +56,24 @@ addps %xmm1, %xmm1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     addps	%xmm1, %xmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DR   .  .   xorps	%xmm0, %xmm0
 # CHECK-NEXT: [0,1]     DeER .  .   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [0,2]     D=eeeER .   addps	%xmm1, %xmm1
+# CHECK-NEXT: [0,2]     DPeeeER .   addps	%xmm1, %xmm1
 # CHECK-NEXT: [1,0]     D-----R .   xorps	%xmm0, %xmm0
 # CHECK-NEXT: [1,1]     .DeE--R .   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [1,2]     .D=eeeER.   addps	%xmm1, %xmm1
+# CHECK-NEXT: [1,2]     .DPeeeER.   addps	%xmm1, %xmm1
 # CHECK-NEXT: [2,0]     .D-----R.   xorps	%xmm0, %xmm0
 # CHECK-NEXT: [2,1]     .D=eE--R.   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [2,2]     . D=eeeER   addps	%xmm1, %xmm1
+# CHECK-NEXT: [2,2]     . DPeeeER   addps	%xmm1, %xmm1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

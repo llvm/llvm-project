@@ -147,7 +147,14 @@ s_waitcnt vmcnt(0) lgkmcnt(0)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     s_waitcnt vmcnt(0) lgkmcnt(0)
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0123456789          0123456789          0123
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789          0123456789          0123456789          0123
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   s_load_dwordx2 s[2:3], s[0:1], 0x24

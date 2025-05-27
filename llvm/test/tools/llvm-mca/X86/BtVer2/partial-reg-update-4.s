@@ -60,18 +60,25 @@ add %cx, %bx
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addw	%cx, %bx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234567
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeER    .    . .   imulw	%ax, %bx
-# CHECK-NEXT: [0,1]     D===eER   .    . .   lzcntw	%ax, %bx
-# CHECK-NEXT: [0,2]     .D===eER  .    . .   addw	%cx, %bx
-# CHECK-NEXT: [1,0]     .D====eeeER    . .   imulw	%ax, %bx
-# CHECK-NEXT: [1,1]     . D======eER   . .   lzcntw	%ax, %bx
-# CHECK-NEXT: [1,2]     . D=======eER  . .   addw	%cx, %bx
-# CHECK-NEXT: [2,0]     .  D=======eeeER .   imulw	%ax, %bx
-# CHECK-NEXT: [2,1]     .  D==========eER.   lzcntw	%ax, %bx
-# CHECK-NEXT: [2,2]     .   D==========eER   addw	%cx, %bx
+# CHECK-NEXT: [0,1]     DPPPeER   .    . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [0,2]     .DPPPeER  .    . .   addw	%cx, %bx
+# CHECK-NEXT: [1,0]     .DPPPPeeeER    . .   imulw	%ax, %bx
+# CHECK-NEXT: [1,1]     . DPPPPPPeER   . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [1,2]     . DPPPPPPPeER  . .   addw	%cx, %bx
+# CHECK-NEXT: [2,0]     .  DPPPPPPPeeeER .   imulw	%ax, %bx
+# CHECK-NEXT: [2,1]     .  DPPPPPPPPPPeER.   lzcntw	%ax, %bx
+# CHECK-NEXT: [2,2]     .   DPPPPPPPPPPeER   addw	%cx, %bx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

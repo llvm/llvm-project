@@ -50,15 +50,22 @@ sbb %eax, %eax
 # CHECK-NEXT:  -      -     0.67   0.67    -     0.67    -      -     sbbl	%eax, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    .   .   sbbl	%edx, %edx
-# CHECK-NEXT: [0,1]     D==eeER   .   .   sbbl	%eax, %eax
-# CHECK-NEXT: [1,0]     .D===eeER .   .   sbbl	%edx, %edx
-# CHECK-NEXT: [1,1]     .D=====eeER   .   sbbl	%eax, %eax
-# CHECK-NEXT: [2,0]     . D======eeER .   sbbl	%edx, %edx
-# CHECK-NEXT: [2,1]     . D========eeER   sbbl	%eax, %eax
+# CHECK-NEXT: [0,1]     DPPeeER   .   .   sbbl	%eax, %eax
+# CHECK-NEXT: [1,0]     .DPPPeeER .   .   sbbl	%edx, %edx
+# CHECK-NEXT: [1,1]     .DPPPPPeeER   .   sbbl	%eax, %eax
+# CHECK-NEXT: [2,0]     . DPPPPPPeeER .   sbbl	%edx, %edx
+# CHECK-NEXT: [2,1]     . DPPPPPPPPeeER   sbbl	%eax, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

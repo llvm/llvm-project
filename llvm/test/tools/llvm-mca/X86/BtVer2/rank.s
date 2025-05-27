@@ -70,7 +70,14 @@ add %ebx, %eax
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     addl	%ebx, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234567
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234567
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    .    . .   addl	%eax, %ecx
@@ -80,23 +87,23 @@ add %ebx, %eax
 # CHECK-NEXT: [0,4]     . DeER    .    . .   addl	%ebx, %eax
 # CHECK-NEXT: [0,5]     . DeER    .    . .   addl	%edx, %esi
 # CHECK-NEXT: [0,6]     .  DeER   .    . .   addl	%ebx, %eax
-# CHECK-NEXT: [0,7]     .  D=eER  .    . .   addl	%ebx, %eax
-# CHECK-NEXT: [1,0]     .   D=eER .    . .   addl	%eax, %ecx
-# CHECK-NEXT: [1,1]     .   D=eER .    . .   addl	%eax, %edx
+# CHECK-NEXT: [0,7]     .  DPeER  .    . .   addl	%ebx, %eax
+# CHECK-NEXT: [1,0]     .   DPeER .    . .   addl	%eax, %ecx
+# CHECK-NEXT: [1,1]     .   DPeER .    . .   addl	%eax, %edx
 # CHECK-NEXT: [1,2]     .    D=eER.    . .   addl	%eax, %ebx
-# CHECK-NEXT: [1,3]     .    D=eER.    . .   addl	%edx, %esi
-# CHECK-NEXT: [1,4]     .    .D=eER    . .   addl	%ebx, %eax
-# CHECK-NEXT: [1,5]     .    .D=eER    . .   addl	%edx, %esi
-# CHECK-NEXT: [1,6]     .    . D=eER   . .   addl	%ebx, %eax
-# CHECK-NEXT: [1,7]     .    . D==eER  . .   addl	%ebx, %eax
-# CHECK-NEXT: [2,0]     .    .  D==eER . .   addl	%eax, %ecx
-# CHECK-NEXT: [2,1]     .    .  D==eER . .   addl	%eax, %edx
-# CHECK-NEXT: [2,2]     .    .   D==eER. .   addl	%eax, %ebx
-# CHECK-NEXT: [2,3]     .    .   D==eER. .   addl	%edx, %esi
-# CHECK-NEXT: [2,4]     .    .    D==eER .   addl	%ebx, %eax
-# CHECK-NEXT: [2,5]     .    .    D==eER .   addl	%edx, %esi
-# CHECK-NEXT: [2,6]     .    .    .D==eER.   addl	%ebx, %eax
-# CHECK-NEXT: [2,7]     .    .    .D===eER   addl	%ebx, %eax
+# CHECK-NEXT: [1,3]     .    DPeER.    . .   addl	%edx, %esi
+# CHECK-NEXT: [1,4]     .    .DPeER    . .   addl	%ebx, %eax
+# CHECK-NEXT: [1,5]     .    .DPeER    . .   addl	%edx, %esi
+# CHECK-NEXT: [1,6]     .    . DPeER   . .   addl	%ebx, %eax
+# CHECK-NEXT: [1,7]     .    . DPPeER  . .   addl	%ebx, %eax
+# CHECK-NEXT: [2,0]     .    .  DPPeER . .   addl	%eax, %ecx
+# CHECK-NEXT: [2,1]     .    .  DPPeER . .   addl	%eax, %edx
+# CHECK-NEXT: [2,2]     .    .   DP=eER. .   addl	%eax, %ebx
+# CHECK-NEXT: [2,3]     .    .   DPPeER. .   addl	%edx, %esi
+# CHECK-NEXT: [2,4]     .    .    DPPeER .   addl	%ebx, %eax
+# CHECK-NEXT: [2,5]     .    .    DPPeER .   addl	%edx, %esi
+# CHECK-NEXT: [2,6]     .    .    .DPPeER.   addl	%ebx, %eax
+# CHECK-NEXT: [2,7]     .    .    .DPPPeER   addl	%ebx, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -93,86 +93,93 @@ movq %mm7, %mm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%mm7, %mm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789
 
 # CHECK:      [0,0]     DeER .    .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm0, %mm1
-# CHECK-NEXT: [0,1]     D=eER.    .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
-# CHECK-NEXT: [0,2]     D==eER    .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
-# CHECK-NEXT: [0,3]     D===eER   .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
-# CHECK-NEXT: [0,4]     D====eER  .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
-# CHECK-NEXT: [0,5]     D=====eER .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
-# CHECK-NEXT: [0,6]     .D=====eER.    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm6, %mm7
-# CHECK-NEXT: [0,7]     .D======eER    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm7, %mm0
-# CHECK-NEXT: [1,0]     .D=======eER   .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm0, %mm1
-# CHECK-NEXT: [1,1]     .D========eER  .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
-# CHECK-NEXT: [1,2]     .D=========eER .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
-# CHECK-NEXT: [1,3]     .D==========eER.    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
-# CHECK-NEXT: [1,4]     . D==========eER    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
-# CHECK-NEXT: [1,5]     . D===========eER   .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
-# CHECK-NEXT: [1,6]     . D============eER  .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm6, %mm7
-# CHECK-NEXT: [1,7]     . D=============eER .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm7, %mm0
-# CHECK-NEXT: [2,0]     . D==============eER.    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm0, %mm1
-# CHECK-NEXT: [2,1]     . D===============eER    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
-# CHECK-NEXT: [2,2]     .  D===============eER   .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
-# CHECK-NEXT: [2,3]     .  D================eER  .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
-# CHECK-NEXT: [2,4]     .  D=================eER .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
-# CHECK-NEXT: [2,5]     .  D==================eER.    .    .    .    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
-# CHECK-NEXT: [2,6]     .  D===================eER    .    .    .    .    .    .    .    .    .    .   .   movq	%mm6, %mm7
-# CHECK-NEXT: [2,7]     .  D====================eER   .    .    .    .    .    .    .    .    .    .   .   movq	%mm7, %mm0
-# CHECK-NEXT: [3,0]     .   D====================eER  .    .    .    .    .    .    .    .    .    .   .   movq	%mm0, %mm1
-# CHECK-NEXT: [3,1]     .   D=====================eER .    .    .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
-# CHECK-NEXT: [3,2]     .   D======================eER.    .    .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
-# CHECK-NEXT: [3,3]     .   D=======================eER    .    .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
-# CHECK-NEXT: [3,4]     .   D========================eER   .    .    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
-# CHECK-NEXT: [3,5]     .   D=========================eER  .    .    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
-# CHECK-NEXT: [3,6]     .    D=========================eER .    .    .    .    .    .    .    .    .   .   movq	%mm6, %mm7
-# CHECK-NEXT: [3,7]     .    D==========================eER.    .    .    .    .    .    .    .    .   .   movq	%mm7, %mm0
-# CHECK-NEXT: [4,0]     .    D===========================eER    .    .    .    .    .    .    .    .   .   movq	%mm0, %mm1
-# CHECK-NEXT: [4,1]     .    D============================eER   .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
-# CHECK-NEXT: [4,2]     .    D=============================eER  .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
-# CHECK-NEXT: [4,3]     .    D==============================eER .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
-# CHECK-NEXT: [4,4]     .    .D==============================eER.    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
-# CHECK-NEXT: [4,5]     .    .D===============================eER    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
-# CHECK-NEXT: [4,6]     .    .D================================eER   .    .    .    .    .    .    .   .   movq	%mm6, %mm7
-# CHECK-NEXT: [4,7]     .    .D=================================eER  .    .    .    .    .    .    .   .   movq	%mm7, %mm0
-# CHECK-NEXT: [5,0]     .    .D==================================eER .    .    .    .    .    .    .   .   movq	%mm0, %mm1
-# CHECK-NEXT: [5,1]     .    .D===================================eER.    .    .    .    .    .    .   .   movq	%mm1, %mm2
-# CHECK-NEXT: [5,2]     .    . D===================================eER    .    .    .    .    .    .   .   movq	%mm2, %mm3
-# CHECK-NEXT: [5,3]     .    . D====================================eER   .    .    .    .    .    .   .   movq	%mm3, %mm4
-# CHECK-NEXT: [5,4]     .    . D=====================================eER  .    .    .    .    .    .   .   movq	%mm4, %mm5
-# CHECK-NEXT: [5,5]     .    . D======================================eER .    .    .    .    .    .   .   movq	%mm5, %mm6
-# CHECK-NEXT: [5,6]     .    . D=======================================eER.    .    .    .    .    .   .   movq	%mm6, %mm7
-# CHECK-NEXT: [5,7]     .    . D========================================eER    .    .    .    .    .   .   movq	%mm7, %mm0
-# CHECK-NEXT: [6,0]     .    .  D========================================eER   .    .    .    .    .   .   movq	%mm0, %mm1
-# CHECK-NEXT: [6,1]     .    .  D=========================================eER  .    .    .    .    .   .   movq	%mm1, %mm2
-# CHECK-NEXT: [6,2]     .    .  D==========================================eER .    .    .    .    .   .   movq	%mm2, %mm3
-# CHECK-NEXT: [6,3]     .    .  D===========================================eER.    .    .    .    .   .   movq	%mm3, %mm4
-# CHECK-NEXT: [6,4]     .    .  D============================================eER    .    .    .    .   .   movq	%mm4, %mm5
-# CHECK-NEXT: [6,5]     .    .  D=============================================eER   .    .    .    .   .   movq	%mm5, %mm6
-# CHECK-NEXT: [6,6]     .    .   D=============================================eER  .    .    .    .   .   movq	%mm6, %mm7
-# CHECK-NEXT: [6,7]     .    .   D==============================================eER .    .    .    .   .   movq	%mm7, %mm0
-# CHECK-NEXT: [7,0]     .    .   D===============================================eER.    .    .    .   .   movq	%mm0, %mm1
-# CHECK-NEXT: [7,1]     .    .   D================================================eER    .    .    .   .   movq	%mm1, %mm2
-# CHECK-NEXT: [7,2]     .    .   D=================================================eER   .    .    .   .   movq	%mm2, %mm3
-# CHECK-NEXT: [7,3]     .    .   D==================================================eER  .    .    .   .   movq	%mm3, %mm4
-# CHECK-NEXT: [7,4]     .    .    D==================================================eER .    .    .   .   movq	%mm4, %mm5
-# CHECK-NEXT: [7,5]     .    .    D===================================================eER.    .    .   .   movq	%mm5, %mm6
-# CHECK-NEXT: [7,6]     .    .    D====================================================eER    .    .   .   movq	%mm6, %mm7
-# CHECK-NEXT: [7,7]     .    .    D=====================================================eER   .    .   .   movq	%mm7, %mm0
-# CHECK-NEXT: [8,0]     .    .    D======================================================eER  .    .   .   movq	%mm0, %mm1
-# CHECK-NEXT: [8,1]     .    .    D=======================================================eER .    .   .   movq	%mm1, %mm2
-# CHECK-NEXT: [8,2]     .    .    .D=======================================================eER.    .   .   movq	%mm2, %mm3
-# CHECK-NEXT: [8,3]     .    .    .D========================================================eER    .   .   movq	%mm3, %mm4
-# CHECK-NEXT: [8,4]     .    .    .D=========================================================eER   .   .   movq	%mm4, %mm5
-# CHECK-NEXT: [8,5]     .    .    .D==========================================================eER  .   .   movq	%mm5, %mm6
-# CHECK-NEXT: [8,6]     .    .    .D===========================================================eER .   .   movq	%mm6, %mm7
-# CHECK-NEXT: [8,7]     .    .    .D============================================================eER.   .   movq	%mm7, %mm0
-# CHECK-NEXT: [9,0]     .    .    . D============================================================eER   .   movq	%mm0, %mm1
-# CHECK-NEXT: [9,1]     .    .    . D=============================================================eER  .   movq	%mm1, %mm2
-# CHECK-NEXT: [9,2]     .    .    . D==============================================================eER .   movq	%mm2, %mm3
-# CHECK-NEXT: [9,3]     .    .    . D===============================================================eER.   movq	%mm3, %mm4
-# CHECK-NEXT: [9,4]     .    .    .  D===============================================================eER   movq	%mm4, %mm5
+# CHECK-NEXT: [0,1]     DPeER.    .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
+# CHECK-NEXT: [0,2]     DPPeER    .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
+# CHECK-NEXT: [0,3]     DPPPeER   .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
+# CHECK-NEXT: [0,4]     DPPPPeER  .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
+# CHECK-NEXT: [0,5]     DPPPPPeER .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
+# CHECK-NEXT: [0,6]     .DPPPPPeER.    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm6, %mm7
+# CHECK-NEXT: [0,7]     .DPPPPPPeER    .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm7, %mm0
+# CHECK-NEXT: [1,0]     .DPPPPPPPeER   .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [1,1]     .DPPPPPPPPeER  .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
+# CHECK-NEXT: [1,2]     .DPPPPPPPPPeER .    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
+# CHECK-NEXT: [1,3]     .DPPPPPPPPPPeER.    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
+# CHECK-NEXT: [1,4]     . DPPPPPPPPPPeER    .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
+# CHECK-NEXT: [1,5]     . DPPPPPPPPPPPeER   .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
+# CHECK-NEXT: [1,6]     . DPPPPPPPPPPPPeER  .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm6, %mm7
+# CHECK-NEXT: [1,7]     . DPPPPPPPPPPPPPeER .    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm7, %mm0
+# CHECK-NEXT: [2,0]     . DPPPPPPPPPPPPPPeER.    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [2,1]     . DPPPPPPPPPPPPPPPeER    .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
+# CHECK-NEXT: [2,2]     .  DPPPPPPPPPPPPPPPeER   .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
+# CHECK-NEXT: [2,3]     .  DPPPPPPPPPPPPPPPPeER  .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
+# CHECK-NEXT: [2,4]     .  DPPPPPPPPPPPPPPPPPeER .    .    .    .    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
+# CHECK-NEXT: [2,5]     .  DPPPPPPPPPPPPPPPPPPeER.    .    .    .    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
+# CHECK-NEXT: [2,6]     .  DPPPPPPPPPPPPPPPPPPPeER    .    .    .    .    .    .    .    .    .    .   .   movq	%mm6, %mm7
+# CHECK-NEXT: [2,7]     .  DPPPPPPPPPPPPPPPPPPPPeER   .    .    .    .    .    .    .    .    .    .   .   movq	%mm7, %mm0
+# CHECK-NEXT: [3,0]     .   DPPPPPPPPPPPPPPPPPPPPeER  .    .    .    .    .    .    .    .    .    .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [3,1]     .   DPPPPPPPPPPPPPPPPPPPPPeER .    .    .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
+# CHECK-NEXT: [3,2]     .   DPPPPPPPPPPPPPPPPPPPPPPeER.    .    .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
+# CHECK-NEXT: [3,3]     .   DPPPPPPPPPPPPPPPPPPPPPPPeER    .    .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
+# CHECK-NEXT: [3,4]     .   DPPPPPPPPPPPPPPPPPPPPPPPPeER   .    .    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
+# CHECK-NEXT: [3,5]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPeER  .    .    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
+# CHECK-NEXT: [3,6]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPeER .    .    .    .    .    .    .    .    .   .   movq	%mm6, %mm7
+# CHECK-NEXT: [3,7]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPeER.    .    .    .    .    .    .    .    .   .   movq	%mm7, %mm0
+# CHECK-NEXT: [4,0]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPeER    .    .    .    .    .    .    .    .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [4,1]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   .    .    .    .    .    .    .    .   .   movq	%mm1, %mm2
+# CHECK-NEXT: [4,2]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER  .    .    .    .    .    .    .    .   .   movq	%mm2, %mm3
+# CHECK-NEXT: [4,3]     .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER .    .    .    .    .    .    .    .   .   movq	%mm3, %mm4
+# CHECK-NEXT: [4,4]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.    .    .    .    .    .    .    .   .   movq	%mm4, %mm5
+# CHECK-NEXT: [4,5]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER    .    .    .    .    .    .    .   .   movq	%mm5, %mm6
+# CHECK-NEXT: [4,6]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   .    .    .    .    .    .    .   .   movq	%mm6, %mm7
+# CHECK-NEXT: [4,7]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER  .    .    .    .    .    .    .   .   movq	%mm7, %mm0
+# CHECK-NEXT: [5,0]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER .    .    .    .    .    .    .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [5,1]     .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.    .    .    .    .    .    .   .   movq	%mm1, %mm2
+# CHECK-NEXT: [5,2]     .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER    .    .    .    .    .    .   .   movq	%mm2, %mm3
+# CHECK-NEXT: [5,3]     .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   .    .    .    .    .    .   .   movq	%mm3, %mm4
+# CHECK-NEXT: [5,4]     .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER  .    .    .    .    .    .   .   movq	%mm4, %mm5
+# CHECK-NEXT: [5,5]     .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER .    .    .    .    .    .   .   movq	%mm5, %mm6
+# CHECK-NEXT: [5,6]     .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.    .    .    .    .    .   .   movq	%mm6, %mm7
+# CHECK-NEXT: [5,7]     .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER    .    .    .    .    .   .   movq	%mm7, %mm0
+# CHECK-NEXT: [6,0]     .    .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   .    .    .    .    .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [6,1]     .    .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER  .    .    .    .    .   .   movq	%mm1, %mm2
+# CHECK-NEXT: [6,2]     .    .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER .    .    .    .    .   .   movq	%mm2, %mm3
+# CHECK-NEXT: [6,3]     .    .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.    .    .    .    .   .   movq	%mm3, %mm4
+# CHECK-NEXT: [6,4]     .    .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER    .    .    .    .   .   movq	%mm4, %mm5
+# CHECK-NEXT: [6,5]     .    .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   .    .    .    .   .   movq	%mm5, %mm6
+# CHECK-NEXT: [6,6]     .    .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER  .    .    .    .   .   movq	%mm6, %mm7
+# CHECK-NEXT: [6,7]     .    .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER .    .    .    .   .   movq	%mm7, %mm0
+# CHECK-NEXT: [7,0]     .    .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.    .    .    .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [7,1]     .    .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER    .    .    .   .   movq	%mm1, %mm2
+# CHECK-NEXT: [7,2]     .    .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   .    .    .   .   movq	%mm2, %mm3
+# CHECK-NEXT: [7,3]     .    .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER  .    .    .   .   movq	%mm3, %mm4
+# CHECK-NEXT: [7,4]     .    .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER .    .    .   .   movq	%mm4, %mm5
+# CHECK-NEXT: [7,5]     .    .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.    .    .   .   movq	%mm5, %mm6
+# CHECK-NEXT: [7,6]     .    .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER    .    .   .   movq	%mm6, %mm7
+# CHECK-NEXT: [7,7]     .    .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   .    .   .   movq	%mm7, %mm0
+# CHECK-NEXT: [8,0]     .    .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER  .    .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [8,1]     .    .    DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER .    .   .   movq	%mm1, %mm2
+# CHECK-NEXT: [8,2]     .    .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.    .   .   movq	%mm2, %mm3
+# CHECK-NEXT: [8,3]     .    .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER    .   .   movq	%mm3, %mm4
+# CHECK-NEXT: [8,4]     .    .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   .   .   movq	%mm4, %mm5
+# CHECK-NEXT: [8,5]     .    .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER  .   .   movq	%mm5, %mm6
+# CHECK-NEXT: [8,6]     .    .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER .   .   movq	%mm6, %mm7
+# CHECK-NEXT: [8,7]     .    .    .DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.   .   movq	%mm7, %mm0
+# CHECK-NEXT: [9,0]     .    .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   .   movq	%mm0, %mm1
+# CHECK-NEXT: [9,1]     .    .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER  .   movq	%mm1, %mm2
+# CHECK-NEXT: [9,2]     .    .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER .   movq	%mm2, %mm3
+# CHECK-NEXT: [9,3]     .    .    . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER.   movq	%mm3, %mm4
+# CHECK-NEXT: [9,4]     .    .    .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeER   movq	%mm4, %mm5
 # CHECK-NEXT: Truncated display due to cycle limit
 
 # CHECK:      Average Wait times (based on the timeline view):

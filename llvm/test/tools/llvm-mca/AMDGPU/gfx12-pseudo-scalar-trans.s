@@ -69,7 +69,14 @@ v_s_sqrt_f16 s5, s5
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_sqrt_f16 s5, s5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          01234
 
 # CHECK:      [0,0]     DeeeeeeE  .    .    .    .    .    .    .   .   v_s_exp_f32 s0, s0

@@ -85,34 +85,40 @@
 # ALL-NEXT:      1.00    -      -      -      -      -      -     1.00    -     1.00    -      -      -      -     addq	$44, 640(%r14)
 
 # ALL:           Timeline view:
+# ALL-NEXT:      D: Instruction dispatched
+# ALL-NEXT:      e: Instruction executing
+# ALL-NEXT:      E: Instruction executed (write-back stage)
+# ALL-NEXT:      P: Instruction waiting for data dependency
+# ALL-NEXT:      =: Instruction waiting for available HW resource
+# ALL-NEXT:      -: Instruction executed, waiting to retire in order.
 
-# NOALIAS-NEXT:                      01234567
+# NOALIAS:                           01234567
 # NOALIAS-NEXT:  Index     0123456789
 
-# YESALIAS-NEXT:                     0123456789          0123456789          0123456789
+# YESALIAS:                          0123456789          0123456789          0123456789
 # YESALIAS-NEXT: Index     0123456789          0123456789          0123456789          012
 
 # NOALIAS:       [0,0]     DeeeeeeER .    . .   addq	$44, 64(%r14)
 # NOALIAS-NEXT:  [0,1]     D=eeeeeeER.    . .   addq	$44, 128(%r14)
 # NOALIAS-NEXT:  [0,2]     .D=eeeeeeER    . .   addq	$44, 192(%r14)
-# NOALIAS-NEXT:  [0,3]     .D==eeeeeeER   . .   addq	$44, 256(%r14)
-# NOALIAS-NEXT:  [0,4]     . D==eeeeeeER  . .   addq	$44, 320(%r14)
-# NOALIAS-NEXT:  [0,5]     . D===eeeeeeER . .   addq	$44, 384(%r14)
-# NOALIAS-NEXT:  [0,6]     .  D===eeeeeeER. .   addq	$44, 448(%r14)
-# NOALIAS-NEXT:  [0,7]     .  D====eeeeeeER .   addq	$44, 512(%r14)
-# NOALIAS-NEXT:  [0,8]     .   D====eeeeeeER.   addq	$44, 576(%r14)
-# NOALIAS-NEXT:  [0,9]     .   D=====eeeeeeER   addq	$44, 640(%r14)
+# NOALIAS-NEXT:  [0,3]     .DP=eeeeeeER   . .   addq	$44, 256(%r14)
+# NOALIAS-NEXT:  [0,4]     . DP=eeeeeeER  . .   addq	$44, 320(%r14)
+# NOALIAS-NEXT:  [0,5]     . DPP=eeeeeeER . .   addq	$44, 384(%r14)
+# NOALIAS-NEXT:  [0,6]     .  DPP=eeeeeeER. .   addq	$44, 448(%r14)
+# NOALIAS-NEXT:  [0,7]     .  DPPP=eeeeeeER .   addq	$44, 512(%r14)
+# NOALIAS-NEXT:  [0,8]     .   DPPP=eeeeeeER.   addq	$44, 576(%r14)
+# NOALIAS-NEXT:  [0,9]     .   DPPPP=eeeeeeER   addq	$44, 640(%r14)
 
 # YESALIAS:      [0,0]     DeeeeeeER .    .    .    .    .    .    .    .    .    .    . .   addq	$44, 64(%r14)
-# YESALIAS-NEXT: [0,1]     D======eeeeeeER.    .    .    .    .    .    .    .    .    . .   addq	$44, 128(%r14)
-# YESALIAS-NEXT: [0,2]     .D===========eeeeeeER    .    .    .    .    .    .    .    . .   addq	$44, 192(%r14)
-# YESALIAS-NEXT: [0,3]     .D=================eeeeeeER   .    .    .    .    .    .    . .   addq	$44, 256(%r14)
-# YESALIAS-NEXT: [0,4]     . D======================eeeeeeER  .    .    .    .    .    . .   addq	$44, 320(%r14)
-# YESALIAS-NEXT: [0,5]     . D============================eeeeeeER .    .    .    .    . .   addq	$44, 384(%r14)
-# YESALIAS-NEXT: [0,6]     .  D=================================eeeeeeER.    .    .    . .   addq	$44, 448(%r14)
-# YESALIAS-NEXT: [0,7]     .  D=======================================eeeeeeER    .    . .   addq	$44, 512(%r14)
-# YESALIAS-NEXT: [0,8]     .   D============================================eeeeeeER   . .   addq	$44, 576(%r14)
-# YESALIAS-NEXT: [0,9]     .   D==================================================eeeeeeER   addq	$44, 640(%r14)
+# YESALIAS-NEXT: [0,1]     DPPPPPPeeeeeeER.    .    .    .    .    .    .    .    .    . .   addq	$44, 128(%r14)
+# YESALIAS-NEXT: [0,2]     .DPPPPPPPPPPPeeeeeeER    .    .    .    .    .    .    .    . .   addq	$44, 192(%r14)
+# YESALIAS-NEXT: [0,3]     .DPPPPPPPPPPPPPPPPPeeeeeeER   .    .    .    .    .    .    . .   addq	$44, 256(%r14)
+# YESALIAS-NEXT: [0,4]     . DPPPPPPPPPPPPPPPPPPPPPPeeeeeeER  .    .    .    .    .    . .   addq	$44, 320(%r14)
+# YESALIAS-NEXT: [0,5]     . DPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER .    .    .    .    . .   addq	$44, 384(%r14)
+# YESALIAS-NEXT: [0,6]     .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER.    .    .    . .   addq	$44, 448(%r14)
+# YESALIAS-NEXT: [0,7]     .  DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER    .    . .   addq	$44, 512(%r14)
+# YESALIAS-NEXT: [0,8]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER   . .   addq	$44, 576(%r14)
+# YESALIAS-NEXT: [0,9]     .   DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER   addq	$44, 640(%r14)
 
 # ALL:           Average Wait times (based on the timeline view):
 # ALL-NEXT:      [0]: Executions

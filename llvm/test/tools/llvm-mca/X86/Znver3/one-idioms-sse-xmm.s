@@ -94,12 +94,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddb	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pcmpeqb	%xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER   paddb	%xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPeER   paddb	%xmm0, %xmm0
 # CHECK-NEXT: [1,0]     DeE-R   pcmpeqb	%xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D=eER   paddb	%xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DPeER   paddb	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -185,12 +192,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddw	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pcmpeqw	%xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER   paddw	%xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPeER   paddw	%xmm0, %xmm0
 # CHECK-NEXT: [1,0]     DeE-R   pcmpeqw	%xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D=eER   paddw	%xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DPeER   paddw	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -276,12 +290,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddd	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pcmpeqd	%xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER   paddd	%xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPeER   paddd	%xmm0, %xmm0
 # CHECK-NEXT: [1,0]     DeE-R   pcmpeqd	%xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D=eER   paddd	%xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DPeER   paddd	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -367,12 +388,19 @@ paddq %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.25   0.25    -     0.50    -      -      -      -      -      -      -      -      -      -      -     paddq	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     01234
 
 # CHECK:      [0,0]     DeER.   pcmpeqq	%xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=eER   paddq	%xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPeER   paddq	%xmm0, %xmm0
 # CHECK-NEXT: [1,0]     DeE-R   pcmpeqq	%xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D=eER   paddq	%xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DPeER   paddq	%xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

@@ -67,26 +67,33 @@ pcmpgtw %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     pcmpgtw	%xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .   .   pcmpgtb	%mm0, %mm0
-# CHECK-NEXT: [0,1]     D===eeeER .    .    .    .   .   pcmpgtd	%mm0, %mm0
-# CHECK-NEXT: [0,2]     D======eeeER   .    .    .   .   pcmpgtw	%mm0, %mm0
+# CHECK-NEXT: [0,1]     DPPPeeeER .    .    .    .   .   pcmpgtd	%mm0, %mm0
+# CHECK-NEXT: [0,2]     DPPPPPPeeeER   .    .    .   .   pcmpgtw	%mm0, %mm0
 # CHECK-NEXT: [0,3]     D----------R   .    .    .   .   pcmpgtb	%xmm0, %xmm0
 # CHECK-NEXT: [0,4]     .D---------R   .    .    .   .   pcmpgtd	%xmm0, %xmm0
 # CHECK-NEXT: [0,5]     .D---------R   .    .    .   .   pcmpgtq	%xmm0, %xmm0
 # CHECK-NEXT: [0,6]     .D---------R   .    .    .   .   pcmpgtw	%xmm0, %xmm0
-# CHECK-NEXT: [1,0]     .D========eeeER.    .    .   .   pcmpgtb	%mm0, %mm0
-# CHECK-NEXT: [1,1]     . D==========eeeER  .    .   .   pcmpgtd	%mm0, %mm0
-# CHECK-NEXT: [1,2]     . D=============eeeER    .   .   pcmpgtw	%mm0, %mm0
+# CHECK-NEXT: [1,0]     .DPPPPPPPPeeeER.    .    .   .   pcmpgtb	%mm0, %mm0
+# CHECK-NEXT: [1,1]     . DPPPPPPPPPPeeeER  .    .   .   pcmpgtd	%mm0, %mm0
+# CHECK-NEXT: [1,2]     . DPPPPPPPPPPPPPeeeER    .   .   pcmpgtw	%mm0, %mm0
 # CHECK-NEXT: [1,3]     . D-----------------R    .   .   pcmpgtb	%xmm0, %xmm0
 # CHECK-NEXT: [1,4]     . D-----------------R    .   .   pcmpgtd	%xmm0, %xmm0
 # CHECK-NEXT: [1,5]     .  D----------------R    .   .   pcmpgtq	%xmm0, %xmm0
 # CHECK-NEXT: [1,6]     .  D----------------R    .   .   pcmpgtw	%xmm0, %xmm0
-# CHECK-NEXT: [2,0]     .  D===============eeeER .   .   pcmpgtb	%mm0, %mm0
-# CHECK-NEXT: [2,1]     .  D==================eeeER  .   pcmpgtd	%mm0, %mm0
-# CHECK-NEXT: [2,2]     .   D====================eeeER   pcmpgtw	%mm0, %mm0
+# CHECK-NEXT: [2,0]     .  DPPPPPPPPPPPPPPPeeeER .   .   pcmpgtb	%mm0, %mm0
+# CHECK-NEXT: [2,1]     .  DPPPPPPPPPPPPPPPPPPeeeER  .   pcmpgtd	%mm0, %mm0
+# CHECK-NEXT: [2,2]     .   DPPPPPPPPPPPPPPPPPPPPeeeER   pcmpgtw	%mm0, %mm0
 # CHECK-NEXT: [2,3]     .   D------------------------R   pcmpgtb	%xmm0, %xmm0
 # CHECK-NEXT: [2,4]     .   D------------------------R   pcmpgtd	%xmm0, %xmm0
 # CHECK-NEXT: [2,5]     .   D------------------------R   pcmpgtq	%xmm0, %xmm0

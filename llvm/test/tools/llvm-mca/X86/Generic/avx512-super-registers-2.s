@@ -58,21 +58,28 @@
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vaddps	%xmm4, %xmm5, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123456
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    ..   vmulps	%zmm0, %zmm1, %zmm2
 # CHECK-NEXT: [0,1]     DeeeE--R  .    .    .    ..   vaddps	%ymm1, %ymm1, %ymm2
-# CHECK-NEXT: [0,2]     D===eeeeeER    .    .    ..   vmulps	%zmm2, %zmm3, %zmm4
-# CHECK-NEXT: [0,3]     D========eeeER .    .    ..   vaddps	%xmm4, %xmm5, %xmm6
-# CHECK-NEXT: [0,4]     .D==========eeeeeER .    ..   vmulps	%xmm6, %xmm3, %xmm4
-# CHECK-NEXT: [0,5]     .D===============eeeER   ..   vaddps	%xmm4, %xmm5, %xmm0
-# CHECK-NEXT: [1,0]     .D==================eeeeeER   vmulps	%zmm0, %zmm1, %zmm2
+# CHECK-NEXT: [0,2]     DPPPeeeeeER    .    .    ..   vmulps	%zmm2, %zmm3, %zmm4
+# CHECK-NEXT: [0,3]     DPPPPPPPPeeeER .    .    ..   vaddps	%xmm4, %xmm5, %xmm6
+# CHECK-NEXT: [0,4]     .DPPPPPPPPPPeeeeeER .    ..   vmulps	%xmm6, %xmm3, %xmm4
+# CHECK-NEXT: [0,5]     .DPPPPPPPPPPPPPPPeeeER   ..   vaddps	%xmm4, %xmm5, %xmm0
+# CHECK-NEXT: [1,0]     .DPPPPPPPPPPPPPPPPPPeeeeeER   vmulps	%zmm0, %zmm1, %zmm2
 # CHECK-NEXT: [1,1]     .DeeeE--------------------R   vaddps	%ymm1, %ymm1, %ymm2
-# CHECK-NEXT: [1,2]     . D==eeeeeE---------------R   vmulps	%zmm2, %zmm3, %zmm4
-# CHECK-NEXT: [1,3]     . D=======eeeE------------R   vaddps	%xmm4, %xmm5, %xmm6
-# CHECK-NEXT: [1,4]     . D==========eeeeeE-------R   vmulps	%xmm6, %xmm3, %xmm4
-# CHECK-NEXT: [1,5]     . D===============eeeE----R   vaddps	%xmm4, %xmm5, %xmm0
+# CHECK-NEXT: [1,2]     . DPPeeeeeE---------------R   vmulps	%zmm2, %zmm3, %zmm4
+# CHECK-NEXT: [1,3]     . DPPPPPPPeeeE------------R   vaddps	%xmm4, %xmm5, %xmm6
+# CHECK-NEXT: [1,4]     . DPPPPPPPPPPeeeeeE-------R   vmulps	%xmm6, %xmm3, %xmm4
+# CHECK-NEXT: [1,5]     . DPPPPPPPPPPPPPPPeeeE----R   vaddps	%xmm4, %xmm5, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

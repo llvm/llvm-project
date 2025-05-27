@@ -127,19 +127,26 @@ add %eax, %eax
 # FULLREPORT-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%eax, %eax
 
 # ALL:             Timeline view:
-# ALL-NEXT:                            012
+# ALL-NEXT:        D: Instruction dispatched
+# ALL-NEXT:        e: Instruction executing
+# ALL-NEXT:        E: Instruction executed (write-back stage)
+# ALL-NEXT:        P: Instruction waiting for data dependency
+# ALL-NEXT:        =: Instruction waiting for available HW resource
+# ALL-NEXT:        -: Instruction executed, waiting to retire in order.
+
+# ALL:                                 012
 # ALL-NEXT:        Index     0123456789
 
 # ALL:             [0,0]     DeER .    . .   addl	%eax, %eax
-# ALL-NEXT:        [1,0]     D=eER.    . .   addl	%eax, %eax
-# ALL-NEXT:        [2,0]     .D=eER    . .   addl	%eax, %eax
-# ALL-NEXT:        [3,0]     .D==eER   . .   addl	%eax, %eax
-# ALL-NEXT:        [4,0]     . D==eER  . .   addl	%eax, %eax
-# ALL-NEXT:        [5,0]     . D===eER . .   addl	%eax, %eax
-# ALL-NEXT:        [6,0]     .  D===eER. .   addl	%eax, %eax
-# ALL-NEXT:        [7,0]     .  D====eER .   addl	%eax, %eax
-# ALL-NEXT:        [8,0]     .   D====eER.   addl	%eax, %eax
-# ALL-NEXT:        [9,0]     .   D=====eER   addl	%eax, %eax
+# ALL-NEXT:        [1,0]     DPeER.    . .   addl	%eax, %eax
+# ALL-NEXT:        [2,0]     .DPeER    . .   addl	%eax, %eax
+# ALL-NEXT:        [3,0]     .DPPeER   . .   addl	%eax, %eax
+# ALL-NEXT:        [4,0]     . DPPeER  . .   addl	%eax, %eax
+# ALL-NEXT:        [5,0]     . DPPPeER . .   addl	%eax, %eax
+# ALL-NEXT:        [6,0]     .  DPPPeER. .   addl	%eax, %eax
+# ALL-NEXT:        [7,0]     .  DPPPPeER .   addl	%eax, %eax
+# ALL-NEXT:        [8,0]     .   DPPPPeER.   addl	%eax, %eax
+# ALL-NEXT:        [9,0]     .   DPPPPPeER   addl	%eax, %eax
 
 # ALL:             Average Wait times (based on the timeline view):
 # ALL-NEXT:        [0]: Executions

@@ -55,11 +55,18 @@ mulxq (%rdi), %rax, %rdx
 # CHECK-NEXT:  -      -     0.50   1.00   0.50   0.50    -     0.50   1.00    -     mulxl	(%rdi), %eax, %edx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeeER   .   mulxl	(%rdi), %eax, %edx
-# CHECK-NEXT: [1,0]     . D==eeeeeeeeeER   mulxl	(%rdi), %eax, %edx
+# CHECK-NEXT: [1,0]     . DPPeeeeeeeeeER   mulxl	(%rdi), %eax, %edx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -114,11 +121,18 @@ mulxq (%rdi), %rax, %rdx
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -     1.00    -     mulxq	(%rdi), %rax, %rdx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeeeeeeeeER   .   mulxq	(%rdi), %rax, %rdx
-# CHECK-NEXT: [1,0]     .D===eeeeeeeeeER   mulxq	(%rdi), %rax, %rdx
+# CHECK-NEXT: [1,0]     .DPPPeeeeeeeeeER   mulxq	(%rdi), %rax, %rdx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

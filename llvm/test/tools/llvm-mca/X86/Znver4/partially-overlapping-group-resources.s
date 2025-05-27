@@ -72,7 +72,14 @@ vpxord zmm1, zmm1, zmm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     vpxord	zmm1, zmm1, zmm1
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DeeeeeeER   vpconflictd	zmm0, zmm3
 # CHECK-NEXT: [0,1]     D==eE---R   kxnorw	k1, k1, k1

@@ -84,24 +84,31 @@ mov %rdx, %rax
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%rdx, %rax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          01234
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DR   .    .   .   xorq	%rax, %rax
 # CHECK-NEXT: [0,1]     DeER .    .   .   movq	%rax, %rbx
-# CHECK-NEXT: [0,2]     D=eER.    .   .   movq	%rbx, %rcx
-# CHECK-NEXT: [0,3]     D==eER    .   .   movq	%rcx, %rdx
-# CHECK-NEXT: [0,4]     .D==eER   .   .   movq	%rdx, %rax
+# CHECK-NEXT: [0,2]     DPeER.    .   .   movq	%rbx, %rcx
+# CHECK-NEXT: [0,3]     DPPeER    .   .   movq	%rcx, %rdx
+# CHECK-NEXT: [0,4]     .DPPeER   .   .   movq	%rdx, %rax
 # CHECK-NEXT: [1,0]     .D----R   .   .   xorq	%rax, %rax
 # CHECK-NEXT: [1,1]     .D===eER  .   .   movq	%rax, %rbx
-# CHECK-NEXT: [1,2]     .D====eER .   .   movq	%rbx, %rcx
-# CHECK-NEXT: [1,3]     . D====eER.   .   movq	%rcx, %rdx
-# CHECK-NEXT: [1,4]     . D=====eER   .   movq	%rdx, %rax
+# CHECK-NEXT: [1,2]     .DPPPPeER .   .   movq	%rbx, %rcx
+# CHECK-NEXT: [1,3]     . DPPPPeER.   .   movq	%rcx, %rdx
+# CHECK-NEXT: [1,4]     . DPPPPPeER   .   movq	%rdx, %rax
 # CHECK-NEXT: [2,0]     . D-------R   .   xorq	%rax, %rax
 # CHECK-NEXT: [2,1]     . D======eER  .   movq	%rax, %rbx
-# CHECK-NEXT: [2,2]     .  D======eER .   movq	%rbx, %rcx
-# CHECK-NEXT: [2,3]     .  D=======eER.   movq	%rcx, %rdx
-# CHECK-NEXT: [2,4]     .  D========eER   movq	%rdx, %rax
+# CHECK-NEXT: [2,2]     .  DPPPPPPeER .   movq	%rbx, %rcx
+# CHECK-NEXT: [2,3]     .  DPPPPPPPeER.   movq	%rcx, %rdx
+# CHECK-NEXT: [2,4]     .  DPPPPPPPPeER   movq	%rdx, %rax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

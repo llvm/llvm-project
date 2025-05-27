@@ -68,7 +68,14 @@ vdivu.vv v8, v8, v12
 # CHECK-NEXT:  -      -      -      -     113.00 1.00    -      -     vdivu.vv	v8, v8, v12
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     0123
 
 # CHECK:      [0,0]     DeeE   vsetvli	zero, a0, e64, m1, tu, mu
 # CHECK-NEXT: Truncated display due to cycle limit

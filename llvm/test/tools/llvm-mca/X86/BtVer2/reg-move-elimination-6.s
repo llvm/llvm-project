@@ -82,26 +82,33 @@ mov %esi, %ecx
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%esi, %ecx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DR   .    . .   xorq	%rsi, %rsi
 # CHECK-NEXT: [0,1]     DeER .    . .   addq	%rcx, %rcx
 # CHECK-NEXT: [0,2]     .DeER.    . .   addq	%rcx, %rcx
-# CHECK-NEXT: [0,3]     .D=eER    . .   addq	%rcx, %rcx
-# CHECK-NEXT: [0,4]     . D=eER   . .   addq	%rcx, %rcx
+# CHECK-NEXT: [0,3]     .DPeER    . .   addq	%rcx, %rcx
+# CHECK-NEXT: [0,4]     . DPeER   . .   addq	%rcx, %rcx
 # CHECK-NEXT: [0,5]     . D---R   . .   movl	%esi, %ecx
 # CHECK-NEXT: [1,0]     .  D---R  . .   xorq	%rsi, %rsi
 # CHECK-NEXT: [1,1]     .  DeE-R  . .   addq	%rcx, %rcx
 # CHECK-NEXT: [1,2]     .   DeE-R . .   addq	%rcx, %rcx
-# CHECK-NEXT: [1,3]     .   D=eER . .   addq	%rcx, %rcx
-# CHECK-NEXT: [1,4]     .    D=eER. .   addq	%rcx, %rcx
+# CHECK-NEXT: [1,3]     .   DPeER . .   addq	%rcx, %rcx
+# CHECK-NEXT: [1,4]     .    DPeER. .   addq	%rcx, %rcx
 # CHECK-NEXT: [1,5]     .    D---R. .   movl	%esi, %ecx
 # CHECK-NEXT: [2,0]     .    .D---R .   xorq	%rsi, %rsi
 # CHECK-NEXT: [2,1]     .    .DeE-R .   addq	%rcx, %rcx
 # CHECK-NEXT: [2,2]     .    . DeE-R.   addq	%rcx, %rcx
-# CHECK-NEXT: [2,3]     .    . D=eER.   addq	%rcx, %rcx
-# CHECK-NEXT: [2,4]     .    .  D=eER   addq	%rcx, %rcx
+# CHECK-NEXT: [2,3]     .    . DPeER.   addq	%rcx, %rcx
+# CHECK-NEXT: [2,4]     .    .  DPeER   addq	%rcx, %rcx
 # CHECK-NEXT: [2,5]     .    .  D---R   movl	%esi, %ecx
 
 # CHECK:      Average Wait times (based on the timeline view):

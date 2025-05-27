@@ -66,26 +66,33 @@ retq
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -      -      -     retq
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012345678
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    .    .  .   stmxcsr	-4(%rsp)
 # CHECK-NEXT: [0,1]     DeER .    .    .  .   movl	$-24577, %eax
 # CHECK-NEXT: [0,2]     .DeeeeER  .    .  .   andl	-4(%rsp), %eax
-# CHECK-NEXT: [0,3]     .D====eER .    .  .   movl	%eax, -8(%rsp)
-# CHECK-NEXT: [0,4]     . D===eeeER    .  .   ldmxcsr	-8(%rsp)
+# CHECK-NEXT: [0,3]     .DPPPPeER .    .  .   movl	%eax, -8(%rsp)
+# CHECK-NEXT: [0,4]     . DPPPeeeER    .  .   ldmxcsr	-8(%rsp)
 # CHECK-NEXT: [0,5]     . DeeeeE--R    .  .   retq
-# CHECK-NEXT: [1,0]     .  D=====eER   .  .   stmxcsr	-4(%rsp)
+# CHECK-NEXT: [1,0]     .  DPPPPPeER   .  .   stmxcsr	-4(%rsp)
 # CHECK-NEXT: [1,1]     .  DeE-----R   .  .   movl	$-24577, %eax
 # CHECK-NEXT: [1,2]     .   DeeeeE--R  .  .   andl	-4(%rsp), %eax
-# CHECK-NEXT: [1,3]     .   D=====eER  .  .   movl	%eax, -8(%rsp)
-# CHECK-NEXT: [1,4]     .    D====eeeER.  .   ldmxcsr	-8(%rsp)
+# CHECK-NEXT: [1,3]     .   DPPPP=eER  .  .   movl	%eax, -8(%rsp)
+# CHECK-NEXT: [1,4]     .    DPPPPeeeER.  .   ldmxcsr	-8(%rsp)
 # CHECK-NEXT: [1,5]     .    D=eeeeE--R.  .   retq
-# CHECK-NEXT: [2,0]     .    .D======eER  .   stmxcsr	-4(%rsp)
+# CHECK-NEXT: [2,0]     .    .DPPPPPPeER  .   stmxcsr	-4(%rsp)
 # CHECK-NEXT: [2,1]     .    .DeE------R  .   movl	$-24577, %eax
 # CHECK-NEXT: [2,2]     .    . DeeeeE---R .   andl	-4(%rsp), %eax
-# CHECK-NEXT: [2,3]     .    . D======eER .   movl	%eax, -8(%rsp)
-# CHECK-NEXT: [2,4]     .    .  D=====eeeER   ldmxcsr	-8(%rsp)
+# CHECK-NEXT: [2,3]     .    . DPPPPP=eER .   movl	%eax, -8(%rsp)
+# CHECK-NEXT: [2,4]     .    .  DPPPPPeeeER   ldmxcsr	-8(%rsp)
 # CHECK-NEXT: [2,5]     .    .  DeeeeE----R   retq
 
 # CHECK:      Average Wait times (based on the timeline view):

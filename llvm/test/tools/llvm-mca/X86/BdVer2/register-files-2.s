@@ -78,19 +78,26 @@ vmulps %xmm0, %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmulps	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789          012
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .    .    .    .    . .   vaddps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .    .    .    .    . .   vmulps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     D==========eeeeeER  .    .    .    .    .    .    . .   vaddps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     D===============eeeeeER  .    .    .    .    .    . .   vmulps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [2,0]     .D===================eeeeeER  .    .    .    .    . .   vaddps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [2,1]     .    . D==================eeeeeER  .    .    .    . .   vmulps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [3,0]     .    .    . D==================eeeeeER  .    .    . .   vaddps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [3,1]     .    .    .    . D==================eeeeeER  .    . .   vmulps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [4,0]     .    .    .    .    . D==================eeeeeER  . .   vaddps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [4,1]     .    .    .    .    .    . D==================eeeeeER   vmulps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DPPPPPeeeeeER  .    .    .    .    .    .    .    . .   vmulps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPeeeeeER  .    .    .    .    .    .    . .   vaddps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPeeeeeER  .    .    .    .    .    . .   vmulps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [2,0]     .DPPPPPPPPPPPPPPPPPPPeeeeeER  .    .    .    .    . .   vaddps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [2,1]     .    . DPPPPPPPPPPPPPPPPPPeeeeeER  .    .    .    . .   vmulps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [3,0]     .    .    . DPPPPPPPPPPPPPPPPPPeeeeeER  .    .    . .   vaddps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [3,1]     .    .    .    . DPPPPPPPPPPPPPPPPPPeeeeeER  .    . .   vmulps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [4,0]     .    .    .    .    . DPPPPPPPPPPPPPPPPPPeeeeeER  . .   vaddps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [4,1]     .    .    .    .    .    . DPPPPPPPPPPPPPPPPPPeeeeeER   vmulps	%xmm0, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

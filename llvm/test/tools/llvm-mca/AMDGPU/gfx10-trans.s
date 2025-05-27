@@ -75,11 +75,17 @@ v_sqrt_f64 v[2:3], v[0:1]
 # CHECK-NEXT:  -      -      -     1.00    -     1.00   1.00    -     v_sqrt_f64_e32 v[2:3], v[0:1]
 
 # CHECK:      Timeline view:
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
 
-# GFX10-NEXT:                     0123456789          0123456789          0123456789          0123456789          0123
+# GFX10:                          0123456789          0123456789          0123456789          0123456789          0123
 # GFX10-NEXT: Index     0123456789          0123456789          0123456789          0123456789          0123456789
 
-# GFX11-NEXT:                     0123456789          0123456789          0123456789          0123456789          0123456789          0123456789          0123456789
+# GFX11:                          0123456789          0123456789          0123456789          0123456789          0123456789          0123456789          0123456789
 # GFX11-NEXT: Index     0123456789          0123456789          0123456789          0123456789          0123456789          0123456789          0123456789          01
 
 # GFX10:      [0,0]     DeeeeeeeeeE    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .    .  .   v_log_f32_e32 v0, v0

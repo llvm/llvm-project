@@ -321,17 +321,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    .    ..   mul	x0, x0, x0
-# CHECK-NEXT: [0,1]     D==eeER   .    ..   madd	x0, x1, x2, x0
-# CHECK-NEXT: [0,2]     D===eeER  .    ..   madd	x0, x1, x2, x0
-# CHECK-NEXT: [0,3]     D=====eeER.    ..   madd	x0, x0, x0, x0
-# CHECK-NEXT: [1,0]     D=======eeER   ..   mul	x0, x0, x0
-# CHECK-NEXT: [1,1]     D=========eeER ..   madd	x0, x1, x2, x0
-# CHECK-NEXT: [1,2]     D==========eeER..   madd	x0, x1, x2, x0
-# CHECK-NEXT: [1,3]     D============eeER   madd	x0, x0, x0, x0
+# CHECK-NEXT: [0,1]     DPPeeER   .    ..   madd	x0, x1, x2, x0
+# CHECK-NEXT: [0,2]     DPPPeeER  .    ..   madd	x0, x1, x2, x0
+# CHECK-NEXT: [0,3]     DPPPPPeeER.    ..   madd	x0, x0, x0, x0
+# CHECK-NEXT: [1,0]     DPPPPPPPeeER   ..   mul	x0, x0, x0
+# CHECK-NEXT: [1,1]     DPPPPPPPPPeeER ..   madd	x0, x1, x2, x0
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPeeER..   madd	x0, x1, x2, x0
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPeeER   madd	x0, x0, x0, x0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -359,17 +366,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    .    ..   mul	x0, x0, x0
-# CHECK-NEXT: [0,1]     D==eeER   .    ..   smaddl	x0, w1, w2, x0
-# CHECK-NEXT: [0,2]     D===eeER  .    ..   smaddl	x0, w1, w2, x0
-# CHECK-NEXT: [0,3]     D=====eeER.    ..   smaddl	x0, w0, w0, x0
-# CHECK-NEXT: [1,0]     D=======eeER   ..   mul	x0, x0, x0
-# CHECK-NEXT: [1,1]     D=========eeER ..   smaddl	x0, w1, w2, x0
-# CHECK-NEXT: [1,2]     D==========eeER..   smaddl	x0, w1, w2, x0
-# CHECK-NEXT: [1,3]     D============eeER   smaddl	x0, w0, w0, x0
+# CHECK-NEXT: [0,1]     DPPeeER   .    ..   smaddl	x0, w1, w2, x0
+# CHECK-NEXT: [0,2]     DPPPeeER  .    ..   smaddl	x0, w1, w2, x0
+# CHECK-NEXT: [0,3]     DPPPPPeeER.    ..   smaddl	x0, w0, w0, x0
+# CHECK-NEXT: [1,0]     DPPPPPPPeeER   ..   mul	x0, x0, x0
+# CHECK-NEXT: [1,1]     DPPPPPPPPPeeER ..   smaddl	x0, w1, w2, x0
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPeeER..   smaddl	x0, w1, w2, x0
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPeeER   smaddl	x0, w0, w0, x0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -397,21 +411,28 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeER.    .    .    .    .    .    ..   fadd	d0, d0, d0
-# CHECK-NEXT: [0,1]     D==eeeeER .    .    .    .    .    ..   fmadd	d0, d1, d2, d0
-# CHECK-NEXT: [0,2]     D======eeeER   .    .    .    .    ..   fmul	d0, d0, d0
-# CHECK-NEXT: [0,3]     D=======eeeeER .    .    .    .    ..   fmadd	d0, d1, d2, d0
-# CHECK-NEXT: [0,4]     D=========eeeeER    .    .    .    ..   fmadd	d0, d1, d2, d0
-# CHECK-NEXT: [0,5]     D=============eeeeER.    .    .    ..   fmadd	d0, d0, d1, d2
-# CHECK-NEXT: [1,0]     D=================eeER   .    .    ..   fadd	d0, d0, d0
-# CHECK-NEXT: [1,1]     D===================eeeeER    .    ..   fmadd	d0, d1, d2, d0
-# CHECK-NEXT: [1,2]     D=======================eeeER .    ..   fmul	d0, d0, d0
-# CHECK-NEXT: [1,3]     D========================eeeeER    ..   fmadd	d0, d1, d2, d0
-# CHECK-NEXT: [1,4]     D==========================eeeeER  ..   fmadd	d0, d1, d2, d0
-# CHECK-NEXT: [1,5]     D==============================eeeeER   fmadd	d0, d0, d1, d2
+# CHECK-NEXT: [0,1]     DPPeeeeER .    .    .    .    .    ..   fmadd	d0, d1, d2, d0
+# CHECK-NEXT: [0,2]     DPPPPPPeeeER   .    .    .    .    ..   fmul	d0, d0, d0
+# CHECK-NEXT: [0,3]     DPPPPPPPeeeeER .    .    .    .    ..   fmadd	d0, d1, d2, d0
+# CHECK-NEXT: [0,4]     DPPPPPPPPPeeeeER    .    .    .    ..   fmadd	d0, d1, d2, d0
+# CHECK-NEXT: [0,5]     DPPPPPPPPPPPPPeeeeER.    .    .    ..   fmadd	d0, d0, d1, d2
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPPeeER   .    .    ..   fadd	d0, d0, d0
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeER    .    ..   fmadd	d0, d1, d2, d0
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPPeeeER .    ..   fmul	d0, d0, d0
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER    ..   fmadd	d0, d1, d2, d0
+# CHECK-NEXT: [1,4]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER  ..   fmadd	d0, d1, d2, d0
+# CHECK-NEXT: [1,5]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   fmadd	d0, d0, d1, d2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -441,17 +462,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeeER   .    .    .    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D====eeeeER    .    .    .  .   saba	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    .    .  .   saba	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .  .   saba	v0.4s, v0.4s, v1.4s
-# CHECK-NEXT: [1,0]     D=============eeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     D=================eeeeER .  .   saba	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [1,2]     D==================eeeeER.  .   saba	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [1,3]     D======================eeeeER   saba	v0.4s, v0.4s, v1.4s
+# CHECK-NEXT: [0,1]     DPPPPeeeeER    .    .    .  .   saba	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,2]     DPPPPPeeeeER   .    .    .  .   saba	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .  .   saba	v0.4s, v0.4s, v1.4s
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPeeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPeeeeER .  .   saba	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeeER.  .   saba	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER   saba	v0.4s, v0.4s, v1.4s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -479,17 +507,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 0.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234
 
 # CHECK:      [0,0]     DeeeeER   .    .    .   .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D====eeeER.    .    .   .   sdot	v0.4s, v1.16b, v2.16b
-# CHECK-NEXT: [0,2]     D=====eeeER    .    .   .   sdot	v0.4s, v1.16b, v2.16b
-# CHECK-NEXT: [0,3]     D========eeeER .    .   .   sdot	v0.4s, v0.16b, v1.16b
-# CHECK-NEXT: [1,0]     D===========eeeeER  .   .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     D===============eeeER   .   sdot	v0.4s, v1.16b, v2.16b
-# CHECK-NEXT: [1,2]     D================eeeER  .   sdot	v0.4s, v1.16b, v2.16b
-# CHECK-NEXT: [1,3]     D===================eeeER   sdot	v0.4s, v0.16b, v1.16b
+# CHECK-NEXT: [0,1]     DPPPPeeeER.    .    .   .   sdot	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [0,2]     DPPPPPeeeER    .    .   .   sdot	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [0,3]     DPPPPPPPPeeeER .    .   .   sdot	v0.4s, v0.16b, v1.16b
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPeeeeER  .   .   mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPeeeER   .   sdot	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPeeeER  .   sdot	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPeeeER   sdot	v0.4s, v0.16b, v1.16b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -517,17 +552,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 0.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234
 
 # CHECK:      [0,0]     DeeeeER   .    .    .   .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D====eeeER.    .    .   .   smmla	v0.4s, v1.16b, v2.16b
-# CHECK-NEXT: [0,2]     D=====eeeER    .    .   .   smmla	v0.4s, v1.16b, v2.16b
-# CHECK-NEXT: [0,3]     D========eeeER .    .   .   smmla	v0.4s, v0.16b, v1.16b
-# CHECK-NEXT: [1,0]     D===========eeeeER  .   .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     D===============eeeER   .   smmla	v0.4s, v1.16b, v2.16b
-# CHECK-NEXT: [1,2]     D================eeeER  .   smmla	v0.4s, v1.16b, v2.16b
-# CHECK-NEXT: [1,3]     D===================eeeER   smmla	v0.4s, v0.16b, v1.16b
+# CHECK-NEXT: [0,1]     DPPPPeeeER.    .    .   .   smmla	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [0,2]     DPPPPPeeeER    .    .   .   smmla	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [0,3]     DPPPPPPPPeeeER .    .   .   smmla	v0.4s, v0.16b, v1.16b
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPeeeeER  .   .   mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPeeeER   .   smmla	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPeeeER  .   smmla	v0.4s, v1.16b, v2.16b
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPeeeER   smmla	v0.4s, v0.16b, v1.16b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -555,17 +597,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeeER   .    .    .    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D====eeeeER    .    .    .  .   mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    .    .  .   mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .  .   mla	v0.4s, v0.4s, v1.4s
-# CHECK-NEXT: [1,0]     D=============eeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     D=================eeeeER .  .   mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [1,2]     D==================eeeeER.  .   mla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [1,3]     D======================eeeeER   mla	v0.4s, v0.4s, v1.4s
+# CHECK-NEXT: [0,1]     DPPPPeeeeER    .    .    .  .   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,2]     DPPPPPeeeeER   .    .    .  .   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .  .   mla	v0.4s, v0.4s, v1.4s
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPeeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPeeeeER .  .   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeeER.  .   mla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER   mla	v0.4s, v0.4s, v1.4s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -593,17 +642,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 3.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeER   .    .    .    .    .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D====eeeeER    .    .    .    .   sqrdmlah	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [0,2]     D======eeeeER  .    .    .    .   sqrdmlah	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   sqrdmlah	v0.4s, v0.4s, v1.4s
-# CHECK-NEXT: [1,0]     D==============eeeeER    .    .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     D==================eeeeER.    .   sqrdmlah	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   sqrdmlah	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT: [1,3]     D========================eeeeER   sqrdmlah	v0.4s, v0.4s, v1.4s
+# CHECK-NEXT: [0,1]     DPPPPeeeeER    .    .    .    .   sqrdmlah	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeER  .    .    .    .   sqrdmlah	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeER   .    .    .   sqrdmlah	v0.4s, v0.4s, v1.4s
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPeeeeER    .    .   mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPeeeeER.    .   sqrdmlah	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeER   .   sqrdmlah	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   sqrdmlah	v0.4s, v0.4s, v1.4s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -631,17 +687,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeeER   .    .    .    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D====eeeeER    .    .    .  .   smlal2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    .    .  .   smlal2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .  .   smlal2	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT: [1,0]     D=============eeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     D=================eeeeER .  .   smlal2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,2]     D==================eeeeER.  .   smlal2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,3]     D======================eeeeER   smlal2	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [0,1]     DPPPPeeeeER    .    .    .  .   smlal2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,2]     DPPPPPeeeeER   .    .    .  .   smlal2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .  .   smlal2	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPeeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPeeeeER .  .   smlal2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeeER.  .   smlal2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER   smlal2	v0.4s, v0.8h, v1.8h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -669,17 +732,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeeER   .    .    .    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D====eeeeER    .    .    .  .   sadalp	v0.2d, v1.4s
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    .    .  .   sadalp	v0.2d, v1.4s
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .  .   sadalp	v0.2d, v0.4s
-# CHECK-NEXT: [1,0]     D=============eeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     D=================eeeeER .  .   sadalp	v0.2d, v1.4s
-# CHECK-NEXT: [1,2]     D==================eeeeER.  .   sadalp	v0.2d, v1.4s
-# CHECK-NEXT: [1,3]     D======================eeeeER   sadalp	v0.2d, v0.4s
+# CHECK-NEXT: [0,1]     DPPPPeeeeER    .    .    .  .   sadalp	v0.2d, v1.4s
+# CHECK-NEXT: [0,2]     DPPPPPeeeeER   .    .    .  .   sadalp	v0.2d, v1.4s
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .  .   sadalp	v0.2d, v0.4s
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPeeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPeeeeER .  .   sadalp	v0.2d, v1.4s
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeeER.  .   sadalp	v0.2d, v1.4s
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER   sadalp	v0.2d, v0.4s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -707,17 +777,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeeER   .    .    .    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D====eeeeER    .    .    .  .   ssra	v0.2d, v1.2d, #1
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    .    .  .   ssra	v0.2d, v1.2d, #1
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .  .   ssra	v0.2d, v0.2d, #1
-# CHECK-NEXT: [1,0]     D=============eeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     D=================eeeeER .  .   ssra	v0.2d, v1.2d, #1
-# CHECK-NEXT: [1,2]     D==================eeeeER.  .   ssra	v0.2d, v1.2d, #1
-# CHECK-NEXT: [1,3]     D======================eeeeER   ssra	v0.2d, v0.2d, #1
+# CHECK-NEXT: [0,1]     DPPPPeeeeER    .    .    .  .   ssra	v0.2d, v1.2d, #1
+# CHECK-NEXT: [0,2]     DPPPPPeeeeER   .    .    .  .   ssra	v0.2d, v1.2d, #1
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .  .   ssra	v0.2d, v0.2d, #1
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPeeeeER.    .  .   mul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPeeeeER .  .   ssra	v0.2d, v1.2d, #1
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeeER.  .   ssra	v0.2d, v1.2d, #1
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER   ssra	v0.2d, v0.2d, #1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -745,17 +822,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .  .   fmul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [0,1]     D===eeeeER.    .    .    .  .   fcmla	v0.2d, v1.2d, v2.2d, #90
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    .    .  .   fcmla	v0.2d, v1.2d, v2.2d, #90
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .  .   fcmla	v0.2d, v0.2d, v1.2d, #90
-# CHECK-NEXT: [1,0]     D=============eeeER .    .  .   fmul	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT: [1,1]     D================eeeeER  .  .   fcmla	v0.2d, v1.2d, v2.2d, #90
-# CHECK-NEXT: [1,2]     D==================eeeeER.  .   fcmla	v0.2d, v1.2d, v2.2d, #90
-# CHECK-NEXT: [1,3]     D======================eeeeER   fcmla	v0.2d, v0.2d, v1.2d, #90
+# CHECK-NEXT: [0,1]     DPPPeeeeER.    .    .    .  .   fcmla	v0.2d, v1.2d, v2.2d, #90
+# CHECK-NEXT: [0,2]     DPPPPPeeeeER   .    .    .  .   fcmla	v0.2d, v1.2d, v2.2d, #90
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .  .   fcmla	v0.2d, v0.2d, v1.2d, #90
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPeeeER .    .  .   fmul	v0.4s, v0.4s, v0.4s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPeeeeER  .  .   fcmla	v0.2d, v1.2d, v2.2d, #90
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeeER.  .   fcmla	v0.2d, v1.2d, v2.2d, #90
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER   fcmla	v0.2d, v0.2d, v1.2d, #90
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -783,21 +867,28 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    .    ..   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [0,1]     D=eeeeER  .    .    .    .    .    ..   fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: [0,2]     D=====eeER.    .    .    .    .    ..   fadd	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [0,3]     D=======eeeeER .    .    .    .    ..   fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: [0,4]     D=========eeeeER    .    .    .    ..   fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: [0,5]     D=============eeeeER.    .    .    ..   fmla	v0.2d, v0.2d, v1.2d
-# CHECK-NEXT: [1,0]     D=================eeeER  .    .    ..   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,1]     D==================eeeeER.    .    ..   fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: [1,2]     D======================eeER   .    ..   fadd	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,3]     D========================eeeeER    ..   fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: [1,4]     D==========================eeeeER  ..   fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT: [1,5]     D==============================eeeeER   fmla	v0.2d, v0.2d, v1.2d
+# CHECK-NEXT: [0,1]     DPeeeeER  .    .    .    .    .    ..   fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: [0,2]     DPPPPPeeER.    .    .    .    .    ..   fadd	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [0,3]     DPPPPPPPeeeeER .    .    .    .    ..   fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: [0,4]     DPPPPPPPPPeeeeER    .    .    .    ..   fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: [0,5]     DPPPPPPPPPPPPPeeeeER.    .    .    ..   fmla	v0.2d, v0.2d, v1.2d
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPPeeeER  .    .    ..   fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPeeeeER.    .    ..   fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPeeER   .    ..   fadd	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER    ..   fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: [1,4]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER  ..   fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT: [1,5]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   fmla	v0.2d, v0.2d, v1.2d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -827,21 +918,28 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    .    .    .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [0,1]     D===eeeeER.    .    .    .    .    .    .   fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: [0,2]     D=======eeER   .    .    .    .    .    .   fadd	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .    .    .    .   fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: [0,4]     D===========eeeeER  .    .    .    .    .   fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: [0,5]     D===============eeeeER   .    .    .    .   fmlal	v0.4s, v0.4h, v1.4h
-# CHECK-NEXT: [1,0]     D===================eeeER.    .    .    .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,1]     D======================eeeeER .    .    .   fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: [1,2]     D==========================eeER    .    .   fadd	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,3]     D============================eeeeER.    .   fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: [1,4]     D==============================eeeeER   .   fmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT: [1,5]     D==================================eeeeER   fmlal	v0.4s, v0.4h, v1.4h
+# CHECK-NEXT: [0,1]     DPPPeeeeER.    .    .    .    .    .    .   fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [0,2]     DPPPPPPPeeER   .    .    .    .    .    .   fadd	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .    .    .    .   fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [0,4]     DPPPPPPPPPPPeeeeER  .    .    .    .    .   fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [0,5]     DPPPPPPPPPPPPPPPeeeeER   .    .    .    .   fmlal	v0.4s, v0.4h, v1.4h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPPPPeeeER.    .    .    .   fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER .    .    .   fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeER    .    .   fadd	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER.    .   fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [1,4]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   .   fmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT: [1,5]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   fmlal	v0.4s, v0.4h, v1.4h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -871,17 +969,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          01234
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    .   .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    .    .   .   bfdot	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,2]     D======eeeeeER .    .    .    .   .   bfdot	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,3]     D===========eeeeeER .    .    .   .   bfdot	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT: [1,0]     D================eeeER   .    .   .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,1]     D===================eeeeeER   .   .   bfdot	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,2]     D======================eeeeeER.   .   bfdot	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,3]     D===========================eeeeeER   bfdot	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [0,1]     DPPPeeeeeER    .    .    .    .   .   bfdot	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeeER .    .    .    .   .   bfdot	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPeeeeeER .    .    .   .   bfdot	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPeeeER   .    .   .   fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeeER   .   .   bfdot	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPeeeeeER.   .   bfdot	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER   bfdot	v0.4s, v0.8h, v1.8h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -909,17 +1014,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    .    .    .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [0,1]     D===eeeeeeER   .    .    .    .    .    .   bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,2]     D=======eeeeeeER    .    .    .    .    .   bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,3]     D=============eeeeeeER   .    .    .    .   bfmmla	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT: [1,0]     D===================eeeER.    .    .    .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,1]     D======================eeeeeeER    .    .   bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,2]     D==========================eeeeeeER.    .   bfmmla	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,3]     D================================eeeeeeER   bfmmla	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [0,1]     DPPPeeeeeeER   .    .    .    .    .    .   bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,2]     DPPPPPPPeeeeeeER    .    .    .    .    .   bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPPPeeeeeeER   .    .    .    .   bfmmla	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPPPPeeeER.    .    .    .   fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPPPPeeeeeeER    .    .   bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER.    .   bfmmla	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER   bfmmla	v0.4s, v0.8h, v1.8h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -947,17 +1059,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    . .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    .    . .   bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,2]     D=====eeeeeER  .    .    .    . .   bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [0,3]     D==========eeeeeER  .    .    . .   bfmlalb	v0.4s, v0.8h, v1.8h
-# CHECK-NEXT: [1,0]     D===============eeeER    .    . .   fmul	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT: [1,1]     D==================eeeeeER    . .   bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,2]     D====================eeeeeER  . .   bfmlalb	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT: [1,3]     D=========================eeeeeER   bfmlalb	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [0,1]     DPPPeeeeeER    .    .    .    . .   bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,2]     DPPPPPeeeeeER  .    .    .    . .   bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeeER  .    .    . .   bfmlalb	v0.4s, v0.8h, v1.8h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPeeeER    .    . .   fmul	v0.2d, v0.2d, v0.2d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPeeeeeER    . .   bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeeER  . .   bfmlalb	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER   bfmlalb	v0.4s, v0.8h, v1.8h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -985,17 +1104,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 3.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    .    ..   mul	w0, w0, w0
-# CHECK-NEXT: [0,1]     D==eeER   .    ..   crc32b	w0, w0, w1
-# CHECK-NEXT: [0,2]     D===eeER  .    ..   crc32b	w0, w0, w1
-# CHECK-NEXT: [0,3]     D=====eeER.    ..   crc32b	w0, w0, w0
-# CHECK-NEXT: [1,0]     D=======eeER   ..   mul	w0, w0, w0
-# CHECK-NEXT: [1,1]     D=========eeER ..   crc32b	w0, w0, w1
-# CHECK-NEXT: [1,2]     D==========eeER..   crc32b	w0, w0, w1
-# CHECK-NEXT: [1,3]     D============eeER   crc32b	w0, w0, w0
+# CHECK-NEXT: [0,1]     DPPeeER   .    ..   crc32b	w0, w0, w1
+# CHECK-NEXT: [0,2]     DPPPeeER  .    ..   crc32b	w0, w0, w1
+# CHECK-NEXT: [0,3]     DPPPPPeeER.    ..   crc32b	w0, w0, w0
+# CHECK-NEXT: [1,0]     DPPPPPPPeeER   ..   mul	w0, w0, w0
+# CHECK-NEXT: [1,1]     DPPPPPPPPPeeER ..   crc32b	w0, w0, w1
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPeeER..   crc32b	w0, w0, w1
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPeeER   crc32b	w0, w0, w0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1023,17 +1149,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    .   saba	z0.d, z1.d, z2.d
-# CHECK-NEXT: [0,2]     D======eeeeER  .    .    .    .   saba	z0.d, z1.d, z2.d
-# CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   saba	z0.d, z0.d, z1.d
-# CHECK-NEXT: [1,0]     D==============eeeeeER   .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D===================eeeeER    .   saba	z0.d, z1.d, z2.d
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   saba	z0.d, z1.d, z2.d
-# CHECK-NEXT: [1,3]     D========================eeeeER   saba	z0.d, z0.d, z1.d
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    .   saba	z0.d, z1.d, z2.d
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeER  .    .    .    .   saba	z0.d, z1.d, z2.d
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeER   .    .    .   saba	z0.d, z0.d, z1.d
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPeeeeeER   .    .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeER    .   saba	z0.d, z1.d, z2.d
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeER   .   saba	z0.d, z1.d, z2.d
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   saba	z0.d, z0.d, z1.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1061,17 +1194,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    .   sadalp	z0.d, p0/m, z1.s
-# CHECK-NEXT: [0,2]     D======eeeeER  .    .    .    .   sadalp	z0.d, p0/m, z1.s
-# CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   sadalp	z0.d, p0/m, z0.s
-# CHECK-NEXT: [1,0]     D==============eeeeeER   .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D===================eeeeER    .   sadalp	z0.d, p0/m, z1.s
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   sadalp	z0.d, p0/m, z1.s
-# CHECK-NEXT: [1,3]     D========================eeeeER   sadalp	z0.d, p0/m, z0.s
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    .   sadalp	z0.d, p0/m, z1.s
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeER  .    .    .    .   sadalp	z0.d, p0/m, z1.s
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeER   .    .    .   sadalp	z0.d, p0/m, z0.s
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPeeeeeER   .    .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeER    .   sadalp	z0.d, p0/m, z1.s
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeER   .   sadalp	z0.d, p0/m, z1.s
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   sadalp	z0.d, p0/m, z0.s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1099,17 +1239,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    .   ssra	z0.d, z1.d, #1
-# CHECK-NEXT: [0,2]     D======eeeeER  .    .    .    .   ssra	z0.d, z1.d, #1
-# CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   ssra	z0.d, z0.d, #1
-# CHECK-NEXT: [1,0]     D==============eeeeeER   .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D===================eeeeER    .   ssra	z0.d, z1.d, #1
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   ssra	z0.d, z1.d, #1
-# CHECK-NEXT: [1,3]     D========================eeeeER   ssra	z0.d, z0.d, #1
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    .   ssra	z0.d, z1.d, #1
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeER  .    .    .    .   ssra	z0.d, z1.d, #1
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeER   .    .    .   ssra	z0.d, z0.d, #1
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPeeeeeER   .    .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeER    .   ssra	z0.d, z1.d, #1
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeER   .   ssra	z0.d, z1.d, #1
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   ssra	z0.d, z0.d, #1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1137,17 +1284,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123456
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    ..   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeER    .    .    ..   cdot	z0.s, z1.b, z2.b, #90
-# CHECK-NEXT: [0,2]     D======eeeER   .    .    ..   cdot	z0.s, z1.b, z2.b, #90
-# CHECK-NEXT: [0,3]     D=========eeeER.    .    ..   cdot	z0.s, z0.b, z1.b, #90
-# CHECK-NEXT: [1,0]     D============eeeeeER.    ..   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D=================eeeER  ..   cdot	z0.s, z1.b, z2.b, #90
-# CHECK-NEXT: [1,2]     D==================eeeER ..   cdot	z0.s, z1.b, z2.b, #90
-# CHECK-NEXT: [1,3]     D=====================eeeER   cdot	z0.s, z0.b, z1.b, #90
+# CHECK-NEXT: [0,1]     DPPPPPeeeER    .    .    ..   cdot	z0.s, z1.b, z2.b, #90
+# CHECK-NEXT: [0,2]     DPPPPPPeeeER   .    .    ..   cdot	z0.s, z1.b, z2.b, #90
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeER.    .    ..   cdot	z0.s, z0.b, z1.b, #90
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPeeeeeER.    ..   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPeeeER  ..   cdot	z0.s, z1.b, z2.b, #90
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeER ..   cdot	z0.s, z1.b, z2.b, #90
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPeeeER   cdot	z0.s, z0.b, z1.b, #90
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1175,17 +1329,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    .   cdot	z0.d, z1.h, z2.h, #90
-# CHECK-NEXT: [0,2]     D======eeeeER  .    .    .    .   cdot	z0.d, z1.h, z2.h, #90
-# CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   cdot	z0.d, z0.h, z1.h, #90
-# CHECK-NEXT: [1,0]     D==============eeeeeER   .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D===================eeeeER    .   cdot	z0.d, z1.h, z2.h, #90
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   cdot	z0.d, z1.h, z2.h, #90
-# CHECK-NEXT: [1,3]     D========================eeeeER   cdot	z0.d, z0.h, z1.h, #90
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    .   cdot	z0.d, z1.h, z2.h, #90
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeER  .    .    .    .   cdot	z0.d, z1.h, z2.h, #90
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeER   .    .    .   cdot	z0.d, z0.h, z1.h, #90
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPeeeeeER   .    .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeER    .   cdot	z0.d, z1.h, z2.h, #90
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeER   .   cdot	z0.d, z1.h, z2.h, #90
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   cdot	z0.d, z0.h, z1.h, #90
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1213,17 +1374,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    .   cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: [0,2]     D======eeeeER  .    .    .    .   cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   cmla	z0.b, z0.b, z1.b, #90
-# CHECK-NEXT: [1,0]     D==============eeeeeER   .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D===================eeeeER    .   cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   cmla	z0.b, z1.b, z2.b, #90
-# CHECK-NEXT: [1,3]     D========================eeeeER   cmla	z0.b, z0.b, z1.b, #90
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    .   cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeER  .    .    .    .   cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeER   .    .    .   cmla	z0.b, z0.b, z1.b, #90
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPeeeeeER   .    .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeER    .   cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeER   .   cmla	z0.b, z1.b, z2.b, #90
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   cmla	z0.b, z0.b, z1.b, #90
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1251,17 +1419,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012345678
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .    .  .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .    .  .   cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: [0,2]     D========eeeeeER    .    .    .    .  .   cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: [0,3]     D=============eeeeeER    .    .    .  .   cmla	z0.d, z0.d, z1.d, #90
-# CHECK-NEXT: [1,0]     D==================eeeeeER    .    .  .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D=======================eeeeeER    .  .   cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: [1,2]     D==========================eeeeeER .  .   cmla	z0.d, z1.d, z2.d, #90
-# CHECK-NEXT: [1,3]     D===============================eeeeeER   cmla	z0.d, z0.d, z1.d, #90
+# CHECK-NEXT: [0,1]     DPPPPPeeeeeER  .    .    .    .    .  .   cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: [0,2]     DPPPPPPPPeeeeeER    .    .    .    .  .   cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPPPeeeeeER    .    .    .  .   cmla	z0.d, z0.d, z1.d, #90
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPPPeeeeeER    .    .  .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPPPPPeeeeeER    .  .   cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER .  .   cmla	z0.d, z1.d, z2.d, #90
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER   cmla	z0.d, z0.d, z1.d, #90
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1289,17 +1464,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123456
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    ..   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeER    .    .    ..   sdot	z0.s, z1.b, z2.b
-# CHECK-NEXT: [0,2]     D======eeeER   .    .    ..   sdot	z0.s, z1.b, z2.b
-# CHECK-NEXT: [0,3]     D=========eeeER.    .    ..   sdot	z0.s, z0.b, z1.b
-# CHECK-NEXT: [1,0]     D============eeeeeER.    ..   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D=================eeeER  ..   sdot	z0.s, z1.b, z2.b
-# CHECK-NEXT: [1,2]     D==================eeeER ..   sdot	z0.s, z1.b, z2.b
-# CHECK-NEXT: [1,3]     D=====================eeeER   sdot	z0.s, z0.b, z1.b
+# CHECK-NEXT: [0,1]     DPPPPPeeeER    .    .    ..   sdot	z0.s, z1.b, z2.b
+# CHECK-NEXT: [0,2]     DPPPPPPeeeER   .    .    ..   sdot	z0.s, z1.b, z2.b
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeER.    .    ..   sdot	z0.s, z0.b, z1.b
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPeeeeeER.    ..   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPeeeER  ..   sdot	z0.s, z1.b, z2.b
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeER ..   sdot	z0.s, z1.b, z2.b
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPeeeER   sdot	z0.s, z0.b, z1.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1327,17 +1509,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123456
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    ..   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeER    .    .    ..   sdot	z0.s, z1.b, z2.b[1]
-# CHECK-NEXT: [0,2]     D======eeeER   .    .    ..   sdot	z0.s, z1.b, z2.b[1]
-# CHECK-NEXT: [0,3]     D=========eeeER.    .    ..   sdot	z0.s, z0.b, z1.b[1]
-# CHECK-NEXT: [1,0]     D============eeeeeER.    ..   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D=================eeeER  ..   sdot	z0.s, z1.b, z2.b[1]
-# CHECK-NEXT: [1,2]     D==================eeeER ..   sdot	z0.s, z1.b, z2.b[1]
-# CHECK-NEXT: [1,3]     D=====================eeeER   sdot	z0.s, z0.b, z1.b[1]
+# CHECK-NEXT: [0,1]     DPPPPPeeeER    .    .    ..   sdot	z0.s, z1.b, z2.b[1]
+# CHECK-NEXT: [0,2]     DPPPPPPeeeER   .    .    ..   sdot	z0.s, z1.b, z2.b[1]
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeER.    .    ..   sdot	z0.s, z0.b, z1.b[1]
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPeeeeeER.    ..   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPeeeER  ..   sdot	z0.s, z1.b, z2.b[1]
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeER ..   sdot	z0.s, z1.b, z2.b[1]
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPeeeER   sdot	z0.s, z0.b, z1.b[1]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1365,17 +1554,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    .   sdot	z0.d, z1.h, z2.h
-# CHECK-NEXT: [0,2]     D======eeeeER  .    .    .    .   sdot	z0.d, z1.h, z2.h
-# CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   sdot	z0.d, z0.h, z1.h
-# CHECK-NEXT: [1,0]     D==============eeeeeER   .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D===================eeeeER    .   sdot	z0.d, z1.h, z2.h
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   sdot	z0.d, z1.h, z2.h
-# CHECK-NEXT: [1,3]     D========================eeeeER   sdot	z0.d, z0.h, z1.h
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    .   sdot	z0.d, z1.h, z2.h
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeER  .    .    .    .   sdot	z0.d, z1.h, z2.h
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeER   .    .    .   sdot	z0.d, z0.h, z1.h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPeeeeeER   .    .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeER    .   sdot	z0.d, z1.h, z2.h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeER   .   sdot	z0.d, z1.h, z2.h
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   sdot	z0.d, z0.h, z1.h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1403,17 +1599,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 0.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          01234
 
 # CHECK:      [0,0]     DeeeeER   .    .    .   .   mul	z0.s, z0.s, z0.s
-# CHECK-NEXT: [0,1]     D====eeeER.    .    .   .   smmla	z0.s, z1.b, z2.b
-# CHECK-NEXT: [0,2]     D=====eeeER    .    .   .   smmla	z0.s, z1.b, z2.b
-# CHECK-NEXT: [0,3]     D========eeeER .    .   .   smmla	z0.s, z0.b, z1.b
-# CHECK-NEXT: [1,0]     D===========eeeeER  .   .   mul	z0.s, z0.s, z0.s
-# CHECK-NEXT: [1,1]     D===============eeeER   .   smmla	z0.s, z1.b, z2.b
-# CHECK-NEXT: [1,2]     D================eeeER  .   smmla	z0.s, z1.b, z2.b
-# CHECK-NEXT: [1,3]     D===================eeeER   smmla	z0.s, z0.b, z1.b
+# CHECK-NEXT: [0,1]     DPPPPeeeER.    .    .   .   smmla	z0.s, z1.b, z2.b
+# CHECK-NEXT: [0,2]     DPPPPPeeeER    .    .   .   smmla	z0.s, z1.b, z2.b
+# CHECK-NEXT: [0,3]     DPPPPPPPPeeeER .    .   .   smmla	z0.s, z0.b, z1.b
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPeeeeER  .   .   mul	z0.s, z0.s, z0.s
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPeeeER   .   smmla	z0.s, z1.b, z2.b
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPeeeER  .   smmla	z0.s, z1.b, z2.b
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPeeeER   smmla	z0.s, z0.b, z1.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1441,17 +1644,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    .   mla	z0.b, p0/m, z1.b, z2.b
-# CHECK-NEXT: [0,2]     D======eeeeER  .    .    .    .   mla	z0.b, p0/m, z1.b, z2.b
-# CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   mla	z0.b, p0/m, z0.b, z1.b
-# CHECK-NEXT: [1,0]     D==============eeeeeER   .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D===================eeeeER    .   mla	z0.b, p0/m, z1.b, z2.b
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   mla	z0.b, p0/m, z1.b, z2.b
-# CHECK-NEXT: [1,3]     D========================eeeeER   mla	z0.b, p0/m, z0.b, z1.b
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    .   mla	z0.b, p0/m, z1.b, z2.b
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeER  .    .    .    .   mla	z0.b, p0/m, z1.b, z2.b
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeER   .    .    .   mla	z0.b, p0/m, z0.b, z1.b
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPeeeeeER   .    .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeER    .   mla	z0.b, p0/m, z1.b, z2.b
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeER   .   mla	z0.b, p0/m, z1.b, z2.b
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   mla	z0.b, p0/m, z0.b, z1.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1479,17 +1689,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012345678
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .    .  .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .    .  .   mla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [0,2]     D========eeeeeER    .    .    .    .  .   mla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [0,3]     D=============eeeeeER    .    .    .  .   mla	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT: [1,0]     D==================eeeeeER    .    .  .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D=======================eeeeeER    .  .   mla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [1,2]     D==========================eeeeeER .  .   mla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [1,3]     D===============================eeeeeER   mla	z0.d, p0/m, z0.d, z1.d
+# CHECK-NEXT: [0,1]     DPPPPPeeeeeER  .    .    .    .    .  .   mla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [0,2]     DPPPPPPPPeeeeeER    .    .    .    .  .   mla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPPPeeeeeER    .    .    .  .   mla	z0.d, p0/m, z0.d, z1.d
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPPPeeeeeER    .    .  .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPPPPPeeeeeER    .  .   mla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER .  .   mla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER   mla	z0.d, p0/m, z0.d, z1.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1517,17 +1734,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    .   smlalb	z0.d, z1.s, z2.s
-# CHECK-NEXT: [0,2]     D======eeeeER  .    .    .    .   smlalb	z0.d, z1.s, z2.s
-# CHECK-NEXT: [0,3]     D==========eeeeER   .    .    .   smlalb	z0.d, z0.s, z1.s
-# CHECK-NEXT: [1,0]     D==============eeeeeER   .    .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D===================eeeeER    .   smlalb	z0.d, z1.s, z2.s
-# CHECK-NEXT: [1,2]     D====================eeeeER   .   smlalb	z0.d, z1.s, z2.s
-# CHECK-NEXT: [1,3]     D========================eeeeER   smlalb	z0.d, z0.s, z1.s
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    .   smlalb	z0.d, z1.s, z2.s
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeER  .    .    .    .   smlalb	z0.d, z1.s, z2.s
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeER   .    .    .   smlalb	z0.d, z0.s, z1.s
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPeeeeeER   .    .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeER    .   smlalb	z0.d, z1.s, z2.s
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeER   .   smlalb	z0.d, z1.s, z2.s
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   smlalb	z0.d, z0.s, z1.s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1555,17 +1779,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    . .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    . .   sqdmlalb	z0.d, z1.s, z2.s
-# CHECK-NEXT: [0,2]     D=======eeeeER .    .    .    . .   sqdmlalb	z0.d, z1.s, z2.s
-# CHECK-NEXT: [0,3]     D===========eeeeER  .    .    . .   sqdmlalb	z0.d, z0.s, z1.s
-# CHECK-NEXT: [1,0]     D===============eeeeeER  .    . .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D====================eeeeER   . .   sqdmlalb	z0.d, z1.s, z2.s
-# CHECK-NEXT: [1,2]     D======================eeeeER . .   sqdmlalb	z0.d, z1.s, z2.s
-# CHECK-NEXT: [1,3]     D==========================eeeeER   sqdmlalb	z0.d, z0.s, z1.s
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    . .   sqdmlalb	z0.d, z1.s, z2.s
+# CHECK-NEXT: [0,2]     DPPPPPPPeeeeER .    .    .    . .   sqdmlalb	z0.d, z1.s, z2.s
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPeeeeER  .    .    . .   sqdmlalb	z0.d, z0.s, z1.s
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPeeeeeER  .    . .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPPeeeeER   . .   sqdmlalb	z0.d, z1.s, z2.s
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER . .   sqdmlalb	z0.d, z1.s, z2.s
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   sqdmlalb	z0.d, z0.s, z1.s
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1593,17 +1824,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    . .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeER   .    .    .    . .   sqrdmlah	z0.b, z1.b, z2.b
-# CHECK-NEXT: [0,2]     D=======eeeeER .    .    .    . .   sqrdmlah	z0.b, z1.b, z2.b
-# CHECK-NEXT: [0,3]     D===========eeeeER  .    .    . .   sqrdmlah	z0.b, z0.b, z1.b
-# CHECK-NEXT: [1,0]     D===============eeeeeER  .    . .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D====================eeeeER   . .   sqrdmlah	z0.b, z1.b, z2.b
-# CHECK-NEXT: [1,2]     D======================eeeeER . .   sqrdmlah	z0.b, z1.b, z2.b
-# CHECK-NEXT: [1,3]     D==========================eeeeER   sqrdmlah	z0.b, z0.b, z1.b
+# CHECK-NEXT: [0,1]     DPPPPPeeeeER   .    .    .    . .   sqrdmlah	z0.b, z1.b, z2.b
+# CHECK-NEXT: [0,2]     DPPPPPPPeeeeER .    .    .    . .   sqrdmlah	z0.b, z1.b, z2.b
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPeeeeER  .    .    . .   sqrdmlah	z0.b, z0.b, z1.b
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPeeeeeER  .    . .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPPeeeeER   . .   sqrdmlah	z0.b, z1.b, z2.b
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER . .   sqrdmlah	z0.b, z1.b, z2.b
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeER   sqrdmlah	z0.b, z0.b, z1.b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1631,17 +1869,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012345678
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeeeER  .    .    .    .    .    .  .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .    .  .   sqrdmlah	z0.d, z1.d, z2.d
-# CHECK-NEXT: [0,2]     D========eeeeeER    .    .    .    .  .   sqrdmlah	z0.d, z1.d, z2.d
-# CHECK-NEXT: [0,3]     D=============eeeeeER    .    .    .  .   sqrdmlah	z0.d, z0.d, z1.d
-# CHECK-NEXT: [1,0]     D==================eeeeeER    .    .  .   mul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D=======================eeeeeER    .  .   sqrdmlah	z0.d, z1.d, z2.d
-# CHECK-NEXT: [1,2]     D==========================eeeeeER .  .   sqrdmlah	z0.d, z1.d, z2.d
-# CHECK-NEXT: [1,3]     D===============================eeeeeER   sqrdmlah	z0.d, z0.d, z1.d
+# CHECK-NEXT: [0,1]     DPPPPPeeeeeER  .    .    .    .    .  .   sqrdmlah	z0.d, z1.d, z2.d
+# CHECK-NEXT: [0,2]     DPPPPPPPPeeeeeER    .    .    .    .  .   sqrdmlah	z0.d, z1.d, z2.d
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPPPeeeeeER    .    .    .  .   sqrdmlah	z0.d, z0.d, z1.d
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPPPeeeeeER    .    .  .   mul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPPPPPeeeeeER    .  .   sqrdmlah	z0.d, z1.d, z2.d
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER .  .   sqrdmlah	z0.d, z1.d, z2.d
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER   sqrdmlah	z0.d, z0.d, z1.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1669,17 +1914,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    . .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    .    . .   fcmla	z0.d, p0/m, z1.d, z2.d, #90
-# CHECK-NEXT: [0,2]     D=====eeeeeER  .    .    .    . .   fcmla	z0.d, p0/m, z1.d, z2.d, #90
-# CHECK-NEXT: [0,3]     D==========eeeeeER  .    .    . .   fcmla	z0.d, p0/m, z0.d, z1.d, #90
-# CHECK-NEXT: [1,0]     D===============eeeER    .    . .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D==================eeeeeER    . .   fcmla	z0.d, p0/m, z1.d, z2.d, #90
-# CHECK-NEXT: [1,2]     D====================eeeeeER  . .   fcmla	z0.d, p0/m, z1.d, z2.d, #90
-# CHECK-NEXT: [1,3]     D=========================eeeeeER   fcmla	z0.d, p0/m, z0.d, z1.d, #90
+# CHECK-NEXT: [0,1]     DPPPeeeeeER    .    .    .    . .   fcmla	z0.d, p0/m, z1.d, z2.d, #90
+# CHECK-NEXT: [0,2]     DPPPPPeeeeeER  .    .    .    . .   fcmla	z0.d, p0/m, z1.d, z2.d, #90
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeeER  .    .    . .   fcmla	z0.d, p0/m, z0.d, z1.d, #90
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPeeeER    .    . .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPeeeeeER    . .   fcmla	z0.d, p0/m, z1.d, z2.d, #90
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeeER  . .   fcmla	z0.d, p0/m, z1.d, z2.d, #90
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER   fcmla	z0.d, p0/m, z0.d, z1.d, #90
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1707,17 +1959,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    . .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    .    . .   fcmla	z0.s, z1.s, z2.s[1], #90
-# CHECK-NEXT: [0,2]     D=====eeeeeER  .    .    .    . .   fcmla	z0.s, z1.s, z2.s[1], #90
-# CHECK-NEXT: [0,3]     D==========eeeeeER  .    .    . .   fcmla	z0.s, z0.s, z1.s[1], #90
-# CHECK-NEXT: [1,0]     D===============eeeER    .    . .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D==================eeeeeER    . .   fcmla	z0.s, z1.s, z2.s[1], #90
-# CHECK-NEXT: [1,2]     D====================eeeeeER  . .   fcmla	z0.s, z1.s, z2.s[1], #90
-# CHECK-NEXT: [1,3]     D=========================eeeeeER   fcmla	z0.s, z0.s, z1.s[1], #90
+# CHECK-NEXT: [0,1]     DPPPeeeeeER    .    .    .    . .   fcmla	z0.s, z1.s, z2.s[1], #90
+# CHECK-NEXT: [0,2]     DPPPPPeeeeeER  .    .    .    . .   fcmla	z0.s, z1.s, z2.s[1], #90
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeeER  .    .    . .   fcmla	z0.s, z0.s, z1.s[1], #90
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPeeeER    .    . .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPeeeeeER    . .   fcmla	z0.s, z1.s, z2.s[1], #90
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeeER  . .   fcmla	z0.s, z1.s, z2.s[1], #90
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER   fcmla	z0.s, z0.s, z1.s[1], #90
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1745,17 +2004,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .  .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D===eeeeER.    .    .    .  .   fmla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    .    .  .   fmla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .  .   fmla	z0.d, p0/m, z0.d, z1.d
-# CHECK-NEXT: [1,0]     D=============eeeER .    .  .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D================eeeeER  .  .   fmla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [1,2]     D==================eeeeER.  .   fmla	z0.d, p0/m, z1.d, z2.d
-# CHECK-NEXT: [1,3]     D======================eeeeER   fmla	z0.d, p0/m, z0.d, z1.d
+# CHECK-NEXT: [0,1]     DPPPeeeeER.    .    .    .  .   fmla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [0,2]     DPPPPPeeeeER   .    .    .  .   fmla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .  .   fmla	z0.d, p0/m, z0.d, z1.d
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPeeeER .    .  .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPeeeeER  .  .   fmla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeeER.  .   fmla	z0.d, p0/m, z1.d, z2.d
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER   fmla	z0.d, p0/m, z0.d, z1.d
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1783,17 +2049,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .  .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D===eeeeER.    .    .    .  .   fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    .    .  .   fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .  .   fmla	z0.d, z0.d, z1.d[1]
-# CHECK-NEXT: [1,0]     D=============eeeER .    .  .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D================eeeeER  .  .   fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: [1,2]     D==================eeeeER.  .   fmla	z0.d, z1.d, z2.d[1]
-# CHECK-NEXT: [1,3]     D======================eeeeER   fmla	z0.d, z0.d, z1.d[1]
+# CHECK-NEXT: [0,1]     DPPPeeeeER.    .    .    .  .   fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: [0,2]     DPPPPPeeeeER   .    .    .  .   fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .  .   fmla	z0.d, z0.d, z1.d[1]
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPeeeER .    .  .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPeeeeER  .  .   fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeeER.  .   fmla	z0.d, z1.d, z2.d[1]
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER   fmla	z0.d, z0.d, z1.d[1]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1821,17 +2094,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .  .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D===eeeeER.    .    .    .  .   fmlalb	z0.s, z1.h, z2.h
-# CHECK-NEXT: [0,2]     D=====eeeeER   .    .    .  .   fmlalb	z0.s, z1.h, z2.h
-# CHECK-NEXT: [0,3]     D=========eeeeER    .    .  .   fmlalb	z0.s, z0.h, z1.h
-# CHECK-NEXT: [1,0]     D=============eeeER .    .  .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D================eeeeER  .  .   fmlalb	z0.s, z1.h, z2.h
-# CHECK-NEXT: [1,2]     D==================eeeeER.  .   fmlalb	z0.s, z1.h, z2.h
-# CHECK-NEXT: [1,3]     D======================eeeeER   fmlalb	z0.s, z0.h, z1.h
+# CHECK-NEXT: [0,1]     DPPPeeeeER.    .    .    .  .   fmlalb	z0.s, z1.h, z2.h
+# CHECK-NEXT: [0,2]     DPPPPPeeeeER   .    .    .  .   fmlalb	z0.s, z1.h, z2.h
+# CHECK-NEXT: [0,3]     DPPPPPPPPPeeeeER    .    .  .   fmlalb	z0.s, z0.h, z1.h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPeeeER .    .  .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPeeeeER  .  .   fmlalb	z0.s, z1.h, z2.h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPeeeeER.  .   fmlalb	z0.s, z1.h, z2.h
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPeeeeER   fmlalb	z0.s, z0.h, z1.h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1859,17 +2139,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          01234
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    .   .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    .    .   .   bfdot	z0.s, z1.h, z2.h
-# CHECK-NEXT: [0,2]     D======eeeeeER .    .    .    .   .   bfdot	z0.s, z1.h, z2.h
-# CHECK-NEXT: [0,3]     D===========eeeeeER .    .    .   .   bfdot	z0.s, z0.h, z1.h
-# CHECK-NEXT: [1,0]     D================eeeER   .    .   .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D===================eeeeeER   .   .   bfdot	z0.s, z1.h, z2.h
-# CHECK-NEXT: [1,2]     D======================eeeeeER.   .   bfdot	z0.s, z1.h, z2.h
-# CHECK-NEXT: [1,3]     D===========================eeeeeER   bfdot	z0.s, z0.h, z1.h
+# CHECK-NEXT: [0,1]     DPPPeeeeeER    .    .    .    .   .   bfdot	z0.s, z1.h, z2.h
+# CHECK-NEXT: [0,2]     DPPPPPPeeeeeER .    .    .    .   .   bfdot	z0.s, z1.h, z2.h
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPeeeeeER .    .    .   .   bfdot	z0.s, z0.h, z1.h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPeeeER   .    .   .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPeeeeeER   .   .   bfdot	z0.s, z1.h, z2.h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPeeeeeER.   .   bfdot	z0.s, z1.h, z2.h
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER   bfdot	z0.s, z0.h, z1.h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1897,17 +2184,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    .    .    .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D===eeeeeeER   .    .    .    .    .    .   bfmmla	z0.s, z1.h, z2.h
-# CHECK-NEXT: [0,2]     D=======eeeeeeER    .    .    .    .    .   bfmmla	z0.s, z1.h, z2.h
-# CHECK-NEXT: [0,3]     D=============eeeeeeER   .    .    .    .   bfmmla	z0.s, z0.h, z1.h
-# CHECK-NEXT: [1,0]     D===================eeeER.    .    .    .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D======================eeeeeeER    .    .   bfmmla	z0.s, z1.h, z2.h
-# CHECK-NEXT: [1,2]     D==========================eeeeeeER.    .   bfmmla	z0.s, z1.h, z2.h
-# CHECK-NEXT: [1,3]     D================================eeeeeeER   bfmmla	z0.s, z0.h, z1.h
+# CHECK-NEXT: [0,1]     DPPPeeeeeeER   .    .    .    .    .    .   bfmmla	z0.s, z1.h, z2.h
+# CHECK-NEXT: [0,2]     DPPPPPPPeeeeeeER    .    .    .    .    .   bfmmla	z0.s, z1.h, z2.h
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPPPPeeeeeeER   .    .    .    .   bfmmla	z0.s, z0.h, z1.h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPPPPPeeeER.    .    .    .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPPPPPeeeeeeER    .    .   bfmmla	z0.s, z1.h, z2.h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER.    .   bfmmla	z0.s, z1.h, z2.h
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeeER   bfmmla	z0.s, z0.h, z1.h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1935,17 +2229,24 @@ bfmlalb z0.s, z0.h, z1.h
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789          012
 # CHECK-NEXT: Index     0123456789          0123456789
 
 # CHECK:      [0,0]     DeeeER    .    .    .    .    . .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [0,1]     D===eeeeeER    .    .    .    . .   bfmlalb	z0.s, z1.h, z2.h
-# CHECK-NEXT: [0,2]     D=====eeeeeER  .    .    .    . .   bfmlalb	z0.s, z1.h, z2.h
-# CHECK-NEXT: [0,3]     D==========eeeeeER  .    .    . .   bfmlalb	z0.s, z0.h, z1.h
-# CHECK-NEXT: [1,0]     D===============eeeER    .    . .   fmul	z0.d, z0.d, z0.d
-# CHECK-NEXT: [1,1]     D==================eeeeeER    . .   bfmlalb	z0.s, z1.h, z2.h
-# CHECK-NEXT: [1,2]     D====================eeeeeER  . .   bfmlalb	z0.s, z1.h, z2.h
-# CHECK-NEXT: [1,3]     D=========================eeeeeER   bfmlalb	z0.s, z0.h, z1.h
+# CHECK-NEXT: [0,1]     DPPPeeeeeER    .    .    .    . .   bfmlalb	z0.s, z1.h, z2.h
+# CHECK-NEXT: [0,2]     DPPPPPeeeeeER  .    .    .    . .   bfmlalb	z0.s, z1.h, z2.h
+# CHECK-NEXT: [0,3]     DPPPPPPPPPPeeeeeER  .    .    . .   bfmlalb	z0.s, z0.h, z1.h
+# CHECK-NEXT: [1,0]     DPPPPPPPPPPPPPPPeeeER    .    . .   fmul	z0.d, z0.d, z0.d
+# CHECK-NEXT: [1,1]     DPPPPPPPPPPPPPPPPPPeeeeeER    . .   bfmlalb	z0.s, z1.h, z2.h
+# CHECK-NEXT: [1,2]     DPPPPPPPPPPPPPPPPPPPPeeeeeER  . .   bfmlalb	z0.s, z1.h, z2.h
+# CHECK-NEXT: [1,3]     DPPPPPPPPPPPPPPPPPPPPPPPPPeeeeeER   bfmlalb	z0.s, z0.h, z1.h
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

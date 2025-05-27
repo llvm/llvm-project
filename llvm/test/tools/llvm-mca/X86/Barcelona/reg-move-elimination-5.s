@@ -59,23 +59,30 @@ mov %rdx, %rax
 # CHECK-NEXT:  -      -     0.33    -      -     0.67    -      -     movq	%rdx, %rax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:      Index     012345678
 
 # CHECK:      [0,0]     DR   .  .   xorq	%rax, %rax
 # CHECK-NEXT: [0,1]     DeER .  .   movq	%rax, %rbx
-# CHECK-NEXT: [0,2]     D=eER.  .   movq	%rbx, %rcx
-# CHECK-NEXT: [0,3]     D==eER  .   movq	%rcx, %rdx
-# CHECK-NEXT: [0,4]     .D==eER .   movq	%rdx, %rax
+# CHECK-NEXT: [0,2]     DPeER.  .   movq	%rbx, %rcx
+# CHECK-NEXT: [0,3]     DPPeER  .   movq	%rcx, %rdx
+# CHECK-NEXT: [0,4]     .DPPeER .   movq	%rdx, %rax
 # CHECK-NEXT: [1,0]     .D----R .   xorq	%rax, %rax
 # CHECK-NEXT: [1,1]     .DeE--R .   movq	%rax, %rbx
-# CHECK-NEXT: [1,2]     .D=eE-R .   movq	%rbx, %rcx
-# CHECK-NEXT: [1,3]     . D=eER .   movq	%rcx, %rdx
-# CHECK-NEXT: [1,4]     . D==eER.   movq	%rdx, %rax
+# CHECK-NEXT: [1,2]     .DPeE-R .   movq	%rbx, %rcx
+# CHECK-NEXT: [1,3]     . DPeER .   movq	%rcx, %rdx
+# CHECK-NEXT: [1,4]     . DPPeER.   movq	%rdx, %rax
 # CHECK-NEXT: [2,0]     . D----R.   xorq	%rax, %rax
 # CHECK-NEXT: [2,1]     . DeE--R.   movq	%rax, %rbx
 # CHECK-NEXT: [2,2]     .  DeE-R.   movq	%rbx, %rcx
-# CHECK-NEXT: [2,3]     .  D=eER.   movq	%rcx, %rdx
-# CHECK-NEXT: [2,4]     .  D==eER   movq	%rdx, %rax
+# CHECK-NEXT: [2,3]     .  DPeER.   movq	%rcx, %rdx
+# CHECK-NEXT: [2,4]     .  DPPeER   movq	%rdx, %rax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

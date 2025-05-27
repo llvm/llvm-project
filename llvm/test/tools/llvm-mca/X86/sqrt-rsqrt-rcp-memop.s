@@ -32,60 +32,108 @@ rcpss (%rax), %xmm1
 # ALL:            [0] Code Region - test_sqrtss
 
 # ALL:            Timeline view:
+# ALL-NEXT:       D: Instruction dispatched
+# ALL-NEXT:       e: Instruction executing
+# ALL-NEXT:       E: Instruction executed (write-back stage)
+# ALL-NEXT:       P: Instruction waiting for data dependency
+# ALL-NEXT:       =: Instruction waiting for available HW resource
+# ALL-NEXT:       -: Instruction executed, waiting to retire in order.
 
-# BARCELONA-NEXT:                     0123456789
+# BARCELONA:                          0123456789
 # BARCELONA-NEXT: Index     0123456789          0123
 
-# BDVER2-NEXT:                        012345678
+# BDVER2:                             012345678
 # BDVER2-NEXT:    Index     0123456789
 
-# BROADWELL-NEXT:                     0123456789
+# BROADWELL:                          0123456789
 # BROADWELL-NEXT: Index     0123456789
 
-# BTVER2-NEXT:                        0123456789          0
-# BTVER2-NEXT:    Index     0123456789          0123456789
-
-# HASWELL-NEXT:                       0123456789
+# HASWELL:                            0123456789
 # HASWELL-NEXT:   Index     0123456789
 
-# SKYLAKE-NEXT:                       0123456789
+# SKYLAKE:                            0123456789
 # SKYLAKE-NEXT:   Index     0123456789          0
 
-# ZNVER1-NEXT:                        0123456789
-# ZNVER1-NEXT:    Index     0123456789          01234
-
-# ZNVER2-NEXT:                        0123456789
-# ZNVER2-NEXT:    Index     0123456789          01234
-
 # BARCELONA:      [0,0]     DeER .    .    .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BARCELONA-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# BARCELONA-NEXT: [0,1]     DPeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
 # BDVER2:         [0,0]     DeeER.    .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BDVER2-NEXT:    [0,1]     D==eeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# BDVER2-NEXT:    [0,1]     DPPeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
 # BROADWELL:      [0,0]     DeER .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
-
-# BTVER2:         [0,0]     DeeER.    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# BTVER2-NEXT:    [0,1]     D==eeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# BROADWELL-NEXT: [0,1]     DPeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
 # HASWELL:        [0,0]     DeER .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# HASWELL-NEXT:   [0,1]     D=eeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# HASWELL-NEXT:   [0,1]     DPeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
 # SKYLAKE:        [0,0]     DeER .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# SKYLAKE-NEXT:   [0,1]     D=eeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# SKYLAKE-NEXT:   [0,1]     DPeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+
+# BTVER2:                             0123456789          0
+# BTVER2-NEXT:    Index     0123456789          0123456789
+
+# ZNVER1:                             0123456789
+# ZNVER1-NEXT:    Index     0123456789          01234
+
+# ZNVER2:                             0123456789
+# ZNVER2-NEXT:    Index     0123456789          01234
+
+# BTVER2:         [0,0]     DeeER.    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
+# BTVER2-NEXT:    [0,1]     DPPeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
 # ZNVER1:         [0,0]     DeER .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# ZNVER1-NEXT:    [0,1]     DPeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
 # ZNVER2:         [0,0]     DeER .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER2-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# ZNVER2-NEXT:    [0,1]     DPeeeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
-# ALL:            Average Wait times (based on the timeline view):
-# ALL-NEXT:       [0]: Executions
-# ALL-NEXT:       [1]: Average time spent waiting in a scheduler's queue
-# ALL-NEXT:       [2]: Average time spent waiting in a scheduler's queue while ready
-# ALL-NEXT:       [3]: Average time elapsed from WB until retire stage
+# BARCELONA:      Average Wait times (based on the timeline view):
+# BARCELONA-NEXT: [0]: Executions
+# BARCELONA-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# BARCELONA-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# BARCELONA-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# BDVER2:         Average Wait times (based on the timeline view):
+# BDVER2-NEXT:    [0]: Executions
+# BDVER2-NEXT:    [1]: Average time spent waiting in a scheduler's queue
+# BDVER2-NEXT:    [2]: Average time spent waiting in a scheduler's queue while ready
+# BDVER2-NEXT:    [3]: Average time elapsed from WB until retire stage
+
+# BROADWELL:      Average Wait times (based on the timeline view):
+# BROADWELL-NEXT: [0]: Executions
+# BROADWELL-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# BROADWELL-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# BROADWELL-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# BTVER2:         Average Wait times (based on the timeline view):
+# BTVER2-NEXT:    [0]: Executions
+# BTVER2-NEXT:    [1]: Average time spent waiting in a scheduler's queue
+# BTVER2-NEXT:    [2]: Average time spent waiting in a scheduler's queue while ready
+# BTVER2-NEXT:    [3]: Average time elapsed from WB until retire stage
+
+# HASWELL:        Average Wait times (based on the timeline view):
+# HASWELL-NEXT:   [0]: Executions
+# HASWELL-NEXT:   [1]: Average time spent waiting in a scheduler's queue
+# HASWELL-NEXT:   [2]: Average time spent waiting in a scheduler's queue while ready
+# HASWELL-NEXT:   [3]: Average time elapsed from WB until retire stage
+
+# SKYLAKE:        Average Wait times (based on the timeline view):
+# SKYLAKE-NEXT:   [0]: Executions
+# SKYLAKE-NEXT:   [1]: Average time spent waiting in a scheduler's queue
+# SKYLAKE-NEXT:   [2]: Average time spent waiting in a scheduler's queue while ready
+# SKYLAKE-NEXT:   [3]: Average time elapsed from WB until retire stage
+
+# ZNVER1:         Average Wait times (based on the timeline view):
+# ZNVER1-NEXT:    [0]: Executions
+# ZNVER1-NEXT:    [1]: Average time spent waiting in a scheduler's queue
+# ZNVER1-NEXT:    [2]: Average time spent waiting in a scheduler's queue while ready
+# ZNVER1-NEXT:    [3]: Average time elapsed from WB until retire stage
+
+# ZNVER2:         Average Wait times (based on the timeline view):
+# ZNVER2-NEXT:    [0]: Executions
+# ZNVER2-NEXT:    [1]: Average time spent waiting in a scheduler's queue
+# ZNVER2-NEXT:    [2]: Average time spent waiting in a scheduler's queue while ready
+# ZNVER2-NEXT:    [3]: Average time elapsed from WB until retire stage
 
 # ALL:                  [0]    [1]    [2]    [3]
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       leaq	8(%rsp,%rdi,2), %rax
@@ -117,54 +165,60 @@ rcpss (%rax), %xmm1
 # ALL:            [1] Code Region - test_sqrtsd
 
 # ALL:            Timeline view:
+# ALL-NEXT:       D: Instruction dispatched
+# ALL-NEXT:       e: Instruction executing
+# ALL-NEXT:       E: Instruction executed (write-back stage)
+# ALL-NEXT:       P: Instruction waiting for data dependency
+# ALL-NEXT:       =: Instruction waiting for available HW resource
+# ALL-NEXT:       -: Instruction executed, waiting to retire in order.
 
-# BARCELONA-NEXT:                     0123456789          0
+# BARCELONA:                          0123456789          0
 # BARCELONA-NEXT: Index     0123456789          0123456789
 
-# BDVER2-NEXT:                        012345678
+# BDVER2:                             012345678
 # BDVER2-NEXT:    Index     0123456789
 
-# BROADWELL-NEXT:                     0123456789
+# BROADWELL:                          0123456789
 # BROADWELL-NEXT: Index     0123456789          01234
 
-# BTVER2-NEXT:                        0123456789          0123456
+# BTVER2:                             0123456789          0123456
 # BTVER2-NEXT:    Index     0123456789          0123456789
 
-# HASWELL-NEXT:                       0123456789
+# HASWELL:                            0123456789
 # HASWELL-NEXT:   Index     0123456789          01234
 
-# SKYLAKE-NEXT:                       0123456789
+# SKYLAKE:                            0123456789
 # SKYLAKE-NEXT:   Index     0123456789          0123456
 
-# ZNVER1-NEXT:                        0123456789          0
+# ZNVER1:                             0123456789          0
 # ZNVER1-NEXT:    Index     0123456789          0123456789
 
-# ZNVER2-NEXT:                        0123456789          0
+# ZNVER2:                             0123456789          0
 # ZNVER2-NEXT:    Index     0123456789          0123456789
 
 # BARCELONA:      [0,0]     DeER .    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# BARCELONA-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# BARCELONA-NEXT: [0,1]     DPeeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # BDVER2:         [0,0]     DeeER.    .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BDVER2-NEXT:    [0,1]     D==eeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# BDVER2-NEXT:    [0,1]     DPPeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # BROADWELL:      [0,0]     DeER .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# BROADWELL-NEXT: [0,1]     DPeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # BTVER2:         [0,0]     DeeER.    .    .    .    .    .    ..   leaq	8(%rsp,%rdi,2), %rax
-# BTVER2-NEXT:    [0,1]     D==eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# BTVER2-NEXT:    [0,1]     DPPeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # HASWELL:        [0,0]     DeER .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# HASWELL-NEXT:   [0,1]     D=eeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# HASWELL-NEXT:   [0,1]     DPeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # SKYLAKE:        [0,0]     DeER .    .    .    .    ..   leaq	8(%rsp,%rdi,2), %rax
-# SKYLAKE-NEXT:   [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# SKYLAKE-NEXT:   [0,1]     DPeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # ZNVER1:         [0,0]     DeER .    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# ZNVER1-NEXT:    [0,1]     DPeeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # ZNVER2:         [0,0]     DeER .    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER2-NEXT:    [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# ZNVER2-NEXT:    [0,1]     DPeeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions
@@ -202,41 +256,60 @@ rcpss (%rax), %xmm1
 # ALL:            [2] Code Region - test_rsqrtss
 
 # ALL:            Timeline view:
+# ALL-NEXT:       D: Instruction dispatched
+# ALL-NEXT:       e: Instruction executing
+# ALL-NEXT:       E: Instruction executed (write-back stage)
+# ALL-NEXT:       P: Instruction waiting for data dependency
+# ALL-NEXT:       =: Instruction waiting for available HW resource
+# ALL-NEXT:       -: Instruction executed, waiting to retire in order.
 
-# BARCELONA-NEXT:                     01234
-# BDVER2-NEXT:                        01234
-# BROADWELL-NEXT:                     0123
-# BTVER2-NEXT:                        01
-# HASWELL-NEXT:                       0123
-# SKYLAKE-NEXT:                       012
-# ZNVER1-NEXT:                        012345
-# ZNVER2-NEXT:                        012345
+# BARCELONA:                          01234
+# BARCELONA-NEXT: Index     0123456789
 
-# ALL-NEXT:       Index     0123456789
+# BDVER2:                             01234
+# BDVER2-NEXT:    Index     0123456789
+
+# BROADWELL:                          0123
+# BROADWELL-NEXT: Index     0123456789
+
+# BTVER2:                             01
+# BTVER2-NEXT:    Index     0123456789
+
+# HASWELL:                            0123
+# HASWELL-NEXT:   Index     0123456789
+
+# SKYLAKE:                            012
+# SKYLAKE-NEXT:   Index     0123456789
+
+# ZNVER1:                             012345
+# ZNVER1-NEXT:    Index     0123456789
+
+# ZNVER2:                             012345
+# ZNVER2-NEXT:    Index     0123456789
 
 # BARCELONA:      [0,0]     DeER .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# BARCELONA-NEXT: [0,1]     D=eeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# BARCELONA-NEXT: [0,1]     DPeeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # BDVER2:         [0,0]     DeeER.    .   .   leaq	8(%rsp,%rdi,2), %rax
-# BDVER2-NEXT:    [0,1]     D==eeeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# BDVER2-NEXT:    [0,1]     DPPeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # BROADWELL:      [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# BROADWELL-NEXT: [0,1]     DPeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # BTVER2:         [0,0]     DeeER.    ..   leaq	8(%rsp,%rdi,2), %rax
-# BTVER2-NEXT:    [0,1]     D==eeeeeeeER   rsqrtss	(%rax), %xmm1
+# BTVER2-NEXT:    [0,1]     DPPeeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # HASWELL:        [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# HASWELL-NEXT:   [0,1]     D=eeeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# HASWELL-NEXT:   [0,1]     DPeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # SKYLAKE:        [0,0]     DeER .    . .   leaq	8(%rsp,%rdi,2), %rax
-# SKYLAKE-NEXT:   [0,1]     D=eeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# SKYLAKE-NEXT:   [0,1]     DPeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # ZNVER1:         [0,0]     DeER .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# ZNVER1-NEXT:    [0,1]     DPeeeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # ZNVER2:         [0,0]     DeER .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER2-NEXT:    [0,1]     D=eeeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# ZNVER2-NEXT:    [0,1]     DPeeeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions
@@ -274,41 +347,60 @@ rcpss (%rax), %xmm1
 # ALL:            [3] Code Region - test_rcp
 
 # ALL:            Timeline view:
+# ALL-NEXT:       D: Instruction dispatched
+# ALL-NEXT:       e: Instruction executing
+# ALL-NEXT:       E: Instruction executed (write-back stage)
+# ALL-NEXT:       P: Instruction waiting for data dependency
+# ALL-NEXT:       =: Instruction waiting for available HW resource
+# ALL-NEXT:       -: Instruction executed, waiting to retire in order.
 
-# BARCELONA-NEXT:                     01234
-# BDVER2-NEXT:                        01234
-# BROADWELL-NEXT:                     0123
-# BTVER2-NEXT:                        01
-# HASWELL-NEXT:                       0123
-# SKYLAKE-NEXT:                       012
-# ZNVER1-NEXT:                        012345
-# ZNVER2-NEXT:                        012345
+# BARCELONA:                          01234
+# BARCELONA-NEXT: Index     0123456789
 
-# ALL-NEXT:       Index     0123456789
+# BDVER2:                             01234
+# BDVER2-NEXT:    Index     0123456789
+
+# BROADWELL:                          0123
+# BROADWELL-NEXT: Index     0123456789
+
+# BTVER2:                             01
+# BTVER2-NEXT:    Index     0123456789
+
+# HASWELL:                            0123
+# HASWELL-NEXT:   Index     0123456789
+
+# SKYLAKE:                            012
+# SKYLAKE-NEXT:   Index     0123456789
+
+# ZNVER1:                             012345
+# ZNVER1-NEXT:    Index     0123456789
+
+# ZNVER2:                             012345
+# ZNVER2-NEXT:    Index     0123456789
 
 # BARCELONA:      [0,0]     DeER .    .   .   leaq	8(%rsp,%rdi,2), %rax
-# BARCELONA-NEXT: [0,1]     D=eeeeeeeeeeeER   rcpss	(%rax), %xmm1
+# BARCELONA-NEXT: [0,1]     DPeeeeeeeeeeeER   rcpss	(%rax), %xmm1
 
 # BDVER2:         [0,0]     DeeER.    .   .   leaq	8(%rsp,%rdi,2), %rax
-# BDVER2-NEXT:    [0,1]     D==eeeeeeeeeeER   rcpss	(%rax), %xmm1
+# BDVER2-NEXT:    [0,1]     DPPeeeeeeeeeeER   rcpss	(%rax), %xmm1
 
 # BROADWELL:      [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeER   rcpss	(%rax), %xmm1
+# BROADWELL-NEXT: [0,1]     DPeeeeeeeeeeER   rcpss	(%rax), %xmm1
 
 # BTVER2:         [0,0]     DeeER.    ..   leaq	8(%rsp,%rdi,2), %rax
-# BTVER2-NEXT:    [0,1]     D==eeeeeeeER   rcpss	(%rax), %xmm1
+# BTVER2-NEXT:    [0,1]     DPPeeeeeeeER   rcpss	(%rax), %xmm1
 
 # HASWELL:        [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# HASWELL-NEXT:   [0,1]     D=eeeeeeeeeeER   rcpss	(%rax), %xmm1
+# HASWELL-NEXT:   [0,1]     DPeeeeeeeeeeER   rcpss	(%rax), %xmm1
 
 # SKYLAKE:        [0,0]     DeER .    . .   leaq	8(%rsp,%rdi,2), %rax
-# SKYLAKE-NEXT:   [0,1]     D=eeeeeeeeeER   rcpss	(%rax), %xmm1
+# SKYLAKE-NEXT:   [0,1]     DPeeeeeeeeeER   rcpss	(%rax), %xmm1
 
 # ZNVER1:         [0,0]     DeER .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER1-NEXT:    [0,1]     D=eeeeeeeeeeeeER   rcpss	(%rax), %xmm1
+# ZNVER1-NEXT:    [0,1]     DPeeeeeeeeeeeeER   rcpss	(%rax), %xmm1
 
 # ZNVER2:         [0,0]     DeER .    .    .   leaq	8(%rsp,%rdi,2), %rax
-# ZNVER2-NEXT:    [0,1]     D=eeeeeeeeeeeeER   rcpss	(%rax), %xmm1
+# ZNVER2-NEXT:    [0,1]     DPeeeeeeeeeeeeER   rcpss	(%rax), %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions

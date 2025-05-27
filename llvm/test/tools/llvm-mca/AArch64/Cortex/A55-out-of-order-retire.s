@@ -88,7 +88,14 @@ add	w7, w9, w0
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     add	w7, w9, w0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          0123
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeE .    .  .   fdiv	s1, s2, s3

@@ -50,13 +50,24 @@ vfmadd213ps (%rdi), %xmm1, %xmm2
 # ZNVER1-NEXT:  Block RThroughput: 0.5
 
 # ALL:          Timeline view:
+# ALL-NEXT:     D: Instruction dispatched
+# ALL-NEXT:     e: Instruction executing
+# ALL-NEXT:     E: Instruction executed (write-back stage)
+# ALL-NEXT:     P: Instruction waiting for data dependency
+# ALL-NEXT:     =: Instruction waiting for available HW resource
+# ALL-NEXT:     -: Instruction executed, waiting to retire in order.
 
-# BDWELL-NEXT:                      012
-# HASWELL-NEXT:                     0123
-# SKYLAKE-NEXT:                     012
-# ZNVER1-NEXT:                      01234
+# BDWELL:                           012
+# BDWELL-NEXT:  Index     0123456789
 
-# ALL-NEXT:     Index     0123456789
+# HASWELL:                          0123
+# HASWELL-NEXT: Index     0123456789
+
+# SKYLAKE:                          012
+# SKYLAKE-NEXT: Index     0123456789
+
+# ZNVER1:                           01234
+# ZNVER1-NEXT:  Index     0123456789
 
 # BDWELL:       [0,0]     DeeeER    . .   vaddps	%xmm0, %xmm0, %xmm2
 # BDWELL-NEXT:  [0,1]     DeeeeeeeeeeER   vfmadd213ps	(%rdi), %xmm1, %xmm2

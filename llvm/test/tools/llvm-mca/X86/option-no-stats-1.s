@@ -71,19 +71,26 @@ add %edi, %eax
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%edi, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          012
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeER .    . .   addl	%edi, %eax
-# CHECK-NEXT: [1,0]     D=eER.    . .   addl	%edi, %eax
-# CHECK-NEXT: [2,0]     .D=eER    . .   addl	%edi, %eax
-# CHECK-NEXT: [3,0]     .D==eER   . .   addl	%edi, %eax
-# CHECK-NEXT: [4,0]     . D==eER  . .   addl	%edi, %eax
-# CHECK-NEXT: [5,0]     . D===eER . .   addl	%edi, %eax
-# CHECK-NEXT: [6,0]     .  D===eER. .   addl	%edi, %eax
-# CHECK-NEXT: [7,0]     .  D====eER .   addl	%edi, %eax
-# CHECK-NEXT: [8,0]     .   D====eER.   addl	%edi, %eax
-# CHECK-NEXT: [9,0]     .   D=====eER   addl	%edi, %eax
+# CHECK-NEXT: [1,0]     DPeER.    . .   addl	%edi, %eax
+# CHECK-NEXT: [2,0]     .DPeER    . .   addl	%edi, %eax
+# CHECK-NEXT: [3,0]     .DPPeER   . .   addl	%edi, %eax
+# CHECK-NEXT: [4,0]     . DPPeER  . .   addl	%edi, %eax
+# CHECK-NEXT: [5,0]     . DPPPeER . .   addl	%edi, %eax
+# CHECK-NEXT: [6,0]     .  DPPPeER. .   addl	%edi, %eax
+# CHECK-NEXT: [7,0]     .  DPPPPeER .   addl	%edi, %eax
+# CHECK-NEXT: [8,0]     .   DPPPPeER.   addl	%edi, %eax
+# CHECK-NEXT: [9,0]     .   DPPPPPeER   addl	%edi, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

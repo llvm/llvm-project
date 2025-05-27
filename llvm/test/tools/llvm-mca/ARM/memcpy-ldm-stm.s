@@ -44,15 +44,22 @@
 # CHECK-NEXT:  -      -      -     2.00   1.37   1.63   stm	r0!, {r3, r4, r5, r6, r12, lr}
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: D: Instruction dispatched
+# CHECK-NEXT: e: Instruction executing
+# CHECK-NEXT: E: Instruction executed (write-back stage)
+# CHECK-NEXT: P: Instruction waiting for data dependency
+# CHECK-NEXT: =: Instruction waiting for available HW resource
+# CHECK-NEXT: -: Instruction executed, waiting to retire in order.
+
+# CHECK:                          0123456789
 # CHECK-NEXT: Index     0123456789          012345678
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeER    .  .   ldm	r2!, {r3, r4, r5, r6, r12, lr}
-# CHECK-NEXT: [0,1]     .D=================eER   .  .   stm	r0!, {r3, r4, r5, r6, r12, lr}
+# CHECK-NEXT: [0,1]     .DPPPPPPPPPPPPPPPPPeER   .  .   stm	r0!, {r3, r4, r5, r6, r12, lr}
 # CHECK-NEXT: [1,0]     .  DeeeeeeeeeeeeeeeeeeER .  .   ldm	r2!, {r3, r4, r5, r6, r12, lr}
-# CHECK-NEXT: [1,1]     .   D=================eER.  .   stm	r0!, {r3, r4, r5, r6, r12, lr}
+# CHECK-NEXT: [1,1]     .   DPPPPPPPPPPPPPPPPPeER.  .   stm	r0!, {r3, r4, r5, r6, r12, lr}
 # CHECK-NEXT: [2,0]     .    .DeeeeeeeeeeeeeeeeeeER .   ldm	r2!, {r3, r4, r5, r6, r12, lr}
-# CHECK-NEXT: [2,1]     .    . D==================eER   stm	r0!, {r3, r4, r5, r6, r12, lr}
+# CHECK-NEXT: [2,1]     .    . DPPPPPPPPPPPPPPPPP=eER   stm	r0!, {r3, r4, r5, r6, r12, lr}
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
