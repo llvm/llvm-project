@@ -83,12 +83,13 @@ public:
   struct __data {
     pointer __first_ = nullptr;
     pointer __begin_ = nullptr;
-#ifndef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
+    size_type __size_ = 0;
+    size_type __cap_ = 0;
+    allocator_type __alloc_;
+#else
     pointer __end_ = nullptr;
     _LIBCPP_COMPRESSED_PAIR(pointer, __cap_ = nullptr, allocator_type, __alloc_);
-#else
-    size_type __size_ = 0;
-    _LIBCPP_COMPRESSED_PAIR(size_type, __cap_ = 0, allocator_type, __alloc_);
 #endif
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __data() = default;
@@ -96,13 +97,6 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __data(const allocator_type& __alloc)
     : __alloc_(__alloc)
     {}
-
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer first() _NOEXCEPT {
-      return __first_;
-    }
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer first() const _NOEXCEPT {
-      return __first_;
-    }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer begin() _NOEXCEPT {
       return __begin_;
@@ -112,7 +106,7 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer end() _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       return __begin_ + __size_;
 #else
       return __end_;
@@ -120,7 +114,7 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer end() const _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       return __begin_ + __size_;
 #else
       return __end_;
@@ -128,7 +122,7 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       return __size_;
 #else
       return static_cast<size_type>(__end_ - __begin_);
@@ -136,7 +130,7 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       return __size_ == 0;
 #else
       return __begin_ == __end_;
@@ -144,31 +138,15 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type capacity() const _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       return __cap_;
 #else
       return static_cast<size_type>(__cap_ - __first_);
 #endif
     }
 
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __capacity_as_pointer() _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
-      return __first_ + __cap_;
-#else
-      return __cap_;
-#endif
-    }
-
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __capacity_as_pointer() const _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
-      return __first_ + __cap_;
-#else
-      return __cap_;
-#endif
-    }
-
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __update_begin(pointer __new_begin) _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       __size_ -= __new_begin - __begin_;
 #else
       // TODO: explain why there isn't a pointer-based analogue
@@ -183,7 +161,7 @@ public:
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __update_sentinel(pointer __new_end) _NOEXCEPT {
       _LIBCPP_ASSERT(__first_ <= __new_end, "__new_end cannot precede __first_");
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       __size_ += __new_end - end();
 #else
       __end_ = __new_end;
@@ -191,7 +169,7 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __update_sentinel(size_type __new_size) _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       __size_ = __new_size;
 #else
       __end_ = __begin_ + __new_size;
@@ -199,7 +177,7 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __update_capacity(size_type __new_capacity) _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       __cap_ = __new_capacity;
 #else
       __cap_ = __first_ + __new_capacity;
@@ -207,7 +185,7 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __back_spare() const _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       // `__cap_ - __end_` tells us the total number of spares when in size-mode. We need to remove
       // the __front_spare from the count.
       return __cap_ - __size_ - __front_spare();
@@ -217,7 +195,7 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference back() _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       return __begin_[__size_ - 1];
 #else
       return *(__end_ - 1);
@@ -225,7 +203,7 @@ public:
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       return __begin_[__size_ - 1];
 #else
       return *(__end_ - 1);
@@ -237,7 +215,7 @@ public:
       std::swap(__first_, __other.__first_);
       std::swap(__begin_, __other.__begin_);
       std::swap(__cap_, __other.__cap_);
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       std::swap(__size_, __other.__size_);
 #else
       std::swap(__end_, __other.__end_);
@@ -251,38 +229,32 @@ public:
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const _NOEXCEPT {
       if (__first_ == nullptr) {
-        if (__begin_ != nullptr) {
+        if (__begin_ != nullptr)
           return false;
-        }
 
-        if (!empty()) {
+        if (!empty())
           return false;
-        }
 
-        if (capacity() != 0) {
+        if (capacity() != 0)
           return false;
-        }
 
         return true;
       }
 
-      if (__begin_ < __first_) {
+      if (__begin_ < __first_)
         return false;
-      }
 
-      if (capacity() < size()) {
+      if (capacity() < size())
         return false;
-      }
 
-      if (end() < __begin_) {
+      if (end() < __begin_)
         return false;
-      }
 
       return true;
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __is_full() const _NOEXCEPT {
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       return __size_ == __cap_;
 #else
       return __end_ == __cap_;
@@ -292,7 +264,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset() _NOEXCEPT {
       __first_ = nullptr;
       __begin_ = nullptr;
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       __size_ = 0;
       __cap_ = 0;
 #else
@@ -307,7 +279,7 @@ public:
       __first_ = __other.__first_;
       __begin_ = __other.__begin_;
       __cap_ = __other.__cap_;
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       __size_ = __other.__size_;
 #else
       __end_ = __other.__end_;
@@ -633,7 +605,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::emplace_fron
       difference_type __d = __data_.__back_spare();
       __d                 = (__d + 1) / 2;
       __data_.__begin_    = std::move_backward(__data_.__begin_, __end, __end + __d);
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
       // TODO: explain why there isn't a size-based analogue
 #else
       __data_.__end_ += __d;
@@ -648,7 +620,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::emplace_fron
 
   __alloc_traits::construct(__data_.__alloc_, std::__to_address(__data_.__begin_ - 1), std::forward<_Args>(__args)...);
   --__data_.__begin_;
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_SIZE_BASED_CONTAINERS
   __data_.__update_sentinel(__data_.end() + 1);
 #else
   // TODO: explain why there isn't a pointer-based analogue
