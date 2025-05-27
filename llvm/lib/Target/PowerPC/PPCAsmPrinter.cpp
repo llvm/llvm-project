@@ -445,6 +445,14 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
   }
 
   assert(MI->getOperand(OpNo).isReg());
+  const MachineOperand &FlagsOP = MI->getOperand(OpNo - 1);
+  if (!FlagsOP.isImm())
+    return true;
+  const InlineAsm::Flag Flags(FlagsOP.getImm());
+  if (Flags.getMemoryConstraintID() == InlineAsm::ConstraintCode::a) {
+    printOperand(MI, OpNo, O);
+    return false;
+  }
   O << "0(";
   printOperand(MI, OpNo, O);
   O << ")";

@@ -304,8 +304,8 @@ public:
       break;
     case 'a': // Address operand that is an indexed or indirect from a
               // register (`p' is preferable for asm statements)
-              // TODO: Add full support for this constraint
-      return false;
+      Info.setAllowsRegister();
+      break;
     case 'R': // AIX TOC entry
     case 'S': // Constant suitable as a 64-bit mask operand
     case 'T': // Constant suitable as a 32-bit mask operand
