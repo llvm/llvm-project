@@ -528,6 +528,7 @@ Warning flags
 
   + ``-Wthread-safety-attributes``: Semantic checks for thread safety attributes.
   + ``-Wthread-safety-analysis``: The core analysis.
+  + ``-Wthread-safety-pedantic``: Contradictory usage patterns.
   + ``-Wthread-safety-precise``: Requires that mutex expressions match precisely.
        This warning can be disabled for code which has a lot of aliases.
   + ``-Wthread-safety-reference``: Checks when guarded members are passed or
