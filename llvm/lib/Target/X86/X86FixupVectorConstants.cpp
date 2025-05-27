@@ -146,8 +146,16 @@ static std::optional<APInt> extractConstantBits(const Constant *C) {
 }
 
 static std::optional<APInt> extractConstantBits(const Constant *C,
-                                                unsigned NumBits) {
+                                                int64_t ByteOffset) {
+  int64_t BitOffset = ByteOffset * 8;
   if (std::optional<APInt> Bits = extractConstantBits(C))
+    return Bits->extractBits(Bits->getBitWidth() - BitOffset, BitOffset);
+  return std::nullopt;
+}
+
+static std::optional<APInt>
+extractConstantBits(const Constant *C, int64_t ByteOffset, unsigned NumBits) {
+  if (std::optional<APInt> Bits = extractConstantBits(C, ByteOffset))
     return Bits->zextOrTrunc(NumBits);
   return std::nullopt;
 }
@@ -155,10 +163,15 @@ static std::optional<APInt> extractConstantBits(const Constant *C,
 // Attempt to compute the splat width of bits data by normalizing the splat to
 // remove undefs.
 static std::optional<APInt> getSplatableConstant(const Constant *C,
+                                                 int64_t ByteOffset,
                                                  unsigned SplatBitWidth) {
   const Type *Ty = C->getType();
   assert((Ty->getPrimitiveSizeInBits() % SplatBitWidth) == 0 &&
          "Illegal splat width");
+
+  // TODO: Add ByteOffset support once we have test coverage.
+  if (ByteOffset != 0)
+    return std::nullopt;
 
   if (std::optional<APInt> Bits = extractConstantBits(C))
     if (Bits->isSplat(SplatBitWidth))
@@ -248,10 +261,12 @@ static Constant *rebuildConstant(LLVMContext &Ctx, Type *SclTy,
 
 // Attempt to rebuild a normalized splat vector constant of the requested splat
 // width, built up of potentially smaller scalar values.
-static Constant *rebuildSplatCst(const Constant *C, unsigned /*NumBits*/,
-                                 unsigned /*NumElts*/, unsigned SplatBitWidth) {
+static Constant *rebuildSplatCst(const Constant *C, int64_t ByteOffset,
+                                 unsigned /*NumBits*/, unsigned /*NumElts*/,
+                                 unsigned SplatBitWidth) {
   // TODO: Truncate to NumBits once ConvertToBroadcastAVX512 support this.
-  std::optional<APInt> Splat = getSplatableConstant(C, SplatBitWidth);
+  std::optional<APInt> Splat =
+      getSplatableConstant(C, ByteOffset, SplatBitWidth);
   if (!Splat)
     return nullptr;
 
@@ -270,8 +285,8 @@ static Constant *rebuildSplatCst(const Constant *C, unsigned /*NumBits*/,
   return rebuildConstant(C->getContext(), SclTy, *Splat, NumSclBits);
 }
 
-static Constant *rebuildZeroUpperCst(const Constant *C, unsigned NumBits,
-                                     unsigned /*NumElts*/,
+static Constant *rebuildZeroUpperCst(const Constant *C, int64_t ByteOffset,
+                                     unsigned NumBits, unsigned /*NumElts*/,
                                      unsigned ScalarBitWidth) {
   Type *SclTy = C->getType()->getScalarType();
   unsigned NumSclBits = SclTy->getPrimitiveSizeInBits();
@@ -279,7 +294,8 @@ static Constant *rebuildZeroUpperCst(const Constant *C, unsigned NumBits,
 
   if (NumBits > ScalarBitWidth) {
     // Determine if the upper bits are all zero.
-    if (std::optional<APInt> Bits = extractConstantBits(C, NumBits)) {
+    if (std::optional<APInt> Bits =
+            extractConstantBits(C, ByteOffset, NumBits)) {
       if (Bits->countLeadingZeros() >= (NumBits - ScalarBitWidth)) {
         // If the original constant was made of smaller elements, try to retain
         // those types.
@@ -297,14 +313,14 @@ static Constant *rebuildZeroUpperCst(const Constant *C, unsigned NumBits,
 }
 
 static Constant *rebuildExtCst(const Constant *C, bool IsSExt,
-                               unsigned NumBits, unsigned NumElts,
-                               unsigned SrcEltBitWidth) {
+                               int64_t ByteOffset, unsigned NumBits,
+                               unsigned NumElts, unsigned SrcEltBitWidth) {
   unsigned DstEltBitWidth = NumBits / NumElts;
   assert((NumBits % NumElts) == 0 && (NumBits % SrcEltBitWidth) == 0 &&
          (DstEltBitWidth % SrcEltBitWidth) == 0 &&
          (DstEltBitWidth > SrcEltBitWidth) && "Illegal extension width");
 
-  if (std::optional<APInt> Bits = extractConstantBits(C, NumBits)) {
+  if (std::optional<APInt> Bits = extractConstantBits(C, ByteOffset, NumBits)) {
     assert((Bits->getBitWidth() / DstEltBitWidth) == NumElts &&
            (Bits->getBitWidth() % DstEltBitWidth) == 0 &&
            "Unexpected constant extension");
@@ -326,13 +342,15 @@ static Constant *rebuildExtCst(const Constant *C, bool IsSExt,
 
   return nullptr;
 }
-static Constant *rebuildSExtCst(const Constant *C, unsigned NumBits,
-                                unsigned NumElts, unsigned SrcEltBitWidth) {
-  return rebuildExtCst(C, true, NumBits, NumElts, SrcEltBitWidth);
+static Constant *rebuildSExtCst(const Constant *C, int64_t ByteOffset,
+                                unsigned NumBits, unsigned NumElts,
+                                unsigned SrcEltBitWidth) {
+  return rebuildExtCst(C, true, ByteOffset, NumBits, NumElts, SrcEltBitWidth);
 }
-static Constant *rebuildZExtCst(const Constant *C, unsigned NumBits,
-                                unsigned NumElts, unsigned SrcEltBitWidth) {
-  return rebuildExtCst(C, false, NumBits, NumElts, SrcEltBitWidth);
+static Constant *rebuildZExtCst(const Constant *C, int64_t ByteOffset,
+                                unsigned NumBits, unsigned NumElts,
+                                unsigned SrcEltBitWidth) {
+  return rebuildExtCst(C, false, ByteOffset, NumBits, NumElts, SrcEltBitWidth);
 }
 
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
@@ -352,7 +370,8 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     int Op;
     int NumCstElts;
     int MemBitWidth;
-    std::function<Constant *(const Constant *, unsigned, unsigned, unsigned)>
+    std::function<Constant *(const Constant *, int64_t, unsigned, unsigned,
+                             unsigned)>
         RebuildConstant;
   };
   auto FixupConstant = [&](ArrayRef<FixupEntry> Fixups, unsigned RegBitWidth,
@@ -367,19 +386,23 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
 #endif
     assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
-    if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
+    int64_t ByteOffset = 0;
+    if (auto *C = X86::getConstantFromPool(MI, OperandNo, &ByteOffset)) {
       unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
       RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
       for (const FixupEntry &Fixup : Fixups) {
-        if (Fixup.Op) {
+        if (Fixup.Op && 0 <= ByteOffset &&
+            (RegBitWidth + (8 * ByteOffset)) <= CstBitWidth) {
           // Construct a suitable constant and adjust the MI to use the new
           // constant pool entry.
-          if (Constant *NewCst = Fixup.RebuildConstant(
-                  C, RegBitWidth, Fixup.NumCstElts, Fixup.MemBitWidth)) {
+          if (Constant *NewCst =
+                  Fixup.RebuildConstant(C, ByteOffset, RegBitWidth,
+                                        Fixup.NumCstElts, Fixup.MemBitWidth)) {
             unsigned NewCPI =
                 CP->getConstantPoolIndex(NewCst, Align(Fixup.MemBitWidth / 8));
             MI.setDesc(TII->get(Fixup.Op));
             MI.getOperand(OperandNo + X86::AddrDisp).setIndex(NewCPI);
+            MI.getOperand(OperandNo + X86::AddrDisp).setOffset(0);
             return true;
           }
         }

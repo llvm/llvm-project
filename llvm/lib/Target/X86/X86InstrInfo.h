@@ -112,7 +112,10 @@ bool isX87Instruction(MachineInstr &MI);
 int getFirstAddrOperandIdx(const MachineInstr &MI);
 
 /// Find any constant pool entry associated with a specific instruction operand.
-const Constant *getConstantFromPool(const MachineInstr &MI, unsigned OpNo);
+/// By default returns null if the address offset is non-zero, but will return
+/// the entry if \p ByteOffset is non-null to store the value.
+const Constant *getConstantFromPool(const MachineInstr &MI, unsigned OpNo,
+                                    int64_t *ByteOffset = nullptr);
 
 } // namespace X86
 
