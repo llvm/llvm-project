@@ -898,19 +898,6 @@ let Constraints = "$dr = $r,@earlyclobber $dr" in {
                    "movt\t$r, $s, $t", []>, Requires<[HasBoolean]>;
 }
 
-let Predicates = [HasBoolean] in {
-  def SPILL_BOOL: Pseudo<(outs), (ins BR:$b, mem8:$mem),
-                            "!spill_bool $b, $mem",[]> {
-    let mayStore = 1;
-  }
-
-  def RESTORE_BOOL: Pseudo<(outs BR:$out), (ins mem8:$mem),
-                            "!restore_bool $out, $mem",[]> {
-    let mayLoad = 1;
-    let Defs = [BREG];
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // SEXT Instruction
 //===----------------------------------------------------------------------===//

@@ -596,8 +596,7 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
   if (AllowParens && getLexer().is(AsmToken::LParen)) {
     size_t ReadCount = getLexer().peekTokens(Buf);
     if (ReadCount == 2 && Buf[1].getKind() == AsmToken::RParen) {
-      if ((Buf[0].getKind() == AsmToken::Integer) &&
-          (RegType == Xtensa_Generic))
+      if (Buf[0].getKind() == AsmToken::Integer && RegType == Xtensa_Generic)
         return ParseStatus::NoMatch;
       HadParens = true;
       getParser().Lex(); // Eat '('
