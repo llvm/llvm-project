@@ -5,7 +5,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16, -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-TRUE16 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16, -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-FAKE16 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
 
 define amdgpu_ps i16 @s_mul_i16(i16 inreg %num, i16 inreg %den) {
 ; GCN-LABEL: s_mul_i16:
