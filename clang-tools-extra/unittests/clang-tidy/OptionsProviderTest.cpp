@@ -1,4 +1,4 @@
-//===---- ObjCModuleTest.cpp - clang-tidy ---------------------------------===//
+//===---- OptionsProviderTest.cpp - clang-tidy ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,8 +53,10 @@ TEST(ClangTidyOptionsProvider, InMemoryFileSystems) {
   llvm::ErrorOr<ClangTidyOptions> File3Options =
       FileOpt.getOptions("ProjectRoot/SubDir1/SubDir2/SubDir3/File.cpp");
 
+  ASSERT_TRUE(File1Options);
   ASSERT_TRUE(File1Options->Checks.has_value());
   EXPECT_EQ(*File1Options->Checks, "-*,clang-diagnostic-*,readability-*");
+  ASSERT_TRUE(File2Options);
   ASSERT_TRUE(File2Options->Checks.has_value());
   EXPECT_EQ(*File2Options->Checks, "bugprone-*,misc-*,clang-diagnostic-*");
 
@@ -100,9 +102,9 @@ TEST(ClangTidyOptionsProvider, InvalidConfigurationFiles) {
   llvm::ErrorOr<ClangTidyOptions> File3Options =
       FileOpt.getOptions("ProjectRoot/SubDir1/SubDir2/File.cpp");
 
-  ASSERT_TRUE(!File1Options);
-  ASSERT_TRUE(!File2Options);
-  ASSERT_TRUE(!!File3Options);
+  ASSERT_FALSE(File1Options);
+  ASSERT_FALSE(File2Options);
+  ASSERT_TRUE(File3Options);
   ASSERT_TRUE(File3Options->Checks.has_value());
   EXPECT_EQ(*File3Options->Checks, "bugprone-*,misc-*,clang-diagnostic-*");
 }
