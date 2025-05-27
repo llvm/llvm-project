@@ -7209,12 +7209,14 @@ void testReentrantTypedef() {
   bit_unlock(bl);
 }
 
+// Negative + reentrant capability tests.
 class TestNegativeWithReentrantMutex {
   ReentrantMutex rmu;
   int a GUARDED_BY(rmu);
 
 public:
-  void baz() EXCLUSIVE_LOCKS_REQUIRED(!rmu) {
+  void baz() EXCLUSIVE_LOCKS_REQUIRED(!rmu) { // \
+    // expected-warning{{'ReentrantMutex' is marked reentrant but used as a negative capability; this may be contradictory}}
     rmu.Lock();
     rmu.Lock();
     a = 0;
@@ -7222,5 +7224,11 @@ public:
     rmu.Unlock();
   }
 };
+
+typedef int __attribute__((capability("role"), reentrant_capability)) ThreadRole;
+ThreadRole FlightControl1, FlightControl2;
+void dispatch_log(const char *msg) __attribute__((requires_capability(!FlightControl1 && !FlightControl2))) {} // \
+  // expected-warning{{'ThreadRole' (aka 'int') is marked reentrant but used as a negative capability; this may be contradictory}} \
+  // expected-warning{{'ThreadRole' (aka 'int') is marked reentrant but used as a negative capability; this may be contradictory}}
 
 } // namespace Reentrancy
