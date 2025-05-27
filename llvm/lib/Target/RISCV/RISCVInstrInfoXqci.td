@@ -124,7 +124,8 @@ def simm16nonzero : RISCVOp<XLenVT>,
   let OperandType = "OPERAND_SIMM16_NONZERO";
 }
 
-def simm20_li : RISCVOp<XLenVT> {
+def simm20_li : RISCVOp<XLenVT>,
+                ImmLeaf<XLenVT, [{return isInt<20>(Imm);}]>{
   let ParserMatchClass = SImmAsmOperand<20, "LI">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<20>";
@@ -1524,9 +1525,12 @@ let Predicates = [HasVendorXqcili, IsRV32] in {
 def : CompressPat<(QC_LI GPRNoX0:$rd, simm6:$imm),
                   (C_LI GPRNoX0:$rd, simm6:$imm)>;
 
-let isCompressOnly = true in
+let isCompressOnly = true in {
 def : CompressPat<(QC_E_LI GPRNoX0:$rd, simm6:$imm),
                   (C_LI GPRNoX0:$rd, simm6:$imm)>;
+def : CompressPat<(QC_E_LI GPRNoX0:$rd, simm20_li:$imm),
+                  (QC_LI GPRNoX0:$rd, simm20_li:$imm)>;
+} // isCompressOnly = true
 } // Predicates = [HasVendorXqcili, IsRV32]
 
 let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32] in {
