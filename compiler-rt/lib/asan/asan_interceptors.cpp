@@ -56,8 +56,15 @@ namespace __asan {
 #  define ASAN_READ_STRING(ctx, s, n) \
     ASAN_READ_STRING_OF_LEN((ctx), (s), internal_strlen(s), (n))
 
-#  if ASAN_INTERCEPT_STRCAT || ASAN_INTERCEPT_STRCPY
-static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
+static inline uptr internal_or_real_memcpy(void *new_mem, const char *s, uptr length) {
+#if SANITIZER_INTERCEPT_MEMCPY
+  return REAL(memcpy)(new_mem, s, length + 1);
+#else
+  return internal_memcpy(new_mem, s, length + 1);
+#endif
+}
+
+[[maybe_unused]] static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
   if (REAL(strnlen)) {
     return REAL(strnlen)(s, maxlen);
@@ -65,7 +72,6 @@ static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #endif
   return internal_strnlen(s, maxlen);
 }
-#  endif
 
 void SetThreadName(const char *name) {
   AsanThread *t = GetCurrentThread();
@@ -609,13 +615,7 @@ INTERCEPTOR(char*, strdup, const char *s) {
   GET_STACK_TRACE_MALLOC;
   void *new_mem = asan_malloc(length + 1, &stack);
   if (new_mem) {
-#  if SANITIZER_AIX
-    // memcpy is a static function defined in libc.a on AIX. It can not be
-    // intercepted, so REAL(memcpy) is null on AIX. Use internal_memcpy instead.
-    internal_memcpy(new_mem, s, length + 1);
-#  else
-    REAL(memcpy)(new_mem, s, length + 1);
-#  endif
+    internal_or_real_memcpy(new_mem, s, length + 1);
   }
   return reinterpret_cast<char*>(new_mem);
 }
