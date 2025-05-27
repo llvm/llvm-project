@@ -164,3 +164,55 @@ define <4 x i32> @ext_shuffle_v4i16_v4i32_one(<4 x i16> %l, <4 x i32> %a, <4 x i
   %add3 = add <4 x i32> %mul3, %b
   ret <4 x i32> %add3
 }
+
+define <4 x i32> @ext_shuffle_v4i16_v4i32_extra_user(<4 x i16> %l, <4 x i32> %a, <4 x i32> %b) {
+; CHECK-SD-LABEL: ext_shuffle_v4i16_v4i32_extra_user:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll v3.4s, v0.4h, #0
+; CHECK-SD-NEXT:    mov v4.16b, v2.16b
+; CHECK-SD-NEXT:    mov v5.16b, v2.16b
+; CHECK-SD-NEXT:    mov v6.16b, v2.16b
+; CHECK-SD-NEXT:    mla v4.4s, v1.4s, v3.s[0]
+; CHECK-SD-NEXT:    mla v5.4s, v1.4s, v3.s[1]
+; CHECK-SD-NEXT:    mla v2.4s, v1.4s, v3.s[3]
+; CHECK-SD-NEXT:    mla v6.4s, v1.4s, v3.s[2]
+; CHECK-SD-NEXT:    sub v1.4s, v4.4s, v5.4s
+; CHECK-SD-NEXT:    sub v2.4s, v2.4s, v6.4s
+; CHECK-SD-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    ssubw v0.4s, v1.4s, v0.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ext_shuffle_v4i16_v4i32_extra_user:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v3.4s, v0.4h, #0
+; CHECK-GI-NEXT:    mov v4.16b, v2.16b
+; CHECK-GI-NEXT:    mov v5.16b, v2.16b
+; CHECK-GI-NEXT:    mov v6.16b, v2.16b
+; CHECK-GI-NEXT:    mla v4.4s, v1.4s, v3.s[0]
+; CHECK-GI-NEXT:    mla v5.4s, v1.4s, v3.s[1]
+; CHECK-GI-NEXT:    mla v2.4s, v1.4s, v3.s[3]
+; CHECK-GI-NEXT:    mla v6.4s, v1.4s, v3.s[2]
+; CHECK-GI-NEXT:    sub v1.4s, v4.4s, v5.4s
+; CHECK-GI-NEXT:    sub v2.4s, v6.4s, v2.4s
+; CHECK-GI-NEXT:    sub v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    ssubw v0.4s, v1.4s, v0.4h
+; CHECK-GI-NEXT:    ret
+  %lanes = sext <4 x i16> %l to <4 x i32>
+  %shf0 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> zeroinitializer
+  %mul0 = mul <4 x i32> %shf0, %a
+  %add0 = add <4 x i32> %mul0, %b
+  %shf1 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %mul1 = mul <4 x i32> %shf1, %a
+  %add1 = add <4 x i32> %mul1, %b
+  %shf2 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %mul2 = mul <4 x i32> %shf2, %a
+  %add2 = add <4 x i32> %mul2, %b
+  %shf3 = shufflevector <4 x i32> %lanes, <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %mul3 = mul <4 x i32> %shf3, %a
+  %add3 = add <4 x i32> %mul3, %b
+  %sub1 = sub <4 x i32> %add0, %add1
+  %sub2 = sub <4 x i32> %add2, %add3
+  %sub3 = sub <4 x i32> %sub1, %sub2
+  %sub4 = sub <4 x i32> %sub3, %lanes
+  ret <4 x i32> %sub4
+}
