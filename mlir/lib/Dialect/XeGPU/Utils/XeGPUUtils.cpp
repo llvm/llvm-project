@@ -152,17 +152,11 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const OpOperand &opr) {
   return getLayoutAttr(opr.get());
 }
 
-void xegpu::setLayoutAttr(const OpOperand &opr, const LayoutAttr layout) {
-  auto owner = opr.getOwner();
-  std::string name = xegpu::getLayoutName(opr);
+template <typename T, typename>
+void xegpu::setLayoutAttr(const T &operandOrResult, const LayoutAttr layout) {
+  Operation *owner = operandOrResult.getOwner();
+  std::string name = xegpu::getLayoutName(operandOrResult);
   if (layout && !owner->hasAttrOfType<LayoutAttr>(name))
-    owner->setAttr(name, layout);
-}
-
-void xegpu::setLayoutAttr(const OpResult result, const LayoutAttr layout) {
-  Operation *owner = result.getOwner();
-  std::string name = xegpu::getLayoutName(result);
-  if (layout && !owner->hasAttr(name))
     owner->setAttr(name, layout);
 }
 

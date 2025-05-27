@@ -73,11 +73,12 @@ LayoutAttr getLayoutAttr(const Value value);
 /// it will check the operand itself and its defining op.
 LayoutAttr getLayoutAttr(const OpOperand &opr);
 
-/// Sets the LayoutAttr for a given OpOperand by attaching it to the owner
-void setLayoutAttr(const OpOperand &opr, const LayoutAttr layout);
-
-/// Set the LayoutAttr for the given OpResult by attching it to the defining op
-void setLayoutAttr(const OpResult result, const LayoutAttr layout);
+/// Sets the LayoutAttr for a given OpOperand or OpResult by attaching
+/// it to the owner's dictionary attributes
+template <typename T,
+          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                      std::is_same_v<T, OpResult>>>
+void setLayoutAttr(const T &operandOrResult, const LayoutAttr layout);
 
 /// Set the LayoutAttr for each OpOperand and OpResult of the given operation.
 /// If the operation contains regions, it is also applied recursively to the
