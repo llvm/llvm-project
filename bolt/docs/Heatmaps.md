@@ -89,7 +89,12 @@ For the generation, the default bucket size was used with a line size of 128.
 Some useful options are:
 
 ```
--line-size=<uint>   - number of entries per line (default 256)
+-line-size=<uint>   - number of entries per line (default 256).
+                      Use 128 if the heatmap doesn't fit screen horizontally.
+-block-size=<uint>[:<pow2>,...]  - heatmap bucket size in bytes (default 64),
+                      optionally followed by power-of-two zoom-out scales to
+                      produce coarse grained heatmaps (default 6, 2, 6 =>
+                      4K, 16K, 1MB).
 -max-address=<uint> - maximum address considered valid for heatmap (default 4GB)
 -print-mappings     - print mappings in the legend, between characters/blocks and text sections (default false)
 ```

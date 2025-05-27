@@ -23,6 +23,19 @@ enum HeatmapModeKind {
   HM_Optional   // perf2bolt --heatmap
 };
 
+struct HeatmapBlockSpec {
+  unsigned Initial{0};                // Initial block size in bytes.
+  llvm::SmallVector<unsigned> Scales; // Pow2 zoom factors applied cumulatively.
+};
+
+struct HeatmapBlockSpecParser : public llvm::cl::parser<HeatmapBlockSpec> {
+  explicit HeatmapBlockSpecParser(llvm::cl::Option &O)
+      : llvm::cl::parser<HeatmapBlockSpec>(O) {}
+  // Return true on error.
+  bool parse(llvm::cl::Option &O, llvm::StringRef ArgName, llvm::StringRef Arg,
+             HeatmapBlockSpec &Val);
+};
+
 extern HeatmapModeKind HeatmapMode;
 extern bool BinaryAnalysisMode;
 
@@ -47,7 +60,8 @@ extern llvm::cl::opt<bool> EqualizeBBCounts;
 extern llvm::cl::opt<bool> ForcePatch;
 extern llvm::cl::opt<bool> RemoveSymtab;
 extern llvm::cl::opt<unsigned> ExecutionCountThreshold;
-extern llvm::cl::opt<unsigned> HeatmapBlock;
+extern llvm::cl::opt<HeatmapBlockSpec, false, HeatmapBlockSpecParser>
+    HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
 extern llvm::cl::opt<bool> HeatmapPrintMappings;

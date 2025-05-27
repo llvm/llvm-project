@@ -55,6 +55,8 @@ void Heatmap::print(StringRef FileName) const {
     errs() << "error opening output file: " << EC.message() << '\n';
     exit(1);
   }
+  outs() << "HEATMAP: dumping heatmap with bucket size " << BucketSize << " to "
+         << FileName << '\n';
   print(OS);
 }
 
@@ -304,14 +306,20 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
   if (TextSections.empty())
     return;
 
-  uint64_t UnmappedHotness = 0;
+  uint64_t UnmappedCounts = 0;
+  uint64_t KernelCounts = 0;
+  AddressRange KernelRange(KernelBaseAddr, -1ULL);
   auto RecordUnmappedBucket = [&](uint64_t Address, uint64_t Frequency) {
+    if (KernelRange.contains(Address)) {
+      KernelCounts += Frequency;
+      return;
+    }
     if (opts::Verbosity >= 1)
       errs() << "Couldn't map the address bucket [0x"
              << Twine::utohexstr(Address) << ", 0x"
              << Twine::utohexstr(Address + BucketSize) << "] containing "
              << Frequency << " samples to a text section in the binary.";
-    UnmappedHotness += Frequency;
+    UnmappedCounts += Frequency;
   };
 
   AddressRange HotTextRange(HotStart, HotEnd);
@@ -348,7 +356,7 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
 
   OS << "Section Name, Begin Address, End Address, Percentage Hotness, "
      << "Utilization Pct, Partition Score\n";
-  const uint64_t MappedCounts = NumTotalCounts - UnmappedHotness;
+  const uint64_t MappedCounts = NumTotalCounts - UnmappedCounts - KernelCounts;
   for (const auto [Name, Begin, End] : Sections) {
     const float Hotness = 1. * SectionHotness[Name] / NumTotalCounts;
     const float MappedHotness =
@@ -360,9 +368,20 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
     OS << formatv("{0}, {1:x}, {2:x}, {3:f4}, {4:f4}, {5:f4}\n", Name, Begin,
                   End, 100. * Hotness, 100. * Utilization, PartitionScore);
   }
-  if (UnmappedHotness > 0)
+  if (KernelCounts)
+    OS << formatv("[kernel], {0:x}, {1:x}, {0:f4}, 0, 0\n", KernelBaseAddr,
+                  -1ULL, 100.0 * KernelCounts / NumTotalCounts);
+  if (UnmappedCounts)
     OS << formatv("[unmapped], 0x0, 0x0, {0:f4}, 0, 0\n",
-                  100.0 * UnmappedHotness / NumTotalCounts);
+                  100.0 * UnmappedCounts / NumTotalCounts);
+}
+
+uint64_t Heatmap::resizeBucket(uint64_t Pow2Scale) {
+  std::map<uint64_t, uint64_t> NewMap;
+  for (const auto [Bucket, Count] : Map)
+    NewMap[Bucket >> Pow2Scale] += Count;
+  Map = NewMap;
+  return BucketSize <<= Pow2Scale;
 }
 } // namespace bolt
 } // namespace llvm
