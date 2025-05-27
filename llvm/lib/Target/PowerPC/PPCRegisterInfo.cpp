@@ -1511,7 +1511,7 @@ void PPCRegisterInfo::lowerQuadwordRestore(MachineBasicBlock::iterator II,
 
 /// lowerDMRSpilling - Generate the code for spilling the DMR register.
 void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
-                                        unsigned FrameIndex) const {
+                                       unsigned FrameIndex) const {
   MachineInstr &MI = *II; // SPILL_DMR <SrcReg>, <offset>
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -1557,7 +1557,7 @@ void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
 
 /// lowerDMRRestore - Generate the code to restore the DMR register.
 void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
-                                       unsigned FrameIndex) const {
+                                      unsigned FrameIndex) const {
   MachineInstr &MI = *II; // <DestReg> = RESTORE_WACC <offset>
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -1584,14 +1584,12 @@ void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
                     FrameIndex, IsLittleEndian ? 0 : 96);
 
   // Kill virtual registers (killedRegState::Killed).
-  BuildMI(MBB, II, DL,
-          TII.get(PPC::DMXXINSTDMR512_HI),
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512_HI),
           TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_hi))
       .addReg(VSRpReg2, RegState::Kill)
       .addReg(VSRpReg3, RegState::Kill);
 
-  BuildMI(MBB, II, DL,
-          TII.get(PPC::DMXXINSTDMR512),
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512),
           TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_lo))
       .addReg(VSRpReg0, RegState::Kill)
       .addReg(VSRpReg1, RegState::Kill);
