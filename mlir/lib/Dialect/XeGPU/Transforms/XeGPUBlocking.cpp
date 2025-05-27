@@ -180,49 +180,41 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 }
 
 bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
-  if (isa<LoopLikeOpInterface>(op))
+  // skip the op if any of its operands or results has workgroup level layouts
+  bool hasWgLayoutOperands =
+      llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
+        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(opr);
+        return layout && layout.isWgLayout();
+      });
+  bool hasWgLayoutResults =
+      llvm::any_of(op->getOpResults(), [](OpResult result) {
+        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
+        return layout && layout.isWgLayout();
+      });
+  if (hasWgLayoutOperands || hasWgLayoutResults)
     return false;
 
-  auto isUnrollable = [](Value value,
-                         ArrayRef<int64_t> tileShape) -> std::optional<bool> {
+  auto isUnrollable = [](Value value, ArrayRef<int64_t> tileShape) {
     Type valTy = value.getType();
-    if (auto tdesc = dyn_cast<xegpu::TensorDescType>(valTy)) {
-      xegpu::LayoutAttr layout = tdesc.getLayoutAttr();
-      if (!layout)
-        return std::nullopt;
-      if (layout.isWgLayout())
-        return false;
-      if (layout.getInstData())
-        return true;
+    if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(valTy)) {
+      xegpu::LayoutAttr layout = tdescTy.getLayoutAttr();
+      return layout && layout.getInstData();
     }
-
     auto shapedType = dyn_cast<ShapedType>(valTy);
-    if (shapedType && !llvm::equal(tileShape, shapedType.getShape()))
-      return true;
-
-    return std::nullopt;
+    return shapedType && !llvm::equal(tileShape, shapedType.getShape());
   };
 
-  for (OpOperand &opr : op->getOpOperands()) {
-    std::optional<SmallVector<int64_t>> tileShape = getTileShape(opr);
-    if (!tileShape)
-      continue;
-
-    std::optional<bool> unrollable = isUnrollable(opr.get(), *tileShape);
-    if (unrollable.has_value())
-      return unrollable.value();
-  }
-
-  for (OpResult result : op->getOpResults()) {
-    std::optional<SmallVector<int64_t>> tileShape = getTileShape(result);
-    if (!tileShape)
-      continue;
-
-    std::optional<bool> unrollable = isUnrollable(result, *tileShape);
-    if (unrollable.has_value())
-      return unrollable.value();
-  }
-  return false;
+  bool hasUnrollableOperands =
+      llvm::any_of(op->getOpOperands(), [&](OpOperand &opr) {
+        std::optional<SmallVector<int64_t>> tileShape = getTileShape(opr);
+        return tileShape.has_value() && isUnrollable(opr.get(), *tileShape);
+      });
+  bool hasUnrollableResults =
+      llvm::any_of(op->getOpResults(), [&](OpResult result) {
+        std::optional<SmallVector<int64_t>> tileShape = getTileShape(result);
+        return tileShape.has_value() && isUnrollable(result, *tileShape);
+      });
+  return hasUnrollableOperands || hasUnrollableResults;
 }
 
 void XeGPUBlockingPass::runOnOperation() {
