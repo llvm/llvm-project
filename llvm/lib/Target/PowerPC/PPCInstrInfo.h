@@ -235,8 +235,7 @@ enum PPCMachineCombinerPattern : unsigned {
    PPC::SPILL_QUADWORD}
 
 #define FutureStoreOpcodes                                                     \
-  {NoInstr,                                                                    \
-   PPC::STW,                                                                   \
+  {PPC::STW,                                                                   \
    PPC::STD,                                                                   \
    PPC::STFD,                                                                  \
    PPC::STFS,                                                                  \
