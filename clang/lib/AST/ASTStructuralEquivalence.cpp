@@ -458,7 +458,7 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
   // If either declaration has an attribute on it, we treat the declarations
   // as not being structurally equivalent.
   // FIXME: this should be handled on a case-by-case basis via tablegen in
-  // Attr.td. There are multiple cases to consider: one declation with the
+  // Attr.td. There are multiple cases to consider: one declaration with the
   // attribute, another without it; different attribute syntax|spellings for
   // the same semantic attribute, differences in attribute arguments, order
   // in which attributes are applied, how to merge attributes if the types are

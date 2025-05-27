@@ -1085,7 +1085,7 @@ void ASTContext::mergeDefinitionIntoModule(NamedDecl *ND, Module *M,
   MergedDefModules[cast<NamedDecl>(ND->getCanonicalDecl())].push_back(M);
 }
 
-void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
+void ASTContext::deduplicateMergedDefinitionsFor(NamedDecl *ND) {
   auto It = MergedDefModules.find(cast<NamedDecl>(ND->getCanonicalDecl()));
   if (It == MergedDefModules.end())
     return;
@@ -1803,7 +1803,7 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
         Align = Target->getCharWidth();
     }
 
-    // Ensure miminum alignment for global variables.
+    // Ensure minimum alignment for global variables.
     if (const auto *VD = dyn_cast<VarDecl>(D))
       if (VD->hasGlobalStorage() && !ForAlignof) {
         uint64_t TypeSize =

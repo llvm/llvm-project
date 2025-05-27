@@ -2220,7 +2220,7 @@ Error ASTNodeImporter::ImportFieldDeclDefinition(const FieldDecl *From,
   QualType FromType = From->getType();
   QualType ToType = To->getType();
   if (FromType->isArrayType()) {
-    // getBaseElementTypeUnsafe(...) handles multi-dimensonal arrays for us.
+    // getBaseElementTypeUnsafe(...) handles multi-dimensional arrays for us.
     FromRecordDecl = FromType->getBaseElementTypeUnsafe()->getAsRecordDecl();
     ToRecordDecl = ToType->getBaseElementTypeUnsafe()->getAsRecordDecl();
   }
@@ -6142,7 +6142,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
         if (!hasSameVisibilityContextAndLinkage(FoundTemplate, D))
           continue;
 
-        // FIXME: sufficient conditon for 'IgnoreTemplateParmDepth'?
+        // FIXME: sufficient condition for 'IgnoreTemplateParmDepth'?
         bool IgnoreTemplateParmDepth =
             (FoundTemplate->getFriendObjectKind() != Decl::FOK_None) !=
             (D->getFriendObjectKind() != Decl::FOK_None);
