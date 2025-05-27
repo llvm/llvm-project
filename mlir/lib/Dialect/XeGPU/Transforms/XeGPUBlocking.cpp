@@ -172,8 +172,8 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   if (isa<LoopLikeOpInterface>(op))
     return false;
 
-  auto isUnrollable = [&](Value value,
-                          ArrayRef<int64_t> tileShape) -> std::optional<bool> {
+  auto isUnrollable = [](Value value,
+                         ArrayRef<int64_t> tileShape) -> std::optional<bool> {
     Type valTy = value.getType();
     if (auto tdesc = dyn_cast<xegpu::TensorDescType>(valTy)) {
       xegpu::LayoutAttr layout = tdesc.getLayoutAttr();
@@ -221,7 +221,7 @@ void XeGPUBlockingPass::runOnOperation() {
   // Preserve the LayoutAttr for each operand to the owner's DictionaryAttr.
   // This ensures that the LayoutAttr remains accessible even if the defining
   // operation is replaced.
-  xegpu::setLayoutAttrs(mod, [&](Value v) { return xegpu::getLayoutAttr(v); });
+  xegpu::setLayoutAttrs(mod, [](Value v) { return xegpu::getLayoutAttr(v); });
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
                                  xegpu::LayoutAttr layout) {
@@ -237,7 +237,7 @@ void XeGPUBlockingPass::runOnOperation() {
 
   // Perform type conversion for SCF control folow ops
   TypeConverter converter;
-  converter.addConversion([&](Type type) -> Type { return type; });
+  converter.addConversion([](Type type) -> Type { return type; });
   converter.addConversion(
       [&](RankedTensorType type,
           SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
@@ -283,7 +283,7 @@ void XeGPUBlockingPass::runOnOperation() {
 
   xegpu::UnrollOptions options;
   options.setFilterConstraint([&](Operation *op) -> LogicalResult {
-    return needsUnroll(op) ? success() : failure();
+    return success(needsUnroll(op));
   });
 
   options.setNativeShapeFn([&](Operation *op) { return getTileShape(op); });
@@ -315,7 +315,7 @@ void XeGPUBlockingPass::runOnOperation() {
 
   (void)applyPatternsGreedily(mod, std::move(patterns));
 
-  mod->walk([&](Operation *op) {
+  mod->walk([](Operation *op) {
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
 
