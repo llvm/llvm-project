@@ -52,6 +52,7 @@ public:
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
   bool enableWritePrefetching() const override;
+  bool enableInterleavedAccessVectorization() const override { return true; }
 
   // TODO: Implement more hooks to provide TTI machinery for LoongArch.
 };
