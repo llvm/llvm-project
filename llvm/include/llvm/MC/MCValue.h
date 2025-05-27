@@ -46,6 +46,7 @@ public:
   void setSpecifier(uint32_t S) { Specifier = S; }
 
   const MCSymbol *getAddSym() const { return SymA; }
+  void setAddSym(const MCSymbol *A) { SymA = A; }
   const MCSymbol *getSubSym() const { return SymB; }
 
   /// Is this an absolute (as opposed to relocatable) value.

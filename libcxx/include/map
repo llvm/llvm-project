@@ -911,8 +911,7 @@ public:
 private:
   typedef std::__value_type<key_type, mapped_type> __value_type;
   typedef __map_value_compare<key_type, value_type, key_compare> __vc;
-  typedef __rebind_alloc<allocator_traits<allocator_type>, __value_type> __allocator_type;
-  typedef __tree<__value_type, __vc, __allocator_type> __base;
+  typedef __tree<__value_type, __vc, allocator_type> __base;
   typedef typename __base::__node_traits __node_traits;
   typedef allocator_traits<allocator_type> __alloc_traits;
 
@@ -1596,8 +1595,7 @@ public:
 private:
   typedef std::__value_type<key_type, mapped_type> __value_type;
   typedef __map_value_compare<key_type, value_type, key_compare> __vc;
-  typedef __rebind_alloc<allocator_traits<allocator_type>, __value_type> __allocator_type;
-  typedef __tree<__value_type, __vc, __allocator_type> __base;
+  typedef __tree<__value_type, __vc, allocator_type> __base;
   typedef typename __base::__node_traits __node_traits;
   typedef allocator_traits<allocator_type> __alloc_traits;
 
