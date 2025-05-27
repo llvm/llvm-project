@@ -57,7 +57,7 @@ public:
 
   uint8_t getAddressSize() { return Target.isArch32Bit() ? 4 : 8; }
 
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 
   void resetBuffer() { OSOffset = InternalOS.tell(); }
 

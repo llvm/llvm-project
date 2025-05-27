@@ -399,7 +399,7 @@ public:
   void writeSymbolTable(MCAssembler &Asm);
   // END MCCAS
 
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 };
 } // end namespace llvm
 

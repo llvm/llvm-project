@@ -1156,7 +1156,8 @@ void MachObjectWriter::writeSymbolTable(MCAssembler &Asm) {
 // BEGIN MCCAS
 }
 
-uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t MachObjectWriter::writeObject() {
+  auto &Asm = *this->Asm;
   uint64_t StartOffset = W.OS.tell();
   auto NumBytesWritten = [&] { return W.OS.tell() - StartOffset; };
 

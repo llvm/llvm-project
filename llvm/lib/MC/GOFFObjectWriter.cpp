@@ -245,7 +245,7 @@ public:
   // Implementation of the MCObjectWriter interface.
   void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
                         MCValue Target, uint64_t &FixedValue) override {}
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 };
 } // end anonymous namespace
 
@@ -281,7 +281,7 @@ void GOFFObjectWriter::writeEnd() {
   OS.writebe<uint32_t>(ESDID); // ESDID (of entry point)
 }
 
-uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t GOFFObjectWriter::writeObject() {
   writeHeader();
   writeEnd();
 
