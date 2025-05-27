@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the interface for lazy computation of value constraint
+// This file implements the interface for lazy computation of value constraint
 // information.
 //
 //===----------------------------------------------------------------------===//
