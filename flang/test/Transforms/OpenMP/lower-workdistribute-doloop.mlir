@@ -2,13 +2,18 @@
 
 // CHECK-LABEL:   func.func @x({{.*}})
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : index
-// CHECK:           omp.parallel {
-// CHECK:             omp.wsloop {
-// CHECK:               omp.loop_nest (%[[VAL_1:.*]]) : index = (%[[ARG0:.*]]) to (%[[ARG1:.*]]) inclusive step (%[[ARG2:.*]]) {
-// CHECK:                 fir.store %[[VAL_0]] to %[[ARG4:.*]] : !fir.ref<index>
-// CHECK:                 omp.yield
-// CHECK:               }
-// CHECK:             }
+// CHECK:           omp.teams {
+// CHECK:             omp.parallel {
+// CHECK:               omp.distribute {
+// CHECK:                 omp.wsloop {
+// CHECK:                   omp.loop_nest (%[[VAL_1:.*]]) : index = (%[[ARG0:.*]]) to (%[[ARG1:.*]]) inclusive step (%[[ARG2:.*]]) {
+// CHECK:                     fir.store %[[VAL_0]] to %[[ARG4:.*]] : !fir.ref<index>
+// CHECK:                     omp.yield
+// CHECK:                   }
+// CHECK:                 } {omp.composite}
+// CHECK:               } {omp.composite}
+// CHECK:               omp.terminator
+// CHECK:             } {omp.composite}
 // CHECK:             omp.terminator
 // CHECK:           }
 // CHECK:           return
