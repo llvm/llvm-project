@@ -3,19 +3,19 @@
 # RUN:   %p/Inputs/coff-load-config-x64.dll \
 # RUN:   %p/Inputs/zero-string-table.obj.coff-i386 | FileCheck %s
 
-# CHECK-LABEL: File: {{.*}}/string-table.test.tmp.obj
+# CHECK-LABEL: File: {{.*}}string-table.test.tmp.obj
 # CHECK:       StringTable {
 # CHECK-NEXT:    Length: 31
 # CHECK-NEXT:    [     4] .debug_str
 # CHECK-NEXT:    [     f] _main_test_test
 # CHECK-NEXT:  }
 
-# CHECK-LABEL: File: {{.*}}/coff-load-config-x64.dll
+# CHECK-LABEL: File: {{.*}}coff-load-config-x64.dll
 # CHECK:       StringTable {
 # CHECK-NEXT:    Length: 0
 # CHECK-NEXT:  }
 
-# CHECK-LABEL: File: {{.*}}/zero-string-table.obj.coff-i386
+# CHECK-LABEL: File: {{.*}}zero-string-table.obj.coff-i386
 # CHECK:       StringTable {
 # CHECK-NEXT:    Length: 4
 # CHECK-NEXT:  }
