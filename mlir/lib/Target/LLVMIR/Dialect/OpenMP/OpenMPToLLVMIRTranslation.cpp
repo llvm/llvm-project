@@ -1524,10 +1524,11 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
 }
 
 static LogicalResult copyFirstPrivateVars(
-    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    mlir::Operation *op, llvm::IRBuilderBase &builder,
+    LLVM::ModuleTranslation &moduleTranslation,
     SmallVectorImpl<mlir::Value> &mlirPrivateVars,
     ArrayRef<llvm::Value *> llvmPrivateVars,
-    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
+    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls, bool insertBarrier,
     llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Apply copy region for firstprivate.
   bool needsFirstprivate =
@@ -1573,6 +1574,14 @@ static LogicalResult copyFirstPrivateVars(
     // re-created with different sources for reuse of the same reduction
     // decl
     moduleTranslation.forgetMapping(copyRegion);
+  }
+
+  if (insertBarrier) {
+    llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy res =
+        ompBuilder->createBarrier(builder.saveIP(), llvm::omp::OMPD_barrier);
+    if (failed(handleError(res, *op)))
+      return failure();
   }
 
   return success();
@@ -2183,8 +2192,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   // firstprivate copy region
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
   if (failed(copyFirstPrivateVars(
-          builder, moduleTranslation, privateVarsInfo.mlirVars,
-          taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers)))
+          taskOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
+          taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers,
+          taskOp.getPrivateNeedsBarrier())))
     return llvm::failure();
 
   // Set up for call to createTask()
@@ -2404,8 +2414,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   if (failed(copyFirstPrivateVars(
-          builder, moduleTranslation, privateVarsInfo.mlirVars,
-          privateVarsInfo.llvmVars, privateVarsInfo.privatizers)))
+          wsloopOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
+          privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
+          wsloopOp.getPrivateNeedsBarrier())))
     return failure();
 
   assert(afterAllocas.get()->getSinglePredecessor());
@@ -2524,8 +2535,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(copyFirstPrivateVars(
-            builder, moduleTranslation, privateVarsInfo.mlirVars,
-            privateVarsInfo.llvmVars, privateVarsInfo.privatizers)))
+            opInst, builder, moduleTranslation, privateVarsInfo.mlirVars,
+            privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
+            opInst.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(
@@ -3543,17 +3555,19 @@ static void collectMapDataFromMapOperands(
   }
 
   auto findMapInfo = [&mapData](llvm::Value *val,
-                                llvm::OpenMPIRBuilder::DeviceInfoTy devInfoTy) {
-    unsigned index = 0;
+                                llvm::OpenMPIRBuilder::DeviceInfoTy devInfoTy,
+                                size_t memberCount) {
     bool found = false;
-    for (llvm::Value *basePtr : mapData.OriginalValue) {
-      if (basePtr == val && mapData.IsAMapping[index]) {
+    for (size_t index = 0; index < mapData.OriginalValue.size(); ++index) {
+      auto mapInfoOp = dyn_cast<omp::MapInfoOp>(mapData.MapClause[index]);
+      if (mapData.IsAMapping[index] && mapData.Pointers[index] == val &&
+          mapData.BasePointers[index] == val &&
+          memberCount == mapInfoOp.getMembers().size()) {
         found = true;
         mapData.Types[index] |=
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
         mapData.DevicePointers[index] = devInfoTy;
       }
-      index++;
     }
     return found;
   };
@@ -3568,7 +3582,7 @@ static void collectMapDataFromMapOperands(
       llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
 
       // Check if map info is already present for this entry.
-      if (!findMapInfo(origValue, devInfoTy)) {
+      if (!findMapInfo(origValue, devInfoTy, mapOp.getMembers().size())) {
         mapData.OriginalValue.push_back(origValue);
         mapData.Pointers.push_back(mapData.OriginalValue.back());
         mapData.IsDeclareTarget.push_back(false);
@@ -4748,8 +4762,9 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
       return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(copyFirstPrivateVars(
-            builder, moduleTranslation, privVarsInfo.mlirVars,
-            privVarsInfo.llvmVars, privVarsInfo.privatizers)))
+            distributeOp, builder, moduleTranslation, privVarsInfo.mlirVars,
+            privVarsInfo.llvmVars, privVarsInfo.privatizers,
+            distributeOp.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
@@ -5520,9 +5535,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(copyFirstPrivateVars(
-            builder, moduleTranslation, privateVarsInfo.mlirVars,
+            targetOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
             privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
-            &mappedPrivateVars)))
+            targetOp.getPrivateNeedsBarrier(), &mappedPrivateVars)))
       return llvm::make_error<PreviouslyReportedError>();
 
     SmallVector<Region *> privateCleanupRegions;
@@ -5739,21 +5754,23 @@ static void addAllocasForDeclareTargetFunctionPointerArgs(
   // below. The users are updated accordingly.
   for (auto &Arg : Fn->args()) {
     if (Arg.getType()->isPointerTy()) {
-      llvm::Value *V = builder.CreateAlloca(Arg.getType(), allocaAS, nullptr);
-      if (allocaAS != defaultAS)
-        V = ompBuilder->Builder.CreateAddrSpaceCast(
-            V, builder.getPtrTy(defaultAS));
-      llvm::StoreInst *Store = builder.CreateStore(&Arg, V);
-      llvm::Value *Load = builder.CreateLoad(Arg.getType(), V);
+      llvm::Value *AllocaV =
+          builder.CreateAlloca(Arg.getType(), allocaAS, nullptr);
+      llvm::Value *GenericV = allocaAS == defaultAS
+                                  ? AllocaV
+                                  : ompBuilder->Builder.CreateAddrSpaceCast(
+                                        AllocaV, builder.getPtrTy(defaultAS));
+      llvm::StoreInst *Store = builder.CreateStore(&Arg, GenericV);
+      llvm::Value *Load = builder.CreateLoad(Arg.getType(), GenericV);
       llvm::SmallVector<llvm::DbgVariableIntrinsic *> DbgUsers;
       llvm::SmallVector<llvm::DbgVariableRecord *> DPUsers;
       llvm::findDbgUsers(DbgUsers, &Arg, &DPUsers);
       for (auto *DVI : DbgUsers) {
-        DVI->replaceVariableLocationOp(&Arg, V);
+        DVI->replaceVariableLocationOp(&Arg, AllocaV);
         DVI->setExpression(Expr);
       }
       for (auto *DVR : DPUsers) {
-        DVR->replaceVariableLocationOp(&Arg, V);
+        DVR->replaceVariableLocationOp(&Arg, AllocaV);
         DVR->setExpression(Expr);
       }
       Arg.replaceUsesWithIf(Load, [&](const llvm::Use &U) -> bool {
@@ -5783,16 +5800,21 @@ static void updateDebugInfoForDeclareTargetFunctions(
     // Skip if an expression is already present.
     if ((Old != nullptr) && (Old->getNumElements() != 0))
       return;
-    for (auto Loc : DR->location_ops()) {
-      llvm::Type *Ty = Loc->getType();
-      if (auto *Ref = dyn_cast<llvm::AddrSpaceCastInst>(Loc))
-        Ty = Ref->getPointerOperand()->getType();
-      llvm::DIExprBuilder EB(Fn->getContext());
-      EB.append<llvm::DIOp::Arg>(0u, Ty);
-      EB.append<llvm::DIOp::Deref>(Loc->getType());
-      DR->setExpression(EB.intoExpression());
-      break;
-    }
+    // Skip if the there are multiple inputs.
+    // FIXME: Could this be an assert? More to the point, can we do this at the
+    // point of generating the intrinsics to begin with, rather than fixing them
+    // up here?
+    if (DR->getNumVariableLocationOps() != 1u)
+      return;
+    auto Loc = DR->getVariableLocationOp(0u);
+    if (!isa<llvm::AllocaInst>(Loc->stripPointerCasts()))
+      return;
+    llvm::AllocaInst *AI = cast<llvm::AllocaInst>(Loc->stripPointerCasts());
+    DR->replaceVariableLocationOp(0u, AI);
+    llvm::DIExprBuilder EB(Fn->getContext());
+    EB.append<llvm::DIOp::Arg>(0u, AI->getType());
+    EB.append<llvm::DIOp::Deref>(AI->getAllocatedType());
+    DR->setExpression(EB.intoExpression());
   };
 
   for (llvm::Instruction &I : instructions(Fn)) {

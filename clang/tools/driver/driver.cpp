@@ -203,20 +203,11 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
-// This lets us create the DiagnosticsEngine with a properly-filled-out
-// DiagnosticOptions instance.
-static DiagnosticOptions *CreateAndPopulateDiagOpts(ArrayRef<const char *> argv,
-                                                    InputArgList &Args) {
-  auto *DiagOpts = new DiagnosticOptions;
+static void PopulateArgsOpts(ArrayRef<const char *> argv,
+                             InputArgList &Args) {
   unsigned MissingArgIndex, MissingArgCount;
   Args = getDriverOptTable().ParseArgs(argv.slice(1), MissingArgIndex,
                                        MissingArgCount);
-  // We ignore MissingArgCount and the return value of ParseDiagnosticArgs.
-  // Any errors that would be diagnosed here will also be diagnosed later,
-  // when the DiagnosticsEngine actually exists.
-  (void)ParseDiagnosticArgs(*DiagOpts, Args);
-
-  return DiagOpts;
 }
 
 static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
@@ -338,20 +329,21 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                            .Default(UseNewCC1Process);
 
   InputArgList ArgList;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-      CreateAndPopulateDiagOpts(Args, ArgList);
+  PopulateArgsOpts(Args, ArgList);
+
+  std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(Args);
   // Driver's diagnostics don't use suppression mappings, so don't bother
   // parsing them. CC1 still receives full args, so this doesn't impact other
   // actions.
   DiagOpts->DiagnosticSuppressionMappingsFile.clear();
 
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
+  DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagClient);
   unsigned NumParallelJobs =
       getLastArgIntValue(ArgList, options::OPT_parallel_jobs_EQ, 1, Diags);
   UseNewCC1Process =
@@ -362,7 +354,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!DiagOpts->DiagnosticSerializationFile.empty()) {
     auto SerializedConsumer =
         clang::serialized_diags::create(DiagOpts->DiagnosticSerializationFile,
-                                        &*DiagOpts, /*MergeChildRecords=*/true);
+                                        *DiagOpts, /*MergeChildRecords=*/true);
     Diags.setClient(new ChainedDiagnosticConsumer(
         Diags.takeClient(), std::move(SerializedConsumer)));
   }

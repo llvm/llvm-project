@@ -352,6 +352,7 @@ struct IsaInfo {
   unsigned AddressableNumSGPRs;
   unsigned VGPRAllocGranule;
   unsigned TotalNumVGPRs;
+  // TODO: Update this to AvailableNumVGPRs to be more accurate
   unsigned AddressableNumVGPRs;
 } IsaInfos[] = {
 #define HANDLE_ISA(TARGET_TRIPLE, PROCESSOR, SRAMECC_SUPPORTED,                \

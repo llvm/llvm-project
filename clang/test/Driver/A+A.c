@@ -21,4 +21,4 @@
 // CHECK-OMP-OPEN-NOT: "{{.*}}../alt/bin/ld.lld"
 
 // RUN: %clang -famd-opt -O3 -### %s  2>&1 | FileCheck --check-prefix=CHECK-ALT-MISS  %s
-// CHECK-ALT-MISS: warning: [AMD] proprietary optimization compiler has been removed
+// CHECK-ALT-MISS: warning: argument unused during compilation: '-famd-opt'

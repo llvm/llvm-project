@@ -14,6 +14,7 @@ add_library(PluginCommon OBJECT
   src/GlobalHandler.cpp
   src/JIT.cpp
   src/RPC.cpp
+  src/OffloadError.cpp
   src/Utils/ELF.cpp
   ${emissary_sources}
 )

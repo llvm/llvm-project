@@ -2335,6 +2335,11 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_struct_buffer_load_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
     return selectBufferLoadLds(I);
+  // Until we can store both the address space of the global and the LDS
+  // arguments by having tto MachineMemOperands on an intrinsic, we just trust
+  // that the argument is a global pointer (buffer pointers have been handled by
+  // a LLVM IR-level lowering).
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds:
     return selectGlobalLoadLds(I);
   case Intrinsic::amdgcn_exp_compr:

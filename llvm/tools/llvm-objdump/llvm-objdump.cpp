@@ -65,8 +65,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -2323,7 +2321,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           // provided
           MCInst Inst;
           ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index);
-          uint64_t ThisAddr = SectionAddr + Index;
+          uint64_t ThisAddr = SectionAddr + Index + VMAAdjustment;
           bool Disassembled = DT->DisAsm->getInstruction(
               Inst, Size, ThisBytes, ThisAddr, CommentStream);
           if (Size == 0)
