@@ -15,9 +15,9 @@
 #ifndef LLVM_C_REMARKS_H
 #define LLVM_C_REMARKS_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 #ifdef __cplusplus
 #include <cstddef>
 #else
@@ -62,7 +62,8 @@ typedef struct LLVMRemarkOpaqueString *LLVMRemarkStringRef;
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern const char *LLVMRemarkStringGetData(LLVMRemarkStringRef String);
+LLVM_C_ABI extern const char *
+LLVMRemarkStringGetData(LLVMRemarkStringRef String);
 
 /**
  * Returns the size of the string.
@@ -91,14 +92,16 @@ LLVMRemarkDebugLocGetSourceFilePath(LLVMRemarkDebugLocRef DL);
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern uint32_t LLVMRemarkDebugLocGetSourceLine(LLVMRemarkDebugLocRef DL);
+LLVM_C_ABI extern uint32_t
+LLVMRemarkDebugLocGetSourceLine(LLVMRemarkDebugLocRef DL);
 
 /**
  * Return the column in the source file for a debug location.
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern uint32_t LLVMRemarkDebugLocGetSourceColumn(LLVMRemarkDebugLocRef DL);
+LLVM_C_ABI extern uint32_t
+LLVMRemarkDebugLocGetSourceColumn(LLVMRemarkDebugLocRef DL);
 
 /**
  * Element of the "Args" list. The key might give more information about what
@@ -122,7 +125,8 @@ LLVM_C_ABI extern LLVMRemarkStringRef LLVMRemarkArgGetKey(LLVMRemarkArgRef Arg);
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern LLVMRemarkStringRef LLVMRemarkArgGetValue(LLVMRemarkArgRef Arg);
+LLVM_C_ABI extern LLVMRemarkStringRef
+LLVMRemarkArgGetValue(LLVMRemarkArgRef Arg);
 
 /**
  * Returns the debug location that is attached to the value of this argument.
@@ -131,7 +135,8 @@ LLVM_C_ABI extern LLVMRemarkStringRef LLVMRemarkArgGetValue(LLVMRemarkArgRef Arg
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern LLVMRemarkDebugLocRef LLVMRemarkArgGetDebugLoc(LLVMRemarkArgRef Arg);
+LLVM_C_ABI extern LLVMRemarkDebugLocRef
+LLVMRemarkArgGetDebugLoc(LLVMRemarkArgRef Arg);
 
 /**
  * A remark emitted by the compiler.
@@ -153,7 +158,8 @@ LLVM_C_ABI extern void LLVMRemarkEntryDispose(LLVMRemarkEntryRef Remark);
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern enum LLVMRemarkType LLVMRemarkEntryGetType(LLVMRemarkEntryRef Remark);
+LLVM_C_ABI extern enum LLVMRemarkType
+LLVMRemarkEntryGetType(LLVMRemarkEntryRef Remark);
 
 /**
  * Get the name of the pass that emitted this remark.
@@ -214,7 +220,8 @@ LLVM_C_ABI extern uint32_t LLVMRemarkEntryGetNumArgs(LLVMRemarkEntryRef Remark);
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern LLVMRemarkArgRef LLVMRemarkEntryGetFirstArg(LLVMRemarkEntryRef Remark);
+LLVM_C_ABI extern LLVMRemarkArgRef
+LLVMRemarkEntryGetFirstArg(LLVMRemarkEntryRef Remark);
 
 /**
  * Get the next argument in \p Remark from the position of \p It.
@@ -225,8 +232,8 @@ LLVM_C_ABI extern LLVMRemarkArgRef LLVMRemarkEntryGetFirstArg(LLVMRemarkEntryRef
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern LLVMRemarkArgRef LLVMRemarkEntryGetNextArg(LLVMRemarkArgRef It,
-                                                  LLVMRemarkEntryRef Remark);
+LLVM_C_ABI extern LLVMRemarkArgRef
+LLVMRemarkEntryGetNextArg(LLVMRemarkArgRef It, LLVMRemarkEntryRef Remark);
 
 typedef struct LLVMRemarkOpaqueParser *LLVMRemarkParserRef;
 
@@ -241,8 +248,8 @@ typedef struct LLVMRemarkOpaqueParser *LLVMRemarkParserRef;
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
-                                                      uint64_t Size);
+LLVM_C_ABI extern LLVMRemarkParserRef
+LLVMRemarkParserCreateYAML(const void *Buf, uint64_t Size);
 
 /**
  * Creates a remark parser that can be used to parse the buffer located in \p
@@ -255,8 +262,8 @@ LLVM_C_ABI extern LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf
  *
  * \since REMARKS_API_VERSION=1
  */
-LLVM_C_ABI extern LLVMRemarkParserRef LLVMRemarkParserCreateBitstream(const void *Buf,
-                                                           uint64_t Size);
+LLVM_C_ABI extern LLVMRemarkParserRef
+LLVMRemarkParserCreateBitstream(const void *Buf, uint64_t Size);
 
 /**
  * Returns the next remark in the file.
@@ -300,7 +307,8 @@ LLVM_C_ABI extern LLVMRemarkParserRef LLVMRemarkParserCreateBitstream(const void
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern LLVMRemarkEntryRef LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser);
+LLVM_C_ABI extern LLVMRemarkEntryRef
+LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser);
 
 /**
  * Returns `1` if the parser encountered an error while parsing the buffer.
@@ -320,7 +328,8 @@ LLVM_C_ABI extern LLVMBool LLVMRemarkParserHasError(LLVMRemarkParserRef Parser);
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern const char *LLVMRemarkParserGetErrorMessage(LLVMRemarkParserRef Parser);
+LLVM_C_ABI extern const char *
+LLVMRemarkParserGetErrorMessage(LLVMRemarkParserRef Parser);
 
 /**
  * Releases all the resources used by \p Parser.

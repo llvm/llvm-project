@@ -19,9 +19,9 @@
 #ifndef LLVM_C_BITWRITER_H
 #define LLVM_C_BITWRITER_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -39,7 +39,7 @@ LLVM_C_ABI int LLVMWriteBitcodeToFile(LLVMModuleRef M, const char *Path);
 
 /** Writes a module to an open file descriptor. Returns 0 on success. */
 LLVM_C_ABI int LLVMWriteBitcodeToFD(LLVMModuleRef M, int FD, int ShouldClose,
-                         int Unbuffered);
+                                    int Unbuffered);
 
 /** Deprecated for LLVMWriteBitcodeToFD. Writes a module to an open file
     descriptor. Returns 0 on success. Closes the Handle. */

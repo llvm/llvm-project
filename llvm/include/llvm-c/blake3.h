@@ -57,20 +57,21 @@ typedef struct {
 
 LLVM_C_ABI const char *llvm_blake3_version(void);
 LLVM_C_ABI void llvm_blake3_hasher_init(llvm_blake3_hasher *self);
-LLVM_C_ABI void llvm_blake3_hasher_init_keyed(llvm_blake3_hasher *self,
-                                   const uint8_t key[LLVM_BLAKE3_KEY_LEN]);
+LLVM_C_ABI void
+llvm_blake3_hasher_init_keyed(llvm_blake3_hasher *self,
+                              const uint8_t key[LLVM_BLAKE3_KEY_LEN]);
 LLVM_C_ABI void llvm_blake3_hasher_init_derive_key(llvm_blake3_hasher *self,
-                                        const char *context);
+                                                   const char *context);
 LLVM_C_ABI void llvm_blake3_hasher_init_derive_key_raw(llvm_blake3_hasher *self,
-                                            const void *context,
-                                            size_t context_len);
-LLVM_C_ABI void llvm_blake3_hasher_update(llvm_blake3_hasher *self, const void *input,
-                               size_t input_len);
-LLVM_C_ABI void llvm_blake3_hasher_finalize(const llvm_blake3_hasher *self, uint8_t *out,
-                                 size_t out_len);
+                                                       const void *context,
+                                                       size_t context_len);
+LLVM_C_ABI void llvm_blake3_hasher_update(llvm_blake3_hasher *self,
+                                          const void *input, size_t input_len);
+LLVM_C_ABI void llvm_blake3_hasher_finalize(const llvm_blake3_hasher *self,
+                                            uint8_t *out, size_t out_len);
 LLVM_C_ABI void llvm_blake3_hasher_finalize_seek(const llvm_blake3_hasher *self,
-                                      uint64_t seek, uint8_t *out,
-                                      size_t out_len);
+                                                 uint64_t seek, uint8_t *out,
+                                                 size_t out_len);
 LLVM_C_ABI void llvm_blake3_hasher_reset(llvm_blake3_hasher *self);
 
 #ifdef __cplusplus

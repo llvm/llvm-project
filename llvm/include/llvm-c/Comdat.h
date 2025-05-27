@@ -14,9 +14,9 @@
 #ifndef LLVM_C_COMDAT_H
 #define LLVM_C_COMDAT_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -44,7 +44,8 @@ typedef enum {
  *
  * @see llvm::Module::getOrInsertComdat()
  */
-LLVM_C_ABI LLVMComdatRef LLVMGetOrInsertComdat(LLVMModuleRef M, const char *Name);
+LLVM_C_ABI LLVMComdatRef LLVMGetOrInsertComdat(LLVMModuleRef M,
+                                               const char *Name);
 
 /**
  * Get the Comdat assigned to the given global object.
@@ -72,7 +73,8 @@ LLVM_C_ABI LLVMComdatSelectionKind LLVMGetComdatSelectionKind(LLVMComdatRef C);
  *
  * @see llvm::Comdat::setSelectionKind()
  */
-LLVM_C_ABI void LLVMSetComdatSelectionKind(LLVMComdatRef C, LLVMComdatSelectionKind Kind);
+LLVM_C_ABI void LLVMSetComdatSelectionKind(LLVMComdatRef C,
+                                           LLVMComdatSelectionKind Kind);
 
 /**
  * @}

@@ -14,8 +14,8 @@
 #ifndef LLVM_C_ERRORHANDLING_H
 #define LLVM_C_ERRORHANDLING_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/ExternC.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 

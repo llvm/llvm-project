@@ -14,9 +14,9 @@
 #ifndef LLVM_C_IRREADER_H
 #define LLVM_C_IRREADER_H
 
-#include "llvm-c/Visibility.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -37,8 +37,9 @@ LLVM_C_EXTERN_C_BEGIN
  * @see llvm::ParseIR()
  */
 LLVM_C_ABI LLVMBool LLVMParseIRInContext(LLVMContextRef ContextRef,
-                              LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutM,
-                              char **OutMessage);
+                                         LLVMMemoryBufferRef MemBuf,
+                                         LLVMModuleRef *OutM,
+                                         char **OutMessage);
 
 /**
  * @}
