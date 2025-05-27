@@ -37,7 +37,7 @@ public:
   unsigned getRelocType(const MCFixup &, const MCValue &,
                         bool IsPCRel) const override;
 
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+  bool needsRelocateWithSymbol(const MCValue &Val,
                                unsigned Type) const override;
 };
 
@@ -48,14 +48,13 @@ ARMELFObjectWriter::ARMELFObjectWriter(uint8_t OSABI)
                             ELF::EM_ARM,
                             /*HasRelocationAddend*/ false) {}
 
-bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
-                                                 const MCSymbol &Sym,
+bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
                                                  unsigned Type) const {
   // If the symbol is a thumb function the final relocation must set the lowest
   // bit. With a symbol that is done by just having the symbol have that bit
   // set, so we would lose the bit if we relocated with the section.
   // We could use the section but add the bit to the relocation value.
-  if (Asm->isThumbFunc(Val.getAddSym()))
+  if (Asm->isThumbFunc(V.getAddSym()))
     return true;
 
   // FIXME: This is extremely conservative. This really needs to use an
