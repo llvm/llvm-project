@@ -12236,7 +12236,7 @@ SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
   return TokenFactor;
 }
 
-SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
+SDValue SelectionDAG::makeEquivalentMemoryOrdering(MemSDNode *OldLoad,
                                                    SDValue NewMemOp) {
   assert(isa<MemSDNode>(NewMemOp.getNode()) && "Expected a memop node");
   SDValue OldChain = SDValue(OldLoad, 1);
