@@ -443,7 +443,8 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
             .addImm(RegImm.Imm);
       } else {
         assert(RegImm.Imm == 0);
-        TII.copyPhysReg(MBB, MI, MI.getDebugLoc(), NewReg, RegImm.Reg, /*KillSrc*/false);
+        TII.copyPhysReg(MBB, MI, MI.getDebugLoc(), NewReg, RegImm.Reg,
+                        /*KillSrc*/ false);
       }
 
       // Update the set of instructions to use the compressed register and
