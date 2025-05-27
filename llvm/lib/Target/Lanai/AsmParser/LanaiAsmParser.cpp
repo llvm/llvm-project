@@ -91,7 +91,7 @@ public:
 
 private:
   MCAsmParser &Parser;
-  MCAsmLexer &Lexer;
+  AsmLexer &Lexer;
 
   const MCSubtargetInfo &SubtargetInfo;
 };
