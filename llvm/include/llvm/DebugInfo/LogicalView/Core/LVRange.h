@@ -60,8 +60,8 @@ class LVRange final : public LVObject {
 
 public:
   LVRange(LVAddress Address = MaxAddress)
-      : LVObject(),
-        RangesTree(Allocator), TombstoneAddress(Address), Lower(Address) {}
+      : LVObject(), RangesTree(Allocator), TombstoneAddress(Address),
+        Lower(Address) {}
   LVRange(const LVRange &) = delete;
   LVRange &operator=(const LVRange &) = delete;
   ~LVRange() = default;
