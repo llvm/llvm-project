@@ -3,8 +3,8 @@
 cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
 ===============================================================
 
-Flags calls to ``operator[]`` in STL containers and suggests replacing it with
-safe alternatives.
+Finds calls to ``operator[]`` in STL containers and suggests replacing them
+with safe alternatives.
 
 For example, both
 

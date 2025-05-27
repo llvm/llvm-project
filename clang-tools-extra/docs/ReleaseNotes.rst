@@ -122,8 +122,8 @@ New checks
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-accesses>`
   check.
 
-  Flags calls to ``operator[]`` in STL containers and suggests replacing it with
-  safe alternatives.
+  Finds calls to ``operator[]`` in STL containers and suggests replacing them
+  with safe alternatives.
 
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
