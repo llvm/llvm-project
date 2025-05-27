@@ -214,6 +214,12 @@ struct VariadicOperatorMatcherFunc {
   }
 };
 
+namespace internal {
+const VariadicOperatorMatcherFunc<1, std::numeric_limits<unsigned>::max()>
+    anyOf = {DynMatcher::AnyOf};
+const VariadicOperatorMatcherFunc<1, std::numeric_limits<unsigned>::max()>
+    allOf = {DynMatcher::AllOf};
+} // namespace internal
 } // namespace mlir::query::matcher
 
 #endif // MLIR_TOOLS_MLIRQUERY_MATCHER_MATCHERSINTERNAL_H

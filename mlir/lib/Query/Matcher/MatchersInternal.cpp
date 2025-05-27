@@ -5,10 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Implements the base layer of the matcher framework.
-//
-//===----------------------------------------------------------------------===//
+
 #include "mlir/Query/Matcher/MatchersInternal.h"
 #include "llvm/ADT/SetVector.h"
 

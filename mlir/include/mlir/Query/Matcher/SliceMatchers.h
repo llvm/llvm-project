@@ -189,14 +189,6 @@ private:
   bool inclusive;
 };
 
-namespace internal {
-const matcher::VariadicOperatorMatcherFunc<1,
-                                           std::numeric_limits<unsigned>::max()>
-    anyOf = {matcher::DynMatcher::AnyOf};
-const matcher::VariadicOperatorMatcherFunc<1,
-                                           std::numeric_limits<unsigned>::max()>
-    allOf = {matcher::DynMatcher::AllOf};
-} // namespace internal
 /// Matches transitive defs of a top-level operation up to N levels.
 template <typename Matcher>
 inline BackwardSliceMatcher<Matcher>
