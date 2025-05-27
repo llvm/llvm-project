@@ -39,6 +39,7 @@ enum ClangVisibility {
   FlangOption = (1 << 4),
   FC1Option = (1 << 5),
   DXCOption = (1 << 6),
+  CL2000Option = (1 << 7)
 };
 
 enum ID {
