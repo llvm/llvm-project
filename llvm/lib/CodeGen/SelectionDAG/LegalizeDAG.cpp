@@ -3589,9 +3589,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     unsigned Factor = Node->getNumOperands();
     if (Factor <= 2 || !isPowerOf2_32(Factor))
       break;
-    SmallVector<SDValue, 8> Ops;
-    for (SDValue Op : Node->ops())
-      Ops.push_back(Op);
     EVT VecVT = Node->getValueType(0);
     SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
     SmallVector<SDValue, 8> LOps, ROps;
@@ -3600,7 +3597,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     for (unsigned I = 0; I < Factor / 2; I++) {
       SDValue Interleave =
           DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, {VecVT, VecVT},
-                      {Ops[I], Ops[I + Factor / 2]});
+                      {Node->getOperand(I), Node->getOperand(I + Factor / 2)});
       LOps.push_back(Interleave.getValue(0));
       ROps.push_back(Interleave.getValue(1));
     }
