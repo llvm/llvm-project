@@ -1451,11 +1451,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (MVT VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 })
       setOperationAction(ISD::ADD, VT, Custom);
     // FADDP custom lowering
-    for (MVT VT : {MVT::v16f16, MVT::v8f32, MVT::v4f64})
+    for (MVT VT : { MVT::v16f16, MVT::v8f32, MVT::v4f64 })
       setOperationAction(ISD::FADD, VT, Custom);
 
     if (EnablePartialReduceNodes && Subtarget->hasDotProd()) {
-      setPartialReduceMLAAction(MVT::v2i64, MVT::v8i16, Legal);
       setPartialReduceMLAAction(MVT::v4i32, MVT::v16i8, Legal);
       setPartialReduceMLAAction(MVT::v2i32, MVT::v8i8, Legal);
       setPartialReduceMLAAction(MVT::v2i64, MVT::v16i8, Custom);
@@ -29546,9 +29545,9 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
 
   assert((!Scalable || Subtarget->isSVEorStreamingSVEAvailable()) &&
          "SVE or StreamingSVE must be available when using scalable vectors.");
-  assert(
-      (Scalable || (Subtarget->isNeonAvailable() || Subtarget->hasDotProd())) &&
-      "Neon or dotprod must be available when using fixed-width vectors.");
+  assert((Scalable || Subtarget->hasDotProd()) &&
+         "Dotprod must be available when targeting NEON dot product "
+         "instructions.");
 
   SDLoc DL(Op);
 
