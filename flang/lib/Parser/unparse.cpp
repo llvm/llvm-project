@@ -2093,7 +2093,7 @@ public:
     Walk(x.v, ",");
   }
   void Unparse(const OmpMapperSpecifier &x) {
-    const auto &mapperName = std::get<std::string>(x.t);
+    const auto &mapperName{std::get<std::string>(x.t)};
     if (mapperName.find("omp.default.mapper") == std::string::npos) {
       Walk(mapperName);
       Put(":");
@@ -2800,7 +2800,7 @@ public:
     BeginOpenMP();
     Word("!$OMP DECLARE MAPPER (");
     const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
-    const auto &mapperName = std::get<std::string>(spec.t);
+    const auto &mapperName{std::get<std::string>(spec.t)};
     if (mapperName.find("omp.default.mapper") == std::string::npos) {
       Walk(mapperName);
       Put(":");
