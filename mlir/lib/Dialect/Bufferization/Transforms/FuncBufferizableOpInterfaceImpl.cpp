@@ -213,7 +213,7 @@ struct CallOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto callOp = cast<func::CallOp>(op);
 
@@ -398,7 +398,7 @@ struct FuncOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto funcOp = cast<FuncOp>(op);
     auto bbArg = cast<BlockArgument>(value);

@@ -186,9 +186,10 @@ struct MaskOpInterface
     return {{&yieldOp->getOpOperand(resultNum), BufferRelation::Equivalent}};
   }
 
-  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
-                                 const AnalysisState &analysisState,
-                                 BufferizationState &bufferizationState) const {
+  LogicalResult
+  resolveConflicts(Operation *op, RewriterBase &rewriter,
+                   const AnalysisState &analysisState,
+                   const BufferizationState &bufferizationState) const {
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(
             rewriter, analysisState, bufferizationState)))

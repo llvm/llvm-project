@@ -165,7 +165,8 @@ Operation *bufferization::getOwnerOfValue(Value value) {
 /// allocated.
 FailureOr<Value> bufferization::allocateTensorForShapedValue(
     OpBuilder &b, Location loc, Value shapedValue,
-    const BufferizationOptions &options, BufferizationState &state, bool copy) {
+    const BufferizationOptions &options, const BufferizationState &state,
+    bool copy) {
   Value tensor;
   if (llvm::isa<RankedTensorType>(shapedValue.getType())) {
     tensor = shapedValue;
@@ -224,7 +225,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
 
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
     RewriterBase &rewriter, const AnalysisState &analysisState,
-    BufferizationState &bufferizationState) {
+    const BufferizationState &bufferizationState) {
   OpBuilder::InsertionGuard g(rewriter);
   Operation *op = getOperation();
   SmallVector<OpOperand *> outOfPlaceOpOperands;
@@ -670,7 +671,7 @@ static void ensureToBufferOpIsValid(Value tensor, Type memrefType) {
 
 FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
                                           const BufferizationOptions &options,
-                                          BufferizationState &state) {
+                                          const BufferizationState &state) {
 #ifndef NDEBUG
   auto tensorType = llvm::dyn_cast<TensorType>(value.getType());
   assert(tensorType && "unexpected non-tensor type");
@@ -695,7 +696,7 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
 /// Return the buffer type for a given Value (tensor) after bufferization.
 FailureOr<BaseMemRefType>
 bufferization::getBufferType(Value value, const BufferizationOptions &options,
-                             BufferizationState &state) {
+                             const BufferizationState &state) {
   SmallVector<Value> invocationStack;
   return getBufferType(value, options, state, invocationStack);
 }
@@ -703,7 +704,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
 /// Return the buffer type for a given Value (tensor) after bufferization.
 FailureOr<BaseMemRefType>
 bufferization::getBufferType(Value value, const BufferizationOptions &options,
-                             BufferizationState &state,
+                             const BufferizationState &state,
                              SmallVector<Value> &invocationStack) {
   assert(llvm::isa<TensorType>(value.getType()) &&
          "unexpected non-tensor type");
@@ -951,7 +952,7 @@ AliasingOpOperandList bufferization::detail::defaultGetAliasingOpOperands(
 
 FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
     Value value, const BufferizationOptions &options,
-    BufferizationState &bufferizationState,
+    const BufferizationState &bufferizationState,
     SmallVector<Value> &invocationStack) {
   assert(llvm::isa<TensorType>(value.getType()) && "expected tensor type");
 

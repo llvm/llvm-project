@@ -34,7 +34,7 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     // Note: The user may want to override this function for OpResults in
     // case the bufferized result type is different from the bufferized type of

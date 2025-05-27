@@ -26,7 +26,7 @@ namespace {
 /// Generic conversion for any DestinationStyleOpInterface on tensors.
 static LogicalResult bufferizeDestinationStyleOpInterface(
     RewriterBase &rewriter, DestinationStyleOpInterface op,
-    const BufferizationOptions &options, BufferizationState &state) {
+    const BufferizationOptions &options, const BufferizationState &state) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);

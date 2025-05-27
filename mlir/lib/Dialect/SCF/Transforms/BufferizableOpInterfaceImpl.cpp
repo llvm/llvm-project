@@ -276,7 +276,7 @@ struct IfOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto ifOp = cast<scf::IfOp>(op);
     auto thenYieldOp = cast<scf::YieldOp>(ifOp.thenBlock()->getTerminator());
@@ -392,7 +392,7 @@ struct IndexSwitchOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto switchOp = cast<scf::IndexSwitchOp>(op);
     assert(value.getDefiningOp() == op && "invalid value");
@@ -524,7 +524,7 @@ getBbArgReplacements(RewriterBase &rewriter, Block::BlockArgListType bbArgs,
 /// layout map and a cast must be inserted.
 static FailureOr<BaseMemRefType> computeLoopRegionIterArgBufferType(
     Operation *loopOp, BlockArgument iterArg, Value initArg, Value yieldedValue,
-    const BufferizationOptions &options, BufferizationState &state,
+    const BufferizationOptions &options, const BufferizationState &state,
     SmallVector<Value> &invocationStack) {
   // Determine the buffer type of the init_arg.
   auto initArgBufferType =
@@ -653,9 +653,10 @@ struct ForOpInterface
     return true;
   }
 
-  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
-                                 const AnalysisState &analysisState,
-                                 BufferizationState &bufferizationState) const {
+  LogicalResult
+  resolveConflicts(Operation *op, RewriterBase &rewriter,
+                   const AnalysisState &analysisState,
+                   const BufferizationState &bufferizationState) const {
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(
             rewriter, analysisState, bufferizationState)))
@@ -708,7 +709,7 @@ struct ForOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto forOp = cast<scf::ForOp>(op);
     assert(getOwnerOfValue(value) == op && "invalid value");
@@ -900,9 +901,10 @@ struct WhileOpInterface
     return true;
   }
 
-  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
-                                 const AnalysisState &analysisState,
-                                 BufferizationState &bufferizationState) const {
+  LogicalResult
+  resolveConflicts(Operation *op, RewriterBase &rewriter,
+                   const AnalysisState &analysisState,
+                   const BufferizationState &bufferizationState) const {
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(
             rewriter, analysisState, bufferizationState)))
@@ -1042,7 +1044,7 @@ struct WhileOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto whileOp = cast<scf::WhileOp>(op);
     assert(getOwnerOfValue(value) == op && "invalid value");
@@ -1298,7 +1300,7 @@ struct ForallOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto forallOp = cast<ForallOp>(op);
 

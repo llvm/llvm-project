@@ -51,7 +51,7 @@ struct CastOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto castOp = cast<tensor::CastOp>(op);
     auto maybeSrcBufferType = bufferization::getBufferType(
@@ -142,7 +142,7 @@ struct CollapseShapeOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto collapseShapeOp = cast<tensor::CollapseShapeOp>(op);
     auto maybeSrcBufferType = bufferization::getBufferType(
@@ -320,7 +320,7 @@ struct ExpandShapeOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto expandShapeOp = cast<tensor::ExpandShapeOp>(op);
     auto maybeSrcBufferType = bufferization::getBufferType(
@@ -405,7 +405,7 @@ struct ExtractSliceOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
     assert(value == extractSliceOp.getResult() && "invalid value");
@@ -754,7 +754,7 @@ struct PadOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     // Infer memory space from the source tensor.
     auto padOp = cast<tensor::PadOp>(op);
@@ -927,7 +927,7 @@ struct ReshapeOpInterface
 
   FailureOr<BaseMemRefType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
-                BufferizationState &state,
+                const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto reshapeOp = cast<tensor::ReshapeOp>(op);
     assert(value == reshapeOp.getResult() && "unexpected value provided");
@@ -1023,9 +1023,10 @@ struct ParallelInsertSliceOpInterface
 
   /// tensor.parallel_insert_slice op has implicit inplace behavior. We
   /// shouldn't create copy to resolve conflict.
-  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
-                                 const AnalysisState &analysisState,
-                                 BufferizationState &bufferizationState) const {
+  LogicalResult
+  resolveConflicts(Operation *op, RewriterBase &rewriter,
+                   const AnalysisState &analysisState,
+                   const BufferizationState &bufferizationState) const {
     return success();
   }
 };

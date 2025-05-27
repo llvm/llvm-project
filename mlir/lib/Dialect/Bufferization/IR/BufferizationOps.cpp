@@ -224,7 +224,7 @@ AliasingValueList AllocTensorOp::getAliasingValues(OpOperand &opOperand,
 
 FailureOr<BaseMemRefType>
 AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
-                             BufferizationState &state,
+                             const BufferizationState &state,
                              SmallVector<Value> &invocationStack) {
   assert(value == getResult() && "invalid value");
 

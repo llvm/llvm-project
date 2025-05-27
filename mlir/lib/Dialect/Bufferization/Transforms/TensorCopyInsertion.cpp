@@ -28,7 +28,7 @@ using namespace mlir::bufferization;
 
 LogicalResult mlir::bufferization::insertTensorCopies(
     Operation *op, const OneShotBufferizationOptions &options,
-    BufferizationState &bufferizationState,
+    const BufferizationState &bufferizationState,
     BufferizationStatistics *statistics) {
   OneShotAnalysisState analysisState(op, options);
   // Run normal One-Shot Bufferize analysis or One-Shot Module Bufferize
@@ -50,7 +50,7 @@ LogicalResult mlir::bufferization::insertTensorCopies(
 
 LogicalResult mlir::bufferization::insertTensorCopies(
     Operation *op, const AnalysisState &analysisState,
-    BufferizationState &bufferizationState) {
+    const BufferizationState &bufferizationState) {
   IRRewriter rewriter(op->getContext());
 
   // It may be more efficient to walk in pre-order here, but the current

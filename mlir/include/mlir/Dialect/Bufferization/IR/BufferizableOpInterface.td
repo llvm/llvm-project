@@ -382,7 +382,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodName=*/"resolveConflicts",
         /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
                       "const ::mlir::bufferization::AnalysisState &":$analysisState,
-                      "::mlir::bufferization::BufferizationState &":$bufferizationState),
+                      "const ::mlir::bufferization::BufferizationState &":$bufferizationState),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           auto bufferizableOp =
@@ -524,7 +524,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodName=*/"getBufferType",
         /*args=*/(ins "::mlir::Value":$value,
                       "const ::mlir::bufferization::BufferizationOptions &":$options,
-                      "::mlir::bufferization::BufferizationState &":$state,
+                      "const ::mlir::bufferization::BufferizationState &":$state,
                       "::llvm::SmallVector<::mlir::Value> &":$invocationStack),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
@@ -619,7 +619,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
     ::llvm::LogicalResult resolveTensorOpOperandConflicts(
         ::mlir::RewriterBase &rewriter,
         const ::mlir::bufferization::AnalysisState &analysisState,
-        ::mlir::bufferization::BufferizationState &bufferizationState);
+        const ::mlir::bufferization::BufferizationState &bufferizationState);
 
     /// Return `true` if the given OpOperand creates an alias but does neither
     /// read nor write. This implies that `bufferizesToMemoryRead` and
