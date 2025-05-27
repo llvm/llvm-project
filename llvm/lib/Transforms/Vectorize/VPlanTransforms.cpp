@@ -941,11 +941,10 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
 
 /// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
 /// non-nullptr Value for a handled \p Opcode if corresponding \p Operands are
-/// foldable.
-static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
-                                ArrayRef<VPValue *> Operands,
-                                const DataLayout &DL,
-                                VPTypeAnalysis &TypeInfo) {
+/// foldable live-ins.
+static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
+                               ArrayRef<VPValue *> Operands,
+                               const DataLayout &DL, VPTypeAnalysis &TypeInfo) {
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
     if (!Op->isLiveIn() || !Op->getLiveInIRValue())
@@ -1003,8 +1002,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
             VPlan *Plan = R.getParent()->getPlan();
             const DataLayout &DL =
                 Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
-            Value *V = tryToConstantFold(*I, I->getOpcode(), I->operands(), DL,
-                                         TypeInfo);
+            Value *V = tryToFoldLiveIns(*I, I->getOpcode(), I->operands(), DL,
+                                        TypeInfo);
             if (V)
               I->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
             return V;
