@@ -17,7 +17,7 @@ class TestDAP_subtleFrames(lldbdap_testcase.DAPTestCaseBase):
         Internal stack frames (such as the ones used by `std::function`) are marked as "subtle".
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, disableASLR=False)
+        self.build_and_launch(program)
         source = "main.cpp"
         self.set_source_breakpoints(source, [line_number(source, "BREAK HERE")])
         self.continue_to_next_stop()
