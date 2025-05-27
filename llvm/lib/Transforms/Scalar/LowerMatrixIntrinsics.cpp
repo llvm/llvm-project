@@ -384,8 +384,8 @@ class LowerMatrixIntrinsics {
         else {
 #ifndef NDEBUG
           Constant->dump();
-          report_fatal_error("unhandled ConstantData type");
 #endif
+          report_fatal_error("unhandled ConstantData type");
         }
       }
     }
