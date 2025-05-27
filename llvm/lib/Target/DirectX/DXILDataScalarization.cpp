@@ -188,36 +188,38 @@ allocaArrayFromVector(IRBuilder<> &Builder, Value *Vec, Type *IdxTy) {
   return std::make_pair(ArrAlloca, ArrTy);
 }
 
-bool DataScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
+static bool replaceDynamicInsertElementInst(InsertElementInst &IEI) {
+  IRBuilder<> Builder(&IEI);
+
   Value *Vec = IEI.getOperand(0);
   Value *Val = IEI.getOperand(1);
   Value *Index = IEI.getOperand(2);
   Type *IndexTy = Index->getType();
 
-  // If the index is a constant then we don't need to scalarize it
-  if (isa<ConstantInt>(Index))
-    return false;
-
-  IRBuilder<> Builder(&IEI);
   std::pair<Value *, Type *> Arr = allocaArrayFromVector(Builder, Vec, IndexTy);
   Value *ArrAlloca = Arr.first;
   Type *ArrTy = Arr.second;
   Value *GEP = Builder.CreateInBoundsGEP(ArrTy, ArrAlloca,
                                          {ConstantInt::get(IndexTy, 0), Index});
   Builder.CreateStore(Val, GEP);
-
   IEI.eraseFromParent();
   return true;
 }
 
-bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
+bool DataScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
   // If the index is a constant then we don't need to scalarize it
-  Value *Index = EEI.getIndexOperand();
-  Type *IndexTy = Index->getType();
+  Value *Index = IEI.getOperand(2);
   if (isa<ConstantInt>(Index))
     return false;
+  return replaceDynamicInsertElementInst(IEI);
+}
 
+static bool replaceDynamicExtractElementInst(ExtractElementInst &EEI) {
   IRBuilder<> Builder(&EEI);
+
+  Value *Index = EEI.getIndexOperand();
+  Type *IndexTy = Index->getType();
+
   std::pair<Value *, Type *> Arr =
       allocaArrayFromVector(Builder, EEI.getVectorOperand(), IndexTy);
   Value *ArrAlloca = Arr.first;
@@ -230,6 +232,14 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
   EEI.replaceAllUsesWith(Load);
   EEI.eraseFromParent();
   return true;
+}
+
+bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
+  // If the index is a constant then we don't need to scalarize it
+  Value *Index = EEI.getIndexOperand();
+  if (isa<ConstantInt>(Index))
+    return false;
+  return replaceDynamicExtractElementInst(EEI);
 }
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
