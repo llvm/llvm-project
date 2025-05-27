@@ -481,7 +481,8 @@ INTERCEPTOR(char*, textdomain, const char *domainname) {
 #endif
 
 #if SANITIZER_INTERCEPT_STRCMP || SANITIZER_INTERCEPT_MEMCMP
-[[maybe_unused]] static inline int CharCmpX(unsigned char c1, unsigned char c2) {
+[[maybe_unused]] static inline int CharCmpX(unsigned char c1,
+                                            unsigned char c2) {
   return (c1 == c2) ? 0 : (c1 < c2) ? -1 : 1;
 }
 #endif
@@ -1816,22 +1817,22 @@ FORMAT_INTERCEPTOR_IMPL(__isoc99_snprintf, __isoc99_vsnprintf, str, size,
 #endif  // SANITIZER_INTERCEPT_PRINTF
 
 #if SANITIZER_INTERCEPT_PRINTF
-# define INIT_PRINTF_COMMON                      \
-      COMMON_INTERCEPT_FUNCTION_LDBL(printf);    \
-      COMMON_INTERCEPT_FUNCTION_LDBL(sprintf);   \
-      COMMON_INTERCEPT_FUNCTION_LDBL(snprintf);  \
-      COMMON_INTERCEPT_FUNCTION_LDBL(fprintf);   \
-      COMMON_INTERCEPT_FUNCTION_LDBL(vprintf);   \
-      COMMON_INTERCEPT_FUNCTION_LDBL(vsprintf);  \
-      COMMON_INTERCEPT_FUNCTION_LDBL(vsnprintf); \
-      COMMON_INTERCEPT_FUNCTION_LDBL(vfprintf);
+#  define INIT_PRINTF_COMMON                   \
+    COMMON_INTERCEPT_FUNCTION_LDBL(printf);    \
+    COMMON_INTERCEPT_FUNCTION_LDBL(sprintf);   \
+    COMMON_INTERCEPT_FUNCTION_LDBL(snprintf);  \
+    COMMON_INTERCEPT_FUNCTION_LDBL(fprintf);   \
+    COMMON_INTERCEPT_FUNCTION_LDBL(vprintf);   \
+    COMMON_INTERCEPT_FUNCTION_LDBL(vsprintf);  \
+    COMMON_INTERCEPT_FUNCTION_LDBL(vsnprintf); \
+    COMMON_INTERCEPT_FUNCTION_LDBL(vfprintf);
 #  if !SANITIZER_AIX
-  // AIX does not have [v]asprintf.
-#    define INIT_PRINTF_EXTRA                    \
-      COMMON_INTERCEPT_FUNCTION_LDBL(asprintf);  \
+// AIX does not have [v]asprintf.
+#    define INIT_PRINTF_EXTRA                   \
+      COMMON_INTERCEPT_FUNCTION_LDBL(asprintf); \
       COMMON_INTERCEPT_FUNCTION_LDBL(vasprintf);
 #  else
-#   define INIT_PRINTF_EXTRA                          
+#    define INIT_PRINTF_EXTRA
 #  endif
 #  define INIT_PRINTF INIT_PRINTF_COMMON INIT_PRINTF_EXTRA
 #else
