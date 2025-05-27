@@ -11,6 +11,7 @@
 /// (e.g. `counted_by`)
 ///
 //===----------------------------------------------------------------------===//
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
