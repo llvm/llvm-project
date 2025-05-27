@@ -148,8 +148,37 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPromoteConstantPass(*PR);
 }
 
+static StringRef computeDataLayout(const Triple &TT,
+                                   const TargetOptions &Options) {
+  StringRef ABIName = Options.MCOptions.getABIName();
+  if (TT.isOSBinFormatMachO())
+    return "e-m:o-p:32:32-i64:64-n32-S128";
+
+  if (TT.isArch64Bit()) {
+    if (ABIName == "lp64e")
+      return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S64";
+
+    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+  }
+  assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
+
+  if (ABIName == "ilp32e")
+    return "e-m:e-p:32:32-i64:64-n32-S32";
+
+  return "e-m:e-p:32:32-i64:64-n32-S128";
+}
+
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
+}
+
+static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSBinFormatELF())
+    return std::make_unique<RISCVELFTargetObjectFile>();
+  else if (TT.isOSBinFormatMachO())
+    return std::make_unique<TargetLoweringObjectFileMachO>();
+  else
+    return std::unique_ptr<TargetLoweringObjectFile>();
 }
 
 RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,

@@ -14,6 +14,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
@@ -955,12 +956,31 @@ RISCVAsmBackend::createObjectTargetWriter() const {
   return createRISCVELFObjectWriter(OSABI, Is64Bit);
 }
 
+class DarwinRISCVAsmBackend : public RISCVAsmBackend {
+public:
+  DarwinRISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
+			bool IsLittleEndian,
+                        const MCTargetOptions &Options)
+    : RISCVAsmBackend(STI, OSABI, Is64Bit, IsLittleEndian, Options) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    const Triple &TT = STI.getTargetTriple();
+    uint32_t CPUType = cantFail(MachO::getCPUType(TT));
+    uint32_t CPUSubType = cantFail(MachO::getCPUSubType(TT));
+    return createRISCVMachObjectWriter(CPUType, CPUSubType);
+  }
+};
+
 MCAsmBackend *llvm::createRISCVAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
+  if (TT.isOSBinFormatMachO())
+    return new DarwinRISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), TT.isLittleEndian(),
+				     Options);
   return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), TT.isLittleEndian(),
-                             Options);
+			     Options);
 }

@@ -60,7 +60,11 @@ static MCRegisterInfo *createRISCVMCRegisterInfo(const Triple &TT) {
 static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
                                        const Triple &TT,
                                        const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new RISCVMCAsmInfo(TT);
+  MCAsmInfo *MAI = nullptr;
+  if (TT.isOSBinFormatELF())
+    MAI = new RISCVMCAsmInfo(TT);
+  else if (TT.isOSBinFormatMachO())
+    MAI = new RISCVMCAsmInfoDarwin();
 
   unsigned SP = MRI.getDwarfRegNum(RISCV::X2, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
