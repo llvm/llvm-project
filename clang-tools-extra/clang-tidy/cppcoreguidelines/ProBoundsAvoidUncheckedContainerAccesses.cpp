@@ -23,9 +23,8 @@ ProBoundsAvoidUncheckedContainerAccesses::
     ProBoundsAvoidUncheckedContainerAccesses(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
-  ExcludedClassesStr = Options.get("ExcludeClasses", DefaultExclusionStr);
-  ExcludedClasses =
-      clang::tidy::utils::options::parseStringList(ExcludedClassesStr);
+  ExcludedClasses = utils::options::parseStringList(
+      Options.get("ExcludeClasses", DefaultExclusionStr));
   FixMode = Options.get("FixMode", None);
   FixFunction = Options.get("FixFunction", "gsl::at");
 }
@@ -35,7 +34,8 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
 
   Options.store(Opts, "FixFunction", FixFunction);
   Options.store(Opts, "FixMode", FixMode);
-  Options.store(Opts, "ExcludeClasses", ExcludedClassesStr);
+  Options.store(Opts, "ExcludeClasses",
+                utils::options::serializeStringList(ExcludedClasses));
 }
 
 // TODO: if at() is defined in another class in the class hierarchy of the class

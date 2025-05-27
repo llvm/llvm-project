@@ -36,7 +36,6 @@ public:
 private:
   // A list of class names that are excluded from the warning
   std::vector<llvm::StringRef> ExcludedClasses;
-  llvm::StringRef ExcludedClassesStr;
   // Setting which fix to suggest
   FixModes FixMode;
   llvm::StringRef FixFunction;
