@@ -156,6 +156,10 @@ protected:
                        LVAddress LowerAddress, LVAddress UpperAddress);
   LVRange *getSectionRanges(LVSectionIndex SectionIndex);
 
+  // Tombstone value. Assume 64 bits. The value is updated for each
+  // Compile Unit that is processed.
+  LVAddress TombstoneAddress = MaxAddress;
+
   // Record Compilation Unit entry.
   void addCompileUnitOffset(LVOffset Offset, LVScopeCompileUnit *CompileUnit) {
     CompileUnits.emplace(Offset, CompileUnit);
@@ -281,6 +285,9 @@ public:
   codeview::CPUType getCompileUnitCPUType() {
     return CompileUnit->getCPUType();
   }
+
+  void setTombstoneAddress(LVAddress Address) { TombstoneAddress = Address; }
+  LVAddress getTombstoneAddress() const { return TombstoneAddress; }
 
   // Access to the scopes root.
   LVScopeRoot *getScopesRoot() const { return Root; }
