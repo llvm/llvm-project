@@ -12,10 +12,10 @@ define zeroext i1 @test_cmpxchg_res_i8(ptr %addr, i8 %desired, i8 zeroext %new) 
 ; CHECK-ARM-LABEL: test_cmpxchg_res_i8:
 ; CHECK-ARM:         .save {r4, lr}
 ; CHECK-ARM-NEXT:    push {r4, lr}
-; CHECK-ARM-NEXT:    mov r4, r1
+; CHECK-ARM-NEXT:    and r4, r1, #255
+; CHECK-ARM-NEXT:    mov r1, r4
 ; CHECK-ARM-NEXT:    bl __sync_val_compare_and_swap_1
-; CHECK-ARM-NEXT:    and r1, r4, #255
-; CHECK-ARM-NEXT:    sub r0, r0, r1
+; CHECK-ARM-NEXT:    sub r0, r0, r4
 ; CHECK-ARM-NEXT:    rsbs r1, r0, #0
 ; CHECK-ARM-NEXT:    adc r0, r0, r1
 ; CHECK-ARM-NEXT:    pop {r4, lr}
@@ -25,10 +25,11 @@ define zeroext i1 @test_cmpxchg_res_i8(ptr %addr, i8 %desired, i8 zeroext %new) 
 ; CHECK-THUMB:         .save {r4, lr}
 ; CHECK-THUMB-NEXT:    push {r4, lr}
 ; CHECK-THUMB-NEXT:    movs r4, r1
-; CHECK-THUMB-NEXT:    bl __sync_val_compare_and_swap_1
 ; CHECK-THUMB-NEXT:    movs r1, #255
-; CHECK-THUMB-NEXT:    ands r1, r4
-; CHECK-THUMB-NEXT:    subs r1, r0, r1
+; CHECK-THUMB-NEXT:    ands r4, r1
+; CHECK-THUMB-NEXT:    movs r1, r4
+; CHECK-THUMB-NEXT:    bl __sync_val_compare_and_swap_1
+; CHECK-THUMB-NEXT:    subs r1, r0, r4
 ; CHECK-THUMB-NEXT:    rsbs r0, r1, #0
 ; CHECK-THUMB-NEXT:    adcs r0, r1
 ; CHECK-THUMB-NEXT:    pop {r4}
@@ -52,10 +53,10 @@ define zeroext i1 @test_cmpxchg_res_i8(ptr %addr, i8 %desired, i8 zeroext %new) 
 ; CHECK-THUMBV6-LABEL: test_cmpxchg_res_i8:
 ; CHECK-THUMBV6:         .save {r4, lr}
 ; CHECK-THUMBV6-NEXT:    push {r4, lr}
-; CHECK-THUMBV6-NEXT:    mov r4, r1
+; CHECK-THUMBV6-NEXT:    uxtb r4, r1
+; CHECK-THUMBV6-NEXT:    mov r1, r4
 ; CHECK-THUMBV6-NEXT:    bl __sync_val_compare_and_swap_1
-; CHECK-THUMBV6-NEXT:    uxtb r1, r4
-; CHECK-THUMBV6-NEXT:    subs r1, r0, r1
+; CHECK-THUMBV6-NEXT:    subs r1, r0, r4
 ; CHECK-THUMBV6-NEXT:    rsbs r0, r1, #0
 ; CHECK-THUMBV6-NEXT:    adcs r0, r1
 ; CHECK-THUMBV6-NEXT:    pop {r4, pc}
