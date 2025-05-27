@@ -1326,7 +1326,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     Continue = getJumpDestInCurrentScope("for.inc");
   BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
 
-  llvm::BasicBlock *ForBody = nullptr;
   if (S.getCond()) {
     // If the for statement has a condition scope, emit the local variable
     // declaration.
@@ -1351,7 +1350,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
-    ForBody = createBasicBlock("for.body");
+    llvm::BasicBlock *ForBody = createBasicBlock("for.body");
 
     // C99 6.8.5p2/p4: The first substatement is executed if the expression
     // compares unequal to 0.  The condition must be a scalar type.
@@ -1397,6 +1396,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     EmitStmt(S.getBody());
   }
 
+  auto *FinalBodyBB = Builder.GetInsertBlock();
+
   // If there is an increment, emit it next.
   if (S.getInc()) {
     EmitBlock(Continue.getBlock());
@@ -1427,10 +1428,10 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
 
-  if (ForBody) {
+  if (FinalBodyBB) {
     // Key Instructions: We want the for closing brace to be step-able on to
     // match existing behaviour.
-    addInstToNewSourceAtom(ForBody->getTerminator(), nullptr);
+    addInstToNewSourceAtom(FinalBodyBB->getTerminator(), nullptr);
   }
 }
 
