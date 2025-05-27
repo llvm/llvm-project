@@ -1699,11 +1699,81 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   return Call(S, OpPC, F, VarArgSize);
 }
 
+bool StartLifetime(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
+    return false;
+
+  Ptr.startLifetime();
+  return true;
+}
+
+// FIXME: It might be better to the recursing as part of the generated code for
+// a destructor?
+static void endLifetimeRecurse(const Pointer &Ptr) {
+  Ptr.endLifetime();
+  if (const Record *R = Ptr.getRecord()) {
+    for (const Record::Field &Fi : R->fields())
+      endLifetimeRecurse(Ptr.atField(Fi.Offset));
+    return;
+  }
+
+  if (const Descriptor *FieldDesc = Ptr.getFieldDesc();
+      FieldDesc->isCompositeArray()) {
+    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I)
+      endLifetimeRecurse(Ptr.atIndex(I).narrow());
+  }
+}
+
+/// Ends the lifetime of the peek'd pointer.
+bool EndLifetime(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  endLifetimeRecurse(Ptr);
+  return true;
+}
+
+/// Ends the lifetime of the pop'd pointer.
+bool EndLifetimePop(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
+    return false;
+  endLifetimeRecurse(Ptr);
+  return true;
+}
+
 bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
                           std::optional<uint64_t> ArraySize) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr))
+  // Similar to CheckStore(), but with the additional CheckTemporary() call and
+  // the AccessKinds are different.
+  if (!CheckTemporary(S, OpPC, Ptr, AK_Construct))
+    return false;
+  if (!CheckLive(S, OpPC, Ptr, AK_Construct))
+    return false;
+  if (!CheckDummy(S, OpPC, Ptr, AK_Construct))
+    return false;
+
+  // CheckLifetime for this and all base pointers.
+  for (Pointer P = Ptr;;) {
+    if (!CheckLifetime(S, OpPC, P, AK_Construct)) {
+      return false;
+    }
+    if (P.isRoot())
+      break;
+    P = P.getBase();
+  }
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, AK_Construct))
+    return false;
+  if (!CheckGlobal(S, OpPC, Ptr))
+    return false;
+  if (!CheckConst(S, OpPC, Ptr))
+    return false;
+  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
     return false;
 
   if (!InvalidNewDeleteExpr(S, OpPC, E))

@@ -887,11 +887,10 @@ isNotLinearizableBecauseLargeInnerDimension(Operation *op,
   // Check on bitwidths.
   SmallVector<std::pair<Type, unsigned>> toCheck =
       getTypeBitWidthBoundPairs(op, targetBitWidth);
-  return std::any_of(toCheck.begin(), toCheck.end(),
-                     [&](std::pair<Type, unsigned> typeWidth) {
-                       return isNotLinearizableBecauseLargeInnerDimension(
-                           typeWidth.first, typeWidth.second);
-                     });
+  return llvm::any_of(toCheck, [&](std::pair<Type, unsigned> typeWidth) {
+    return isNotLinearizableBecauseLargeInnerDimension(typeWidth.first,
+                                                       typeWidth.second);
+  });
 }
 
 void populateWithBitWidthConstraints(TypeConverter &typeConverter,

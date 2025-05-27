@@ -655,6 +655,9 @@ public:
 /// }
 /// provides low-level access.
 class GFConstant {
+  using VecTy = SmallVector<APFloat>;
+  using const_iterator = VecTy::const_iterator;
+
 public:
   enum class GFConstantKind { Scalar, FixedVector, ScalableVector };
 
@@ -671,6 +674,23 @@ public:
 
   /// Returns the kind of of this constant, e.g, Scalar.
   GFConstantKind getKind() const { return Kind; }
+
+  const_iterator begin() const {
+    assert(Kind != GFConstantKind::ScalableVector &&
+           "Expected fixed vector or scalar constant");
+    return Values.begin();
+  }
+
+  const_iterator end() const {
+    assert(Kind != GFConstantKind::ScalableVector &&
+           "Expected fixed vector or scalar constant");
+    return Values.end();
+  }
+
+  size_t size() const {
+    assert(Kind == GFConstantKind::FixedVector && "Expected fixed vector");
+    return Values.size();
+  }
 
   /// Returns the value, if this constant is a scalar.
   APFloat getScalarValue() const;
