@@ -2,7 +2,7 @@
 Test lldb data formatter subsystem.
 """
 
-
+from typing import Optional
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
