@@ -597,10 +597,8 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       LineLocation Loc = I->first;
       const FunctionSamples &CalleeSamples = FS.second;
       OS.indent(Indent);
-      if (Loc.Discriminator == 0)
-        OS << Loc.LineOffset << ": ";
-      else
-        OS << Loc.LineOffset << "." << Loc.Discriminator << ": ";
+      Loc.print(OS);
+      OS << ": ";
       if (std::error_code EC = writeSample(CalleeSamples))
         return EC;
     }
