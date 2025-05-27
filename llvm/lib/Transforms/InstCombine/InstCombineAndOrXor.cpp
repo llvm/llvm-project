@@ -3650,7 +3650,8 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
 
     if (!ICmpInst::isEquality(ICmpDecompose->Pred) ||
         !ICmpDecompose->C.isZero() || !ICmpDecompose->Mask.isPowerOf2() ||
-        ICmpDecompose->Mask.isZero())
+        ICmpDecompose->Mask.isZero() ||
+        NeZero->getBitWidth() != ICmpDecompose->Mask.getBitWidth())
       return std::nullopt;
 
     if (!NeZero->urem(ICmpDecompose->Mask).isZero())
