@@ -181,9 +181,7 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 
   IRBuilder<> Builder(&EEI);
   VectorType *VecTy = EEI.getVectorOperandType();
-  assert(VecTy->getElementCount().isFixed() &&
-         "Vector operand of ExtractElement must have a fixed size");
-  
+
   Type *ArrTy = equivalentArrayTypeFromVector(VecTy);
   Value *ArrAlloca = Builder.CreateAlloca(ArrTy);
 
