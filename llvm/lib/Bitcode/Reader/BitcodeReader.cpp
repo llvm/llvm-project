@@ -980,6 +980,9 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// the CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
   std::vector<uint64_t> RadixArray;
 
+  // A table which maps ValueID to the GUID for that value.
+  std::vector<uint64_t> DefinedGUIDs;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
@@ -7164,9 +7167,7 @@ ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
 void ModuleSummaryIndexBitcodeReader::setValueGUID(
     uint64_t ValueID, StringRef ValueName, GlobalValue::LinkageTypes Linkage,
     StringRef SourceFileName) {
-  std::string GlobalId =
-      GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
-  auto ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(GlobalId);
+  auto ValueGUID = DefinedGUIDs[ValueID];
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
     OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
@@ -7388,6 +7389,10 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
           // word before the start of the identification or module block, which
           // was historically always the start of the regular bitcode header.
           VSTOffset = Record[0] - 1;
+          break;
+        // MODULE_CODE_GUIDLIST: [i64 x N]
+        case bitc::MODULE_CODE_GUIDLIST:
+          llvm::append_range(DefinedGUIDs, Record);
           break;
         // v1 GLOBALVAR: [pointer type, isconst,     initid,       linkage, ...]
         // v1 FUNCTION:  [type,         callingconv, isproto,      linkage, ...]
