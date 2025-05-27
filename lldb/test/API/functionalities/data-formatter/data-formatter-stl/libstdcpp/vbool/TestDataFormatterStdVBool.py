@@ -20,7 +20,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
     @skip
     @add_test_categories(["libstdcxx"])
     def test_with_run_command(self):
-        self.with_run_command({})
+        self.with_run_command()
 
     @add_test_categories(["libstdcxx"])
     def test_with_run_command_debug(self):
