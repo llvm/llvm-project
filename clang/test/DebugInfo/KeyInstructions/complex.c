@@ -87,7 +87,6 @@ void test() {
 // CHECK: [[G6R1]] = !DILocation({{.*}}, atomGroup: 6, atomRank: 1)
 // CHECK: [[G7R2]] = !DILocation({{.*}}, atomGroup: 7, atomRank: 2)
 // CHECK: [[G7R1]] = !DILocation({{.*}}, atomGroup: 7, atomRank: 1)
-// FIXME: These inc by 2 atom groups each time?
 // CHECK-C: [[G8R2]] = !DILocation({{.*}}, atomGroup: 8, atomRank: 2)
 // CHECK-C: [[G8R1]] = !DILocation({{.*}}, atomGroup: 8, atomRank: 1)
 // CHECK-C: [[G9R2]] = !DILocation({{.*}}, atomGroup: 9, atomRank: 2)
