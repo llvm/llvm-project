@@ -33,7 +33,8 @@ static Type *equivalentArrayTypeFromVector(Type *T) {
     return ArrayType::get(VecTy->getElementType(),
                           dyn_cast<FixedVectorType>(VecTy)->getNumElements());
   if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
-    Type *NewElementType = equivalentArrayTypeFromVector(ArrayTy->getElementType());
+    Type *NewElementType =
+        equivalentArrayTypeFromVector(ArrayTy->getElementType());
     return ArrayType::get(NewElementType, ArrayTy->getNumElements());
   }
   // If it's not a vector or array, return the original type.
