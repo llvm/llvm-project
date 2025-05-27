@@ -1353,8 +1353,8 @@ static StringRef getIdentStringFromSourceLocation(CodeGenFunction &CGF,
   // Build debug location
   PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
   OS << ";";
-  if (CGF.getDebugInfo())
-    OS << CGF.getDebugInfo()->remapDIPath(PLoc.getFilename());
+  if (auto *DbgInfo = CGF.getDebugInfo())
+    OS << DbgInfo->remapDIPath(PLoc.getFilename());
   else
     OS << PLoc.getFilename();
   OS << ";";
@@ -1379,8 +1379,8 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CGF.CurFuncDecl))
       FunctionName = FD->getQualifiedNameAsString();
     PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-    if (CGF.getDebugInfo())
-      FileName = CGF.getDebugInfo()->remapDIPath(PLoc.getFilename());
+    if (auto *DbgInfo = CGF.getDebugInfo())
+      FileName = DbgInfo->remapDIPath(PLoc.getFilename());
     else
       FileName = PLoc.getFilename();
     unsigned Line = PLoc.getLine();
@@ -8851,8 +8851,8 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
 
   std::string FileName;
   PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-  if (CGF.getDebugInfo())
-    FileName = CGF.getDebugInfo()->remapDIPath(PLoc.getFilename());
+  if (auto *DbgInfo = CGF.getDebugInfo())
+    FileName = DbgInfo->remapDIPath(PLoc.getFilename());
   else
     FileName = PLoc.getFilename();
   return OMPBuilder.getOrCreateSrcLocStr(FileName, ExprName, PLoc.getLine(),
