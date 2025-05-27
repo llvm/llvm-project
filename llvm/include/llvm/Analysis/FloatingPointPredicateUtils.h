@@ -9,13 +9,25 @@
 #ifndef LLVM_ANALYSIS_FLOATINGPOINTPREDICATEUTILS_H
 #define LLVM_ANALYSIS_FLOATINGPOINTPREDICATEUTILS_H
 
-#include "llvm/ADT/GenericFloatingPointPredicateUtils.h"
+#include "llvm/IR/GenericFloatingPointPredicateUtils.h"
 #include "llvm/IR/SSAContext.h"
 
 namespace llvm {
 
 using FloatingPointPredicateUtils =
     GenericFloatingPointPredicateUtils<SSAContext>;
+
+template <>
+DenormalMode FloatingPointPredicateUtils::queryDenormalMode(const Function &F,
+                                                            Value *Val);
+
+template <>
+bool FloatingPointPredicateUtils::lookThroughFAbs(const Function &F, Value *LHS,
+                                                  Value *&Src);
+
+template <>
+std::optional<APFloat>
+FloatingPointPredicateUtils::matchConstantFloat(const Function &F, Value *Val);
 
 /// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
 /// same result as an fcmp with the given operands.
