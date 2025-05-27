@@ -215,6 +215,58 @@ exit:
   ret void
 }
 
+define void @matrix_phi_loop_cdv(ptr %in1, ptr %in2, i32 %count, ptr %out) {
+; CHECK-LABEL: @matrix_phi_loop_cdv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI4:%.*]] = phi <3 x double> [ <double 0.000000e+00, double 1.000000e+00, double 2.000000e+00>, [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI5:%.*]] = phi <3 x double> [ <double 3.000000e+00, double 4.000000e+00, double 5.000000e+00>, [[ENTRY]] ], [ [[TMP1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI6:%.*]] = phi <3 x double> [ <double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[ENTRY]] ], [ [[TMP2:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY]] ], [ [[DEC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[IN2:%.*]], align 128
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN2]], i64 3
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN2]], i64 6
+; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 16
+; CHECK-NEXT:    [[TMP0]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP1]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP2]] = fadd <3 x double> [[PHI6]], [[COL_LOAD3]]
+; CHECK-NEXT:    [[DEC]] = sub i32 [[CTR]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DEC]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    store <3 x double> [[TMP0]], ptr [[OUT:%.*]], align 128
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store <3 x double> [[TMP1]], ptr [[VEC_GEP7]], align 8
+; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    store <3 x double> [[TMP2]], ptr [[VEC_GEP8]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %phi = phi <9 x double> [<double 0., double 1., double 2., double 3., double 4., double 5., double 6., double 7., double 8.>, %entry], [%sum, %loop]
+  %ctr = phi i32 [%count, %entry], [%dec, %loop]
+
+  %in2v = load <9 x double>, ptr %in2
+
+  ; Give in2 the shape: 3 x 3
+  %in2t  = call <9 x double> @llvm.matrix.transpose(<9 x double> %in2v, i32 3, i32 3)
+  %in2tt = call <9 x double> @llvm.matrix.transpose(<9 x double> %in2t, i32 3, i32 3)
+
+  %sum = fadd <9 x double> %phi, %in2tt
+
+  %dec = sub i32 %ctr, 1
+  %cmp = icmp eq i32 %dec, 0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  store <9 x double> %sum, ptr %out
+  ret void
+}
+
 define <9 x double> @matrix_phi_ifthenelse(i1 %cond, <9 x double> %A, <9 x double> %B, <9 x double> %C) {
 ; CHECK-LABEL: @matrix_phi_ifthenelse(
 ; CHECK-NEXT:  entry:
