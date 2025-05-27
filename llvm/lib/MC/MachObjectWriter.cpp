@@ -65,6 +65,11 @@ void MachObjectWriter::reset() {
   MCObjectWriter::reset();
 }
 
+void MachObjectWriter::setAssembler(MCAssembler *Asm) {
+  MCObjectWriter::setAssembler(Asm);
+  TargetObjectWriter->setAssembler(Asm);
+}
+
 bool MachObjectWriter::doesSymbolRequireExternRelocation(const MCSymbol &S) {
   // Undefined symbols are always extern.
   if (S.isUndefined())

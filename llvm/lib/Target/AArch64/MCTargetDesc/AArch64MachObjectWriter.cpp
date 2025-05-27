@@ -99,8 +99,7 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     // This encompasses the relocation for the whole 21-bit value.
     switch (Spec) {
     default:
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "ADR/ADRP relocations must be GOT relative");
+      reportError(Fixup.getLoc(), "ADR/ADRP relocations must be GOT relative");
       return false;
     case AArch64MCExpr::M_PAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_PAGE21);
@@ -176,25 +175,24 @@ void AArch64MachObjectWriter::recordRelocation(
   // assembler local symbols. If we got here, that's not what we have,
   // so complain loudly.
   if (Kind == AArch64::fixup_aarch64_pcrel_branch19) {
-    Asm.getContext().reportError(
-        Fixup.getLoc(), "conditional branch requires assembler-local"
-                        " label. '" +
-                            Target.getAddSym()->getName() + "' is external.");
+    reportError(Fixup.getLoc(), "conditional branch requires assembler-local"
+                                " label. '" +
+                                    Target.getAddSym()->getName() +
+                                    "' is external.");
     return;
   }
 
   // 14-bit branch relocations should only target internal labels, and so
   // should never get here.
   if (Kind == AArch64::fixup_aarch64_pcrel_branch14) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                 "Invalid relocation on conditional branch!");
+    reportError(Fixup.getLoc(), "Invalid relocation on conditional branch!");
     return;
   }
 
   if (!getAArch64FixupKindMachOInfo(
           Fixup, Type, AArch64MCExpr::Specifier(Target.getSpecifier()),
           Log2Size, Asm)) {
-    Asm.getContext().reportError(Fixup.getLoc(), "unknown AArch64 fixup kind!");
+    reportError(Fixup.getLoc(), "unknown AArch64 fixup kind!");
     return;
   }
 
@@ -206,8 +204,7 @@ void AArch64MachObjectWriter::recordRelocation(
     Type = MachO::ARM64_RELOC_UNSIGNED;
 
     if (IsPCRel) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "PC relative absolute relocation!");
+      reportError(Fixup.getLoc(), "PC relative absolute relocation!");
       return;
 
       // FIXME: x86_64 sets the type to a branch reloc here. Should we do
@@ -234,16 +231,14 @@ void AArch64MachObjectWriter::recordRelocation(
       return;
     } else if (Target.getSpecifier() != AArch64MCExpr::None) {
       // Otherwise, neither symbol can be modified.
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "unsupported relocation of modified symbol");
+      reportError(Fixup.getLoc(), "unsupported relocation of modified symbol");
       return;
     }
 
     // We don't support PCrel relocations of differences.
     if (IsPCRel) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "unsupported pc-relative relocation of "
-                                   "difference");
+      reportError(Fixup.getLoc(), "unsupported pc-relative relocation of "
+                                  "difference");
       return;
     }
 
@@ -254,23 +249,20 @@ void AArch64MachObjectWriter::recordRelocation(
     // FIXME: We should probably just synthesize an external symbol and use
     // that.
     if (!A_Base) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(),
-          "unsupported relocation of local symbol '" + A->getName() +
-              "'. Must have non-local symbol earlier in section.");
+      reportError(Fixup.getLoc(),
+                  "unsupported relocation of local symbol '" + A->getName() +
+                      "'. Must have non-local symbol earlier in section.");
       return;
     }
     if (!B_Base) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(),
-          "unsupported relocation of local symbol '" + B->getName() +
-              "'. Must have non-local symbol earlier in section.");
+      reportError(Fixup.getLoc(),
+                  "unsupported relocation of local symbol '" + B->getName() +
+                      "'. Must have non-local symbol earlier in section.");
       return;
     }
 
     if (A_Base == B_Base && A_Base) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "unsupported relocation with identical base");
+      reportError(Fixup.getLoc(), "unsupported relocation with identical base");
       return;
     }
 
@@ -303,10 +295,10 @@ void AArch64MachObjectWriter::recordRelocation(
       // Make sure that the symbol is actually in a section here. If it isn't,
       // emit an error and exit.
       if (!Symbol->isInSection()) {
-        Asm.getContext().reportError(
-            Fixup.getLoc(),
-            "unsupported relocation of local symbol '" + Symbol->getName() +
-                "'. Must have non-local symbol earlier in section.");
+        reportError(Fixup.getLoc(),
+                    "unsupported relocation of local symbol '" +
+                        Symbol->getName() +
+                        "'. Must have non-local symbol earlier in section.");
         return;
       }
       const MCSection &Sec = Symbol->getSection();
@@ -340,10 +332,10 @@ void AArch64MachObjectWriter::recordRelocation(
         Value += Asm.getSymbolOffset(*Symbol) - Asm.getSymbolOffset(*Base);
     } else if (Symbol->isInSection()) {
       if (!CanUseLocalRelocation) {
-        Asm.getContext().reportError(
-            Fixup.getLoc(),
-            "unsupported relocation of local symbol '" + Symbol->getName() +
-                "'. Must have non-local symbol earlier in section.");
+        reportError(Fixup.getLoc(),
+                    "unsupported relocation of local symbol '" +
+                        Symbol->getName() +
+                        "'. Must have non-local symbol earlier in section.");
         return;
       }
       // Adjust the relocation to be section-relative.
@@ -369,8 +361,7 @@ void AArch64MachObjectWriter::recordRelocation(
        Type == MachO::ARM64_RELOC_PAGEOFF12) &&
       Value) {
     if (!isInt<24>(Value)) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "addend too big for relocation");
+      reportError(Fixup.getLoc(), "addend too big for relocation");
       return;
     }
 
@@ -398,21 +389,19 @@ void AArch64MachObjectWriter::recordRelocation(
     assert(Type == MachO::ARM64_RELOC_UNSIGNED);
 
     if (IsPCRel) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "invalid PC relative auth relocation");
+      reportError(Fixup.getLoc(), "invalid PC relative auth relocation");
       return;
     }
 
     if (Log2Size != 3) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(), "invalid auth relocation size, must be 8 bytes");
+      reportError(Fixup.getLoc(),
+                  "invalid auth relocation size, must be 8 bytes");
       return;
     }
 
     if (Target.getSubSym()) {
-      Asm.getContext().reportError(
-          Fixup.getLoc(),
-          "invalid auth relocation, can't reference two symbols");
+      reportError(Fixup.getLoc(),
+                  "invalid auth relocation, can't reference two symbols");
       return;
     }
 
@@ -420,8 +409,7 @@ void AArch64MachObjectWriter::recordRelocation(
     AArch64PACKey::ID Key = Expr->getKey();
 
     if (!isInt<32>(Value)) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "addend too big for relocation");
+      reportError(Fixup.getLoc(), "addend too big for relocation");
       return;
     }
 
