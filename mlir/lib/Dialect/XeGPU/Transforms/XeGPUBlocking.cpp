@@ -279,9 +279,8 @@ void XeGPUBlockingPass::runOnOperation() {
   xegpu::doSCFStructuralTypeConversionWithTensorType(op, converter);
 
   xegpu::UnrollOptions options;
-  options.setFilterConstraint([&](Operation *op) -> LogicalResult {
-    return success(needsUnroll(op));
-  });
+  options.setFilterConstraint(
+      [&](Operation *op) -> LogicalResult { return success(needsUnroll(op)); });
 
   options.setNativeShapeFn([&](Operation *op) { return getTileShape(op); });
 
