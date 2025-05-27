@@ -2127,9 +2127,8 @@ static void canonicalizeShuffleVectorByLane(const SDLoc &DL,
   }
 }
 
-// lowerShuffleAsLanePermuteAndShuffle
 /// Lower VECTOR_SHUFFLE as lane permute and then shuffle (if possible).
-/// Only for 256-bit vector
+/// Only for 256-bit vector.
 ///
 /// For example:
 /// %2 = shufflevector <4 x i64> %0, <4 x i64> posion,
