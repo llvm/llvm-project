@@ -18535,6 +18535,7 @@ Value *BoUpSLP::vectorizeTree(
     }
   }
   for (auto &Entry : GatherEntries) {
+    IRBuilderBase::InsertPointGuard Guard(Builder);
     Builder.SetInsertPoint(Entry.second);
     Builder.SetCurrentDebugLocation(Entry.second->getDebugLoc());
     (void)vectorizeTree(Entry.first);
@@ -23089,8 +23090,7 @@ private:
         case RecurKind::Mul:
         case RecurKind::FMul:
         case RecurKind::FMulAdd:
-        case RecurKind::IAnyOf:
-        case RecurKind::FAnyOf:
+        case RecurKind::AnyOf:
         case RecurKind::FindLastIV:
         case RecurKind::FMaximumNum:
         case RecurKind::FMinimumNum:
@@ -23224,8 +23224,7 @@ private:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
-    case RecurKind::IAnyOf:
-    case RecurKind::FAnyOf:
+    case RecurKind::AnyOf:
     case RecurKind::FindLastIV:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
@@ -23324,8 +23323,7 @@ private:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
-    case RecurKind::IAnyOf:
-    case RecurKind::FAnyOf:
+    case RecurKind::AnyOf:
     case RecurKind::FindLastIV:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
