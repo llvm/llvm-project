@@ -2102,18 +2102,18 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
                                                           EVT OpVT) const {
   // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).
-  if (!Subtarget->hasSVE())
+  if (!Subtarget->hasSVE() || ResVT.getVectorElementType() != MVT::i1)
     return true;
 
-  // We can only support legal predicate result types. We can use the SVE
-  // whilelo instruction for generating fixed-width predicates too.
-  if (ResVT != MVT::nxv2i1 && ResVT != MVT::nxv4i1 && ResVT != MVT::nxv8i1 &&
-      ResVT != MVT::nxv16i1 && ResVT != MVT::v2i1 && ResVT != MVT::v4i1 &&
-      ResVT != MVT::v8i1 && ResVT != MVT::v16i1)
+  // Only support illegal types if the result is scalable and min elements > 1.
+  if (ResVT.getVectorMinNumElements() == 1 ||
+      (ResVT.isFixedLengthVector() && (ResVT.getVectorNumElements() > 16 ||
+                                       (OpVT != MVT::i32 && OpVT != MVT::i64))))
     return true;
 
-  // The whilelo instruction only works with i32 or i64 scalar inputs.
-  if (OpVT != MVT::i32 && OpVT != MVT::i64)
+  // 32 & 64 bit operands are supported. We can promote anything < 64 bits,
+  // but anything larger should be expanded.
+  if (OpVT.getFixedSizeInBits() > 64)
     return true;
 
   return false;
