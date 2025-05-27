@@ -779,7 +779,8 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
       return;
     }
 
-    if (!VerifyOnly && Field->hasAttr<ExplicitInitAttr>()) {
+    if (!VerifyOnly && Field->hasAttr<ExplicitInitAttr>() &&
+        !SemaRef.isUnevaluatedContext()) {
       SemaRef.Diag(ILE->getExprLoc(), diag::warn_field_requires_explicit_init)
           << /* Var-in-Record */ 0 << Field;
       SemaRef.Diag(Field->getLocation(), diag::note_entity_declared_at)
@@ -4620,7 +4621,8 @@ static void TryConstructorInitialization(Sema &S,
          Kind.getKind() == InitializationKind::IK_Direct) &&
         !(CtorDecl->isCopyOrMoveConstructor() && CtorDecl->isImplicit()) &&
         DestRecordDecl->isAggregate() &&
-        DestRecordDecl->hasUninitializedExplicitInitFields()) {
+        DestRecordDecl->hasUninitializedExplicitInitFields() &&
+        !S.isUnevaluatedContext()) {
       S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
           << /* Var-in-Record */ 1 << DestRecordDecl;
       emitUninitializedExplicitInitFields(S, DestRecordDecl);
@@ -5984,7 +5986,8 @@ static void TryOrBuildParenListInitialization(
       } else {
         // We've processed all of the args, but there are still members that
         // have to be initialized.
-        if (!VerifyOnly && FD->hasAttr<ExplicitInitAttr>()) {
+        if (!VerifyOnly && FD->hasAttr<ExplicitInitAttr>() &&
+            !S.isUnevaluatedContext()) {
           S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
               << /* Var-in-Record */ 0 << FD;
           S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
@@ -6606,7 +6609,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
     if (RecordDecl *Rec = DestType->getAsRecordDecl()) {
       VarDecl *Var = dyn_cast_or_null<VarDecl>(Entity.getDecl());
       if (Rec->hasUninitializedExplicitInitFields()) {
-        if (Var && !Initializer) {
+        if (Var && !Initializer && !S.isUnevaluatedContext()) {
           S.Diag(Var->getLocation(), diag::warn_field_requires_explicit_init)
               << /* Var-in-Record */ 1 << Rec;
           emitUninitializedExplicitInitFields(S, Rec);
@@ -7470,7 +7473,8 @@ PerformConstructorInitialization(Sema &S,
       if (RD && RD->isAggregate() && RD->hasUninitializedExplicitInitFields()) {
         unsigned I = 0;
         for (const FieldDecl *FD : RD->fields()) {
-          if (I >= ConstructorArgs.size() && FD->hasAttr<ExplicitInitAttr>()) {
+          if (I >= ConstructorArgs.size() && FD->hasAttr<ExplicitInitAttr>() &&
+              !S.isUnevaluatedContext()) {
             S.Diag(Loc, diag::warn_field_requires_explicit_init)
                 << /* Var-in-Record */ 0 << FD;
             S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;

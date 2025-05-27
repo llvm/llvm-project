@@ -1642,6 +1642,8 @@ void aggregate() {
   S::foo(S{.s1 = 100, .s4 = 100});
   S::foo(S{.s1 = 100}); // expected-warning {{field 's4' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_S4 {{'s4' declared here}}
 
+  (void)sizeof(S{}); // no warning -- unevaluated operand
+
   S s{.s1 = 100, .s4 = 100};
   (void)s;
 
