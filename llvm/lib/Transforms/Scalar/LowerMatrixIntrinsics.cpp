@@ -30,6 +30,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
@@ -230,6 +231,7 @@ static bool isUniformShape(Value *V) {
     return true;
 
   switch (I->getOpcode()) {
+  case Instruction::PHI:
   case Instruction::FAdd:
   case Instruction::FSub:
   case Instruction::FMul: // Scalar multiply.
@@ -359,6 +361,33 @@ class LowerMatrixIntrinsics {
       for (unsigned J = 0; J < D; ++J)
         addVector(PoisonValue::get(FixedVectorType::get(
             EltTy, isColumnMajor() ? NumRows : NumColumns)));
+    }
+    MatrixTy(ConstantData *Constant, const ShapeInfo &SI)
+        : IsColumnMajor(SI.IsColumnMajor) {
+      Type *EltTy = cast<VectorType>(Constant->getType())->getElementType();
+      Type *RowTy = VectorType::get(EltTy, ElementCount::getFixed(SI.NumRows));
+
+      for (unsigned J = 0, D = SI.getNumVectors(); J < D; ++J) {
+        if (auto *CDV = dyn_cast<ConstantDataVector>(Constant)) {
+          unsigned Width = SI.getStride();
+          size_t EltSize = EltTy->getPrimitiveSizeInBits() / 8;
+          StringRef Data = CDV->getRawDataValues().substr(
+              J * Width * EltSize, Width * EltSize);
+          addVector(ConstantDataVector::getRaw(Data, Width,
+                                               CDV->getElementType()));
+        } else if (isa<PoisonValue>(Constant))
+          addVector(PoisonValue::get(RowTy));
+        else if (isa<UndefValue>(Constant))
+          addVector(UndefValue::get(RowTy));
+        else if (isa<ConstantAggregateZero>(Constant))
+          addVector(ConstantAggregateZero::get(RowTy));
+        else {
+#ifndef NDEBUG
+          Constant->dump();
+          report_fatal_error("unhandled ConstantData type");
+#endif
+        }
+      }
     }
 
     Value *getVector(unsigned i) const { return Vectors[i]; }
@@ -563,6 +592,27 @@ public:
 
       MatrixVal = M.embedInVector(Builder);
     }
+
+    // If it's a PHI, split it now. We'll take care of fixing up the operands
+    // later once we're in VisitPHI.
+    if (auto *PHI = dyn_cast<PHINode>(MatrixVal)) {
+      auto *EltTy = cast<VectorType>(PHI->getType())->getElementType();
+      MatrixTy PhiM{SI.NumRows, SI.NumColumns, EltTy};
+
+      IRBuilder<>::InsertPointGuard IPG(Builder);
+      Builder.SetInsertPoint(PHI);
+      for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
+        PhiM.setVector(VI, Builder.CreatePHI(PhiM.getVectorTy(),
+                                             PHI->getNumIncomingValues(),
+                                             PHI->getName()));
+
+      Inst2ColumnMatrix[PHI] = PhiM;
+      return PhiM;
+    }
+
+    // If it's a constant, materialize the split version of it with this shape.
+    if (auto *IncomingConst = dyn_cast<ConstantData>(MatrixVal))
+      return MatrixTy(IncomingConst, SI);
 
     // Otherwise split MatrixVal.
     SmallVector<Value *, 16> SplitVecs;
@@ -1077,6 +1127,11 @@ public:
         Changed |= VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
     }
 
+    // Fifth, lower all the PHI's with shape information.
+    for (Instruction *Inst : MatrixInsts)
+      if (auto *PHI = dyn_cast<PHINode>(Inst))
+        Changed |= VisitPHI(PHI);
+
     if (ORE) {
       RemarkGenerator RemarkGen(Inst2ColumnMatrix, *ORE, Func);
       RemarkGen.emitRemarks();
@@ -1349,7 +1404,8 @@ public:
                         IRBuilder<> &Builder) {
     auto inserted = Inst2ColumnMatrix.insert(std::make_pair(Inst, Matrix));
     (void)inserted;
-    assert(inserted.second && "multiple matrix lowering mapping");
+    assert((inserted.second || isa<PHINode>(Inst)) &&
+           "multiple matrix lowering mapping");
 
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
@@ -2130,6 +2186,41 @@ public:
     LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
                Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
                I->second);
+    return true;
+  }
+
+  bool VisitPHI(PHINode *Inst) {
+    auto I = ShapeMap.find(Inst);
+    if (I == ShapeMap.end())
+      return false;
+
+    IRBuilder<> Builder(Inst);
+
+    MatrixTy PhiM = getMatrix(Inst, I->second, Builder);
+
+    for (unsigned IncomingI = 0, IncomingE = Inst->getNumIncomingValues();
+         IncomingI != IncomingE; ++IncomingI) {
+      Value *IncomingV = Inst->getIncomingValue(IncomingI);
+      BasicBlock *IncomingB = Inst->getIncomingBlock(IncomingI);
+
+      // getMatrix() may insert some instructions. The safe place to insert them
+      // is at the end of the parent block, where the register allocator would
+      // have inserted the copies that materialize the PHI.
+      if (auto *IncomingInst = dyn_cast<Instruction>(IncomingV))
+        Builder.SetInsertPoint(IncomingInst->getParent()->getTerminator());
+
+      MatrixTy OpM = getMatrix(IncomingV, I->second, Builder);
+
+      for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI) {
+        PHINode *NewPHI = cast<PHINode>(PhiM.getVector(VI));
+        NewPHI->addIncoming(OpM.getVector(VI), IncomingB);
+      }
+    }
+
+    // finalizeLowering() may also insert instructions in some cases. The safe
+    // place for those is at the end of the initial block of PHIs.
+    Builder.SetInsertPoint(*Inst->getInsertionPointAfterDef());
+    finalizeLowering(Inst, PhiM, Builder);
     return true;
   }
 
