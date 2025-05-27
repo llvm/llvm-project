@@ -10,12 +10,12 @@ declare float @llvm.nvvm.lg2.approx.ftz.f(float)
 define float @lg2_float(float %0) {
 ; CHECK-LABEL: lg2_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [lg2_float_param_0];
-; CHECK-NEXT:    lg2.approx.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [lg2_float_param_0];
+; CHECK-NEXT:    lg2.approx.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %res = call float @llvm.nvvm.lg2.approx.f(float %0)
   ret float %res
@@ -25,12 +25,12 @@ define float @lg2_float(float %0) {
 define float @lg2_float_ftz(float %0) {
 ; CHECK-LABEL: lg2_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [lg2_float_ftz_param_0];
-; CHECK-NEXT:    lg2.approx.ftz.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [lg2_float_ftz_param_0];
+; CHECK-NEXT:    lg2.approx.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %res = call float @llvm.nvvm.lg2.approx.ftz.f(float %0)
   ret float %res

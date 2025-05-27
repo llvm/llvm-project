@@ -53,7 +53,6 @@ class NonLocalDepResult;
 class OptimizationRemarkEmitter;
 class PHINode;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 class Value;
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
@@ -227,7 +226,6 @@ private:
   MemoryDependenceResults *MD = nullptr;
   DominatorTree *DT = nullptr;
   const TargetLibraryInfo *TLI = nullptr;
-  const TargetTransformInfo *TTI = nullptr;
   AssumptionCache *AC = nullptr;
   SetVector<BasicBlock *> DeadBlocks;
   OptimizationRemarkEmitter *ORE = nullptr;
@@ -320,8 +318,7 @@ private:
   using UnavailBlkVect = SmallVector<BasicBlock *, 64>;
 
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
-               const TargetLibraryInfo &RunTLI,
-               const TargetTransformInfo &RunTTI, AAResults &RunAA,
+               const TargetLibraryInfo &RunTLI, AAResults &RunAA,
                MemoryDependenceResults *RunMD, LoopInfo &LI,
                OptimizationRemarkEmitter *ORE, MemorySSA *MSSA = nullptr);
 

@@ -1024,6 +1024,14 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
     // This is either a vtable (in .data.rel.ro) or a jump table (in .text).
     // Either way it's expected to be in the low 2 GiB, so set the small code
     // model.
+    //
+    // For .data.rel.ro, we currently place all such sections in the low 2 GiB
+    // [1], and for .text the sections are expected to be in the low 2 GiB under
+    // the small and medium code models [2] and this pass only supports those
+    // code models (e.g. jump tables use jmp instead of movabs/jmp).
+    //
+    // [1]https://github.com/llvm/llvm-project/pull/137742
+    // [2]https://maskray.me/blog/2023-05-14-relocation-overflow-and-code-models
     GV->setCodeModel(CodeModel::Small);
     TIL.OffsetedGlobal = GV;
   }
@@ -1716,8 +1724,22 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
           F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
       FAlias->takeName(F);
-      if (FAlias->hasName())
+      if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
+        // For COFF we should also rename the comdat if this function also
+        // happens to be the key function. Even if the comdat name changes, this
+        // should still be fine since comdat and symbol resolution happens
+        // before LTO, so all symbols which would prevail have been selected.
+        if (F->hasComdat() && ObjectFormat == Triple::COFF &&
+            F->getComdat()->getName() == FAlias->getName()) {
+          Comdat *OldComdat = F->getComdat();
+          Comdat *NewComdat = M.getOrInsertComdat(F->getName());
+          for (GlobalObject &GO : M.global_objects()) {
+            if (GO.getComdat() == OldComdat)
+              GO.setComdat(NewComdat);
+          }
+        }
+      }
       replaceCfiUses(F, FAlias, IsJumpTableCanonical);
       if (!F->hasLocalLinkage())
         F->setVisibility(GlobalVariable::HiddenVisibility);

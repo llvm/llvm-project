@@ -1534,16 +1534,6 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       }
       // See if the instruction has an available value.  If so, use it.
       if (Value *V = AvailableValues.lookup(&Inst)) {
-        // If this CSE would effectively hoist the instruction and that's known
-        // to be unprofitable, don't do it. Remember the instruction so that it
-        // can be used by other instructions in the same block.
-        if (auto *ReplI = dyn_cast<Instruction>(V)) {
-          if (ReplI->getParent() != Inst.getParent() &&
-              !TTI.isProfitableToHoist(&Inst)) {
-            AvailableValues.insert(&Inst, &Inst);
-            continue;
-          }
-        }
         LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << Inst << "  to: " << *V
                           << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
