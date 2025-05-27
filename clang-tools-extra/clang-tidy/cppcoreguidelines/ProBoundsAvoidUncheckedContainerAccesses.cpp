@@ -23,7 +23,6 @@ ProBoundsAvoidUncheckedContainerAccesses::
     ProBoundsAvoidUncheckedContainerAccesses(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
-
   ExcludedClassesStr = Options.get("ExcludeClasses", DefaultExclusionStr);
   ExcludedClasses =
       clang::tidy::utils::options::parseStringList(ExcludedClassesStr);
