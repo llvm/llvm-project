@@ -35,9 +35,7 @@ public:
   static char ID;
   RISCVIndirectBranchTracking() : MachineFunctionPass(ID) {}
 
-  StringRef getPassName() const override {
-    return PASS_NAME;
-  }
+  StringRef getPassName() const override { return PASS_NAME; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -47,7 +45,8 @@ private:
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(RISCVIndirectBranchTracking, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(RISCVIndirectBranchTracking, DEBUG_TYPE, PASS_NAME, false,
+                false)
 
 char RISCVIndirectBranchTracking::ID = 0;
 
@@ -62,8 +61,7 @@ static void emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII,
       .addImm(Label);
 }
 
-bool RISCVIndirectBranchTracking::runOnMachineFunction(
-    MachineFunction &MF) {
+bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
   if (!Subtarget.hasStdExtZicfilp())
