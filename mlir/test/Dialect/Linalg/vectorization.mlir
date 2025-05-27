@@ -367,20 +367,20 @@ func.func @vectorize_dynamic_reduction_2d_scalable(%arg0: tensor<?x?xf32>,
 
 // CHECK-LABEL:  func.func @vectorize_dynamic_reduction_2d_scalable(
 // CHECK-SAME:     %[[ARG_0:.*]]: tensor<?x?xf32>, %[[ARG_1:.*]]: tensor<?xf32>) -> tensor<?xf32> {
-// CHECK:    %[[C0_idx:.*]] = arith.constant 0 : index
-// CHECK:    %[[DIM_A0_0:.*]] = tensor.dim %[[ARG_0]], %[[C0_idx]] : tensor<?x?xf32>
-// CHECK:    %[[C1_idx:.*]] = arith.constant 1 : index
-// CHECK:    %[[DIM_A0_1:.*]] = tensor.dim %[[ARG_0]], %[[C1_idx]] : tensor<?x?xf32>
-// CHECK:    %[[C0_idx:.*]] = arith.constant 0 : index
+// CHECK:    %[[C0_IDX:.*]] = arith.constant 0 : index
+// CHECK:    %[[DIM_A0_0:.*]] = tensor.dim %[[ARG_0]], %[[C0_IDX]] : tensor<?x?xf32>
+// CHECK:    %[[C1_IDX:.*]] = arith.constant 1 : index
+// CHECK:    %[[DIM_A0_1:.*]] = tensor.dim %[[ARG_0]], %[[C1_IDX]] : tensor<?x?xf32>
+// CHECK:    %[[C0_IDX:.*]] = arith.constant 0 : index
 // CHECK:    %[[C0_f32:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:    %[[MASK_2d:.*]] = vector.create_mask %[[DIM_A0_0]], %[[DIM_A0_1]] : vector<4x[8]xi1>
-// CHECK:    %[[VEC_RD_0:.*]] = vector.mask %[[MASK_2d]] { vector.transfer_read %[[ARG_0]][%[[C0_idx]], %[[C0_idx]]], %[[C0_f32]] {in_bounds = [true, true]} : tensor<?x?xf32>, vector<4x[8]xf32> } : vector<4x[8]xi1> -> vector<4x[8]xf32>
+// CHECK:    %[[MASK_2D:.*]] = vector.create_mask %[[DIM_A0_0]], %[[DIM_A0_1]] : vector<4x[8]xi1>
+// CHECK:    %[[VEC_RD_0:.*]] = vector.mask %[[MASK_2D]] { vector.transfer_read %[[ARG_0]][%[[C0_IDX]], %[[C0_IDX]]], %[[C0_f32]] {in_bounds = [true, true]} : tensor<?x?xf32>, vector<4x[8]xf32> } : vector<4x[8]xi1> -> vector<4x[8]xf32>
 // CHECK:    %[[C0_f32:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:    %[[MASK_1d:.*]] = vector.create_mask %[[DIM_A0_0]] : vector<4xi1>
-// CHECK:    %[[VEC_RD_1:.*]] = vector.mask %[[MASK_1d]] { vector.transfer_read %[[ARG_1]][%[[C0_idx]]], %[[C0_f32]] {in_bounds = [true]} : tensor<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
-// CHECK:    %[[REDUCE:.*]] = vector.mask %[[MASK_2d]] { vector.multi_reduction <add>, %[[VEC_RD_0]], %[[VEC_RD_1]] [1] : vector<4x[8]xf32> to vector<4xf32> } : vector<4x[8]xi1> -> vector<4xf32>
-// CHECK:    %[[C0_idx:.*]] = arith.constant 0 : index
-// CHECK:    %{{.*}} = vector.mask %[[MASK_1d]] { vector.transfer_write %[[REDUCE]], %[[ARG_1]][%[[C0_idx]]] {in_bounds = [true]} : vector<4xf32>, tensor<?xf32> } : vector<4xi1> -> tensor<?xf32>
+// CHECK:    %[[MASK_1D:.*]] = vector.create_mask %[[DIM_A0_0]] : vector<4xi1>
+// CHECK:    %[[VEC_RD_1:.*]] = vector.mask %[[MASK_1D]] { vector.transfer_read %[[ARG_1]][%[[C0_IDX]]], %[[C0_f32]] {in_bounds = [true]} : tensor<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+// CHECK:    %[[REDUCE:.*]] = vector.mask %[[MASK_2D]] { vector.multi_reduction <add>, %[[VEC_RD_0]], %[[VEC_RD_1]] [1] : vector<4x[8]xf32> to vector<4xf32> } : vector<4x[8]xi1> -> vector<4xf32>
+// CHECK:    %[[C0_IDX:.*]] = arith.constant 0 : index
+// CHECK:    %{{.*}} = vector.mask %[[MASK_1D]] { vector.transfer_write %[[REDUCE]], %[[ARG_1]][%[[C0_IDX]]] {in_bounds = [true]} : vector<4xf32>, tensor<?xf32> } : vector<4xi1> -> tensor<?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -405,12 +405,12 @@ func.func @vectorize_dynamic_reduction_scalable_1d(%arg0: tensor<?xf32>,
 
 // CHECK-LABEL:  func.func @vectorize_dynamic_reduction_scalable_1d(
 // CHECK-SAME:     %[[ARG_0:.*]]: tensor<?xf32>, %[[ARG_1:.*]]: tensor<f32>) -> tensor<f32> {
-// CHECK:          %[[C0_idx:.*]] = arith.constant 0 : index
-// CHECK:          %[[DIM_A0_0:.*]] = tensor.dim %[[ARG_0]], %[[C0_idx]] : tensor<?xf32>
-// CHECK:          %[[C0_idx:.*]] = arith.constant 0 : index
+// CHECK:          %[[C0_IDX:.*]] = arith.constant 0 : index
+// CHECK:          %[[DIM_A0_0:.*]] = tensor.dim %[[ARG_0]], %[[C0_IDX]] : tensor<?xf32>
+// CHECK:          %[[C0_IDX:.*]] = arith.constant 0 : index
 // CHECK:          %[[C0_f32:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:          %[[MASK:.*]] = vector.create_mask %[[DIM_A0_0]] : vector<[4]xi1>
-// CHECK:          %[[VEC_RD_0:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[ARG_0]][%[[C0_idx]]], %[[C0_f32]] {in_bounds = [true]} : tensor<?xf32>, vector<[4]xf32> } : vector<[4]xi1> -> vector<[4]xf32>
+// CHECK:          %[[VEC_RD_0:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[ARG_0]][%[[C0_IDX]]], %[[C0_f32]] {in_bounds = [true]} : tensor<?xf32>, vector<[4]xf32> } : vector<[4]xi1> -> vector<[4]xf32>
 // CHECK:          %[[C0_F32:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:          %[[VEC_RD_1:.*]] = vector.transfer_read %[[ARG_1]][], %[[C0_F32]] : tensor<f32>, vector<f32>
 // CHECK:          %[[ACC_f32:.*]] = vector.extract %[[VEC_RD_1]][] : f32 from vector<f32>
@@ -789,7 +789,6 @@ func.func @vectorize_dynamic_matvec_trailing_reduction_dim(%arg0: tensor<?x?xf32
 // CHECK:    %[[REDUCE:.*]] = vector.mask %[[MASK_2d]] { vector.multi_reduction <add>, %[[MUL]], %[[VEC_RD_2]] [1] : vector<[4]x4xf32> to vector<[4]xf32> } : vector<[4]x4xi1> -> vector<[4]xf32>
 // CHECK:    %[[C0_idx:.*]] = arith.constant 0 : index
 // CHECK:    %{{.*}} = vector.mask %[[MASK_d2]] { vector.transfer_write %[[REDUCE]], %[[ARG_2]][%[[C0_idx]]] {in_bounds = [true]} : vector<[4]xf32>, tensor<?xf32> } : vector<[4]xi1> -> tensor<?xf32>
-
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
