@@ -18,6 +18,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -28,7 +29,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/CodeGen/MachineDominators.h"
 
 using namespace llvm;
 
@@ -96,10 +96,10 @@ char MachineLateInstrsCleanupLegacy::ID = 0;
 char &llvm::MachineLateInstrsCleanupID = MachineLateInstrsCleanupLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(MachineLateInstrsCleanupLegacy, DEBUG_TYPE,
-                "Machine Late Instructions Cleanup Pass", false, false)
+                      "Machine Late Instructions Cleanup Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineLateInstrsCleanupLegacy, DEBUG_TYPE,
-                "Machine Late Instructions Cleanup Pass", false, false)
+                    "Machine Late Instructions Cleanup Pass", false, false)
 
 bool MachineLateInstrsCleanupLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
@@ -113,7 +113,8 @@ PreservedAnalyses
 MachineLateInstrsCleanupPass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
-  const MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  const MachineDominatorTree &MDT =
+      MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   if (!MachineLateInstrsCleanup(MDT).run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -186,7 +187,8 @@ void MachineLateInstrsCleanup::removeRedundantDef(MachineInstr *MI) {
 // and the only reg it may use is FrameReg. Typically this is an immediate
 // load or a load-address instruction.
 static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
-                        Register FrameReg, const TargetRegisterInfo *TRI, const MachineDominatorTree *DT) {
+                        Register FrameReg, const TargetRegisterInfo *TRI,
+                        const MachineDominatorTree *DT) {
   DefedReg = MCRegister::NoRegister;
   bool SawStore = true;
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
@@ -213,17 +215,19 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
           // If the machineOperand is Implicit and alias with DefedReg then
           // continue to next operand.
           if (MO.isImplicit() && TRI->isSubRegister(MO.getReg(), DefedReg)) {
-              if(MI->all_uses().empty()){ // No direct use of the register
+            if (MI->all_uses().empty()) { // No direct use of the register
               bool found = false;
               // Iterate through all instructions in the MBB
               // to check if there is a use of MO.getReg() that is not a kill.
-              // If there is a use that is not a kill, then continue to next operand.
+              // If there is a use that is not a kill, then continue to next
+              // operand.
               for (auto &I : llvm::make_early_inc_range(*MI->getParent())) {
                 // Skip the current instruction itself.
                 if (MI == &I) {
                   continue;
                 }
-                // Check if the instruction dominates the instruction which has the use.
+                // Check if the instruction dominates the instruction which has
+                // the use.
                 if (!DT->dominates(MI, &I)) {
                   continue;
                 }
@@ -235,14 +239,14 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
                   // Check if the operand is a use of the same register.
                   // If it is a kill, then we found a candidate and can continue
                   // to the next operand.
-                  if (UMO.getReg() == MO.getReg() && UMO.isKill()){
-                     found = true;
-                     continue;
+                  if (UMO.getReg() == MO.getReg() && UMO.isKill()) {
+                    found = true;
+                    continue;
                   }
                   // Any another use of the same register
                   // that is not a kill means we cannot remove the instruction.
                   if (UMO.getReg() == MO.getReg() && found) {
-                     found = false;
+                    found = false;
                     break;
                   }
                 }
