@@ -1052,7 +1052,7 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   SmallVector<Value *> ScalarOps;
   std::optional<uint64_t> Index;
 
-  auto Ops = II ? II->args() : I.operand_values();
+  auto Ops = II ? II->args() : I.operands();
   for (Value *Op : Ops) {
     Constant *VecC;
     Value *V;
