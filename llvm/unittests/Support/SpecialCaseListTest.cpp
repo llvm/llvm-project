@@ -311,8 +311,7 @@ TEST_F(SpecialCaseListTest, LinesInSection) {
   std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:foo\n"
                                                              "fun:bar\n"
                                                              "fun:foo\n");
-  // FIXME: Get the last one for #139128.
-  EXPECT_EQ(1u, SCL->inSectionBlame("sect1", "fun", "foo"));
+  EXPECT_EQ(3u, SCL->inSectionBlame("sect1", "fun", "foo"));
   EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "fun", "bar"));
 }
 
@@ -322,8 +321,7 @@ TEST_F(SpecialCaseListTest, LinesCrossSection) {
                                                              "fun:foo\n"
                                                              "[sect1]\n"
                                                              "fun:bar\n");
-  // FIXME: Get the last one for #139128.
-  EXPECT_EQ(1u, SCL->inSectionBlame("sect1", "fun", "foo"));
-  EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "fun", "bar"));
+  EXPECT_EQ(3u, SCL->inSectionBlame("sect1", "fun", "foo"));
+  EXPECT_EQ(5u, SCL->inSectionBlame("sect1", "fun", "bar"));
 }
 }
