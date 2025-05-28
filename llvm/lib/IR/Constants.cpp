@@ -1507,7 +1507,9 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   if (V->isNullValue())
     return ConstantAggregateZero::get(VTy);
-  else if (isa<UndefValue>(V))
+  if (isa<PoisonValue>(V))
+    return PoisonValue::get(VTy);
+  if (isa<UndefValue>(V))
     return UndefValue::get(VTy);
 
   Type *IdxTy = Type::getInt64Ty(VTy->getContext());

@@ -3780,7 +3780,35 @@ static Constant *ConstantFoldScalableVectorCall(
   default:
     break;
   }
-  return nullptr;
+
+  // If trivially vectorizable, try folding it via the scalar call if all
+  // operands are splats.
+
+  // TODO: ConstantFoldFixedVectorCall should probably check this too?
+  if (!isTriviallyVectorizable(IntrinsicID))
+    return nullptr;
+
+  SmallVector<Constant *, 4> SplatOps;
+  for (auto [I, Op] : enumerate(Operands)) {
+    if (isVectorIntrinsicWithScalarOpAtArg(IntrinsicID, I, /*TTI=*/nullptr)) {
+      SplatOps.push_back(Op);
+      continue;
+    }
+    // TODO: Should getSplatValue return a poison scalar for a poison vector?
+    if (isa<PoisonValue>(Op)) {
+      SplatOps.push_back(PoisonValue::get(Op->getType()->getScalarType()));
+      continue;
+    }
+    Constant *Splat = Op->getSplatValue();
+    if (!Splat)
+      return nullptr;
+    SplatOps.push_back(Splat);
+  }
+  Constant *Folded = ConstantFoldScalarCall(
+      Name, IntrinsicID, SVTy->getElementType(), SplatOps, TLI, Call);
+  if (!Folded)
+    return nullptr;
+  return ConstantVector::getSplat(SVTy->getElementCount(), Folded);
 }
 
 static std::pair<Constant *, Constant *>
