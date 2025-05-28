@@ -89,9 +89,9 @@ define amdgpu_kernel void @addrspacecast_flat_to_dds(ptr %inout) {
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    flat_load_b64 v[0:1], v2, s[0:1]
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1300-NEXT:    v_add_nc_u32_e32 v3, 0x80000000, v0
 ; GFX1300-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
-; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1300-NEXT:    v_add_nc_u32_e32 v3, 0x80000000, v0
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_cndmask_b32_e32 v0, -1, v3, vcc_lo
 ; GFX1300-NEXT:    flat_store_b32 v2, v0, s[0:1] scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm

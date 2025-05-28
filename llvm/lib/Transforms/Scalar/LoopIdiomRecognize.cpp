@@ -455,8 +455,8 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   // random store we can't handle.
   const SCEV *StoreEv = SE->getSCEV(StorePtr);
   const SCEVConstant *Stride;
-  if (!match(StoreEv, m_scev_AffineAddRec(m_SCEV(), m_SCEVConstant(Stride))) ||
-      cast<SCEVAddRecExpr>(StoreEv)->getLoop() != CurLoop)
+  if (!match(StoreEv, m_scev_AffineAddRec(m_SCEV(), m_SCEVConstant(Stride),
+                                          m_SpecificLoop(CurLoop))))
     return LegalStoreKind::None;
 
   // See if the store can be turned into a memset.
@@ -512,9 +512,8 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
     const SCEV *LoadEv = SE->getSCEV(LI->getPointerOperand());
 
     // The store and load must share the same stride.
-    if (!match(LoadEv,
-               m_scev_AffineAddRec(m_SCEV(), m_scev_Specific(Stride))) ||
-        cast<SCEVAddRecExpr>(LoadEv)->getLoop() != CurLoop)
+    if (!match(LoadEv, m_scev_AffineAddRec(m_SCEV(), m_scev_Specific(Stride),
+                                           m_SpecificLoop(CurLoop))))
       return LegalStoreKind::None;
 
     // Success.  This store can be converted into a memcpy.
@@ -787,23 +786,20 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
   // See if the load and store pointer expressions are AddRec like {base,+,1} on
   // the current loop, which indicates a strided load and store.  If we have
   // something else, it's a random load or store we can't handle.
-  const SCEVAddRecExpr *StoreEv = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Dest));
-  if (!StoreEv || StoreEv->getLoop() != CurLoop || !StoreEv->isAffine())
-    return false;
-  const SCEVAddRecExpr *LoadEv = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Source));
-  if (!LoadEv || LoadEv->getLoop() != CurLoop || !LoadEv->isAffine())
+  const SCEV *StoreEv = SE->getSCEV(Dest);
+  const SCEV *LoadEv = SE->getSCEV(Source);
+  const APInt *StoreStrideValue, *LoadStrideValue;
+  if (!match(StoreEv,
+             m_scev_AffineAddRec(m_SCEV(), m_scev_APInt(StoreStrideValue),
+                                 m_SpecificLoop(CurLoop))) ||
+      !match(LoadEv,
+             m_scev_AffineAddRec(m_SCEV(), m_scev_APInt(LoadStrideValue),
+                                 m_SpecificLoop(CurLoop))))
     return false;
 
   // Reject memcpys that are so large that they overflow an unsigned.
   uint64_t SizeInBytes = cast<ConstantInt>(MCI->getLength())->getZExtValue();
   if ((SizeInBytes >> 32) != 0)
-    return false;
-
-  // Check if the stride matches the size of the memcpy. If so, then we know
-  // that every byte is touched in the loop.
-  const APInt *StoreStrideValue, *LoadStrideValue;
-  if (!match(StoreEv->getOperand(1), m_scev_APInt(StoreStrideValue)) ||
-      !match(LoadEv->getOperand(1), m_scev_APInt(LoadStrideValue)))
     return false;
 
   // Huge stride value - give up
@@ -830,8 +826,8 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
 
   return processLoopStoreOfLoopLoad(
       Dest, Source, SE->getConstant(Dest->getType(), SizeInBytes),
-      MCI->getDestAlign(), MCI->getSourceAlign(), MCI, MCI, StoreEv, LoadEv,
-      BECount);
+      MCI->getDestAlign(), MCI->getSourceAlign(), MCI, MCI,
+      cast<SCEVAddRecExpr>(StoreEv), cast<SCEVAddRecExpr>(LoadEv), BECount);
 }
 
 /// processLoopMemSet - See if this memset can be promoted to a large memset.
@@ -852,12 +848,11 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   // random store we can't handle.
   const SCEV *Ev = SE->getSCEV(Pointer);
   const SCEV *PointerStrideSCEV;
-  if (!match(Ev, m_scev_AffineAddRec(m_SCEV(), m_SCEV(PointerStrideSCEV)))) {
+  if (!match(Ev, m_scev_AffineAddRec(m_SCEV(), m_SCEV(PointerStrideSCEV),
+                                     m_SpecificLoop(CurLoop)))) {
     LLVM_DEBUG(dbgs() << "  Pointer is not affine, abort\n");
     return false;
   }
-  if (cast<SCEVAddRecExpr>(Ev)->getLoop() != CurLoop)
-    return false;
 
   const SCEV *MemsetSizeSCEV = SE->getSCEV(MSI->getLength());
 
