@@ -1248,6 +1248,25 @@ Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
 }
 
+Value *llvm::createMinMaxIdxReduction(IRBuilderBase &Builder, Value *Src,
+                                      Value *Start,
+                                      const RecurrenceDescriptor &Desc) {
+  RecurKind Kind = Desc.getRecurrenceKind();
+  assert(RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(Kind) &&
+         "Unexpected reduction kind");
+  Value *Sentinel = Desc.getSentinelValue();
+  Value *Rdx = Src;
+  if (Src->getType()->isVectorTy())
+    Rdx = Kind == RecurKind::MinMaxFirstIdx
+              ? Builder.CreateIntMinReduce(Src, true)
+              : Builder.CreateIntMaxReduce(Src, true);
+  // Correct the final reduction result back to the start value if the reduction
+  // result is sentinel value.
+  Value *Cmp =
+      Builder.CreateCmp(CmpInst::ICMP_NE, Rdx, Sentinel, "rdx.select.cmp");
+  return Builder.CreateSelect(Cmp, Rdx, Start, "rdx.select");
+}
+
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
                                   FastMathFlags Flags) {
   bool Negative = false;
@@ -1336,7 +1355,8 @@ Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
                                    RecurKind Kind) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
-         "AnyOf or FindLastIV reductions are not supported.");
+         !RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(Kind) &&
+         "AnyOf, FindLastIV and MinMaxIdx reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();

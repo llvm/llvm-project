@@ -4457,6 +4457,14 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
         return false;
   }
 
+  // TODO: support epilogue vectorization for min/max with index.
+  if (any_of(Legal->getReductionVars(), [](const auto &Reduction) {
+        const RecurrenceDescriptor &RdxDesc = Reduction.second;
+        return RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(
+            RdxDesc.getRecurrenceKind());
+      }))
+    return false;
+
   // Epilogue vectorization code has not been auditted to ensure it handles
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
@@ -4901,7 +4909,8 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
           const RecurrenceDescriptor &RdxDesc = Reduction.second;
           RecurKind RK = RdxDesc.getRecurrenceKind();
           return RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-                 RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK);
+                 RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) ||
+                 RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(RK);
         });
     if (HasSelectCmpReductions) {
       LLVM_DEBUG(dbgs() << "LV: Not interleaving select-cmp reductions.\n");
@@ -6618,6 +6627,10 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
 
   for (const auto &Reduction : Legal->getReductionVars()) {
     PHINode *Phi = Reduction.first;
+    // TODO: support in-loop min/max with index.
+    if (Legal->isMinMaxRecurrence(Phi))
+      continue;
+
     const RecurrenceDescriptor &RdxDesc = Reduction.second;
 
     // We don't collect reductions that are type promoted (yet).
@@ -7232,6 +7245,8 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
        EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult &&
        EpiRedResult->getOpcode() != VPInstruction::ComputeFindLastIVResult))
     return;
+
+  assert(EpiRedResult->getOpcode() != VPInstruction::ComputeMinMaxIdxResult);
 
   auto *EpiRedHeaderPhi =
       cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
@@ -8140,10 +8155,9 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   // Find all possible partial reductions.
   SmallVector<std::pair<PartialReductionChain, unsigned>>
       PartialReductionChains;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
-    getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
-                        PartialReductionChains);
-  }
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars())
+    if (auto *ExitInstr = RdxDesc.getLoopExitInstr())
+      getScaledReductions(Phi, ExitInstr, Range, PartialReductionChains);
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
@@ -9037,6 +9051,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     assert(
         !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
+        !RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(Kind) &&
         "AnyOf and FindLast reductions are not allowed for in-loop reductions");
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
@@ -9160,15 +9175,32 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PreviousLink = RedRecipe;
     }
   }
+
+  // Collect all VPReductionPHIRecipes in the header block, and sort them based
+  // on the dependency order of the reductions. This ensures that results of
+  // min/max reductions are computed before their corresponding index
+  // reductions, since the index reduction relies on the result of the min/max
+  // reduction to determine which lane produced the min/max.
+  SmallVector<VPReductionPHIRecipe *> VPReductionPHIs;
+  for (VPRecipeBase &R : Header->phis())
+    if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R))
+      VPReductionPHIs.push_back(PhiR);
+
+  stable_sort(VPReductionPHIs, [this](const VPReductionPHIRecipe *R1,
+                                      const VPReductionPHIRecipe *R2) {
+    auto *Phi1 = cast<PHINode>(R1->getUnderlyingInstr());
+    if (!Legal->isMinMaxRecurrence(Phi1))
+      return false;
+
+    auto *Phi2 = cast<PHINode>(R2->getUnderlyingInstr());
+    return Legal->getMinMaxRecurrences().find(Phi1)->second == Phi2;
+  });
+
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
   Builder.setInsertPoint(&*std::prev(std::prev(LatchVPBB->end())));
   VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
-  for (VPRecipeBase &R :
-       Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!PhiR)
-      continue;
-
+  SmallDenseMap<VPReductionPHIRecipe *, VPValue *> IdxReductionMasks;
+  for (auto *PhiR : VPReductionPHIs) {
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
     Type *PhiTy = PhiR->getUnderlyingValue()->getType();
     // If tail is folded by masking, introduce selects between the phi
@@ -9195,7 +9227,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                 cast<VPInstruction>(&U)->getOpcode() ==
                     VPInstruction::ComputeReductionResult ||
                 cast<VPInstruction>(&U)->getOpcode() ==
-                    VPInstruction::ComputeFindLastIVResult);
+                    VPInstruction::ComputeFindLastIVResult ||
+                cast<VPInstruction>(&U)->getOpcode() ==
+                    VPInstruction::ComputeMinMaxIdxResult);
       });
       if (CM.usePredicatedReductionSelect())
         PhiR->setOperand(1, NewExitingVPV);
@@ -9239,6 +9273,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
+    RecurKind RK = RdxDesc.getRecurrenceKind();
     if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
       VPValue *Start = PhiR->getStartValue();
@@ -9251,6 +9286,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
+    } else if (RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(RK)) {
+      // Mask out lanes that cannot be the index of the min/max value.
+      VPValue *Mask = IdxReductionMasks.at(PhiR);
+      Value *Iden = llvm::getRecurrenceIdentity(
+          RK == RecurKind::MinMaxFirstIdx ? RecurKind::SMin : RecurKind::SMax,
+          PhiTy, RdxDesc.getFastMathFlags());
+      NewExitingVPV = Builder.createSelect(Mask, NewExitingVPV,
+                                           Plan->getOrAddLiveIn(Iden), ExitDL);
+
+      VPValue *Start = PhiR->getStartValue();
+      FinalReductionResult =
+          Builder.createNaryOp(VPInstruction::ComputeMinMaxIdxResult,
+                               {PhiR, Start, NewExitingVPV}, ExitDL);
     } else {
       VPIRFlags Flags = RecurrenceDescriptor::isFloatingPointRecurrenceKind(
                             RdxDesc.getRecurrenceKind())
@@ -9262,10 +9310,24 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     }
     // Update all users outside the vector region.
     OrigExitingVPV->replaceUsesWithIf(
-        FinalReductionResult, [FinalReductionResult](VPUser &User, unsigned) {
+        FinalReductionResult,
+        [FinalReductionResult, NewExitingVPV](VPUser &User, unsigned) {
           auto *Parent = cast<VPRecipeBase>(&User)->getParent();
-          return FinalReductionResult != &User && !Parent->getParent();
+          return FinalReductionResult != &User &&
+                 NewExitingVPV->getDefiningRecipe() != &User &&
+                 !Parent->getParent();
         });
+
+    // Generate a mask for the index reduction.
+    auto *Phi = cast<PHINode>(PhiR->getUnderlyingInstr());
+    if (Legal->isMinMaxRecurrence(Phi)) {
+      VPValue *IdxRdxMask = Builder.createICmp(CmpInst::ICMP_EQ, NewExitingVPV,
+                                               FinalReductionResult, ExitDL);
+      PHINode *IdxPhi = Legal->getMinMaxRecurrences().find(Phi)->second;
+      IdxReductionMasks.try_emplace(
+          cast<VPReductionPHIRecipe>(RecipeBuilder.getRecipe(IdxPhi)),
+          IdxRdxMask);
+    }
 
     // Adjust AnyOf reductions; replace the reduction phi for the selected value
     // with a boolean reduction phi node to check if the condition is true in
@@ -9301,16 +9363,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
     }
 
-    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
-      // Adjust the start value for FindLastIV recurrences to use the sentinel
-      // value after generating the ResumePhi recipe, which uses the original
-      // start value.
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) ||
+        RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(RK)) {
+      // Adjust the start value for FindLastIV/MinMaxIdx recurrences to use the
+      // sentinel value after generating the ResumePhi recipe, which uses the
+      // original start value.
       PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
     }
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+
     if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isMinMaxIdxRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
