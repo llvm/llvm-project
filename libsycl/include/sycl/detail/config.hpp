@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the macroses defining attributes for
+/// This file contains the declaration of the macros defining attributes for
 /// exported methods and defining API namespaces.
 ///
 //===----------------------------------------------------------------------===//
