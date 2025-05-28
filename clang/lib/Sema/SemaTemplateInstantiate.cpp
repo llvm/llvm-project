@@ -623,6 +623,12 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Inst.NumTemplateArgs = TemplateArgs.size();
     Inst.DeductionInfo = DeductionInfo;
     Inst.InstantiationRange = InstantiationRange;
+    Inst.InConstraintSubstitution =
+        Inst.Kind == CodeSynthesisContext::ConstraintSubstitution;
+    if (!SemaRef.CodeSynthesisContexts.empty())
+      Inst.InConstraintSubstitution |=
+          SemaRef.CodeSynthesisContexts.back().InConstraintSubstitution;
+
     SemaRef.pushCodeSynthesisContext(Inst);
 
     AlreadyInstantiating = !Inst.Entity ? false :
@@ -833,9 +839,6 @@ void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
   if (!Ctx.isInstantiationRecord())
     ++NonInstantiationEntries;
 
-  if (Ctx.Kind != CodeSynthesisContext::ConstraintSubstitution)
-    ++NonConstraintSubstitutionEntries;
-
   // Check to see if we're low on stack space. We can't do anything about this
   // from here, but we can at least warn the user.
   StackHandler.warnOnStackNearlyExhausted(Ctx.PointOfInstantiation);
@@ -846,11 +849,6 @@ void Sema::popCodeSynthesisContext() {
   if (!Active.isInstantiationRecord()) {
     assert(NonInstantiationEntries > 0);
     --NonInstantiationEntries;
-  }
-
-  if (Active.Kind != CodeSynthesisContext::ConstraintSubstitution) {
-    assert(NonConstraintSubstitutionEntries > 0);
-    --NonConstraintSubstitutionEntries;
   }
 
   InNonInstantiationSFINAEContext = Active.SavedInNonInstantiationSFINAEContext;
@@ -1463,9 +1461,8 @@ namespace {
           SemaRef.inConstraintSubstitution()) {
         for (UnexpandedParameterPack ParmPack : Unexpanded) {
           NamedDecl *VD = ParmPack.first.dyn_cast<NamedDecl *>();
-          if (!isa_and_present<ParmVarDecl>(VD))
-            continue;
-          if (maybeInstantiateFunctionParameterToScope(cast<ParmVarDecl>(VD)))
+          if (auto *PVD = dyn_cast_if_present<ParmVarDecl>(VD);
+              PVD && maybeInstantiateFunctionParameterToScope(PVD))
             return true;
         }
       }
@@ -1956,18 +1953,18 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
     // template parameter.
   }
 
-  if (SemaRef.CurrentInstantiationScope) {
-    if (SemaRef.inConstraintSubstitution() && isa<ParmVarDecl>(D) &&
-        maybeInstantiateFunctionParameterToScope(cast<ParmVarDecl>(D)))
-      return nullptr;
-  }
+  if (ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(D);
+      PVD && SemaRef.CurrentInstantiationScope &&
+      SemaRef.inConstraintSubstitution() &&
+      maybeInstantiateFunctionParameterToScope(PVD))
+    return nullptr;
 
   return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D), TemplateArgs);
 }
 
 bool TemplateInstantiator::maybeInstantiateFunctionParameterToScope(
     ParmVarDecl *OldParm) {
-  if (SemaRef.CurrentInstantiationScope->findInstantiationUnsafe(OldParm))
+  if (SemaRef.CurrentInstantiationScope->getInstantiationOfIfExists(OldParm))
     return false;
 
   if (!OldParm->isParameterPack())
@@ -4587,7 +4584,7 @@ static const Decl *getCanonicalParmVarDecl(const Decl *D) {
 }
 
 llvm::PointerUnion<Decl *, LocalInstantiationScope::DeclArgumentPack *> *
-LocalInstantiationScope::findInstantiationUnsafe(const Decl *D) {
+LocalInstantiationScope::getInstantiationOfIfExists(const Decl *D) {
   D = getCanonicalParmVarDecl(D);
   for (LocalInstantiationScope *Current = this; Current;
        Current = Current->Outer) {
@@ -4617,7 +4614,7 @@ LocalInstantiationScope::findInstantiationUnsafe(const Decl *D) {
 
 llvm::PointerUnion<Decl *, LocalInstantiationScope::DeclArgumentPack *> *
 LocalInstantiationScope::findInstantiationOf(const Decl *D) {
-  auto *Result = findInstantiationUnsafe(D);
+  auto *Result = getInstantiationOfIfExists(D);
   if (Result)
     return Result;
   // If we're performing a partial substitution during template argument

@@ -12548,6 +12548,10 @@ public:
   ///
   /// \param OriginalCallArgs If non-NULL, the original call arguments against
   /// which the deduced argument types should be compared.
+  /// \param CheckNonDependent Callback before substituting into the declaration
+  /// with the deduced template arguments. \param SkipUserDefinedConversion is
+  /// used as a workaround for some breakages introduced by CWG2369, where
+  /// non-user-defined conversions are checked before constraints.
   TemplateDeductionResult FinishTemplateArgumentDeduction(
       FunctionTemplateDecl *FunctionTemplate,
       SmallVectorImpl<DeducedTemplateArgument> &Deduced,
@@ -12555,9 +12559,8 @@ public:
       sema::TemplateDeductionInfo &Info,
       SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
       bool PartialOverloading, bool PartialOrdering,
-      llvm::function_ref<bool(bool)> CheckNonDependent = [](bool) {
-        return false;
-      });
+      llvm::function_ref<bool(bool)> CheckNonDependent =
+          [](bool /*SkipUserDefinedConversion*/) { return false; });
 
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
@@ -13069,6 +13072,9 @@ public:
     /// Was the enclosing context a non-instantiation SFINAE context?
     bool SavedInNonInstantiationSFINAEContext;
 
+    /// Whether we're substituting into constraints.
+    bool InConstraintSubstitution;
+
     /// The point of instantiation or synthesis within the source code.
     SourceLocation PointOfInstantiation;
 
@@ -13118,9 +13124,9 @@ public:
 
     CodeSynthesisContext()
         : Kind(TemplateInstantiation),
-          SavedInNonInstantiationSFINAEContext(false), Entity(nullptr),
-          Template(nullptr), TemplateArgs(nullptr), NumTemplateArgs(0),
-          DeductionInfo(nullptr) {}
+          SavedInNonInstantiationSFINAEContext(false),
+          InConstraintSubstitution(false), Entity(nullptr), Template(nullptr),
+          TemplateArgs(nullptr), NumTemplateArgs(0), DeductionInfo(nullptr) {}
 
     /// Determines whether this template is an actual instantiation
     /// that should be counted toward the maximum instantiation depth.
@@ -13368,19 +13374,20 @@ public:
   /// \param ForDefaultArgumentSubstitution indicates we should continue looking
   /// when encountering a specialized member function template, rather than
   /// returning immediately.
-  MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
-      const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
+  void getTemplateInstantiationArgs(
+      MultiLevelTemplateArgumentList &Result, const NamedDecl *D,
+      const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
       bool ForConstraintInstantiation = false,
       bool SkipForSpecialization = false,
       bool ForDefaultArgumentSubstitution = false);
 
-  /// Apart from storing the result to \p Result, this behaves the same as
-  /// another overload.
-  void getTemplateInstantiationArgs(
-      MultiLevelTemplateArgumentList &Result, const NamedDecl *D,
-      const DeclContext *DC = nullptr, bool Final = false,
+  /// This creates a new \p MultiLevelTemplateArgumentList and invokes the other
+  /// overload with it as the first parameter. Prefer this overload in most
+  /// situations.
+  MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
+      const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
       bool ForConstraintInstantiation = false,
@@ -13472,10 +13479,6 @@ public:
   /// \p LangOptions::InstantiationDepth we will abort instantiation.
   // FIXME: Should we have a similar limit for other forms of synthesis?
   unsigned NonInstantiationEntries;
-
-  /// The number of \p CodeSynthesisContexts that are not constraint
-  /// substitution.
-  unsigned NonConstraintSubstitutionEntries;
 
   /// The depth of the context stack at the point when the most recent
   /// error or warning was produced.
@@ -13807,7 +13810,8 @@ public:
 
   /// Determine whether we are currently performing constraint substitution.
   bool inConstraintSubstitution() const {
-    return CodeSynthesisContexts.size() > NonConstraintSubstitutionEntries;
+    return !CodeSynthesisContexts.empty() &&
+           CodeSynthesisContexts.back().InConstraintSubstitution;
   }
 
   using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;

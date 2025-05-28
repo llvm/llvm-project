@@ -526,7 +526,7 @@ enum class TemplateSubstitutionKind : char {
     /// instantiation was not found within the current instantiation scope. This
     /// is helpful for on-demand declaration instantiation.
     llvm::PointerUnion<Decl *, DeclArgumentPack *> *
-    findInstantiationUnsafe(const Decl *D);
+    getInstantiationOfIfExists(const Decl *D);
 
     void InstantiatedLocal(const Decl *D, Decl *Inst);
     void InstantiatedLocalPackArg(const Decl *D, VarDecl *Inst);
