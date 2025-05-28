@@ -851,7 +851,7 @@ Arm and AArch64 Support
 
 - Implementation of modal 8-bit floating point intrinsics in accordance with
   the Arm C Language Extensions (ACLE)
-  `as specified here <https://github.com/ARM-software/acle/blob/main/main/acle.md#modal-8-bit-floating-point-extensions>_`
+  `as specified here <https://github.com/ARM-software/acle/blob/main/main/acle.md#modal-8-bit-floating-point-extensions>`_
   is now available.
 - Support has been added for the following processors (command-line identifiers in parentheses):
   - Arm Cortex-A320 (``cortex-a320``)
