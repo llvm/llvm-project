@@ -19,57 +19,49 @@
 this_section:
 
 # ASM: qc.e.j undef
-# OBJ: qc.e.j 0x0
+# OBJ: qc.e.j 0x0 <this_section>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM195 undef{{$}}
-# OBJ-NOT: R_RISCV
 qc.e.j undef
 
 # ASM: qc.e.jal undef
-# OBJ: qc.e.jal 0x6
+# OBJ-NEXT: qc.e.jal 0x6 <this_section+0x6>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM195 undef{{$}}
-# OBJ-NOT: R_RISCV
 qc.e.jal undef
 
 
 # ASM: qc.e.j same_section
-# OBJ: qc.e.j 0x30
-# OBJ-NOT: R_RISCV
+# OBJ-NEXT: qc.e.j 0x30 <same_section>
 qc.e.j same_section
 
 # ASM: qc.e.jal same_section
-# OBJ: qc.e.jal 0x30
-# OBJ-NOT: R_RISCV
+# OBJ-NEXT: qc.e.jal 0x30 <same_section>
 qc.e.jal same_section
 
 # ASM: qc.e.j same_section_extern
-# OBJ: qc.e.j 0x18
+# OBJ-NEXT: qc.e.j 0x18 <this_section+0x18>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM195 same_section_extern{{$}}
-# OBJ-NOT: R_RISCV
 qc.e.j same_section_extern
 
 # ASM: qc.e.jal same_section_extern
-# OBJ: qc.e.jal 0x1e
+# OBJ-NEXT: qc.e.jal 0x1e <this_section+0x1e>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM195 same_section_extern{{$}}
-# OBJ-NOT: R_RISCV
 qc.e.jal same_section_extern
 
 
 # ASM: qc.e.j other_section
-# OBJ: qc.e.j 0x24
+# OBJ-NEXT: qc.e.j 0x24 <this_section+0x24>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM195 other_section{{$}}
-# OBJ-NOT: R_RISCV
 qc.e.j other_section
 
 # ASM: qc.e.jal other_section
-# OBJ: qc.e.jal 0x2a
+# OBJ-NEXT: qc.e.jal 0x2a <this_section+0x2a>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM195 other_section{{$}}
-# OBJ-NOT: R_RISCV
 qc.e.jal other_section
 
 

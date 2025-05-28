@@ -23,54 +23,46 @@ this_section:
 # OBJ: qc.li a0, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM192 undef{{$}}
-# OBJ-NOT: R_RISCV
 qc.li a0, %qc.abs20(undef)
 
 # ASM: qc.e.li s0, undef
-# OBJ: qc.e.li s0, 0x0
+# OBJ-NEXT: qc.e.li s0, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM194 undef{{$}}
-# OBJ-NOT: R_RISCV
 qc.e.li s0, undef
 
 
 # ASM: qc.li a1, %qc.abs20(0)
-# OBJ: qc.li a1, 0x0
-# OBJ-NOT: R_RISCV
+# OBJ-NEXT: qc.li a1, 0x0
 qc.li a1, %qc.abs20(abs_symbol)
 
 # ASM: qc.e.li s1, 0
-# OBJ: qc.e.li s1, 0x0
-# OBJ-NOT: R_RISCV
+# OBJ-NEXT: qc.e.li s1, 0x0
 qc.e.li s1, abs_symbol
 
 
 # ASM: qc.li a2, %qc.abs20(same_section)
-# OBJ: qc.li a2, 0x0
+# OBJ-NEXT: qc.li a2, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM192 same_section{{$}}
-# OBJ-NOT: R_RISCV
 qc.li a2, %qc.abs20(same_section)
 
 # ASM: qc.e.li s2, same_section
-# OBJ: qc.e.li s2, 0x0
+# OBJ-NEXT: qc.e.li s2, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM194 same_section{{$}}
-# OBJ-NOT: R_RISCV
 qc.e.li s2, same_section
 
 # ASM: qc.li a3, %qc.abs20(other_section)
-# OBJ: qc.li a3, 0x0
+# OBJ-NEXT: qc.li a3, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM192 other_section{{$}}
-# OBJ-NOT: R_RISCV
 qc.li a3, %qc.abs20(other_section)
 
 # ASM: qc.e.li s3, other_section
-# OBJ: qc.e.li s3, 0x0
+# OBJ-NEXT: qc.e.li s3, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM194 other_section{{$}}
-# OBJ-NOT: R_RISCV
 qc.e.li s3, other_section
 
 # ASM-LABEL: same_section:
