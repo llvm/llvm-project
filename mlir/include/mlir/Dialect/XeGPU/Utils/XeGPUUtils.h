@@ -57,10 +57,10 @@ FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
                                                LayoutAttr layout);
 
 /// Return the attribute name for the OpOperand to attach LayoutAttr
-std::string getLayoutName(const OpOperand &opr);
+std::string getLayoutName(const OpOperand &operand);
 
 /// Return the attribute name for the OpResult to attach LayoutAttr
-std::string getLayoutName(const OpResult res);
+std::string getLayoutName(const OpResult result);
 
 /// Retrieves the LayoutAttr associated with a given Value. For TensorDescType
 /// values, the LayoutAttr is extracted from the TensorDescType itself. For

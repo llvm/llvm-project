@@ -101,15 +101,15 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
-std::string xegpu::getLayoutName(const OpOperand &opr) {
+std::string xegpu::getLayoutName(const OpOperand &operand) {
   const StringRef prefix("layout_operand_");
-  unsigned idx = const_cast<OpOperand &>(opr).getOperandNumber();
+  unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
   return llvm::formatv("{0}{1}", prefix, idx).str();
 }
 
-std::string xegpu::getLayoutName(const OpResult res) {
+std::string xegpu::getLayoutName(const OpResult result) {
   const StringRef prefix = "layout_result_";
-  return llvm::formatv("{0}{1}", prefix, res.getResultNumber()).str();
+  return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
 
 xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
