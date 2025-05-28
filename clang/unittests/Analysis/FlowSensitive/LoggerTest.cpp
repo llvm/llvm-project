@@ -1,8 +1,9 @@
 #include "TestingSupport.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -10,43 +11,59 @@ namespace clang::dataflow::test {
 namespace {
 using testing::HasSubstr;
 
-struct TestLattice {
+struct TestLattice : public llvm::RTTIExtends<TestLattice, DataflowLattice> {
+  inline static char ID = 0;
+
   int Elements = 0;
   int Branches = 0;
   int Joins = 0;
 
-  LatticeJoinEffect join(const TestLattice &Other) {
+  DataflowLatticePtr clone() override {
+    return std::make_unique<TestLattice>(*this);
+  }
+
+  bool isEqual(const DataflowLattice &Other) const override {
+    return *this == llvm::cast<const TestLattice>(Other);
+  }
+
+  LatticeEffect join(const DataflowLattice &L) override {
+    const auto &Other = llvm::cast<const TestLattice>(L);
     if (Joins < 3) {
       ++Joins;
       Elements += Other.Elements;
       Branches += Other.Branches;
-      return LatticeJoinEffect::Changed;
+      return LatticeEffect::Changed;
     }
-    return LatticeJoinEffect::Unchanged;
+    return LatticeEffect::Unchanged;
   }
-  friend bool operator==(const TestLattice &LHS, const TestLattice &RHS) {
-    return std::tie(LHS.Elements, LHS.Branches, LHS.Joins) ==
+
+  bool operator==(const TestLattice &RHS) const {
+    return std::tie(Elements, Branches, Joins) ==
            std::tie(RHS.Elements, RHS.Branches, RHS.Joins);
   }
 };
 
-class TestAnalysis : public DataflowAnalysis<TestAnalysis, TestLattice> {
+class TestAnalysis : public DataflowAnalysis {
 public:
+  using Lattice = TestLattice;
   using DataflowAnalysis::DataflowAnalysis;
 
-  static TestLattice initialElement() { return TestLattice{}; }
-  void transfer(const CFGElement &, TestLattice &L, Environment &E) {
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>();
+  }
+  void transfer(const CFGElement &, DataflowLattice &L,
+                Environment &E) override {
     E.getDataflowAnalysisContext().getOptions().Log->log(
         [](llvm::raw_ostream &OS) { OS << "transfer()"; });
-    ++L.Elements;
+    ++llvm::cast<Lattice>(L).Elements;
   }
-  void transferBranch(bool Branch, const Stmt *S, TestLattice &L,
-                      Environment &E) {
+  void transferBranch(bool Branch, const Stmt &, DataflowLattice &L,
+                      Environment &E) override {
     E.getDataflowAnalysisContext().getOptions().Log->log(
         [&](llvm::raw_ostream &OS) {
           OS << "transferBranch(" << Branch << ")";
         });
-    ++L.Branches;
+    ++llvm::cast<Lattice>(L).Branches;
   }
 };
 
@@ -57,8 +74,7 @@ public:
 private:
   llvm::raw_string_ostream OS;
 
-  void beginAnalysis(const AdornedCFG &,
-                     TypeErasedDataflowAnalysis &) override {
+  void beginAnalysis(const AdornedCFG &, DataflowAnalysis &) override {
     logText("beginAnalysis()");
   }
   void endAnalysis() override { logText("\nendAnalysis()"); }
@@ -76,7 +92,7 @@ private:
     OS << "enterElement(" << llvm::StringRef(S).trim() << ")\n";
   }
   void recordState(TypeErasedDataflowAnalysisState &S) override {
-    const TestLattice &L = llvm::any_cast<TestLattice>(S.Lattice.Value);
+    const TestLattice &L = llvm::cast<TestLattice>(*S.Lattice);
     OS << "recordState(Elements=" << L.Elements << ", Branches=" << L.Branches
        << ", Joins=" << L.Joins << ")\n";
   }

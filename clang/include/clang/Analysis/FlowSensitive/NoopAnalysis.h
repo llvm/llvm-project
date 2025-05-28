@@ -13,26 +13,26 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
 
-#include "clang/AST/ASTContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
+#include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
+#include <memory>
 
 namespace clang {
 namespace dataflow {
 
-class NoopAnalysis : public DataflowAnalysis<NoopAnalysis, NoopLattice> {
+class NoopAnalysis : public DataflowAnalysis {
 public:
-  NoopAnalysis(ASTContext &Context)
-      : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context) {}
+  using DataflowAnalysis::DataflowAnalysis;
+  using Lattice = NoopLattice;
 
-  NoopAnalysis(ASTContext &Context, DataflowAnalysisOptions Options)
-      : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context, Options) {}
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<NoopLattice>();
+  }
 
-  static NoopLattice initialElement() { return {}; }
-
-  void transfer(const CFGElement &E, NoopLattice &L, Environment &Env) {}
+  void transfer(const CFGElement &E, DataflowLattice &L,
+                Environment &Env) override {}
 };
 
 } // namespace dataflow

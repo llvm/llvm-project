@@ -351,19 +351,24 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-class SignPropagationAnalysis
-    : public DataflowAnalysis<SignPropagationAnalysis, NoopLattice> {
+class SignPropagationAnalysis : public DataflowAnalysis {
 public:
+  using Lattice = NoopLattice;
+
   SignPropagationAnalysis(ASTContext &Context)
-      : DataflowAnalysis<SignPropagationAnalysis, NoopLattice>(Context),
+      : DataflowAnalysis(Context),
         TransferMatchSwitch(buildTransferMatchSwitch()) {}
 
-  static NoopLattice initialElement() { return {}; }
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<NoopLattice>();
+  }
 
-  void transfer(const CFGElement &Elt, NoopLattice &L, Environment &Env) {
-    LatticeTransferState State(L, Env);
+  void transfer(const CFGElement &Elt, DataflowLattice &L,
+                Environment &Env) override {
+    LatticeTransferState State(llvm::cast<NoopLattice>(L), Env);
     TransferMatchSwitch(Elt, getASTContext(), State);
   }
+
   void join(QualType Type, const Value &Val1, const Environment &Env1,
             const Value &Val2, const Environment &Env2, Value &MergedVal,
             Environment &MergedEnv) override;

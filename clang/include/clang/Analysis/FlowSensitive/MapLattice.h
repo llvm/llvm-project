@@ -36,11 +36,15 @@ namespace dataflow {
 ///
 /// Requirements on `ElementLattice`:
 /// * Provides standard declarations of a bounded semi-lattice.
-template <typename Key, typename ElementLattice> class MapLattice {
+template <typename Key, typename ElementLattice>
+class MapLattice : public llvm::RTTIExtends<MapLattice<Key, ElementLattice>,
+                                            DataflowLattice> {
   using Container = llvm::DenseMap<Key, ElementLattice>;
   Container C;
 
 public:
+  inline static char ID = 0;
+
   using key_type = Key;
   using mapped_type = ElementLattice;
   using value_type = typename Container::value_type;
@@ -89,18 +93,28 @@ public:
 
   mapped_type &operator[](const key_type &K) { return C[K]; }
 
+  DataflowLatticePtr clone() override {
+    return std::make_unique<MapLattice>(*this);
+  }
+
+  bool isEqual(const DataflowLattice &Other) const override {
+    return llvm::isa<const MapLattice>(Other) &&
+           *this == llvm::cast<const MapLattice>(Other);
+  }
+
   /// If an entry exists in one map but not the other, the missing entry is
   /// treated as implicitly mapping to `bottom`. So, the joined map contains the
   /// entry as it was in the source map.
-  LatticeJoinEffect join(const MapLattice &Other) {
-    LatticeJoinEffect Effect = LatticeJoinEffect::Unchanged;
+  LatticeEffect join(const DataflowLattice &L) override {
+    const auto &Other = llvm::cast<MapLattice>(L);
+    LatticeEffect Effect = LatticeEffect::Unchanged;
     for (const auto &O : Other.C) {
       auto It = C.find(O.first);
       if (It == C.end()) {
         C.insert(O);
-        Effect = LatticeJoinEffect::Changed;
-      } else if (It->second.join(O.second) == LatticeJoinEffect::Changed)
-        Effect = LatticeJoinEffect::Changed;
+        Effect = LatticeEffect::Changed;
+      } else if (It->second.join(O.second) == LatticeEffect::Changed)
+        Effect = LatticeEffect::Changed;
     }
     return Effect;
   }

@@ -25,12 +25,22 @@ namespace {
 
 using namespace ast_matchers;
 
-struct TestLattice {
+struct TestLattice : public llvm::RTTIExtends<TestLattice, DataflowLattice> {
+  inline static char ID = 0;
+
   std::optional<bool> Branch;
   static TestLattice bottom() { return {}; }
 
+  DataflowLatticePtr clone() override {
+    return std::make_unique<TestLattice>(*this);
+  }
+
+  bool isEqual(const DataflowLattice &Other) const override {
+    return *this == llvm::cast<const TestLattice>(Other);
+  }
+
   // Does not matter for this test, but we must provide some definition of join.
-  LatticeJoinEffect join(const TestLattice &Other) {
+  LatticeJoinEffect join(const DataflowLattice &) override {
     return LatticeJoinEffect::Unchanged;
   }
   friend bool operator==(const TestLattice &Lhs, const TestLattice &Rhs) {
@@ -38,16 +48,20 @@ struct TestLattice {
   }
 };
 
-class TestPropagationAnalysis
-    : public DataflowAnalysis<TestPropagationAnalysis, TestLattice> {
+class TestPropagationAnalysis : public DataflowAnalysis {
 public:
+  using Lattice = TestLattice;
+
   explicit TestPropagationAnalysis(ASTContext &Context)
-      : DataflowAnalysis<TestPropagationAnalysis, TestLattice>(Context) {}
-  static TestLattice initialElement() { return TestLattice::bottom(); }
-  void transfer(const CFGElement &, TestLattice &, Environment &) {}
-  void transferBranch(bool Branch, const Stmt *S, TestLattice &L,
-                      Environment &Env) {
-    L.Branch = Branch;
+      : DataflowAnalysis(Context) {}
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>(TestLattice::bottom());
+  }
+  void transfer(const CFGElement &, DataflowLattice &, Environment &) override {
+  }
+  void transferBranch(bool Branch, const Stmt &S, DataflowLattice &L,
+                      Environment &Env) override {
+    llvm::cast<Lattice>(L).Branch = Branch;
   }
 };
 

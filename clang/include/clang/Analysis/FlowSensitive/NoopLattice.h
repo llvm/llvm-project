@@ -14,8 +14,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOP_LATTICE_H
 
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include "clang/Support/Compiler.h"
-#include "llvm/ADT/Any.h"
+#include <memory>
 #include <ostream>
 
 namespace clang {
@@ -24,13 +23,25 @@ namespace dataflow {
 /// Trivial lattice for dataflow analysis with exactly one element.
 ///
 /// Useful for analyses that only need the Environment and nothing more.
-class NoopLattice {
+class NoopLattice : public llvm::RTTIExtends<NoopLattice, DataflowLattice> {
 public:
-  bool operator==(const NoopLattice &Other) const { return true; }
+  /// For RTTI.
+  inline static char ID = 0;
 
-  LatticeJoinEffect join(const NoopLattice &Other) {
+  bool isEqual(const DataflowLattice &Other) const override {
+    return llvm::isa<NoopLattice>(Other);
+  }
+
+  std::unique_ptr<DataflowLattice> clone() override {
+    return std::make_unique<NoopLattice>();
+  }
+
+  LatticeEffect join(const DataflowLattice &Other) override {
+    assert(llvm::isa<NoopLattice>(Other));
     return LatticeJoinEffect::Unchanged;
   }
+
+  bool operator==(const NoopLattice &Other) const { return true; }
 };
 
 inline std::ostream &operator<<(std::ostream &OS, const NoopLattice &) {
@@ -39,14 +50,5 @@ inline std::ostream &operator<<(std::ostream &OS, const NoopLattice &) {
 
 } // namespace dataflow
 } // namespace clang
-
-namespace llvm {
-// This needs to be exported for ClangAnalysisFlowSensitiveTests so any_cast
-// uses the correct address of Any::TypeId from the clang shared library instead
-// of creating one in the test executable. when building with
-// CLANG_LINK_CLANG_DYLIB
-extern template struct CLANG_TEMPLATE_ABI
-    Any::TypeId<clang::dataflow::NoopLattice>;
-} // namespace llvm
 
 #endif // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOP_LATTICE_H

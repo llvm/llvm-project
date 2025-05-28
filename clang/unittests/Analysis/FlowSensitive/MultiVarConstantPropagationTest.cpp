@@ -45,7 +45,9 @@ using namespace ast_matchers;
 
 // Models the value of an expression at a program point, for all paths through
 // the program.
-struct ValueLattice {
+struct ValueLattice : public llvm::RTTIExtends<ValueLattice, DataflowLattice> {
+  inline static char ID = 0;
+
   // FIXME: change the internal representation to use a `std::variant`, once
   // clang admits C++17 constructs.
   enum class ValueState : bool {
@@ -61,17 +63,12 @@ struct ValueLattice {
   // `State`.
   std::optional<int64_t> Value;
 
-  constexpr ValueLattice()
-      : State(ValueState::Undefined), Value(std::nullopt) {}
-  constexpr ValueLattice(int64_t V) : State(ValueState::Defined), Value(V) {}
-  constexpr ValueLattice(ValueState S) : State(S), Value(std::nullopt) {}
+  ValueLattice() : State(ValueState::Undefined), Value(std::nullopt) {}
+  explicit ValueLattice(int64_t V) : State(ValueState::Defined), Value(V) {}
+  explicit ValueLattice(ValueState S) : State(S), Value(std::nullopt) {}
 
-  static constexpr ValueLattice bottom() {
-    return ValueLattice(ValueState::Undefined);
-  }
-  static constexpr ValueLattice top() {
-    return ValueLattice(ValueState::Defined);
-  }
+  static ValueLattice bottom() { return ValueLattice(ValueState::Undefined); }
+  static ValueLattice top() { return ValueLattice(ValueState::Defined); }
 
   friend bool operator==(const ValueLattice &Lhs, const ValueLattice &Rhs) {
     return Lhs.State == Rhs.State && Lhs.Value == Rhs.Value;
@@ -80,17 +77,26 @@ struct ValueLattice {
     return !(Lhs == Rhs);
   }
 
-  LatticeJoinEffect join(const ValueLattice &Other) {
+  DataflowLatticePtr clone() override {
+    return std::make_unique<ValueLattice>(*this);
+  }
+
+  bool isEqual(const DataflowLattice &Other) const override {
+    return *this == llvm::cast<const ValueLattice>(Other);
+  }
+
+  LatticeEffect join(const DataflowLattice &L) override {
+    const auto &Other = llvm::cast<ValueLattice>(L);
     if (*this == Other || Other == bottom() || *this == top())
-      return LatticeJoinEffect::Unchanged;
+      return LatticeEffect::Unchanged;
 
     if (*this == bottom()) {
       *this = Other;
-      return LatticeJoinEffect::Changed;
+      return LatticeEffect::Changed;
     }
 
     *this = top();
-    return LatticeJoinEffect::Changed;
+    return LatticeEffect::Changed;
   }
 };
 
@@ -122,24 +128,24 @@ auto refToVar() { return declRefExpr(to(varDecl().bind(kVar))); }
 // not account for the variable's address possibly escaping, which would
 // invalidate the analysis. It also could be optimized to drop out-of-scope
 // variables from the map.
-class ConstantPropagationAnalysis
-    : public DataflowAnalysis<ConstantPropagationAnalysis,
-                              ConstantPropagationLattice> {
+class ConstantPropagationAnalysis : public DataflowAnalysis {
 public:
-  explicit ConstantPropagationAnalysis(ASTContext &Context)
-      : DataflowAnalysis<ConstantPropagationAnalysis,
-                         ConstantPropagationLattice>(Context) {}
+  using Lattice = ConstantPropagationLattice;
 
-  static ConstantPropagationLattice initialElement() {
-    return ConstantPropagationLattice::bottom();
+  explicit ConstantPropagationAnalysis(ASTContext &Context)
+      : DataflowAnalysis(Context) {}
+
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>(ConstantPropagationLattice::bottom());
   }
 
-  void transfer(const CFGElement &E, ConstantPropagationLattice &Vars,
-                Environment &Env) {
+  void transfer(const CFGElement &E, DataflowLattice &L,
+                Environment &Env) override {
+    auto &Vars = llvm::cast<ConstantPropagationLattice>(L);
     auto CS = E.getAs<CFGStmt>();
     if (!CS)
       return;
-    auto S = CS->getStmt();
+    auto *S = CS->getStmt();
     auto matcher =
         stmt(anyOf(declStmt(hasSingleDecl(
                        varDecl(decl().bind(kVar), hasType(isInteger()),

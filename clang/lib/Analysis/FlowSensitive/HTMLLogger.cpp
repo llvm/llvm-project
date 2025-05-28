@@ -175,8 +175,7 @@ class HTMLLogger : public Logger {
 
 public:
   explicit HTMLLogger(StreamFactory Streams) : Streams(std::move(Streams)) {}
-  void beginAnalysis(const AdornedCFG &ACFG,
-                     TypeErasedDataflowAnalysis &A) override {
+  void beginAnalysis(const AdornedCFG &ACFG, DataflowAnalysis &A) override {
     OS = Streams();
     this->ACFG = &ACFG;
     *OS << llvm::StringRef(HTMLLogger_html).split("<?INJECT?>").first;
