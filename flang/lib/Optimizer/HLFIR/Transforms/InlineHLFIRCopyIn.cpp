@@ -52,19 +52,15 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
     return rewriter.notifyMatchFailure(copyIn,
                                        "CopyInOp's data type is not trivial");
 
-  if (fir::isPointerType(inputVariable.getType()))
-    return rewriter.notifyMatchFailure(
-        copyIn, "CopyInOp's input variable is a pointer");
-
   // There should be exactly one user of WasCopied - the corresponding
   // CopyOutOp.
-  if (copyIn.getWasCopied().getUses().empty())
-    return rewriter.notifyMatchFailure(copyIn,
-                                       "CopyInOp's WasCopied has no uses");
+  if (!copyIn.getWasCopied().hasOneUse())
+    return rewriter.notifyMatchFailure(
+        copyIn, "CopyInOp's WasCopied has no single user");
   // The copy out should always be present, either to actually copy or just
   // deallocate memory.
   auto copyOut = mlir::dyn_cast<hlfir::CopyOutOp>(
-      copyIn.getWasCopied().getUsers().begin().getCurrent().getUser());
+      copyIn.getWasCopied().user_begin().getCurrent().getUser());
 
   if (!copyOut)
     return rewriter.notifyMatchFailure(copyIn,
@@ -77,28 +73,45 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
 
   inputVariable =
       hlfir::derefPointersAndAllocatables(loc, builder, inputVariable);
-  mlir::Type resultAddrType = copyIn.getCopiedIn().getType();
+  mlir::Type sequenceType =
+      hlfir::getFortranElementOrSequenceType(inputVariable.getType());
+  fir::BoxType resultBoxType = fir::BoxType::get(sequenceType);
   mlir::Value isContiguous =
       builder.create<fir::IsContiguousBoxOp>(loc, inputVariable);
   mlir::Operation::result_range results =
       builder
-          .genIfOp(loc, {resultAddrType, builder.getI1Type()}, isContiguous,
+          .genIfOp(loc, {resultBoxType, builder.getI1Type()}, isContiguous,
                    /*withElseRegion=*/true)
           .genThen([&]() {
-            mlir::Value falseVal = builder.create<mlir::arith::ConstantOp>(
-                loc, builder.getI1Type(), builder.getBoolAttr(false));
+            mlir::Value result = inputVariable;
+            if (fir::isPointerType(inputVariable.getType())) {
+              auto boxAddr = builder.create<fir::BoxAddrOp>(loc, inputVariable);
+              fir::ReferenceType refTy = fir::ReferenceType::get(sequenceType);
+              mlir::Value refVal = builder.createConvert(loc, refTy, boxAddr);
+              mlir::Value shape = hlfir::genShape(loc, builder, inputVariable);
+              result = builder.create<fir::EmboxOp>(loc, resultBoxType, refVal,
+                                                    shape);
+            }
             builder.create<fir::ResultOp>(
-                loc, mlir::ValueRange{inputVariable, falseVal});
+                loc, mlir::ValueRange{result, builder.createBool(loc, false)});
           })
           .genElse([&] {
-            auto [temp, cleanup] =
-                hlfir::createTempFromMold(loc, builder, inputVariable);
             mlir::Value shape = hlfir::genShape(loc, builder, inputVariable);
             llvm::SmallVector<mlir::Value> extents =
                 hlfir::getIndexExtents(loc, builder, shape);
-            hlfir::LoopNest loopNest = hlfir::genLoopNest(
-                loc, builder, extents, /*isUnordered=*/true,
-                flangomp::shouldUseWorkshareLowering(copyIn));
+            llvm::StringRef tmpName{".tmp.copy_in"};
+            llvm::SmallVector<mlir::Value> lenParams;
+            mlir::Value alloc = builder.createHeapTemporary(
+                loc, sequenceType, tmpName, extents, lenParams);
+
+            auto declareOp = builder.create<hlfir::DeclareOp>(
+                loc, alloc, tmpName, shape, lenParams,
+                /*dummy_scope=*/nullptr);
+            hlfir::Entity temp{declareOp.getBase()};
+            hlfir::LoopNest loopNest =
+                hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                                   flangomp::shouldUseWorkshareLowering(copyIn),
+                                   /*couldVectorize=*/false);
             builder.setInsertionPointToStart(loopNest.body);
             hlfir::Entity elem = hlfir::getElementAt(
                 loc, builder, inputVariable, loopNest.oneBasedIndices);
@@ -117,12 +130,12 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
               fir::ReferenceType refTy =
                   fir::ReferenceType::get(temp.getElementOrSequenceType());
               mlir::Value refVal = builder.createConvert(loc, refTy, temp);
-              result =
-                  builder.create<fir::EmboxOp>(loc, resultAddrType, refVal);
+              result = builder.create<fir::EmboxOp>(loc, resultBoxType, refVal,
+                                                    shape);
             }
 
-            builder.create<fir::ResultOp>(loc,
-                                          mlir::ValueRange{result, cleanup});
+            builder.create<fir::ResultOp>(
+                loc, mlir::ValueRange{result, builder.createBool(loc, true)});
           })
           .getResults();
 
@@ -140,16 +153,7 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   });
   rewriter.eraseOp(copyOut);
 
-  mlir::Value tempBox = copyIn.getTempBox();
-
   rewriter.replaceOp(copyIn, {addr, builder.genNot(loc, isContiguous)});
-
-  // The TempBox is only needed for flang-rt calls which we're no longer
-  // generating. It should have no uses left at this stage.
-  if (!tempBox.getUses().empty())
-    return mlir::failure();
-  rewriter.eraseOp(tempBox.getDefiningOp());
-
   return mlir::success();
 }
 

@@ -60,9 +60,9 @@ func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {
 // CHECK:    %[[VAL_21:.*]]:2 = fir.if %[[VAL_20:.*]] -> (!fir.box<!fir.array<?xf64>>, i1) {
 // CHECK:      fir.result %[[VAL_19:.*]], %[[VAL_4:.*]] : !fir.box<!fir.array<?xf64>>, i1
 // CHECK:    } else {
-// CHECK:      %[[VAL_24:.*]] = fir.allocmem !fir.array<?xf64>, %[[VAL_15:.*]] {bindc_name = ".tmp", uniq_name = ""}
-// CHECK:      %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_24:.*]](%[[VAL_18:.*]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.heap<!fir.array<?xf64>>)
-// CHECK:      fir.do_loop %arg3 = %[[VAL_7:.*]] to %[[VAL_15:.*]] step %[[VAL_7:.*]] unordered {
+// CHECK:      %[[VAL_24:.*]] = fir.allocmem !fir.array<?xf64>, %[[VAL_15:.*]] {bindc_name = ".tmp.copy_in", uniq_name = ""}
+// CHECK:      %[[VAL_25:.*]]:2 = hlfir.declare %[[VAL_24:.*]](%[[VAL_18:.*]]) {uniq_name = ".tmp.copy_in"} : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.heap<!fir.array<?xf64>>)
+// CHECK:      fir.do_loop %arg3 = %[[VAL_7:.*]] to %[[VAL_15:.*]] step %[[VAL_7:.*]] unordered attributes {loopAnnotation = #loop_annotation} {
 // CHECK:        %[[VAL_26:.*]] = hlfir.designate %[[VAL_19:.*]] (%arg3)  : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:        %[[VAL_27:.*]] = fir.load %[[VAL_26:.*]] : !fir.ref<f64>
 // CHECK:        %[[VAL_28:.*]] = hlfir.designate %[[VAL_25:.*]]#0 (%arg3)  : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
