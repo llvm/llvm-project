@@ -236,43 +236,29 @@ Error RemarkCounter::print(StringRef OutputFileName) {
 
 Expected<Filters> getRemarkFilter() {
   // Create Filter properties.
-  std::optional<FilterMatcher> RemarkNameFilter;
-  if (!RemarkNameOpt.empty())
-    RemarkNameFilter = FilterMatcher::createExact(RemarkNameOpt);
-  else if (!RemarkNameOptRE.empty()) {
-    auto FM = FilterMatcher::createRE(RemarkNameOptRE);
-    if (!FM)
-      return FM.takeError();
-    RemarkNameFilter = std::move(*FM);
-  }
+  auto MaybeRemarkNameFilter =
+      FilterMatcher::createExactOrRE(RemarkNameOpt, RemarkNameOptRE);
+  if (!MaybeRemarkNameFilter)
+    return MaybeRemarkNameFilter.takeError();
 
-  std::optional<FilterMatcher> PassNameFilter;
-  if (!PassNameOpt.empty())
-    PassNameFilter = FilterMatcher::createExact(PassNameOpt);
-  else if (!PassNameOptRE.empty()) {
-    auto FM = FilterMatcher::createRE(PassNameOptRE);
-    if (!FM)
-      return FM.takeError();
-    PassNameFilter = std::move(*FM);
-  }
+  auto MaybePassNameFilter =
+      FilterMatcher::createExactOrRE(PassNameOpt, PassNameOptRE);
+  if (!MaybePassNameFilter)
+    return MaybePassNameFilter.takeError();
 
-  std::optional<FilterMatcher> RemarkArgFilter;
-  if (!RemarkFilterArgByOpt.empty())
-    RemarkArgFilter = FilterMatcher::createExact(RemarkFilterArgByOpt);
-  else if (!RemarkArgFilterOptRE.empty()) {
-    auto FM = FilterMatcher::createRE(RemarkArgFilterOptRE);
-    if (!FM)
-      return FM.takeError();
-    RemarkArgFilter = std::move(*FM);
-  }
+  auto MaybeRemarkArgFilter = FilterMatcher::createExactOrRE(
+      RemarkFilterArgByOpt, RemarkArgFilterOptRE);
+  if (!MaybeRemarkArgFilter)
+    return MaybeRemarkArgFilter.takeError();
 
   std::optional<Type> RemarkType;
   if (RemarkTypeOpt != Type::Failure)
     RemarkType = RemarkTypeOpt;
 
   // Create RemarkFilter.
-  return Filters{std::move(RemarkNameFilter), std::move(PassNameFilter),
-                 std::move(RemarkArgFilter), RemarkType};
+  return Filters{std::move(*MaybeRemarkNameFilter),
+                 std::move(*MaybePassNameFilter),
+                 std::move(*MaybeRemarkArgFilter), RemarkType};
 }
 
 Error useCollectRemark(StringRef Buffer, Counter &Counter, Filters &Filter) {
