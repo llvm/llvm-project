@@ -144,8 +144,8 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
         static_cast<SPIRV::MemoryModel::MemoryModel>(getMetadataUInt(MemMD, 1));
   } else {
     // TODO: Add support for VulkanMemoryModel.
-    MAI.Mem = !ST->isShaderEnv() ? SPIRV::MemoryModel::OpenCL
-                                 : SPIRV::MemoryModel::GLSL450;
+    MAI.Mem = ST->isShaderEnv() ? SPIRV::MemoryModel::GLSL450
+                                : SPIRV::MemoryModel::OpenCL;
     if (MAI.Mem == SPIRV::MemoryModel::OpenCL) {
       unsigned PtrSize = ST->getPointerSize();
       MAI.Addr = PtrSize == 32   ? SPIRV::AddressingModel::Physical32

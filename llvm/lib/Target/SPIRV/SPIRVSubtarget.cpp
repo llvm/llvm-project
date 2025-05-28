@@ -119,10 +119,10 @@ bool SPIRVSubtarget::canUseExtInstSet(
 
 SPIRV::InstructionSet::InstructionSet
 SPIRVSubtarget::getPreferredInstructionSet() const {
-  if (!isShaderEnv())
-    return SPIRV::InstructionSet::OpenCL_std;
-  else
+  if (isShaderEnv())
     return SPIRV::InstructionSet::GLSL_std_450;
+  else
+    return SPIRV::InstructionSet::OpenCL_std;
 }
 
 bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
