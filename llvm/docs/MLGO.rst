@@ -492,15 +492,15 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
 3. **Compute and Access Embeddings**:
    Call ``getFunctionVector()`` to get the embedding for the function. 
 
-  .. code-block:: c++
+   .. code-block:: c++
 
-      const ir2vec::Embedding &FuncVector = Emb->getFunctionVector();
+    const ir2vec::Embedding &FuncVector = Emb->getFunctionVector();
 
    Currently, ``Embedder`` can generate embeddings at three levels: Instructions,
    Basic Blocks, and Functions. Appropriate getters are provided to access the
    embeddings at these levels.
 
-  .. note::
+   .. note::
 
     The validity of ``Embedder`` instance (and the embeddings it generates) is
     tied to the function it is associated with remains unchanged. If the function
