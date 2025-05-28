@@ -108,8 +108,8 @@ public:
     switch (FullSmVersion) {
     default:
       break;
-    case 1001: // sm_100a
-    case 1011: // sm_101a
+    case 10011: // sm_100a
+    case 10111: // sm_101a
       HasTcgen05 = true;
       break;
     }
@@ -135,15 +135,25 @@ public:
   bool hasPTXASUnreachableBug() const { return PTXVersion < 83; }
   bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
-  unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
+  unsigned int getSmVersion() const { return getFullSmVersion() / 100; }
   // GPUs with "a" suffix have include architecture-accelerated features that
   // are supported on the specified architecture only, hence such targets do not
   // follow the onion layer model. hasArchAccelFeatures() allows
   // distinguishing such GPU variants from the base GPU architecture.
-  // - 0 represents base GPU model,
-  // - non-zero value identifies particular architecture-accelerated variant.
-  bool hasArchAccelFeatures() const { return getFullSmVersion() % 10; }
-
+  // - false represents non-accelerated architecture.
+  // - true represents architecture-accelerated variant.
+  bool hasArchAccelFeatures() const {
+    return getFullSmVersion() % 10 && PTXVersion >= 80;
+  }
+  // GPUs with 'f' suffix have architecture-accelerated features which are
+  // portable across all future architectures under same SM major. For example,
+  // sm_100f features will work for sm_10X*f*/sm_10X*a* future architectures.
+  // - false represents non-family-specific architecture.
+  // - true represents family-specific variant.
+  bool hasFamilySpecificFeatures() const {
+    return getFullSmVersion() % 100 == 10 ? PTXVersion >= 88
+                                          : hasArchAccelFeatures();
+  }
   // If the user did not provide a target we default to the `sm_30` target.
   std::string getTargetName() const {
     return TargetName.empty() ? "sm_30" : TargetName;

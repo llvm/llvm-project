@@ -55,7 +55,7 @@ NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const NVPTXTargetMachine &TM)
     : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
-      FullSmVersion(200), SmVersion(getSmVersion()),
+      FullSmVersion(2000), SmVersion(getSmVersion()),
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS)) {
   TSInfo = std::make_unique<NVPTXSelectionDAGInfo>();
 }
