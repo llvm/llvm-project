@@ -43,3 +43,12 @@ define <8 x i8> @vec_const() {
   %r = call <8 x i8> @llvm.abs.v8i8(<8 x i8> <i8 -127, i8 -126, i8 -42, i8 -1, i8 0, i8 1, i8 42, i8 127>, i1 1)
   ret <8 x i8> %r
 }
+
+define <vscale x 1 x i8> @scalable_vec_const() {
+; CHECK-LABEL: @scalable_vec_const(
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 1 x i8> @llvm.abs.nxv1i8(<vscale x 1 x i8> splat (i8 -42), i1 true)
+; CHECK-NEXT:    ret <vscale x 1 x i8> [[R]]
+;
+  %r = call <vscale x 1 x i8> @llvm.abs(<vscale x 1 x i8> splat (i8 -42), i1 1)
+  ret <vscale x 1 x i8> %r
+}
