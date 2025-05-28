@@ -260,6 +260,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
+  llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
   mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
 
@@ -582,7 +583,7 @@ private:
   llvm::DenseMap<UsingEnumDecl *, UsingEnumDecl *>
       InstantiatedFromUsingEnumDecl;
 
-  /// Simlarly maps instantiated UsingShadowDecls to their origin.
+  /// Similarly maps instantiated UsingShadowDecls to their origin.
   llvm::DenseMap<UsingShadowDecl*, UsingShadowDecl*>
     InstantiatedFromUsingShadowDecl;
 
@@ -790,7 +791,7 @@ public:
     }
     return new (*this) DeclListNode(ND);
   }
-  /// Deallcates a \c DeclListNode by returning it to the \c ListNodeFreeList
+  /// Deallocates a \c DeclListNode by returning it to the \c ListNodeFreeList
   /// pool.
   void DeallocateDeclListNode(DeclListNode *N) {
     N->Rest = ListNodeFreeList;
@@ -1123,7 +1124,7 @@ public:
 
   /// Clean up the merged definition list. Call this if you might have
   /// added duplicates into the list.
-  void deduplicateMergedDefinitonsFor(NamedDecl *ND);
+  void deduplicateMergedDefinitionsFor(NamedDecl *ND);
 
   /// Get the additional modules in which the definition \p Def has
   /// been merged.
@@ -1807,6 +1808,10 @@ public:
   QualType getHLSLAttributedResourceType(
       QualType Wrapped, QualType Contained,
       const HLSLAttributedResourceType::Attributes &Attrs);
+
+  QualType getHLSLInlineSpirvType(uint32_t Opcode, uint32_t Size,
+                                  uint32_t Alignment,
+                                  ArrayRef<SpirvOperand> Operands);
 
   QualType getSubstTemplateTypeParmType(QualType Replacement,
                                         Decl *AssociatedDecl, unsigned Index,
@@ -2565,7 +2570,7 @@ public:
   /// Return the ABI-specified natural alignment of a (complete) type \p T,
   /// before alignment adjustments, in bits.
   ///
-  /// This alignment is curently used only by ARM and AArch64 when passing
+  /// This alignment is currently used only by ARM and AArch64 when passing
   /// arguments of a composite type.
   unsigned getTypeUnadjustedAlign(QualType T) const {
     return getTypeUnadjustedAlign(T.getTypePtr());
@@ -2638,7 +2643,7 @@ public:
   /// considered specifically for the query.
   CharUnits getAlignOfGlobalVarInChars(QualType T, const VarDecl *VD) const;
 
-  /// Return the minimum alignement as specified by the target. If \p VD is
+  /// Return the minimum alignment as specified by the target. If \p VD is
   /// non-null it may be used to identify external or weak variables.
   unsigned getMinGlobalAlignOfVar(uint64_t Size, const VarDecl *VD) const;
 

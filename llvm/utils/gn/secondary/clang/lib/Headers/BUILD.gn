@@ -228,6 +228,7 @@ copy("Headers") {
     "hlsl/hlsl_detail.h",
     "hlsl/hlsl_intrinsic_helpers.h",
     "hlsl/hlsl_intrinsics.h",
+    "hlsl/hlsl_spirv.h",
     "hresetintrin.h",
     "htmintrin.h",
     "htmxlintrin.h",

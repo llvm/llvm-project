@@ -765,6 +765,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
   }
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
     break;
   }
@@ -876,6 +877,10 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
   // We have to ask the ABI about member pointers.
   if (const MemberPointerType *MPT = T->getAs<MemberPointerType>())
     return getCXXABI().isZeroInitializable(MPT);
+
+  // HLSL Inline SPIR-V types are non-zero-initializable.
+  if (T->getAs<HLSLInlineSpirvType>())
+    return false;
 
   // Everything else is okay.
   return true;

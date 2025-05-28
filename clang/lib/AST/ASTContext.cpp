@@ -1085,7 +1085,7 @@ void ASTContext::mergeDefinitionIntoModule(NamedDecl *ND, Module *M,
   MergedDefModules[cast<NamedDecl>(ND->getCanonicalDecl())].push_back(M);
 }
 
-void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
+void ASTContext::deduplicateMergedDefinitionsFor(NamedDecl *ND) {
   auto It = MergedDefModules.find(cast<NamedDecl>(ND->getCanonicalDecl()));
   if (It == MergedDefModules.end())
     return;
@@ -1803,7 +1803,7 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
         Align = Target->getCharWidth();
     }
 
-    // Ensure miminum alignment for global variables.
+    // Ensure minimum alignment for global variables.
     if (const auto *VD = dyn_cast<VarDecl>(D))
       if (VD->hasGlobalStorage() && !ForAlignof) {
         uint64_t TypeSize =
@@ -2492,6 +2492,19 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::HLSLAttributedResource:
     return getTypeInfo(
         cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr());
+
+  case Type::HLSLInlineSpirv: {
+    const auto *ST = cast<HLSLInlineSpirvType>(T);
+    // Size is specified in bytes, convert to bits
+    Width = ST->getSize() * 8;
+    Align = ST->getAlignment();
+    if (Width == 0 && Align == 0) {
+      // We are defaulting to laying out opaque SPIR-V types as 32-bit ints.
+      Width = 32;
+      Align = 32;
+    }
+    break;
+  }
 
   case Type::Atomic: {
     // Start with the base type information.
@@ -3507,6 +3520,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     return;
   }
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("should never get here");
     break;
   case Type::DeducedTemplateSpecialization:
@@ -4228,6 +4242,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::DependentBitInt:
   case Type::ArrayParameter:
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -5486,6 +5501,31 @@ QualType ASTContext::getHLSLAttributedResourceType(
 
   return QualType(Ty, 0);
 }
+
+QualType ASTContext::getHLSLInlineSpirvType(uint32_t Opcode, uint32_t Size,
+                                            uint32_t Alignment,
+                                            ArrayRef<SpirvOperand> Operands) {
+  llvm::FoldingSetNodeID ID;
+  HLSLInlineSpirvType::Profile(ID, Opcode, Size, Alignment, Operands);
+
+  void *InsertPos = nullptr;
+  HLSLInlineSpirvType *Ty =
+      HLSLInlineSpirvTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (Ty)
+    return QualType(Ty, 0);
+
+  void *Mem = Allocate(
+      HLSLInlineSpirvType::totalSizeToAlloc<SpirvOperand>(Operands.size()),
+      alignof(HLSLInlineSpirvType));
+
+  Ty = new (Mem) HLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
+
+  Types.push_back(Ty);
+  HLSLInlineSpirvTypes.InsertNode(Ty, InsertPos);
+
+  return QualType(Ty, 0);
+}
+
 /// Retrieve a substitution-result type.
 QualType ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
                                                   Decl *AssociatedDecl,
@@ -9457,6 +9497,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     return;
 
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
@@ -11904,6 +11945,20 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return LHS;
     return {};
   }
+  case Type::HLSLInlineSpirv:
+    const HLSLInlineSpirvType *LHSTy = LHS->castAs<HLSLInlineSpirvType>();
+    const HLSLInlineSpirvType *RHSTy = RHS->castAs<HLSLInlineSpirvType>();
+
+    if (LHSTy->getOpcode() == RHSTy->getOpcode() &&
+        LHSTy->getSize() == RHSTy->getSize() &&
+        LHSTy->getAlignment() == RHSTy->getAlignment()) {
+      for (size_t I = 0; I < LHSTy->getOperands().size(); I++)
+        if (LHSTy->getOperands()[I] != RHSTy->getOperands()[I])
+          return {};
+
+      return LHS;
+    }
+    return {};
   }
 
   llvm_unreachable("Invalid Type::Class!");
@@ -13922,6 +13977,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
     SUGAR_FREE_TYPE(HLSLAttributedResource)
+    SUGAR_FREE_TYPE(HLSLInlineSpirv)
 #undef SUGAR_FREE_TYPE
 #define NON_UNIQUE_TYPE(Class) UNEXPECTED_TYPE(Class, "non-unique")
     NON_UNIQUE_TYPE(TypeOfExpr)
@@ -14262,6 +14318,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(FunctionProto)
     CANONICAL_TYPE(IncompleteArray)
     CANONICAL_TYPE(HLSLAttributedResource)
+    CANONICAL_TYPE(HLSLInlineSpirv)
     CANONICAL_TYPE(LValueReference)
     CANONICAL_TYPE(ObjCInterface)
     CANONICAL_TYPE(ObjCObject)

@@ -37,6 +37,16 @@ TEST_P(olGetDeviceInfoTest, SuccessName) {
   ASSERT_EQ(std::strlen(Name.data()), Size - 1);
 }
 
+TEST_P(olGetDeviceInfoTest, HostName) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Host, OL_DEVICE_INFO_NAME, &Size));
+  ASSERT_GT(Size, 0ul);
+  std::vector<char> Name;
+  Name.resize(Size);
+  ASSERT_SUCCESS(olGetDeviceInfo(Host, OL_DEVICE_INFO_NAME, Size, Name.data()));
+  ASSERT_EQ(std::strlen(Name.data()), Size - 1);
+}
+
 TEST_P(olGetDeviceInfoTest, SuccessVendor) {
   size_t Size = 0;
   ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_VENDOR, &Size));

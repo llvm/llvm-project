@@ -12452,6 +12452,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
   case Type::ObjCObjectPointer:
   case Type::Pipe:
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     // Classify all other types that don't fit into the regular
     // classification the same way.
     return GCCTypeClass::None;

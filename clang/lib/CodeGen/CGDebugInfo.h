@@ -210,6 +210,7 @@ private:
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
                            llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLInlineSpirvType *Ty, llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 
