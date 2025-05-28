@@ -13,6 +13,7 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMP_H
 #define LLVM_FRONTEND_OPENMP_OMP_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -20,17 +21,17 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm::omp {
-ArrayRef<Directive> getLeafConstructs(Directive D);
-ArrayRef<Directive> getLeafConstructsOrSelf(Directive D);
+LLVM_ABI ArrayRef<Directive> getLeafConstructs(Directive D);
+LLVM_ABI ArrayRef<Directive> getLeafConstructsOrSelf(Directive D);
 
-ArrayRef<Directive>
+LLVM_ABI ArrayRef<Directive>
 getLeafOrCompositeConstructs(Directive D, SmallVectorImpl<Directive> &Output);
 
-Directive getCompoundConstruct(ArrayRef<Directive> Parts);
+LLVM_ABI Directive getCompoundConstruct(ArrayRef<Directive> Parts);
 
-bool isLeafConstruct(Directive D);
-bool isCompositeConstruct(Directive D);
-bool isCombinedConstruct(Directive D);
+LLVM_ABI bool isLeafConstruct(Directive D);
+LLVM_ABI bool isCompositeConstruct(Directive D);
+LLVM_ABI bool isCombinedConstruct(Directive D);
 
 /// Can clause C have an iterator-modifier.
 static constexpr inline bool canHaveIterator(Clause C) {
@@ -48,14 +49,14 @@ static constexpr inline bool canHaveIterator(Clause C) {
 }
 
 static constexpr unsigned FallbackVersion = 52;
-ArrayRef<unsigned> getOpenMPVersions();
+LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
 
 /// Create a nicer version of a function name for humans to look at.
-std::string prettifyFunctionName(StringRef FunctionName);
+LLVM_ABI std::string prettifyFunctionName(StringRef FunctionName);
 
 /// Deconstruct an OpenMP kernel name into the parent function name and the line
 /// number.
-std::string deconstructOpenMPKernelName(StringRef KernelName, unsigned &LineNo);
+LLVM_ABI std::string deconstructOpenMPKernelName(StringRef KernelName, unsigned &LineNo);
 
 } // namespace llvm::omp
 

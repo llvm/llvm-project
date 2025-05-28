@@ -14,6 +14,7 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/raw_ostream.h"
@@ -123,7 +124,7 @@ struct DescriptorTable {
   uint32_t NumClauses = 0;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
 static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
@@ -153,7 +154,7 @@ struct DescriptorTableClause {
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
 
 struct StaticSampler {
   Register Reg;
@@ -179,7 +180,7 @@ using RootElement =
     std::variant<RootFlags, RootConstants, RootDescriptor, DescriptorTable,
                  DescriptorTableClause, StaticSampler>;
 
-void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
+LLVM_ABI void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
 class MetadataBuilder {
 public:
@@ -190,7 +191,7 @@ public:
   ///
   /// Accumulates the root signature and returns the Metadata node that is just
   /// a list of all the elements
-  MDNode *BuildRootSignature();
+  LLVM_ABI MDNode *BuildRootSignature();
 
 private:
   /// Define the various builders for the different metadata types

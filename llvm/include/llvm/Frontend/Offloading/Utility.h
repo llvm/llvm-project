@@ -9,6 +9,7 @@
 #ifndef LLVM_FRONTEND_OFFLOADING_UTILITY_H
 #define LLVM_FRONTEND_OFFLOADING_UTILITY_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 
@@ -67,7 +68,7 @@ enum OffloadEntryKindFlag : uint32_t {
 
 /// Returns the type of the offloading entry we use to store kernels and
 /// globals that will be registered with the offloading runtime.
-StructType *getEntryTy(Module &M);
+LLVM_ABI StructType *getEntryTy(Module &M);
 
 /// Create an offloading section struct used to register this global at
 /// runtime.
@@ -81,7 +82,7 @@ StructType *getEntryTy(Module &M);
 /// \param Data Extra data storage associated with the entry.
 /// \param SectionName The section this entry will be placed at.
 /// \param AuxAddr An extra pointer if needed.
-void emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
+LLVM_ABI void emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
                          StringRef Name, uint64_t Size, uint32_t Flags,
                          uint64_t Data, Constant *AuxAddr = nullptr,
                          StringRef SectionName = "llvm_offload_entries");
@@ -89,14 +90,14 @@ void emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
 /// Create a constant struct initializer used to register this global at
 /// runtime.
 /// \return the constant struct and the global variable holding the symbol name.
-std::pair<Constant *, GlobalVariable *>
+LLVM_ABI std::pair<Constant *, GlobalVariable *>
 getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
                               Constant *Addr, StringRef Name, uint64_t Size,
                               uint32_t Flags, uint64_t Data, Constant *AuxAddr);
 
 /// Creates a pair of globals used to iterate the array of offloading entries by
 /// accessing the section variables provided by the linker.
-std::pair<GlobalVariable *, GlobalVariable *>
+LLVM_ABI std::pair<GlobalVariable *, GlobalVariable *>
 getOffloadEntryArray(Module &M, StringRef SectionName = "llvm_offload_entries");
 
 namespace amdgpu {
@@ -109,7 +110,7 @@ namespace amdgpu {
 /// and is compatible with either '+' or '-'. The HSA runtime returns this
 /// information using the target-id, while we use the ELF header to determine
 /// these features.
-bool isImageCompatibleWithEnv(StringRef ImageArch, uint32_t ImageFlags,
+LLVM_ABI bool isImageCompatibleWithEnv(StringRef ImageArch, uint32_t ImageFlags,
                               StringRef EnvTargetID);
 
 /// Struct for holding metadata related to AMDGPU kernels, for more information
@@ -149,7 +150,7 @@ struct AMDGPUKernelMetaData {
 
 /// Reads AMDGPU specific metadata from the ELF file and propagates the
 /// KernelInfoMap.
-Error getAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
+LLVM_ABI Error getAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
                                  StringMap<AMDGPUKernelMetaData> &KernelInfoMap,
                                  uint16_t &ELFABIVersion);
 } // namespace amdgpu
@@ -157,7 +158,7 @@ Error getAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
 namespace intel {
 /// Containerizes an offloading binary into the ELF binary format expected by
 /// the Intel runtime offload plugin.
-Error containerizeOpenMPSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary);
+LLVM_ABI Error containerizeOpenMPSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary);
 } // namespace intel
 } // namespace offloading
 } // namespace llvm
