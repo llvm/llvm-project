@@ -2111,7 +2111,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
       .lower();
 
-  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP}).custom();
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).custom();
 
   getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
         G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,
@@ -2229,7 +2229,9 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_TRAP:
     return legalizeTrap(MI, MRI, B);
   case TargetOpcode::G_DEBUGTRAP:
-    return legalizeDebugTrap(MI, MRI, B);
+    return legalizeDebugUbsanTrap(MI, MRI, B, TargetOpcode::G_DEBUGTRAP);
+  case TargetOpcode::G_UBSANTRAP:
+    return legalizeDebugUbsanTrap(MI, MRI, B, TargetOpcode::G_UBSANTRAP);
   default:
     return false;
   }
@@ -7039,22 +7041,26 @@ bool AMDGPULegalizerInfo::legalizeTrapHsa(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
-                                            MachineRegisterInfo &MRI,
-                                            MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeDebugUbsanTrap(MachineInstr &MI,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineIRBuilder &B,
+                                                 unsigned int Opcode) const {
   // Is non-HSA path or trap-handler disabled? Then, report a warning
   // accordingly
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
-    DiagnosticInfoUnsupported NoTrap(B.getMF().getFunction(),
-                                     "debugtrap handler not supported",
-                                     MI.getDebugLoc(), DS_Warning);
+    DiagnosticInfoUnsupported NoTrap(
+        B.getMF().getFunction(), "debugtrap/ubsantrap handler not supported",
+        MI.getDebugLoc(), DS_Warning);
     LLVMContext &Ctx = B.getMF().getFunction().getContext();
     Ctx.diagnose(NoTrap);
-  } else {
+  } else if (Opcode == TargetOpcode::G_DEBUGTRAP) {
     // Insert debug-trap instruction
     B.buildInstr(AMDGPU::S_TRAP)
         .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap));
+  } else if (Opcode == TargetOpcode::G_UBSANTRAP) {
+    B.buildInstr(AMDGPU::S_TRAP)
+        .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
   }
 
   MI.eraseFromParent();

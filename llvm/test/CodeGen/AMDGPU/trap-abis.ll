@@ -8,6 +8,7 @@
 
 declare void @llvm.trap() #0
 declare void @llvm.debugtrap() #1
+declare void @llvm.ubsantrap(i8) #2
 
 define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; NOHSA-TRAP-GFX900-LABEL: trap:
@@ -490,6 +491,134 @@ define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) 
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_endpgm
   store volatile i32 1, ptr addrspace(1) %arg0
   call void @llvm.debugtrap()
+  store volatile i32 2, ptr addrspace(1) %arg0
+  ret void
+}
+
+define void @ubsan_trap(ptr addrspace(1) nocapture readonly %arg0) {
+; CHECK-LABEL: ubsan_trap:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_trap 2
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; NOHSA-TRAP-GFX900-LABEL: ubsan_trap:
+; NOHSA-TRAP-GFX900:       ; %bb.0:
+; NOHSA-TRAP-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; NOHSA-TRAP-GFX900-NEXT:    v_mov_b32_e32 v2, 1
+; NOHSA-TRAP-GFX900-NEXT:    global_store_dword v[0:1], v2, off
+; NOHSA-TRAP-GFX900-NEXT:    s_waitcnt vmcnt(0)
+; NOHSA-TRAP-GFX900-NEXT:    s_cbranch_execnz .LBB4_2
+; NOHSA-TRAP-GFX900-NEXT:  ; %bb.1:
+; NOHSA-TRAP-GFX900-NEXT:    v_mov_b32_e32 v2, 2
+; NOHSA-TRAP-GFX900-NEXT:    global_store_dword v[0:1], v2, off
+; NOHSA-TRAP-GFX900-NEXT:    s_waitcnt vmcnt(0)
+; NOHSA-TRAP-GFX900-NEXT:    s_setpc_b64 s[30:31]
+; NOHSA-TRAP-GFX900-NEXT:  .LBB4_2:
+; NOHSA-TRAP-GFX900-NEXT:    s_endpgm
+;
+; HSA-TRAP-GFX803-LABEL: ubsan_trap:
+; HSA-TRAP-GFX803:       ; %bb.0:
+; HSA-TRAP-GFX803-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v2, 1
+; HSA-TRAP-GFX803-NEXT:    flat_store_dword v[0:1], v2
+; HSA-TRAP-GFX803-NEXT:    s_waitcnt vmcnt(0)
+; HSA-TRAP-GFX803-NEXT:    v_mov_b32_e32 v2, 2
+; HSA-TRAP-GFX803-NEXT:    s_mov_b64 s[0:1], s[6:7]
+; HSA-TRAP-GFX803-NEXT:    s_trap 2
+; HSA-TRAP-GFX803-NEXT:    flat_store_dword v[0:1], v2
+; HSA-TRAP-GFX803-NEXT:    s_waitcnt vmcnt(0)
+; HSA-TRAP-GFX803-NEXT:    s_setpc_b64 s[30:31]
+;
+; HSA-TRAP-GFX900-LABEL: ubsan_trap:
+; HSA-TRAP-GFX900:       ; %bb.0:
+; HSA-TRAP-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; HSA-TRAP-GFX900-NEXT:    v_mov_b32_e32 v2, 1
+; HSA-TRAP-GFX900-NEXT:    global_store_dword v[0:1], v2, off
+; HSA-TRAP-GFX900-NEXT:    s_waitcnt vmcnt(0)
+; HSA-TRAP-GFX900-NEXT:    v_mov_b32_e32 v2, 2
+; HSA-TRAP-GFX900-NEXT:    s_trap 2
+; HSA-TRAP-GFX900-NEXT:    global_store_dword v[0:1], v2, off
+; HSA-TRAP-GFX900-NEXT:    s_waitcnt vmcnt(0)
+; HSA-TRAP-GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; HSA-NOTRAP-GFX900-LABEL: ubsan_trap:
+; HSA-NOTRAP-GFX900:       ; %bb.0:
+; HSA-NOTRAP-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; HSA-NOTRAP-GFX900-NEXT:    v_mov_b32_e32 v2, 1
+; HSA-NOTRAP-GFX900-NEXT:    global_store_dword v[0:1], v2, off
+; HSA-NOTRAP-GFX900-NEXT:    s_waitcnt vmcnt(0)
+; HSA-NOTRAP-GFX900-NEXT:    s_cbranch_execnz .LBB4_2
+; HSA-NOTRAP-GFX900-NEXT:  ; %bb.1:
+; HSA-NOTRAP-GFX900-NEXT:    v_mov_b32_e32 v2, 2
+; HSA-NOTRAP-GFX900-NEXT:    global_store_dword v[0:1], v2, off
+; HSA-NOTRAP-GFX900-NEXT:    s_waitcnt vmcnt(0)
+; HSA-NOTRAP-GFX900-NEXT:    s_setpc_b64 s[30:31]
+; HSA-NOTRAP-GFX900-NEXT:  .LBB4_2:
+; HSA-NOTRAP-GFX900-NEXT:    s_endpgm
+;
+; HSA-TRAP-GFX1100-LABEL: ubsan_trap:
+; HSA-TRAP-GFX1100:       ; %bb.0:
+; HSA-TRAP-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; HSA-TRAP-GFX1100-NEXT:    v_mov_b32_e32 v2, 1
+; HSA-TRAP-GFX1100-NEXT:    global_store_b32 v[0:1], v2, off dlc
+; HSA-TRAP-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
+; HSA-TRAP-GFX1100-NEXT:    s_cbranch_execnz .LBB4_2
+; HSA-TRAP-GFX1100-NEXT:  ; %bb.1:
+; HSA-TRAP-GFX1100-NEXT:    v_mov_b32_e32 v2, 2
+; HSA-TRAP-GFX1100-NEXT:    global_store_b32 v[0:1], v2, off dlc
+; HSA-TRAP-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
+; HSA-TRAP-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; HSA-TRAP-GFX1100-NEXT:  .LBB4_2:
+; HSA-TRAP-GFX1100-NEXT:    s_trap 2
+; HSA-TRAP-GFX1100-NEXT:    s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
+; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 ttmp2, m0
+; HSA-TRAP-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
+; HSA-TRAP-GFX1100-NEXT:    s_and_b32 s0, s0, 0x3ff
+; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; HSA-TRAP-GFX1100-NEXT:    s_bitset1_b32 s0, 10
+; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
+; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, ttmp2
+; HSA-TRAP-GFX1100-NEXT:  .LBB4_3: ; =>This Inner Loop Header: Depth=1
+; HSA-TRAP-GFX1100-NEXT:    s_sethalt 5
+; HSA-TRAP-GFX1100-NEXT:    s_branch .LBB4_3
+;
+; HSA-TRAP-GFX1100-O0-LABEL: ubsan_trap:
+; HSA-TRAP-GFX1100-O0:       ; %bb.0:
+; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v2, v1
+; HSA-TRAP-GFX1100-O0-NEXT:    ; implicit-def: $sgpr0
+; HSA-TRAP-GFX1100-O0-NEXT:    ; implicit-def: $sgpr0
+; HSA-TRAP-GFX1100-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v1, v2
+; HSA-TRAP-GFX1100-O0-NEXT:    scratch_store_b64 off, v[0:1], s32 ; 8-byte Folded Spill
+; HSA-TRAP-GFX1100-O0-NEXT:    ; implicit-def: $sgpr0_sgpr1
+; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v2, 1
+; HSA-TRAP-GFX1100-O0-NEXT:    global_store_b32 v[0:1], v2, off dlc
+; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt_vscnt null, 0x0
+; HSA-TRAP-GFX1100-O0-NEXT:    s_cbranch_execnz .LBB4_2
+; HSA-TRAP-GFX1100-O0-NEXT:  ; %bb.1:
+; HSA-TRAP-GFX1100-O0-NEXT:    scratch_load_b64 v[0:1], off, s32 ; 8-byte Folded Reload
+; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v2, 2
+; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(0)
+; HSA-TRAP-GFX1100-O0-NEXT:    global_store_b32 v[0:1], v2, off dlc
+; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt_vscnt null, 0x0
+; HSA-TRAP-GFX1100-O0-NEXT:    s_setpc_b64 s[30:31]
+; HSA-TRAP-GFX1100-O0-NEXT:  .LBB4_2:
+; HSA-TRAP-GFX1100-O0-NEXT:    s_trap 2
+; HSA-TRAP-GFX1100-O0-NEXT:    s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 ttmp2, m0
+; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; HSA-TRAP-GFX1100-O0-NEXT:    s_and_b32 s0, s0, 0x3ff
+; HSA-TRAP-GFX1100-O0-NEXT:    s_or_b32 s0, s0, 0x400
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-O0-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 m0, ttmp2
+; HSA-TRAP-GFX1100-O0-NEXT:  .LBB4_3: ; =>This Inner Loop Header: Depth=1
+; HSA-TRAP-GFX1100-O0-NEXT:    s_sethalt 5
+; HSA-TRAP-GFX1100-O0-NEXT:    s_branch .LBB4_3
+  store volatile i32 1, ptr addrspace(1) %arg0
+  call void @llvm.ubsantrap(i8 0)
   store volatile i32 2, ptr addrspace(1) %arg0
   ret void
 }

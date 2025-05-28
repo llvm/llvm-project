@@ -7315,9 +7315,9 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
 
   if (!Subtarget->isTrapHandlerEnabled() ||
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
-    DiagnosticInfoUnsupported NoTrap(MF.getFunction(),
-                                     "debugtrap handler not supported",
-                                     Op.getDebugLoc(), DS_Warning);
+    DiagnosticInfoUnsupported NoTrap(
+        MF.getFunction(), "debugtrap/ubsantrap handler not supported",
+        Op.getDebugLoc(), DS_Warning);
     LLVMContext &Ctx = MF.getFunction().getContext();
     Ctx.diagnose(NoTrap);
     return Chain;
