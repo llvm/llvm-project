@@ -62,12 +62,12 @@ struct DemangledNameInfo {
   /// Indicates the [start, end) of the function's prefix. This is a
   /// catch-all range for anything that is not tracked by the rest of
   /// the pairs.
-  std::pair<size_t, size_t> PrefixRange;
+  std::pair<size_t, size_t> PrefixRange{};
 
   /// Indicates the [start, end) of the function's suffix. This is a
   /// catch-all range for anything that is not tracked by the rest of
   /// the pairs.
-  std::pair<size_t, size_t> SuffixRange;
+  std::pair<size_t, size_t> SuffixRange{};
 
   /// Returns \c true if this object holds a valid basename range.
   bool hasBasename() const {
