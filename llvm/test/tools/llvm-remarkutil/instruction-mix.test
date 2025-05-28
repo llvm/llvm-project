@@ -4,6 +4,7 @@ RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yam
 RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --report_style=csv | FileCheck %s --check-prefix=CSV
 RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --rfilter=meow | FileCheck %s --check-prefix=MEOW-RE
 RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --filter=meow | FileCheck %s --check-prefix=MEOW-EXACT
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --filter=none | FileCheck %s --check-prefix=NONE-EXACT
 RUN: not llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --rfilter=* 2>&1 | FileCheck %s --check-prefix=ERROR
 
 ; CHECK-LABEL: Instruction Count
@@ -28,5 +29,9 @@ RUN: not llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix
 ; MEOW-EXACT-NEXT: mul         9
 ; MEOW-EXACT-NEXT: add         8
 ; MEOW-EXACT-NEXT: nop         7
+
+; NONE-EXACT: Instruction Count
+; NONE-EXACT: ----------- -----
+; NONE-NOT: {{.*}}
 
 ; ERROR: error: invalid argument '--rfilter=*': repetition-operator operand invalid

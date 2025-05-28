@@ -115,7 +115,7 @@ static Error tryInstructionMix() {
                           return std::max(MaxMnemonic, Elt.first.length());
                         });
     unsigned MaxValue = std::accumulate(
-        Mix.begin(), Mix.end(), 0, [](unsigned MaxValue, const MixEntry &Elt) {
+        Mix.begin(), Mix.end(), 1, [](unsigned MaxValue, const MixEntry &Elt) {
           return std::max(MaxValue, Elt.second);
         });
     unsigned ValueWidth = std::log10(MaxValue) + 1;
