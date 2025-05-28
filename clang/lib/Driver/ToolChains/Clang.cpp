@@ -7970,8 +7970,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         IsDeviceOffloadAction ? D.getLTOMode() : D.getOffloadLTOMode();
     auto OtherIsUsingLTO = OtherLTOMode != LTOK_None;
 
-    if ((!IsUsingLTO && !OtherIsUsingLTO) ||
-        (IsPS4 && !UnifiedLTO && (D.getLTOMode() != LTOK_Full)))
+    if (!IsUsingLTO && !OtherIsUsingLTO && !UnifiedLTO) {
+      if (Arg *A = Args.getLastArg(options::OPT_O_Group))
+        if (!A->getOption().matches(options::OPT_O0))
+          CmdArgs.push_back("-fwhole-program-vtables");
+    } else if ((!IsUsingLTO && !OtherIsUsingLTO) ||
+               (IsPS4 && !UnifiedLTO && (D.getLTOMode() != LTOK_Full)))
       D.Diag(diag::err_drv_argument_only_allowed_with)
           << "-fwhole-program-vtables"
           << ((IsPS4 && !UnifiedLTO) ? "-flto=full" : "-flto");
