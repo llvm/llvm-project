@@ -94,9 +94,6 @@ struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
       if (!resultType)
         return failure();
     }
-    if (operandType != resultType)
-      return rewriter.notifyMatchFailure(
-          op, "compatible result type doesn't match operand type");
 
     if (!isa<LLVM::LLVMArrayType>(operandType)) {
       rewriter.replaceOpWithNewOp<LLVMOp>(op, resultType, adaptor.getOperand(),
