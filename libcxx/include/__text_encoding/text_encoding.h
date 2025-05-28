@@ -25,7 +25,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__ranges/view_interface.h>
 #include <__string/char_traits.h>
-#include <__text_encoding/text_encoding_make_locale.h>
+#include <__text_encoding/text_encoding_get_locale.h>
 #include <__utility/unreachable.h>
 #include <cstdint>
 #include <string_view>

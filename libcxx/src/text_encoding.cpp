@@ -9,7 +9,7 @@
 #include <__config>
 
 #include <__locale_dir/locale_base_api.h>
-#include <__text_encoding/text_encoding_make_locale.h>
+#include <__text_encoding/text_encoding_get_locale.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TEXT_ENCODING_TEXT_ENCODING_REP_H
-#define _LIBCPP___TEXT_ENCODING_TEXT_ENCODING_REP_H
+#ifndef _LIBCPP___TEXT_ENCODING_TEXT_GET_LOCALE_H
+#define _LIBCPP___TEXT_ENCODING_TEXT_GET_LOCALE_H
 
 #include <__config>
 #include <string_view>
