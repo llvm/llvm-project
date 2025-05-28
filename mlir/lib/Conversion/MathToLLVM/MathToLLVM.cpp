@@ -89,19 +89,17 @@ struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
     const auto &typeConverter = *this->getTypeConverter();
-    if (!LLVM::isCompatibleType(resultType)) {
-      resultType = typeConverter.convertType(resultType);
-      if (!resultType)
-        return failure();
-    }
+    auto llvmResultType = typeConverter.convertType(resultType);
+    if (!llvmResultType)
+      return failure();
 
     if (!isa<LLVM::LLVMArrayType>(operandType)) {
-      rewriter.replaceOpWithNewOp<LLVMOp>(op, resultType, adaptor.getOperand(),
-                                          false);
+      rewriter.replaceOpWithNewOp<LLVMOp>(op, llvmResultType,
+                                          adaptor.getOperand(), false);
       return success();
     }
 
-    auto vectorType = dyn_cast<VectorType>(resultType);
+    auto vectorType = dyn_cast<VectorType>(llvmResultType);
     if (!vectorType)
       return failure();
 
