@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tahiti -disable-promote-alloca-to-vector | FileCheck --check-prefixes=PAL,CI --enable-var-scope %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga -disable-promote-alloca-to-vector | FileCheck --check-prefixes=PAL,VI --enable-var-scope %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tahiti | FileCheck --check-prefixes=PAL,CI --enable-var-scope %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefixes=PAL,VI --enable-var-scope %s
 
 ; PAL-NOT: .AMDGPU.config
 ; PAL-LABEL: {{^}}simple:
@@ -70,7 +70,7 @@ entry:
   store i32 %extra, ptr addrspace(5) %v
   store <2 x i32> %in, ptr addrspace(5) %v1
   %e = getelementptr [2 x i32], ptr addrspace(5) %v1, i32 0, i32 %idx
-  %x = load i32, ptr addrspace(5) %e
+  %x = load volatile i32, ptr addrspace(5) %e
   %xf = bitcast i32 %x to float
   call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %xf, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
   ret void
