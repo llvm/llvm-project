@@ -288,8 +288,15 @@ def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
     type. The `real` parameter gives the real part of the complex number and the
     `imag` parameter gives the imaginary part of the complex number.
 
-    The `real` and `imag` parameter must be either an IntAttr or an FPAttr that
-    contains values of the same CIR type.
+    The `real` and `imag` parameters must both reference the same type and must
+    be either IntAttr or FPAttr.
+
+    ```mlir
+    %ci = #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i>
+        : !cir.complex<!s32i>
+    %cf = #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float,
+        #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+    ```
   }];
 
   let parameters = (ins

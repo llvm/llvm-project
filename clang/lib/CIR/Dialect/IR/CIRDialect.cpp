@@ -234,7 +234,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
             opType))
       return success();
     return op->emitOpError(
-        "zero expects struct, array, vector or complex type");
+        "zero expects struct, array, vector, or complex type");
   }
 
   if (mlir::isa<cir::BoolAttr>(attrType)) {

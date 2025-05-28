@@ -592,6 +592,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
           builder.getAttr<cir::IntAttr>(complexElemTy, imag));
     }
 
+    assert(isa<cir::CIRFPTypeInterface>(complexElemTy) &&
+           "expected floating-point type");
     llvm::APFloat real = value.getComplexFloatReal();
     llvm::APFloat imag = value.getComplexFloatImag();
     return builder.getAttr<cir::ConstComplexAttr>(
