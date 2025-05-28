@@ -233,6 +233,7 @@ static bool isUniformShape(Value *V) {
   case Instruction::FAdd:
   case Instruction::FSub:
   case Instruction::FMul: // Scalar multiply.
+  case Instruction::FDiv:
   case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::Mul:
@@ -2167,6 +2168,8 @@ public:
         return Builder.CreateFAdd(LHS, RHS);
       case Instruction::FMul:
         return Builder.CreateFMul(LHS, RHS);
+      case Instruction::FDiv:
+        return Builder.CreateFDiv(LHS, RHS);
       case Instruction::FSub:
         return Builder.CreateFSub(LHS, RHS);
       default:
