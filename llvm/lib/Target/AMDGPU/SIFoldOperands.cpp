@@ -103,9 +103,9 @@ struct FoldableDef {
   /// Return the effective immediate value defined by this instruction, after
   /// application of any subregister extracts which may exist between the use
   /// and def instruction.
-  std::optional<int64_t> getEffectiveImmVal() const {
+  int64_t getEffectiveImmVal(const SIInstrInfo &TII) const {
     assert(isImm());
-    return SIInstrInfo::extractSubregFromImm(ImmToFold, DefSubReg);
+    return TII.extractSubregFromImm(ImmToFold, DefSubReg);
   }
 
   /// Check if it is legal to fold this effective value into \p MI's \p OpNo
@@ -114,13 +114,11 @@ struct FoldableDef {
                       unsigned OpIdx) const {
     switch (Kind) {
     case MachineOperand::MO_Immediate: {
-      std::optional<int64_t> ImmToFold = getEffectiveImmVal();
-      if (!ImmToFold)
-        return false;
+      int64_t ImmToFold = getEffectiveImmVal(TII);
 
       // TODO: Should verify the subregister index is supported by the class
       // TODO: Avoid the temporary MachineOperand
-      MachineOperand TmpOp = MachineOperand::CreateImm(*ImmToFold);
+      MachineOperand TmpOp = MachineOperand::CreateImm(ImmToFold);
       return TII.isOperandLegal(MI, OpIdx, &TmpOp);
     }
     case MachineOperand::MO_FrameIndex: {
@@ -611,7 +609,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
 
   std::optional<int64_t> ImmVal;
   if (Fold.isImm())
-    ImmVal = Fold.Def.getEffectiveImmVal();
+    ImmVal = Fold.Def.getEffectiveImmVal(*TII);
 
   if (ImmVal && canUseImmWithOpSel(Fold.UseMI, Fold.UseOpNo, *ImmVal)) {
     if (tryFoldImmWithOpSel(Fold.UseMI, Fold.UseOpNo, *ImmVal))
@@ -790,9 +788,9 @@ static bool isPKF32InstrReplicatesLower32BitsOfScalarOperand(
 // literal) and replicates the bits to both channels. Therefore, if the hi and
 // lo are not same, we can't fold it.
 static bool checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(
-    const FoldableDef &OpToFold) {
+    const FoldableDef &OpToFold, const SIInstrInfo &TII) {
   assert(OpToFold.isImm() && "Expected immediate operand");
-  uint64_t ImmVal = OpToFold.getEffectiveImmVal().value();
+  uint64_t ImmVal = OpToFold.getEffectiveImmVal(TII);
   uint32_t Lo = Lo_32(ImmVal);
   uint32_t Hi = Hi_32(ImmVal);
   return Lo == Hi;
@@ -839,8 +837,8 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
 
   bool IsLegal = OpToFold.isOperandLegal(*TII, *MI, OpNo);
   if (!IsLegal && OpToFold.isImm()) {
-    if (std::optional<int64_t> ImmVal = OpToFold.getEffectiveImmVal())
-      IsLegal = canUseImmWithOpSel(MI, OpNo, *ImmVal);
+    int64_t ImmVal = OpToFold.getEffectiveImmVal(*TII);
+    IsLegal = canUseImmWithOpSel(MI, OpNo, ImmVal);
   }
 
   if (!IsLegal) {
@@ -955,7 +953,8 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
   // src0 or src1.
   if (OpToFold.isImm() &&
       isPKF32InstrReplicatesLower32BitsOfScalarOperand(ST, MI, OpNo) &&
-      !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold))
+      !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold,
+                                                                   *TII))
     return false;
 
   appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
@@ -1181,7 +1180,8 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
 
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
     if (isPKF32InstrReplicatesLower32BitsOfScalarOperand(ST, UseMI, UseOpIdx) &&
-        !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold))
+        !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold,
+                                                                     *TII))
       return false;
     appendFoldCandidate(FoldList, UseMI, UseOpIdx, OpToFold);
     return true;
@@ -1348,7 +1348,7 @@ bool SIFoldOperandsImpl::foldOperand(
         if (MovOp == AMDGPU::AV_MOV_B32_IMM_PSEUDO &&
             (!OpToFold.isImm() ||
              !TII->isImmOperandLegal(MovDesc, SrcIdx,
-                                     *OpToFold.getEffectiveImmVal())))
+                                     OpToFold.getEffectiveImmVal(*TII))))
           break;
 
         if (!MRI->constrainRegClass(SrcReg, MovSrcRC))
@@ -1362,7 +1362,8 @@ bool SIFoldOperandsImpl::foldOperand(
         // only matters for these concrete cases.
         // TODO: Handle non-imm case if it's useful.
         if (!OpToFold.isImm() ||
-            !TII->isImmOperandLegal(MovDesc, 1, *OpToFold.getEffectiveImmVal()))
+            !TII->isImmOperandLegal(MovDesc, 1,
+                                    OpToFold.getEffectiveImmVal(*TII)))
           break;
       }
 
@@ -1469,7 +1470,7 @@ bool SIFoldOperandsImpl::foldOperand(
 
         if (OpToFold.isImm()) {
           UseMI->getOperand(1).ChangeToImmediate(
-              *OpToFold.getEffectiveImmVal());
+              OpToFold.getEffectiveImmVal(*TII));
         } else if (OpToFold.isFI())
           UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getFI());
         else {

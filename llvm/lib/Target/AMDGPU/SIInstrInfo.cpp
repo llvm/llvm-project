@@ -3477,28 +3477,14 @@ void SIInstrInfo::mutateAndCleanupImplicit(MachineInstr &MI,
     MI.removeOperand(I);
 }
 
-std::optional<int64_t> SIInstrInfo::extractSubregFromImm(int64_t Imm,
-                                                         unsigned SubRegIndex) {
-  switch (SubRegIndex) {
-  case AMDGPU::NoSubRegister:
+int64_t SIInstrInfo::extractSubregFromImm(int64_t Imm,
+                                          unsigned SubRegIndex) const {
+  if (SubRegIndex == AMDGPU::NoSubRegister)
     return Imm;
-  case AMDGPU::sub0:
-    return SignExtend64<32>(Imm);
-  case AMDGPU::sub1:
-    return SignExtend64<32>(Imm >> 32);
-  case AMDGPU::lo16:
-    return SignExtend64<16>(Imm);
-  case AMDGPU::hi16:
-    return SignExtend64<16>(Imm >> 16);
-  case AMDGPU::sub1_lo16:
-    return SignExtend64<16>(Imm >> 32);
-  case AMDGPU::sub1_hi16:
-    return SignExtend64<16>(Imm >> 48);
-  default:
-    return std::nullopt;
-  }
-
-  llvm_unreachable("covered subregister switch");
+  assert(RI.getSubRegIdxSize(SubRegIndex) > 0);
+  assert(RI.getSubRegIdxOffset(SubRegIndex) >= 0);
+  return SignExtend64(Imm >> RI.getSubRegIdxOffset(SubRegIndex),
+                      RI.getSubRegIdxSize(SubRegIndex));
 }
 
 static unsigned getNewFMAAKInst(const GCNSubtarget &ST, unsigned Opc) {
@@ -3624,7 +3610,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     MCRegister MovDstPhysReg =
         DstReg.isPhysical() ? DstReg.asMCReg() : MCRegister();
 
-    std::optional<int64_t> SubRegImm = extractSubregFromImm(Imm, UseSubReg);
+    int64_t SubRegImm = extractSubregFromImm(Imm, UseSubReg);
 
     // TODO: Try to fold with AMDGPU::V_MOV_B16_t16_e64
     for (unsigned MovOp :
@@ -3670,7 +3656,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // FIXME: isImmOperandLegal should have form that doesn't require existing
       // MachineInstr or MachineOperand
       if (!RI.opCanUseLiteralConstant(OpInfo.OperandType) &&
-          !isInlineConstant(*SubRegImm, OpInfo.OperandType))
+          !isInlineConstant(SubRegImm, OpInfo.OperandType))
         break;
 
       NewOpc = MovOp;
@@ -3689,7 +3675,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
     const MCInstrDesc &NewMCID = get(NewOpc);
     UseMI.setDesc(NewMCID);
-    UseMI.getOperand(1).ChangeToImmediate(*SubRegImm);
+    UseMI.getOperand(1).ChangeToImmediate(SubRegImm);
     UseMI.addImplicitDefUseOperands(*MF);
     return true;
   }
@@ -3771,7 +3757,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (pseudoToMCOpcode(NewOpc) == -1)
         return false;
 
-      const std::optional<int64_t> SubRegImm = extractSubregFromImm(
+      int64_t SubRegImm = extractSubregFromImm(
           Imm, RegSrc == Src1 ? Src0->getSubReg() : Src1->getSubReg());
 
       // FIXME: This would be a lot easier if we could return a new instruction
@@ -3790,7 +3776,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         UseMI.untieRegOperand(
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2));
 
-      Src1->ChangeToImmediate(*SubRegImm);
+      Src1->ChangeToImmediate(SubRegImm);
 
       removeModOperands(UseMI);
       UseMI.setDesc(get(NewOpc));
@@ -3865,11 +3851,10 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         UseMI.untieRegOperand(
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2));
 
-      const std::optional<int64_t> SubRegImm =
-          extractSubregFromImm(Imm, Src2->getSubReg());
+      int64_t SubRegImm = extractSubregFromImm(Imm, Src2->getSubReg());
 
       // ChangingToImmediate adds Src2 back to the instruction.
-      Src2->ChangeToImmediate(*SubRegImm);
+      Src2->ChangeToImmediate(SubRegImm);
 
       // These come before src2.
       removeModOperands(UseMI);
