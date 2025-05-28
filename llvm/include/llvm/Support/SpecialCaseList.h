@@ -70,6 +70,7 @@ class FileSystem;
 /// ---
 class SpecialCaseList {
 public:
+  constexpr static std::pair<unsigned, unsigned> NotFound = {0, 0};
   /// Parses the special case list entries from files. On failure, returns
   /// 0 and writes an error message to string.
   LLVM_ABI static std::unique_ptr<SpecialCaseList>

@@ -224,7 +224,7 @@ SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
         return {S.FileIdx, Blame};
     }
   }
-  return {0, 0};
+  return NotFound;
 }
 
 unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,
