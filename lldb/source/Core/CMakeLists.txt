@@ -51,6 +51,7 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   SearchFilter.cpp
   Section.cpp
   SourceLocationSpec.cpp
+        SourceLocator.cpp
   SourceManager.cpp
   StreamAsynchronousIO.cpp
   Telemetry.cpp

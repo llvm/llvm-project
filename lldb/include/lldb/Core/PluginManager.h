@@ -362,6 +362,20 @@ public:
   static SymbolVendorCreateInstance
   GetSymbolVendorCreateCallbackAtIndex(uint32_t idx);
 
+  // SourceLocator
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             SourceLocatorCreateInstance create_callback,
+                             SourceLocatorLocateSourceFile locate_source_file);
+
+  static bool UnregisterPlugin(SourceLocatorCreateInstance create_callback);
+
+  static std::optional<FileSpec> LocateSourceFile(const ModuleSpec &module_spec,
+                                                  const FileSpec &file_spec);
+
+  static bool CreateSettingForSourceLocatorPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
   // SymbolLocator
   static bool RegisterPlugin(
       llvm::StringRef name, llvm::StringRef description,
@@ -382,7 +396,6 @@ public:
 
   static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec,
                                                StatisticsMap &map);
-
   static FileSpec
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
                              const FileSpecList &default_search_paths,

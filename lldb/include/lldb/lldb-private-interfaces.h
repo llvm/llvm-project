@@ -24,6 +24,7 @@ class Value;
 } // namespace llvm
 
 namespace lldb_private {
+class SourceLocator;
 class ScriptedInterfaceUsages;
 typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
@@ -85,6 +86,9 @@ typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
     Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
     Debugger &debugger);
+typedef SourceLocator *(*SourceLocatorCreateInstance)();
+typedef std::optional<FileSpec> (*SourceLocatorLocateSourceFile)(
+    const ModuleSpec &module_spec, const FileSpec &file_spec);
 typedef SymbolFile *(*SymbolFileCreateInstance)(lldb::ObjectFileSP objfile_sp);
 typedef SymbolVendor *(*SymbolVendorCreateInstance)(
     const lldb::ModuleSP &module_sp,
