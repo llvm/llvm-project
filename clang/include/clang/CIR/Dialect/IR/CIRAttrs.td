@@ -284,9 +284,9 @@ def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
                                 [TypedAttrInterface]> {
   let summary = "An attribute that contains a constant complex value";
   let description = [{
-    The `#cir.const_complex` attribute contains a constant value of complex number
-    type. The `real` parameter gives the real part of the complex number and the
-    `imag` parameter gives the imaginary part of the complex number.
+    The `#cir.const_complex` attribute contains a constant value of complex
+    number type. The `real` parameter gives the real part of the complex number
+    and the `imag` parameter gives the imaginary part of the complex number.
 
     The `real` and `imag` parameters must both reference the same type and must
     be either IntAttr or FPAttr.
