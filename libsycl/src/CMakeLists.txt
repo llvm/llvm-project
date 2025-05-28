@@ -92,29 +92,14 @@ endif()
 # Version-agnostic name of the import library, has effect on Windows only.
 set(IMPLIB_NAME "sycl")
 
-if (MSVC)
-  # MSVC provides two incompatible build variants for its CRT: release and debug
-  # To avoid potential issues in user code we also need to provide two kinds
-  # of SYCL Runtime Library for release and debug configurations.
-  foreach(flag_var
-      CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-      CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-    string(REGEX REPLACE "/MDd" "" ${flag_var} "${${flag_var}}")
-    string(REGEX REPLACE "/MTd" "" ${flag_var} "${${flag_var}}")
-    string(REGEX REPLACE "/MD" "" ${flag_var} "${${flag_var}}")
-    string(REGEX REPLACE "/MT" "" ${flag_var} "${${flag_var}}")
-  endforeach()
-
-  add_sycl_rt_library(${LIB_NAME}d sycld_object COMPILE_OPTIONS "/MDd" SOURCES ${LIBSYCL_SOURCES} IMPLIB_NAME ${IMPLIB_NAME}d)
-  add_library(sycld ALIAS ${LIB_NAME}d)
-
-  set(LIBSYCL_EXTRA_OPTS "/MD")
-endif()
-
 add_sycl_rt_library(${LIB_NAME} sycl_object COMPILE_OPTIONS ${LIBSYCL_EXTRA_OPTS} SOURCES ${LIBSYCL_SOURCES} IMPLIB_NAME ${IMPLIB_NAME})
 
 if (WIN32)
   add_library(sycl ALIAS ${LIB_NAME})
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  set_target_properties(${LIB_NAME} PROPERTIES DEBUG_POSTFIX d)
 endif()
 
 install(TARGETS ${LIBSYCL_RT_LIBS}
