@@ -999,12 +999,12 @@ namespace llvm {
     InlineAsm::ConstraintCode
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
       return StringSwitch<InlineAsm::ConstraintCode>(ConstraintCode)
-        .Case("es", InlineAsm::ConstraintCode::es)
-        .Case("Q", InlineAsm::ConstraintCode::Q)
-        .Case("Z", InlineAsm::ConstraintCode::Z)
-        .Case("Zy", InlineAsm::ConstraintCode::Zy)
-        .Case("a", InlineAsm::ConstraintCode::a)
-        .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
+          .Case("es", InlineAsm::ConstraintCode::es)
+          .Case("Q", InlineAsm::ConstraintCode::Q)
+          .Case("Z", InlineAsm::ConstraintCode::Z)
+          .Case("Zy", InlineAsm::ConstraintCode::Zy)
+          .Case("a", InlineAsm::ConstraintCode::a)
+          .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
     }
 
     void CollectTargetIntrinsicOperands(const CallInst &I,
