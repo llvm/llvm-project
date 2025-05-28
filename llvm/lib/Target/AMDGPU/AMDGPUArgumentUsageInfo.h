@@ -101,27 +101,27 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ArgDescriptor &Arg) {
 namespace KernArgPreload {
 
 enum HiddenArg {
-  HIDDEN_BLOCK_COUNT_X,
-  HIDDEN_BLOCK_COUNT_Y,
-  HIDDEN_BLOCK_COUNT_Z,
-  HIDDEN_GROUP_SIZE_X,
-  HIDDEN_GROUP_SIZE_Y,
-  HIDDEN_GROUP_SIZE_Z,
-  HIDDEN_REMAINDER_X,
-  HIDDEN_REMAINDER_Y,
-  HIDDEN_REMAINDER_Z,
-  END_HIDDEN_ARGS
+  HIDDEN_BLOCK_COUNT_X = 0,
+  HIDDEN_BLOCK_COUNT_Y = 1,
+  HIDDEN_BLOCK_COUNT_Z = 2,
+  HIDDEN_GROUP_SIZE_X = 3,
+  HIDDEN_GROUP_SIZE_Y = 4,
+  HIDDEN_GROUP_SIZE_Z = 5,
+  HIDDEN_REMAINDER_X = 6,
+  HIDDEN_REMAINDER_Y = 7,
+  HIDDEN_REMAINDER_Z = 8,
+  END_HIDDEN_ARGS = 9
 };
 
 // Stores information about a specific hidden argument.
 struct HiddenArgInfo {
   // Offset in bytes from the location in the kernearg segment pointed to by
   // the implicitarg pointer.
-  uint8_t Offset;
+  uint8_t Offset = 0;
   // The size of the hidden argument in bytes.
-  uint8_t Size;
+  uint8_t Size = 0;
   // The name of the hidden argument in the kernel signature.
-  const char *Name;
+  const char *Name = nullptr;
 };
 
 struct HiddenArgUtils {
