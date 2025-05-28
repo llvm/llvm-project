@@ -217,16 +217,19 @@ class MapsForPrivatizedSymbolsPass
       }
     } else {
       mlir::Location loc = var.getLoc();
-      fir::factory::AddrAndBoundsInfo info = fir::factory::getDataOperandBaseAddr(builder, var, /*isOptional=*/false, loc);
+      fir::factory::AddrAndBoundsInfo info =
+          fir::factory::getDataOperandBaseAddr(builder, var,
+                                               /*isOptional=*/false, loc);
       fir::ExtendedValue extendedValue =
           hlfir::translateToExtendedValue(loc, builder,
                                           hlfir::Entity{info.addr},
-                                          /*continguousHint=*/true).first;
+                                          /*continguousHint=*/true)
+              .first;
       llvm::SmallVector<mlir::Value> boundsOpsVec =
           fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
                                              mlir::omp::MapBoundsType>(
-                builder, info, extendedValue,
-                /*dataExvIsAssumedSize=*/false, loc);
+              builder, info, extendedValue,
+              /*dataExvIsAssumedSize=*/false, loc);
       for (auto bounds : boundsOpsVec)
         boundsOps.push_back(bounds);
     }

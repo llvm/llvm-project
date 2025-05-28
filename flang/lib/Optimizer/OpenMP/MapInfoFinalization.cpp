@@ -295,15 +295,17 @@ class MapInfoFinalizationPass
     if (mlir::isa<fir::ReferenceType>(op.getVarPtr().getType()))
       boxChar = builder.create<fir::LoadOp>(loc, op.getVarPtr());
 
-    fir::BoxCharType boxCharType = mlir::dyn_cast<fir::BoxCharType>(boxChar.getType());
-    mlir::Value boxAddr = builder.create<fir::BoxOffsetOp>(loc, op.getVarPtr(), fir::BoxFieldAttr::base_addr);
+    fir::BoxCharType boxCharType =
+        mlir::dyn_cast<fir::BoxCharType>(boxChar.getType());
+    mlir::Value boxAddr = builder.create<fir::BoxOffsetOp>(
+        loc, op.getVarPtr(), fir::BoxFieldAttr::base_addr);
 
     uint64_t mapTypeToImplicit = static_cast<
         std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
 
-    mlir::ArrayAttr  newMembersAttr;
+    mlir::ArrayAttr newMembersAttr;
     llvm::SmallVector<llvm::SmallVector<int64_t>> memberIdx = {{0}};
     newMembersAttr = builder.create2DI64ArrayAttr(memberIdx);
 
@@ -324,10 +326,10 @@ class MapInfoFinalizationPass
 
     mlir::omp::MapInfoOp newMapInfoOp = builder.create<mlir::omp::MapInfoOp>(
         op.getLoc(), op.getResult().getType(), varPtr,
-        mlir::TypeAttr::get(llvm::cast<mlir::omp::PointerLikeType>(varPtr.getType())
-                            .getElementType()),
-        op.getMapTypeAttr(),
-        op.getMapCaptureTypeAttr(),
+        mlir::TypeAttr::get(
+            llvm::cast<mlir::omp::PointerLikeType>(varPtr.getType())
+                .getElementType()),
+        op.getMapTypeAttr(), op.getMapCaptureTypeAttr(),
         /*varPtrPtr=*/mlir::Value{},
         /*members=*/llvm::SmallVector<mlir::Value>{memberMapInfoOp},
         /*member_index=*/newMembersAttr,
