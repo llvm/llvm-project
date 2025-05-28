@@ -154,7 +154,6 @@ protected:
   };
 
   std::vector<Section> Sections;
-  unsigned currFileIdx;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr,
                                           unsigned FileIdx, unsigned LineNo,

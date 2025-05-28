@@ -45,7 +45,7 @@ public:
                  StringRef Category = StringRef()) const;
 
   // Query ignorelisted entries if any bit in Mask matches the entry's section.
-  // Return (0,0 if not found. If found, return the file index number and the
+  // Return (0,0) if not found. If found, return the file index number and the
   // line number (FileIdx, LineNo) (all start with 1).
   std::pair<unsigned, unsigned>
   inSectionBlame(SanitizerMask Mask, StringRef Prefix, StringRef Query,
