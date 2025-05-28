@@ -510,11 +510,23 @@ llvm::StringRef Debugger::GetSeparator() const {
       idx, g_debugger_properties[idx].default_cstr_value);
 }
 
+llvm::StringRef Debugger::GetDisabledBreakpointAnsiPrefix() const {
+  const uint32_t idx = ePropertyShowDisabledBreakpointAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
 bool Debugger::SetSeparator(llvm::StringRef s) {
   constexpr uint32_t idx = ePropertySeparator;
   bool ret = SetPropertyAtIndex(idx, s);
   RedrawStatusline();
   return ret;
+}
+
+llvm::StringRef Debugger::GetDisabledBreakpointAnsiSuffix() const {
+  const uint32_t idx = ePropertyShowDisabledBreakpointAnsiSuffix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
 }
 
 bool Debugger::GetUseAutosuggestion() const {
