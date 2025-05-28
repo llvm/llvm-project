@@ -42,7 +42,7 @@ StringRef Binary::getFileName() const { return Data.getBufferIdentifier(); }
 
 MemoryBufferRef Binary::getMemoryBufferRef() const { return Data; }
 
-Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
+Expected<std::unique_ptr<Binary>> object::createBinary(const MemoryBufferRef &Buffer,
                                                        LLVMContext *Context,
                                                        bool InitContent) {
   file_magic Type = identify_magic(Buffer.getBuffer());

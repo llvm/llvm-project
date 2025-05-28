@@ -482,7 +482,7 @@ static uint64_t computeHeadersSize(object::Archive::Kind Kind,
 }
 
 static Expected<std::unique_ptr<SymbolicFile>>
-getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context,
+getSymbolicFile(const MemoryBufferRef &Buf, LLVMContext &Context,
                 object::Archive::Kind Kind, function_ref<void(Error)> Warn) {
   const file_magic Type = identify_magic(Buf.getBuffer());
   // Don't attempt to read non-symbolic file types.

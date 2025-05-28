@@ -382,7 +382,7 @@ public:
   }
 
   static Expected<std::unique_ptr<COFFObjectFile>>
-  createCOFFObjectFile(MemoryBufferRef Object);
+  createCOFFObjectFile(const MemoryBufferRef &Object);
 
   static Expected<std::unique_ptr<ObjectFile>>
   createXCOFFObjectFile(MemoryBufferRef Object, unsigned FileType);
@@ -396,7 +396,7 @@ public:
                         size_t MachOFilesetEntryOffset = 0);
 
   static Expected<std::unique_ptr<ObjectFile>>
-  createGOFFObjectFile(MemoryBufferRef Object);
+  createGOFFObjectFile(const MemoryBufferRef &Object);
 
   static Expected<std::unique_ptr<WasmObjectFile>>
   createWasmObjectFile(MemoryBufferRef Object);
