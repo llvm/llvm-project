@@ -43,6 +43,7 @@
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
+static llvm::ExitOnError ExitOnErr;
 
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
@@ -249,6 +250,8 @@ int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
 
+  ExitOnErr.setBanner("clang-doc error: ");
+
   const char *Overview =
       R"(Generates documentation from source code and comments.
 
@@ -272,11 +275,7 @@ Example usage for a project using a compile commands database:
   // Fail early if an invalid format was provided.
   std::string Format = getFormatString();
   llvm::outs() << "Emiting docs in " << Format << " format.\n";
-  auto G = doc::findGeneratorByName(Format);
-  if (!G) {
-    llvm::errs() << toString(G.takeError()) << "\n";
-    return 1;
-  }
+  auto G = ExitOnErr(doc::findGeneratorByName(Format));
 
   ArgumentsAdjuster ArgAdjuster;
   if (!DoxygenOnly)
@@ -297,10 +296,7 @@ Example usage for a project using a compile commands database:
       {UserStylesheets.begin(), UserStylesheets.end()}};
 
   if (Format == "html") {
-    if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
-      llvm::errs() << toString(std::move(Err)) << "\n";
-      return 1;
-    }
+    ExitOnErr(getHtmlAssetFiles(argv[0], CDCtx));
   }
 
   if (Format == "mustache") {
@@ -320,7 +316,7 @@ Example usage for a project using a compile commands database:
                       "these files and continue:\n"
                    << toString(std::move(Err)) << "\n";
     else {
-      llvm::errs() << toString(std::move(Err)) << "\n";
+      ExitOnErr(std::move(Err));
       return 1;
     }
   }
@@ -391,22 +387,14 @@ Example usage for a project using a compile commands database:
   sortUsrToInfo(USRToInfo);
 
   // Ensure the root output directory exists.
-  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
-      Err != std::error_code()) {
-    llvm::errs() << "Failed to create directory '" << OutDirectory << "'\n";
-    return 1;
-  }
+  ExitOnErr(
+      llvm::errorCodeToError(llvm::sys::fs::create_directories(OutDirectory)));
 
   // Run the generator.
   llvm::outs() << "Generating docs...\n";
-  if (auto Err =
-          G->get()->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx)) {
-    llvm::errs() << toString(std::move(Err)) << "\n";
-    return 1;
-  }
-
+  ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
   llvm::outs() << "Generating assets for docs...\n";
-  Err = G->get()->createResources(CDCtx);
+  Err = G->createResources(CDCtx);
   if (Err) {
     llvm::outs() << "warning: " << toString(std::move(Err)) << "\n";
   }
