@@ -1885,6 +1885,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
 
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv16i8, Custom);
+
+    // Wide add types
+    if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
+      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv4i32, Custom);
+      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv8i16, Custom);
+      setPartialReduceMLAAction(MVT::nxv8i16, MVT::nxv16i8, Custom);
+    }
   }
 
   // Handle operations that are only available in non-streaming SVE mode.
@@ -29229,6 +29236,34 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   EVT ResultVT = Op.getValueType();
+
+  // Recognise Op as a wide add, if it is then we leave it as-is
+  // Base: nxv2i64, Subdivision: nxv4i32
+  auto IsEVTSubdivision = [](EVT Base, EVT Subdivision) -> bool {
+    assert(Base.isVector() && Subdivision.isVector());
+    assert(Base.isScalableVector() == Subdivision.isScalableVector());
+
+    ElementCount BaseCount = Base.getVectorElementCount();
+    ElementCount SubCount = Subdivision.getVectorElementCount();
+    if (BaseCount * 2 != SubCount)
+      return false;
+
+    uint64_t BaseScalarSize = Base.getScalarSizeInBits();
+    uint64_t SubScalarSize = Subdivision.getScalarSizeInBits();
+    if (BaseScalarSize != SubScalarSize * 2)
+      return false;
+
+    return true;
+  };
+  if (IsEVTSubdivision(ResultVT, LHS.getValueType())) {
+    // If it looks like a real wide add, we can leave it as-is and treat it as
+    // Legal
+    APInt C;
+    if (ISD::isConstantSplatVector(RHS.getNode(), C) && C.isOne())
+      return Op;
+    // If it doesn't, then we need to expand it.
+    return SDValue();
+  }
 
   assert((Scalable && ResultVT == MVT::nxv2i64 &&
           LHS.getValueType() == MVT::nxv16i8) ||

@@ -12676,6 +12676,8 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
           TLI.getTypeToTransformTo(*Context, LHSExtOpVT)))
     return SDValue();
 
+  EVT ResultVT = N->getValueType(0);
+
   bool ExtIsSigned = LHSOpcode == ISD::SIGN_EXTEND;
   unsigned NewOpcode =
       ExtIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
@@ -12689,7 +12691,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
         (LHSOpcode != ISD::SIGN_EXTEND || CTrunc.sext(LHSBits) != C))
       return SDValue();
 
-    return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp,
+    return DAG.getNode(NewOpcode, DL, ResultVT, Acc, LHSExtOp,
                        DAG.getConstant(CTrunc, DL, LHSExtOpVT));
   }
 
@@ -12710,8 +12712,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
       Op1.getValueType().getVectorElementType() != AccElemVT)
     return SDValue();
 
-  return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp,
-                     RHSExtOp);
+  return DAG.getNode(NewOpcode, DL, ResultVT, Acc, LHSExtOp, RHSExtOp);
 }
 
 // partial.reduce.umla(acc, zext(op), splat(1))
@@ -12735,7 +12736,10 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
 
   SDValue UnextOp1 = Op1.getOperand(0);
   EVT UnextOp1VT = UnextOp1.getValueType();
-  if (!TLI.isPartialReduceMLALegalOrCustom(N->getValueType(0), UnextOp1VT))
+  auto *Context = DAG.getContext();
+  if (!TLI.isPartialReduceMLALegalOrCustom(
+          TLI.getTypeToTransformTo(*Context, N->getValueType(0)),
+          TLI.getTypeToTransformTo(*Context, UnextOp1VT)))
     return SDValue();
 
   bool Op1IsSigned = Op1Opcode == ISD::SIGN_EXTEND;
