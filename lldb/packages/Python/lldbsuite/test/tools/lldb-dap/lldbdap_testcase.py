@@ -1,9 +1,16 @@
 import os
 import time
-from typing import Optional
+from typing import Dict, Optional
+from typing_extensions import Unpack
 import uuid
 
-from dap_server import DebugAdapterServer, Source, Response
+from dap_server import (
+    DebugAdapterServer,
+    Source,
+    Response,
+    AttachArguments,
+    LaunchArguments,
+)
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
@@ -17,7 +24,7 @@ class DAPTestCaseBase(TestBase):
 
     def create_debug_adapter(
         self,
-        lldbDAPEnv: Optional[dict[str, str]] = None,
+        env: Optional[Dict[str, str]] = None,
         connection: Optional[str] = None,
     ):
         """Create the Visual Studio Code debug adapter"""
@@ -30,16 +37,16 @@ class DAPTestCaseBase(TestBase):
             connection=connection,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
-            env=lldbDAPEnv,
+            env=env,
         )
 
     def build_and_create_debug_adapter(
         self,
-        lldbDAPEnv: Optional[dict[str, str]] = None,
-        dictionary: Optional[dict] = None,
+        adapter_env: Optional[Dict[str, str]] = None,
+        dictionary: Optional[Dict] = None,
     ):
         self.build(dictionary=dictionary)
-        self.create_debug_adapter(lldbDAPEnv)
+        self.create_debug_adapter(adapter_env)
 
     def build_and_create_debug_adapter_for_attach(self):
         """Variant of build_and_create_debug_adapter that builds a uniquely
@@ -105,6 +112,7 @@ class DAPTestCaseBase(TestBase):
 
     def assertResponseSuccess(self, response: Response):
         self.assertIsNotNone(response)
+        self.assertIn("success", response)
         if not response.get("success", False):
             cmd = response.get("command", "<not set>")
             msg = f"command ({cmd}) failed"
@@ -391,7 +399,7 @@ class DAPTestCaseBase(TestBase):
         disconnectAutomatically=True,
         sourceInitFile=False,
         expectFailure=False,
-        **kwargs,
+        **kwargs: Unpack[AttachArguments],
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
@@ -418,12 +426,13 @@ class DAPTestCaseBase(TestBase):
 
     def launch(
         self,
-        program=None,
+        program: str,
+        /,
         *,
         sourceInitFile=False,
         disconnectAutomatically=True,
         expectFailure=False,
-        **kwargs,
+        **kwargs: Unpack[LaunchArguments],
     ):
         """Sending launch request to dap"""
 
@@ -439,7 +448,8 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_launch(program, **kwargs)
+        kwargs["program"] = program
+        response = self.dap_server.request_launch(**kwargs)
         if expectFailure:
             return response
         if not (response and response["success"]):
@@ -450,17 +460,17 @@ class DAPTestCaseBase(TestBase):
 
     def build_and_launch(
         self,
-        program,
+        program: str,
+        /,
         *,
-        lldbDAPEnv: Optional[dict[str, str]] = None,
-        **kwargs,
+        adapter_env: Optional[Dict[str, str]] = None,
+        **kwargs: Unpack[LaunchArguments],
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and launch the process.
         """
-        self.build_and_create_debug_adapter(lldbDAPEnv)
+        self.build_and_create_debug_adapter(adapter_env)
         self.assertTrue(os.path.exists(program), "executable must exist")
-
         return self.launch(program, **kwargs)
 
     def getBuiltinDebugServerTool(self):

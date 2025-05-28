@@ -13,48 +13,97 @@ import sys
 import threading
 import time
 from typing import (
+    IO,
     Any,
     Optional,
     Union,
-    BinaryIO,
+    List,  # required for python 3.8 compatibility
+    Dict,  # required for python 3.8 compatibility
+    Tuple,  # required for python 3.8 compatibility
     TextIO,
     TypedDict,
     Literal,
     Callable,
     TypeVar,
+    Generic,
+    cast,
 )
+from typing_extensions import Unpack
 
 ## DAP type references
 
+T = TypeVar("T")
 
-class Event(TypedDict):
+
+class Event(TypedDict, Generic[T]):
     type: Literal["event"]
     seq: Literal[0]
     event: str
-    body: Optional[dict]
+    body: Optional[T]
 
 
-class Request(TypedDict):
+class Request(TypedDict, Generic[T]):
     type: Literal["request"]
     seq: int
     command: str
-    arguments: Optional[dict]
+    arguments: Optional[T]
 
 
-class Response(TypedDict):
+class Response(TypedDict, Generic[T]):
     type: Literal["response"]
     seq: Literal[0]
     request_seq: int
     success: bool
     command: str
     message: Optional[str]
-    body: Optional[dict]
+    body: Optional[T]
 
 
-_T = TypeVar("_T")
+class AttachOrLaunchArguments(TypedDict, total=False):
+    stopOnEntry: bool
+    disableASLR: bool
+    disableSTDIO: bool
+    enableAutoVariableSummaries: bool
+    displayExtendedBacktrace: bool
+    enableSyntheticChildDebugging: bool
+    initCommands: List[str]
+    preRunCommands: List[str]
+    postRunCommands: List[str]
+    stopCommands: List[str]
+    exitCommands: List[str]
+    terminateCommands: List[str]
+    sourceMap: Union[List[Tuple[str, str]], Dict[str, str]]
+    sourcePath: str
+    debuggerRoot: str
+    commandEscapePrefix: str
+    customFrameFormat: str
+    customThreadFormat: str
+
+
+class LaunchArguments(AttachOrLaunchArguments, total=False):
+    program: str
+    args: List[str]
+    cwd: str
+    env: Dict[str, str]
+    shellExpandArguments: bool
+    runInTerminal: bool
+    launchCommands: List[str]
+
+
+class AttachArguments(AttachOrLaunchArguments, total=False):
+    program: str
+    pid: int
+    waitFor: bool
+    attachCommands: List[str]
+    coreFile: str
+    gdbRemotePort: int
+    gdbRemoteHostname: str
+
+
 ProtocolMessage = Union[Event, Request, Response]
+
 # An internal type used for tracking protocol messages and an EOF sentinel
-# value. 'None' cannot easily be used as a sentinel because it is a falsey
+# value. 'None' cannot easily be used as a sentinel because it is a falsy
 # value. When returned outside of DebugCommunication an EOFError is typically
 # converted into 'None'.
 _InternalProtocolMessage = Union[Event, Request, Response, EOFError]
@@ -98,7 +147,7 @@ def dump_memory(base_addr, data, num_per_line, outfile):
 
 
 def read_packet(
-    f: BinaryIO, verbose=False, trace_file=None
+    f: IO[bytes], verbose=False, trace_file=None
 ) -> _InternalProtocolMessage:
     """Decode a JSON packet that starts with the content length and is
     followed by the JSON bytes from a file 'f'. Returns None on EOF.
@@ -161,8 +210,8 @@ class Source(object):
     def __str__(self):
         return f"Source(name={self.name}, path={self.path}), source_reference={self.source_reference})"
 
-    def as_dict(self) -> dict:
-        source_dict: dict[str, Any] = {}
+    def as_dict(self) -> Dict:
+        source_dict: Dict[str, Any] = {}
         if self._name is not None:
             source_dict["name"] = self._name
         if self._path is not None:
@@ -175,9 +224,9 @@ class Source(object):
 class DebugCommunication(object):
     def __init__(
         self,
-        recv: BinaryIO,
-        send: BinaryIO,
-        init_commands: list[str],
+        recv: IO[bytes],
+        send: IO[bytes],
+        init_commands: List[str],
         log_file: Optional[str] = None,
     ):
         # For debugging test failures, try setting `trace_file = sys.stderr`.
@@ -185,7 +234,7 @@ class DebugCommunication(object):
         self.log_file = log_file
         self.send = send
         self.recv = recv
-        self.recv_packets: list[_InternalProtocolMessage] = []
+        self.recv_packets: List[_InternalProtocolMessage] = []
         self.recv_condition = threading.Condition()
         self.recv_thread = threading.Thread(target=self._read_packet_thread)
         self.exit_status: Optional[int] = None
@@ -193,18 +242,18 @@ class DebugCommunication(object):
         self.initialize_body = None
         self.initialized = False
         self.configuration_done_sent = False
-        self.process_event_body: Optional[dict] = None
+        self.process_event_body: Optional[Dict] = None
         self.terminated = False
-        self.progress_events: list[Event] = []
-        self.reverse_requests: list[Request] = []
+        self.progress_events: List[Event] = []
+        self.reverse_requests: List[Request] = []
         self.sequence = 1
         self.output_condition = threading.Condition()
-        self.output: dict[str, list[str]] = {}
+        self.output: Dict[str, List[str]] = {}
 
         # debuggee state
         self.threads = None
-        self.thread_stop_reasons: dict[str, Any] = {}
-        self.frame_scopes: dict[str, Any] = {}
+        self.thread_stop_reasons: Dict[str, Any] = {}
+        self.frame_scopes: Dict[str, Any] = {}
 
         self.recv_thread.start()
 
@@ -213,10 +262,10 @@ class DebugCommunication(object):
         return ("Content-Length: %u\r\n\r\n%s" % (len(s), s)).encode("utf-8")
 
     @classmethod
-    def validate_response(cls, command: Request, response: Response):
-        if command["command"] != response["command"]:
+    def validate_response(cls, request: Request, response: Response):
+        if request["command"] != response["command"]:
             raise ValueError("command mismatch in response")
-        if command["seq"] != response["request_seq"]:
+        if request["seq"] != response["request_seq"]:
             raise ValueError("seq mismatch in response")
 
     def _read_packet_thread(self):
@@ -403,27 +452,33 @@ class DebugCommunication(object):
             desc = 'unknown reverse request "%s"' % (request["command"])
             raise ValueError(desc)
 
-    def send_packet(self, command_dict: ProtocolMessage) -> int:
+    def send_packet(self, packet: ProtocolMessage) -> int:
         """Take the "command_dict" python dictionary and encode it as a JSON
         string and send the contents as a packet to the VSCode debug
-        adapter."""
-        seq = 0
-        # Set the sequence ID for this command automatically
-        if command_dict["type"] == "request":
-            seq = command_dict["seq"] = self.sequence
+        adapter.
+
+        Returns the seq of the packet."""
+
+        # Set the seq for requests.
+        if packet["type"] == "request":
+            packet["seq"] = self.sequence
             self.sequence += 1
         else:
-            command_dict["seq"] = 0
+            packet["seq"] = 0
+
         # Encode our command dictionary as a JSON string
-        json_str = json.dumps(command_dict, separators=(",", ":"))
+        json_str = json.dumps(packet, separators=(",", ":"))
+
         if self.trace_file:
             self.trace_file.write("to adapter:\n%s\n" % (json_str))
+
         length = len(json_str)
         if length > 0:
             # Send the encoded JSON packet and flush the 'send' file
             self.send.write(self.encode_content(json_str))
             self.send.flush()
-        return seq
+
+        return packet["seq"]
 
     def receive_response(
         self,
@@ -439,25 +494,25 @@ class DebugCommunication(object):
     def _recv_packet(
         self,
         *,
-        predicate: Callable[[_T], bool],
+        predicate: Callable[[T], bool],
         timeout: Optional[float] = None,
-    ) -> Optional[_T]:
+    ) -> Optional[T]:
         """Get a JSON packet from the VSCode debug adapter. This function
         assumes a thread that reads packets is running and will deliver
         any received packets by calling handle_recv_packet(...). This
         function will wait for the packet to arrive and return it when
         it does."""
+
+        def _predicate():
+            return next(
+                filter(
+                    lambda p: isinstance(p, EOFError) or predicate(p),
+                    self.recv_packets,
+                ),
+                None,
+            )
+
         with self.recv_condition:
-
-            def _predicate():
-                return next(
-                    filter(
-                        lambda p: isinstance(p, EOFError) or predicate(p),
-                        self.recv_packets,
-                    ),
-                    None,
-                )
-
             packet = self.recv_condition.wait_for(_predicate, timeout=timeout)
             if packet is None:  # Timeout
                 return None
@@ -479,7 +534,7 @@ class DebugCommunication(object):
         return response
 
     def wait_for_event(
-        self, filter: list[str] = [], timeout: Optional[float] = None
+        self, filter: List[str] = [], timeout: Optional[float] = None
     ) -> Optional[Event]:
         """Wait for the first event that matches the filter."""
 
@@ -490,7 +545,7 @@ class DebugCommunication(object):
 
     def wait_for_stopped(
         self, timeout: Optional[float] = None
-    ) -> Optional[list[Event]]:
+    ) -> Optional[List[Event]]:
         stopped_events = []
         stopped_event = self.wait_for_event(
             filter=["stopped", "exited"], timeout=timeout
@@ -509,7 +564,7 @@ class DebugCommunication(object):
         return stopped_events
 
     def wait_for_breakpoint_events(self, timeout: Optional[float] = None):
-        breakpoint_events: list[Event] = []
+        breakpoint_events: List[Event] = []
         while True:
             event = self.wait_for_event(["breakpoint"], timeout=timeout)
             if not event:
@@ -685,62 +740,19 @@ class DebugCommunication(object):
                     print("error: didn't get a valid response")
                 mode = "invalid"
 
-    def request_attach(
-        self,
-        *,
-        program: Optional[str] = None,
-        pid: Optional[int] = None,
-        waitFor=False,
-        initCommands: Optional[list[str]] = None,
-        preRunCommands: Optional[list[str]] = None,
-        attachCommands: Optional[list[str]] = None,
-        postRunCommands: Optional[list[str]] = None,
-        stopCommands: Optional[list[str]] = None,
-        exitCommands: Optional[list[str]] = None,
-        terminateCommands: Optional[list[str]] = None,
-        coreFile: Optional[str] = None,
-        stopOnEntry=False,
-        sourceMap: Optional[Union[list[tuple[str, str]], dict[str, str]]] = None,
-        gdbRemotePort: Optional[int] = None,
-        gdbRemoteHostname: Optional[str] = None,
-    ):
-        args_dict: dict[str, Any] = {}
-        if pid is not None:
-            args_dict["pid"] = pid
-        if program is not None:
-            args_dict["program"] = program
-        if waitFor:
-            args_dict["waitFor"] = waitFor
-        args_dict["initCommands"] = self.init_commands
-        if initCommands:
-            args_dict["initCommands"].extend(initCommands)
-        if preRunCommands:
-            args_dict["preRunCommands"] = preRunCommands
-        if stopCommands:
-            args_dict["stopCommands"] = stopCommands
-        if exitCommands:
-            args_dict["exitCommands"] = exitCommands
-        if terminateCommands:
-            args_dict["terminateCommands"] = terminateCommands
-        if attachCommands:
-            args_dict["attachCommands"] = attachCommands
-        if coreFile:
-            args_dict["coreFile"] = coreFile
-        if stopOnEntry:
-            args_dict["stopOnEntry"] = stopOnEntry
-        if postRunCommands:
-            args_dict["postRunCommands"] = postRunCommands
-        if sourceMap:
-            args_dict["sourceMap"] = sourceMap
-        if gdbRemotePort is not None:
-            args_dict["gdb-remote-port"] = gdbRemotePort
-        if gdbRemoteHostname is not None:
-            args_dict["gdb-remote-hostname"] = gdbRemoteHostname
+    def request_attach(self, **kwargs: Unpack[AttachArguments]):
+        attach_args = cast(AttachArguments, {k: v for k, v in kwargs.items() if v})
+        attach_args.setdefault("disableASLR", True)
+        attach_args.setdefault("initCommands", [])
+        attach_args["initCommands"] = [
+            *self.init_commands,
+            *attach_args["initCommands"],
+        ]
         command_dict: Request = {
             "command": "attach",
             "type": "request",
             "seq": 0,
-            "arguments": args_dict,
+            "arguments": attach_args,
         }
         return self._send_recv(command_dict)
 
@@ -919,87 +931,20 @@ class DebugCommunication(object):
                 self.initialize_body = response["body"]
         return response
 
-    def request_launch(
-        self,
-        program: str,
-        *,
-        args: Optional[list[str]] = None,
-        cwd: Optional[str] = None,
-        env: Optional[dict[str, str]] = None,
-        stopOnEntry=False,
-        disableASLR=True,
-        disableSTDIO=False,
-        shellExpandArguments=False,
-        runInTerminal=False,
-        enableAutoVariableSummaries=False,
-        displayExtendedBacktrace=False,
-        enableSyntheticChildDebugging=False,
-        initCommands: Optional[list[str]] = None,
-        preRunCommands: Optional[list[str]] = None,
-        launchCommands: Optional[list[str]] = None,
-        postRunCommands: Optional[list[str]] = None,
-        stopCommands: Optional[list[str]] = None,
-        exitCommands: Optional[list[str]] = None,
-        terminateCommands: Optional[list[str]] = None,
-        sourceMap: Optional[Union[list[tuple[str, str]], dict[str, str]]] = None,
-        sourcePath: Optional[str] = None,
-        debuggerRoot: Optional[str] = None,
-        commandEscapePrefix: Optional[str] = None,
-        customFrameFormat: Optional[str] = None,
-        customThreadFormat: Optional[str] = None,
-    ):
-        args_dict: dict[str, Any] = {"program": program}
-        if args:
-            args_dict["args"] = args
-        if cwd:
-            args_dict["cwd"] = cwd
-        if env:
-            args_dict["env"] = env
-        if stopOnEntry:
-            args_dict["stopOnEntry"] = stopOnEntry
-        if disableSTDIO:
-            args_dict["disableSTDIO"] = disableSTDIO
-        if shellExpandArguments:
-            args_dict["shellExpandArguments"] = shellExpandArguments
-        args_dict["initCommands"] = self.init_commands
-        if initCommands:
-            args_dict["initCommands"].extend(initCommands)
-        if preRunCommands:
-            args_dict["preRunCommands"] = preRunCommands
-        if stopCommands:
-            args_dict["stopCommands"] = stopCommands
-        if exitCommands:
-            args_dict["exitCommands"] = exitCommands
-        if terminateCommands:
-            args_dict["terminateCommands"] = terminateCommands
-        if sourcePath:
-            args_dict["sourcePath"] = sourcePath
-        if debuggerRoot:
-            args_dict["debuggerRoot"] = debuggerRoot
-        if launchCommands:
-            args_dict["launchCommands"] = launchCommands
-        if sourceMap:
-            args_dict["sourceMap"] = sourceMap
-        if runInTerminal:
-            args_dict["runInTerminal"] = runInTerminal
-        if postRunCommands:
-            args_dict["postRunCommands"] = postRunCommands
-        if customFrameFormat:
-            args_dict["customFrameFormat"] = customFrameFormat
-        if customThreadFormat:
-            args_dict["customThreadFormat"] = customThreadFormat
+    def request_launch(self, **kwargs: Unpack[LaunchArguments]):
+        launch_args = cast(LaunchArguments, {k: v for k, v in kwargs.items() if v})
+        launch_args.setdefault("disableASLR", True)
+        launch_args.setdefault("initCommands", [])
+        launch_args["initCommands"] = [
+            *self.init_commands,
+            *launch_args["initCommands"],
+        ]
 
-        args_dict["disableASLR"] = disableASLR
-        args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
-        args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
-        args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
-        if commandEscapePrefix is not None:
-            args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict: Request = {
             "type": "request",
             "seq": 0,
             "command": "launch",
-            "arguments": args_dict,
+            "arguments": kwargs,
         }
         return self._send_recv(command_dict)
 
@@ -1331,11 +1276,11 @@ class DebugAdapterServer(DebugCommunication):
         self,
         executable: Optional[str] = None,
         connection: Optional[str] = None,
-        init_commands: list[str] = [],
+        init_commands: List[str] = [],
         log_file: Optional[str] = None,
-        env: Optional[dict[str, str]] = None,
+        env: Optional[Dict[str, str]] = None,
     ):
-        self.process = None
+        self.process: Optional[subprocess.Popen[bytes]] = None
         self.connection = None
         if executable is not None:
             process, connection = DebugAdapterServer.launch(
@@ -1359,7 +1304,7 @@ class DebugAdapterServer(DebugCommunication):
                 self, s.makefile("rb"), s.makefile("wb"), init_commands, log_file
             )
             self.connection = connection
-        else:
+        elif self.process and self.process.stdout and self.process.stdin:
             DebugCommunication.__init__(
                 self, self.process.stdout, self.process.stdin, init_commands, log_file
             )
@@ -1369,10 +1314,10 @@ class DebugAdapterServer(DebugCommunication):
         cls,
         *,
         executable: str,
-        env: Optional[dict[str, str]] = None,
+        env: Optional[Dict[str, str]] = None,
         log_file: Optional[str] = None,
         connection: Optional[str] = None,
-    ) -> tuple[subprocess.Popen, Optional[str]]:
+    ) -> Tuple[subprocess.Popen[bytes], Optional[str]]:
         adapter_env = os.environ.copy()
         if env is not None:
             adapter_env.update(env)
@@ -1396,6 +1341,8 @@ class DebugAdapterServer(DebugCommunication):
         if connection is None:
             return (process, None)
 
+        assert process.stdout
+
         # lldb-dap will print the listening address once the listener is
         # made to stdout. The listener is formatted like
         # `connection://host:port` or `unix-connection:///path`.
@@ -1410,7 +1357,9 @@ class DebugAdapterServer(DebugCommunication):
             )
 
         # If the listener expanded into multiple addresses, use the first.
-        connection = out.removeprefix(expected_prefix).rstrip("\r\n").split(",", 1)[0]
+        if out.startswith(expected_prefix):
+            out = out[len(expected_prefix) :]
+        connection = out.rstrip("\r\n").split(",", 1)[0]
 
         return (process, connection)
 
