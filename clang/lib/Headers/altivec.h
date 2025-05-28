@@ -7529,13 +7529,9 @@ vec_pack(vector double __a, vector double __b) {
 #ifdef __POWER9_VECTOR__
 static __inline__ vector unsigned short __ATTRS_o_ai
 vec_pack_to_short_fp32(vector float __a, vector float __b) {
-  vector float __resa = __builtin_vsx_xvcvsphp(__a);
-  vector float __resb = __builtin_vsx_xvcvsphp(__b);
-#ifdef __LITTLE_ENDIAN__
-  return (vector unsigned short)vec_mergee(__resa, __resb);
-#else
-  return (vector unsigned short)vec_mergeo(__resa, __resb);
-#endif
+  vector unsigned int __resa = (vector unsigned int)__builtin_vsx_xvcvsphp(__a);
+  vector unsigned int __resb = (vector unsigned int)__builtin_vsx_xvcvsphp(__b);
+  return vec_pack(__resa, __resb);
 }
 
 #endif
