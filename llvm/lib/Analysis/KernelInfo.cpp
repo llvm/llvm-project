@@ -92,27 +92,100 @@ public:
 
 // For the purposes of KernelInfo::ProfileFloatingPointOpCount, should the
 // specified Instruction be considered a floating point operation?  If so,
-// return the floating point type.  Otherwise, return nullptr.
+// return the floating point type and a multiplier for its FLOP count.
+// Otherwise, return std::nullopt.
 //
 // TODO: Does this correctly identify floating point operations we care about?
 // For example, we skip phi even when it returns a floating point value, and
 // load is covered by KernelInfo::ProfileFloatingPointBytesMoved instead.  Is
-// there anything missing that should be covered here?
-//
-// TODO: Should different operations have different weights?  For example,
-// @llvm.fmuladd.* might be expensive for some targets.
-static Type *getFloatingPointOpType(const Instruction &I) {
+// there anything missing that should be covered here?  Is there anything else
+// that we should exclude?  For example, at least for AMD GPU, there are
+// floating point instruction patterns (e.g., fmul with one operand in some
+// category of immediate) that lower to instructions that do not trigger AMD's
+// floating point hardware counters.  Should we somehow query target-specific
+// lowering to exclude such cases?
+static std::optional<std::pair<Type *, unsigned>>
+getFloatingPointOp(const Instruction &I) {
   if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I)) {
     if (At->isFloatingPointOperation())
-      return At->getType();
-    return nullptr;
+      return std::make_pair(At->getType(), 1);
+    return std::nullopt;
   }
-  if (!I.isBinaryOp() && !I.isUnaryOp() && !isa<IntrinsicInst>(&I))
-    return nullptr;
+  if (const CastInst *CI = dyn_cast<CastInst>(&I)) {
+    Type *SrcTy = CI->getSrcTy();
+    Type *DestTy = CI->getDestTy();
+    // For AMD GPU, conversions between fp and integer types where either is not
+    // 64-bit lower to instructions that do not trigger AMD's floating point
+    // hardware counters.  TODO: Is that true for all archs, all non-64-bit
+    // floating point types, and all non-64-bit integer types?  On AMD GPU, we
+    // have checked 64 vs. 32 and 32 vs. 32 so far.
+    if (SrcTy->getScalarSizeInBits() != 64 ||
+        DestTy->getScalarSizeInBits() != 64)
+      return std::nullopt;
+    // For AMD GPU, uitofp and sitofp lower to FADD instructions.  TODO: Is that
+    // true for all archs?
+    if (isa<UIToFPInst>(I) || isa<SIToFPInst>(I))
+      return std::make_pair(DestTy, 1);
+    // For AMD GPU, fptoui and fptosi lower to FMA instructions.  Thus, as for
+    // FMA instructions below, we mutliply by 2.  TODO: Is that true for all
+    // archs?
+    if (isa<FPToUIInst>(I) || isa<FPToSIInst>(I))
+      return std::make_pair(SrcTy, 2);
+    return std::nullopt;
+  }
   Type *Ty = I.getType();
-  if (Ty->isFPOrFPVectorTy())
-    return Ty;
-  return nullptr;
+  if (!Ty->isFPOrFPVectorTy())
+    return std::nullopt;
+  if (I.isBinaryOp() || I.isUnaryOp()) {
+    switch (I.getOpcode()) {
+    // For AMD GPU, fneg lowers to instructions that do not trigger AMD's
+    // floating point hardware counters.  TODO: Is that true for all archs and
+    // all floating point types?  On AMD GPU, we have check 64 bit.
+    case Instruction::FNeg:
+      return std::nullopt;
+    // This multiplier is based on AMD hardware fp counters for fdiv:
+    // - SQ_INSTS_VALU_FMA_F64   = 6*2
+    // - SQ_INSTS_VALU_MUL_F64   = 1
+    // - SQ_INSTS_VALU_TRANS_F64 = 1
+    // TODO: Is that true for all archs and all floating point types?  On AMD
+    // GPU, we have checked 64 bit.  Moreover, this is surely brittle.  What if
+    // the implementation changes?
+    case Instruction::FDiv:
+      return std::make_pair(Ty, 14);
+    }
+    return std::make_pair(Ty, 1);
+  }
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I)) {
+    switch (II->getIntrinsicID()) {
+    // For AMD GPU, these lower to instructions that do not trigger AMD's
+    // floating point hardware counters.  TODO: Is that true for all archs and
+    // all floating point types?  On AMD GPU, we have checked 64 bit.
+    case Intrinsic::copysign:
+    case Intrinsic::fabs:
+    case Intrinsic::floor:
+    case Intrinsic::ldexp:
+    case Intrinsic::minnum:
+    case Intrinsic::rint:
+      return std::nullopt;
+    // For FMA instructions, we mimic AMD's rocprofiler-compute, which
+    // multiplies SQ_INSTS_VALU_FMA_* counts by 2.
+    case Intrinsic::fmuladd:
+    case Intrinsic::fma:
+      return std::make_pair(Ty, 2);
+    // This multiplier is based on AMD hardware fp counters for this intrinsic:
+    // - SQ_INSTS_VALU_FMA_F64   = 7*2
+    // - SQ_INSTS_VALU_MUL_F64   = 2
+    // - SQ_INSTS_VALU_TRANS_F64 = 1
+    // TODO: Is that true for all archs and all floating point types?  On AMD
+    // GPU, we have check 64 bit.  Moreover, this is surely brittle.  What if
+    // the implementation changes?
+    case Intrinsic::sqrt:
+      return std::make_pair(Ty, 17);
+    default:
+      return std::make_pair(Ty, 1);
+    }
+  }
+  return std::nullopt;
 }
 
 static void identifyCallee(OptimizationRemark &R, const Module *M,
@@ -218,7 +291,7 @@ static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
 
 static void
 remarkFloatingPointOp(OptimizationRemarkEmitter &ORE, const Function &Caller,
-                      const Instruction &I, Type *Ty,
+                      const Instruction &I, Type *Ty, unsigned Multiplier,
                       std::optional<uint64_t> BlockProfileCount,
                       std::optional<uint64_t> BytesMoved = std::nullopt) {
   ORE.emit([&] {
@@ -240,6 +313,8 @@ remarkFloatingPointOp(OptimizationRemarkEmitter &ORE, const Function &Caller,
           << " fp bytes";
       else
         R << " executed " << utostr(*BlockProfileCount) << " flops";
+      if (Multiplier != 1)
+        R << " x " << utostr(Multiplier);
     } else {
       R << " has no profile data";
     }
@@ -262,7 +337,8 @@ void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
         return;
       TypeSize::ScalarTy Size = DL.getTypeStoreSize(Ty).getFixedValue();
       ProfileFloatingPointBytesMoved += BlockProfileCount.value_or(0) * Size;
-      remarkFloatingPointOp(ORE, F, I, Ty, BlockProfileCount, Size);
+      remarkFloatingPointOp(ORE, F, I, Ty, /*Multiplier=*/1, BlockProfileCount,
+                            Size);
     };
     if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(&I)) {
       ++Allocas;
@@ -351,9 +427,12 @@ void KernelInfo::updateForBB(const BasicBlock &BB, BlockFrequencyInfo &BFI,
       // cmpxchg is encoded as operating on integer types not floating point
       // types, so HandleFloatingPointBytesMoved is useless here.
     }
-    if (Type *Ty = getFloatingPointOpType(I)) {
-      ProfileFloatingPointOpCount += BlockProfileCount.value_or(0);
-      remarkFloatingPointOp(ORE, F, I, Ty, BlockProfileCount);
+    if (auto Op = getFloatingPointOp(I)) {
+      Type *Ty;
+      unsigned Multiplier;
+      std::tie(Ty, Multiplier) = *Op;
+      ProfileFloatingPointOpCount += Multiplier * BlockProfileCount.value_or(0);
+      remarkFloatingPointOp(ORE, F, I, Ty, Multiplier, BlockProfileCount);
     }
   }
 }

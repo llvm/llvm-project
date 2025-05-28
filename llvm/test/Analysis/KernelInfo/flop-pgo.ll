@@ -64,21 +64,28 @@ define double @f() !dbg !400 !prof !402 {
   ;
   ; branch_weights gives this block a count of 3 per entry into the function.
 .many:                                         ; preds = %.none, %.many
-  ; This is not counted as a floating point op even though it returns a floating
-  ; point value.
+  ; These are not counted as floating point ops even though they return floating
+  ; point values.  For AMD GPUs, we have seen no evidence that the hardware
+  ; instructions to which they lower ever trigger floating point hardware
+  ; counters.  More appear with conversions below.
   %phi = phi double [ %fadd, %.none ], [ %load, %.many ], !dbg !405
+  %fneg = fneg double 0.000000e+00, !dbg !405
+  %copysign = call double @llvm.copysign.f64(double 0.000000e+00, double 0.000000e+00), !dbg !405
+  %fabs = call double @llvm.fabs.f64(double 0.000000e+00), !dbg !405
+  %floor = call double @llvm.floor.f64(double 0.000000e+00), !dbg !405
+  %ldexp = call double @llvm.ldexp.f64.i32(double 0.000000e+00, i32 0), !dbg !405
+  %minnum = call double @llvm.minnum.f64(double 0.000000e+00, double 0.000000e+00), !dbg !405
+  %rint = call double @llvm.rint.f64(double 0.000000e+00), !dbg !405
 
   ; Check simple floating point ops not already checked above, and check an
   ; unnamed value.
   ;
-  ; CHECK: remark: test.c:30:9: in function 'f', double 'fdiv' ('%1') executed 6 flops
+  ; CHECK: remark: test.c:30:9: in function 'f', double 'fdiv' ('%1') executed 6 flops x 14
   %1 = fdiv double 0.000000e+00, 0.000000e+00, !dbg !430
-  ; CHECK: remark: test.c:31:9: in function 'f', double 'fneg' ('%fneg') executed 6 flops
-  %fneg = fneg double 0.000000e+00, !dbg !431
-  ; CHECK: remark: test.c:32:9: in function 'f', double 'load' ('%load') moved 48 fp bytes
-  %load = load double, ptr addrspace(1) %alloca, align 8, !dbg !432
-  ; CHECK: remark: test.c:33:9: in function 'f', double 'store' moved 48 fp bytes
-  store double 0.000000e+00, ptr addrspace(1) %alloca, align 8, !dbg !433
+  ; CHECK: remark: test.c:31:9: in function 'f', double 'load' ('%load') moved 48 fp bytes
+  %load = load double, ptr addrspace(1) %alloca, align 8, !dbg !431
+  ; CHECK: remark: test.c:32:9: in function 'f', double 'store' moved 48 fp bytes
+  store double 0.000000e+00, ptr addrspace(1) %alloca, align 8, !dbg !432
 
   ; Check atomicrmw.
   ;
@@ -101,12 +108,18 @@ define double @f() !dbg !400 !prof !402 {
 
   ; Check some flop intrinsics.
   ;
-  ; CHECK: remark: test.c:50:9: in function 'f', double 'llvm.sqrt.f64' call ('%sqrt') executed 6 flops
-  %sqrt = call double @llvm.sqrt.f64(double 0.000000e+00), !dbg !450
-  ; CHECK: remark: test.c:51:9: in function 'f', double 'llvm.sin.f64' call ('%sin') executed 6 flops
-  %sin = call double @llvm.sin.f64(double 0.000000e+00), !dbg !451
-  ; CHECK: remark: test.c:52:9: in function 'f', double 'llvm.fmuladd.f64' call ('%fmuladd') executed 6 flops
-  %fmuladd = call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00), !dbg !452
+  ; CHECK: remark: test.c:50:9: in function 'f', double 'llvm.amdgcn.rcp.f64' call ('%rcp') executed 6 flops
+  %rcp = call double @llvm.amdgcn.rcp.f64(double 0.000000e+00), !dbg !450
+  ; CHECK: remark: test.c:51:9: in function 'f', double 'llvm.amdgcn.trig.preop.f64' call ('%trig.preop') executed 6 flops
+  %trig.preop = call double @llvm.amdgcn.trig.preop.f64(double 0.000000e+00, i32 0), !dbg !451
+  ; CHECK: remark: test.c:52:9: in function 'f', double 'llvm.fma.f64' call ('%fma') executed 6 flops x 2
+  %fma = call double @llvm.fma.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00), !dbg !452
+  ; CHECK: remark: test.c:53:9: in function 'f', double 'llvm.fmuladd.f64' call ('%fmuladd') executed 6 flops x 2
+  %fmuladd = call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00), !dbg !453
+  ; CHECK: remark: test.c:54:9: in function 'f', double 'llvm.sin.f64' call ('%sin') executed 6 flops
+  %sin = call double @llvm.sin.f64(double 0.000000e+00), !dbg !454
+  ; CHECK: remark: test.c:55:9: in function 'f', double 'llvm.sqrt.f64' call ('%sqrt') executed 6 flops x 17
+  %sqrt = call double @llvm.sqrt.f64(double 0.000000e+00), !dbg !455
   ; Intrinsic that is not a floating point op.
   %umax = call i32 @llvm.umax.i32(i32 0, i32 0), !dbg !405
 
@@ -133,9 +146,36 @@ define double @f() !dbg !400 !prof !402 {
   ; CHECK: remark: test.c:69:9: in function 'f', <2 x double> 'store' moved 96 fp bytes
   store <2 x double> <double 0.000000e+00, double 0.000000e+00>, ptr null, align 8, !dbg !469
 
+  ; Check conversions.
+  ;
+  ; CHECK: remark: test.c:70:9: in function 'f', double 'uitofp' ('%uitofp.64.64') executed 6 flops
+  %uitofp.64.64 = uitofp i64 0 to double, !dbg !470
+  ; CHECK: remark: test.c:71:9: in function 'f', double 'sitofp' ('%sitofp.64.64') executed 6 flops
+  %sitofp.64.64 = sitofp i64 0 to double, !dbg !471
+  ; CHECK: remark: test.c:72:9: in function 'f', double 'fptoui' ('%fptoui.64.64') executed 6 flops x 2
+  %fptoui.64.64 = fptoui double 0.000000e+00 to i64, !dbg !472
+  ; CHECK: remark: test.c:73:9: in function 'f', double 'fptosi' ('%fptosi.64.64') executed 6 flops x 2
+  %fptosi.64.64 = fptosi double 0.000000e+00 to i64, !dbg !473
+  %uitofp.32.64 = uitofp i32 0 to double, !dbg !405
+  %sitofp.32.64 = sitofp i32 0 to double, !dbg !405
+  %fptoui.64.32 = fptoui double 0.000000e+00 to i32, !dbg !405
+  %fptosi.64.32 = fptosi double 0.000000e+00 to i32, !dbg !405
+  %uitofp.64.32 = uitofp i64 0 to float, !dbg !405
+  %sitofp.64.32 = sitofp i64 0 to float, !dbg !405
+  %fptoui.32.64 = fptoui float 0.000000e+00 to i64, !dbg !405
+  %fptosi.32.64 = fptosi float 0.000000e+00 to i64, !dbg !405
+  %uitofp.32.32 = uitofp i32 0 to float, !dbg !405
+  %sitofp.32.32 = sitofp i32 0 to float, !dbg !405
+  %fptoui.32.32 = fptoui float 0.000000e+00 to i32, !dbg !405
+  %fptosi.32.32 = fptosi float 0.000000e+00 to i32, !dbg !405
+  %fptrunc.64.32 = fptrunc double 0.000000e+00 to float, !dbg !405
+  %fpext.32.64 = fpext float 0.000000e+00 to double, !dbg !405
+  %bitcast.double.i64 = bitcast double 0.000000e+00 to i64, !dbg !405
+  %bitcast.i64.double = bitcast i64 0 to double, !dbg !405
+
   br i1 false, label %.ret, label %.many, !prof !499, !dbg !405
 }
-; CHECK: remark: test.c:4:0: in function 'f', ProfileFloatingPointOpCount = 90
+; CHECK: remark: test.c:4:0: in function 'f', ProfileFloatingPointOpCount = 324
 ; CHECK: remark: test.c:4:0: in function 'f', ProfileFloatingPointBytesMoved = 576
 
 !llvm.module.flags = !{!0}
@@ -179,7 +219,6 @@ define double @f() !dbg !400 !prof !402 {
 !430 = !DILocation(line: 30, column: 9, scope: !403)
 !431 = !DILocation(line: 31, column: 9, scope: !403)
 !432 = !DILocation(line: 32, column: 9, scope: !403)
-!433 = !DILocation(line: 33, column: 9, scope: !403)
 !440 = !DILocation(line: 40, column: 9, scope: !403)
 !441 = !DILocation(line: 41, column: 9, scope: !403)
 !442 = !DILocation(line: 42, column: 9, scope: !403)
@@ -188,6 +227,9 @@ define double @f() !dbg !400 !prof !402 {
 !450 = !DILocation(line: 50, column: 9, scope: !403)
 !451 = !DILocation(line: 51, column: 9, scope: !403)
 !452 = !DILocation(line: 52, column: 9, scope: !403)
+!453 = !DILocation(line: 53, column: 9, scope: !403)
+!454 = !DILocation(line: 54, column: 9, scope: !403)
+!455 = !DILocation(line: 55, column: 9, scope: !403)
 !460 = !DILocation(line: 60, column: 9, scope: !403)
 !461 = !DILocation(line: 61, column: 9, scope: !403)
 !462 = !DILocation(line: 62, column: 9, scope: !403)
@@ -198,4 +240,8 @@ define double @f() !dbg !400 !prof !402 {
 !467 = !DILocation(line: 67, column: 9, scope: !403)
 !468 = !DILocation(line: 68, column: 9, scope: !403)
 !469 = !DILocation(line: 69, column: 9, scope: !403)
+!470 = !DILocation(line: 70, column: 9, scope: !403)
+!471 = !DILocation(line: 71, column: 9, scope: !403)
+!472 = !DILocation(line: 72, column: 9, scope: !403)
+!473 = !DILocation(line: 73, column: 9, scope: !403)
 !499 = !{!"branch_weights", i32 1, i32 2}
