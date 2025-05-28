@@ -17,7 +17,6 @@
 
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
@@ -1427,15 +1426,32 @@ OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 LogicalResult cir::ShiftOp::verify() {
   mlir::Operation *op = getOperation();
-  mlir::Type resType = getResult().getType();
-  const bool isOp0Vec = mlir::isa<cir::VectorType>(op->getOperand(0).getType());
-  const bool isOp1Vec = mlir::isa<cir::VectorType>(op->getOperand(1).getType());
-  if (isOp0Vec != isOp1Vec)
+  auto op0VecTy = mlir::dyn_cast<cir::VectorType>(op->getOperand(0).getType());
+  auto op1VecTy = mlir::dyn_cast<cir::VectorType>(op->getOperand(1).getType());
+  if (!op0VecTy ^ !op1VecTy)
     return emitOpError() << "input types cannot be one vector and one scalar";
-  if (isOp1Vec && op->getOperand(1).getType() != resType) {
-    return emitOpError() << "shift amount must have the type of the result "
-                         << "if it is vector shift";
+
+  if (op0VecTy) {
+    if (op0VecTy.getSize() != op1VecTy.getSize())
+      return emitOpError() << "input vector types must have the same size";
+
+    auto opResultTy = mlir::dyn_cast<cir::VectorType>(getResult().getType());
+    if (!opResultTy)
+      return emitOpError() << "the type of the result must be a vector "
+                           << "if it is vector shift";
+
+    auto op0VecEleTy = mlir::cast<cir::IntType>(op0VecTy.getElementType());
+    auto op1VecEleTy = mlir::cast<cir::IntType>(op1VecTy.getElementType());
+    if (op0VecEleTy.getWidth() != op1VecEleTy.getWidth())
+      return emitOpError()
+             << "vector operands do not have the same elements sizes";
+
+    auto resVecEleTy = mlir::cast<cir::IntType>(opResultTy.getElementType());
+    if (op0VecEleTy.getWidth() != resVecEleTy.getWidth())
+      return emitOpError() << "vector operands and result type do not have the "
+                              "same elements sizes";
   }
+
   return mlir::success();
 }
 
