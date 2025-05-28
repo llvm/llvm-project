@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Basic/SanitizerSpecialCaseList.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 
@@ -73,5 +74,5 @@ SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask, StringRef Prefix,
         return {it->FileIdx, lineNum};
     }
   }
-  return {0, 0};
+  return NotFound;
 }

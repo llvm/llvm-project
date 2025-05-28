@@ -1762,6 +1762,29 @@ def err_user_defined_msg_constexpr : Error<
   "%sub{subst_user_defined_msg}0 must be produced by a "
   "constant expression">;
 
+// Type traits explanations
+def note_unsatisfied_trait : Note<"%0 is not %enum_select<TraitName>{"
+                                  "%TriviallyRelocatable{trivially relocatable}"
+                                  "}1">;
+
+def note_unsatisfied_trait_reason
+    : Note<"because it "
+           "%enum_select<TraitNotSatisfiedReason>{"
+           "%Ref{is a reference type}|"
+           "%HasArcLifetime{has an ARC lifetime qualifier}|"
+           "%VLA{is a variably-modified type}|"
+           "%VBase{has a virtual base %1}|"
+           "%NRBase{has a non-trivially-relocatable base %1}|"
+           "%NRField{has a non-trivially-relocatable member %1 of type %2}|"
+           "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
+           "%UserProvidedCtr{has a user provided %select{copy|move}1 "
+           "constructor}|"
+           "%UserProvidedAssign{has a user provided %select{copy|move}1 "
+           "assignment operator}|"
+           "%UnionWithUserDeclaredSMF{is a union with a user-declared "
+           "%sub{select_special_member_kind}1}"
+           "}0">;
+
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,
   InGroup<DiagGroup<"redundant-consteval-if">>;
@@ -4059,6 +4082,9 @@ def warn_thread_attribute_not_on_scoped_lockable_param : Warning<
   "%0 attribute applies to function parameters only if their type is a "
   "reference to a 'scoped_lockable'-annotated type">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_requires_preceded : Warning<
+  "%0 attribute on %1 must be preceded by %2 attribute">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def err_attribute_argument_out_of_bounds_extra_info : Error<
   "%0 attribute parameter %1 is out of bounds: "
   "%plural{0:no parameters to index into|"
@@ -4082,10 +4108,10 @@ def warn_expecting_locked : Warning<
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 // FIXME: improve the error message about locks not in scope
 def warn_lock_some_predecessors : Warning<
-  "%0 '%1' is not held on every path through here">,
+  "%0 '%1' is not held on every path through here%select{| with equal reentrancy depth}2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def warn_expecting_lock_held_on_loop : Warning<
-  "expecting %0 '%1' to be held at start of each loop">,
+  "expecting %0 '%1' to be held at start of each loop%select{| with equal reentrancy depth}2">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 def note_locked_here : Note<"%0 acquired here">;
 def note_unlocked_here : Note<"%0 released here">;
@@ -12971,6 +12997,9 @@ def err_hlsl_expect_arg_const_int_one_or_neg_one: Error<
   "argument %0 must be constant integer 1 or -1">;
 def err_invalid_hlsl_resource_type: Error<
   "invalid __hlsl_resource_t type attributes">;
+
+def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
+def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

@@ -62,7 +62,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
-; CHECK-NEXT:  Successor(s): vector.ph
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + vp<[[VEC_TC]]> * ir<-1>
@@ -94,6 +94,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
 ; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
@@ -103,9 +106,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
@@ -193,26 +193,23 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %18 = mul i64 %17, 4
 ; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + ir<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:    vp<[[END2:%.+]]> = DERIVED-IV ir<%n> + ir<[[VEC_TC]]> * ir<-1>
-; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
-; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
-; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
-; CHECK-NEXT:      WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:      WIDEN ir<%add9> = add ir<[[L]]>, ir<1>
-; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<[[VEC_PTR2:%.+]]> = vector-end-pointer inbounds ir<%arrayidx3>, ir<[[VF]]>
-; CHECK-NEXT:      WIDEN store vp<[[VEC_PTR2]]>, ir<%add9>
-; CHECK-NEXT:      EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VFxUF]]>.1
-; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VEC_TC]]>
-; CHECK-NEXT:    No successors
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
+; CHECK-NEXT:    vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
+; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
+; CHECK-NEXT:    WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:    WIDEN ir<%add9> = add ir<[[L]]>, ir<1>
+; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
+; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-end-pointer inbounds ir<%arrayidx3>, ir<[[VF]]>
+; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%add9>
+; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VFxUF]]>.1
+; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VEC_TC]]>
+; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<%0>, ir<[[VEC_TC]]>
@@ -313,7 +310,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
-; CHECK-NEXT:  Successor(s): vector.ph
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + vp<[[VEC_TC]]> * ir<-1>
@@ -345,6 +342,9 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
 ; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
@@ -354,9 +354,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
-; CHECK-NEXT:  No successors
-; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
@@ -444,26 +441,23 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR   %18 = mul i64 %17, 4
 ; CHECK-NEXT:    vp<[[END1:%.+]]> = DERIVED-IV ir<%0> + ir<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT:    vp<[[END2:%.+]]> = DERIVED-IV ir<%n> + ir<[[VEC_TC]]> * ir<-1>
-; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
-; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
-; CHECK-NEXT:      vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
-; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
-; CHECK-NEXT:      WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:      WIDEN ir<%conv1> = fadd ir<[[L]]>, ir<1.000000e+00>
-; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx3>, ir<[[VF]]>
-; CHECK-NEXT:      WIDEN store vp<[[VEC_PTR]]>, ir<%conv1>
-; CHECK-NEXT:      EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VFxUF]]>.1
-; CHECK-NEXT:      EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VEC_TC]]>
-; CHECK-NEXT:    No successors
-; CHECK-NEXT:  }
-; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
+; CHECK-NEXT:    vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
+; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
+; CHECK-NEXT:    WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<[[L]]>, ir<1.000000e+00>
+; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
+; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx3>, ir<[[VF]]>
+; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR]]>, ir<%conv1>
+; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VFxUF]]>.1
+; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VEC_TC]]>
+; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<%0>, ir<[[VEC_TC]]>

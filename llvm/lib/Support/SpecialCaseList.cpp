@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -66,12 +67,12 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
 }
 
 unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
-  for (auto it = Globs.crbegin(); it != Globs.crend(); ++it)
-    if ((*it)->Pattern.match(Query))
-      return (*it)->LineNo;
-  for (auto it = RegExes.crbegin(); it != RegExes.crend(); ++it)
-    if (it->first->match(Query))
-      return it->second;
+  for (const auto &Glob : reverse(Globs))
+    if (Glob->Pattern.match(Query))
+      return Glob->LineNo;
+  for (const auto &[Regex, LineNumber] : reverse(RegExes))
+    if (Regex->match(Query))
+      return LineNumber;
   return 0;
 }
 
@@ -104,7 +105,8 @@ SpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
 
 bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
                                      vfs::FileSystem &VFS, std::string &Error) {
-  for (const auto &Path : Paths) {
+  for (size_t i = 0; i < Paths.size(); ++i) {
+    const auto &Path = Paths[i];
     ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
         VFS.getBufferForFile(Path);
     if (std::error_code EC = FileOrErr.getError()) {
@@ -112,8 +114,7 @@ bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
       return false;
     }
     std::string ParseError;
-    ++currFileIdx;
-    if (!parse(FileOrErr.get().get(), ParseError)) {
+    if (!parse(i, FileOrErr.get().get(), ParseError)) {
       Error = (Twine("error parsing file '") + Path + "': " + ParseError).str();
       return false;
     }
@@ -123,19 +124,16 @@ bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
 
 bool SpecialCaseList::createInternal(const MemoryBuffer *MB,
                                      std::string &Error) {
-  ++currFileIdx;
-  if (!parse(MB, Error))
+  if (!parse(0, MB, Error))
     return false;
   return true;
 }
 
 Expected<SpecialCaseList::Section *>
-SpecialCaseList::addSection(StringRef SectionStr, unsigned LineNo,
-                            bool UseGlobs) {
-  Sections.emplace_back();
+SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
+                            unsigned LineNo, bool UseGlobs) {
+  Sections.emplace_back(SectionStr, FileNo);
   auto &Section = Sections.back();
-  Section.SectionStr = SectionStr;
-  Section.FileIdx = currFileIdx;
 
   if (auto Err = Section.SectionMatcher->insert(SectionStr, LineNo, UseGlobs)) {
     return createStringError(errc::invalid_argument,
@@ -147,9 +145,10 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned LineNo,
   return &Section;
 }
 
-bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
+bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
+                            std::string &Error) {
   Section *CurrentSection;
-  if (auto Err = addSection("*", 1).moveInto(CurrentSection)) {
+  if (auto Err = addSection("*", FileIdx, 1).moveInto(CurrentSection)) {
     Error = toString(std::move(Err));
     return false;
   }
@@ -177,7 +176,8 @@ bool SpecialCaseList::parse(const MemoryBuffer *MB, std::string &Error) {
         return false;
       }
 
-      if (auto Err = addSection(Line.drop_front().drop_back(), LineNo, UseGlobs)
+      if (auto Err = addSection(Line.drop_front().drop_back(), FileIdx, LineNo,
+                                UseGlobs)
                          .moveInto(CurrentSection)) {
         Error = toString(std::move(Err));
         return false;
@@ -217,14 +217,14 @@ bool SpecialCaseList::inSection(StringRef Section, StringRef Prefix,
 std::pair<unsigned, unsigned>
 SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                 StringRef Query, StringRef Category) const {
-  for (auto it = Sections.crbegin(); it != Sections.crend(); ++it) {
-    if (it->SectionMatcher->match(Section)) {
-      unsigned Blame = inSectionBlame(it->Entries, Prefix, Query, Category);
+  for (const auto &S : reverse(Sections)) {
+    if (S.SectionMatcher->match(Section)) {
+      unsigned Blame = inSectionBlame(S.Entries, Prefix, Query, Category);
       if (Blame)
-        return {it->FileIdx, Blame};
+        return {S.FileIdx, Blame};
     }
   }
-  return {0, 0};
+  return NotFound;
 }
 
 unsigned SpecialCaseList::inSectionBlame(const SectionEntries &Entries,

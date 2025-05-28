@@ -207,6 +207,32 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
+bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
+                            const VPDominatorTree &VPDT) {
+  auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+  if (!VPBB)
+    return false;
+
+  // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
+  // VPBB as its entry, i.e., free of predecessors.
+  if (auto *R = VPBB->getParent())
+    return !R->isReplicator() && VPBB->getNumPredecessors() == 0;
+
+  // A header dominates its second predecessor (the latch), with the other
+  // predecessor being the preheader
+  return VPB->getPredecessors().size() == 2 &&
+         VPDT.dominates(VPB, VPB->getPredecessors()[1]);
+}
+
+bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
+                           const VPDominatorTree &VPDT) {
+  // A latch has a header as its second successor, with its other successor
+  // leaving the loop. A preheader OTOH has a header as its first (and only)
+  // successor.
+  return VPB->getNumSuccessors() == 2 &&
+         VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
+}
+
 VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   iterator It = begin();
   while (It != end() && It->isPhi())
@@ -424,13 +450,21 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
   if (ParentLoop && !State.LI->getLoopFor(NewBB))
     ParentLoop->addBasicBlockToLoop(NewBB, *State.LI);
 
+  SmallVector<VPBlockBase *> Preds;
+  if (VPBlockUtils::isHeader(this, State.VPDT)) {
+    // There's no block for the latch yet, connect to the preheader only.
+    Preds = {getPredecessors()[0]};
+  } else {
+    Preds = to_vector(getPredecessors());
+  }
+
   // Hook up the new basic block to its predecessors.
-  for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
+  for (VPBlockBase *PredVPBlock : Preds) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
     auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
+    assert(CFG.VPBB2IRBB.contains(PredVPBB) &&
+           "Predecessor basic-block not found building successor.");
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
-
-    assert(PredBB && "Predecessor basic-block not found building successor.");
     auto *PredBBTerminator = PredBB->getTerminator();
     LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
 
@@ -491,11 +525,25 @@ void VPBasicBlock::execute(VPTransformState *State) {
   bool Replica = bool(State->Lane);
   BasicBlock *NewBB = State->CFG.PrevBB; // Reuse it if possible.
 
+  if (VPBlockUtils::isHeader(this, State->VPDT)) {
+    // Create and register the new vector loop.
+    Loop *PrevParentLoop = State->CurrentParentLoop;
+    State->CurrentParentLoop = State->LI->AllocateLoop();
+
+    // Insert the new loop into the loop nest and register the new basic blocks
+    // before calling any utilities such as SCEV that require valid LoopInfo.
+    if (PrevParentLoop)
+      PrevParentLoop->addChildLoop(State->CurrentParentLoop);
+    else
+      State->LI->addTopLevelLoop(State->CurrentParentLoop);
+  }
+
   auto IsReplicateRegion = [](VPBlockBase *BB) {
     auto *R = dyn_cast_or_null<VPRegionBlock>(BB);
-    return R && R->isReplicator();
+    assert((!R || R->isReplicator()) &&
+           "only replicate region blocks should remain");
+    return R;
   };
-
   // 1. Create an IR basic block.
   if ((Replica && this == getParent()->getEntry()) ||
       IsReplicateRegion(getSingleHierarchicalPredecessor())) {
@@ -518,6 +566,10 @@ void VPBasicBlock::execute(VPTransformState *State) {
 
   // 2. Fill the IR basic block with IR instructions.
   executeRecipes(State, NewBB);
+
+  // If this block is a latch, update CurrentParentLoop.
+  if (VPBlockUtils::isLatch(this, State->VPDT))
+    State->CurrentParentLoop = State->CurrentParentLoop->getParentLoop();
 }
 
 VPBasicBlock *VPBasicBlock::clone() {
@@ -729,35 +781,13 @@ VPRegionBlock *VPRegionBlock::clone() {
 }
 
 void VPRegionBlock::execute(VPTransformState *State) {
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
-      RPOT(Entry);
-
-  if (!isReplicator()) {
-    // Create and register the new vector loop.
-    Loop *PrevParentLoop = State->CurrentParentLoop;
-    State->CurrentParentLoop = State->LI->AllocateLoop();
-
-    // Insert the new loop into the loop nest and register the new basic blocks
-    // before calling any utilities such as SCEV that require valid LoopInfo.
-    if (PrevParentLoop)
-      PrevParentLoop->addChildLoop(State->CurrentParentLoop);
-    else
-      State->LI->addTopLevelLoop(State->CurrentParentLoop);
-
-    // Visit the VPBlocks connected to "this", starting from it.
-    for (VPBlockBase *Block : RPOT) {
-      LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
-      Block->execute(State);
-    }
-
-    State->CurrentParentLoop = PrevParentLoop;
-    return;
-  }
-
+  assert(isReplicator() &&
+         "Loop regions should have been lowered to plain CFG");
   assert(!State->Lane && "Replicating a Region with non-null instance.");
-
-  // Enter replicating mode.
   assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
+
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Entry);
   State->Lane = VPLane(0);
   for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
        ++Lane) {
@@ -850,6 +880,22 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
   printSuccessors(O, Indent);
 }
 #endif
+
+void VPRegionBlock::dissolveToCFGLoop() {
+  auto *Header = cast<VPBasicBlock>(getEntry());
+  VPBlockBase *Preheader = getSinglePredecessor();
+  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
+  VPBlockBase *Middle = getSingleSuccessor();
+  VPBlockUtils::disconnectBlocks(Preheader, this);
+  VPBlockUtils::disconnectBlocks(this, Middle);
+
+  for (VPBlockBase *VPB : vp_depth_first_shallow(Entry))
+    VPB->setParent(getParent());
+
+  VPBlockUtils::connectBlocks(Preheader, Header);
+  VPBlockUtils::connectBlocks(ExitingLatch, Middle);
+  VPBlockUtils::connectBlocks(ExitingLatch, Header);
+}
 
 VPlan::VPlan(Loop *L) {
   setEntry(createVPIRBasicBlock(L->getLoopPreheader()));
@@ -962,16 +1008,15 @@ void VPlan::execute(VPTransformState *State) {
 
   State->CFG.DTU.flush();
 
-  auto *LoopRegion = getVectorLoopRegion();
-  if (!LoopRegion)
+  VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
+  if (!Header)
     return;
 
-  VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
+  auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
   BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
   // Fix the latch value of canonical, reduction and first-order recurrences
   // phis in the vector loop.
-  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   for (VPRecipeBase &R : Header->phis()) {
     // Skip phi-like recipes that generate their backedege values themselves.
     if (isa<VPWidenPHIRecipe>(&R))
@@ -1007,8 +1052,10 @@ void VPlan::execute(VPTransformState *State) {
     bool NeedsScalar = isa<VPInstruction>(PhiR) ||
                        (isa<VPReductionPHIRecipe>(PhiR) &&
                         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+
     Value *Phi = State->get(PhiR, NeedsScalar);
-    // VPHeaderPHIRecipe supports getBackedgeValue() but VPInstruction does not.
+    // VPHeaderPHIRecipe supports getBackedgeValue() but VPInstruction does
+    // not.
     Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
     cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
   }
