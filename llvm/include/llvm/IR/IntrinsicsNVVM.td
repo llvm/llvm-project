@@ -745,9 +745,24 @@ class NVVMBuiltin :
 }
 
 let TargetPrefix = "nvvm" in {
-  def int_nvvm_prmt : NVVMBuiltin,
-      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-        [IntrNoMem, IntrSpeculatable]>;
+
+  // PRMT - permute
+
+  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
+    def int_nvvm_prmt : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+
+    foreach mode = ["f4e", "b4e"] in
+      def int_nvvm_prmt_ # mode :
+          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+
+    // Note: these variants also have 2 source operands but only one will ever
+    // be used so we eliminate the other operand in the IR (0 is used as the
+    // placeholder in the backend).
+    foreach mode = ["rc8", "ecl", "ecr", "rc16"] in
+      def int_nvvm_prmt_ # mode :
+          DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
+  }
 
   def int_nvvm_nanosleep : NVVMBuiltin,
       DefaultAttrsIntrinsic<[], [llvm_i32_ty],
@@ -1285,9 +1300,9 @@ let TargetPrefix = "nvvm" in {
     foreach align = ["", "_aligned"] in {
       def int_nvvm_barrier_cta_sync # align # _all :
           Intrinsic<[], [llvm_i32_ty]>;
-      def int_nvvm_barrier_cta_sync # align :
+      def int_nvvm_barrier_cta_sync # align # _count :
           Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
-      def int_nvvm_barrier_cta_arrive # align :
+      def int_nvvm_barrier_cta_arrive # align # _count :
           Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
     }
   }

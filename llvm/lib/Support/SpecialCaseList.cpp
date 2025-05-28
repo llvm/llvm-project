@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -53,25 +54,23 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
     return Error::success();
   }
 
-  auto [It, DidEmplace] = Globs.try_emplace(Pattern);
-  if (DidEmplace) {
-    // We must be sure to use the string in the map rather than the provided
-    // reference which could be destroyed before match() is called
-    Pattern = It->getKey();
-    auto &Pair = It->getValue();
-    if (auto Err = GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024)
-                       .moveInto(Pair.first))
-      return Err;
-    Pair.second = LineNumber;
-  }
+  auto Glob = std::make_unique<Matcher::Glob>();
+  Glob->Name = Pattern.str();
+  Glob->LineNo = LineNumber;
+  // We must be sure to use the string in `Glob` rather than the provided
+  // reference which could be destroyed before match() is called
+  if (auto Err = GlobPattern::create(Glob->Name, /*MaxSubPatterns=*/1024)
+                     .moveInto(Glob->Pattern))
+    return Err;
+  Globs.push_back(std::move(Glob));
   return Error::success();
 }
 
 unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
-  for (const auto &[Pattern, Pair] : Globs)
-    if (Pair.first.match(Query))
-      return Pair.second;
-  for (const auto &[Regex, LineNumber] : RegExes)
+  for (const auto &Glob : reverse(Globs))
+    if (Glob->Pattern.match(Query))
+      return Glob->LineNo;
+  for (const auto &[Regex, LineNumber] : reverse(RegExes))
     if (Regex->match(Query))
       return LineNumber;
   return 0;
@@ -215,7 +214,7 @@ bool SpecialCaseList::inSection(StringRef Section, StringRef Prefix,
 unsigned SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                          StringRef Query,
                                          StringRef Category) const {
-  for (const auto &S : Sections) {
+  for (const auto &S : reverse(Sections)) {
     if (S.SectionMatcher->match(Section)) {
       unsigned Blame = inSectionBlame(S.Entries, Prefix, Query, Category);
       if (Blame)

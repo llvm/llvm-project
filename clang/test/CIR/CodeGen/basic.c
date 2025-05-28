@@ -16,11 +16,11 @@ int f1(int i) {
 // CIR-NEXT: cir.func @f1(%arg0: !s32i loc({{.*}})) -> !s32i
 // CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
-// CIR-NEXT:   cir.store %arg0, %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[I_IGNORED:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   cir.store %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %arg0, %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[I_IGNORED:.*]] = cir.load{{.*}} %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[I:.*]] = cir.load{{.*}} %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define i32 @f1(i32 %[[IP:.*]])
@@ -46,8 +46,8 @@ int f2(void) { return 3; }
 //      CIR: cir.func @f2() -> !s32i
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT:   %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR-NEXT:   cir.store %[[THREE]], %[[RV]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[R:.*]] = cir.load %0 : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[THREE]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %0 : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define i32 @f2()
@@ -69,10 +69,10 @@ int f3(void) {
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR-NEXT:   cir.store %[[THREE]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   cir.store %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[THREE]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[I:.*]] = cir.load{{.*}} %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define i32 @f3()
@@ -153,9 +153,9 @@ int f6(void) {
 //      CIR: cir.func @f6() -> !s32i
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT:   %[[GV_PTR:.*]] = cir.get_global @gv : !cir.ptr<!s32i>
-// CIR-NEXT:   %[[GV:.*]] = cir.load %[[GV_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:   cir.store %[[GV]], %[[RV]] : !s32i, !cir.ptr<!s32i>
-// CIR-NEXT:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[GV:.*]] = cir.load{{.*}} %[[GV_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[GV]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 // LLVM:      define i32 @f6()
@@ -178,9 +178,9 @@ int f7(int a, int b, int c) {
 // CIR:  %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR:  %[[B_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR:  %[[C_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c", init]
-// CIR:  %[[A:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR:  %[[B:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR:  %[[C:.*]] = cir.load %[[C_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:  %[[A:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:  %[[B:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR:  %[[C:.*]] = cir.load{{.*}} %[[C_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR:  %[[B_PLUS_C:.*]] = cir.binop(add, %[[B]], %[[C]]) nsw : !s32i
 // CIR:  %[[RETVAL:.*]] = cir.binop(add, %[[A]], %[[B_PLUS_C]]) nsw : !s32i
 
@@ -213,10 +213,10 @@ int f8(int *p) {
 // CIR: cir.func @f8
 // CIR:    %[[P_PTR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p", init]
 // CIR:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CIR:    %[[P:.*]] = cir.load deref %[[P_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR:    cir.store %[[TWO]], %[[P]] : !s32i, !cir.ptr<!s32i>
-// CIR:    %[[P2:.*]] = cir.load deref %[[P_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-// CIR:    %[[STAR_P:.*]] = cir.load %[[P2]] : !cir.ptr<!s32i>, !s32i
+// CIR:    %[[P:.*]] = cir.load deref{{.*}} %[[P_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:    cir.store{{.*}} %[[TWO]], %[[P]] : !s32i, !cir.ptr<!s32i>
+// CIR:    %[[P2:.*]] = cir.load deref{{.*}} %[[P_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:    %[[STAR_P:.*]] = cir.load{{.*}} %[[P2]] : !cir.ptr<!s32i>, !s32i
 
 // LLVM: define i32 @f8
 // LLVM:   %[[P_PTR:.*]] = alloca ptr, i64 1, align 8
@@ -250,7 +250,7 @@ void f10(int arg0, ...) {}
 
 //      CIR: cir.func @f10(%[[ARG0:.*]]: !s32i loc({{.*}}), ...)
 // CIR-NEXT:   %[[ARG0_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["arg0", init] {alignment = 4 : i64}
-// CIR-NEXT:   cir.store %[[ARG0]], %[[ARG0_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   cir.store{{.*}} %[[ARG0]], %[[ARG0_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:   cir.return
 
 //      LLVM: define void @f10(i32 %[[ARG0:.*]], ...)
@@ -284,8 +284,8 @@ size_type max_size(void) {
 
 // OGCG: define{{.*}} i64 @max_size()
 // OGCG:   ret i64 2305843009213693951
-// CHECK:   cir.store %5, %0 : !u64i, !cir.ptr<!u64i>
-// CHECK:   %6 = cir.load %0 : !cir.ptr<!u64i>, !u64i
+// CHECK:   cir.store{{.*}} %5, %0 : !u64i, !cir.ptr<!u64i>
+// CHECK:   %6 = cir.load{{.*}} %0 : !cir.ptr<!u64i>, !u64i
 // CHECK:   cir.return %6 : !u64i
 // CHECK:   }
 

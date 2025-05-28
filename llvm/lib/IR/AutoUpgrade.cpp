@@ -2492,13 +2492,14 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_aligned_all,
                                   {}, {Arg});
   } else if (Name == "barrier") {
-    Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_aligned, {},
-                                  {CI->getArgOperand(0), CI->getArgOperand(1)});
+    Rep = Builder.CreateIntrinsic(
+        Intrinsic::nvvm_barrier_cta_sync_aligned_count, {},
+        {CI->getArgOperand(0), CI->getArgOperand(1)});
   } else if (Name == "barrier.sync") {
     Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_all, {},
                                   {CI->getArgOperand(0)});
   } else if (Name == "barrier.sync.cnt") {
-    Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync, {},
+    Rep = Builder.CreateIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count, {},
                                   {CI->getArgOperand(0), CI->getArgOperand(1)});
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);

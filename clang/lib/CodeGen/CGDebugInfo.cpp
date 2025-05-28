@@ -134,10 +134,9 @@ void CGDebugInfo::addInstSourceAtomMetadata(llvm::Instruction *I,
   // Each instruction can only be attributed to one source atom (a limitation of
   // the implementation). If this instruction is already part of a source atom,
   // pick the group in which it has highest precedence (lowest rank).
-  if (DL.get()->getAtomGroup() && DL.get()->getAtomRank() &&
-      DL.get()->getAtomRank() < Rank) {
-    Group = DL.get()->getAtomGroup();
-    Rank = DL.get()->getAtomRank();
+  if (DL->getAtomGroup() && DL->getAtomRank() && DL->getAtomRank() < Rank) {
+    Group = DL->getAtomGroup();
+    Rank = DL->getAtomRank();
   }
 
   // Update the function-local watermark so we don't reuse this number for
@@ -3639,6 +3638,12 @@ llvm::DIType *CGDebugInfo::CreateType(const HLSLAttributedResourceType *Ty,
   return getOrCreateType(Ty->getWrappedType(), U);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const HLSLInlineSpirvType *Ty,
+                                      llvm::DIFile *U) {
+  // Debug information unneeded.
+  return nullptr;
+}
+
 llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
   const EnumDecl *ED = Ty->getDecl();
 
@@ -3992,6 +3997,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);
   case Type::HLSLAttributedResource:
     return CreateType(cast<HLSLAttributedResourceType>(Ty), Unit);
+  case Type::HLSLInlineSpirv:
+    return CreateType(cast<HLSLInlineSpirvType>(Ty), Unit);
 
   case Type::CountAttributed:
   case Type::Auto:
