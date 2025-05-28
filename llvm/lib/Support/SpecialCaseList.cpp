@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -66,10 +67,10 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
 }
 
 unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
-  for (const auto &Glob : Globs)
+  for (const auto &Glob : reverse(Globs))
     if (Glob->Pattern.match(Query))
       return Glob->LineNo;
-  for (const auto &[Regex, LineNumber] : RegExes)
+  for (const auto &[Regex, LineNumber] : reverse(RegExes))
     if (Regex->match(Query))
       return LineNumber;
   return 0;
@@ -213,7 +214,7 @@ bool SpecialCaseList::inSection(StringRef Section, StringRef Prefix,
 unsigned SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                          StringRef Query,
                                          StringRef Category) const {
-  for (const auto &S : Sections) {
+  for (const auto &S : reverse(Sections)) {
     if (S.SectionMatcher->match(Section)) {
       unsigned Blame = inSectionBlame(S.Entries, Prefix, Query, Category);
       if (Blame)
