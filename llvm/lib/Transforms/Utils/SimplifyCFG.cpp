@@ -3455,7 +3455,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   return true;
 }
 
-typedef SmallPtrSet<BasicBlock *, 8> BlocksSet;
+using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
 
 static bool reachesUsed(BasicBlock *BB,
                         const BlocksSet &UsedInNonLocalBlocksSet,
