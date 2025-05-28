@@ -680,6 +680,9 @@ public:
     /// If the value is true the peeling cost model can decide to peel only
     /// some iterations and in this case it will set this to false.
     bool PeelProfiledIterations;
+
+    /// Peel off the last PeelCount loop iterations.
+    bool PeelLast;
   };
 
   /// Get target-customized preferences for the generic loop peeling

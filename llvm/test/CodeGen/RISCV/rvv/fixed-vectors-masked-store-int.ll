@@ -330,3 +330,12 @@ define void @masked_store_v256i8(<256 x i8> %val, ptr %a, <256 x i1> %mask) {
   ret void
 }
 
+define void @masked_store_v7i8(<7 x i8> %val, ptr %a, <7 x i1> %mask) {
+; CHECK-LABEL: masked_store_v7i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 7, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.v7i8.p0(<7 x i8> %val, ptr %a, i32 8, <7 x i1> %mask)
+  ret void
+}
