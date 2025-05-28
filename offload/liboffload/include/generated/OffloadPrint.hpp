@@ -224,6 +224,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   case OL_DEVICE_TYPE_CPU:
     os << "OL_DEVICE_TYPE_CPU";
     break;
+  case OL_DEVICE_TYPE_HOST:
+    os << "OL_DEVICE_TYPE_HOST";
+    break;
   default:
     os << "unknown enumerator";
     break;
