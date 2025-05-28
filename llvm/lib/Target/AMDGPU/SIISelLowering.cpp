@@ -11901,6 +11901,7 @@ bool llvm::isBoolSGPR(SDValue V) {
   default:
     break;
   case ISD::SETCC:
+  case ISD::IS_FPCLASS:
   case AMDGPUISD::FP_CLASS:
     return true;
   case ISD::AND:
