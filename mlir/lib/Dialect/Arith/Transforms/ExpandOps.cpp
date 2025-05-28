@@ -436,7 +436,18 @@ struct ScalingTruncFOpConverter
     Type resultTy = op.getType();
     Type inputTy = inputOperand.getType();
     Value scaleExt = b.create<arith::ExtFOp>(inputTy, scaleOperand);
-    Value result = b.create<arith::DivFOp>(inputOperand, scaleExt);
+    // flush denorms, check if exponent part of input operand is zero or not.
+    Type f8E8M0Ty = cloneToShapedType(inputTy, b.getF8E8M0Type());
+    Type i8Ty = cloneToShapedType(inputTy, b.getI8Type());
+    Value inputExponent = b.create<arith::TruncFOp>(inputOperand, f8E8M0Ty);
+    Value inputExponentU8 = b.create<arith::BitcastOp>(inputExponent, i8Ty);
+    Value cI8Zero = createConst(op.getLoc(), i8Ty, 0x00, rewriter);
+    Value cmpCond = b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, cI8Zero,
+                                            inputExponentU8);
+    Value inputTyZero = createConst(op.getLoc(), inputTy, 0, rewriter);
+    Value flushedInput =
+        b.create<arith::SelectOp>(cmpCond, inputTyZero, inputOperand);
+    Value result = b.create<arith::DivFOp>(flushedInput, scaleExt);
     Value resultCast = b.create<arith::TruncFOp>(resultTy, result);
     rewriter.replaceOp(op, resultCast);
     return success();
