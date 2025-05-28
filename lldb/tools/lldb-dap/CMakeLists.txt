@@ -64,7 +64,8 @@ add_lldb_library(lldbDAP
   Handler/TestGetTargetBreakpointsRequestHandler.cpp
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
-
+  Handler/WriteMemoryRequestHandler.cpp
+  
   Protocol/ProtocolBase.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
