@@ -386,6 +386,7 @@ bool ParasolTargetLowering::CanLowerReturn(
   case 2:
     return Outs[0].VT.getStoreSize() + Outs[1].VT.getStoreSize() <= 8;
   default:
+    return false;
   }
 
   return false;
