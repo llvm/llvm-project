@@ -28,6 +28,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/CodeGen/MachineDominators.h"
 
 using namespace llvm;
 
@@ -40,6 +41,7 @@ namespace {
 class MachineLateInstrsCleanup {
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
+  const MachineDominatorTree *DT = nullptr;
 
   // Data structures to map regs to their definitions and kills per MBB.
   struct Reg2MIMap : public SmallDenseMap<Register, MachineInstr *> {
@@ -61,6 +63,7 @@ class MachineLateInstrsCleanup {
                         BitVector &VisitedPreds, MachineInstr *ToRemoveMI);
 
 public:
+  MachineLateInstrsCleanup(const MachineDominatorTree &MDT) : DT(&MDT) {}
   bool run(MachineFunction &MF);
 };
 
@@ -75,6 +78,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -91,21 +95,26 @@ char MachineLateInstrsCleanupLegacy::ID = 0;
 
 char &llvm::MachineLateInstrsCleanupID = MachineLateInstrsCleanupLegacy::ID;
 
-INITIALIZE_PASS(MachineLateInstrsCleanupLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(MachineLateInstrsCleanupLegacy, DEBUG_TYPE,
+                "Machine Late Instructions Cleanup Pass", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_END(MachineLateInstrsCleanupLegacy, DEBUG_TYPE,
                 "Machine Late Instructions Cleanup Pass", false, false)
 
 bool MachineLateInstrsCleanupLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
-
-  return MachineLateInstrsCleanup().run(MF);
+  const MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return MachineLateInstrsCleanup(MDT).run(MF);
 }
 
 PreservedAnalyses
 MachineLateInstrsCleanupPass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
-  if (!MachineLateInstrsCleanup().run(MF))
+  const MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  if (!MachineLateInstrsCleanup(MDT).run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
@@ -177,7 +186,7 @@ void MachineLateInstrsCleanup::removeRedundantDef(MachineInstr *MI) {
 // and the only reg it may use is FrameReg. Typically this is an immediate
 // load or a load-address instruction.
 static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
-                        Register FrameReg, const TargetRegisterInfo *TRI) {
+                        Register FrameReg, const TargetRegisterInfo *TRI, const MachineDominatorTree *DT) {
   DefedReg = MCRegister::NoRegister;
   bool SawStore = true;
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
@@ -203,8 +212,46 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
             continue;
           // If the machineOperand is Implicit and alias with DefedReg then
           // continue to next operand.
-          if (MO.isImplicit() && TRI->isSubRegister(MO.getReg(), DefedReg))
-            continue;
+          if (MO.isImplicit() && TRI->isSubRegister(MO.getReg(), DefedReg)) {
+              if(MI->all_uses().empty()){ // No direct use of the register
+              bool found = false;
+              // Iterate through all instructions in the MBB
+              // to check if there is a use of MO.getReg() that is not a kill.
+              // If there is a use that is not a kill, then continue to next operand.
+              for (auto &I : llvm::make_early_inc_range(*MI->getParent())) {
+                // Skip the current instruction itself.
+                if (MI == &I) {
+                  continue;
+                }
+                // Check if the instruction dominates the instruction which has the use.
+                if (!DT->dominates(MI, &I)) {
+                  continue;
+                }
+                // Iterate through the operands of the instruction.
+                for (auto &UMO : I.operands()) {
+                  if (!UMO.isReg()) {
+                    continue;
+                  }
+                  // Check if the operand is a use of the same register.
+                  // If it is a kill, then we found a candidate and can continue
+                  // to the next operand.
+                  if (UMO.getReg() == MO.getReg() && UMO.isKill()){
+                     found = true;
+                     continue;
+                  }
+                  // Any another use of the same register
+                  // that is not a kill means we cannot remove the instruction.
+                  if (UMO.getReg() == MO.getReg() && found) {
+                     found = false;
+                    break;
+                  }
+                }
+              }
+              if (found) {
+                continue;
+              }
+            }
+          }
           return false;
         } else
           return false;
@@ -252,7 +299,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     }
 
     Register DefedReg;
-    bool IsCandidate = isCandidate(&MI, DefedReg, FrameReg, TRI);
+    bool IsCandidate = isCandidate(&MI, DefedReg, FrameReg, TRI, DT);
 
     // Check for an earlier identical and reusable instruction.
     if (IsCandidate && MBBDefs.hasIdentical(DefedReg, &MI)) {

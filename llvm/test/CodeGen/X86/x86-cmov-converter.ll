@@ -365,6 +365,7 @@ define i32 @MaxIndex_unpredictable(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-NEXT:    jl .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:  .LBB3_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -386,6 +387,7 @@ define i32 @MaxIndex_unpredictable(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-FORCEALL-NEXT:    jl .LBB3_3
 ; CHECK-FORCEALL-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-FORCEALL-NEXT:    movl %edi, %ecx
+; CHECK-FORCEALL-NEXT:    xorl %eax, %eax
 ; CHECK-FORCEALL-NEXT:    movl $1, %edx
 ; CHECK-FORCEALL-NEXT:  .LBB3_2: # %for.body
 ; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
