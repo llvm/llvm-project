@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
@@ -1938,6 +1939,14 @@ public:
   LLVM_ABI void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+
+  /// Target can implement more complex patterns for getting Uniformity of an
+  /// instruction.Currently Uniformity analysis catagorises instructions with a
+  /// fixed set of InstructionUniformity values: Default, AlwaysUniform and
+  /// NeverUniform.
+  std::optional<InstructionUniformity> getInstructionUniformity(
+      const Instruction &I,
+      SmallVector<InstructionUniformity> OperandUniformities) const;
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;

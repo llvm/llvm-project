@@ -1443,3 +1443,21 @@ void GCNTTIImpl::collectKernelLaunchBounds(
   LB.push_back({"amdgpu-waves-per-eu[0]", WavesPerEU.first});
   LB.push_back({"amdgpu-waves-per-eu[1]", WavesPerEU.second});
 }
+
+std::optional<InstructionUniformity> GCNTTIImpl::getInstructionUniformity(
+    const Instruction &I,
+    SmallVector<InstructionUniformity> OperandUniformities) const {
+  if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::amdgcn_permlane64:
+      if (llvm::any_of(OperandUniformities, [](InstructionUniformity U) {
+            return U == InstructionUniformity::AlwaysUniform;
+          }))
+        return InstructionUniformity::AlwaysUniform;
+      return InstructionUniformity::Default;
+    default:
+      break;
+    }
+  }
+  return std::nullopt;
+}
