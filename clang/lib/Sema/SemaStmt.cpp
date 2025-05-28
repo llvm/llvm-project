@@ -4311,13 +4311,8 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
   const llvm::Triple &T = Context.getTargetInfo().getTriple();
   const bool IsOpenMPGPUTarget =
       getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
-  // Don't report an error if 'try' is used in system headers or in an OpenMP
-  // target region compiled for a GPU architecture.
-  if (!IsOpenMPGPUTarget && !getLangOpts().CXXExceptions &&
-      !getSourceManager().isInSystemHeader(TryLoc) && !getLangOpts().CUDA) {
-    // Delay error emission for the OpenMP device code.
-    targetDiag(TryLoc, diag::err_exceptions_disabled) << "try";
-  }
+
+  DiagnoseExceptionUse(TryLoc, /* IsTry= */ true);
 
   // In OpenMP target regions, we assume that catch is never reached on GPU
   // targets.
@@ -4417,6 +4412,23 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
 
   return CXXTryStmt::Create(Context, TryLoc, cast<CompoundStmt>(TryBlock),
                             Handlers);
+}
+
+void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
+  const llvm::Triple &T = Context.getTargetInfo().getTriple();
+  const bool IsOpenMPGPUTarget =
+      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
+
+  // Don't report an error if 'try' is used in system headers or in an OpenMP
+  // target region compiled for a GPU architecture.
+  if (IsOpenMPGPUTarget || getLangOpts().CUDA)
+    // Delay error emission for the OpenMP device code.
+    return;
+
+  if (!getLangOpts().CXXExceptions &&
+      !getSourceManager().isInSystemHeader(Loc) &&
+      !CurContext->isDependentContext())
+    targetDiag(Loc, diag::err_exceptions_disabled) << (IsTry ? "try" : "throw");
 }
 
 StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,
