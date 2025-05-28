@@ -132,10 +132,29 @@ public:
   // are supported on the specified architecture only, hence such targets do not
   // follow the onion layer model. hasArchAccelFeatures() allows
   // distinguishing such GPU variants from the base GPU architecture.
-  // - 0 represents base GPU model,
-  // - non-zero value identifies particular architecture-accelerated variant.
-  bool hasArchAccelFeatures() const { return getFullSmVersion() % 10; }
-
+  // - false represents non-accelerated architecture.
+  // - true represents architecture-accelerated variant.
+  bool hasArchAccelFeatures() const {
+    auto FullSMVersionMod = getFullSmVersion() % 10;
+    assert(FullSMVersionMod < 3 && "Invalid architecture!");
+    return FullSMVersionMod == 1;
+  }
+  // GPUs with 'f' suffix have architecture-accelerated features which are
+  // portable across all future architectures under same SM major. For example,
+  // sm_100f features will work for sm_10X future architectures.
+  // - false represents non-family-specific architecture.
+  // - true represents family-specific variant.
+  bool hasFamilySpecificFeatures() const {
+    auto FullSMVersionMod = getFullSmVersion() % 10;
+    assert(FullSMVersionMod < 3 && "Invalid architecture!");
+    return FullSMVersionMod == 2 && PTXVersion >= 88;
+  }
+  // Checks if architecture is accelerated or family-specific.
+  // - false represents neither arch-accelerated nor family-specific arch.
+  // - true represents either arch-accelerated or family-specific arch.
+  bool hasArchAccelOrFamilySpecificFeatures() const {
+    return hasArchAccelFeatures() || hasFamilySpecificFeatures();
+  }
   // If the user did not provide a target we default to the `sm_30` target.
   std::string getTargetName() const {
     return TargetName.empty() ? "sm_30" : TargetName;

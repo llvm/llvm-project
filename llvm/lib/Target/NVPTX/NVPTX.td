@@ -41,12 +41,14 @@ foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
 
 // Arch-specific targets. PTX for these is not compatible with any other
 // architectures.
-def SM90a : FeatureSM<"90a", 901>;
-def SM100a: FeatureSM<"100a", 1001>;
-def SM101a: FeatureSM<"101a", 1011>;
-def SM103a: FeatureSM<"103a", 1031>;
-def SM120a: FeatureSM<"120a", 1201>;
-def SM121a: FeatureSM<"121a", 1211>;
+foreach sm = [90, 100, 101, 103, 120, 121] in {
+  def SM#sm#a : FeatureSM<""#sm#"a", !add(!mul(sm, 10), 1)>;
+}
+
+// Family-specific targets. PTX for these is compatible within the same family.
+foreach sm = [100, 101, 103, 120, 121] in {
+  def SM#sm#f : FeatureSM<""#sm#"f", !add(!mul(sm, 10), 2)>;
+}
 
 foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65,
                    70, 71, 72, 73, 74, 75, 76, 77, 78,
@@ -83,14 +85,19 @@ def : Proc<"sm_90",   [SM90, PTX78]>;
 def : Proc<"sm_90a",  [SM90a, PTX80]>;
 def : Proc<"sm_100",  [SM100, PTX86]>;
 def : Proc<"sm_100a", [SM100a, PTX86]>;
+def : Proc<"sm_100f", [SM100f, PTX88]>;
 def : Proc<"sm_101",  [SM101, PTX86]>;
 def : Proc<"sm_101a", [SM101a, PTX86]>;
+def : Proc<"sm_101f", [SM101f, PTX88]>;
 def : Proc<"sm_103",  [SM103, PTX88]>;
 def : Proc<"sm_103a", [SM103a, PTX88]>;
+def : Proc<"sm_103f", [SM103f, PTX88]>;
 def : Proc<"sm_120",  [SM120, PTX87]>;
 def : Proc<"sm_120a", [SM120a, PTX87]>;
+def : Proc<"sm_120f", [SM120f, PTX88]>;
 def : Proc<"sm_121",  [SM121, PTX88]>;
 def : Proc<"sm_121a", [SM121a, PTX88]>;
+def : Proc<"sm_121f", [SM121f, PTX88]>;
 
 def NVPTXInstrInfo : InstrInfo {
 }
