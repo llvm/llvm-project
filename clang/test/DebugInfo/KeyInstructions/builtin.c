@@ -22,6 +22,7 @@ void fun() {
 // CHECK: store ptr %1, ptr %b{{.*}}, !dbg [[G2R1:!.*]]
     void *b = __builtin_alloca_with_align(4, 8);
 
+// CHECK: %2 = load <4 x float>, ptr @mat{{.*}}, !dbg [[G3R2:!.*]]
 // CHECK: call void @llvm.matrix.column.major.store.v4f32{{.*}}, !dbg [[G3R1:!.*]]
     __builtin_matrix_column_major_store(mat, f4, sizeof(float) * 2);
 
@@ -63,6 +64,7 @@ void fun() {
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
+// CHECK: [[G3R2]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 2)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
 // CHECK: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
