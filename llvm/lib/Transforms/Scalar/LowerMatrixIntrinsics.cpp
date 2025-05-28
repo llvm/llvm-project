@@ -32,8 +32,10 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MatrixBuilder.h"
@@ -231,6 +233,32 @@ static bool isUniformShape(Value *V) {
 
   if (I->isBinaryOp())
     return true;
+
+  if (auto *Cast = dyn_cast<CastInst>(V))
+    switch (Cast->getOpcode()) {
+    case llvm::Instruction::Trunc:
+    case llvm::Instruction::ZExt:
+    case llvm::Instruction::SExt:
+    case llvm::Instruction::FPToUI:
+    case llvm::Instruction::FPToSI:
+    case llvm::Instruction::UIToFP:
+    case llvm::Instruction::SIToFP:
+    case llvm::Instruction::FPTrunc:
+    case llvm::Instruction::FPExt:
+      return true;
+    case llvm::Instruction::AddrSpaceCast:
+    case CastInst::PtrToInt:
+    case CastInst::IntToPtr:
+      return false;
+    case CastInst::BitCast: {
+      if (auto *SrcVTy = dyn_cast<FixedVectorType>(Cast->getSrcTy()))
+        if (auto *DestVTy = dyn_cast<FixedVectorType>(Cast->getDestTy()))
+          return SrcVTy->getNumElements() == DestVTy->getNumElements();
+      return false;
+    }
+    case llvm::Instruction::CastOpsEnd:
+      llvm_unreachable("not an actual cast op");
+    }
 
   switch (I->getOpcode()) {
   case Instruction::FNeg:
@@ -1066,9 +1094,11 @@ public:
       Value *Op2;
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
         Changed |= VisitBinaryOperator(BinOp);
-      if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
+      else if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
         Changed |= VisitUnaryOperator(UnOp);
-      if (match(Inst, m_Load(m_Value(Op1))))
+      else if (auto *Cast = dyn_cast<CastInst>(Inst))
+        Changed |= VisitCastInstruction(Cast);
+      else if (match(Inst, m_Load(m_Value(Op1))))
         Changed |= VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
         Changed |= VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
@@ -2190,6 +2220,37 @@ public:
 
     for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
       Result.addVector(BuildVectorOp(M.getVector(I)));
+
+    finalizeLowering(Inst,
+                     Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                             Result.getNumVectors()),
+                     Builder);
+    return true;
+  }
+
+  /// Lower cast instructions, if shape information is available.
+  bool VisitCastInstruction(CastInst *Inst) {
+    auto I = ShapeMap.find(Inst);
+    if (I == ShapeMap.end())
+      return false;
+
+    Value *Op = Inst->getOperand(0);
+
+    IRBuilder<> Builder(Inst);
+    ShapeInfo &Shape = I->second;
+
+    MatrixTy Result;
+    MatrixTy M = getMatrix(Op, Shape, Builder);
+
+    Builder.setFastMathFlags(getFastMathFlags(Inst));
+
+    auto *OrigVTy = cast<VectorType>(Inst->getType());
+    auto *NewVTy = VectorType::get(OrigVTy->getElementType(),
+                                   ElementCount::getFixed(M.getStride()));
+
+    for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
+      Result.addVector(
+          Builder.CreateCast(Inst->getOpcode(), M.getVector(I), NewVTy));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
