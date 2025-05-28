@@ -14,13 +14,13 @@
 #ifndef LLVM_MCA_HARDWAREUNITS_SCHEDULER_H
 #define LLVM_MCA_HARDWAREUNITS_SCHEDULER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
 #include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/MCA/HardwareUnits/ResourceManager.h"
 #include "llvm/MCA/Support.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {
@@ -204,8 +204,7 @@ public:
   LLVM_ABI void issueInstruction(
       InstRef &IR,
       SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &Used,
-      SmallVectorImpl<InstRef> &Pending,
-      SmallVectorImpl<InstRef> &Ready);
+      SmallVectorImpl<InstRef> &Pending, SmallVectorImpl<InstRef> &Ready);
 
   /// Returns true if IR has to be issued immediately, or if IR is a zero
   /// latency instruction.
@@ -224,9 +223,9 @@ public:
   /// the READY state (going through the PENDING state) within a single cycle.
   /// That means, instructions may appear in both the Pending and Ready set.
   LLVM_ABI void cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
-                  SmallVectorImpl<InstRef> &Executed,
-                  SmallVectorImpl<InstRef> &Pending,
-                  SmallVectorImpl<InstRef> &Ready);
+                           SmallVectorImpl<InstRef> &Executed,
+                           SmallVectorImpl<InstRef> &Pending,
+                           SmallVectorImpl<InstRef> &Ready);
 
   /// Convert a resource mask into a valid llvm processor resource identifier.
   ///
@@ -250,7 +249,7 @@ public:
   /// register dependencies.  Vector MemDeps is populated by instructions that
   /// were not issued because of unsolved memory dependencies.
   LLVM_ABI void analyzeDataDependencies(SmallVectorImpl<InstRef> &RegDeps,
-                               SmallVectorImpl<InstRef> &MemDeps);
+                                        SmallVectorImpl<InstRef> &MemDeps);
 
   /// Returns a mask of busy resources, and populates vector Insts with
   /// instructions that could not be issued to the underlying pipelines because

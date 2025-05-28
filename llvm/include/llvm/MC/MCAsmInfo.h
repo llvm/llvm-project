@@ -15,12 +15,12 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
@@ -429,8 +429,8 @@ public:
   virtual ~MCAsmInfo();
 
   // Explicitly non-copyable.
-  MCAsmInfo(MCAsmInfo const&) = delete;
-  MCAsmInfo& operator=(MCAsmInfo const&) = delete;
+  MCAsmInfo(MCAsmInfo const &) = delete;
+  MCAsmInfo &operator=(MCAsmInfo const &) = delete;
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }

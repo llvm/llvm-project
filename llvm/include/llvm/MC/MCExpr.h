@@ -9,8 +9,8 @@
 #ifndef LLVM_MC_MCEXPR_H
 #define LLVM_MC_MCEXPR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 
@@ -63,7 +63,7 @@ protected:
   }
 
   LLVM_ABI bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 bool InSet) const;
+                                          bool InSet) const;
 
   unsigned getSubclassData() const { return SubclassData; }
 
@@ -82,7 +82,7 @@ public:
   /// @{
 
   LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI,
-             int SurroundingPrec = 0) const;
+                      int SurroundingPrec = 0) const;
   LLVM_ABI void dump() const;
 
   /// Returns whether the given symbol is used anywhere in the expression or
@@ -104,7 +104,8 @@ public:
   /// Aggressive variant of evaluateAsRelocatable when relocations are
   /// unavailable (e.g. .fill). Expects callers to handle errors when true is
   /// returned.
-  LLVM_ABI bool evaluateKnownAbsolute(int64_t &Res, const MCAssembler &Asm) const;
+  LLVM_ABI bool evaluateKnownAbsolute(int64_t &Res,
+                                      const MCAssembler &Asm) const;
 
   /// Try to evaluate the expression to a relocatable value, i.e. an
   /// expression of the fixed form (a - b + constant).
@@ -112,7 +113,8 @@ public:
   /// \param Res - The relocatable value, if evaluation succeeds.
   /// \param Asm - The assembler object to use for evaluating values.
   /// \return - True on success.
-  LLVM_ABI bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const;
+  LLVM_ABI bool evaluateAsRelocatable(MCValue &Res,
+                                      const MCAssembler *Asm) const;
 
   /// Try to evaluate the expression to the form (a - b + constant) where
   /// neither a nor b are variables.
@@ -129,8 +131,9 @@ public:
 
   /// @}
 
-  LLVM_ABI static bool evaluateSymbolicAdd(const MCAssembler *, bool, const MCValue &,
-                                  const MCValue &, MCValue &);
+  LLVM_ABI static bool evaluateSymbolicAdd(const MCAssembler *, bool,
+                                           const MCValue &, const MCValue &,
+                                           MCValue &);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
@@ -161,8 +164,8 @@ public:
   /// @{
 
   LLVM_ABI static const MCConstantExpr *create(int64_t Value, MCContext &Ctx,
-                                      bool PrintInHex = false,
-                                      unsigned SizeInBytes = 0);
+                                               bool PrintInHex = false,
+                                               unsigned SizeInBytes = 0);
 
   /// @}
   /// \name Accessors
@@ -221,8 +224,10 @@ public:
     return MCSymbolRefExpr::create(Symbol, VK_None, Ctx, Loc);
   }
 
-  LLVM_ABI static const MCSymbolRefExpr *create(const MCSymbol *Symbol, VariantKind Kind,
-                                       MCContext &Ctx, SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCSymbolRefExpr *create(const MCSymbol *Symbol,
+                                                VariantKind Kind,
+                                                MCContext &Ctx,
+                                                SMLoc Loc = SMLoc());
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, uint16_t Kind,
                                        MCContext &Ctx, SMLoc Loc = SMLoc()) {
     return MCSymbolRefExpr::create(Symbol, VariantKind(Kind), Ctx, Loc);
@@ -267,8 +272,8 @@ public:
   /// \name Construction
   /// @{
 
-  LLVM_ABI static const MCUnaryExpr *create(Opcode Op, const MCExpr *Expr,
-                                   MCContext &Ctx, SMLoc Loc = SMLoc());
+  LLVM_ABI static const MCUnaryExpr *
+  create(Opcode Op, const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc());
 
   static const MCUnaryExpr *createLNot(const MCExpr *Expr, MCContext &Ctx, SMLoc Loc = SMLoc()) {
     return create(LNot, Expr, Ctx, Loc);
@@ -345,8 +350,8 @@ public:
   /// @{
 
   LLVM_ABI static const MCBinaryExpr *create(Opcode Op, const MCExpr *LHS,
-                                    const MCExpr *RHS, MCContext &Ctx,
-                                    SMLoc Loc = SMLoc());
+                                             const MCExpr *RHS, MCContext &Ctx,
+                                             SMLoc Loc = SMLoc());
 
   static const MCBinaryExpr *createAdd(const MCExpr *LHS, const MCExpr *RHS,
                                        MCContext &Ctx) {

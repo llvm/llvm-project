@@ -16,7 +16,6 @@
 #ifndef LLVM_MCA_CODEEMITTER_H
 #define LLVM_MCA_CODEEMITTER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,6 +23,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {

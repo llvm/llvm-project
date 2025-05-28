@@ -16,12 +16,12 @@
 #ifndef LLVM_MCA_STAGES_INSTRUCTIONTABLES_H
 #define LLVM_MCA_STAGES_INSTRUCTIONTABLES_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/HardwareUnits/Scheduler.h"
 #include "llvm/MCA/Stages/Stage.h"
 #include "llvm/MCA/Support.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {

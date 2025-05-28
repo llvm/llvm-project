@@ -14,8 +14,8 @@
 #ifndef LLVM_MCA_INCREMENTALSOURCEMGR_H
 #define LLVM_MCA_INCREMENTALSOURCEMGR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/MCA/SourceMgr.h"
+#include "llvm/Support/Compiler.h"
 #include <deque>
 
 namespace llvm {
@@ -49,8 +49,8 @@ public:
   IncrementalSourceMgr() = default;
 
   // Explicitly non-copyable.
-  IncrementalSourceMgr& operator=(const IncrementalSourceMgr&) = delete;
-  IncrementalSourceMgr(const IncrementalSourceMgr&) = delete;
+  IncrementalSourceMgr &operator=(const IncrementalSourceMgr &) = delete;
+  IncrementalSourceMgr(const IncrementalSourceMgr &) = delete;
 
   void clear();
 

@@ -15,8 +15,8 @@
 #ifndef LLVM_MCA_STAGES_STAGE_H
 #define LLVM_MCA_STAGES_STAGE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/MCA/HWEventListener.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <set>
 

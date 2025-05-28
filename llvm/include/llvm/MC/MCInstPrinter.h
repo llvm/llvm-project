@@ -101,8 +101,9 @@ public:
 
   class WithMarkup {
   public:
-    LLVM_CTOR_NODISCARD LLVM_ABI WithMarkup(MCInstPrinter &IP, raw_ostream &OS, Markup M,
-                                   bool EnableMarkup, bool EnableColor);
+    LLVM_CTOR_NODISCARD LLVM_ABI WithMarkup(MCInstPrinter &IP, raw_ostream &OS,
+                                            Markup M, bool EnableMarkup,
+                                            bool EnableColor);
     LLVM_ABI ~WithMarkup();
 
     template <typename T> WithMarkup &operator<<(T &O) {

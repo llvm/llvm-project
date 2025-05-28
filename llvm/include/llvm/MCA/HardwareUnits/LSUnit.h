@@ -15,12 +15,12 @@
 #ifndef LLVM_MCA_HARDWAREUNITS_LSUNIT_H
 #define LLVM_MCA_HARDWAREUNITS_LSUNIT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
 #include "llvm/MCA/Instruction.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {

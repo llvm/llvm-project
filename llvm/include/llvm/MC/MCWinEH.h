@@ -9,8 +9,8 @@
 #ifndef LLVM_MC_MCWINEH_H
 #define LLVM_MC_MCWINEH_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <vector>
 

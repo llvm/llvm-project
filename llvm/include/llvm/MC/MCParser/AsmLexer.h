@@ -13,11 +13,11 @@
 #ifndef LLVM_MC_MCPARSER_ASMLEXER_H
 #define LLVM_MC_MCPARSER_ASMLEXER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <string>
@@ -131,7 +131,8 @@ public:
   }
 
   /// Look ahead an arbitrary number of tokens.
-  LLVM_ABI size_t peekTokens(MutableArrayRef<AsmToken> Buf, bool ShouldSkipSpace = true);
+  LLVM_ABI size_t peekTokens(MutableArrayRef<AsmToken> Buf,
+                             bool ShouldSkipSpace = true);
 
   /// Get the current error location
   SMLoc getErrLoc() { return ErrLoc; }
@@ -191,7 +192,7 @@ public:
   void setLexHLASMStrings(bool V) { LexHLASMStrings = V; }
 
   LLVM_ABI void setBuffer(StringRef Buf, const char *ptr = nullptr,
-                 bool EndStatementAtEOF = true);
+                          bool EndStatementAtEOF = true);
 
   const MCAsmInfo &getMAI() const { return MAI; }
 

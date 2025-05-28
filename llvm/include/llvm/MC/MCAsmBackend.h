@@ -9,10 +9,10 @@
 #ifndef LLVM_MC_MCASMBACKEND_H
 #define LLVM_MC_MCASMBACKEND_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
 

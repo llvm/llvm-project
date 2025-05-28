@@ -9,9 +9,9 @@
 #ifndef LLVM_MC_MCASMMACRO_H
 #define LLVM_MC_MCASMMACRO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SMLoc.h"
 #include <vector>

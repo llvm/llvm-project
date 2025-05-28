@@ -15,12 +15,12 @@
 #ifndef LLVM_MC_MCREGISTERINFO_H
 #define LLVM_MC_MCREGISTERINFO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>

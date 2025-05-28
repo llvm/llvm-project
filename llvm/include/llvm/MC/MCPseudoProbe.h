@@ -54,7 +54,6 @@
 #ifndef LLVM_MC_MCPSEUDOPROBE_H
 #define LLVM_MC_MCPSEUDOPROBE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -63,6 +62,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include <functional>
 #include <memory>
@@ -179,7 +179,8 @@ public:
 
   uint64_t getGuid() const { return Guid; };
   MCSymbol *getLabel() const { return Label; }
-  LLVM_ABI void emit(MCObjectStreamer *MCOS, const MCPseudoProbe *LastProbe) const;
+  LLVM_ABI void emit(MCObjectStreamer *MCOS,
+                     const MCPseudoProbe *LastProbe) const;
 };
 
 // Represents a callsite with caller function name and probe id
@@ -217,7 +218,7 @@ public:
 
   // Print pseudo probe while disassembling
   LLVM_ABI void print(raw_ostream &OS, const GUIDProbeFunctionMap &GUID2FuncMAP,
-             bool ShowName) const;
+                      bool ShowName) const;
 };
 
 // Address to pseudo probes map.
@@ -304,7 +305,7 @@ public:
 
   // MCPseudoProbeInlineTree method based on Inlinees
   LLVM_ABI void addPseudoProbe(const MCPseudoProbe &Probe,
-                      const MCPseudoProbeInlineStack &InlineStack);
+                               const MCPseudoProbeInlineStack &InlineStack);
   LLVM_ABI void emit(MCObjectStreamer *MCOS, const MCPseudoProbe *&LastProbe);
 };
 
@@ -435,7 +436,7 @@ public:
   // If pseudo_probe_desc section is mapped to memory and \p IsMMapped is true,
   // uses StringRefs pointing to the section.
   LLVM_ABI bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size,
-                             bool IsMMapped = false);
+                                      bool IsMMapped = false);
 
   // Decode pseudo_probe section to count the number of probes and inlined
   // function records for each function record.
@@ -446,8 +447,8 @@ public:
   // Decode pseudo_probe section to build address to probes map for specifed
   // functions only.
   LLVM_ABI bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size,
-                             const Uint64Set &GuildFilter,
-                             const Uint64Map &FuncStartAddrs);
+                                      const Uint64Set &GuildFilter,
+                                      const Uint64Map &FuncStartAddrs);
 
   // Print pseudo_probe_desc section info
   LLVM_ABI void printGUID2FuncDescMap(raw_ostream &OS);
@@ -459,7 +460,8 @@ public:
   LLVM_ABI void printProbesForAllAddresses(raw_ostream &OS);
 
   // Look up the probe of a call for the input address
-  LLVM_ABI const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const;
+  LLVM_ABI const MCDecodedPseudoProbe *
+  getCallProbeForAddr(uint64_t Address) const;
 
   LLVM_ABI const MCPseudoProbeFuncDesc *getFuncDescForGUID(uint64_t GUID) const;
 

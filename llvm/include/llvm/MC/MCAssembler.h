@@ -9,7 +9,6 @@
 #ifndef LLVM_MC_MCASSEMBLER_H
 #define LLVM_MC_MCASSEMBLER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -18,6 +17,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <algorithm>
 #include <cassert>
@@ -136,9 +136,10 @@ public:
   // concrete and require clients to pass in a target like object. The other
   // option is to make this abstract, and have targets provide concrete
   // implementations as we do with AsmParser.
-  LLVM_ABI MCAssembler(MCContext &Context, std::unique_ptr<MCAsmBackend> Backend,
-              std::unique_ptr<MCCodeEmitter> Emitter,
-              std::unique_ptr<MCObjectWriter> Writer);
+  LLVM_ABI MCAssembler(MCContext &Context,
+                       std::unique_ptr<MCAsmBackend> Backend,
+                       std::unique_ptr<MCCodeEmitter> Emitter,
+                       std::unique_ptr<MCObjectWriter> Writer);
   MCAssembler(const MCAssembler &) = delete;
   MCAssembler &operator=(const MCAssembler &) = delete;
 
@@ -165,7 +166,8 @@ public:
   LLVM_ABI const MCSymbol *getBaseSymbol(const MCSymbol &Symbol) const;
 
   /// Emit the section contents to \p OS.
-  LLVM_ABI void writeSectionData(raw_ostream &OS, const MCSection *Section) const;
+  LLVM_ABI void writeSectionData(raw_ostream &OS,
+                                 const MCSection *Section) const;
 
   /// Check whether a given symbol has been flagged with .thumb_func.
   LLVM_ABI bool isThumbFunc(const MCSymbol *Func) const;
@@ -229,8 +231,9 @@ public:
 
   /// Write the necessary bundle padding to \p OS.
   /// Expects a fragment \p F containing instructions and its size \p FSize.
-  LLVM_ABI void writeFragmentPadding(raw_ostream &OS, const MCEncodedFragment &F,
-                            uint64_t FSize) const;
+  LLVM_ABI void writeFragmentPadding(raw_ostream &OS,
+                                     const MCEncodedFragment &F,
+                                     uint64_t FSize) const;
 
   LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
   // Record pending errors during layout iteration, as they may go away once the

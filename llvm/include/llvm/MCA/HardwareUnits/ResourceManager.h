@@ -15,12 +15,12 @@
 #ifndef LLVM_MCA_HARDWAREUNITS_RESOURCEMANAGER_H
 #define LLVM_MCA_HARDWAREUNITS_RESOURCEMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/Instruction.h"
 #include "llvm/MCA/Support.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {
@@ -212,7 +212,8 @@ class ResourceState {
   }
 
 public:
-  LLVM_ABI ResourceState(const MCProcResourceDesc &Desc, unsigned Index, uint64_t Mask);
+  LLVM_ABI ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
+                         uint64_t Mask);
 
   unsigned getProcResourceID() const { return ProcResourceDescIndex; }
   uint64_t getResourceMask() const { return ResourceMask; }
@@ -383,7 +384,7 @@ class ResourceManager {
   // Overrides the selection strategy for the processor resource with the given
   // mask.
   LLVM_ABI void setCustomStrategyImpl(std::unique_ptr<ResourceStrategy> S,
-                             uint64_t ResourceMask);
+                                      uint64_t ResourceMask);
 
 public:
   LLVM_ABI ResourceManager(const MCSchedModel &SM);
@@ -447,16 +448,18 @@ public:
   // schedule, no matter in which order individual uses are processed. For that
   // reason, the vector of resource uses is simply (and quickly) processed in
   // sequence. The resulting schedule is eventually stored into vector `Pipes`.
-  LLVM_ABI void fastIssueInstruction(const InstrDesc &Desc,
-                            SmallVectorImpl<ResourceWithCycles> &Pipes);
+  LLVM_ABI void
+  fastIssueInstruction(const InstrDesc &Desc,
+                       SmallVectorImpl<ResourceWithCycles> &Pipes);
 
   // Selects pipeline resources consumed by an instruction.
   // This method works under the assumption that used resource groups may
   // partially overlap. This complicates the selection process, because the
   // order in which uses are processed matters. The logic internally prioritizes
   // groups which are more constrained than others.
-  LLVM_ABI void issueInstructionImpl(const InstrDesc &Desc,
-                            SmallVectorImpl<ResourceWithCycles> &Pipes);
+  LLVM_ABI void
+  issueInstructionImpl(const InstrDesc &Desc,
+                       SmallVectorImpl<ResourceWithCycles> &Pipes);
 
   LLVM_ABI void cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed);
 

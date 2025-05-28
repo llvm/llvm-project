@@ -15,11 +15,11 @@
 #ifndef LLVM_MCA_INSTRUCTION_H
 #define LLVM_MCA_INSTRUCTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCRegister.h" // definition of MCPhysReg.
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 
 #ifndef NDEBUG

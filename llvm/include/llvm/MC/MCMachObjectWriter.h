@@ -9,7 +9,6 @@
 #ifndef LLVM_MC_MCMACHOBJECTWRITER_H
 #define LLVM_MC_MCMACHOBJECTWRITER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -19,6 +18,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cstdint>

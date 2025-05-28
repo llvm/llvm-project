@@ -14,10 +14,10 @@
 #ifndef LLVM_MC_MCINSTRDESC_H
 #define LLVM_MC_MCINSTRDESC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MCRegisterInfo;
@@ -330,7 +330,8 @@ public:
   /// Return true if this is a branch or an instruction which directly
   /// writes to the program counter. Considered 'may' affect rather than
   /// 'does' affect as things like predication are not taken into account.
-  LLVM_ABI bool mayAffectControlFlow(const MCInst &MI, const MCRegisterInfo &RI) const;
+  LLVM_ABI bool mayAffectControlFlow(const MCInst &MI,
+                                     const MCRegisterInfo &RI) const;
 
   /// Return true if this instruction has a predicate operand
   /// that controls execution. It may be set to 'always', or may be set to other
@@ -591,8 +592,9 @@ public:
 
   /// Return true if this instruction implicitly
   /// defines the specified physical register.
-  LLVM_ABI bool hasImplicitDefOfPhysReg(MCRegister Reg,
-                               const MCRegisterInfo *MRI = nullptr) const;
+  LLVM_ABI bool
+  hasImplicitDefOfPhysReg(MCRegister Reg,
+                          const MCRegisterInfo *MRI = nullptr) const;
 
   /// Return the scheduling class for this instruction.  The
   /// scheduling class is an index into the InstrItineraryData table.  This
@@ -619,7 +621,7 @@ public:
   /// Return true if this instruction defines the specified physical
   /// register, either explicitly or implicitly.
   LLVM_ABI bool hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,
-                       const MCRegisterInfo &RI) const;
+                                const MCRegisterInfo &RI) const;
 };
 
 } // end namespace llvm

@@ -9,7 +9,6 @@
 #ifndef LLVM_MC_MCPARSER_MCASMPARSER_H
 #define LLVM_MC_MCPARSER_MCASMPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -18,6 +17,7 @@
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 #include <string>
@@ -340,11 +340,12 @@ public:
 
 /// Create an MCAsmParser instance for parsing assembly similar to gas syntax
 LLVM_ABI MCAsmParser *createMCAsmParser(SourceMgr &, MCContext &, MCStreamer &,
-                               const MCAsmInfo &, unsigned CB = 0);
+                                        const MCAsmInfo &, unsigned CB = 0);
 
 /// Create an MCAsmParser instance for parsing Microsoft MASM-style assembly
 LLVM_ABI MCAsmParser *createMCMasmParser(SourceMgr &, MCContext &, MCStreamer &,
-                                const MCAsmInfo &, struct tm, unsigned CB = 0);
+                                         const MCAsmInfo &, struct tm,
+                                         unsigned CB = 0);
 
 } // end namespace llvm
 

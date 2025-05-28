@@ -9,10 +9,10 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 #define LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>

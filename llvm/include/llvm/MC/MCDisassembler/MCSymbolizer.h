@@ -15,9 +15,9 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCSYMBOLIZER_H
 #define LLVM_MC_MCDISASSEMBLER_MCSYMBOLIZER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 #include <utility>

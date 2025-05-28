@@ -13,12 +13,12 @@
 #ifndef LLVM_MC_MCSYMBOL_H
 #define LLVM_MC_MCSYMBOL_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -178,7 +178,8 @@ protected:
 
   // Provide custom new/delete as we will only allocate space for a name
   // if we need one.
-  LLVM_ABI void *operator new(size_t s, const MCSymbolTableEntry *Name, MCContext &Ctx);
+  LLVM_ABI void *operator new(size_t s, const MCSymbolTableEntry *Name,
+                              MCContext &Ctx);
 
 private:
   void operator delete(void *);

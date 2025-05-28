@@ -14,7 +14,6 @@
 #ifndef LLVM_MCA_INSTRBUILDER_H
 #define LLVM_MCA_INSTRBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -24,6 +23,7 @@
 #include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/MCA/Instruction.h"
 #include "llvm/MCA/Support.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -101,8 +101,8 @@ class InstrBuilder {
 
 public:
   LLVM_ABI InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
-               const MCRegisterInfo &RI, const MCInstrAnalysis *IA,
-               const InstrumentManager &IM, unsigned CallLatency);
+                        const MCRegisterInfo &RI, const MCInstrAnalysis *IA,
+                        const InstrumentManager &IM, unsigned CallLatency);
 
   void clear() {
     Descriptors.clear();

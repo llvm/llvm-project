@@ -17,13 +17,13 @@
 #ifndef LLVM_MCA_CONTEXT_H
 #define LLVM_MCA_CONTEXT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
 #include "llvm/MCA/Pipeline.h"
 #include "llvm/MCA/SourceMgr.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -68,15 +68,15 @@ public:
 
   /// Construct a basic pipeline for simulating an out-of-order pipeline.
   /// This pipeline consists of Fetch, Dispatch, Execute, and Retire stages.
-  LLVM_ABI std::unique_ptr<Pipeline> createDefaultPipeline(const PipelineOptions &Opts,
-                                                  SourceMgr &SrcMgr,
-                                                  CustomBehaviour &CB);
+  LLVM_ABI std::unique_ptr<Pipeline>
+  createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr,
+                        CustomBehaviour &CB);
 
   /// Construct a basic pipeline for simulating an in-order pipeline.
   /// This pipeline consists of Fetch, InOrderIssue, and Retire stages.
-  LLVM_ABI std::unique_ptr<Pipeline> createInOrderPipeline(const PipelineOptions &Opts,
-                                                  SourceMgr &SrcMgr,
-                                                  CustomBehaviour &CB);
+  LLVM_ABI std::unique_ptr<Pipeline>
+  createInOrderPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr,
+                        CustomBehaviour &CB);
 };
 
 } // namespace mca
