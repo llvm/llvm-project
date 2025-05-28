@@ -740,17 +740,17 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
 
   // DXC will treat a postive signed integer as unsigned
   if (!Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
-    auto UInt = handleUIntLiteral();
+    std::optional<uint32_t> UInt = handleUIntLiteral();
     if (!UInt.has_value())
       return std::nullopt;
     return (float)UInt.value();
   } else if (tryConsumeExpectedToken(TokenKind::int_literal)) {
-    auto Int = handleIntLiteral(Negated);
+    std::optional<int32_t> = handleIntLiteral(Negated);
     if (!Int.has_value())
       return std::nullopt;
     return (float)Int.value();
   } else if (tryConsumeExpectedToken(TokenKind::float_literal)) {
-    auto Float = handleFloatLiteral(Negated);
+    std::optional<float> Float = handleFloatLiteral(Negated);
     if (!Float.has_value())
       return std::nullopt;
     return Float.value();
