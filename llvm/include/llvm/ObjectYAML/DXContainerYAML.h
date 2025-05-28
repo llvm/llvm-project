@@ -90,29 +90,53 @@ struct RootDescriptorYaml {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
-struct RootParameterYamlDesc {
+struct RootParameterHeaderYaml {
   uint32_t Type;
   uint32_t Visibility;
   uint32_t Offset;
-  RootParameterYamlDesc() {};
-  RootParameterYamlDesc(uint32_t T) : Type(T) {
-    switch (T) {
 
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      Constants = RootConstantsYaml();
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      Descriptor = RootDescriptorYaml();
-      break;
+  RootParameterHeaderYaml(){};
+  RootParameterHeaderYaml(uint32_t T) : Type(T) {}
+};
+
+struct RootParameterLocationYaml {
+  RootParameterHeaderYaml Header;
+  std::optional<size_t> IndexInSignature;
+
+  RootParameterLocationYaml(){};
+  explicit RootParameterLocationYaml(RootParameterHeaderYaml Header)
+      : Header(Header) {}
+};
+
+struct RootParameterYamlDesc {
+  SmallVector<RootParameterLocationYaml> Locations;
+
+  SmallVector<RootConstantsYaml> Constants;
+  SmallVector<RootDescriptorYaml> Descriptors;
+
+  template <typename T>
+  T &getOrInsertImpl(RootParameterLocationYaml &ParamDesc,
+                     SmallVectorImpl<T> &Container) {
+    if (!ParamDesc.IndexInSignature) {
+      ParamDesc.IndexInSignature = Container.size();
+      Container.emplace_back();
     }
+    return Container[*ParamDesc.IndexInSignature];
   }
 
-  union {
-    RootConstantsYaml Constants;
-    RootDescriptorYaml Descriptor;
-  };
+  RootConstantsYaml &
+  getOrInsertConstants(RootParameterLocationYaml &ParamDesc) {
+    return getOrInsertImpl(ParamDesc, Constants);
+  }
+
+  RootDescriptorYaml &
+  getOrInsertDescriptor(RootParameterLocationYaml &ParamDesc) {
+    return getOrInsertImpl(ParamDesc, Descriptors);
+  }
+
+  void insertLocation(RootParameterLocationYaml &Location) {
+    Locations.push_back(Location);
+  }
 };
 
 struct RootSignatureYamlDesc {
@@ -124,13 +148,9 @@ struct RootSignatureYamlDesc {
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
 
-  SmallVector<RootParameterYamlDesc> Parameters;
+  RootParameterYamlDesc Parameters;
 
   uint32_t getEncodedFlags();
-
-  iterator_range<RootParameterYamlDesc *> params() {
-    return make_range(Parameters.begin(), Parameters.end());
-  }
 
   static llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
   create(const object::DirectX::RootSignature &Data);
@@ -242,7 +262,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterYamlDesc)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterLocationYaml)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -315,8 +335,12 @@ template <> struct MappingTraits<DXContainerYAML::RootSignatureYamlDesc> {
                       DXContainerYAML::RootSignatureYamlDesc &RootSignature);
 };
 
-template <> struct MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc> {
-  static void mapping(IO &IO, llvm::DXContainerYAML::RootParameterYamlDesc &P);
+template <>
+struct MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
+                            DXContainerYAML::RootSignatureYamlDesc> {
+  static void mapping(IO &IO,
+                      llvm::DXContainerYAML::RootParameterLocationYaml &L,
+                      DXContainerYAML::RootSignatureYamlDesc &S);
 };
 
 template <> struct MappingTraits<llvm::DXContainerYAML::RootConstantsYaml> {
