@@ -839,7 +839,7 @@ static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
         D.getSourceLanguages(), OS,
         [&](const Record *L) {
           StringRef N = L->getValueAsString("name");
-          OS << "SourceLanguage::" << BaseRecord::formatName(N);
+          OS << "SourceLanguage::" << BaseRecord::getSnakeName(N);
         },
         " | ");
     OS << ";\n";
