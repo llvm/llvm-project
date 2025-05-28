@@ -16837,19 +16837,22 @@ static void knownBitsForSBFE(const MachineInstr &MI, GISelValueTracking &VT,
   const MachineOperand &Src1 = MI.getOperand(2);
 
   unsigned Src1Cst = 0;
-  if (Src1.isImm())
+  if (Src1.isImm()) {
     Src1Cst = Src1.getImm();
-  else if (Src1.isReg()) {
+  } else if (Src1.isReg()) {
     auto Cst = getIConstantVRegValWithLookThrough(Src1.getReg(), MRI);
     if (!Cst)
       return;
     Src1Cst = Cst->Value.getZExtValue();
-  } else
+  } else {
     return;
+  }
 
-  const unsigned Mask = maskTrailingOnes<unsigned>(6);
-  const unsigned Offset = Src1Cst & Mask;
-  const unsigned Width = (Src1Cst >> 16) & Mask;
+  // Offset is at bits [4:0] for 32 bit, [5:0] for 64 bit.
+  // Width is always [22:16].
+  const unsigned Offset =
+      Src1Cst & maskTrailingOnes<unsigned>((BFEWidth == 32) ? 5 : 6);
+  const unsigned Width = (Src1Cst >> 16) & maskTrailingOnes<unsigned>(6);
 
   VT.computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts);
 
