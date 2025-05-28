@@ -17,6 +17,7 @@
 #endif
 
 #include <__algorithm/copy_n.h>
+#include <__algorithm/find.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/min.h>
 #include <__assert>
@@ -51,6 +52,10 @@ private:
 
     friend constexpr bool operator<(const __encoding_data& __e, const __id_rep __i) noexcept {
       return __e.__mib_rep_ < __i;
+    }
+
+    friend constexpr bool operator==(const __encoding_data& __e, std::string_view __name) noexcept {
+      return __comp_name(__name, string_view(__e.__name_, __e.__name_size_));
     }
   };
 
@@ -531,18 +536,10 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI static constexpr const __encoding_data* __find_encoding_data(string_view __a) {
     _LIBCPP_ASSERT(__a.size() <= max_name_length, "Passing encoding name longer than max_name_length!");
-    auto __data_ptr = __text_encoding_data + 2, __data_last = std::end(__text_encoding_data) - 1;
+    auto __data_ptr = __text_encoding_data + 2, __data_last = std::end(__text_encoding_data);
+    auto __found_data = std::find(__data_ptr, __data_last, __a);
 
-    for (; __data_ptr != __data_last; __data_ptr++) {
-      if (__comp_name(__a, string_view(__data_ptr->__name_, __data_ptr->__name_size_))) {
-        const auto __found_id = __data_ptr->__mib_rep_;
-        while (__data_ptr[-1].__mib_rep_ == __found_id)
-          __data_ptr--;
-        return __data_ptr;
-      }
-    }
-
-    return __text_encoding_data; // other
+    return __found_data != __data_last ? __found_data : __text_encoding_data; // other
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr const __encoding_data* __find_encoding_data_by_id(id __i) {
