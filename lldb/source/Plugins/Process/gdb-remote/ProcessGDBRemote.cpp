@@ -894,14 +894,14 @@ Status ProcessGDBRemote::HandleGPUActions(const GPUActions &gpu_action) {
   // Any commands below require a GPU process
   if (!(gpu_action.load_libraries || gpu_action.resume_gpu_process || 
       gpu_action.wait_for_gpu_process_to_resume))
-    return;
+    return error;
   lldb::TargetSP gpu_target_sp = 
       GetTarget().GetGPUPluginTarget(gpu_action.plugin_name);
   if (!gpu_target_sp)
-    return;
+    return error;
   lldb::ProcessSP gpu_process_sp = gpu_target_sp->GetProcessSP();
   if (!gpu_process_sp)
-    return;
+    return error;
   // Save the resume ID in case we need to wait for the process to resume below.
   const uint32_t gpu_process_resume_id = gpu_process_sp->GetResumeID();
   if (gpu_action.load_libraries) {
