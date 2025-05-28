@@ -82,7 +82,8 @@ private:
   const llvm::StringRef CStringEntryPrefix = "CSTR:";
 
   std::optional<int> getSymbolPriority(const Defined *sym);
-  std::optional<int> getSymbolOrCStringPriority(const StringRef key, InputFile *f);
+  std::optional<int> getSymbolOrCStringPriority(const StringRef key,
+                                                InputFile *f);
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
   llvm::MapVector<SectionPair, uint64_t> callGraphProfile;
 };
