@@ -1,8 +1,8 @@
 // Test that NEON types are defined, even when arm_neon.h is not included.
 // as required by AAPCS64 "Support for Advanced SIMD Extensions".
 
-// RUN: %clang_cc1 -ast-dump -triple aarch64-linux-gnu %s -x c | FileCheck --check-prefixes=CHECK,A64 %s
-// RUN: %clang_cc1 -ast-dump -triple aarch64-linux-gnu %s -x c++ | FileCheck --check-prefixes=CHECK,A64 %s
+// RUN: %clang_cc1 -ast-dump -triple aarch64-linux-gnu %s -x c | FileCheck %s
+// RUN: %clang_cc1 -ast-dump -triple aarch64-linux-gnu %s -x c++ | FileCheck %s
 // RUN: %clang_cc1 -verify -verify-ignore-unexpected=note -triple x86_64 %s -x c
 // RUN: %clang_cc1 -verify -verify-ignore-unexpected=note -triple x86_64 %s -x c++
 // RUN: %clang_cc1 -verify -verify-ignore-unexpected=note -triple arm-linux-gnu %s -x c
@@ -113,13 +113,13 @@ __Bfloat16x8_t Bfloat16x8;
 // expected-error@-2{{unknown type name '__Bfloat16x8_t'}}
 
 __mfp8 mfp8;
-// A64: mfp8 '__mfp8'
+// CHECK: mfp8 '__mfp8'
 // expected-error@-2{{unknown type name '__mfp8'}}
 
 __Mfloat8x8_t Mfloat8x8;
-// A64: Mfloat8x8 '__Mfloat8x8_t':'__attribute__((neon_vector_type(8))) __mfp8'
+// CHECK: Mfloat8x8 '__Mfloat8x8_t':'__attribute__((neon_vector_type(8))) __mfp8'
 // expected-error@-2{{unknown type name '__Mfloat8x8_t'}}
 
 __Mfloat8x16_t Mfloat8x16;
-// A64: Mfloat8x16 '__Mfloat8x16_t':'__attribute__((neon_vector_type(16))) __mfp8'
+// CHECK: Mfloat8x16 '__Mfloat8x16_t':'__attribute__((neon_vector_type(16))) __mfp8'
 // expected-error@-2{{unknown type name '__Mfloat8x16_t'}}
