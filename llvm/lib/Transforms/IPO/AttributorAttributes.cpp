@@ -12579,7 +12579,7 @@ struct AAInvariantLoadPointerImpl
 
   ChangeStatus updateImpl(Attributor &A) override {
     if (isKnownInvariant())
-      return ChangeStatus::UNCHANGED;
+      return indicateOptimisticFixpoint();
 
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
@@ -12605,15 +12605,13 @@ struct AAInvariantLoadPointerImpl
     const auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
         getIRPosition(), this, DepClassTy::REQUIRED);
 
-    if (!AUO->forallUnderlyingObjects(IsInvariantLoadIfPointer)) {
-      removeAssumedBits(IS_INVARIANT);
-      return ChangeStatus::CHANGED;
-    }
+    if (!AUO->forallUnderlyingObjects(IsInvariantLoadIfPointer))
+      return indicatePessimisticFixpoint();
 
     if (!UsedAssumedInformation) {
       // pointer is known (not assumed) to be invariant
       addKnownBits(IS_INVARIANT);
-      return ChangeStatus::CHANGED;
+      return indicateOptimisticFixpoint() | Changed;
     }
 
     return Changed;
@@ -12671,24 +12669,44 @@ protected:
     if (isKnown(IS_NOALIAS) || !isAssumed(IS_NOALIAS))
       return ChangeStatus::UNCHANGED;
 
-    const auto *ANoAlias = A.getOrCreateAAFor<AANoAlias>(getIRPosition(), this,
-                                                         DepClassTy::REQUIRED);
-    if (!ANoAlias)
-      return tryInferNoAlias(A);
+    const auto *F = getAssociatedFunction();
 
-    if (!ANoAlias->isAssumedNoAlias()) {
+    if (F && isCallableCC(F->getCallingConv())) {
+      // program-wide alias information cannot be inferred
       removeAssumedBits(IS_NOALIAS);
       return ChangeStatus::CHANGED;
     }
-    if (ANoAlias->isKnownNoAlias())
-      addKnownBits(IS_NOALIAS);
 
-    return ChangeStatus::UNCHANGED;
-  }
+    // try to use AANoAlias
+    if (const auto *ANoAlias = A.getOrCreateAAFor<AANoAlias>(
+            getIRPosition(), this, DepClassTy::REQUIRED)) {
+      if (ANoAlias->isKnownNoAlias()) {
+        addKnownBits(IS_NOALIAS);
+        return ChangeStatus::UNCHANGED;
+      }
 
-  /// Fallback method if updateNoAlias fails to infer noalias information from
-  /// AANoAlias.
-  virtual ChangeStatus tryInferNoAlias(Attributor &A) {
+      if (!ANoAlias->isAssumedNoAlias()) {
+        removeAssumedBits(IS_NOALIAS);
+        return ChangeStatus::CHANGED;
+      }
+
+      return ChangeStatus::UNCHANGED;
+    }
+
+    // if the function is not callable, try to infer noalias from argument
+    // attribute, since it is applicable for the duration of the function
+    if (const auto *Arg = getAssociatedArgument()) {
+      if (Arg->hasNoAliasAttr()) {
+        addKnownBits(IS_NOALIAS);
+        return ChangeStatus::UNCHANGED;
+      }
+
+      // noalias information is not provided, and cannot be inferred,
+      // so we conservatively assume the pointer aliases.
+      removeAssumedBits(IS_NOALIAS);
+      return ChangeStatus::CHANGED;
+    }
+
     return ChangeStatus::UNCHANGED;
   }
 
@@ -12696,28 +12714,45 @@ protected:
     if (isKnown(IS_READONLY) || !isAssumed(IS_READONLY))
       return ChangeStatus::UNCHANGED;
 
-    // AAMemoryBehavior may crash if value is global
-    if (!getAssociatedFunction())
-      return tryInferReadOnly(A);
+    const auto *F = getAssociatedFunction();
 
-    const auto *AMemoryBehavior = A.getOrCreateAAFor<AAMemoryBehavior>(
-        getIRPosition(), this, DepClassTy::REQUIRED);
-    if (!AMemoryBehavior)
-      return tryInferReadOnly(A);
+    if (!F)
+      return ChangeStatus::UNCHANGED;
 
-    if (!AMemoryBehavior->isAssumedReadOnly()) {
+    if (isCallableCC(F->getCallingConv())) {
+      // readonly attribute is only useful if applicable program-wide
       removeAssumedBits(IS_READONLY);
       return ChangeStatus::CHANGED;
     }
-    if (AMemoryBehavior->isKnownReadOnly())
-      addKnownBits(IS_READONLY);
 
-    return ChangeStatus::UNCHANGED;
-  }
+    // try to use AAMemoryBehavior to infer readonly attribute
+    if (const auto *AMemoryBehavior = A.getOrCreateAAFor<AAMemoryBehavior>(
+            getIRPosition(), this, DepClassTy::REQUIRED)) {
+      if (!AMemoryBehavior->isAssumedReadOnly()) {
+        removeAssumedBits(IS_READONLY);
+        return ChangeStatus::CHANGED;
+      }
 
-  /// Fallback method if updateReadOnly fails to infer readonly information from
-  /// AAMemoryBehavior.
-  virtual ChangeStatus tryInferReadOnly(Attributor &A) {
+      if (AMemoryBehavior->isKnownReadOnly()) {
+        addKnownBits(IS_READONLY);
+        return ChangeStatus::UNCHANGED;
+      }
+
+      return ChangeStatus::UNCHANGED;
+    }
+
+    if (const auto *Arg = getAssociatedArgument()) {
+      if (Arg->onlyReadsMemory()) {
+        addKnownBits(IS_READONLY);
+        return ChangeStatus::UNCHANGED;
+      }
+
+      // readonly information is not provided, and cannot be inferred from
+      // AAMemoryBehavior
+      removeAssumedBits(IS_READONLY);
+      return ChangeStatus::CHANGED;
+    }
+
     return ChangeStatus::UNCHANGED;
   }
 };
@@ -12741,33 +12776,6 @@ struct AAInvariantLoadPointerCallSiteReturned final
 struct AAInvariantLoadPointerArgument final : AAInvariantLoadPointerImpl {
   AAInvariantLoadPointerArgument(const IRPosition &IRP, Attributor &A)
       : AAInvariantLoadPointerImpl(IRP, A) {}
-
-protected:
-  ChangeStatus tryInferNoAlias(Attributor &A) override {
-    const auto *Arg = getAssociatedArgument();
-    if (Arg->hasNoAliasAttr()) {
-      addKnownBits(IS_NOALIAS);
-      return ChangeStatus::UNCHANGED;
-    }
-
-    // noalias information is not provided, and cannot be inferred from
-    // AANoAlias
-    removeAssumedBits(IS_NOALIAS);
-    return ChangeStatus::CHANGED;
-  }
-
-  ChangeStatus tryInferReadOnly(Attributor &A) override {
-    const auto *Arg = getAssociatedArgument();
-    if (Arg->onlyReadsMemory()) {
-      addKnownBits(IS_READONLY);
-      return ChangeStatus::UNCHANGED;
-    }
-
-    // readonly information is not provided, and cannot be inferred from
-    // AAMemoryBehavior
-    removeAssumedBits(IS_READONLY);
-    return ChangeStatus::CHANGED;
-  }
 };
 
 struct AAInvariantLoadPointerCallSiteArgument final

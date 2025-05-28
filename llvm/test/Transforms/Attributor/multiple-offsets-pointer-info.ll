@@ -10,7 +10,7 @@ define i8 @select_offsets_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_simplifiable_1
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = call noalias ptr @calloc(i64 noundef 1024, i64 noundef 1)
+; CHECK-NEXT:    [[BYTES:%.*]] = call ptr @calloc(i64 noundef 1024, i64 noundef 1)
 ; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
 ; CHECK-NEXT:    store i8 23, ptr [[GEP23]], align 4
 ; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 29
@@ -190,7 +190,7 @@ define i8 @select_offsets_not_simplifiable_3(i1 %cnd1, i1 %cnd2) {
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_not_simplifiable_3
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = call noalias ptr @calloc(i64 noundef 1024, i64 noundef 1)
+; CHECK-NEXT:    [[BYTES:%.*]] = call ptr @calloc(i64 noundef 1024, i64 noundef 1)
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
 ; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
@@ -214,7 +214,7 @@ define i8 @select_offsets_not_simplifiable_4(i1 %cnd1, i1 %cnd2) {
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_not_simplifiable_4
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = call noalias ptr @calloc(i64 noundef 1024, i64 noundef 1)
+; CHECK-NEXT:    [[BYTES:%.*]] = call ptr @calloc(i64 noundef 1024, i64 noundef 1)
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
 ; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
@@ -445,7 +445,7 @@ define i8 @phi_gep_not_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_not_simplifiable_2
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = call noalias ptr @calloc(i64 noundef 1024, i64 noundef 1)
+; CHECK-NEXT:    [[BYTES:%.*]] = call ptr @calloc(i64 noundef 1024, i64 noundef 1)
 ; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:

@@ -6298,6 +6298,7 @@ struct AAInvariantLoadPointer : public AbstractAttribute {
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.getAssociatedType()->isPointerTy())
       return false;
+
     return AbstractAttribute::isValidIRPositionForInit(A, IRP);
   }
 
