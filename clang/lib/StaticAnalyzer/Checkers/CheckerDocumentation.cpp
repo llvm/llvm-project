@@ -16,7 +16,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 
 using namespace clang;
 using namespace ento;
@@ -40,6 +39,7 @@ class CheckerDocumentation
           check::ASTDecl<FunctionDecl>,
           check::BeginFunction,
           check::Bind,
+          check::BlockEntrance,
           check::BranchCondition,
           check::ConstPointerEscape,
           check::DeadSymbols,
@@ -129,7 +129,20 @@ public:
   /// check::PostCall
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const {}
 
-  /// Pre-visit of the condition statement of a branch (such as IfStmt).
+  /// Pre-visit of the condition statement of a branch.
+  /// For example:
+  ///  - logical operators (&&, ||)
+  ///  - if, do, while, for, ranged-for statements
+  ///  - ternary operators (?:), gnu conditionals, gnu choose expressions
+  /// Interestingly, switch statements don't seem to trigger BranchCondition.
+  ///
+  /// check::BlockEntrance is a similar callback, which is strictly more
+  /// generic. Prefer check::BranchCondition to check::BlockEntrance if
+  /// pre-visiting conditional statements is enough for the checker.
+  /// Note that check::BlockEntrance is also invoked for leaving basic blocks
+  /// while entering the next.
+  ///
+  /// check::BranchCondition
   void checkBranchCondition(const Stmt *Condition, CheckerContext &Ctx) const {}
 
   /// Post-visit the C++ operator new's allocation call.
@@ -165,6 +178,29 @@ public:
   ///
   /// check::Bind
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &) const {}
+
+  /// Called after a CFG edge is taken within a function.
+  ///
+  /// This callback can be used to obtain information about potential branching
+  /// points or any other constructs that involve traversing a CFG edge.
+  ///
+  /// check::BranchCondition is a similar callback, which is only invoked for
+  /// pre-visiting the condition statement of a branch. Prefer that callback if
+  /// possible.
+  ///
+  /// \remark There is no CFG edge from the caller to a callee, consequently
+  /// this callback is not invoked for "inlining" a function call.
+  /// \remark Once a function call is inlined, we will start from the imaginary
+  /// "entry" basic block of that CFG. This callback will be invoked for
+  /// entering the real first basic block of the "inlined" function body from
+  /// that "entry" basic block.
+  /// \remark This callback is also invoked for entering the imaginary "exit"
+  /// basic block of the CFG when returning from a function.
+  ///
+  /// \param E The ProgramPoint that describes the transition.
+  ///
+  /// check::BlockEntrance
+  void checkBlockEntrance(const BlockEntrance &E, CheckerContext &) const {}
 
   /// Called whenever a symbol becomes dead.
   ///

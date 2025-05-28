@@ -13505,7 +13505,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    v_lshl_or_b32 v77, v11, 8, v12
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(1)
 ; ALIGNED-NEXT:    buffer_store_dword v125, off, s[0:3], s32 offset:1308 ; 4-byte Folded Spill
-; ALIGNED-NEXT:    v_lshl_or_b32 v70, v91, 16, v77
+; ALIGNED-NEXT:    v_lshl_or_b32 v71, v91, 16, v77
 ; ALIGNED-NEXT:    v_lshl_or_b32 v77, v6, 8, v8
 ; ALIGNED-NEXT:    v_lshl_or_b32 v91, v7, 8, v5
 ; ALIGNED-NEXT:    v_lshl_or_b32 v4, v91, 16, v77

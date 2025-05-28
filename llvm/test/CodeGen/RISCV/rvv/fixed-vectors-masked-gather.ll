@@ -14191,37 +14191,37 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV64ZVE32F-NEXT:    lbu t0, 13(a0)
 ; RV64ZVE32F-NEXT:    slli a2, a2, 8
 ; RV64ZVE32F-NEXT:    slli a4, a4, 8
+; RV64ZVE32F-NEXT:    slli a6, a6, 8
 ; RV64ZVE32F-NEXT:    or a1, a2, a1
 ; RV64ZVE32F-NEXT:    or a3, a4, a3
-; RV64ZVE32F-NEXT:    lbu a2, 16(a0)
-; RV64ZVE32F-NEXT:    lbu a4, 17(a0)
-; RV64ZVE32F-NEXT:    lbu t1, 20(a0)
-; RV64ZVE32F-NEXT:    lbu t2, 21(a0)
-; RV64ZVE32F-NEXT:    slli a6, a6, 8
-; RV64ZVE32F-NEXT:    or a5, a6, a5
+; RV64ZVE32F-NEXT:    or a2, a6, a5
+; RV64ZVE32F-NEXT:    lbu a4, 16(a0)
+; RV64ZVE32F-NEXT:    lbu a5, 17(a0)
+; RV64ZVE32F-NEXT:    lbu a6, 20(a0)
+; RV64ZVE32F-NEXT:    lbu t1, 21(a0)
 ; RV64ZVE32F-NEXT:    slli t0, t0, 8
-; RV64ZVE32F-NEXT:    slli a4, a4, 8
-; RV64ZVE32F-NEXT:    slli t2, t2, 8
-; RV64ZVE32F-NEXT:    or a6, t0, a7
-; RV64ZVE32F-NEXT:    or a2, a4, a2
-; RV64ZVE32F-NEXT:    or a4, t2, t1
-; RV64ZVE32F-NEXT:    lbu a7, 25(a0)
-; RV64ZVE32F-NEXT:    lbu t0, 24(a0)
+; RV64ZVE32F-NEXT:    slli a5, a5, 8
+; RV64ZVE32F-NEXT:    or a7, t0, a7
+; RV64ZVE32F-NEXT:    or a4, a5, a4
+; RV64ZVE32F-NEXT:    lbu a5, 24(a0)
+; RV64ZVE32F-NEXT:    lbu t0, 25(a0)
+; RV64ZVE32F-NEXT:    slli t1, t1, 8
+; RV64ZVE32F-NEXT:    or a6, t1, a6
 ; RV64ZVE32F-NEXT:    lbu t1, 28(a0)
 ; RV64ZVE32F-NEXT:    lbu a0, 29(a0)
-; RV64ZVE32F-NEXT:    slli a7, a7, 8
-; RV64ZVE32F-NEXT:    or a7, a7, t0
+; RV64ZVE32F-NEXT:    slli t0, t0, 8
+; RV64ZVE32F-NEXT:    or a5, t0, a5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    slli a0, a0, 8
 ; RV64ZVE32F-NEXT:    or a0, a0, t1
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
-; RV64ZVE32F-NEXT:    vmv.v.x v9, a2
+; RV64ZVE32F-NEXT:    vmv.v.x v9, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
-; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a4
-; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a5
-; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a7
-; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a6
+; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a6
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
+; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a5
+; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
