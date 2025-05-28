@@ -18,6 +18,7 @@ set(core_files
   __stdarg_va_list.h
   stdatomic.h
   stdbool.h
+  stdcountof.h
   stdckdint.h
   stddef.h
   __stddef_header_macro.h
