@@ -2508,8 +2508,8 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
     };
     for (User *U : make_early_inc_range(GV.users())) {
       if (auto *CI = dyn_cast<ICmpInst>(U)) {
-            if (CI->getPredicate() == CmpInst::ICMP_EQ && 
-                MaySimplifyPtr(CI->getOperand(0))) {
+        if (CI->getPredicate() == CmpInst::ICMP_EQ &&
+            MaySimplifyPtr(CI->getOperand(0))) {
           // This is an equality comparison (TypeTestResolution::Single case in
           // lowerTypeTestCall). In this case we just replace the comparison
           // with true.
@@ -2538,8 +2538,8 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
         if (U.getOperandNo() == 1 && CI &&
             CI->getPredicate() == CmpInst::ICMP_EQ &&
             MaySimplifyInt(CI->getOperand(0))) {
-          // This is an equality comparison. Unlike in the case above it remained
-          // as an integer compare.
+          // This is an equality comparison. Unlike in the case above it
+          // remained as an integer compare.
           CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
           CI->eraseFromParent();
           Changed = true;
