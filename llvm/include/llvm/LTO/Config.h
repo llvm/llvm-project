@@ -14,6 +14,7 @@
 #ifndef LLVM_LTO_CONFIG_H
 #define LLVM_LTO_CONFIG_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -277,7 +278,7 @@ struct Config {
   ///
   /// SaveTempsArgs can be specified to select which temps to save.
   /// If SaveTempsArgs is not provided, all temps are saved.
-  Error addSaveTemps(std::string OutputFileName,
+  LLVM_ABI Error addSaveTemps(std::string OutputFileName,
                      bool UseInputModulePath = false,
                      const DenseSet<StringRef> &SaveTempsArgs = {});
 };

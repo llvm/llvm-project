@@ -16,6 +16,7 @@
 #ifndef LLVM_LTO_LTOBACKEND_H
 #define LLVM_LTO_LTOBACKEND_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -34,14 +35,14 @@ class Target;
 namespace lto {
 
 /// Runs middle-end LTO optimizations on \p Mod.
-bool opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
+LLVM_ABI bool opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
          bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
          const ModuleSummaryIndex *ImportSummary,
          const std::vector<uint8_t> &CmdArgs);
 
 /// Runs a regular LTO backend. The regular LTO backend can also act as the
 /// regular LTO phase of ThinLTO, which may need to access the combined index.
-Error backend(const Config &C, AddStreamFn AddStream,
+LLVM_ABI Error backend(const Config &C, AddStreamFn AddStream,
               unsigned ParallelCodeGenParallelismLevel, Module &M,
               ModuleSummaryIndex &CombinedIndex);
 
@@ -54,7 +55,7 @@ Error backend(const Config &C, AddStreamFn AddStream,
 /// the backend will skip optimization and only perform code generation. If
 /// \p IRAddStream is not nullptr, it will be called just before code generation
 /// to serialize the optimized IR.
-Error thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream,
+LLVM_ABI Error thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream,
                   Module &M, const ModuleSummaryIndex &CombinedIndex,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,
@@ -62,19 +63,19 @@ Error thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream,
                   bool CodeGenOnly, AddStreamFn IRAddStream = nullptr,
                   const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
 
-Error finalizeOptimizationRemarks(
+LLVM_ABI Error finalizeOptimizationRemarks(
     std::unique_ptr<ToolOutputFile> DiagOutputFile);
 
 /// Returns the BitcodeModule that is ThinLTO.
-BitcodeModule *findThinLTOModule(MutableArrayRef<BitcodeModule> BMs);
+LLVM_ABI BitcodeModule *findThinLTOModule(MutableArrayRef<BitcodeModule> BMs);
 
 /// Variant of the above.
-Expected<BitcodeModule> findThinLTOModule(MemoryBufferRef MBRef);
+LLVM_ABI Expected<BitcodeModule> findThinLTOModule(MemoryBufferRef MBRef);
 
 /// Distributed ThinLTO: collect the referenced modules based on
 /// module summary and initialize ImportList. Returns false if the
 /// operation failed.
-bool initImportList(const Module &M, const ModuleSummaryIndex &CombinedIndex,
+LLVM_ABI bool initImportList(const Module &M, const ModuleSummaryIndex &CombinedIndex,
                     FunctionImporter::ImportMapTy &ImportList);
 }
 }
