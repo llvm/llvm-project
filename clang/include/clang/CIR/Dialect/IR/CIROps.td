@@ -417,11 +417,15 @@ def LoadOp : CIR_Op<"load", [
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr, UnitAttr:$isDeref);
+                           [MemRead]>:$addr,
+                       UnitAttr:$isDeref,
+                       OptionalAttr<I64Attr>:$alignment
+                       );
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     (`deref` $isDeref^)?
+    (`align` `(` $alignment^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
@@ -458,9 +462,11 @@ def StoreOp : CIR_Op<"store", [
 
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
-                           [MemWrite]>:$addr);
+                           [MemWrite]>:$addr,
+                           OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
@@ -553,7 +559,6 @@ def IfOp : CIR_Op<"if",
   let arguments = (ins CIR_BoolType:$condition);
   let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
   let hasCustomAssemblyFormat=1;
-  let hasVerifier=1;
   let skipDefaultBuilders=1;
   let builders = [
     OpBuilder<(ins "mlir::Value":$cond, "bool":$withElseRegion,
@@ -1644,7 +1649,8 @@ def GlobalOp : CIR_Op<"global"> {
                        TypeAttr:$sym_type,
                        Arg<GlobalLinkageKind, "linkage type">:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       UnitAttr:$dsolocal);
+                       UnitAttr:$dsolocal,
+                       OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
     $linkage
@@ -1844,13 +1850,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
                       DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
   let extraClassDeclaration = [{
     /// Get the argument operands to the called function.
-    mlir::OperandRange getArgOperands() {
-      return getArgs();
-    }
-
-    mlir::MutableOperandRange getArgOperandsMutable() {
-      return getArgsMutable();
-    }
+    mlir::OperandRange getArgOperands();
+    mlir::MutableOperandRange getArgOperandsMutable();
 
     /// Return the callee of this operation
     mlir::CallInterfaceCallable getCallableForCallee() {
@@ -1872,8 +1873,17 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     ::mlir::Attribute removeArgAttrsAttr() { return {}; }
     ::mlir::Attribute removeResAttrsAttr() { return {}; }
 
+    bool isIndirect() { return !getCallee(); }
+    mlir::Value getIndirectCall();
+
     void setArg(unsigned index, mlir::Value value) {
-      setOperand(index, value);
+      if (!isIndirect()) {
+        setOperand(index, value);
+        return;
+      }
+
+      // For indirect call, the operand list is shifted by one.
+      setOperand(index + 1, value);
     }
   }];
 
@@ -1885,16 +1895,24 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   // the upstreaming process moves on. The verifiers is also missing for now,
   // will add in the future.
 
-  dag commonArgs = (ins FlatSymbolRefAttr:$callee,
-                        Variadic<CIR_AnyType>:$args);
+  dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+      Variadic<CIR_AnyType>:$args);
 }
 
 def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let summary = "call a function";
   let description = [{
-    The `cir.call` operation represents a direct call to a function that is
-    within the same symbol scope as the call. The callee is encoded as a symbol
-    reference attribute named `callee`.
+    The `cir.call` operation represents a function call. It could represent
+    either a direct call or an indirect call.
+
+    If the operation represents a direct call, the callee should be defined
+    within the same symbol scope as the call. The `callee` attribute contains a
+    symbol reference to the callee function. All operands of this operation are
+    arguments to the callee function.
+
+    If the operation represents an indirect call, the `callee` attribute is
+    empty. The first operand of this operation must be a pointer to the callee
+    function. The rest operands are arguments to the callee function.
 
     Example:
 
@@ -1906,14 +1924,25 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = commonArgs;
 
-  let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
-                                 "mlir::Type":$resType,
-                                 "mlir::ValueRange":$operands), [{
+  let builders = [
+    // Build a call op for a direct call
+    OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
+                   "mlir::ValueRange":$operands), [{
+      assert(callee && "callee attribute is required for direct call");
       $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
-    }]>];
+    }]>,
+    // Build a call op for an indirect call
+    OpBuilder<(ins "mlir::Value":$calleePtr, "mlir::Type":$resType,
+                   "mlir::ValueRange":$operands), [{
+      $_state.addOperands(calleePtr);
+      $_state.addOperands(operands);
+      if (resType && !isa<VoidType>(resType))
+        $_state.addTypes(resType);
+    }]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2081,6 +2110,35 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecCmpOp
+//===----------------------------------------------------------------------===//
+
+def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
+
+  let summary = "Compare two vectors";
+  let description = [{
+    The `cir.vec.cmp` operation does an element-wise comparison of two vectors
+    of the same type. The result is a vector of the same size as the operands
+    whose element type is the signed integral type that is the same size as the
+    element type of the operands. The values in the result are 0 or -1.
+
+    ```mlir
+    %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins Arg<CmpOpKind, "cmp kind">:$kind, CIR_VectorType:$lhs,
+                       CIR_VectorType:$rhs);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    qualified(type($result)) attr-dict
+  }];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

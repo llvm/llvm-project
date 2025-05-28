@@ -79,6 +79,10 @@ enum NodeType : unsigned {
   BrxStart,
   BrxItem,
   BrxEnd,
+  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED,
+  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X,
+  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y,
+  CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z,
   Dummy,
 
   FIRST_MEMORY_OPCODE,
@@ -189,11 +193,11 @@ public:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
-  std::string
-  getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
-               const SmallVectorImpl<ISD::OutputArg> &, MaybeAlign retAlignment,
-               std::optional<std::pair<unsigned, const APInt &>> VAInfo,
-               const CallBase &CB, unsigned UniqueCallSite) const;
+  std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
+                           const SmallVectorImpl<ISD::OutputArg> &,
+                           MaybeAlign RetAlign,
+                           std::optional<unsigned> FirstVAArg,
+                           const CallBase &CB, unsigned UniqueCallSite) const;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,

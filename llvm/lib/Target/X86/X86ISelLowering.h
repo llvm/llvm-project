@@ -90,6 +90,10 @@ namespace llvm {
     /// POP_FROM_X87_REG (which may remove a required FPU stack pop).
     POP_FROM_X87_REG,
 
+    // Pseudo for a call to an imported function to ensure the correct machine
+    // instruction is emitted for Import Call Optimization.
+    IMP_CALL,
+
     /// X86 compare and logical compare instructions.
     CMP,
     FCMP,
@@ -1746,8 +1750,8 @@ namespace llvm {
 
     /// Creates target global address or external symbol nodes for calls or
     /// other uses.
-    SDValue LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
-                                  bool ForCall) const;
+    SDValue LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG, bool ForCall,
+                                  bool *IsImpCall) const;
 
     SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;

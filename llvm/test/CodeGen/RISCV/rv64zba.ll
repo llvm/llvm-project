@@ -2298,7 +2298,7 @@ define i64 @addshl64_5_8(i64 %a, i64 %b) {
   ret i64 %e
 }
 
-; Make sure we use sext.h+slli+srli for Zba+Zbb.
+; Make sure we use sext.b+slli+srli for Zba+Zbb.
 define zeroext i32 @sext_ashr_zext_i8(i8 %a) nounwind {
 ; RV64I-LABEL: sext_ashr_zext_i8:
 ; RV64I:       # %bb.0:

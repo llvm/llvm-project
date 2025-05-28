@@ -325,7 +325,7 @@ Value *AA::getWithType(Value &V, Type &Ty) {
   if (isa<UndefValue>(V))
     return UndefValue::get(&Ty);
   if (auto *C = dyn_cast<Constant>(&V)) {
-    if (C->isNullValue())
+    if (C->isNullValue() && !Ty.isPtrOrPtrVectorTy())
       return Constant::getNullValue(&Ty);
     if (C->getType()->isPointerTy() && Ty.isPointerTy())
       return ConstantExpr::getPointerCast(C, &Ty);
@@ -2670,7 +2670,8 @@ ChangeStatus Attributor::run() {
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
   TimeTraceScope TimeScope("updateAA", [&]() {
-    return AA.getName() + std::to_string(AA.getIRPosition().getPositionKind());
+    return AA.getName().str() +
+           std::to_string(AA.getIRPosition().getPositionKind());
   });
   assert(Phase == AttributorPhase::UPDATE &&
          "We can update AA only in the update stage!");

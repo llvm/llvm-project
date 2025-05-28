@@ -67,6 +67,7 @@ void LVOptions::resolveDependencies() {
     setAttributeQualified();
     setAttributeQualifier();
     setAttributeRegister();
+    setAttributeSize();
     setAttributeSubrange();
     setAttributeSystem();
     setAttributeTypename();
@@ -208,7 +209,7 @@ void LVOptions::resolveDependencies() {
   // 1) Sort the CUs, to get a fast compare.
   // 2) Encode template instantiations, so the names include template
   //    parameter information.
-  // 3) Include qualified types.
+  // 3) Include qualified types and their sizes.
   // 4) Include any inserted abstract references.
   // 5) For added/missing elements add the '+' or '-' tags.
   if (getCompareExecute()) {
@@ -221,6 +222,7 @@ void LVOptions::resolveDependencies() {
     setAttributeInserted();
     setAttributeMissing();
     setAttributeQualified();
+    setAttributeSize();
   }
 
   // Enable formatting for printing (indentation, print children).
@@ -312,9 +314,10 @@ void LVOptions::print(raw_ostream &OS) const {
      << "Range:         " << getAttributeRange() << ", "
      << "Reference:     " << getAttributeReference() << "\n"
      << "Register:      " << getAttributeRegister() << ", "
+     << "Size:          " << getAttributeSize() << ", "
      << "Standard:      " << getAttributeStandard() << ", "
-     << "Subrange:      " << getAttributeSubrange() << ", "
-     << "System:        " << getAttributeSystem() << "\n"
+     << "Subrange:      " << getAttributeSubrange() << "\n"
+     << "System:        " << getAttributeSystem() << ", "
      << "Typename:      " << getAttributeTypename() << ", "
      << "Underlying:    " << getAttributeUnderlying() << ", "
      << "Zero:          " << getAttributeZero() << "\n";

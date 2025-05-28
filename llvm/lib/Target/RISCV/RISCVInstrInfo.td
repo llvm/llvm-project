@@ -379,7 +379,8 @@ def Simm21Lsb0JALAsmOperand : BareSImmNLsb0AsmOperand<21> {
 }
 
 // A 21-bit signed immediate where the least significant bit is zero.
-def simm21_lsb0_jal : Operand<OtherVT> {
+def simm21_lsb0_jal : Operand<OtherVT>,
+                      ImmLeaf<XLenVT, [{return isShiftedInt<20, 1>(Imm);}]>  {
   let ParserMatchClass = Simm21Lsb0JALAsmOperand;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsrN<1>";
@@ -1648,9 +1649,9 @@ let Predicates = [HasStdExtC, OptForMinSize] in {
 
 multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
   let usesCustomInserter = 1 in
-  def Select_GPR_Using_ # NAME
+  def Select_# valty #_Using_ # NAME
       : Pseudo<(outs valty:$dst),
-               (ins GPR:$lhs, imm:$imm, cond_code:$cc,
+               (ins valty:$lhs, imm:$imm, cond_code:$cc,
                 valty:$truev, valty:$falsev), []>;
 }
 
@@ -2267,6 +2268,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
+include "RISCVInstrInfoXSfmm.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"

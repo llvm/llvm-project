@@ -149,6 +149,10 @@ static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
+static cl::opt<bool> DisableCombines("combiner-disabled", cl::Hidden,
+                                     cl::init(false),
+                                     cl::desc("Disable the DAG combiner"));
+
 namespace {
 
   class DAGCombiner {
@@ -248,7 +252,8 @@ namespace {
           STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL),
           BatchAA(BatchAA) {
       ForCodeSize = DAG.shouldOptForSize();
-      DisableGenericCombines = STI && STI->disableGenericCombines(OptLevel);
+      DisableGenericCombines =
+          DisableCombines || (STI && STI->disableGenericCombines(OptLevel));
 
       MaximumLegalStoreInBits = 0;
       // We use the minimum store size here, since that's all we can guarantee
@@ -412,7 +417,8 @@ namespace {
     SDValue visitMERGE_VALUES(SDNode *N);
     SDValue visitADD(SDNode *N);
     SDValue visitADDLike(SDNode *N);
-    SDValue visitADDLikeCommutative(SDValue N0, SDValue N1, SDNode *LocReference);
+    SDValue visitADDLikeCommutative(SDValue N0, SDValue N1,
+                                    SDNode *LocReference);
     SDValue visitSUB(SDNode *N);
     SDValue visitADDSAT(SDNode *N);
     SDValue visitSUBSAT(SDNode *N);
@@ -1095,7 +1101,7 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
   // (load/store (add, (add, x, y), offset2)) ->
   // (load/store (add, (add, x, offset2), y)).
 
-  if (N0.getOpcode() != ISD::ADD)
+  if (!N0.isAnyAdd())
     return false;
 
   // Check for vscale addressing modes.
@@ -2388,7 +2394,7 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use, SelectionDAG &DAG,
   }
 
   TargetLowering::AddrMode AM;
-  if (N->getOpcode() == ISD::ADD) {
+  if (N->isAnyAdd()) {
     AM.HasBaseReg = true;
     ConstantSDNode *Offset = dyn_cast<ConstantSDNode>(N->getOperand(1));
     if (Offset)
@@ -9482,8 +9488,8 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // split into legal sized loads. This enables us to combine i64 load by i8
   // patterns to a couple of i32 loads on 32 bit targets.
   if (LegalOperations &&
-      !TLI.isOperationLegal(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD,
-                            MemVT))
+      !TLI.isLoadExtLegal(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, VT,
+                          MemVT))
     return SDValue();
 
   // Check if the bytes of the OR we are looking at match with either big or

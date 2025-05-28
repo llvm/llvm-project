@@ -2189,7 +2189,10 @@ gentbl_cc_library(
 
 td_library(
     name = "AMXTdFiles",
-    srcs = ["include/mlir/Dialect/AMX/AMX.td"],
+    srcs = [
+        "include/mlir/Dialect/AMX/AMX.td",
+        "include/mlir/Dialect/AMX/AMXInterfaces.td",
+    ],
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
@@ -2226,6 +2229,19 @@ gentbl_cc_library(
     deps = [":AMXTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "AMXInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/AMX/AMXInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/AMX/AMXInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/AMX/AMXInterfaces.td",
+    deps = [
+        ":AMXTdFiles",
+    ],
+)
+
 cc_library(
     name = "AMXDialect",
     srcs = ["lib/Dialect/AMX/IR/AMXDialect.cpp"],
@@ -2233,8 +2249,10 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AMXIncGen",
+        ":AMXInterfaceIncGen",
         ":BytecodeOpInterface",
         ":IR",
+        ":LLVMCommonConversion",
         ":LLVMDialect",
         ":SideEffectInterfaces",
         "//llvm:Support",
@@ -2253,14 +2271,6 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
     ],
-)
-
-gentbl_cc_library(
-    name = "AMXConversionIncGen",
-    tbl_outs = {"include/mlir/Dialect/AMX/AMXConversions.inc": ["-gen-llvmir-conversions"]},
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/AMX/AMX.td",
-    deps = [":AMXTdFiles"],
 )
 
 ##---------------------------------------------------------------------------##
@@ -3419,11 +3429,13 @@ cc_library(
     deps = [
         ":AffineUtils",
         ":Analysis",
+        ":ArithUtils",
         ":DialectUtils",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":GPUUtils",
         ":IR",
+        ":IndexDialect",
         ":InliningUtils",
         ":MemRefDialect",
         ":Pass",
@@ -5775,10 +5787,12 @@ cc_library(
     srcs = [
         "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
         "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMRequiresSMTraits.cpp",
     ],
     hdrs = [
         "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
         "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h",
     ],
     includes = ["include"],
     deps = [
@@ -5790,6 +5804,7 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
+        ":NVVMRequiresSMTraitsIncGen",
         ":SideEffectInterfaces",
         ":Support",
         ":ToLLVMIRTranslation",
@@ -5856,6 +5871,16 @@ td_library(
 )
 
 td_library(
+    name = "NVVMRequiresSMTraitsTdFiles",
+    srcs = ["include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"],
+    includes = ["include"],
+    deps = [
+        ":LLVMOpsTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+td_library(
     name = "NVVMOpsTdFiles",
     srcs = ["include/mlir/Dialect/LLVMIR/NVVMOps.td"],
     includes = ["include"],
@@ -5863,6 +5888,7 @@ td_library(
         ":BasicPtxBuilderIntTdFiles",
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
+        ":NVVMRequiresSMTraitsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -5885,6 +5911,17 @@ gentbl_cc_library(
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "NVVMRequiresSMTraitsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td",
+    deps = [":NVVMRequiresSMTraitsTdFiles"],
 )
 
 gentbl_cc_library(
@@ -8181,6 +8218,53 @@ cc_library(
 )
 
 cc_library(
+    name = "IRDLToCpp",
+    srcs = [
+        "lib/Target/IRDLToCpp/IRDLToCpp.cpp",
+        "lib/Target/IRDLToCpp/TemplatingUtils.h",
+    ],
+    hdrs = [
+        "include/mlir/Target/IRDLToCpp/IRDLToCpp.h",
+    ],
+    includes = ["include"],
+    textual_hdrs = glob(["lib/Target/IRDLToCpp/Templates/*.txt"]),
+    deps = [
+        ":IRDLDialect",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "irdl-to-cpp",
+    srcs = [
+        "tools/mlir-irdl-to-cpp/mlir-irdl-to-cpp.cpp",
+    ],
+    deps = [
+        ":IR",
+        ":IRDLDialect",
+        ":IRDLToCpp",
+        ":ParseUtilities",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "IRDLToCppTranslationRegistration",
+    srcs = ["lib/Target/IRDLToCpp/TranslationRegistration.cpp"],
+    hdrs = ["include/mlir/Target/IRDLToCpp/TranslationRegistration.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":IRDLDialect",
+        ":IRDLToCpp",
+        ":TranslateLib",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "ToLLVMIRTranslation",
     srcs = [
         "lib/Target/LLVMIR/AttrKindDetail.h",
@@ -8215,21 +8299,6 @@ cc_library(
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
         "//llvm:TransformUtils",
-    ],
-)
-
-cc_library(
-    name = "AMXToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/AMX/*.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/AMX/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":AMXConversionIncGen",
-        ":AMXDialect",
-        ":IR",
-        ":ToLLVMIRTranslation",
-        "//llvm:Core",
-        "//llvm:Support",
     ],
 )
 
@@ -8464,7 +8533,6 @@ cc_library(
     hdrs = ["include/mlir/Target/LLVMIR/Dialect/All.h"],
     includes = ["include"],
     deps = [
-        ":AMXToLLVMIRTranslation",
         ":ArmNeonToLLVMIRTranslation",
         ":ArmSMEToLLVMIRTranslation",
         ":ArmSVEToLLVMIRTranslation",
@@ -8646,6 +8714,7 @@ cc_library(
     hdrs = ["include/mlir/InitAllTranslations.h"],
     deps = [
         ":FromLLVMIRTranslationRegistration",
+        ":IRDLToCppTranslationRegistration",
         ":SPIRVTranslateRegistration",
         ":TargetCpp",
         ":TargetSMTLIB",
@@ -8877,6 +8946,7 @@ cc_binary(
         "//mlir/test:TestFuncToLLVM",
         "//mlir/test:TestGPU",
         "//mlir/test:TestIR",
+        "//mlir/test:TestIRDLToCpp",
         "//mlir/test:TestLLVM",
         "//mlir/test:TestLinalg",
         "//mlir/test:TestLoopLikeInterface",
@@ -12247,6 +12317,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BufferizationInterfaces",
+        ":BufferizationTransforms",
         ":FuncDialect",
         ":IR",
         ":MLProgramDialect",

@@ -75,8 +75,7 @@ public:
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 };
 

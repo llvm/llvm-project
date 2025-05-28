@@ -8,7 +8,6 @@
 
 #include "SystemZ.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/Host.h"

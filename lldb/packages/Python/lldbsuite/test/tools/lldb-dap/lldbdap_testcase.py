@@ -4,6 +4,7 @@ from typing import Optional
 import uuid
 
 import dap_server
+from dap_server import Source
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
@@ -55,8 +56,24 @@ class DAPTestCaseBase(TestBase):
         Each object in data is 1:1 mapping with the entry in lines.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        response = self.dap_server.request_setBreakpoints(source_path, lines, data)
+        response = self.dap_server.request_setBreakpoints(
+            Source(source_path), lines, data
+        )
         if response is None or not response["success"]:
+            return []
+        breakpoints = response["body"]["breakpoints"]
+        breakpoint_ids = []
+        for breakpoint in breakpoints:
+            breakpoint_ids.append("%i" % (breakpoint["id"]))
+        return breakpoint_ids
+
+    def set_source_breakpoints_assembly(self, source_reference, lines, data=None):
+        response = self.dap_server.request_setBreakpoints(
+            Source(source_reference=source_reference),
+            lines,
+            data,
+        )
+        if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
         breakpoint_ids = []
@@ -116,7 +133,7 @@ class DAPTestCaseBase(TestBase):
                 # location.
                 description = body["description"]
                 for breakpoint_id in breakpoint_ids:
-                    match_desc = "breakpoint %s." % (breakpoint_id)
+                    match_desc = f"breakpoint {breakpoint_id}."
                     if match_desc in description:
                         return
         self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
@@ -312,6 +329,9 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         return self.dap_server.wait_for_stopped(timeout)
 
+    def continue_to_breakpoint(self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT):
+        self.continue_to_breakpoints((breakpoint_id), timeout)
+
     def continue_to_breakpoints(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids, timeout)
@@ -346,10 +366,14 @@ class DAPTestCaseBase(TestBase):
         memoryReference = stackFrames[0]["instructionPointerReference"]
         self.assertIsNotNone(memoryReference)
 
-        if memoryReference not in self.dap_server.disassembled_instructions:
-            self.dap_server.request_disassemble(memoryReference=memoryReference)
+        instructions = self.dap_server.request_disassemble(
+            memoryReference=memoryReference
+        )
+        disassembled_instructions = {}
+        for inst in instructions:
+            disassembled_instructions[inst["address"]] = inst
 
-        return self.dap_server.disassembled_instructions[memoryReference]
+        return disassembled_instructions, disassembled_instructions[memoryReference]
 
     def attach(
         self,

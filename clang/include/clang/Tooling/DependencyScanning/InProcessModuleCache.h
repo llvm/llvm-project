@@ -20,7 +20,7 @@ namespace tooling {
 namespace dependencies {
 struct ModuleCacheEntry {
   std::shared_mutex CompilationMutex;
-  std::atomic<bool> UpToDate = false;
+  std::atomic<std::time_t> Timestamp = 0;
 };
 
 struct ModuleCacheEntries {

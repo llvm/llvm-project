@@ -35,6 +35,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/ProfileData/MemProfSummary.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -740,19 +741,6 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
   return computeStackId(Frame.Function, Frame.LineOffset, Frame.Column);
 }
 
-// Helper to generate a single hash id for a given callstack, used for emitting
-// matching statistics and useful for uniquing such statistics across modules.
-static uint64_t computeFullStackId(ArrayRef<Frame> CallStack) {
-  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
-      HashBuilder;
-  for (auto &F : CallStack)
-    HashBuilder.add(F.Function, F.LineOffset, F.Column);
-  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
-  uint64_t Id;
-  std::memcpy(&Id, Hash.data(), sizeof(Hash));
-  return Id;
-}
-
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
                                    const AllocationInfo *AllocInfo,
                                    uint64_t FullStackId) {
@@ -865,8 +853,8 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
           StringRef CallerName = DIL->getSubprogramLinkageName();
           assert(!CallerName.empty() &&
                  "Be sure to enable -fdebug-info-for-profiling");
-          uint64_t CallerGUID = IndexedMemProfRecord::getGUID(CallerName);
-          uint64_t CalleeGUID = IndexedMemProfRecord::getGUID(CalleeName);
+          uint64_t CallerGUID = memprof::getGUID(CallerName);
+          uint64_t CalleeGUID = memprof::getGUID(CalleeName);
           // Pretend that we are calling a function with GUID == 0 if we are
           // in the inline stack leading to a heap allocation function.
           if (IsAlloc) {

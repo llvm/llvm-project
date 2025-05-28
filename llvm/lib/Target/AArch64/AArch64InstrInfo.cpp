@@ -54,7 +54,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <utility>

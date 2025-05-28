@@ -13,40 +13,13 @@
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
 using namespace llvm::memprof;
 
 #define DEBUG_TYPE "memory-profile-info"
-
-// Upper bound on lifetime access density (accesses per byte per lifetime sec)
-// for marking an allocation cold.
-cl::opt<float> MemProfLifetimeAccessDensityColdThreshold(
-    "memprof-lifetime-access-density-cold-threshold", cl::init(0.05),
-    cl::Hidden,
-    cl::desc("The threshold the lifetime access density (accesses per byte per "
-             "lifetime sec) must be under to consider an allocation cold"));
-
-// Lower bound on lifetime to mark an allocation cold (in addition to accesses
-// per byte per sec above). This is to avoid pessimizing short lived objects.
-cl::opt<unsigned> MemProfAveLifetimeColdThreshold(
-    "memprof-ave-lifetime-cold-threshold", cl::init(200), cl::Hidden,
-    cl::desc("The average lifetime (s) for an allocation to be considered "
-             "cold"));
-
-// Lower bound on average lifetime accesses density (total life time access
-// density / alloc count) for marking an allocation hot.
-cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
-    "memprof-min-ave-lifetime-access-density-hot-threshold", cl::init(1000),
-    cl::Hidden,
-    cl::desc("The minimum TotalLifetimeAccessDensity / AllocCount for an "
-             "allocation to be considered hot"));
-
-cl::opt<bool>
-    MemProfUseHotHints("memprof-use-hot-hints", cl::init(false), cl::Hidden,
-                       cl::desc("Enable use of hot hints (only supported for "
-                                "unambigously hot allocations)"));
 
 cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
@@ -55,7 +28,7 @@ cl::opt<bool> MemProfReportHintedSizes(
 // This is useful if we have enabled reporting of hinted sizes, and want to get
 // information from the indexing step for all contexts (especially for testing),
 // or have specified a value less than 100% for -memprof-cloning-cold-threshold.
-cl::opt<bool> MemProfKeepAllNotColdContexts(
+LLVM_ABI cl::opt<bool> MemProfKeepAllNotColdContexts(
     "memprof-keep-all-not-cold-contexts", cl::init(false), cl::Hidden,
     cl::desc("Keep all non-cold contexts (increases cloning overheads)"));
 
@@ -71,28 +44,6 @@ cl::opt<unsigned> MinCallsiteColdBytePercent(
     "memprof-callsite-cold-threshold", cl::init(100), cl::Hidden,
     cl::desc("Min percent of cold bytes at a callsite to discard non-cold "
              "contexts"));
-
-AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
-                                           uint64_t AllocCount,
-                                           uint64_t TotalLifetime) {
-  // The access densities are multiplied by 100 to hold 2 decimal places of
-  // precision, so need to divide by 100.
-  if (((float)TotalLifetimeAccessDensity) / AllocCount / 100 <
-          MemProfLifetimeAccessDensityColdThreshold
-      // Lifetime is expected to be in ms, so convert the threshold to ms.
-      && ((float)TotalLifetime) / AllocCount >=
-             MemProfAveLifetimeColdThreshold * 1000)
-    return AllocationType::Cold;
-
-  // The access densities are multiplied by 100 to hold 2 decimal places of
-  // precision, so need to divide by 100.
-  if (MemProfUseHotHints &&
-      ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
-          MemProfMinAveLifetimeAccessDensityHotThreshold)
-    return AllocationType::Hot;
-
-  return AllocationType::NotCold;
-}
 
 MDNode *llvm::memprof::buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
                                               LLVMContext &Ctx) {

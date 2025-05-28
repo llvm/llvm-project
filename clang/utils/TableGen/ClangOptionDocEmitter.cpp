@@ -367,7 +367,7 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
        R->getValueAsListOfDefs("HelpTextsForVariants")) {
     // This is a list of visibilities.
     ArrayRef<const Init *> Visibilities =
-        VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
+        VisibilityHelp->getValueAsListInit("Visibilities")->getElements();
 
     // See if any of the program's visibilities are in the list.
     for (StringRef DocInfoMask :

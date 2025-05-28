@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -3667,6 +3668,12 @@ static bool GenerateTargetSpecificAttrChecks(const Record *R,
 static void GenerateHasAttrSpellingStringSwitch(
     ArrayRef<std::pair<const Record *, FlattenedSpelling>> Attrs,
     raw_ostream &OS, StringRef Variety, StringRef Scope = "") {
+
+  // It turns out that there are duplicate records for a given spelling. This
+  // map combines matching test strings using '||'. For example, if there are
+  // three conditions A, B, and C, the final result will be: A || B || C.
+  llvm::StringMap<std::string> TestStringMap;
+
   for (const auto &[Attr, Spelling] : Attrs) {
     // C++11-style attributes have specific version information associated with
     // them. If the attribute has no scope, the version information must not
@@ -3727,12 +3734,25 @@ static void GenerateHasAttrSpellingStringSwitch(
       }
     }
 
-    std::string TestStr = !Test.empty()
-                              ? Test + " ? " + itostr(Version) + " : 0"
-                              : itostr(Version);
-    if (Scope.empty() || Scope == Spelling.nameSpace())
-      OS << "    .Case(\"" << Spelling.name() << "\", " << TestStr << ")\n";
+    std::string TestStr =
+        !Test.empty() ? '(' + Test + " ? " + itostr(Version) + " : 0" + ')'
+                      : '(' + itostr(Version) + ')';
+
+    if (Scope.empty() || Scope == Spelling.nameSpace()) {
+      if (TestStringMap.contains(Spelling.name()))
+        TestStringMap[Spelling.name()] += " || " + TestStr;
+      else
+        TestStringMap[Spelling.name()] = TestStr;
+    }
   }
+
+  // Create the actual string switch statement after all the attributes have
+  // been parsed.
+  for (auto &Entry : TestStringMap) {
+    OS << "    .Case(\"" << Entry.getKey() << "\", " << Entry.getValue()
+       << ")\n";
+  }
+
   OS << "    .Default(0);\n";
 }
 
@@ -4103,6 +4123,41 @@ void EmitClangAttrParsedAttrList(const RecordKeeper &Records, raw_ostream &OS) {
   for (const auto &I : Names) {
     OS << "PARSED_ATTR(" << I.first << ")\n";
   }
+}
+
+void EmitAttributeSpellingList(const RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader("List of attribute names", OS, Records);
+
+  std::set<StringRef> AttrSpellingList;
+  std::set<StringRef> AttrScopeSpellingList;
+
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    for (const auto &S : GetFlattenedSpellings(*A)) {
+      AttrSpellingList.insert(S.name());
+      if (S.nameSpace().size())
+        AttrScopeSpellingList.insert(S.nameSpace());
+    }
+  }
+
+  OS << "#ifndef ATTR_NAME" << "\n";
+  OS << "#define ATTR_NAME(NAME) NAME" << "\n";
+  OS << "#endif" << "\n" << "\n";
+  for (const auto &AttrName : AttrSpellingList) {
+    OS << "ATTR_NAME(\"" << AttrName << "\")\n";
+  }
+  OS << "\n";
+  OS << "#undef ATTR_NAME" << "\n";
+  OS << "\n";
+
+  OS << "#ifndef ATTR_SCOPE_NAME" << "\n";
+  OS << "#define ATTR_SCOPE_NAME(SCOPE_NAME) SCOPE_NAME" << "\n";
+  OS << "#endif" << "\n" << "\n";
+  for (const auto &AttrScopeName : AttrScopeSpellingList) {
+    OS << "ATTR_SCOPE_NAME(\"" << AttrScopeName << "\")\n";
+  }
+  OS << "\n";
+  OS << "#undef ATTR_SCOPE_NAME" << "\n";
+  OS << "\n";
 }
 
 static bool isArgVariadic(const Record &R, StringRef AttrName) {

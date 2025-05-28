@@ -2391,11 +2391,11 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
   // in `Environment` so that `FileMgr` can out-live this function scope.
   FileMgr =
       std::make_unique<FileManager>(FileSystemOptions(), InMemoryFileSystem);
+  DiagOpts = std::make_unique<DiagnosticOptions>();
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // by `Environment` due to the same reason above.
   Diagnostics = std::make_unique<DiagnosticsEngine>(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-      new DiagnosticOptions);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID =
