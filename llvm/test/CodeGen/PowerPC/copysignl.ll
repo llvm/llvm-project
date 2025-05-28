@@ -43,31 +43,27 @@ declare double @copysign(double, double) #0
 define ppc_fp128 @foo_ll(double %a, ppc_fp128 %b) #0 {
 ; CHECK-LABEL: foo_ll:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -112(1)
-; CHECK-NEXT:    fmr 3, 2
-; CHECK-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
-; CHECK-NEXT:    std 0, 128(1)
-; CHECK-NEXT:    lfs 2, .LCPI2_0@toc@l(3)
-; CHECK-NEXT:    bl copysignl
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 1, 1, 112
-; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    fcpsgn 0, 2, 1
+; CHECK-NEXT:    li 3, 8
+; CHECK-NEXT:    addis 4, 2, .LCPI2_0@toc@ha
+; CHECK-NEXT:    addi 4, 4, .LCPI2_0@toc@l
+; CHECK-NEXT:    fcmpu 0, 1, 0
+; CHECK-NEXT:    fmr 1, 0
+; CHECK-NEXT:    crnor 20, 2, 3
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    lfdx 2, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: foo_ll:
 ; CHECK-VSX:       # %bb.0: # %entry
-; CHECK-VSX-NEXT:    mflr 0
-; CHECK-VSX-NEXT:    stdu 1, -112(1)
-; CHECK-VSX-NEXT:    fmr 3, 2
+; CHECK-VSX-NEXT:    fmr 0, 1
+; CHECK-VSX-NEXT:    xscpsgndp 1, 2, 1
 ; CHECK-VSX-NEXT:    xxlxor 2, 2, 2
-; CHECK-VSX-NEXT:    std 0, 128(1)
-; CHECK-VSX-NEXT:    bl copysignl
-; CHECK-VSX-NEXT:    nop
-; CHECK-VSX-NEXT:    addi 1, 1, 112
-; CHECK-VSX-NEXT:    ld 0, 16(1)
-; CHECK-VSX-NEXT:    mtlr 0
+; CHECK-VSX-NEXT:    fcmpu 0, 0, 1
+; CHECK-VSX-NEXT:    cror 20, 2, 3
+; CHECK-VSX-NEXT:    bclr 12, 20, 0
+; CHECK-VSX-NEXT:  # %bb.1: # %entry
+; CHECK-VSX-NEXT:    xsnegdp 2, 2
 ; CHECK-VSX-NEXT:    blr
 entry:
   %conv = fpext double %a to ppc_fp128
@@ -78,31 +74,27 @@ entry:
 define ppc_fp128 @foo_ld(double %a, double %b) #0 {
 ; CHECK-LABEL: foo_ld:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -112(1)
-; CHECK-NEXT:    fmr 3, 2
-; CHECK-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; CHECK-NEXT:    std 0, 128(1)
-; CHECK-NEXT:    lfs 2, .LCPI3_0@toc@l(3)
-; CHECK-NEXT:    bl copysignl
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 1, 1, 112
-; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    fcpsgn 0, 2, 1
+; CHECK-NEXT:    li 3, 8
+; CHECK-NEXT:    addis 4, 2, .LCPI3_0@toc@ha
+; CHECK-NEXT:    addi 4, 4, .LCPI3_0@toc@l
+; CHECK-NEXT:    fcmpu 0, 1, 0
+; CHECK-NEXT:    fmr 1, 0
+; CHECK-NEXT:    crnor 20, 2, 3
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    lfdx 2, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: foo_ld:
 ; CHECK-VSX:       # %bb.0: # %entry
-; CHECK-VSX-NEXT:    mflr 0
-; CHECK-VSX-NEXT:    stdu 1, -112(1)
-; CHECK-VSX-NEXT:    fmr 3, 2
+; CHECK-VSX-NEXT:    fmr 0, 1
+; CHECK-VSX-NEXT:    xscpsgndp 1, 2, 1
 ; CHECK-VSX-NEXT:    xxlxor 2, 2, 2
-; CHECK-VSX-NEXT:    std 0, 128(1)
-; CHECK-VSX-NEXT:    bl copysignl
-; CHECK-VSX-NEXT:    nop
-; CHECK-VSX-NEXT:    addi 1, 1, 112
-; CHECK-VSX-NEXT:    ld 0, 16(1)
-; CHECK-VSX-NEXT:    mtlr 0
+; CHECK-VSX-NEXT:    fcmpu 0, 0, 1
+; CHECK-VSX-NEXT:    cror 20, 2, 3
+; CHECK-VSX-NEXT:    bclr 12, 20, 0
+; CHECK-VSX-NEXT:  # %bb.1: # %entry
+; CHECK-VSX-NEXT:    xsnegdp 2, 2
 ; CHECK-VSX-NEXT:    blr
 entry:
   %conv = fpext double %a to ppc_fp128
@@ -114,31 +106,27 @@ entry:
 define ppc_fp128 @foo_lf(double %a, float %b) #0 {
 ; CHECK-LABEL: foo_lf:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -112(1)
-; CHECK-NEXT:    fmr 3, 2
-; CHECK-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; CHECK-NEXT:    std 0, 128(1)
-; CHECK-NEXT:    lfs 2, .LCPI4_0@toc@l(3)
-; CHECK-NEXT:    bl copysignl
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 1, 1, 112
-; CHECK-NEXT:    ld 0, 16(1)
-; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    fcpsgn 0, 2, 1
+; CHECK-NEXT:    li 3, 8
+; CHECK-NEXT:    addis 4, 2, .LCPI4_0@toc@ha
+; CHECK-NEXT:    addi 4, 4, .LCPI4_0@toc@l
+; CHECK-NEXT:    fcmpu 0, 1, 0
+; CHECK-NEXT:    fmr 1, 0
+; CHECK-NEXT:    crnor 20, 2, 3
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    lfdx 2, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: foo_lf:
 ; CHECK-VSX:       # %bb.0: # %entry
-; CHECK-VSX-NEXT:    mflr 0
-; CHECK-VSX-NEXT:    stdu 1, -112(1)
-; CHECK-VSX-NEXT:    fmr 3, 2
+; CHECK-VSX-NEXT:    fmr 0, 1
+; CHECK-VSX-NEXT:    fcpsgn 1, 2, 1
 ; CHECK-VSX-NEXT:    xxlxor 2, 2, 2
-; CHECK-VSX-NEXT:    std 0, 128(1)
-; CHECK-VSX-NEXT:    bl copysignl
-; CHECK-VSX-NEXT:    nop
-; CHECK-VSX-NEXT:    addi 1, 1, 112
-; CHECK-VSX-NEXT:    ld 0, 16(1)
-; CHECK-VSX-NEXT:    mtlr 0
+; CHECK-VSX-NEXT:    fcmpu 0, 0, 1
+; CHECK-VSX-NEXT:    cror 20, 2, 3
+; CHECK-VSX-NEXT:    bclr 12, 20, 0
+; CHECK-VSX-NEXT:  # %bb.1: # %entry
+; CHECK-VSX-NEXT:    xsnegdp 2, 2
 ; CHECK-VSX-NEXT:    blr
 entry:
   %conv = fpext double %a to ppc_fp128
