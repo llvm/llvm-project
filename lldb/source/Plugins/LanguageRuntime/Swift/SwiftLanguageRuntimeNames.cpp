@@ -45,6 +45,7 @@ enum class ThunkKind {
   AllocatingInit,
   PartialApply,
   ObjCAttribute,
+  NonObjCAttributeOnCtor,
   Reabstraction,
   ProtocolConformance,
 };
@@ -55,6 +56,7 @@ enum class ThunkAction {
   StepIntoConformance,
   StepIntoAllocatingInit,
   StepThrough,
+  RunToObjcCInteropCtor,
 };
 
 } // namespace
@@ -313,6 +315,10 @@ static ThunkKind GetThunkKind(Symbol *symbol) {
   switch (main_node->getKind()) {
   case Node::Kind::ObjCAttribute:
     return ThunkKind::ObjCAttribute;
+  case Node::Kind::NonObjCAttribute:
+    if (hasChild(nodes, Node::Kind::Constructor))
+      return ThunkKind::NonObjCAttributeOnCtor;
+    break;
   case Node::Kind::ProtocolWitness:
     if (hasChild(main_node, Node::Kind::ProtocolConformance))
       return ThunkKind::ProtocolConformance;
@@ -342,6 +348,8 @@ static const char *GetThunkKindName(ThunkKind kind) {
     return "GetThunkTarget";
   case ThunkKind::ObjCAttribute:
     return "GetThunkTarget";
+  case ThunkKind::NonObjCAttributeOnCtor:
+    return "RunToObjcCInteropCtor";
   case ThunkKind::Reabstraction:
     return "GetThunkTarget";
   case ThunkKind::ProtocolConformance:
@@ -363,6 +371,8 @@ static ThunkAction GetThunkAction(ThunkKind kind) {
     return ThunkAction::StepThrough;
   case ThunkKind::ProtocolConformance:
     return ThunkAction::StepIntoConformance;
+  case ThunkKind::NonObjCAttributeOnCtor:
+    return ThunkAction::RunToObjcCInteropCtor;
   }
 }
 
@@ -417,6 +427,66 @@ CreateRunThroughTaskSwitchingTrampolines(Thread &thread,
     return CreateRunThroughTaskSwitchThreadPlan(thread,
                                                 LLDB_REGNUM_GENERIC_ARG3);
   return nullptr;
+}
+
+/// Demangle `symbol_name` and extracts the text at the node described by
+/// `node_path`, if it exists; otherwise, returns an empty string.
+static std::string FindClassName(StringRef symbol_name,
+                                 llvm::ArrayRef<Node::Kind> node_path) {
+  swift::Demangle::Context ctx;
+  NodePointer demangled_node =
+      SwiftLanguageRuntime::DemangleSymbolAsNode(symbol_name, ctx);
+
+  if (!demangled_node) {
+    std::string symbol_name_str = symbol_name.str();
+    LLDB_LOGF(GetLog(LLDBLog::Step),
+              "SwiftLanguageRuntime: failed to demangle %s.",
+              symbol_name_str.c_str());
+    return "";
+  }
+  NodePointer class_node = childAtPath(demangled_node, node_path);
+  if (!class_node || !class_node->hasText()) {
+    std::string node_str = getNodeTreeAsString(demangled_node);
+    LLDB_LOGF(GetLog(LLDBLog::Step),
+              "SwiftLanguageRuntime: failed to extract name from "
+              "demangle node: %s",
+              node_str.c_str());
+    return "";
+  }
+  return class_node->getText().str();
+}
+
+/// If sc_list is non-empty, returns a plan that runs to any of its addresses.
+/// Otherwise, returns nullptr.
+static ThreadPlanSP
+CreateThreadPlanRunToSCInList(Thread &thread, const SymbolContextList &sc_list,
+                              bool stop_others) {
+  std::vector<addr_t> load_addresses;
+  Target &target = thread.GetProcess()->GetTarget();
+  for (const SymbolContext &sc : sc_list) {
+    const Symbol *ctor_symbol = sc.symbol;
+    if (ctor_symbol)
+      load_addresses.push_back(ctor_symbol->GetLoadAddress(&target));
+  }
+
+  if (load_addresses.empty()) {
+    LLDB_LOG(GetLog(LLDBLog::Step),
+             "SwiftLanguageRuntime: empty sc_list found.");
+    return {};
+  }
+  return std::make_shared<ThreadPlanRunToAddress>(thread, load_addresses,
+                                                  stop_others);
+}
+
+/// Search all modules for `target_func` and creates a RunToAddress plan
+/// targeting all symbols found.
+static ThreadPlanSP CreateRunToAddressPlan(StringRef target_func,
+                                           Thread &thread, bool stop_others) {
+  ModuleList modules = thread.GetProcess()->GetTarget().GetImages();
+  SymbolContextList sc_list;
+  modules.FindFunctionSymbols(ConstString(target_func), eFunctionNameTypeFull,
+                              sc_list);
+  return CreateThreadPlanRunToSCInList(thread, sc_list, stop_others);
 }
 
 static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
@@ -475,19 +545,32 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
       log->Printf(
           "Stepped to thunk \"%s\" (kind: %s) stepping to target: \"%s\".",
           symbol_name, GetThunkKindName(thunk_kind), thunk_target.c_str());
-
-    ModuleList modules = thread.GetProcess()->GetTarget().GetImages();
-    SymbolContextList sc_list;
-    modules.FindFunctionSymbols(ConstString(thunk_target),
-                                eFunctionNameTypeFull, sc_list);
-    if (sc_list.GetSize() == 1 && sc_list[0].symbol) {
-      Symbol &thunk_symbol = *sc_list[0].symbol;
-      Address target_address = thunk_symbol.GetAddress();
-      if (target_address.IsValid())
-        return std::make_shared<ThreadPlanRunToAddress>(thread, target_address,
-                                                        stop_others);
+    return CreateRunToAddressPlan(thunk_target, thread, stop_others);
+  }
+  case ThunkAction::RunToObjcCInteropCtor: {
+    static constexpr auto class_path = {
+        Node::Kind::Constructor, Node::Kind::Class, Node::Kind::Identifier};
+    std::string class_name = FindClassName(symbol_name, class_path);
+    if (class_name.empty()) {
+      LLDB_LOGF(log,
+                "SwiftLanguageRuntime: could not derive class name from symbol "
+                "\"%s\".",
+                symbol_name);
+      return nullptr;
     }
-    return nullptr;
+    std::string ctor_name = llvm::formatv("{0} init", class_name);
+    LLDB_LOGF(log,
+              "SwiftLanguageRuntime: running to objective C constructor \"%s\" "
+              "from swift.",
+              ctor_name.c_str());
+
+    SymbolContextList sc_list;
+    ModuleFunctionSearchOptions options{/*include_symbols*/ true,
+                                        /*include_inlines*/ true};
+    ModuleList modules = thread.GetProcess()->GetTarget().GetImages();
+    modules.FindFunctions(RegularExpression(ctor_name), options, sc_list);
+
+    return CreateThreadPlanRunToSCInList(thread, sc_list, stop_others);
   }
   case ThunkAction::StepIntoConformance: {
     // The TTW symbols encode the protocol conformance requirements
@@ -582,37 +665,19 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   }
   case ThunkAction::StepIntoAllocatingInit: {
     LLDB_LOGF(log, "Stepping into allocating init: \"%s\"", symbol_name);
-    swift::Demangle::Context ctx;
-    NodePointer demangled_node =
-        SwiftLanguageRuntime::DemangleSymbolAsNode(symbol_name, ctx);
-
     using Kind = Node::Kind;
-    NodePointer class_node = childAtPath(
-        demangled_node, {Kind::Allocator, Kind::Class, Kind::Identifier});
-    if (!class_node || !class_node->hasText()) {
-      std::string node_str = getNodeTreeAsString(demangled_node);
-      LLDB_LOGF(log,
-                "Failed to extract constructor name from demangle node: %s",
-                node_str.c_str());
+    static constexpr auto class_path = {Kind::Allocator, Kind::Class,
+                                        Kind::Identifier};
+    std::string class_name = FindClassName(symbol_name, class_path);
+    if (class_name.empty())
       return nullptr;
-    }
 
     ModuleFunctionSearchOptions options{/*include_symbols*/ true,
                                         /*include_inlines*/ true};
-    std::string ctor_name = llvm::formatv("{0}.init", class_node->getText());
+    std::string ctor_name = llvm::formatv("{0}.init", class_name);
     SymbolContextList sc_list;
     sc.module_sp->FindFunctions(RegularExpression(ctor_name), options, sc_list);
-    std::vector<addr_t> load_addresses;
-    Target &target = thread.GetProcess()->GetTarget();
-    for (const SymbolContext &ctor_sc : sc_list) {
-      const Symbol *ctor_symbol = ctor_sc.symbol;
-      if (ctor_symbol)
-        load_addresses.push_back(ctor_symbol->GetLoadAddress(&target));
-    }
-    if (load_addresses.empty())
-      return nullptr;
-    return std::make_shared<ThreadPlanRunToAddress>(thread, load_addresses,
-                                                    stop_others);
+    return CreateThreadPlanRunToSCInList(thread, sc_list, stop_others);
   }
   case ThunkAction::StepThrough: {
     if (log)
