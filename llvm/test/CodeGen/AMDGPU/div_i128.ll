@@ -4501,21 +4501,19 @@ define i128 @v_sdiv_i128_v_pow2k(i128 %lhs) {
 ; GFX9-G-O0-NEXT:    v_add_co_u32_e64 v4, s[6:7], v4, v5
 ; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v1, s[6:7], v1, v0, s[6:7]
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s8
-; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v5, s[6:7], v2, v0, s[6:7]
+; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v2, s[6:7], v2, v0, s[6:7]
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX9-G-O0-NEXT:    v_addc_co_u32_e64 v4, s[6:7], v3, v0, s[6:7]
-; GFX9-G-O0-NEXT:    ; kill: def $vgpr5 killed $vgpr5 def $vgpr5_vgpr6 killed $exec
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v6, v4
+; GFX9-G-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX9-G-O0-NEXT:    s_mov_b32 s5, 1
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX9-G-O0-NEXT:    v_lshrrev_b32_e64 v0, v0, v1
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, s4
-; GFX9-G-O0-NEXT:    v_lshlrev_b64 v[5:6], v2, v[5:6]
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v3, v5
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, v6
-; GFX9-G-O0-NEXT:    v_or_b32_e64 v0, v0, v3
-; GFX9-G-O0-NEXT:    v_or_b32_e64 v1, v1, v2
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-G-O0-NEXT:    v_lshlrev_b64 v[5:6], v1, v[2:3]
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, v5
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, v6
+; GFX9-G-O0-NEXT:    v_or_b32_e64 v0, v0, v2
 ; GFX9-G-O0-NEXT:    s_mov_b32 s4, 31
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-G-O0-NEXT:    v_ashrrev_i32_e64 v3, v2, v4
@@ -4590,14 +4588,12 @@ define i128 @v_udiv_i128_v_pow2k(i128 %lhs) {
 ; GFX9-G-O0-NEXT:    s_mov_b32 s4, 1
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-G-O0-NEXT:    v_lshrrev_b32_e64 v0, v0, v1
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-G-O0-NEXT:    s_mov_b32 s4, 31
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, s4
-; GFX9-G-O0-NEXT:    v_lshlrev_b64 v[5:6], v2, v[4:5]
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v4, v5
-; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, v6
-; GFX9-G-O0-NEXT:    v_or_b32_e64 v0, v0, v4
-; GFX9-G-O0-NEXT:    v_or_b32_e64 v1, v1, v2
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-G-O0-NEXT:    v_lshlrev_b64 v[4:5], v1, v[4:5]
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, v4
+; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, v5
+; GFX9-G-O0-NEXT:    v_or_b32_e64 v0, v0, v2
 ; GFX9-G-O0-NEXT:    s_mov_b32 s4, 1
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9-G-O0-NEXT:    v_lshrrev_b32_e64 v2, v2, v3
