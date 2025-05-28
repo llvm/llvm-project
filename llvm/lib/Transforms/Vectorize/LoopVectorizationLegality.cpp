@@ -851,7 +851,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           if (MinMaxRecurDes.getLoopExitInstr())
             AllowedExit.insert(MinMaxRecurDes.getLoopExitInstr());
           Reductions[Phi] = MinMaxRecurDes;
-          MinMaxRecurrences.insert(Phi);
+          MinMaxRecurrences.try_emplace(Phi);
           MinMaxRecurrenceChains[Phi] = std::move(Chain);
           continue;
         }
@@ -1093,10 +1093,6 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     if (!canVectorizeMinMaxRecurrence(Phi, Chain))
       return false;
   }
-  // FIXME: Remove this after the IR generation of min/max with index is
-  // supported.
-  if (!MinMaxRecurrences.empty())
-    return false;
 
   return true;
 }
@@ -1105,6 +1101,10 @@ bool LoopVectorizationLegality::canVectorizeMinMaxRecurrence(
     PHINode *Phi, ArrayRef<Instruction *> Chain) {
   assert(!Chain.empty() && "Unexpected empty recurrence chain");
   assert(isMinMaxRecurrence(Phi) && "The PHI is not a min/max recurrence phi");
+
+  auto It = MinMaxRecurrences.find(Phi);
+  if (It->second)
+    return true;
 
   auto IsMinMaxIdxReductionPhi = [this, Phi, &Chain](Value *Candidate) -> bool {
     auto *IdxPhi = dyn_cast<PHINode>(Candidate);
@@ -1150,7 +1150,17 @@ bool LoopVectorizationLegality::canVectorizeMinMaxRecurrence(
 
   auto *TrueVal = IdxChainHead->getTrueValue();
   auto *FalseVal = IdxChainHead->getFalseValue();
-  return IsMinMaxIdxReductionPhi(TrueVal) || IsMinMaxIdxReductionPhi(FalseVal);
+  PHINode *IdxPhi;
+  if (IsMinMaxIdxReductionPhi(TrueVal))
+    IdxPhi = cast<PHINode>(TrueVal);
+  else if (IsMinMaxIdxReductionPhi(FalseVal))
+    IdxPhi = cast<PHINode>(FalseVal);
+  else
+    return false;
+
+  // Record the index reduction phi uses the min/max recurrence.
+  It->second = IdxPhi;
+  return true;
 }
 
 /// Find histogram operations that match high-level code in loops:
@@ -1973,7 +1983,8 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   SmallPtrSet<const Value *, 8> ReductionLiveOuts;
 
   for (const auto &Reduction : getReductionVars())
-    ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
+    if (auto *ExitInstr = Reduction.second.getLoopExitInstr())
+      ReductionLiveOuts.insert(ExitInstr);
 
   // TODO: handle non-reduction outside users when tail is folded by masking.
   for (auto *AE : AllowedExit) {

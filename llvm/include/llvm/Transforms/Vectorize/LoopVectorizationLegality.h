@@ -307,6 +307,11 @@ public:
   /// Return the fixed-order recurrences found in the loop.
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
+  /// Return the min/max recurrences found in the loop.
+  const SmallDenseMap<PHINode *, PHINode *> &getMinMaxRecurrences() {
+    return MinMaxRecurrences;
+  }
+
   /// Returns the widest induction type.
   IntegerType *getWidestInductionType() { return WidestIndTy; }
 
@@ -618,7 +623,7 @@ private:
   RecurrenceSet FixedOrderRecurrences;
 
   /// Holds the min/max recurrences variables.
-  RecurrenceSet MinMaxRecurrences;
+  SmallDenseMap<PHINode *, PHINode *> MinMaxRecurrences;
 
   /// Holds the widest induction type encountered.
   IntegerType *WidestIndTy = nullptr;
