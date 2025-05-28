@@ -77,15 +77,14 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, ir<0>
-; CHECK-NEXT:   vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
-; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>
+; CHECK-NEXT:   vp<[[VPTR1:%.]]> = vector-pointer ir<%A>
+; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer ir<%A>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[VPTR1]]>
 ; CHECK-NEXT:   WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nsw ir<%l>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%add>.1 = add nsw ir<%l>.1, ir<10>
-; CHECK-NEXT:   vp<[[VPTR3:%.+]]> = vector-pointer vp<[[PADD1]]>
-; CHECK-NEXT:   vp<[[VPTR4:%.+]]> = vector-pointer vp<[[PADD1]]>, ir<1>
+; CHECK-NEXT:   vp<[[VPTR3:%.+]]> = vector-pointer ir<%A>
+; CHECK-NEXT:   vp<[[VPTR4:%.+]]> = vector-pointer ir<%A>, ir<1>
 ; CHECK-NEXT:   WIDEN store vp<[[VPTR3]]>, ir<%add>
 ; CHECK-NEXT:   WIDEN store vp<[[VPTR4]]>, ir<%add>.1
 ; CHECK-NEXT: Successor(s): middle.block

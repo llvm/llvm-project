@@ -741,6 +741,7 @@ class DebugCommunication(object):
                 mode = "invalid"
 
     def request_attach(self, **kwargs: Unpack[AttachArguments]):
+        # Remove any default (empty) values.
         attach_args = cast(AttachArguments, {k: v for k, v in kwargs.items() if v})
         attach_args.setdefault("disableASLR", True)
         attach_args.setdefault("initCommands", [])
@@ -932,8 +933,8 @@ class DebugCommunication(object):
         return response
 
     def request_launch(self, **kwargs: Unpack[LaunchArguments]):
+        # Remove any default (empty) values.
         launch_args = cast(LaunchArguments, {k: v for k, v in kwargs.items() if v})
-        launch_args.setdefault("disableASLR", True)
         launch_args.setdefault("initCommands", [])
         launch_args["initCommands"] = [
             *self.init_commands,

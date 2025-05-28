@@ -3290,7 +3290,7 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b128 off, v[28:31], s33 offset:1536 ; 16-byte Folded Spill
 ; GFX11-NEXT:    scratch_store_b128 off, v[32:35], s32
-; GFX11-NEXT:    v_dual_mov_b32 v31, v47 :: v_dual_mov_b32 v32, v36
+; GFX11-NEXT:    v_mov_b32_e32 v32, v36
 ; GFX11-NEXT:    v_dual_mov_b32 v33, v48 :: v_dual_mov_b32 v34, v49
 ; GFX11-NEXT:    v_dual_mov_b32 v35, v50 :: v_dual_mov_b32 v48, v51
 ; GFX11-NEXT:    v_dual_mov_b32 v49, v52 :: v_dual_mov_b32 v50, v53
@@ -3317,7 +3317,6 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_add_i32 s2, s32, 0x70
 ; GFX11-NEXT:    v_mov_b32_e32 v6, v17
 ; GFX11-NEXT:    scratch_store_b128 off, v[12:15], s2
-; GFX11-NEXT:    v_mov_b32_e32 v13, v24
 ; GFX11-NEXT:    s_add_i32 s2, s32, 0x6c
 ; GFX11-NEXT:    v_mov_b32_e32 v7, v18
 ; GFX11-NEXT:    scratch_store_b32 off, v0, s2
@@ -3328,26 +3327,27 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    v_dual_mov_b32 v12, v23 :: v_dual_mov_b32 v29, v45
 ; GFX11-NEXT:    scratch_store_b128 off, v[40:43], s2
 ; GFX11-NEXT:    s_add_i32 s2, s32, 64
-; GFX11-NEXT:    v_mov_b32_e32 v14, v25
+; GFX11-NEXT:    v_mov_b32_e32 v13, v24
 ; GFX11-NEXT:    scratch_store_b128 off, v[52:55], s2
 ; GFX11-NEXT:    s_add_i32 s2, s32, 48
-; GFX11-NEXT:    v_mov_b32_e32 v16, v27
+; GFX11-NEXT:    v_mov_b32_e32 v14, v25
 ; GFX11-NEXT:    scratch_store_b128 off, v[36:39], s2
 ; GFX11-NEXT:    s_add_i32 s2, s32, 32
-; GFX11-NEXT:    v_mov_b32_e32 v30, v46
+; GFX11-NEXT:    v_mov_b32_e32 v16, v27
 ; GFX11-NEXT:    scratch_store_b128 off, v[48:51], s2
 ; GFX11-NEXT:    s_add_i32 s2, s32, 16
+; GFX11-NEXT:    v_mov_b32_e32 v30, v46
 ; GFX11-NEXT:    scratch_store_b128 off, v[32:35], s2
-; GFX11-NEXT:    scratch_load_b128 v[1:4], off, s33 offset:1584 ; 16-byte Folded Reload
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, 42
-; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    s_clause 0x3
+; GFX11-NEXT:    scratch_load_b128 v[1:4], off, s33 offset:1584
 ; GFX11-NEXT:    scratch_load_b128 v[17:20], off, s33 offset:1568
 ; GFX11-NEXT:    scratch_load_b128 v[21:24], off, s33 offset:1552
 ; GFX11-NEXT:    scratch_load_b128 v[25:28], off, s33 offset:1536
 ; GFX11-NEXT:    s_add_i32 s2, s33, 0x400
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-NEXT:    v_dual_mov_b32 v31, v47 :: v_dual_mov_b32 v0, s2
+; GFX11-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-NEXT:    v_mov_b32_e32 v1, 42
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_clause 0xb
 ; GFX11-NEXT:    scratch_load_b32 v59, off, s33
