@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
@@ -24,6 +25,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <variant>
 
 namespace llvm {
@@ -119,9 +121,10 @@ template <typename T> struct ViewArray {
 
 namespace DirectX {
 struct RootParameterView {
-  const dxbc::RootParameterHeader &Header;
+  const dxbc::RTS0::v1::RootParameterHeader &Header;
   StringRef ParamData;
-  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
+
+  RootParameterView(const dxbc::RTS0::v1::RootParameterHeader &H, StringRef P)
       : Header(H), ParamData(P) {}
 
   template <typename T> Expected<T> readParameter() {
@@ -144,8 +147,33 @@ struct RootConstantView : RootParameterView {
            (uint32_t)dxbc::RootParameterType::Constants32Bit;
   }
 
-  llvm::Expected<dxbc::RootConstants> read() {
-    return readParameter<dxbc::RootConstants>();
+  llvm::Expected<dxbc::RTS0::v1::RootConstants> read() {
+    return readParameter<dxbc::RTS0::v1::RootConstants>();
+  }
+};
+
+struct RootDescriptorView : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::UAV));
+  }
+
+  llvm::Expected<dxbc::RTS0::v2::RootDescriptor> read(uint32_t Version) {
+    if (Version == 1) {
+      auto Descriptor = readParameter<dxbc::RTS0::v1::RootDescriptor>();
+      if (Error E = Descriptor.takeError())
+        return E;
+      return dxbc::RTS0::v2::RootDescriptor(*Descriptor);
+    }
+    if (Version != 2)
+      return make_error<GenericBinaryError>("Invalid Root Signature version: " +
+                                                Twine(Version),
+                                            object_error::parse_failed);
+    return readParameter<dxbc::RTS0::v2::RootDescriptor>();
   }
 };
 
@@ -161,10 +189,11 @@ private:
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
   uint32_t Flags;
-  ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
+  ViewArray<dxbc::RTS0::v1::RootParameterHeader> ParametersHeaders;
   StringRef PartData;
 
-  using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
+  using param_header_iterator =
+      ViewArray<dxbc::RTS0::v1::RootParameterHeader>::iterator;
 
 public:
   RootSignature(StringRef PD) : PartData(PD) {}
@@ -182,7 +211,7 @@ public:
   uint32_t getFlags() const { return Flags; }
 
   llvm::Expected<RootParameterView>
-  getParameter(const dxbc::RootParameterHeader &Header) const {
+  getParameter(const dxbc::RTS0::v1::RootParameterHeader &Header) const {
     size_t DataSize;
 
     if (!dxbc::isValidParameterType(Header.ParameterType))
@@ -190,7 +219,15 @@ public:
 
     switch (static_cast<dxbc::RootParameterType>(Header.ParameterType)) {
     case dxbc::RootParameterType::Constants32Bit:
-      DataSize = sizeof(dxbc::RootConstants);
+      DataSize = sizeof(dxbc::RTS0::v1::RootConstants);
+      break;
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV:
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RTS0::v1::RootDescriptor);
+      else
+        DataSize = sizeof(dxbc::RTS0::v2::RootDescriptor);
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0

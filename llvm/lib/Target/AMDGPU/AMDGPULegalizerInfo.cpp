@@ -872,12 +872,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // Report legal for any types we can handle anywhere. For the cases only legal
   // on the SALU, RegBankSelect will be able to re-legalize.
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
-    .legalFor({S32, S1, S64, V2S32, S16, V2S16, V4S16})
-    .clampScalar(0, S32, S64)
-    .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-    .fewerElementsIf(vectorWiderThan(0, 64), fewerEltsToSize64Vector(0))
-    .widenScalarToNextPow2(0)
-    .scalarize(0);
+      .legalFor({S32, S1, S64, V2S32, S16, V2S16, V4S16})
+      .clampScalar(0, S32, S64)
+      .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+      .fewerElementsIf(
+          all(vectorWiderThan(0, 64), scalarOrEltNarrowerThan(0, 64)),
+          fewerEltsToSize64Vector(0))
+      .widenScalarToNextPow2(0)
+      .scalarize(0);
 
   getActionDefinitionsBuilder(
       {G_UADDO, G_USUBO, G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
@@ -958,6 +960,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &MinNumMaxNum = getActionDefinitionsBuilder({
       G_FMINNUM, G_FMAXNUM, G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
 
+  // TODO: These should be custom lowered and are directly legal with IEEE=0
+  auto &MinimumNumMaximumNum =
+      getActionDefinitionsBuilder({G_FMINIMUMNUM, G_FMAXIMUMNUM});
+
   if (ST.hasVOP3PInsts()) {
     MinNumMaxNum.customFor(FPTypesPK16)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
@@ -973,6 +979,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampScalar(0, S32, S64)
       .scalarize(0);
   }
+
+  MinimumNumMaximumNum.lower();
 
   if (ST.hasVOP3PInsts())
     FPOpActions.clampMaxNumElementsStrict(0, S16, 2);
@@ -1757,7 +1765,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         // 32-bit amount.
         const LLT ValTy = Query.Types[0];
         const LLT AmountTy = Query.Types[1];
-        return ValTy.getSizeInBits() <= 16 &&
+        return ValTy.isScalar() && ValTy.getSizeInBits() <= 16 &&
                AmountTy.getSizeInBits() < 16;
       }, changeTo(1, S16));
     Shifts.maxScalarIf(typeIs(0, S16), 1, S16);

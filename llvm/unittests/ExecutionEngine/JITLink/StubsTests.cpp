@@ -9,8 +9,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
-#include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
+#include "llvm/ExecutionEngine/JITLink/x86.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/Support/Memory.h"
@@ -96,19 +96,19 @@ TEST(StubsTest, StubsGeneration_aarch64) {
             ArrayRef<char>(PointerJumpStubContent));
 }
 
-TEST(StubsTest, StubsGeneration_i386) {
+TEST(StubsTest, StubsGeneration_x86) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
               Triple("i386-unknown-linux-gnu"), SubtargetFeatures(),
               getGenericEdgeKindName);
-  auto [PointerSym, StubSym] = GenerateStub(G, 4U, i386::Pointer32);
+  auto [PointerSym, StubSym] = GenerateStub(G, 4U, x86::Pointer32);
 
   EXPECT_EQ(std::distance(StubSym.getBlock().edges().begin(),
                           StubSym.getBlock().edges().end()),
             1U);
   auto &JumpEdge = *StubSym.getBlock().edges().begin();
-  EXPECT_EQ(JumpEdge.getKind(), i386::Pointer32);
+  EXPECT_EQ(JumpEdge.getKind(), x86::Pointer32);
   EXPECT_EQ(&JumpEdge.getTarget(), &PointerSym);
   EXPECT_EQ(StubSym.getBlock().getContent(),
             ArrayRef<char>(PointerJumpStubContent));

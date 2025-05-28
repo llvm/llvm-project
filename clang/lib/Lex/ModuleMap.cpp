@@ -37,9 +37,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <cstring>
 #include <optional>
 #include <string>
@@ -2019,7 +2017,7 @@ void ModuleMapLoader::handleUmbrellaDirDecl(
     }
 
     // Sort header paths so that the pcm doesn't depend on iteration order.
-    std::stable_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
+    llvm::stable_sort(Headers, compareModuleHeaders);
 
     for (auto &Header : Headers)
       Map.addHeader(ActiveModule, std::move(Header), ModuleMap::TextualHeader);

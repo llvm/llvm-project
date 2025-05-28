@@ -816,9 +816,12 @@ removeTriviallyEmptyRange(IntrinsicInst &EndI, InstCombinerImpl &IC,
 }
 
 Instruction *InstCombinerImpl::visitVAEndInst(VAEndInst &I) {
-  removeTriviallyEmptyRange(I, *this, [](const IntrinsicInst &I) {
-    return I.getIntrinsicID() == Intrinsic::vastart ||
-           I.getIntrinsicID() == Intrinsic::vacopy;
+  removeTriviallyEmptyRange(I, *this, [&I](const IntrinsicInst &II) {
+    // Bail out on the case where the source va_list of a va_copy is destroyed
+    // immediately by a follow-up va_end.
+    return II.getIntrinsicID() == Intrinsic::vastart ||
+           (II.getIntrinsicID() == Intrinsic::vacopy &&
+            I.getArgOperand(0) != II.getArgOperand(1));
   });
   return nullptr;
 }
@@ -2298,6 +2301,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ true,
                                      /*MatchBitReversals*/ true))
         return BitOp;
+    }
+
+    // fshl(X, X, Neg(Y)) --> fshr(X, X, Y)
+    // fshr(X, X, Neg(Y)) --> fshl(X, X, Y)
+    // if BitWidth is a power-of-2
+    Value *Y;
+    if (Op0 == Op1 && isPowerOf2_32(BitWidth) &&
+        match(II->getArgOperand(2), m_Neg(m_Value(Y)))) {
+      Module *Mod = II->getModule();
+      Function *OppositeShift = Intrinsic::getOrInsertDeclaration(
+          Mod, IID == Intrinsic::fshl ? Intrinsic::fshr : Intrinsic::fshl, Ty);
+      return CallInst::Create(OppositeShift, {Op0, Op1, Y});
     }
 
     // fshl(X, 0, Y) --> shl(X, and(Y, BitWidth - 1)) if bitwidth is a
@@ -3796,6 +3811,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (MinAlign > Align.valueOrOne()) {
       II->addRetAttr(Attribute::getWithAlignment(II->getContext(), MinAlign));
       return II;
+    }
+    break;
+  }
+  case Intrinsic::frexp: {
+    Value *X;
+    // The first result is idempotent with the added complication of the struct
+    // return, and the second result is zero because the value is already
+    // normalized.
+    if (match(II->getArgOperand(0), m_ExtractValue<0>(m_Value(X)))) {
+      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value()))) {
+        X = Builder.CreateInsertValue(
+            X, Constant::getNullValue(II->getType()->getStructElementType(1)),
+            1);
+        return replaceInstUsesWith(*II, X);
+      }
     }
     break;
   }

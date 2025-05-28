@@ -61,7 +61,6 @@
 
 TABLE_FUNCTION_DECL(float2, log2_tbl);
 TABLE_FUNCTION_DECL(float2, log10_tbl);
-TABLE_FUNCTION_DECL(uint4, pibits_tbl);
 
 CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl_ep_head);
 CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl_ep_tail);
@@ -75,6 +74,7 @@ CLC_TABLE_FUNCTION_DECL(float, cbrt_tbl_head);
 CLC_TABLE_FUNCTION_DECL(float, cbrt_tbl_tail);
 CLC_TABLE_FUNCTION_DECL(float, sinhcosh_tbl_head);
 CLC_TABLE_FUNCTION_DECL(float, sinhcosh_tbl_tail);
+CLC_TABLE_FUNCTION_DECL(ulong, pibits_tbl);
 
 #ifdef cl_khr_fp64
 

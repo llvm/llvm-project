@@ -861,9 +861,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasIEEEMinMax()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
-    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
-                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
-                       Custom);
   } else {
     // FIXME: For nnan fmaximum, emit the fmaximum3 instead of fmaxnum
     if (Subtarget->hasMinimum3Maximum3F32())
@@ -876,6 +873,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       if (!Subtarget->hasMinimum3Maximum3F16())
         setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
     }
+  }
+
+  if (Subtarget->hasVOP3PInsts()) {
+    // We want to break these into v2f16 pieces, not scalarize.
+    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Custom);
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
@@ -915,6 +919,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
+  if (Subtarget->hasCvtPkF16F32Inst())
+    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Custom);
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -930,6 +937,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMAXNUM_IEEE,
                        ISD::FMINIMUM,
                        ISD::FMAXIMUM,
+                       ISD::FMINIMUMNUM,
+                       ISD::FMAXIMUMNUM,
                        ISD::FMA,
                        ISD::SMIN,
                        ISD::SMAX,
@@ -1450,6 +1459,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.flags |= MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds: {
     Info.opc = ISD::INTRINSIC_VOID;
     unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
@@ -1531,6 +1541,7 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_load_tr_b128:
     Ptr = II->getArgOperand(0);
     break;
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds:
     Ptr = II->getArgOperand(1);
     break;
@@ -3711,9 +3722,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     // followed by the flags and any other arguments with special meanings.
     // Pop them out of CLI.Outs and CLI.OutVals before we do any processing so
     // we don't treat them like the "real" arguments.
-    auto RequestedExecIt = std::find_if(
-        CLI.Outs.begin(), CLI.Outs.end(),
-        [](const ISD::OutputArg &Arg) { return Arg.OrigArgIndex == 2; });
+    auto RequestedExecIt =
+        llvm::find_if(CLI.Outs, [](const ISD::OutputArg &Arg) {
+          return Arg.OrigArgIndex == 2;
+        });
     assert(RequestedExecIt != CLI.Outs.end() && "No node for EXEC");
 
     size_t SpecialArgsBeginIdx = RequestedExecIt - CLI.Outs.begin();
@@ -6893,17 +6905,33 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
+  EVT DstVT = Op.getValueType();
+
+  if (DstVT == MVT::v2f16) {
+    assert(Subtarget->hasCvtPkF16F32Inst() && "support v_cvt_pk_f16_f32");
+    return SrcVT == MVT::v2f32 ? Op : SDValue();
+  }
+
   if (SrcVT.getScalarType() != MVT::f64)
     return Op;
 
-  EVT DstVT = Op.getValueType();
   SDLoc DL(Op);
   if (DstVT == MVT::f16) {
     // TODO: Handle strictfp
     if (Op.getOpcode() != ISD::FP_ROUND)
       return Op;
 
-    SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
+    if (!Subtarget->has16BitInsts()) {
+      SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
+      return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
+    }
+    if (getTargetMachine().Options.UnsafeFPMath) {
+      SDValue Flags = Op.getOperand(1);
+      SDValue Src32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, Src, Flags);
+      return DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, Src32, Flags);
+    }
+    SDValue FpToFp16 = LowerF64ToF16Safe(Src, DL, DAG);
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
     return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
   }
@@ -10229,6 +10257,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     return SDValue(Load, 0);
   }
+  // Buffers are handled by LowerBufferFatPointers, and we're going to go
+  // for "trust me" that the remaining cases are global pointers until
+  // such time as we can put two mem operands on an intrinsic.
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds: {
     if (!Subtarget->hasVMemToLDSLoad())
       return SDValue();
@@ -10259,7 +10291,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       break;
     }
 
-    auto *M = cast<MemSDNode>(Op);
     SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(3));
 
     SmallVector<SDValue, 6> Ops;
@@ -10299,6 +10330,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     Ops.push_back(M0Val.getValue(0)); // Chain
     Ops.push_back(M0Val.getValue(1)); // Glue
 
+    auto *M = cast<MemSDNode>(Op);
     MachineMemOperand *LoadMMO = M->getMemOperand();
     MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
     LoadPtrI.Offset = Op->getConstantOperandVal(5);
@@ -13135,6 +13167,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case AMDGPUISD::CLAMP:
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMAX3:
@@ -13299,7 +13333,9 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FMINIMUM:
-  case AMDGPU::G_FMAXIMUM: {
+  case AMDGPU::G_FMAXIMUM:
+  case AMDGPU::G_FMINIMUMNUM:
+  case AMDGPU::G_FMAXIMUMNUM: {
     if (Subtarget->supportsMinMaxDenormModes() ||
         // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(MRI.getType(Reg), MF))
@@ -13469,6 +13505,7 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   switch (Opc) {
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMAXIMUMNUM:
     return AMDGPUISD::FMAX3;
   case ISD::FMAXIMUM:
     return AMDGPUISD::FMAXIMUM3;
@@ -13478,6 +13515,7 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
     return AMDGPUISD::UMAX3;
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
+  case ISD::FMINIMUMNUM:
     return AMDGPUISD::FMIN3;
   case ISD::FMINIMUM:
     return AMDGPUISD::FMINIMUM3;
@@ -13555,10 +13593,34 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
   if (K0->getValueAPF() > K1->getValueAPF())
     return SDValue();
 
+  // med3 with a nan input acts like
+  // v_min_f32(v_min_f32(S0.f32, S1.f32), S2.f32)
+  //
+  // So the result depends on whether the IEEE mode bit is enabled or not with a
+  // signaling nan input.
+  // ieee=1
+  // s0 snan: yields s2
+  // s1 snan: yields s2
+  // s2 snan: qnan
+
+  // s0 qnan: min(s1, s2)
+  // s1 qnan: min(s0, s2)
+  // s2 qnan: min(s0, s1)
+
+  // ieee=0
+  // s0 snan: min(s1, s2)
+  // s1 snan: min(s0, s2)
+  // s2 snan: qnan
+
+  // s0 qnan: min(s1, s2)
+  // s1 qnan: min(s0, s2)
+  // s2 qnan: min(s0, s1)
   const MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
-  // TODO: Check IEEE bit enabled?
+  // TODO: Check IEEE bit enabled. We can form fmed3 with IEEE=0 regardless of
+  // whether the input is a signaling nan if op0 is fmaximum or fmaximumnum. We
+  // can only form if op0 is fmaxnum_ieee if IEEE=1.
   EVT VT = Op0.getValueType();
   if (Info->getMode().DX10Clamp) {
     // If dx10_clamp is enabled, NaNs clamp to 0.0. This is the same as the
@@ -13599,6 +13661,8 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
     return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());
@@ -13674,9 +13738,14 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
       return Med3;
   }
 
-  // fminnum(fmaxnum(x, K0), K1), K0 < K1 && !is_snan(x) -> fmed3(x, K0, K1)
+  // if !is_snan(x):
+  //   fminnum(fmaxnum(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fminnum_ieee(fmaxnum_ieee(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fminnumnum(fmaxnumnum(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fmin_legacy(fmax_legacy(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
   if (((Opc == ISD::FMINNUM && Op0.getOpcode() == ISD::FMAXNUM) ||
        (Opc == ISD::FMINNUM_IEEE && Op0.getOpcode() == ISD::FMAXNUM_IEEE) ||
+       (Opc == ISD::FMINIMUMNUM && Op0.getOpcode() == ISD::FMAXIMUMNUM) ||
        (Opc == AMDGPUISD::FMIN_LEGACY &&
         Op0.getOpcode() == AMDGPUISD::FMAX_LEGACY)) &&
       (VT == MVT::f32 || VT == MVT::f64 ||
@@ -15304,6 +15373,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM:
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
@@ -16020,7 +16091,8 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
     case 'v':
       switch (BitWidth) {
       case 16:
-        RC = &AMDGPU::VGPR_32RegClass;
+        RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
+                                             : &AMDGPU::VGPR_32RegClass;
         break;
       default:
         RC = TRI->getVGPRClassForBitWidth(BitWidth);

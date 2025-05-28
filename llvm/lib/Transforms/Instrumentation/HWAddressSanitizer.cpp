@@ -692,7 +692,7 @@ void HWAddressSanitizer::initializeModule() {
   }
 
   if (!TargetTriple.isAndroid()) {
-    Constant *C = M.getOrInsertGlobal("__hwasan_tls", IntptrTy, [&] {
+    ThreadPtrGlobal = M.getOrInsertGlobal("__hwasan_tls", IntptrTy, [&] {
       auto *GV = new GlobalVariable(M, IntptrTy, /*isConstant=*/false,
                                     GlobalValue::ExternalLinkage, nullptr,
                                     "__hwasan_tls", nullptr,
@@ -700,7 +700,6 @@ void HWAddressSanitizer::initializeModule() {
       appendToCompilerUsed(M, GV);
       return GV;
     });
-    ThreadPtrGlobal = cast<GlobalVariable>(C);
   }
 }
 
@@ -1847,6 +1846,12 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
                                      IsLocal ? GlobalValue::InternalLinkage
                                              : GlobalValue::LinkOnceODRLinkage,
                                      ThunkName, &M);
+    // TODO: think about other attributes as well.
+    if (any_of(P.second, [](const Function *F) {
+          return F->hasFnAttribute("branch-target-enforcement");
+        })) {
+      ThunkFn->addFnAttr("branch-target-enforcement");
+    }
     if (!IsLocal) {
       ThunkFn->setVisibility(GlobalValue::HiddenVisibility);
       ThunkFn->setComdat(M.getOrInsertComdat(ThunkName));

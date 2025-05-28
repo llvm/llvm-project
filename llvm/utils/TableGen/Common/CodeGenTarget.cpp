@@ -23,7 +23,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <algorithm>
 #include <iterator>
 #include <tuple>
 using namespace llvm;
@@ -70,8 +69,6 @@ std::string llvm::getQualifiedName(const Record *R) {
   return Namespace + "::" + R->getName().str();
 }
 
-/// getTarget - Return the current instance of the Target class.
-///
 CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
     : Records(records), CGH(records), Intrinsics(records) {
   ArrayRef<const Record *> Targets = Records.getAllDerivedDefinitions("Target");
@@ -394,7 +391,7 @@ bool CodeGenTarget::guessInstructionProperties() const {
 ComplexPattern::ComplexPattern(const Record *R) {
   Ty = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
-  SelectFunc = std::string(R->getValueAsString("SelectFunc"));
+  SelectFunc = R->getValueAsString("SelectFunc").str();
   RootNodes = R->getValueAsListOfDefs("RootNodes");
 
   // FIXME: This is a hack to statically increase the priority of patterns which
