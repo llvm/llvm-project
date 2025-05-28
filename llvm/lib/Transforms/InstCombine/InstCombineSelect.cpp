@@ -2798,6 +2798,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     //       fneg/fabs operations.
     if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X))) &&
         (cast<FPMathOperator>(CondVal)->hasNoNaNs() || SI.hasNoNaNs() ||
+         (SI.hasOneUse() && canIgnoreSignBitOfNaN(*SI.use_begin())) ||
          isKnownNeverNaN(X, /*Depth=*/0,
                          IC.getSimplifyQuery().getWithInstruction(
                              cast<Instruction>(CondVal))))) {
@@ -2844,7 +2845,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     // Note: We require "nnan" for this fold because fcmp ignores the signbit
     //       of NAN, but IEEE-754 specifies the signbit of NAN values with
     //       fneg/fabs operations.
-    if (!SI.hasNoSignedZeros() || !SI.hasNoNaNs())
+    if (!SI.hasNoSignedZeros() &&
+        (!SI.hasOneUse() || !canIgnoreSignBitOfZero(*SI.use_begin())))
+      return nullptr;
+    if (!SI.hasNoNaNs() &&
+        (!SI.hasOneUse() || !canIgnoreSignBitOfNaN(*SI.use_begin())))
       return nullptr;
 
     if (Swap)

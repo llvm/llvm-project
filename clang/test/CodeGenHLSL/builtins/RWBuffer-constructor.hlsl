@@ -76,7 +76,7 @@ export void foo() {
 // CHECK: define linkonce_odr void @_ZN4hlsl8RWBufferIdEC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId, ptr noundef %name)
 // CHECK: %[[HANDLE:.*]] = call target("dx.TypedBuffer", double, 1, 0, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.TypedBuffer_f64_1_0_0t
-// CEHCK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
+// CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer.0", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: store target("dx.TypedBuffer", double, 1, 0, 0) %[[HANDLE]], ptr %__handle, align 4
 

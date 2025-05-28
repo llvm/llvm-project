@@ -78,7 +78,7 @@ struct StableFunctionMap {
   const HashFuncsMapType &getFunctionMap() const { return HashToFuncs; }
 
   /// Get the NameToId vector for serialization.
-  const SmallVector<std::string> getNames() const { return IdToName; }
+  ArrayRef<std::string> getNames() const { return IdToName; }
 
   /// Get an existing ID associated with the given name or create a new ID if it
   /// doesn't exist.

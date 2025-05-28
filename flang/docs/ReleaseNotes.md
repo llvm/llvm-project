@@ -32,6 +32,9 @@ page](https://llvm.org/releases/).
 
 ## New Compiler Flags
 
+* -floop-interchange is now recognized by flang.
+* -floop-interchange is enabled by default at -O2 and above.
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang

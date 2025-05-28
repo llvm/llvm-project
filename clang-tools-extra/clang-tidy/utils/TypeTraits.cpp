@@ -9,7 +9,6 @@
 #include "TypeTraits.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <optional>
 
 namespace clang::tidy::utils::type_traits {

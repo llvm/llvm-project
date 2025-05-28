@@ -1882,10 +1882,10 @@ uint64_t4 reversebits(uint64_t4);
 /// x[0] * y[1] - y[0] * x[1]
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_crossf16)
 half3 cross(half3, half3);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_crossf32)
 float3 cross(float3, float3);
 
 //===----------------------------------------------------------------------===//

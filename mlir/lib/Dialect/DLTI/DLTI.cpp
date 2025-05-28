@@ -420,6 +420,12 @@ DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
       DLTIDialect::kDataLayoutStackAlignmentKey);
 }
 
+StringAttr DataLayoutSpecAttr::getFunctionPointerAlignmentIdentifier(
+    MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutFunctionPointerAlignmentKey);
+}
+
 /// Parses an attribute with syntax:
 ///   dl-spec-attr ::= `#dlti.` `dl_spec` `<` entry-list `>`
 ///   entry-list ::= | entry | entry `,` entry-list
@@ -625,6 +631,7 @@ public:
         entryName == DLTIDialect::kDataLayoutProgramMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutGlobalMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutStackAlignmentKey ||
+        entryName == DLTIDialect::kDataLayoutFunctionPointerAlignmentKey ||
         entryName == DLTIDialect::kDataLayoutManglingModeKey)
       return success();
     return emitError(loc) << "unknown data layout entry name: " << entryName;

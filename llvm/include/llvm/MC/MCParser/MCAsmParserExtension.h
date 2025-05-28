@@ -53,8 +53,8 @@ public:
 
   MCContext &getContext() { return getParser().getContext(); }
 
-  MCAsmLexer &getLexer() { return getParser().getLexer(); }
-  const MCAsmLexer &getLexer() const {
+  AsmLexer &getLexer() { return getParser().getLexer(); }
+  const AsmLexer &getLexer() const {
     return const_cast<MCAsmParserExtension *>(this)->getLexer();
   }
 

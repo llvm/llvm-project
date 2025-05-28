@@ -599,17 +599,25 @@ enum NodeType {
   /// vector, but not the other way around.
   EXTRACT_SUBVECTOR,
 
-  /// VECTOR_DEINTERLEAVE(VEC1, VEC2) - Returns two vectors with all input and
-  /// output vectors having the same type. The first output contains the even
-  /// indices from CONCAT_VECTORS(VEC1, VEC2), with the second output
-  /// containing the odd indices. The relative order of elements within an
-  /// output match that of the concatenated input.
+  /// VECTOR_DEINTERLEAVE(VEC1, VEC2, ...) - Returns N vectors from N input
+  /// vectors, where N is the factor to deinterleave. All input and output
+  /// vectors must have the same type.
+  ///
+  /// Each output contains the deinterleaved indices for a specific field from
+  /// CONCAT_VECTORS(VEC1, VEC2, ...):
+  ///
+  /// Result[I][J] = CONCAT_VECTORS(...)[I + N * J]
   VECTOR_DEINTERLEAVE,
 
-  /// VECTOR_INTERLEAVE(VEC1, VEC2) - Returns two vectors with all input and
-  /// output vectors having the same type. The first output contains the
-  /// result of interleaving the low half of CONCAT_VECTORS(VEC1, VEC2), with
-  /// the second output containing the result of interleaving the high half.
+  /// VECTOR_INTERLEAVE(VEC1, VEC2, ...) - Returns N vectors from N input
+  /// vectors, where N is the factor to interleave. All input and
+  /// output vectors must have the same type.
+  ///
+  /// All input vectors are interleaved into one wide vector, which is then
+  /// chunked into equal sized parts:
+  ///
+  /// Interleaved[I] = VEC(I % N)[I / N]
+  /// Result[J] = EXTRACT_SUBVECTOR(Interleaved, J * getVectorMinNumElements())
   VECTOR_INTERLEAVE,
 
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
@@ -1510,6 +1518,11 @@ enum NodeType {
   //   <numArgs>, cc, ...
   // Outputs: [rv], output chain, glue
   PATCHPOINT,
+
+  // PTRADD represents pointer arithmetic semantics, for targets that opt in
+  // using shouldPreservePtrArith().
+  // ptr = PTRADD ptr, offset
+  PTRADD,
 
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,

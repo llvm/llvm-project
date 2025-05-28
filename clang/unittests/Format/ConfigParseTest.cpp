@@ -257,6 +257,8 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InConditionalStatements);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, Other);
+  CHECK_PARSE_NESTED_BOOL(SortIncludes, Enabled);
+  CHECK_PARSE_NESTED_BOOL(SortIncludes, IgnoreCase);
 }
 
 #undef CHECK_PARSE_BOOL
@@ -976,15 +978,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("IncludeIsMainSourceRegex: 'abc$'",
               IncludeStyle.IncludeIsMainSourceRegex, "abc$");
 
-  Style.SortIncludes = FormatStyle::SI_Never;
+  Style.SortIncludes = {};
   CHECK_PARSE("SortIncludes: true", SortIncludes,
-              FormatStyle::SI_CaseSensitive);
-  CHECK_PARSE("SortIncludes: false", SortIncludes, FormatStyle::SI_Never);
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false}));
+  CHECK_PARSE("SortIncludes: false", SortIncludes,
+              FormatStyle::SortIncludesOptions({}));
   CHECK_PARSE("SortIncludes: CaseInsensitive", SortIncludes,
-              FormatStyle::SI_CaseInsensitive);
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/true}));
   CHECK_PARSE("SortIncludes: CaseSensitive", SortIncludes,
-              FormatStyle::SI_CaseSensitive);
-  CHECK_PARSE("SortIncludes: Never", SortIncludes, FormatStyle::SI_Never);
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false}));
+  CHECK_PARSE("SortIncludes: Never", SortIncludes,
+              FormatStyle::SortIncludesOptions({}));
 
   Style.RawStringFormats.clear();
   std::vector<FormatStyle::RawStringFormat> ExpectedRawStringFormats = {
