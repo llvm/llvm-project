@@ -17,7 +17,9 @@ namespace llvm::directive {
 
 struct VersionRange {
   static constexpr int MaxValue = std::numeric_limits<int>::max();
-  int Min = 1;
+  // The default "Version" value in get<Lang><Enum>Name() is 0, include that
+  // in the maximum range.
+  int Min = 0;
   int Max = MaxValue;
 };
 
