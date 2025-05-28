@@ -269,6 +269,15 @@ computeShapeInfoForInst(Instruction *I,
       return OpShape->second;
   }
 
+  if (isa<SelectInst>(I)) {
+    auto OpShape = ShapeMap.find(I->getOperand(1));
+    if (OpShape != ShapeMap.end())
+      return OpShape->second;
+    OpShape = ShapeMap.find(I->getOperand(2));
+    if (OpShape != ShapeMap.end())
+      return OpShape->second;
+  }
+
   if (isUniformShape(I)) {
     // Find the first operand that has a known shape and use that.
     for (auto &Op : I->operands()) {
@@ -623,7 +632,8 @@ public:
       default:
         return false;
       }
-    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
+    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V) ||
+           isa<SelectInst>(V);
   }
 
   /// Propagate the shape information of instructions to their users.
@@ -710,6 +720,12 @@ public:
       } else if (isa<StoreInst>(V)) {
         // Nothing to do.  We forward-propagated to this so we would just
         // backward propagate to an instruction with an already known shape.
+      } else if (auto *Select = dyn_cast<SelectInst>(V)) {
+        ShapeInfo Shape = ShapeMap[V];
+        if (setShapeInfo(Select->getOperand(1), Shape))
+          pushInstruction(Select, WorkList);
+        if (setShapeInfo(Select->getOperand(2), Shape))
+          pushInstruction(Select, WorkList);
       } else if (isUniformShape(V)) {
         // Propagate to all operands.
         ShapeInfo Shape = ShapeMap[V];
@@ -1068,6 +1084,8 @@ public:
         Changed |= VisitBinaryOperator(BinOp);
       if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
         Changed |= VisitUnaryOperator(UnOp);
+      if (auto *Select = dyn_cast<SelectInst>(Inst))
+        Changed |= VisitSelectInst(Select);
       if (match(Inst, m_Load(m_Value(Op1))))
         Changed |= VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
@@ -2190,6 +2208,35 @@ public:
 
     for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
       Result.addVector(BuildVectorOp(M.getVector(I)));
+
+    finalizeLowering(Inst,
+                     Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                             Result.getNumVectors()),
+                     Builder);
+    return true;
+  }
+
+  /// Lower selects, if shape information is available.
+  bool VisitSelectInst(SelectInst *Inst) {
+    auto I = ShapeMap.find(Inst);
+    if (I == ShapeMap.end())
+      return false;
+
+    Value *Cond = Inst->getOperand(0);
+    Value *OpA = Inst->getOperand(1);
+    Value *OpB = Inst->getOperand(2);
+
+    IRBuilder<> Builder(Inst);
+    ShapeInfo &Shape = I->second;
+
+    MatrixTy Result;
+    MatrixTy A = getMatrix(OpA, Shape, Builder);
+    MatrixTy B = getMatrix(OpB, Shape, Builder);
+
+    for (unsigned I = 0; I < Shape.getNumVectors(); ++I) {
+      auto *Sel = Builder.CreateSelect(Cond, A.getVector(I), B.getVector(I));
+      Result.addVector(Sel);
+    }
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
