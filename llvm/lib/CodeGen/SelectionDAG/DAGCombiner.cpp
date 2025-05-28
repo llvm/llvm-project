@@ -396,6 +396,8 @@ namespace {
     bool PromoteLoad(SDValue Op);
 
     SDValue foldShiftToAvg(SDNode *N);
+    // Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+    SDValue foldBitwiseOpWithNeg(SDNode *N);
 
     SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
                                 SDValue RHS, SDValue True, SDValue False,
@@ -7529,11 +7531,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
                          DAG.getNOT(DL, DAG.getNode(Opc, DL, VT, Y, Z), VT));
 
   // Fold (and X, (add (not Y), Z)) -> (and X, (not (sub Y, Z)))
-  if (sd_match(N, m_And(m_Value(X), m_Add(m_Value(NotY), m_Value(Z)))) &&
-      sd_match(NotY, m_Not(m_Value(Y))) &&
-      (TLI.hasAndNot(SDValue(N, 0)) || NotY->hasOneUse()))
-    return DAG.getNode(ISD::AND, DL, VT, X,
-                       DAG.getNOT(DL, DAG.getNode(ISD::SUB, DL, VT, Y, Z), VT));
+  // Fold (and X, (sub (not Y), Z)) -> (and X, (not (add Y, Z)))
+  if (SDValue Folded = foldBitwiseOpWithNeg(N))
+    return Folded;
 
   // Fold (and (srl X, C), 1) -> (srl X, BW-1) for signbit extraction
   // If we are shifting down an extended sign bit, see if we can simplify
@@ -8211,6 +8211,11 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       }
     }
   }
+
+  // Fold (or X, (add (not Y), Z)) -> (or X, (not (sub Y, Z)))
+  // Fold (or X, (sub (not Y), Z)) -> (or X, (not (add Y, Z)))
+  if (SDValue Folded = foldBitwiseOpWithNeg(N))
+    return Folded;
 
   // fold (or x, 0) -> x
   if (isNullConstant(N1))
@@ -9863,6 +9868,10 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     return DAG.getNode(ISD::ROTL, DL, VT, DAG.getSignedConstant(~1, DL, VT),
                        N0.getOperand(1));
   }
+  // Fold (xor X, (add (not Y), Z)) -> (xor X, (not (sub Y, Z)))
+  // Fold (xor X, (sub (not Y), Z)) -> (xor X, (not (add Y, Z)))
+  if (SDValue Folded = foldBitwiseOpWithNeg(N))
+    return Folded;
 
   // Simplify: xor (op x...), (op y...)  -> (op (xor x, y))
   if (N0Opcode == N1.getOpcode())
@@ -11614,6 +11623,35 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N) {
     return SDValue();
 
   return DAG.getNode(FloorISD, SDLoc(N), N->getValueType(0), {A, B});
+}
+
+SDValue DAGCombiner::foldBitwiseOpWithNeg(SDNode *N) {
+  if (!TLI.hasAndNot(SDValue(N, 0)))
+    return SDValue();
+
+  unsigned Opc = N->getOpcode();
+  if (Opc != ISD::AND && Opc != ISD::OR && Opc != ISD::XOR)
+    return SDValue();
+
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N1.getValueType();
+  SDLoc DL(N);
+  SDValue X, Y, Z, NotY;
+
+  if (sd_match(
+          N, m_c_BinOp(Opc, m_Value(X), m_Add(m_AllOf(m_Value(NotY), m_Not(m_Value(Y))),
+                                     m_Value(Z)))))
+    return DAG.getNode(Opc, DL, VT, X,
+                       DAG.getNOT(DL, DAG.getNode(ISD::SUB, DL, VT, Y, Z), VT));
+
+  if (sd_match(N, m_c_BinOp(Opc, m_Value(X),
+                          m_Sub(m_AllOf(m_Value(NotY), m_Not(m_Value(Y))),
+                                m_Value(Z)))) &&
+      NotY->hasOneUse())
+    return DAG.getNode(Opc, DL, VT, X,
+                       DAG.getNOT(DL, DAG.getNode(ISD::ADD, DL, VT, Y, Z), VT));
+
+  return SDValue();
 }
 
 /// Generate Min/Max node
