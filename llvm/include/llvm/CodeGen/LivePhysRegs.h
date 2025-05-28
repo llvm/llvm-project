@@ -202,14 +202,12 @@ bool isPhysRegUsedAfter(Register Reg, MachineBasicBlock::iterator MBI);
 /// any changes were made.
 static inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
   LivePhysRegs LPR;
-  std::vector<MachineBasicBlock::RegisterMaskPair> OldLiveIns;
+  DenseSet<MCRegister> OldLiveIns;
 
   MBB.clearLiveIns(OldLiveIns);
   computeAndAddLiveIns(LPR, MBB);
-  MBB.sortUniqueLiveIns();
 
-  const std::vector<MachineBasicBlock::RegisterMaskPair> &NewLiveIns =
-      MBB.getLiveIns();
+  const DenseSet<MCRegister> &NewLiveIns = MBB.getLiveIns();
   return OldLiveIns != NewLiveIns;
 }
 

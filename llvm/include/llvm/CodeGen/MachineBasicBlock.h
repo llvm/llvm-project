@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_MACHINEBASICBLOCK_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
@@ -173,8 +174,7 @@ private:
   std::optional<uint64_t> IrrLoopHeaderWeight;
 
   /// Keep track of the physical registers that are livein of the basicblock.
-  using LiveInVector = std::vector<RegisterMaskPair>;
-  LiveInVector LiveIns;
+  DenseSet<MCRegister> LiveIns;
 
   /// Alignment of the basic block. One if the basic block does not need to be
   /// aligned.
@@ -460,28 +460,17 @@ public:
 
   // LiveIn management methods.
 
-  /// Adds the specified register as a live in. Note that it is an error to add
-  /// the same register to the same set more than once unless the intention is
-  /// to call sortUniqueLiveIns after all registers are added.
+  /// Adds the live regUnits(both of its roots registers) as the live in, based
+  /// on the LaneMask.
   void addLiveIn(MCRegister PhysReg,
-                 LaneBitmask LaneMask = LaneBitmask::getAll()) {
-    LiveIns.push_back(RegisterMaskPair(PhysReg, LaneMask));
-  }
-  void addLiveIn(const RegisterMaskPair &RegMaskPair) {
-    LiveIns.push_back(RegMaskPair);
-  }
-
-  /// Sorts and uniques the LiveIns vector. It can be significantly faster to do
-  /// this than repeatedly calling isLiveIn before calling addLiveIn for every
-  /// LiveIn insertion.
-  void sortUniqueLiveIns();
+                 LaneBitmask LaneMask = LaneBitmask::getAll());
 
   /// Clear live in list.
   void clearLiveIns();
 
   /// Clear the live in list, and return the removed live in's in \p OldLiveIns.
   /// Requires that the vector \p OldLiveIns is empty.
-  void clearLiveIns(std::vector<RegisterMaskPair> &OldLiveIns);
+  void clearLiveIns(DenseSet<MCRegister> &OldLiveIns);
 
   /// Add PhysReg as live in to this block, and ensure that there is a copy of
   /// PhysReg to a virtual register of class RC. Return the virtual register
@@ -498,7 +487,7 @@ public:
 
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
-  using livein_iterator = LiveInVector::const_iterator;
+  using livein_iterator = DenseSet<MCRegister>::const_iterator;
 
   /// Unlike livein_begin, this method does not check that the liveness
   /// information is accurate. Still for debug purposes it may be useful
@@ -519,15 +508,15 @@ public:
   /// Remove entry from the livein set and return iterator to the next.
   livein_iterator removeLiveIn(livein_iterator I);
 
-  const std::vector<RegisterMaskPair> &getLiveIns() const { return LiveIns; }
+  const DenseSet<MCRegister> &getLiveIns() const { return LiveIns; }
 
   class liveout_iterator {
   public:
     using iterator_category = std::input_iterator_tag;
     using difference_type = std::ptrdiff_t;
-    using value_type = RegisterMaskPair;
-    using pointer = const RegisterMaskPair *;
-    using reference = const RegisterMaskPair &;
+    using value_type = MCRegister;
+    using pointer = const MCRegister *;
+    using reference = const MCRegister &;
 
     liveout_iterator(const MachineBasicBlock &MBB, MCPhysReg ExceptionPointer,
                      MCPhysReg ExceptionSelector, bool End)
@@ -540,8 +529,7 @@ public:
         LiveRegI = (*BlockI)->livein_begin();
         if (!advanceToValidPosition())
           return;
-        if (LiveRegI->PhysReg == ExceptionPointer ||
-            LiveRegI->PhysReg == ExceptionSelector)
+        if (*LiveRegI == ExceptionPointer || *LiveRegI == ExceptionSelector)
           ++(*this);
       }
     }
@@ -551,9 +539,8 @@ public:
         ++LiveRegI;
         if (!advanceToValidPosition())
           return *this;
-      } while ((*BlockI)->isEHPad() &&
-               (LiveRegI->PhysReg == ExceptionPointer ||
-                LiveRegI->PhysReg == ExceptionSelector));
+      } while ((*BlockI)->isEHPad() && (*LiveRegI == ExceptionPointer ||
+                                        *LiveRegI == ExceptionSelector));
       return *this;
     }
 

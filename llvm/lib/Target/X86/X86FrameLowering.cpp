@@ -173,8 +173,7 @@ static unsigned getPOP2Opcode(const X86Subtarget &ST) {
 }
 
 static bool isEAXLiveIn(MachineBasicBlock &MBB) {
-  for (MachineBasicBlock::RegisterMaskPair RegMask : MBB.liveins()) {
-    MCRegister Reg = RegMask.PhysReg;
+  for (MCRegister Reg : MBB.liveins()) {
 
     if (Reg == X86::RAX || Reg == X86::EAX || Reg == X86::AX ||
         Reg == X86::AH || Reg == X86::AL)

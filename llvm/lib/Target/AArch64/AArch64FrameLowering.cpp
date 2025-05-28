@@ -3234,12 +3234,10 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         AFI->setVGIdx(RPI.FrameIdx);
       } else {
         const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
-        if (llvm::any_of(
-                MBB.liveins(),
-                [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
-                  return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
-                      AArch64::X0, LiveIn.PhysReg);
-                }))
+        if (llvm::any_of(MBB.liveins(), [&STI](const MCRegister &LiveIn) {
+              return STI.getRegisterInfo()->isSuperOrSubRegisterEq(AArch64::X0,
+                                                                   LiveIn);
+            }))
           X0Scratch = Reg1;
 
         if (X0Scratch != AArch64::NoRegister)

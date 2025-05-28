@@ -2188,7 +2188,6 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
       SuccBB->removeLiveIn(S);
   for (auto U : UsedOpsInCopy)
     SuccBB->addLiveIn(MI->getOperand(U).getReg());
-  SuccBB->sortUniqueLiveIns();
 }
 
 static bool hasRegisterDependency(MachineInstr *MI,

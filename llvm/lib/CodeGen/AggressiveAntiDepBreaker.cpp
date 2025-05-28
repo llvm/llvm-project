@@ -153,7 +153,7 @@ void AggressiveAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   // Examine the live-in regs of all successors.
   for (MachineBasicBlock *Succ : BB->successors())
     for (const auto &LI : Succ->liveins()) {
-      for (MCRegAliasIterator AI(LI.PhysReg, TRI, true); AI.isValid(); ++AI) {
+      for (MCRegAliasIterator AI(LI, TRI, true); AI.isValid(); ++AI) {
         unsigned Reg = *AI;
         State->UnionGroups(Reg, 0);
         KillIndices[Reg] = BB->size();

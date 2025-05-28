@@ -370,7 +370,7 @@ void LiveIntervals::computeLiveInRegUnits() {
     SlotIndex Begin = Indexes->getMBBStartIdx(&MBB);
     LLVM_DEBUG(dbgs() << Begin << "\t" << printMBBReference(MBB));
     for (const auto &LI : MBB.liveins()) {
-      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
+      for (MCRegUnit Unit : TRI->regunits(LI)) {
         LiveRange *LR = RegUnitRanges[Unit];
         if (!LR) {
           // Use segment set to speed-up initial computation of the live range.

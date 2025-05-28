@@ -544,7 +544,7 @@ bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
     // Live-out registers are used.
     for (const MachineBasicBlock *Succ : MBB.successors()) {
       for (const auto &LI : Succ->liveins()) {
-        int RegIdx = mapRegToGPRIndex(LI.PhysReg);
+        int RegIdx = mapRegToGPRIndex(LI);
         if (RegIdx >= 0)
           LOHInfos[RegIdx].OneUser = true;
       }

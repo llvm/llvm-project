@@ -721,9 +721,7 @@ void printMBB(raw_ostream &OS, MFPrintState &State,
     OS.indent(2) << "liveins: ";
     ListSeparator LS;
     for (const auto &LI : MBB.liveins_dbg()) {
-      OS << LS << printReg(LI.PhysReg, &TRI);
-      if (!LI.LaneMask.all())
-        OS << ":0x" << PrintLaneMask(LI.LaneMask);
+      OS << LS << printReg(LI, &TRI);
     }
     OS << "\n";
     HasLineAttributes = true;

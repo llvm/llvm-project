@@ -66,7 +66,7 @@ void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   // Examine the live-in regs of all successors.
   for (const MachineBasicBlock *Succ : BB->successors())
     for (const auto &LI : Succ->liveins()) {
-      for (MCRegAliasIterator AI(LI.PhysReg, TRI, true); AI.isValid(); ++AI) {
+      for (MCRegAliasIterator AI(LI, TRI, true); AI.isValid(); ++AI) {
         MCRegister Reg = *AI;
         Classes[Reg.id()] = reinterpret_cast<TargetRegisterClass *>(-1);
         KillIndices[Reg.id()] = BBSize;
