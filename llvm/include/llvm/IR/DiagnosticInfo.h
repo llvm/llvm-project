@@ -146,11 +146,12 @@ public:
   /// \p MsgStr is the message to be reported to the frontend.
   /// This class does not copy \p MsgStr, therefore the reference must be valid
   /// for the whole life time of the Diagnostic.
-  DiagnosticInfoGeneric(const Twine &MsgStr,
+  DiagnosticInfoGeneric(const Twine &MsgStr LLVM_LIFETIME_BOUND,
                         DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(MsgStr) {}
 
-  DiagnosticInfoGeneric(const Instruction *I, const Twine &ErrMsg,
+  DiagnosticInfoGeneric(const Instruction *I,
+                        const Twine &ErrMsg LLVM_LIFETIME_BOUND,
                         DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(ErrMsg), Inst(I) {}
 
@@ -181,7 +182,8 @@ public:
   /// \p MsgStr gives the message.
   /// This class does not copy \p MsgStr, therefore the reference must be valid
   /// for the whole life time of the Diagnostic.
-  DiagnosticInfoInlineAsm(uint64_t LocCookie, const Twine &MsgStr,
+  DiagnosticInfoInlineAsm(uint64_t LocCookie,
+                          const Twine &MsgStr LLVM_LIFETIME_BOUND,
                           DiagnosticSeverity Severity = DS_Error);
 
   /// \p Instr gives the original instruction that triggered the diagnostic.
@@ -189,7 +191,8 @@ public:
   /// This class does not copy \p MsgStr, therefore the reference must be valid
   /// for the whole life time of the Diagnostic.
   /// Same for \p I.
-  DiagnosticInfoInlineAsm(const Instruction &I, const Twine &MsgStr,
+  DiagnosticInfoInlineAsm(const Instruction &I,
+                          const Twine &MsgStr LLVM_LIFETIME_BOUND,
                           DiagnosticSeverity Severity = DS_Error);
 
   uint64_t getLocCookie() const { return LocCookie; }
@@ -258,15 +261,16 @@ public:
 class DiagnosticInfoSampleProfile : public DiagnosticInfo {
 public:
   DiagnosticInfoSampleProfile(StringRef FileName, unsigned LineNum,
-                              const Twine &Msg,
+                              const Twine &Msg LLVM_LIFETIME_BOUND,
                               DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_SampleProfile, Severity), FileName(FileName),
         LineNum(LineNum), Msg(Msg) {}
-  DiagnosticInfoSampleProfile(StringRef FileName, const Twine &Msg,
+  DiagnosticInfoSampleProfile(StringRef FileName,
+                              const Twine &Msg LLVM_LIFETIME_BOUND,
                               DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_SampleProfile, Severity), FileName(FileName),
         Msg(Msg) {}
-  DiagnosticInfoSampleProfile(const Twine &Msg,
+  DiagnosticInfoSampleProfile(const Twine &Msg LLVM_LIFETIME_BOUND,
                               DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_SampleProfile, Severity), Msg(Msg) {}
 
@@ -296,7 +300,8 @@ private:
 /// Diagnostic information for the PGO profiler.
 class DiagnosticInfoPGOProfile : public DiagnosticInfo {
 public:
-  DiagnosticInfoPGOProfile(const char *FileName, const Twine &Msg,
+  DiagnosticInfoPGOProfile(const char *FileName,
+                           const Twine &Msg LLVM_LIFETIME_BOUND,
                            DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_PGOProfile, Severity), FileName(FileName), Msg(Msg) {}
 
@@ -364,7 +369,7 @@ public:
 
   /// Return the absolute path tot the file.
   std::string getAbsolutePath() const;
-  
+
   const Function &getFunction() const { return Fn; }
   DiagnosticLocation getLocation() const { return Loc; }
 
@@ -1062,7 +1067,7 @@ public:
 /// Diagnostic information for unsupported feature in backend.
 class DiagnosticInfoUnsupported : public DiagnosticInfoWithLocationBase {
 private:
-  Twine Msg;
+  const Twine &Msg;
 
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
@@ -1072,7 +1077,7 @@ public:
   /// copy this message, so this reference must be valid for the whole life time
   /// of the diagnostic.
   DiagnosticInfoUnsupported(
-      const Function &Fn, const Twine &Msg,
+      const Function &Fn, const Twine &Msg LLVM_LIFETIME_BOUND,
       const DiagnosticLocation &Loc = DiagnosticLocation(),
       DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfoWithLocationBase(DK_Unsupported, Severity, Fn, Loc),
@@ -1090,7 +1095,8 @@ public:
 /// Diagnostic information for MisExpect analysis.
 class DiagnosticInfoMisExpect : public DiagnosticInfoWithLocationBase {
 public:
-  DiagnosticInfoMisExpect(const Instruction *Inst, const Twine &Msg);
+  DiagnosticInfoMisExpect(const Instruction *Inst,
+                          const Twine &Msg LLVM_LIFETIME_BOUND);
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;

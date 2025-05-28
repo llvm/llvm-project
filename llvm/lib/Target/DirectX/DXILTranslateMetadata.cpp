@@ -45,7 +45,8 @@ public:
   /// \p M is the module for which the diagnostic is being emitted. \p Msg is
   /// the message to show. Note that this class does not copy this message, so
   /// this reference must be valid for the whole life time of the diagnostic.
-  DiagnosticInfoTranslateMD(const Module &M, const Twine &Msg,
+  DiagnosticInfoTranslateMD(const Module &M,
+                            const Twine &Msg LLVM_LIFETIME_BOUND,
                             DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
 
