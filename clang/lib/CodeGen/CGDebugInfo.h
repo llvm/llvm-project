@@ -210,6 +210,7 @@ private:
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
                            llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLInlineSpirvType *Ty, llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 
@@ -667,6 +668,9 @@ public:
   /// group \p Atom.
   void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
                                    llvm::Value *Backup, uint64_t Atom);
+
+  /// Emit symbol for debugger that holds the pointer to the vtable.
+  void emitVTableSymbol(llvm::GlobalVariable *VTable, const CXXRecordDecl *RD);
 
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
