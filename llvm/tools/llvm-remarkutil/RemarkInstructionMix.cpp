@@ -50,14 +50,6 @@ static cl::opt<ReportStyleOptions> ReportStyle(
 INPUT_FORMAT_COMMAND_LINE_OPTIONS(InstructionMix)
 INPUT_OUTPUT_COMMAND_LINE_OPTIONS(InstructionMix)
 
-static Expected<FilterMatcher> getRemarkFilter() {
-  if (FunctionFilter.getNumOccurrences())
-    return FilterMatcher::createExact(FunctionFilter);
-  if (FunctionFilterRE.getNumOccurrences())
-    return FilterMatcher::createRE(FunctionFilterRE);
-  return FilterMatcher::createAny();
-}
-
 static Error tryInstructionMix() {
   auto MaybeOF =
       getOutputFileWithFlags(OutputFileName, sys::fs::OF_TextWithCRLF);
@@ -72,7 +64,8 @@ static Error tryInstructionMix() {
   if (!MaybeParser)
     return MaybeParser.takeError();
 
-  Expected<FilterMatcher> Filter = getRemarkFilter();
+  Expected<std::optional<FilterMatcher>> Filter =
+      FilterMatcher::createExactOrRE(FunctionFilter, FunctionFilterRE);
   if (!Filter)
     return Filter.takeError();
 
@@ -81,12 +74,12 @@ static Error tryInstructionMix() {
   auto &Parser = **MaybeParser;
   auto MaybeRemark = Parser.next();
   for (; MaybeRemark; MaybeRemark = Parser.next()) {
-    auto &Remark = **MaybeRemark;
-    if (Remark.RemarkName != "InstructionMix")
+    std::unique_ptr<Remark> Remark = std::move(*MaybeRemark);
+    if (Remark->RemarkName != "InstructionMix")
       continue;
-    if (!Filter->match(Remark.FunctionName))
+    if (*Filter && !(*Filter)->match(Remark->FunctionName))
       continue;
-    for (auto &Arg : Remark.Args) {
+    for (auto &Arg : Remark->Args) {
       StringRef Key = Arg.Key;
       if (!Key.consume_front("INST_"))
         continue;
@@ -99,7 +92,7 @@ static Error tryInstructionMix() {
   }
 
   // Sort it.
-  using MixEntry = std::pair<std::string, unsigned>;
+  using MixEntry = std::pair<StringRef, unsigned>;
   llvm::SmallVector<MixEntry> Mix(Histogram.begin(), Histogram.end());
   std::sort(Mix.begin(), Mix.end(), [](const auto &LHS, const auto &RHS) {
     return LHS.second > RHS.second;
@@ -112,7 +105,7 @@ static Error tryInstructionMix() {
     size_t MaxMnemonic =
         std::accumulate(Mix.begin(), Mix.end(), StringRef("Instruction").size(),
                         [](size_t MaxMnemonic, const MixEntry &Elt) {
-                          return std::max(MaxMnemonic, Elt.first.length());
+                          return std::max(MaxMnemonic, Elt.first.size());
                         });
     unsigned MaxValue = std::accumulate(
         Mix.begin(), Mix.end(), 1, [](unsigned MaxValue, const MixEntry &Elt) {
