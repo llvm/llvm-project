@@ -444,6 +444,7 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp) {
     // Ensure `e` runs `expression`.
     AddAlias("e", cmd_obj_sp);
+    AddAlias("expr", cmd_obj_sp);
     AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
     CommandAlias *parray_alias =
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --");
