@@ -600,6 +600,21 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
 
 namespace RTS0 {
 namespace v1 {
+struct DescriptorRange {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t OffsetInDescriptorsFromTableStart;
+  void swapBytes() {
+    sys::swapByteOrder(RangeType);
+    sys::swapByteOrder(NumDescriptors);
+    sys::swapByteOrder(BaseShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
+  }
+};
+
 struct RootDescriptor {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
@@ -650,21 +665,6 @@ struct RootSignatureHeader {
     sys::swapByteOrder(NumStaticSamplers);
     sys::swapByteOrder(StaticSamplerOffset);
     sys::swapByteOrder(Flags);
-  }
-};
-
-struct DescriptorRange {
-  uint32_t RangeType;
-  uint32_t NumDescriptors;
-  uint32_t BaseShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t OffsetInDescriptorsFromTableStart;
-  void swapBytes() {
-    sys::swapByteOrder(RangeType);
-    sys::swapByteOrder(NumDescriptors);
-    sys::swapByteOrder(BaseShaderRegister);
-    sys::swapByteOrder(RegisterSpace);
-    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
   }
 };
 } // namespace v1

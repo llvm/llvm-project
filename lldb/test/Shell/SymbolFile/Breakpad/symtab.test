@@ -5,7 +5,7 @@
 # CHECK-LABEL: (lldb) image dump symtab symtab.out
 # CHECK: Symtab, file = {{.*}}symtab.out, num_symbols = 4:
 # CHECK: Index   UserID DSX Type            File Address/Value Load Address       Size               Flags      Name
-# CHECK: [    0]      0  SX Code            0x0000000000400000                    0x00000000000000b0 0x00000000 ___lldb_unnamed_symbol{{[0-9]*}}
+# CHECK: [    0]      0  SX Code            0x0000000000400000                    0x00000000000000b0 0x00000000 ___lldb_unnamed_symbol_{{[0-9a-f]*}}
 # CHECK: [    1]      0   X Code            0x00000000004000b0                    0x0000000000000010 0x00000000 f1
 # CHECK: [    2]      0   X Code            0x00000000004000c0                    0x0000000000000010 0x00000000 f2
 # CHECK: [    3]      0   X Code            0x00000000004000d0                    0x0000000000000022 0x00000000 _start

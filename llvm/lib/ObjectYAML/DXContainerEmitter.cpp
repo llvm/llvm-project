@@ -11,9 +11,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
@@ -273,29 +275,41 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
-      for (const auto &Param : P.RootSignature->Parameters) {
-        auto Header = dxbc::RTS0::v1::RootParameterHeader{
-            Param.Type, Param.Visibility, Param.Offset};
+      for (DXContainerYAML::RootParameterLocationYaml &L :
+           P.RootSignature->Parameters.Locations) {
+        dxbc::RTS0::v1::RootParameterHeader Header{L.Header.Type, L.Header.Visibility,
+                                         L.Header.Offset};
 
-        if (auto *ConstantYaml =
-                std::get_if<DXContainerYAML::RootConstantsYaml>(&Param.Data)) {
+        switch (L.Header.Type) {
+        case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+          const DXContainerYAML::RootConstantsYaml &ConstantYaml =
+              P.RootSignature->Parameters.getOrInsertConstants(L);
           dxbc::RTS0::v1::RootConstants Constants;
-          Constants.Num32BitValues = ConstantYaml->Num32BitValues;
-          Constants.RegisterSpace = ConstantYaml->RegisterSpace;
-          Constants.ShaderRegister = ConstantYaml->ShaderRegister;
+          Constants.Num32BitValues = ConstantYaml.Num32BitValues;
+          Constants.RegisterSpace = ConstantYaml.RegisterSpace;
+          Constants.ShaderRegister = ConstantYaml.ShaderRegister;
           RS.ParametersContainer.addParameter(Header, Constants);
-        } else if (auto *DescriptorYaml =
-                       std::get_if<DXContainerYAML::RootDescriptorYaml>(
-                           &Param.Data)) {
+          break;
+        }
+        case llvm::to_underlying(dxbc::RootParameterType::CBV):
+        case llvm::to_underlying(dxbc::RootParameterType::SRV):
+        case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+          const DXContainerYAML::RootDescriptorYaml &DescriptorYaml =
+              P.RootSignature->Parameters.getOrInsertDescriptor(L);
+
           dxbc::RTS0::v2::RootDescriptor Descriptor;
-          Descriptor.RegisterSpace = DescriptorYaml->RegisterSpace;
-          Descriptor.ShaderRegister = DescriptorYaml->ShaderRegister;
+          Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
+          Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
           if (RS.Version > 1)
-            Descriptor.Flags = DescriptorYaml->getEncodedFlags();
+            Descriptor.Flags = DescriptorYaml.getEncodedFlags();
           RS.ParametersContainer.addParameter(Header, Descriptor);
-        } else if (auto *TableYaml = std::get_if<DXContainerYAML::DescriptorTableYaml>(&Param.Data)) {  
+          break;
+        }
+        case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+          const DXContainerYAML::DescriptorTableYaml &TableYaml =
+          P.RootSignature->Parameters.getOrInsertTable(L);
           mcdxbc::DescriptorTable Table;
-          for (const auto &R : TableYaml->Ranges) {
+          for (const auto &R : TableYaml.Ranges) {
 
             dxbc::RTS0::v2::DescriptorRange Range;
             Range.RangeType = R.RangeType;
@@ -309,7 +323,9 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             Table.Ranges.push_back(Range);
           }
           RS.ParametersContainer.addParameter(Header, Table);
-        } else {
+          break;
+        }
+        default:
           // Handling invalid parameter type edge case. We intentionally let
           // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
           // for that to be used as a testing tool more effectively.

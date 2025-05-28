@@ -1209,16 +1209,15 @@ Categories
 ----------
 
 Categories are a way to group related formatters. For instance, LLDB itself
-groups the formatters for the libstdc++ types in a category named
-gnu-libstdc++. Basically, categories act like containers in which to store
-formatters for a same library or OS release.
+groups the formatters for STL types in a category named cpluspus. Basically,
+categories act like containers in which to store formatters for a same library
+or OS release.
 
 By default, several categories are created in LLDB:
 
 - default: this is the category where every formatter ends up, unless another category is specified
 - objc: formatters for basic and common Objective-C types that do not specifically depend on macOS
-- gnu-libstdc++: formatters for std::string, std::vector, std::list and std::map as implemented by libstdcpp
-- libcxx: formatters for std::string, std::vector, std::list and std::map as implemented by libcxx
+- cplusplus: formatters for STL types (currently only libc++ and libstdc++ are supported). Enabled when debugging C++ targets.
 - system: truly basic types for which a formatter is required
 - AppKit: Cocoa classes
 - CoreFoundation: CF classes
@@ -1246,12 +1245,11 @@ that the search order is:
 - AppKit
 - CoreServices
 - CoreGraphics
-- gnu-libstdc++
-- libcxx
+- cplusplus
 - VectorTypes
 - system
 
-As said, gnu-libstdc++ and libcxx contain formatters for C++ STL data types.
+As said, cplusplus contain formatters for C++ STL data types.
 system contains formatters for char* and char[], which reflect the behavior of
 older versions of LLDB which had built-in formatters for these types. Because
 now these are formatters, you can even replace them with your own if so you

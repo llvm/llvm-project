@@ -6689,8 +6689,8 @@ void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
         "'%s' cannot be a Cray pointer as it is already a Cray pointee"_err_en_US);
   }
   pointer->set(Symbol::Flag::CrayPointer);
-  const DeclTypeSpec &pointerType{MakeNumericType(
-      TypeCategory::Integer, context().defaultKinds().subscriptIntegerKind())};
+  const DeclTypeSpec &pointerType{MakeNumericType(TypeCategory::Integer,
+      context().targetCharacteristics().integerKindForPointer())};
   const auto *type{pointer->GetType()};
   if (!type) {
     pointer->SetType(pointerType);
@@ -9376,7 +9376,7 @@ static void SetImplicitCUDADevice(bool inDeviceSubprogram, Symbol &symbol) {
   if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
     auto *object{symbol.detailsIf<ObjectEntityDetails>()};
     if (!object->cudaDataAttr() && !IsValue(symbol) &&
-        (IsDummy(symbol) || object->IsArray())) {
+        !IsFunctionResult(symbol)) {
       // Implicitly set device attribute if none is set in device context.
       object->set_cudaDataAttr(common::CUDADataAttr::Device);
     }
