@@ -95,7 +95,9 @@ define <2 x half> @test_min_max_splat_padded_with_undef(<2 x half> %a) #2 {
 ; GFX10-LABEL: test_min_max_splat_padded_with_undef:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_mul_f16 v0, v0, 2.0 op_sel_hi:[1,0] clamp
+; GFX10-NEXT:    v_pk_mul_f16 v0, v0, 2.0 op_sel_hi:[1,0]
+; GFX10-NEXT:    v_pk_max_f16 v0, v0, 0
+; GFX10-NEXT:    v_pk_min_f16 v0, v0, 1.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: test_min_max_splat_padded_with_undef:
@@ -105,7 +107,10 @@ define <2 x half> @test_min_max_splat_padded_with_undef(<2 x half> %a) #2 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_pk_mul_f16 v0, v0, 2.0 op_sel_hi:[1,0] clamp
+; GFX12-NEXT:    v_pk_mul_f16 v0, v0, 2.0 op_sel_hi:[1,0]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, 0
+; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, 1.0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul <2 x half> %a, <half 2.0, half 2.0>
   %maxnum = call <2 x half> @llvm.maxnum.v2f16(<2 x half> <half 0.0, half poison>, <2 x half> %fmul)
