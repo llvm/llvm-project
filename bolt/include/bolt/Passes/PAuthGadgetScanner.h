@@ -272,6 +272,11 @@ public:
   virtual ~ExtraInfo() {}
 };
 
+/// The set of instructions writing to the affected register in an unsafe
+/// manner.
+///
+/// This is a hint to be printed alongside the report. It should be further
+/// analyzed by the user.
 class ClobberingInfo : public ExtraInfo {
   SmallVector<MCInstReference> ClobberingInstrs;
 
@@ -281,6 +286,11 @@ public:
   void print(raw_ostream &OS, const MCInstReference Location) const override;
 };
 
+/// The set of instructions leaking the authenticated pointer before the
+/// result of authentication was checked.
+///
+/// This is a hint to be printed alongside the report. It should be further
+/// analyzed by the user.
 class LeakageInfo : public ExtraInfo {
   SmallVector<MCInstReference> LeakingInstrs;
 

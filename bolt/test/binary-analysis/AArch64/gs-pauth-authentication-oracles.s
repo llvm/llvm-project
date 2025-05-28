@@ -137,10 +137,55 @@ bad_unknown_usage_read:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x2, [x0]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ret
         autia   x0, x1
+        // Registers are not accessible to an attacker under Pointer
+        // Authentication threat model, until spilled to memory.
+        // Thus, reporting the below MUL instruction is a false positive, since
+        // the next LDR instruction prevents any possible spilling of x3 unless
+        // the authentication succeeded. Though, rejecting anything except for
+        // a closed list of instruction types is the intended behavior of the
+        // analysis, so this false positive is by design.
         mul     x3, x0, x1
         ldr     x2, [x0]
         ret
         .size bad_unknown_usage_read, .-bad_unknown_usage_read
+
+        .globl  bad_store_to_memory_and_wait
+        .type   bad_store_to_memory_and_wait,@function
+bad_store_to_memory_and_wait:
+// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_store_to_memory_and_wait, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
+// CHECK-NEXT:  The 1 instructions that leak the affected registers are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      str     x0, [x3]
+        autia   x0, x1
+        cbz     x3, 2f
+        str     x0, [x3]
+1:
+        // The thread performs a time-consuming computation while the result of
+        // authentication is accessible in memory.
+        nop
+2:
+        ldr     x2, [x0]
+        ret
+        .size bad_store_to_memory_and_wait, .-bad_store_to_memory_and_wait
+
+// FIXME: Known false negative: if no return instruction is reachable from a
+//        program point (this probably implies an infinite loop), such
+//        instruction cannot be detected as an authentication oracle.
+        .globl  bad_store_to_memory_and_hang
+        .type   bad_store_to_memory_and_hang,@function
+bad_store_to_memory_and_hang:
+// CHECK-NOT: bad_store_to_memory_and_hang
+        autia   x0, x1
+        cbz     x3, 2f
+        str     x0, [x3]
+1:
+        // The thread loops indefinitely while the result of authentication
+        // is accessible in memory.
+        b       1b
+2:
+        ldr     x2, [x0]
+        ret
+        .size bad_store_to_memory_and_hang, .-bad_store_to_memory_and_hang
 
         .globl  bad_unknown_usage_subreg_read
         .type   bad_unknown_usage_subreg_read,@function
@@ -419,6 +464,10 @@ good_address_arith_multi_bb:
         ret
         .size good_address_arith_multi_bb, .-good_address_arith_multi_bb
 
+// FIXME: Most *_nocfg test cases contain paciasp+autiasp instructions even if
+//        LR is not spilled - this is a workaround for RET instructions being
+//        reported as non-protected, because LR state is reset at every label.
+
         .globl  good_ret_nocfg
         .type   good_ret_nocfg,@function
 good_ret_nocfg:
@@ -454,13 +503,10 @@ good_call_nocfg:
         .type   good_branch_nocfg,@function
 good_branch_nocfg:
 // CHECK-NOT: good_branch_nocfg
-        paciasp
         adr     x2, 1f
         br      x2
 1:
         autia   x0, x1
-        autiasp            // authenticate LR before tail call
-        ldr     x2, [x30]  // check LR before tail call
         br      x0
         .size good_branch_nocfg, .-good_branch_nocfg
 

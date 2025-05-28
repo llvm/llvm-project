@@ -746,13 +746,18 @@ SrcSafetyAnalysis::create(BinaryFunction &BF,
 /// Similar to SrcState, it is the responsibility of the analysis to take
 /// register aliasing into account.
 ///
-/// Depending on the implementation, it may be possible that an authentication
+/// Depending on the implementation (such as whether FEAT_FPAC is implemented
+/// by an AArch64 CPU or not), it may be possible that an authentication
 /// instruction returns an invalid pointer on failure instead of terminating
 /// the program immediately (assuming the program will crash as soon as that
-/// pointer is dereferenced). To prevent brute-forcing the correct signature,
-/// it should be impossible for an attacker to test if a pointer is correctly
-/// signed - either the program should be terminated on authentication failure
-/// or it should be impossible to tell whether authentication succeeded or not.
+/// pointer is dereferenced). Since few bits are usually allocated for the PAC
+/// field (such as less than 16 bits on a typical AArch64 system), an attacker
+/// can try every possible signature and guess the correct one if there is a
+/// gadget that tells whether the particular pointer has a correct signature
+/// (a so called "authentication oracle"). For that reason, it should be
+/// impossible for an attacker to test if a pointer is correctly signed -
+/// either the program should be terminated on authentication failure or
+/// the result of authentication should not be accessible to an attacker.
 ///
 /// For that reason, a restricted set of operations is allowed on any register
 /// containing a value derived from the result of an authentication instruction
@@ -778,6 +783,14 @@ struct DstState {
   /// instructions should only be written to such registers.
   BitVector CannotEscapeUnchecked;
 
+  /// A vector of sets, only used on the second analysis run.
+  /// Each element in this vector represents one of the tracked registers.
+  /// For each such register we track the set of first instructions that leak
+  /// the authenticated pointer before it was checked. This is intended to
+  /// provide clues on which instruction made the particular register unsafe.
+  ///
+  /// Please note that the mapping from MCPhysReg values to indexes in this
+  /// vector is provided by RegsToTrackInstsFor field of DstSafetyAnalysis.
   std::vector<SetOfRelatedInsts> FirstInstLeakingReg;
 
   /// Constructs an empty state.
@@ -1463,7 +1476,7 @@ void FunctionAnalysisContext::run() {
 
   SmallVector<PartialReport<MCPhysReg>> UnsafeDefs;
   findUnsafeDefs(UnsafeDefs);
-  handleSimpleReports(UnsafeUses);
+  handleSimpleReports(UnsafeDefs);
   if (!UnsafeDefs.empty())
     augmentUnsafeDefReports(UnsafeDefs);
 }
