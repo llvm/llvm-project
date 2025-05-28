@@ -70,16 +70,16 @@ static Error tryInstructionMix() {
     return Filter.takeError();
 
   // Collect the histogram of instruction counts.
-  std::unordered_map<std::string, unsigned> Histogram;
+  llvm::DenseMap<StringRef, unsigned> Histogram;
   auto &Parser = **MaybeParser;
   auto MaybeRemark = Parser.next();
   for (; MaybeRemark; MaybeRemark = Parser.next()) {
-    std::unique_ptr<Remark> Remark = std::move(*MaybeRemark);
-    if (Remark->RemarkName != "InstructionMix")
+    Remark &Remark = **MaybeRemark;
+    if (Remark.RemarkName != "InstructionMix")
       continue;
-    if (*Filter && !(*Filter)->match(Remark->FunctionName))
+    if (*Filter && !(*Filter)->match(Remark.FunctionName))
       continue;
-    for (auto &Arg : Remark->Args) {
+    for (auto &Arg : Remark.Args) {
       StringRef Key = Arg.Key;
       if (!Key.consume_front("INST_"))
         continue;
@@ -87,7 +87,7 @@ static Error tryInstructionMix() {
       bool ParseError = Arg.Val.getAsInteger(10, Val);
       assert(!ParseError);
       (void)ParseError;
-      Histogram[std::string(Key)] += Val;
+      Histogram[Key] += Val;
     }
   }
 
