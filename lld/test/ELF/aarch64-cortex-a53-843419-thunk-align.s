@@ -7,7 +7,7 @@
 // RUN:                  *(.text.02) } \
 // RUN:                  .foo : { *(.foo_sec) } } " > %t.script
 // RUN: ld.lld -pie --fix-cortex-a53-843419 --script=%t.script %t.o -o %t2
-// RUN: llvm-objdump --no-show-raw-insn --triple=aarch64-linux-gnu -d %t2
+// RUN: llvm-objdump --no-show-raw-insn --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
 
 
 /// %t2 is > 128 Megabytes, so delete it early.
@@ -36,13 +36,13 @@ t3_ff8_ldr:
  ret
 
 /// Expect thunk and patch to be inserted here
-// CHECK: 0000000000011008 __AArch64ADRPThunk_far_away:
-// CHECK-NEXT: 11008: adrp    x16, #134221824
-// CHECK-NEXT:        add     x16, x16, #16
-// CHECK-NEXT:        br      x16
-// CHECK: 0000000000012008 __CortexA53843419_11000:
-// CHECK-NEXT: 12008: ldr     x0, [x0, #168]
-// CHECK-NEXT:        b       #-4104 <t3_ff8_ldr+0xc>
+// CHECK-LABEL: 0000000000011008 <__AArch64ADRPThunk_far_away>:
+// CHECK-NEXT: 11008: adrp      x16, 0x8012000
+// CHECK-NEXT:        add     x16, x16, #0x10
+// CHECK-NEXT::       br      x16
+// CHECK-LABEL: 0000000000012008 <__CortexA53843419_11000>:
+// CHECK-NEXT: 12008: ldr     x0, [x0, #0xb8]
+// CHECK-NEXT: 1200c: b       0x11004 <t3_ff8_ldr+0xc>
 
  .section .text.02, "ax", %progbits
  .globl far_away
@@ -52,15 +52,13 @@ far_away:
  ret
 /// Expect thunk for _start not to have size rounded up to 4KiB as it is at
 /// the end of the OutputSection
-// CHECK: 0000000008012010 far_away:
-// CHECK-NEXT:  8012010: bl      #8
-// CHECK-NEXT:           ret
-// CHECK: 0000000008012018 __AArch64ADRPThunk__start:
-// CHECK-NEXT:  8012018: adrp    x16, #-134225920
-// CHECK-NEXT:           add     x16, x16, #0
-// CHECK-NEXT:           br      x16
-// CHECK: 0000000008012024 foo:
-// CHECK-NEXT:  8012024: ret
+// CHECK-LABEL: 0000000008012010 <far_away>:
+// CHECK-NEXT: 8012010: bl      0x8012018 <__AArch64ADRPThunk__start>
+// CHECK-NEXT: 8012014: ret
+// CHECK-LABEL: 0000000008012018 <__AArch64ADRPThunk__start>:
+// CHECK-NEXT: 8012018: adrp    x16, 0x10000
+// CHECK-NEXT: 801201c: add     x16, x16, #0x0
+// CHECK-NEXT: 8012020: br      x16
  .section .foo_sec, "ax", %progbits
  .globl foo
  .type foo, function
