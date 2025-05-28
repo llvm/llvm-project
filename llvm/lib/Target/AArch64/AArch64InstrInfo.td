@@ -1130,65 +1130,69 @@ def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
 
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
-def AArch64ld2post : SDNode<"AArch64ISD::LD2post", SDTypeProfile<3, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld3post : SDNode<"AArch64ISD::LD3post", SDTypeProfile<4, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld4post : SDNode<"AArch64ISD::LD4post", SDTypeProfile<5, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64st2post : SDNode<"AArch64ISD::ST2post", SDTypeProfile<1, 4, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st3post : SDNode<"AArch64ISD::ST3post", SDTypeProfile<1, 5, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st4post : SDNode<"AArch64ISD::ST4post", SDTypeProfile<1, 6, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64ld1x2post : SDNode<"AArch64ISD::LD1x2post", SDTypeProfile<3, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld1x3post : SDNode<"AArch64ISD::LD1x3post", SDTypeProfile<4, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld1x4post : SDNode<"AArch64ISD::LD1x4post", SDTypeProfile<5, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64st1x2post : SDNode<"AArch64ISD::ST1x2post", SDTypeProfile<1, 4, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st1x3post : SDNode<"AArch64ISD::ST1x3post", SDTypeProfile<1, 5, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st1x4post : SDNode<"AArch64ISD::ST1x4post", SDTypeProfile<1, 6, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64ld1duppost : SDNode<"AArch64ISD::LD1DUPpost", SDTypeProfile<2, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld2duppost : SDNode<"AArch64ISD::LD2DUPpost", SDTypeProfile<3, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld3duppost: SDNode<"AArch64ISD::LD3DUPpost", SDTypeProfile<4, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld4duppost: SDNode<"AArch64ISD::LD4DUPpost", SDTypeProfile<5, 2, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld1lanepost: SDNode<"AArch64ISD::LD1LANEpost", SDTypeProfile<2, 4, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld2lanepost : SDNode<"AArch64ISD::LD2LANEpost", SDTypeProfile<3, 5, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld3lanepost: SDNode<"AArch64ISD::LD3LANEpost", SDTypeProfile<4, 6, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ld4lanepost: SDNode<"AArch64ISD::LD4LANEpost", SDTypeProfile<5, 7, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64st2lanepost : SDNode<"AArch64ISD::ST2LANEpost", SDTypeProfile<1, 5, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st3lanepost : SDNode<"AArch64ISD::ST3LANEpost", SDTypeProfile<1, 6, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64st4lanepost : SDNode<"AArch64ISD::ST4LANEpost", SDTypeProfile<1, 7, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64ld2post : SDNode<"AArch64ISD::LD2post", SDTypeProfile<3, 2, []>,
+                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld3post : SDNode<"AArch64ISD::LD3post", SDTypeProfile<4, 2, []>,
+                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld4post : SDNode<"AArch64ISD::LD4post", SDTypeProfile<5, 2, []>,
+                            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64st2post : SDNode<"AArch64ISD::ST2post", SDTypeProfile<1, 4, []>,
+                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st3post : SDNode<"AArch64ISD::ST3post", SDTypeProfile<1, 5, []>,
+                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st4post : SDNode<"AArch64ISD::ST4post", SDTypeProfile<1, 6, []>,
+                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64ld1x2post : SDNode<"AArch64ISD::LD1x2post", SDTypeProfile<3, 2, []>,
+                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld1x3post : SDNode<"AArch64ISD::LD1x3post", SDTypeProfile<4, 2, []>,
+                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld1x4post : SDNode<"AArch64ISD::LD1x4post", SDTypeProfile<5, 2, []>,
+                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64st1x2post : SDNode<"AArch64ISD::ST1x2post", SDTypeProfile<1, 4, []>,
+                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st1x3post : SDNode<"AArch64ISD::ST1x3post", SDTypeProfile<1, 5, []>,
+                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st1x4post : SDNode<"AArch64ISD::ST1x4post", SDTypeProfile<1, 6, []>,
+                              [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64ld1duppost : SDNode<"AArch64ISD::LD1DUPpost", SDTypeProfile<2, 2, []>,
+                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld2duppost : SDNode<"AArch64ISD::LD2DUPpost", SDTypeProfile<3, 2, []>,
+                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld3duppost: SDNode<"AArch64ISD::LD3DUPpost", SDTypeProfile<4, 2, []>,
+                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld4duppost: SDNode<"AArch64ISD::LD4DUPpost", SDTypeProfile<5, 2, []>,
+                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld1lanepost: SDNode<"AArch64ISD::LD1LANEpost", SDTypeProfile<2, 4, []>,
+                               [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld2lanepost : SDNode<"AArch64ISD::LD2LANEpost", SDTypeProfile<3, 5, []>,
+                                [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld3lanepost: SDNode<"AArch64ISD::LD3LANEpost", SDTypeProfile<4, 6, []>,
+                               [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ld4lanepost: SDNode<"AArch64ISD::LD4LANEpost", SDTypeProfile<5, 7, []>,
+                               [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64st2lanepost : SDNode<"AArch64ISD::ST2LANEpost", SDTypeProfile<1, 5, []>,
+                               [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st3lanepost : SDNode<"AArch64ISD::ST3LANEpost", SDTypeProfile<1, 6, []>,
+                               [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64st4lanepost : SDNode<"AArch64ISD::ST4LANEpost", SDTypeProfile<1, 7, []>,
+                               [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 // Scatter store
-def AArch64sstnt1_index_pred: SDNode<"AArch64ISD::SSTNT1_INDEX_PRED", SDTypeProfile<0, 5, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64sstnt1_index_pred
+  : SDNode<"AArch64ISD::SSTNT1_INDEX_PRED", SDTypeProfile<0, 5, []>,
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 // Non-temporal scatter store
-def AArch64sst1q_index_pred: SDNode<"AArch64ISD::SST1Q_INDEX_PRED", SDTypeProfile<0, 5, []>, [
-    SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64sst1q_index_pred
+  : SDNode<"AArch64ISD::SST1Q_INDEX_PRED", SDTypeProfile<0, 5, []>,
+           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 // Non-temporal gather loads
-def AArch64gldnt1_index_merge_zero: SDNode<"AArch64ISD::GLDNT1_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64gldnt1_index_merge_zero
+  : SDNode<"AArch64ISD::GLDNT1_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>,
+           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 // Unsigned gather loads.
-def AArch64gld1q_index_merge_zero: SDNode<"AArch64ISD::GLD1Q_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>, [
-    SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64gld1q_index_merge_zero
+  : SDNode<"AArch64ISD::GLD1Q_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>,
+           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
 // have no common bits.
