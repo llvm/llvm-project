@@ -20,6 +20,17 @@
 ; RUN: llvm-profdata merge %S/Inputs/memprof_pgo.proftext -o %t.pgoprofdata
 ; RUN: llvm-profdata merge %S/Inputs/memprof.nocolinfo.memprofraw --profiled-binary %S/Inputs/memprof.nocolinfo.exe -o %t.nocolinfo.memprofdata
 
+;; Check that the summary can be shown (and is identical) for both the raw and indexed profiles.
+; RUN: llvm-profdata show --memory %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe | FileCheck %s --check-prefixes=SUMMARY
+; RUN: llvm-profdata show --memory %t.memprofdata | FileCheck %s --check-prefixes=SUMMARY
+; SUMMARY: # MemProfSummary:
+; SUMMARY: #   Total contexts: 8
+; SUMMARY: #   Total cold contexts: 5
+; SUMMARY: #   Total hot contexts: 0
+; SUMMARY: #   Maximum cold context total size: 10
+; SUMMARY: #   Maximum warm context total size: 10
+; SUMMARY: #   Maximum hot context total size: 0
+
 ;; In all below cases we should not get any messages about missing profile data
 ;; for any functions. Either we are not performing any matching for a particular
 ;; profile type or we are performing the matching and it should be successful.
