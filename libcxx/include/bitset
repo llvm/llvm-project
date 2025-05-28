@@ -273,26 +273,16 @@ inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset() _NOEXCEPT
 
 template <size_t _N_words, size_t _Size>
 void __bitset<_N_words, _Size>::__init(unsigned long long __v, false_type) _NOEXCEPT {
-  __storage_type __t[sizeof(unsigned long long) / sizeof(__storage_type)];
-  size_t __sz = _Size;
-  for (size_t __i = 0; __i < sizeof(__t) / sizeof(__t[0]); ++__i, __v >>= __bits_per_word, __sz -= __bits_per_word)
-    if (__sz < __bits_per_word)
-      __t[__i] = static_cast<__storage_type>(__v) & (1ULL << __sz) - 1;
-    else
-      __t[__i] = static_cast<__storage_type>(__v);
-
-  std::copy(__t, __t + sizeof(__t) / sizeof(__t[0]), __first_);
-  std::fill(
-      __first_ + sizeof(__t) / sizeof(__t[0]), __first_ + sizeof(__first_) / sizeof(__first_[0]), __storage_type(0));
+  const size_t __n_words = std::min((sizeof(unsigned long long) - 1) / sizeof(__storage_type) + 1, _N_words);
+  for (size_t __i = 0; __i < __n_words; ++__i, __v >>= __bits_per_word)
+    __first_[__i] = static_cast<__storage_type>(__v);
+  std::fill(__first_ + __n_words, __first_ + _N_words, __storage_type(0));
 }
 
 template <size_t _N_words, size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI void __bitset<_N_words, _Size>::__init(unsigned long long __v, true_type) _NOEXCEPT {
   __first_[0] = __v;
-  if (_Size < __bits_per_word)
-    __first_[0] &= (1ULL << _Size) - 1;
-
-  std::fill(__first_ + 1, __first_ + sizeof(__first_) / sizeof(__first_[0]), __storage_type(0));
+  std::fill(__first_ + 1, __first_ + _N_words, __storage_type(0));
 }
 
 #  endif // _LIBCPP_CXX03_LANG
@@ -314,7 +304,7 @@ inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long 
 #  endif
 {
 #  ifdef _LIBCPP_CXX03_LANG
-  __init(__v, integral_constant<bool, sizeof(unsigned long long) == sizeof(__storage_type)>());
+  __init(__v, integral_constant<bool, sizeof(unsigned long long) <= sizeof(__storage_type)>());
 #  endif
 }
 
@@ -658,7 +648,8 @@ public:
 
   // 23.3.5.1 constructors:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bitset() _NOEXCEPT {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bitset(unsigned long long __v) _NOEXCEPT : __base(__v) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bitset(unsigned long long __v) _NOEXCEPT
+      : __base(sizeof(unsigned long long) * CHAR_BIT <= _Size ? __v : __v & ((1ULL << _Size) - 1)) {}
   template <class _CharT, __enable_if_t<_IsCharLikeType<_CharT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit bitset(
       const _CharT* __str,
