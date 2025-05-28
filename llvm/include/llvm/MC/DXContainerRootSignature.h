@@ -16,36 +16,36 @@ class raw_ostream;
 namespace mcdxbc {
 
 struct RootParameterInfo {
-  dxbc::RootParameterHeader Header;
+  dxbc::RTS0::v1::RootParameterHeader Header;
   size_t Location;
 
   RootParameterInfo() = default;
 
-  RootParameterInfo(dxbc::RootParameterHeader Header, size_t Location)
+  RootParameterInfo(dxbc::RTS0::v1::RootParameterHeader Header, size_t Location)
       : Header(Header), Location(Location) {}
 };
 
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
-  SmallVector<dxbc::RootConstants> Constants;
+  SmallVector<dxbc::RTS0::v1::RootConstants> Constants;
   SmallVector<dxbc::RTS0::v2::RootDescriptor> Descriptors;
 
-  void addInfo(dxbc::RootParameterHeader Header, size_t Location) {
+  void addInfo(dxbc::RTS0::v1::RootParameterHeader Header, size_t Location) {
     ParametersInfo.push_back(RootParameterInfo(Header, Location));
   }
 
-  void addParameter(dxbc::RootParameterHeader Header,
-                    dxbc::RootConstants Constant) {
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader Header,
+                    dxbc::RTS0::v1::RootConstants Constant) {
     addInfo(Header, Constants.size());
     Constants.push_back(Constant);
   }
 
-  void addInvalidParameter(dxbc::RootParameterHeader Header) {
+  void addInvalidParameter(dxbc::RTS0::v1::RootParameterHeader Header) {
     addInfo(Header, -1);
   }
 
-  void addParameter(dxbc::RootParameterHeader Header,
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader Header,
                     dxbc::RTS0::v2::RootDescriptor Descriptor) {
     addInfo(Header, Descriptors.size());
     Descriptors.push_back(Descriptor);
@@ -57,12 +57,12 @@ struct RootParametersContainer {
     return {Info.Header.ParameterType, Info.Location};
   }
 
-  const dxbc::RootParameterHeader &getHeader(size_t Location) const {
+  const dxbc::RTS0::v1::RootParameterHeader &getHeader(size_t Location) const {
     const RootParameterInfo &Info = ParametersInfo[Location];
     return Info.Header;
   }
 
-  const dxbc::RootConstants &getConstant(size_t Index) const {
+  const dxbc::RTS0::v1::RootConstants &getConstant(size_t Index) const {
     return Constants[Index];
   }
 
