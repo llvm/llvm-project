@@ -311,8 +311,7 @@ TEST_F(SpecialCaseListTest, LinesInSection) {
   std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:foo\n"
                                                              "fun:bar\n"
                                                              "fun:foo\n");
-  // FIXME: Get the last one for #139128.
-  EXPECT_EQ(1u, SCL->inSectionBlame("sect1", "fun", "foo"));
+  EXPECT_EQ(3u, SCL->inSectionBlame("sect1", "fun", "foo"));
   EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "fun", "bar"));
 }
 
@@ -322,8 +321,30 @@ TEST_F(SpecialCaseListTest, LinesCrossSection) {
                                                              "fun:foo\n"
                                                              "[sect1]\n"
                                                              "fun:bar\n");
-  // FIXME: Get the last one for #139128.
-  EXPECT_EQ(1u, SCL->inSectionBlame("sect1", "fun", "foo"));
-  EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "fun", "bar"));
+  EXPECT_EQ(3u, SCL->inSectionBlame("sect1", "fun", "foo"));
+  EXPECT_EQ(5u, SCL->inSectionBlame("sect1", "fun", "bar"));
+}
+
+TEST_F(SpecialCaseListTest, Blame) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("[sect1]\n"
+                                                             "src:foo*\n"
+                                                             "[sect1]\n"
+                                                             "src:bar*\n"
+                                                             "src:def\n"
+                                                             "[sect2]\n"
+                                                             "src:def\n"
+                                                             "src:de*\n");
+  EXPECT_TRUE(SCL->inSection("sect1", "src", "fooz"));
+  EXPECT_TRUE(SCL->inSection("sect1", "src", "barz"));
+  EXPECT_FALSE(SCL->inSection("sect2", "src", "fooz"));
+
+  EXPECT_TRUE(SCL->inSection("sect2", "src", "def"));
+  EXPECT_TRUE(SCL->inSection("sect1", "src", "def"));
+
+  EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "src", "fooz"));
+  EXPECT_EQ(4u, SCL->inSectionBlame("sect1", "src", "barz"));
+  EXPECT_EQ(5u, SCL->inSectionBlame("sect1", "src", "def"));
+  EXPECT_EQ(8u, SCL->inSectionBlame("sect2", "src", "def"));
+  EXPECT_EQ(8u, SCL->inSectionBlame("sect2", "src", "dez"));
 }
 }
