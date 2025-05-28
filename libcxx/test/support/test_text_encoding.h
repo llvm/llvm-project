@@ -9,9 +9,10 @@
 #ifndef SUPPORT_TEST_TEXT_ENCODING_H
 #define SUPPORT_TEST_TEXT_ENCODING_H
 
-#include "test_macros.h"
 #include <array>
 #include <cstdint>
+
+#include "test_macros.h"
 
 struct encoding_pair {
   int_least32_t mib;
