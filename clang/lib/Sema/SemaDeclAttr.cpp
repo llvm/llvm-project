@@ -4331,6 +4331,32 @@ static void handleAnnotateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
+static void handleAnnotateDeclAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (AL.getNumArgs() < 1) {
+    S.Diag(AL.getLoc(), diag::err_attribute_too_few_arguments) << AL << 1;
+    return;
+  }
+
+  // Make sure that there is a string literal as the annotation's first
+  // argument.
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
+    return;
+
+  llvm::SmallVector<Expr *, 4> Args;
+  Args.reserve(AL.getNumArgs() - 1);
+  for (unsigned Idx = 1; Idx < AL.getNumArgs(); Idx++) {
+    assert(!AL.isArgIdent(Idx));
+    Args.push_back(AL.getArgAsExpr(Idx));
+  }
+  if (!S.ConstantFoldAttrArgs(AL, Args))
+    return;
+  if (auto *AnnotateDeclAttr = AnnotateDeclAttr::Create(
+          S.Context, Str, Args.data(), Args.size(), AL)) {
+    D->addAttr(AnnotateDeclAttr);
+  }
+}
+
 static void handleAlignValueAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   S.AddAlignValueAttr(D, AL, AL.getArgAsExpr(0));
 }
@@ -7061,6 +7087,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Annotate:
     handleAnnotateAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_AnnotateDecl:
+    handleAnnotateDeclAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Availability:
     handleAvailabilityAttr(S, D, AL);
