@@ -85,7 +85,7 @@ private:
 
   std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
-  // MemProf ummary builder to which records are added as MemProf data is added
+  // MemProf summary builder to which records are added as MemProf data is added
   // to the writer.
   memprof::MemProfSummaryBuilder MemProfSumBuilder;
 

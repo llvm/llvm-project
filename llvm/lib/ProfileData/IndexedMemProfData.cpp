@@ -231,11 +231,11 @@ static Error writeMemProfRadixTreeBased(
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof record payload offset.
   OS.write(0ULL); // Reserve space for the memprof record table offset.
-  if (Version >= memprof::Version4)
+  if (Version >= memprof::Version4) {
     OS.write(0ULL); // Reserve space for the data access profile offset.
 
-  if (Version == memprof::Version4)
     MemProfSum->write(OS);
+  }
 
   auto Schema = memprof::getHotColdSchema();
   if (MemProfFullSchema)
@@ -402,7 +402,7 @@ Error IndexedMemProfReader::deserializeRadixTreeBased(
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
   uint64_t DataAccessProfOffset = 0;
-  if (Version == memprof::Version4) {
+  if (Version >= memprof::Version4) {
     DataAccessProfOffset =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     MemProfSum = memprof::MemProfSummary::deserialize(Ptr);
