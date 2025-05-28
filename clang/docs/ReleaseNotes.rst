@@ -63,6 +63,9 @@ C++ Specific Potentially Breaking Changes
 
 - Added ``!nonnull/!align`` metadata to load of references for better codegen.
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
