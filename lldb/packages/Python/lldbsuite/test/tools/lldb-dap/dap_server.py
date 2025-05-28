@@ -856,7 +856,7 @@ class DebugCommunication(object):
         cwd: Optional[str] = None,
         env: Optional[dict[str, str]] = None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         runInTerminal=False,

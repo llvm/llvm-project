@@ -1047,8 +1047,6 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
     MaybeRegisterFunctionBody(copied_function);
 
     context.AddNamedDecl(copied_function);
-
-    context.m_found_function_with_type_info = true;
   } else if (auto copied_var = dyn_cast<clang::VarDecl>(copied_decl)) {
     context.AddNamedDecl(copied_var);
     context.m_found_variable = true;
@@ -1217,11 +1215,11 @@ SymbolContextList ClangExpressionDeclMap::SearchFunctionsInSymbolContexts(
   return sc_func_list;
 }
 
-void ClangExpressionDeclMap::LookupFunction(
+bool ClangExpressionDeclMap::LookupFunction(
     NameSearchContext &context, lldb::ModuleSP module_sp, ConstString name,
     const CompilerDeclContext &namespace_decl) {
   if (!m_parser_vars)
-    return;
+    return false;
 
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
 
@@ -1281,6 +1279,8 @@ void ClangExpressionDeclMap::LookupFunction(
     }
   }
 
+  bool found_function_with_type_info = false;
+
   if (sc_list.GetSize()) {
     Symbol *extern_symbol = nullptr;
     Symbol *non_extern_symbol = nullptr;
@@ -1297,7 +1297,7 @@ void ClangExpressionDeclMap::LookupFunction(
           continue;
 
         AddOneFunction(context, sym_ctx.function, nullptr);
-        context.m_found_function_with_type_info = true;
+        found_function_with_type_info = true;
       } else if (sym_ctx.symbol) {
         Symbol *symbol = sym_ctx.symbol;
         if (target && symbol->GetType() == eSymbolTypeReExported) {
@@ -1313,20 +1313,20 @@ void ClangExpressionDeclMap::LookupFunction(
       }
     }
 
-    if (!context.m_found_function_with_type_info) {
+    if (!found_function_with_type_info) {
       for (clang::NamedDecl *decl : decls_from_modules) {
         if (llvm::isa<clang::FunctionDecl>(decl)) {
           clang::NamedDecl *copied_decl =
               llvm::cast_or_null<FunctionDecl>(CopyDecl(decl));
           if (copied_decl) {
             context.AddNamedDecl(copied_decl);
-            context.m_found_function_with_type_info = true;
+            found_function_with_type_info = true;
           }
         }
       }
     }
 
-    if (!context.m_found_function_with_type_info) {
+    if (!found_function_with_type_info) {
       if (extern_symbol) {
         AddOneFunction(context, nullptr, extern_symbol);
       } else if (non_extern_symbol) {
@@ -1334,6 +1334,8 @@ void ClangExpressionDeclMap::LookupFunction(
       }
     }
   }
+
+  return found_function_with_type_info;
 }
 
 void ClangExpressionDeclMap::FindExternalVisibleDecls(
@@ -1432,10 +1434,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
   }
 
-  LookupFunction(context, module_sp, name, namespace_decl);
-
-  // Try the modules next.
-  if (!context.m_found_function_with_type_info)
+  if (!LookupFunction(context, module_sp, name, namespace_decl))
     LookupInModulesDeclVendor(context, name);
 
   if (target && !context.m_found_variable && !namespace_decl) {

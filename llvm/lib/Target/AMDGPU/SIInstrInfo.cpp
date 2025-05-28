@@ -623,12 +623,12 @@ static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
                               MCRegister SrcReg, bool KillSrc,
                               const char *Msg = "illegal VGPR to SGPR copy") {
   MachineFunction *MF = MBB.getParent();
-  DiagnosticInfoUnsupported IllegalCopy(MF->getFunction(), Msg, DL, DS_Error);
+
   LLVMContext &C = MF->getFunction().getContext();
-  C.diagnose(IllegalCopy);
+  C.diagnose(DiagnosticInfoUnsupported(MF->getFunction(), Msg, DL, DS_Error));
 
   BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_ILLEGAL_COPY), DestReg)
-    .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
 /// Handle copying from SGPR to AGPR, or from AGPR to AGPR on GFX908. It is not

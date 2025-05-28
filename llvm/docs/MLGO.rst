@@ -490,24 +490,21 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
       std::unique_ptr<ir2vec::Embedder> Emb = std::move(*EmbOrErr);
 
 3. **Compute and Access Embeddings**:
-   Call ``computeEmbeddings()`` on the embedder instance to compute the 
-   embeddings. Then the embeddings can be accessed using different getter 
-   methods. Currently, ``Embedder`` can generate embeddings at three levels:
-   Instructions, Basic Blocks, and Functions.
+   Call ``getFunctionVector()`` to get the embedding for the function. 
 
-   .. code-block:: c++
+  .. code-block:: c++
 
-      Emb->computeEmbeddings();
       const ir2vec::Embedding &FuncVector = Emb->getFunctionVector();
-      const ir2vec::InstEmbeddingsMap &InstVecMap = Emb->getInstVecMap();
-      const ir2vec::BBEmbeddingsMap &BBVecMap = Emb->getBBVecMap();
 
-      // Example: Iterate over instruction embeddings
-      for (const auto &Entry : InstVecMap) {
-        const Instruction *Inst = Entry.getFirst();
-        const ir2vec::Embedding &InstEmbedding = Entry.getSecond();
-        // Use Inst and InstEmbedding
-      }
+   Currently, ``Embedder`` can generate embeddings at three levels: Instructions,
+   Basic Blocks, and Functions. Appropriate getters are provided to access the
+   embeddings at these levels.
+
+  .. note::
+
+    The validity of ``Embedder`` instance (and the embeddings it generates) is
+    tied to the function it is associated with remains unchanged. If the function
+    is modified, the embeddings may become stale and should be recomputed accordingly.
 
 4. **Working with Embeddings:**
    Embeddings are represented as ``std::vector<double>``. These

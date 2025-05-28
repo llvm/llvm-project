@@ -320,6 +320,7 @@ copy("Headers") {
     "stdatomic.h",
     "stdbool.h",
     "stdckdint.h",
+    "stdcountof.h",
     "stddef.h",
     "stdint.h",
     "stdnoreturn.h",

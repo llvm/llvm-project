@@ -455,7 +455,8 @@ public:
   void mangleSeqID(unsigned SeqID);
   void mangleName(GlobalDecl GD);
   void mangleType(QualType T);
-  void mangleCXXRecordDecl(const CXXRecordDecl *Record);
+  void mangleCXXRecordDecl(const CXXRecordDecl *Record,
+                           bool SuppressSubstitution = false);
   void mangleLambdaSig(const CXXRecordDecl *Lambda);
   void mangleModuleNamePrefix(StringRef Name, bool IsPartition = false);
   void mangleVendorQualifier(StringRef Name);
@@ -3103,11 +3104,12 @@ void CXXNameMangler::mangleType(QualType T) {
     addSubstitution(T);
 }
 
-void CXXNameMangler::mangleCXXRecordDecl(const CXXRecordDecl *Record) {
+void CXXNameMangler::mangleCXXRecordDecl(const CXXRecordDecl *Record,
+                                         bool SuppressSubstitution) {
   if (mangleSubstitution(Record))
     return;
   mangleName(Record);
-  if (isCompatibleWith(LangOptions::ClangABI::Ver19))
+  if (SuppressSubstitution)
     return;
   addSubstitution(Record);
 }
@@ -7557,7 +7559,12 @@ void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
   // <special-name> ::= TC <type> <offset number> _ <base type>
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTC";
-  Mangler.mangleCXXRecordDecl(RD);
+  // Older versions of clang did not add the record as a substitution candidate
+  // here.
+  bool SuppressSubstitution =
+      getASTContext().getLangOpts().getClangABICompat() <=
+      LangOptions::ClangABI::Ver19;
+  Mangler.mangleCXXRecordDecl(RD, SuppressSubstitution);
   Mangler.getStream() << Offset;
   Mangler.getStream() << '_';
   Mangler.mangleCXXRecordDecl(Type);

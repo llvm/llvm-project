@@ -49,6 +49,7 @@ struct TestDataLayoutQuery
       Attribute globalMemorySpace = layout.getGlobalMemorySpace();
       uint64_t stackAlignment = layout.getStackAlignment();
       Attribute functionPointerAlignment = layout.getFunctionPointerAlignment();
+      Attribute legalIntWidths = layout.getLegalIntWidths();
 
       auto convertTypeSizeToAttr = [&](llvm::TypeSize typeSize) -> Attribute {
         if (!typeSize.isScalable())
@@ -97,7 +98,11 @@ struct TestDataLayoutQuery
                                     ? FunctionPointerAlignmentAttr::get(
                                           builder.getContext(), 0,
                                           /*function_dependent=*/false)
-                                    : functionPointerAlignment)
+                                    : functionPointerAlignment),
+           builder.getNamedAttr("legal_int_widths",
+                                legalIntWidths == Attribute()
+                                    ? builder.getDenseI32ArrayAttr({})
+                                    : legalIntWidths)
 
           });
 

@@ -57,9 +57,9 @@ public:
 
       if (Error E = ReplaceCall(CI)) {
         std::string Message(toString(std::move(E)));
-        DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
-                                       CI->getDebugLoc());
-        M.getContext().diagnose(Diag);
+        M.getContext().diagnose(DiagnosticInfoUnsupported(
+            *CI->getFunction(), Message, CI->getDebugLoc()));
+
         return true;
       }
     }
