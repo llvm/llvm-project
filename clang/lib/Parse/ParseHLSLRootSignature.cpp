@@ -903,10 +903,17 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
 
   llvm::APSInt Val(32, /*IsUnsigned=*/true);
   // GetIntegerValue will overwrite Val from the parsed Literal and return
-  // true if it overflows as a 32-bit unsigned int. Then check that it also
-  // doesn't overflow as a signed 32-bit int.
-  int64_t MaxMagnitude = -int64_t(std::numeric_limits<int32_t>::min());
-  if (Literal.GetIntegerValue(Val) || MaxMagnitude < Val.getExtValue()) {
+  // true if it overflows as a 32-bit unsigned int
+  bool Overflowed = Literal.GetIntegerValue(Val);
+
+  // So we then need to check that it doesn't overflow as a 32-bit signed int:
+  int64_t MaxNegativeMagnitude = -int64_t(std::numeric_limits<int32_t>::min());
+  Overflowed |= (Negated && MaxNegativeMagnitude < Val.getExtValue());
+
+  int64_t MaxPositiveMagnitude = int64_t(std::numeric_limits<int32_t>::max());
+  Overflowed |= (!Negated && MaxPositiveMagnitude < Val.getExtValue());
+
+  if (Overflowed) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
