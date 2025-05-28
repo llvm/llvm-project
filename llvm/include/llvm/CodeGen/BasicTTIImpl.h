@@ -2409,7 +2409,9 @@ public:
       return Cost;
     }
     case Intrinsic::experimental_memset_pattern:
-      // This cost is set to match the cost of the memset_pattern16 libcall
+      // This cost is set to match the cost of the memset_pattern16 libcall.
+      // It should likely be re-evaluated after migration to this intrinsic
+      // is complete.
       return TTI::TCC_Basic * 4;
     case Intrinsic::abs:
       ISD = ISD::ABS;
