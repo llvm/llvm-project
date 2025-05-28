@@ -221,7 +221,8 @@ def lsxsplatf64 : PatFrag<(ops node:$e0),
 
 def to_valid_timm : SDNodeXForm<timm, [{
   auto CN = cast<ConstantSDNode>(N);
-  return CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(N), Subtarget->getGRLenVT());
+  return CurDAG->getSignedTargetConstant(CN->getSExtValue(), SDLoc(N),
+                                         Subtarget->getGRLenVT());
 }]>;
 
 // FP immediate of VLDI patterns.

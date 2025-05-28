@@ -184,19 +184,9 @@ public:
                                     global.getSymName());
   }
 
-  cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
-                         bool isVolatile = false, uint64_t alignment = 0) {
-    mlir::IntegerAttr intAttr;
-    if (alignment)
-      intAttr = mlir::IntegerAttr::get(
-          mlir::IntegerType::get(ptr.getContext(), 64), alignment);
-
-    return create<cir::LoadOp>(loc, ptr);
-  }
-
-  cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
-                           mlir::Value dst) {
-    return create<cir::StoreOp>(loc, val, dst);
+  cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
+                           mlir::IntegerAttr align = {}) {
+    return create<cir::StoreOp>(loc, val, dst, align);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
@@ -209,7 +199,12 @@ public:
                                clang::CharUnits alignment) {
     auto addr = createAlloca(loc, getPointerTo(type), type, {},
                              getSizeFromCharUnits(getContext(), alignment));
-    return createLoad(loc, addr);
+    mlir::IntegerAttr alignAttr;
+    uint64_t align = alignment.getQuantity();
+    if (align)
+      alignAttr = getI64IntegerAttr(align);
+
+    return create<cir::LoadOp>(loc, addr, /*isDeref=*/false, alignAttr);
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,

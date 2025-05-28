@@ -228,10 +228,9 @@ namespace {
     ELFSparcAsmBackend(const MCSubtargetInfo &STI, Triple::OSType OSType)
         : SparcAsmBackend(STI), OSType(OSType) {}
 
-    void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+    void applyFixup(const MCFragment &, const MCFixup &Fixup,
                     const MCValue &Target, MutableArrayRef<char> Data,
-                    uint64_t Value, bool IsResolved,
-                    const MCSubtargetInfo *STI) const override {
+                    uint64_t Value, bool IsResolved) override {
       if (!IsResolved)
         return;
       Value = adjustFixupValue(Fixup.getKind(), Value);

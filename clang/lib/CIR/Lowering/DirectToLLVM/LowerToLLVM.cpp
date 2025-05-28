@@ -728,8 +728,9 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   const mlir::Type llvmTy = convertTypeForMemory(
       *getTypeConverter(), dataLayout, op.getResult().getType());
   assert(!cir::MissingFeatures::opLoadStoreMemOrder());
-  assert(!cir::MissingFeatures::opLoadStoreAlignment());
-  unsigned alignment = (unsigned)dataLayout.getTypeABIAlignment(llvmTy);
+  std::optional<size_t> opAlign = op.getAlignment();
+  unsigned alignment =
+      (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmTy));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -753,10 +754,11 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
     cir::StoreOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   assert(!cir::MissingFeatures::opLoadStoreMemOrder());
-  assert(!cir::MissingFeatures::opLoadStoreAlignment());
   const mlir::Type llvmTy =
       getTypeConverter()->convertType(op.getValue().getType());
-  unsigned alignment = (unsigned)dataLayout.getTypeABIAlignment(llvmTy);
+  std::optional<size_t> opAlign = op.getAlignment();
+  unsigned alignment =
+      (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmTy));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -968,8 +970,7 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   const bool isDsoLocal = true;
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
-  assert(!cir::MissingFeatures::opGlobalAlignment());
-  const uint64_t alignment = 0;
+  const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
 
@@ -1024,8 +1025,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const bool isDsoLocal = true;
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
-  assert(!cir::MissingFeatures::opGlobalAlignment());
-  const uint64_t alignment = 0;
+  const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
   SmallVector<mlir::NamedAttribute> attributes;
@@ -1716,7 +1716,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMUnaryOpLowering,
                CIRToLLVMVecCreateOpLowering,
                CIRToLLVMVecExtractOpLowering,
-               CIRToLLVMVecInsertOpLowering
+               CIRToLLVMVecInsertOpLowering,
+               CIRToLLVMVecCmpOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1838,6 +1839,35 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
       op, adaptor.getVec(), adaptor.getValue(), adaptor.getIndex());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
+    cir::VecCmpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(mlir::isa<cir::VectorType>(op.getType()) &&
+         mlir::isa<cir::VectorType>(op.getLhs().getType()) &&
+         mlir::isa<cir::VectorType>(op.getRhs().getType()) &&
+         "Vector compare with non-vector type");
+  mlir::Type elementType = elementTypeIfVector(op.getLhs().getType());
+  mlir::Value bitResult;
+  if (auto intType = mlir::dyn_cast<cir::IntType>(elementType)) {
+    bitResult = rewriter.create<mlir::LLVM::ICmpOp>(
+        op.getLoc(),
+        convertCmpKindToICmpPredicate(op.getKind(), intType.isSigned()),
+        adaptor.getLhs(), adaptor.getRhs());
+  } else if (mlir::isa<cir::CIRFPTypeInterface>(elementType)) {
+    bitResult = rewriter.create<mlir::LLVM::FCmpOp>(
+        op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
+        adaptor.getLhs(), adaptor.getRhs());
+  } else {
+    return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
+  }
+
+  // LLVM IR vector comparison returns a vector of i1. This one-bit vector
+  // must be sign-extended to the correct result type.
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
+      op, typeConverter->convertType(op.getType()), bitResult);
   return mlir::success();
 }
 

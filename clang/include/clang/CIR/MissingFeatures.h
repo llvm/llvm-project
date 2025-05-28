@@ -34,11 +34,14 @@ struct MissingFeatures {
   static bool opGlobalDSOLocal() { return false; }
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
-  static bool opGlobalAlignment() { return false; }
   static bool opGlobalWeakRef() { return false; }
   static bool opGlobalLinkage() { return false; }
-  static bool opGlobalSetVisitibility() { return false; }
   static bool opGlobalUnnamedAddr() { return false; }
+  static bool opGlobalSection() { return false; }
+  static bool opGlobalVisibility() { return false; }
+  static bool opGlobalDLLImportExport() { return false; }
+  static bool opGlobalPartition() { return false; }
+  static bool opGlobalCIRGlobalValueInterface() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
@@ -51,7 +54,6 @@ struct MissingFeatures {
   static bool opLoadStoreTbaa() { return false; }
   static bool opLoadStoreMemOrder() { return false; }
   static bool opLoadStoreVolatile() { return false; }
-  static bool opLoadStoreAlignment() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
 

@@ -3521,31 +3521,31 @@ define <8 x i100> @test_unsigned_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    extr x8, x21, x27, #28
-; CHECK-NEXT:    extr x9, x29, x20, #28
-; CHECK-NEXT:    stur x28, [x19, #75]
-; CHECK-NEXT:    fcmp s8, #0.0
+; CHECK-NEXT:    str x24, [x19]
 ; CHECK-NEXT:    bfi x22, x20, #36, #28
-; CHECK-NEXT:    lsr x11, x29, #28
+; CHECK-NEXT:    stur x28, [x19, #75]
+; CHECK-NEXT:    extr x9, x29, x20, #28
+; CHECK-NEXT:    fcmp s8, #0.0
 ; CHECK-NEXT:    stur x8, [x19, #41]
-; CHECK-NEXT:    str x9, [x19, #16]
-; CHECK-NEXT:    ldr x10, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x11, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    stp x22, x9, [x19, #8]
+; CHECK-NEXT:    lsr x9, x29, #28
 ; CHECK-NEXT:    csel x8, xzr, x0, lt
-; CHECK-NEXT:    csel x9, xzr, x1, lt
+; CHECK-NEXT:    csel x10, xzr, x1, lt
 ; CHECK-NEXT:    fcmp s8, s9
-; CHECK-NEXT:    stp x24, x22, [x19]
-; CHECK-NEXT:    stur x10, [x19, #50]
-; CHECK-NEXT:    lsr x10, x21, #28
-; CHECK-NEXT:    strb w11, [x19, #24]
-; CHECK-NEXT:    strb w10, [x19, #49]
-; CHECK-NEXT:    csel x9, x23, x9, gt
+; CHECK-NEXT:    stur x11, [x19, #50]
+; CHECK-NEXT:    lsr x11, x21, #28
+; CHECK-NEXT:    strb w9, [x19, #24]
+; CHECK-NEXT:    strb w11, [x19, #49]
+; CHECK-NEXT:    csel x10, x23, x10, gt
 ; CHECK-NEXT:    csinv x8, x8, xzr, le
 ; CHECK-NEXT:    ldp x12, x11, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    bfi x9, x27, #36, #28
+; CHECK-NEXT:    bfi x10, x27, #36, #28
 ; CHECK-NEXT:    stur x8, [x19, #25]
-; CHECK-NEXT:    stur x9, [x19, #33]
-; CHECK-NEXT:    extr x10, x11, x12, #28
+; CHECK-NEXT:    stur x10, [x19, #33]
+; CHECK-NEXT:    extr x9, x11, x12, #28
 ; CHECK-NEXT:    bfi x26, x12, #36, #28
-; CHECK-NEXT:    stur x10, [x19, #91]
+; CHECK-NEXT:    stur x9, [x19, #91]
 ; CHECK-NEXT:    ldp x10, x9, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    stur x26, [x19, #83]
 ; CHECK-NEXT:    extr x8, x9, x10, #28

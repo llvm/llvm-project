@@ -353,6 +353,12 @@ uint64_t RecordType::getElementOffset(const ::mlir::DataLayout &dataLayout,
     offset += dataLayout.getTypeSize(ty);
   }
 
+  // Account for padding, if necessary, for the alignment of the field whose
+  // offset we are calculating.
+  const llvm::Align tyAlign = llvm::Align(
+      getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[idx]));
+  offset = llvm::alignTo(offset, tyAlign);
+
   return offset;
 }
 

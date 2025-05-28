@@ -439,7 +439,8 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
           op,
           /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
           /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
-          /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
+          /*is_align_stack=*/false, LLVM::TailCallKind::None,
+          /*asm_dialect=*/asmDialectAttr,
           /*operand_attrs=*/ArrayAttr());
       return success();
     }
