@@ -1,7 +1,7 @@
 #===============================================================================
 # Setup Project
 #===============================================================================
-cmake_minimum_required(VERSION 3.25.0)
+cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "libc++")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
@@ -499,7 +499,7 @@ function(cxx_add_basic_build_flags target)
 
   # Use C++23 for all targets.
   set_target_properties(${target} PROPERTIES
-    CXX_STANDARD 26
+    CXX_STANDARD 23
     CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     CXX_EXTENSIONS NO)
 
