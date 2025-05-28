@@ -1820,8 +1820,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         if (OpSizeInBits == NewResSizeInBits)
           continue;
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
-        auto [ProcessedIter, IterIsEmpty] =
-            ProcessedTruncs.insert({Op, nullptr});
+        auto [ProcessedIter, IterIsEmpty] = ProcessedTruncs.try_emplace(Op);
         VPWidenCastRecipe *NewOp =
             IterIsEmpty
                 ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy)
@@ -1847,7 +1846,7 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
-    if (VPBB->getNumSuccessors() != 2 ||
+    if (VPBB->getNumSuccessors() != 2 || VPBB == Plan.getEntry() ||
         !match(&VPBB->back(), m_BranchOnCond(m_True())))
       continue;
 

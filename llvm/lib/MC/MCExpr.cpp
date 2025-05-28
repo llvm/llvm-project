@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCExpr.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -478,8 +479,6 @@ static bool canExpand(const MCSymbol &Sym, bool InSet) {
   if (Sym.isWeakExternal())
     return false;
 
-  Sym.getVariableValue(true);
-
   if (InSet)
     return true;
   return !Sym.isInSection();
@@ -497,13 +496,24 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
   case SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
+    MCSymbol &Sym = const_cast<MCSymbol &>(SRE->getSymbol());
     const auto Kind = SRE->getKind();
     bool Layout = Asm && Asm->hasLayout();
 
     // Evaluate recursively if this is a variable.
+    if (Sym.isResolving()) {
+      if (Asm && Asm->hasFinalLayout()) {
+        Asm->getContext().reportError(
+            Sym.getVariableValue()->getLoc(),
+            "cyclic dependency detected for symbol '" + Sym.getName() + "'");
+        Sym.setVariableValue(MCConstantExpr::create(0, Asm->getContext()));
+      }
+      return false;
+    }
     if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
         canExpand(Sym, InSet)) {
+      Sym.setIsResolving(true);
+      auto _ = make_scope_exit([&] { Sym.setIsResolving(false); });
       bool IsMachO =
           Asm && Asm->getContext().getAsmInfo()->hasSubsectionsViaSymbols();
       if (Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
@@ -538,6 +548,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         // Allows aliases with zero offset.
         if (Res.getConstant() == 0 && (!A || !B))
           return true;
+      } else {
+        return false;
       }
     }
 
@@ -707,9 +719,16 @@ MCFragment *MCExpr::findAssociatedFragment() const {
     return MCSymbol::AbsolutePseudoFragment;
 
   case SymbolRef: {
-    const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
-    return Sym.getFragment();
+    auto &Sym =
+        const_cast<MCSymbol &>(cast<MCSymbolRefExpr>(this)->getSymbol());
+    if (Sym.Fragment)
+      return Sym.Fragment;
+    if (Sym.isResolving())
+      return MCSymbol::AbsolutePseudoFragment;
+    Sym.setIsResolving(true);
+    auto *F = Sym.getFragment();
+    Sym.setIsResolving(false);
+    return F;
   }
 
   case Unary:

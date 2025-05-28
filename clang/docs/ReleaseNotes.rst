@@ -447,6 +447,7 @@ Improvements to Clang's diagnostics
   as function arguments or return value respectively. Note that
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
+- The :doc:`ThreadSafetyAnalysis` now supports reentrant capabilities.
 - Clang will now do a better job producing common nested names, when producing
   common types for ternary operator, template argument deduction and multiple return auto deduction.
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers
@@ -797,6 +798,7 @@ Bug Fixes to C++ Support
 - Fix instantiation of default-initialized variable template specialization. (#GH140632) (#GH140622)
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
+- Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1011,6 +1013,7 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``.
 
 Python Binding Changes
 ----------------------

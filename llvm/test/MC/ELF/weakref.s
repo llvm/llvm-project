@@ -1,5 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s | llvm-readelf -s - | FileCheck %s
 # RUN: not llvm-mc -filetype=obj -triple=x86_64 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+# RUN: not llvm-mc -filetype=obj -triple=x86_64 --defsym ERR2=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
 
 // This is a long test that checks that the aliases created by weakref are
 // never in the symbol table and that the only case it causes a symbol to
@@ -104,5 +105,14 @@ alias:
 
 .weakref alias2, target
 .set alias2, 1
+# ERR: [[#@LINE-1]]:14: error: redefinition of 'alias2'
+.endif
+
+.ifdef ERR2
+.weakref cycle0, cycle1
+.weakref cycle1, cycle0
+call cycle0
+# ERR2: <unknown>:0: error: cyclic dependency detected for symbol 'cycle0'
+# ERR2: [[#@LINE-2]]:1: error: expected relocatable expression
 
 .endif
