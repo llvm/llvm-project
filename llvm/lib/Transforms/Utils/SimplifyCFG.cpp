@@ -3472,11 +3472,11 @@ static bool reachesUsed(BasicBlock *BB,
 }
 
 /// Return true if we can thread a branch across this block.
-static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
-                                               BlocksSet &ReachesNonLocalUses) {
+static bool
+blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
+                                   BlocksSet &UsedInNonLocalBlocksSet) {
   int Size = 0;
   EphemeralValueTracker EphTracker;
-  BlocksSet UsedInNonLocalBlocksSet;
 
   // Walk the loop in reverse so that we can identify ephemeral values properly
   // (values only feeding assumes).
@@ -3494,8 +3494,8 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
         return false; // Don't clone large BB's.
     }
 
-    // We can only support instructions that do not define values that are
-    // live outside of the current basic block.
+    // Record blocks with non-local uses of values defined in the current basic
+    // block.
     for (User *U : I.users()) {
       Instruction *UI = cast<Instruction>(U);
       BasicBlock *UsedInBB = UI->getParent();
@@ -3507,12 +3507,6 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
     }
 
     // Looks ok, continue checking.
-  }
-
-  for (BasicBlock *Succ : successors(BB)) {
-    BlocksSet VisitedBlocksSet;
-    if (reachesUsed(Succ, UsedInNonLocalBlocksSet, VisitedBlocksSet))
-      ReachesNonLocalUses.insert(Succ);
   }
 
   return true;
@@ -3568,21 +3562,17 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     return false;
 
   // Now we know that this block has multiple preds and two succs.
-  // Check that the block is small enough and which destination(s) use values
-  // defined in the block.
+  // Check that the block is small enough and record which non-local blocks use
+  // values defined in the block.
 
-  BlocksSet ReachesNonLocalUses;
-  if (!blockIsSimpleEnoughToThreadThrough(BB, ReachesNonLocalUses))
+  BlocksSet UsedInNonLocalBlocksSet;
+  if (!blockIsSimpleEnoughToThreadThrough(BB, UsedInNonLocalBlocksSet))
     return false;
 
   for (const auto &Pair : KnownValues) {
     ConstantInt *CB = Pair.first;
     ArrayRef<BasicBlock *> PredBBs = Pair.second.getArrayRef();
     BasicBlock *RealDest = BI->getSuccessor(!CB->getZExtValue());
-
-    // Only revector to RealDest if no values defined in BB are live.
-    if (ReachesNonLocalUses.contains(RealDest))
-      continue;
 
     // Okay, we now know that all edges from PredBB should be revectored to
     // branch to RealDest.
@@ -3593,6 +3583,11 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     if (any_of(PredBBs, [](BasicBlock *PredBB) {
           return isa<IndirectBrInst>(PredBB->getTerminator());
         }))
+      continue;
+
+    // Only revector to RealDest if no values defined in BB are live.
+    BlocksSet VisitedBlocksSet;
+    if (reachesUsed(RealDest, UsedInNonLocalBlocksSet, VisitedBlocksSet))
       continue;
 
     LLVM_DEBUG({
