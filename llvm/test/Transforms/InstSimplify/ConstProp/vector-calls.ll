@@ -9,6 +9,16 @@ define <3 x i32> @fold_vector_extract() {
   ret <3 x i32> %1
 }
 
+@a = external global i16, align 1
+
+define <3 x i32> @fold_vector_extract_constexpr() {
+; CHECK-LABEL: define <3 x i32> @fold_vector_extract_constexpr() {
+; CHECK-NEXT:    ret <3 x i32> <i32 ptrtoint (ptr @a to i32), i32 1, i32 2>
+;
+  %1 = call <3 x i32> @llvm.vector.extract.v3i32.v8i32(<8 x i32> <i32 ptrtoint (ptr @a to i32), i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, i64 0)
+  ret <3 x i32> %1
+}
+
 define <3 x i32> @fold_vector_extract_last_poison() {
 ; CHECK-LABEL: define <3 x i32> @fold_vector_extract_last_poison() {
 ; CHECK-NEXT:    ret <3 x i32> <i32 6, i32 7, i32 poison>
