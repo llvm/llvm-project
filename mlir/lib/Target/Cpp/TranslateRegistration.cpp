@@ -36,20 +36,20 @@ void registerToCppTranslation() {
   static llvm::cl::opt<bool> emitClass(
       "emit-class",
       llvm::cl::desc("If specified, the output will be a class where "
-                     "the function(s) in the module are members. "
-                     "Enables class-related options."),
+                     "the function(s) in the module are methods "
+                     "Enables class-related options"),
       llvm::cl::init(false));
 
   static llvm::cl::opt<std::string> className(
       "class-name",
-      llvm::cl::desc("Mandatory class name if --emit-class is set."),
+      llvm::cl::desc("Mandatory class name if --emit-class is set"),
       llvm::cl::init(""));
 
   static llvm::cl::opt<std::string> fieldNameAttribute(
       "field-name-attribute",
       llvm::cl::desc("Mandatory name of the attribute to use as field name if "
-                     "--emit-class is set."),
-      llvm::cl::init(""));
+                     "--emit-class is set(default=tf_saved_model.index_path)"),
+      llvm::cl::init("tf_saved_model.index_path"));
 
   TranslateFromMLIRRegistration reg(
       "mlir-to-cpp", "translate from mlir to cpp",
