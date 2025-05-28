@@ -618,17 +618,20 @@ public:
     // Locate the largest ancestor cycle that is not reducible and does not
     // contain a reducible ancestor. This is done with a lambda that is defined
     // and invoked in the same statement.
-    const CycleT *IrreducibleAncestor = [](const CycleT *C) -> const CycleT* {
-      if (!C) return nullptr;
-      if (C->isReducible()) return nullptr;
+    const CycleT *IrreducibleAncestor = [](const CycleT *C) -> const CycleT * {
+      if (!C)
+        return nullptr;
+      if (C->isReducible())
+        return nullptr;
       while (const CycleT *P = C->getParentCycle()) {
-        if (P->isReducible()) return C;
+        if (P->isReducible())
+          return C;
         C = P;
       }
       assert(!C->getParentCycle());
       assert(!C->isReducible());
       return C;
-    } (DivTermCycle);
+    }(DivTermCycle);
 
     for (const auto *SuccBlock : successors(&DivTermBlock)) {
       if (DivTermCycle && !DivTermCycle->contains(SuccBlock)) {
@@ -655,7 +658,8 @@ public:
       const auto *Block = CyclePOT[BlockIdx];
       // If no irreducible cycle, stop if freshLable.count() = 1 and Block
       // is the IPD. If it is in any irreducible cycle, continue propagation.
-      if (FreshLabels.count() == 1 && (!IrreducibleAncestor || !IrreducibleAncestor->contains(Block)))
+      if (FreshLabels.count() == 1 &&
+          (!IrreducibleAncestor || !IrreducibleAncestor->contains(Block)))
         break;
 
       LLVM_DEBUG(dbgs() << "Current labels:\n"; printDefs(dbgs()));
