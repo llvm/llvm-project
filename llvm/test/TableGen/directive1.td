@@ -34,6 +34,7 @@ def TDLC_ClauseB : Clause<"clauseb"> {
 }
 
 def TDLC_ClauseC : Clause<"clausec"> {
+  let aliases = ["ccccccc"];
   let flangClass = "IntExpr";
   let isValueList = 1;
 }
@@ -260,7 +261,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:  TYPE_PARSER(
 // IMPL-NEXT:    "clausec" >> construct<TdlClause>(construct<TdlClause::Clausec>(parenthesized(nonemptyList(Parser<IntExpr>{})))) || 
 // IMPL-NEXT:    "clauseb" >> construct<TdlClause>(construct<TdlClause::Clauseb>(maybe(parenthesized(Parser<IntExpr>{})))) ||
-// IMPL-NEXT:    "clausea" >> construct<TdlClause>(construct<TdlClause::Clausea>())
+// IMPL-NEXT:    "clausea" >> construct<TdlClause>(construct<TdlClause::Clausea>()) ||
+// IMPL-NEXT:    "ccccccc" >> construct<TdlClause>(construct<TdlClause::Clausec>(parenthesized(nonemptyList(Parser<IntExpr>{}))))
 // IMPL-NEXT:  )
 // IMPL-EMPTY:
 // IMPL-NEXT:  #endif // GEN_FLANG_CLAUSES_PARSER
