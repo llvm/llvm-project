@@ -467,6 +467,76 @@ func.func @loop_yield(%count : i32) -> () {
 
 // -----
 
+func.func @loop_break(%count : i32) -> () {
+  %zero = spirv.Constant 0: i32
+  %one  = spirv.Constant 1: i32
+  %five = spirv.Constant 5: i32
+
+  // CHECK: spirv.mlir.loop {
+  spirv.mlir.loop {
+    // CHECK-NEXT: spirv.Branch ^bb1({{%.*}}: i32)
+    spirv.Branch ^header(%zero: i32)
+
+  // CHECK-NEXT: ^bb1({{%.*}}: i32):
+  ^header(%i : i32):
+    %cmp = spirv.SLessThan %i, %count : i32
+    // CHECK: spirv.BranchConditional {{%.*}}, ^bb2, ^bb5
+    spirv.BranchConditional %cmp, ^body, ^merge
+
+  // CHECK-NEXT: ^bb2:
+  ^body:
+    %cond = spirv.SGreaterThan %i, %five : i32
+
+    // CHECK: spirv.Branch ^bb3
+    spirv.Branch ^selection
+
+  // CHECK-NEXT: ^bb3:
+  ^selection:
+    // CHECK-NEXT: spirv.mlir.selection {
+    spirv.mlir.selection {
+      // CHECK-NEXT: spirv.BranchConditional {{%.*}}, ^bb1, ^bb2
+      spirv.BranchConditional %cond, ^true, ^merge
+    // CHECK-NEXT: ^bb1:
+    ^true:
+      // CHECK-NEXT: spirv.mlir.break
+      spirv.mlir.break
+    // CHECK-NEXT: ^bb2:
+    ^merge:
+      // CHECK-NEXT: spirv.mlir.merge
+      spirv.mlir.merge
+    }
+
+    // CHECK: spirv.Branch ^bb4
+    spirv.Branch ^continue
+
+  // CHECK-NEXT: ^bb4:
+  ^continue:
+    %new_i = spirv.IAdd %i, %one : i32
+    // CHECK: spirv.Branch ^bb1({{%.*}}: i32)
+    spirv.Branch ^header(%new_i: i32)
+
+  // CHECK-NEXT: ^bb5:
+  ^merge:
+    // CHECK-NEXT: spirv.mlir.merge
+    spirv.mlir.merge
+  }
+
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.mlir.break
+//===----------------------------------------------------------------------===//
+
+func.func @break() -> () {
+  // expected-error @+1 {{op expects to be nested in LoopOp}}
+  spirv.mlir.break
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.mlir.merge
 //===----------------------------------------------------------------------===//
