@@ -378,7 +378,7 @@ changes can happen in the following situations:
 * Adding new enumerator to an enumeration (can be ABI-breaking in C++).
 * Removing an explicitly deprecated API after a suitably long deprecation
   period.
-* Uses of implementation details, such as names or comments that say something
+* Using implementation details, such as names or comments that say something
   is "private", "reserved", "internal", etc.
 
 The library has version macros (``CINDEX_VERSION_MAJOR``,
