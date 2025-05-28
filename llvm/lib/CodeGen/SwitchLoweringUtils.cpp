@@ -365,7 +365,7 @@ void SwitchCG::SwitchLowering::findBitTestClusters(CaseClusterVector &Clusters,
 
   // Check if the clusters contain one checking for 0 and another one checking
   // for a power-of-2 constant with matching destinations. Those clusters can be
-  // combined to a single ane with CC_And.
+  // combined to a single one with CC_And.
   unsigned ZeroIdx = -1;
   for (const auto &[Idx, C] : enumerate(Clusters)) {
     if (C.Kind != CC_Range || C.Low != C.High)
@@ -391,7 +391,7 @@ void SwitchCG::SwitchLowering::findBitTestClusters(CaseClusterVector &Clusters,
     return;
 
   APInt Pow2 = Clusters[Pow2Idx].Low->getValue();
-  APInt NewC = (Pow2 + 1) * -1;
+  APInt NewC = ~Pow2;
   Clusters[ZeroIdx].Low = ConstantInt::get(SI->getContext(), NewC);
   Clusters[ZeroIdx].High = ConstantInt::get(SI->getContext(), NewC);
   Clusters[ZeroIdx].Kind = CC_And;
