@@ -20,6 +20,9 @@ TEST(LlvmLibcWMemsetTest, SmallStringBoundCheck) {
 
   EXPECT_EQ(output, str + 1);
 
+  
+  // EXPECT_TRUE being used since there isn't currently support for printing wide chars
+  // in the future, it would be preferred to switch these to EXPECT_EQ
   EXPECT_TRUE(str[0] == (wchar_t)'A');
   EXPECT_TRUE(str[1] == (wchar_t)'B');
   EXPECT_TRUE(str[2] == (wchar_t)'B');
