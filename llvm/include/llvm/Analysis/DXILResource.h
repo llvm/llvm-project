@@ -16,11 +16,8 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-<<<<<<< HEAD
-=======
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
->>>>>>> 27675ccdd6315b560f5f90db34f6a4520fa26b6b
 #include "llvm/Support/DXILABI.h"
 #include <cstdint>
 
