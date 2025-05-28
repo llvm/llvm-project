@@ -61,6 +61,8 @@ C++ Specific Potentially Breaking Changes
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
 
+- Added ``!nonnull/!align`` metadata to load of references for better codegen.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -224,6 +226,9 @@ C Language Changes
 - Added the existing ``-Wduplicate-decl-specifier`` diagnostic, which is on by
   default, to ``-Wc++-compat`` because duplicated declaration specifiers are
   not valid in C++.
+- The ``[[clang::assume()]]`` attribute is now correctly recognized in C. The
+  ``__attribute__((assume()))`` form has always been supported, so the fix is
+  specific to the attribute syntax used.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -249,7 +254,9 @@ C2y Feature Support
   a conforming extension in earlier C language modes, but not in C++ language
   modes (``std::extent`` and ``std::size`` already provide the same
   functionality but with more granularity). The feature can be tested via
-  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``.
+  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``. This also
+  adds the ``<stdcountof.h>`` header file which exposes the ``countof`` macro
+  which expands to ``_Countof``.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -445,6 +452,7 @@ Improvements to Clang's diagnostics
   as function arguments or return value respectively. Note that
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
+- The :doc:`ThreadSafetyAnalysis` now supports reentrant capabilities.
 - Clang will now do a better job producing common nested names, when producing
   common types for ternary operator, template argument deduction and multiple return auto deduction.
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers
@@ -795,6 +803,7 @@ Bug Fixes to C++ Support
 - Fix instantiation of default-initialized variable template specialization. (#GH140632) (#GH140622)
 - Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
+- Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -845,6 +854,10 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implementation of modal 8-bit floating point intrinsics in accordance with
+  the Arm C Language Extensions (ACLE)
+  `as specified here <https://github.com/ARM-software/acle/blob/main/main/acle.md#modal-8-bit-floating-point-extensions>`_
+  is now available.
 - Support has been added for the following processors (command-line identifiers in parentheses):
   - Arm Cortex-A320 (``cortex-a320``)
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
@@ -1009,6 +1022,7 @@ Sanitizers
 ----------
 
 - ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
+- Sanitizer ignorelists now support the syntax ``src:*=sanitize``.
 
 Python Binding Changes
 ----------------------

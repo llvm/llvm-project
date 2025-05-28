@@ -11787,9 +11787,8 @@ bool ARMAsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
   Parser.Lex(); // Eat the '.req' token.
   MCRegister Reg;
   SMLoc SRegLoc, ERegLoc;
-  if (check(parseRegister(Reg, SRegLoc, ERegLoc), SRegLoc,
-            "register name expected") ||
-      parseEOL())
+  const bool parseResult = parseRegister(Reg, SRegLoc, ERegLoc);
+  if (check(parseResult, SRegLoc, "register name expected") || parseEOL())
     return true;
 
   if (RegisterReqs.insert(std::make_pair(Name, Reg)).first->second != Reg)

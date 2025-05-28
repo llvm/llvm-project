@@ -290,10 +290,16 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   if (AccSink[0] < AccSrc[0])
     std::swap(Src, Sink);
 
-  auto *SrcAR = dyn_cast<SCEVAddRecExpr>(Src->Expr);
-  auto *SinkAR = dyn_cast<SCEVAddRecExpr>(Sink->Expr);
-  if (!SrcAR || !SinkAR || SrcAR->getLoop() != DC.getInnermostLoop() ||
-      SinkAR->getLoop() != DC.getInnermostLoop())
+  const SCEVConstant *Step;
+  const SCEV *SrcStart;
+  const SCEV *SinkStart;
+  const Loop *InnerLoop = DC.getInnermostLoop();
+  if (!match(Src->Expr,
+             m_scev_AffineAddRec(m_SCEV(SrcStart), m_SCEVConstant(Step),
+                                 m_SpecificLoop(InnerLoop))) ||
+      !match(Sink->Expr,
+             m_scev_AffineAddRec(m_SCEV(SinkStart), m_scev_Specific(Step),
+                                 m_SpecificLoop(InnerLoop))))
     return false;
 
   SmallVector<Instruction *, 4> SrcInsts =
@@ -305,17 +311,14 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   if (isa<ScalableVectorType>(SrcTy) || isa<ScalableVectorType>(DstTy))
     return false;
 
-  const DataLayout &DL =
-      SinkAR->getLoop()->getHeader()->getDataLayout();
+  const DataLayout &DL = InnerLoop->getHeader()->getDataLayout();
   unsigned AllocSize =
       std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
 
   // Only matching constant steps matching the AllocSize are supported at the
   // moment. This simplifies the difference computation. Can be extended in the
   // future.
-  auto *Step = dyn_cast<SCEVConstant>(SinkAR->getStepRecurrence(*SE));
-  if (!Step || Step != SrcAR->getStepRecurrence(*SE) ||
-      Step->getAPInt().abs() != AllocSize)
+  if (Step->getAPInt().abs() != AllocSize)
     return false;
 
   IntegerType *IntTy =
@@ -324,15 +327,14 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
 
   // When counting down, the dependence distance needs to be swapped.
   if (Step->getValue()->isNegative())
-    std::swap(SinkAR, SrcAR);
+    std::swap(SinkStart, SrcStart);
 
-  const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkAR->getStart(), IntTy);
-  const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcAR->getStart(), IntTy);
+  const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkStart, IntTy);
+  const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcStart, IntTy);
   if (isa<SCEVCouldNotCompute>(SinkStartInt) ||
       isa<SCEVCouldNotCompute>(SrcStartInt))
     return false;
 
-  const Loop *InnerLoop = SrcAR->getLoop();
   // If the start values for both Src and Sink also vary according to an outer
   // loop, then it's probably better to avoid creating diff checks because
   // they may not be hoisted. We should instead let llvm::addRuntimeChecks
@@ -2811,16 +2813,8 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
     while (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
       V = C->getOperand();
 
-  auto *S = dyn_cast<SCEVAddRecExpr>(V);
-  if (!S)
+  if (!match(V, m_scev_AffineAddRec(m_SCEV(), m_SCEV(V), m_SpecificLoop(Lp))))
     return nullptr;
-
-  // If the pointer is invariant then there is no stride and it makes no
-  // sense to add it here.
-  if (Lp != S->getLoop())
-    return nullptr;
-
-  V = S->getStepRecurrence(*SE);
 
   // Note that the restriction after this loop invariant check are only
   // profitability restrictions.
@@ -2985,7 +2979,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 }
 
 const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
-  const auto &[It, Inserted] = LoopAccessInfoMap.insert({&L, nullptr});
+  const auto &[It, Inserted] = LoopAccessInfoMap.try_emplace(&L);
 
   if (Inserted)
     It->second =

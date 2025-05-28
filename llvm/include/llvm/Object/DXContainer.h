@@ -121,10 +121,10 @@ template <typename T> struct ViewArray {
 
 namespace DirectX {
 struct RootParameterView {
-  const dxbc::RootParameterHeader &Header;
+  const dxbc::RTS0::v1::RootParameterHeader &Header;
   StringRef ParamData;
 
-  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
+  RootParameterView(const dxbc::RTS0::v1::RootParameterHeader &H, StringRef P)
       : Header(H), ParamData(P) {}
 
   template <typename T> Expected<T> readParameter() {
@@ -147,8 +147,8 @@ struct RootConstantView : RootParameterView {
            (uint32_t)dxbc::RootParameterType::Constants32Bit;
   }
 
-  llvm::Expected<dxbc::RootConstants> read() {
-    return readParameter<dxbc::RootConstants>();
+  llvm::Expected<dxbc::RTS0::v1::RootConstants> read() {
+    return readParameter<dxbc::RTS0::v1::RootConstants>();
   }
 };
 
@@ -189,10 +189,11 @@ private:
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
   uint32_t Flags;
-  ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
+  ViewArray<dxbc::RTS0::v1::RootParameterHeader> ParametersHeaders;
   StringRef PartData;
 
-  using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
+  using param_header_iterator =
+      ViewArray<dxbc::RTS0::v1::RootParameterHeader>::iterator;
 
 public:
   RootSignature(StringRef PD) : PartData(PD) {}
@@ -210,7 +211,7 @@ public:
   uint32_t getFlags() const { return Flags; }
 
   llvm::Expected<RootParameterView>
-  getParameter(const dxbc::RootParameterHeader &Header) const {
+  getParameter(const dxbc::RTS0::v1::RootParameterHeader &Header) const {
     size_t DataSize;
 
     if (!dxbc::isValidParameterType(Header.ParameterType))
@@ -218,7 +219,7 @@ public:
 
     switch (static_cast<dxbc::RootParameterType>(Header.ParameterType)) {
     case dxbc::RootParameterType::Constants32Bit:
-      DataSize = sizeof(dxbc::RootConstants);
+      DataSize = sizeof(dxbc::RTS0::v1::RootConstants);
       break;
     case dxbc::RootParameterType::CBV:
     case dxbc::RootParameterType::SRV:

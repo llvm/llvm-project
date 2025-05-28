@@ -1389,8 +1389,28 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
     verbatim("DECLARE TARGET"_tok), Parser<OmpDeclareTargetSpecifier>{})))
 
+static OmpMapperSpecifier ConstructOmpMapperSpecifier(
+    std::optional<Name> &&mapperName, TypeSpec &&typeSpec, Name &&varName) {
+  // If a name is present, parse: name ":" typeSpec "::" name
+  // This matches the syntax: <mapper-name> : <type-spec> :: <variable-name>
+  if (mapperName.has_value() && mapperName->ToString() != "default") {
+    return OmpMapperSpecifier{
+        mapperName->ToString(), std::move(typeSpec), std::move(varName)};
+  }
+  // If the name is missing, use the DerivedTypeSpec name to construct the
+  // default mapper name.
+  // This matches the syntax: <type-spec> :: <variable-name>
+  if (DerivedTypeSpec * derived{std::get_if<DerivedTypeSpec>(&typeSpec.u)}) {
+    return OmpMapperSpecifier{
+        std::get<Name>(derived->t).ToString() + ".omp.default.mapper",
+        std::move(typeSpec), std::move(varName)};
+  }
+  return OmpMapperSpecifier{std::string("omp.default.mapper"),
+      std::move(typeSpec), std::move(varName)};
+}
+
 // mapper-specifier
-TYPE_PARSER(construct<OmpMapperSpecifier>(
+TYPE_PARSER(applyFunction<OmpMapperSpecifier>(ConstructOmpMapperSpecifier,
     maybe(name / ":" / !":"_tok), typeSpec / "::", name))
 
 // OpenMP 5.2: 5.8.8 Declare Mapper Construct

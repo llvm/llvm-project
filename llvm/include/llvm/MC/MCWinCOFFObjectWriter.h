@@ -60,6 +60,7 @@ public:
 
   // MCObjectWriter interface implementation.
   void reset() override;
+  void setAssembler(MCAssembler *Asm) override;
   void setIncrementalLinkerCompatible(bool Value) {
     IncrementalLinkerCompatible = Value;
   }

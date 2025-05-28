@@ -525,13 +525,6 @@ void WasmObjectWriter::recordRelocation(const MCFragment &F,
     return;
   }
 
-  if (SymA->isVariable()) {
-    const MCExpr *Expr = SymA->getVariableValue();
-    if (const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr))
-      if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF)
-        llvm_unreachable("weakref used in reloc not yet implemented");
-  }
-
   // Put any constant offset in an addend. Offsets can be negative, and
   // LLVM expects wrapping, in contrast to wasm's immediates which can't
   // be negative and don't wrap.

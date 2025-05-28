@@ -1231,14 +1231,14 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
     if (Sym->isVariable()) {
-      auto V = Sym->getVariableValue(/*SetUsed*/ false);
+      auto V = Sym->getVariableValue();
       bool DoInline = isa<MCConstantExpr>(V) && !Variant;
       if (auto TV = dyn_cast<MCTargetExpr>(V))
         DoInline = TV->inlineAssignedExpr();
       if (DoInline) {
         if (Variant)
           return Error(EndLoc, "unexpected modifier on variable reference");
-        Res = Sym->getVariableValue(/*SetUsed*/ false);
+        Res = Sym->getVariableValue();
         return false;
       }
     }
@@ -6332,11 +6332,6 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
   SMLoc EqualLoc = Parser.getTok().getLoc();
   if (Parser.parseExpression(Value))
     return Parser.TokError("missing expression");
-
-  // Note: we don't count b as used in "a = b". This is to allow
-  // a = b
-  // b = c
-
   if (Parser.parseEOL())
     return true;
 
@@ -6344,24 +6339,13 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
   // used as a symbol, or it is an absolute symbol).
   Sym = Parser.getContext().lookupSymbol(Name);
   if (Sym) {
-    // Diagnose assignment to a label.
-    //
-    // FIXME: Diagnostics. Note the location of the definition as a label.
-    // FIXME: Diagnose assignment to protected identifier (e.g., register name).
-    if (Value->isSymbolUsedInExpression(Sym))
-      return Parser.Error(EqualLoc, "Recursive use of '" + Name + "'");
-    else if (Sym->isUndefined() && !Sym->isUsed() && !Sym->isVariable())
-      ; // Allow redefinitions of undefined symbols only used in directives.
-    else if (Sym->isVariable() && !Sym->isUsed() && allow_redef)
-      ; // Allow redefinitions of variables that haven't yet been used.
-    else if (!Sym->isUndefined() && (!Sym->isVariable() || !allow_redef))
+    if (!Sym->isUnset() && (!allow_redef || !Sym->isRedefinable()))
       return Parser.Error(EqualLoc, "redefinition of '" + Name + "'");
-    else if (!Sym->isVariable())
-      return Parser.Error(EqualLoc, "invalid assignment to '" + Name + "'");
-    else if (!isa<MCConstantExpr>(Sym->getVariableValue()))
-      return Parser.Error(EqualLoc,
-                          "invalid reassignment of non-absolute variable '" +
-                              Name + "'");
+    // If the symbol is redefinable, clone it and update the symbol table
+    // to the new symbol. Existing references to the original symbol remain
+    // unchanged.
+    if (Sym->isRedefinable())
+      Sym = Parser.getContext().cloneSymbol(*Sym);
   } else if (Name == ".") {
     Parser.getStreamer().emitValueToOffset(Value, 0, EqualLoc);
     return false;

@@ -7507,7 +7507,7 @@ bool MipsAsmParser::parseSetAssignment() {
   if (MCParserUtils::parseAssignmentExpression(Name, /* allow_redef */ true,
                                                Parser, Sym, Value))
     return true;
-  Sym->setVariableValue(Value);
+  getStreamer().emitAssignment(Sym, Value);
 
   return false;
 }

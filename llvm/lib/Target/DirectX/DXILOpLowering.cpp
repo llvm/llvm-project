@@ -211,6 +211,21 @@ public:
     }
   }
 
+  void replaceHandleFromBindingCall(CallInst *CI, Value *Replacement) {
+    assert(CI->getCalledFunction()->getIntrinsicID() ==
+           Intrinsic::dx_resource_handlefrombinding);
+
+    removeResourceGlobals(CI);
+
+    auto *NameGlobal = dyn_cast<llvm::GlobalVariable>(CI->getArgOperand(5));
+
+    CI->replaceAllUsesWith(Replacement);
+    CI->eraseFromParent();
+
+    if (NameGlobal && NameGlobal->use_empty())
+      NameGlobal->removeFromParent();
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -241,11 +256,7 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
-
-      removeResourceGlobals(CI);
-
-      CI->replaceAllUsesWith(Cast);
-      CI->eraseFromParent();
+      replaceHandleFromBindingCall(CI, Cast);
       return Error::success();
     });
   }
@@ -296,12 +307,7 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
-
-      removeResourceGlobals(CI);
-
-      CI->replaceAllUsesWith(Cast);
-      CI->eraseFromParent();
-
+      replaceHandleFromBindingCall(CI, Cast);
       return Error::success();
     });
   }

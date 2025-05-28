@@ -118,7 +118,7 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
                                          getLoc());
 }
 
-LogicalResult CvtFloatToTF32Op::verify() {
+LogicalResult ConvertFloatToTF32Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   switch (getRnd()) {
   case RndMode::RNA:
@@ -130,12 +130,12 @@ LogicalResult CvtFloatToTF32Op::verify() {
     break;
   default:
     return emitError(
-        "Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.");
+        "Only {rn,rz,rna} rounding modes supported for ConvertFloatToTF32Op.");
   }
   return success();
 }
 
-LogicalResult CvtF32x2ToF8x2Op::verify() {
+LogicalResult ConvertF32x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   using SatMode = NVVM::SaturationMode;
 
@@ -147,8 +147,8 @@ LogicalResult CvtF32x2ToF8x2Op::verify() {
   bool hasRelu = getRelu();
 
   switch (getType()) {
-  case CVTFP8Type::E4M3:
-  case CVTFP8Type::E5M2:
+  case ConvertFP8Type::E4M3:
+  case ConvertFP8Type::E5M2:
     if (!isRoundingModeRN)
       return emitOpError("Only RN rounding mode is supported for conversions "
                          "from f32x2 to .e4m3x2 or .e5m2x2 types");
@@ -156,7 +156,7 @@ LogicalResult CvtF32x2ToF8x2Op::verify() {
       return emitOpError("Only SATFINITE saturation mode is supported for "
                          "conversions from f32x2 to .e4m3x2 or .e5m2x2 types");
     break;
-  case CVTFP8Type::UE8M0:
+  case ConvertFP8Type::UE8M0:
     if (!(isRoundingModeRZ || isRoundingModeRP))
       return emitOpError("Only RZ or RP rounding modes are supported for "
                          "conversions from f32x2 to .ue8m0x2 type");
@@ -167,18 +167,18 @@ LogicalResult CvtF32x2ToF8x2Op::verify() {
   return success();
 }
 
-LogicalResult CvtF16x2ToF8x2Op::verify() {
-  if (getType() == CVTFP8Type::UE8M0)
+LogicalResult ConvertF16x2ToF8x2Op::verify() {
+  if (getType() == ConvertFP8Type::UE8M0)
     return emitOpError("Only .e4m3 or .e5m2 types are supported for "
                        "conversions from f16x2 to f8x2.");
 
   return success();
 }
 
-LogicalResult CvtBF16x2ToF8x2Op::verify() {
+LogicalResult ConvertBF16x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
 
-  if (getType() != CVTFP8Type::UE8M0)
+  if (getType() != ConvertFP8Type::UE8M0)
     return emitOpError(
         "Only .ue8m0 type is supported for conversions from bf16x2 to f8x2.");
 
@@ -1212,6 +1212,50 @@ NVVM::DotAccumulate4WayOp::getPackedArg(llvm::Value *arg,
                                llvm::Type::getInt32Ty(builder.getContext()));
 }
 
+/// Packs the given `field` into the `result`.
+/// The `result` is 64-bits and each `field` can be 32-bits or narrower.
+static llvm::Value *
+packValInto64Bits(llvm::IRBuilderBase &builder,
+                  llvm::Value *result, // the `result` (unset bits are zero)
+                  llvm::Value *field,  // `field` to pack into `result`
+                  unsigned sizeInBits, // Size of `field` in bits
+                  unsigned start) {    // Starting bit within `result`
+  field = builder.CreateZExtOrBitCast(field, builder.getInt32Ty());
+
+  unsigned mask = (sizeInBits < 32 ? ((1u << sizeInBits) - 1) : 0xffffffffu);
+  if (mask != 0xffffffffu)
+    field = builder.CreateAnd(field, builder.getInt32(mask));
+
+  field = builder.CreateZExtOrBitCast(field, builder.getInt64Ty());
+  field = builder.CreateShl(field, start);
+
+  return builder.CreateOr(result, field);
+}
+
+void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
+                                                LLVM::ModuleTranslation &mt,
+                                                llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05MmaSmemDescOp>(op);
+  llvm::Value *smemDesc = builder.getInt64(0);
+
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getStartAddr()), 14, 0);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimOffset()), 14, 16);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getStrideDimOffset()), 14, 32);
+
+  smemDesc = packValInto64Bits(builder, smemDesc, builder.getInt32(1), 3, 46);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getBaseOffset()), 3, 49);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimMode()), 1, 52);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getSwizzleMode()), 3, 61);
+
+  mt.mapValue(thisOp.getRes()) = smemDesc;
+}
+
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
@@ -1252,6 +1296,26 @@ CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
     args.push_back(mt.lookupValue(cpAsyncOp.getCpSize()));
 
   return id;
+}
+
+mlir::NVVM::IDArgPair CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkPrefetchOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Intrinsic::ID id = llvm::Intrinsic::nvvm_cp_async_bulk_prefetch_L2;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused =
+      llvm::ConstantInt::get(llvm::Type::getInt64Ty(mt.getLLVMContext()), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  return {id, std::move(args)};
 }
 
 mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
@@ -1365,9 +1429,9 @@ llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
   hasSatFinite ? CVT_F2TF32_ID_IMPL(rnd, relu, sf)                             \
                : CVT_F2TF32_ID_IMPL(rnd, relu, )
 
-llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
-                                                     NVVM::SaturationMode sat,
-                                                     bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                     NVVM::SaturationMode sat, bool hasRelu) {
   using RndMode = NVVM::FPRoundingMode;
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
   switch (rnd) {
@@ -1386,14 +1450,15 @@ llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu_satfinite            \
            : llvm::Intrinsic::nvvm_ff_to_##type##_rn_satfinite
 
-llvm::Intrinsic::ID CvtF32x2ToF6x2Op::getIntrinsicID(NVVM::CVTFP6Type type,
-                                                     bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertF32x2ToF6x2Op::getIntrinsicID(NVVM::ConvertFP6Type type, bool hasRelu) {
   switch (type) {
-  case NVVM::CVTFP6Type::E2M3:
+  case NVVM::ConvertFP6Type::E2M3:
     return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
-  case NVVM::CVTFP6Type::E3M2:
+  case NVVM::ConvertFP6Type::E3M2:
     return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
   }
+  llvm_unreachable("Invalid conversion in ConvertF32x2ToF6x2Op");
 }
 
 #define GET_F32x2_TO_F8X2_US_ID(rnd, has_satf)                                 \
@@ -1404,20 +1469,20 @@ llvm::Intrinsic::ID CvtF32x2ToF6x2Op::getIntrinsicID(NVVM::CVTFP6Type type,
   has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu                      \
            : llvm::Intrinsic::nvvm_ff_to_##type##_rn
 
-llvm::Intrinsic::ID CvtF32x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
-                                                     NVVM::FPRoundingMode rnd,
-                                                     NVVM::SaturationMode sat,
-                                                     bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertF32x2ToF8x2Op::getIntrinsicID(NVVM::ConvertFP8Type type,
+                                     NVVM::FPRoundingMode rnd,
+                                     NVVM::SaturationMode sat, bool hasRelu) {
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
   bool hasRoundingModeRZ = (rnd == NVVM::FPRoundingMode::RZ);
   bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
 
   switch (type) {
-  case NVVM::CVTFP8Type::E4M3:
+  case NVVM::ConvertFP8Type::E4M3:
     return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
-  case NVVM::CVTFP8Type::E5M2:
+  case NVVM::ConvertFP8Type::E5M2:
     return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
-  case NVVM::CVTFP8Type::UE8M0:
+  case NVVM::ConvertFP8Type::UE8M0:
     if (hasRoundingModeRZ)
       return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
     else if (hasRoundingModeRP)
@@ -1430,15 +1495,15 @@ llvm::Intrinsic::ID CvtF32x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
   has_relu ? llvm::Intrinsic::nvvm_f16x2_to_##type##_rn_relu                   \
            : llvm::Intrinsic::nvvm_f16x2_to_##type##_rn
 
-llvm::Intrinsic::ID CvtF16x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
-                                                     bool hasRelu) {
+llvm::Intrinsic::ID
+ConvertF16x2ToF8x2Op::getIntrinsicID(NVVM::ConvertFP8Type type, bool hasRelu) {
   switch (type) {
-  case NVVM::CVTFP8Type::E4M3:
+  case NVVM::ConvertFP8Type::E4M3:
     return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
-  case NVVM::CVTFP8Type::E5M2:
+  case NVVM::ConvertFP8Type::E5M2:
     return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
   default:
-    llvm_unreachable("Invalid CVTFP8Type for CvtF16x2ToF8x2Op");
+    llvm_unreachable("Invalid ConvertFP8Type for CvtF16x2ToF8x2Op");
   }
 }
 
@@ -1447,8 +1512,8 @@ llvm::Intrinsic::ID CvtF16x2ToF8x2Op::getIntrinsicID(NVVM::CVTFP8Type type,
            : llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd
 
 llvm::Intrinsic::ID
-CvtBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
-                                  NVVM::SaturationMode sat) {
+ConvertBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                      NVVM::SaturationMode sat) {
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
   switch (rnd) {
   case NVVM::FPRoundingMode::RZ:
