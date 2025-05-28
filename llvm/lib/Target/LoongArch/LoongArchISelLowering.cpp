@@ -4410,7 +4410,7 @@ Retry:
     LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 5\n");
     return DAG.getNode(
         LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
-        DAG.getConstant(CN1->getSExtValue() >> MaskIdx0, DL, ValTy),
+        DAG.getSignedConstant(CN1->getSExtValue() >> MaskIdx0, DL, ValTy),
         DAG.getConstant(ValBits == 32 ? (MaskIdx0 + (MaskLen0 & 31) - 1)
                                       : (MaskIdx0 + MaskLen0 - 1),
                         DL, GRLenVT),
@@ -5729,7 +5729,7 @@ emitSelectPseudo(MachineInstr &MI, MachineBasicBlock *BB,
     SelectMBBI = Next;
   }
 
-  F->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+  F->getProperties().resetNoPHIs();
   return TailMBB;
 }
 
@@ -7276,6 +7276,8 @@ LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
   // 'm':  A memory operand whose address is formed by a base register and
   //       offset that is suitable for use in instructions with the same
   //       addressing mode as st.w and ld.w.
+  // 'q':  A general-purpose register except for $r0 and $r1 (for the csrxchg
+  //       instruction)
   // 'I':  A signed 12-bit constant (for arithmetic instructions).
   // 'J':  Integer zero.
   // 'K':  An unsigned 12-bit constant (for logic instructions).
@@ -7289,6 +7291,7 @@ LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
     default:
       break;
     case 'f':
+    case 'q':
       return C_RegisterClass;
     case 'l':
     case 'I':
@@ -7328,6 +7331,8 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
       if (VT.isVector())
         break;
       return std::make_pair(0U, &LoongArch::GPRRegClass);
+    case 'q':
+      return std::make_pair(0U, &LoongArch::GPRNoR0R1RegClass);
     case 'f':
       if (Subtarget.hasBasicF() && VT == MVT::f32)
         return std::make_pair(0U, &LoongArch::FPR32RegClass);

@@ -3579,6 +3579,8 @@ bool BinaryFunction::validateCFG() const {
 }
 
 void BinaryFunction::fixBranches() {
+  assert(isSimple() && "Expected function with valid CFG.");
+
   auto &MIB = BC.MIB;
   MCContext *Ctx = BC.Ctx.get();
 
