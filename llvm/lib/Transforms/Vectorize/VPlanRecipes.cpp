@@ -1081,11 +1081,12 @@ void VPPhi::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   PHINode *NewPhi = State.Builder.CreatePHI(
       State.TypeAnalysis.inferScalarType(this), 2, getName());
-  // TODO: Fixup incoming values once other recipes are enabled.
-  unsigned NumIncoming =
-      getParent() == getParent()->getPlan()->getScalarPreheader()
-          ? getNumIncoming()
-          : 1;
+  unsigned NumIncoming = getNumIncoming();
+  if (getParent() != getParent()->getPlan()->getScalarPreheader()) {
+    // TODO: Fixup all incoming values of header phis once recipes defining them
+    // are introduced.
+    NumIncoming = 1;
+  }
   for (unsigned Idx = 0; Idx != NumIncoming; ++Idx) {
     Value *IncV = State.get(getIncomingValue(Idx), VPLane(0));
     BasicBlock *PredBB = State.CFG.VPBB2IRBB.at(getIncomingBlock(Idx));
@@ -1099,9 +1100,15 @@ void VPPhi::print(raw_ostream &O, const Twine &Indent,
                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
-  O << " = phi ";
-
-  printPhiOperands(O, SlotTracker);
+  const VPBasicBlock *Parent = getParent();
+  if (Parent == Parent->getPlan()->getScalarPreheader()) {
+    // TODO: Use regular printing for resume-phis as well
+    O << " = resume-phi ";
+    printOperands(O, SlotTracker);
+  } else {
+    O << " = phi ";
+    printPhiOperands(O, SlotTracker);
+  }
 }
 #endif
 

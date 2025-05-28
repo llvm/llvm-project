@@ -2380,10 +2380,8 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
 
   // We just connected a new block to the scalar preheader. Update all
   // ResumePhis by adding an incoming value for it, replicating the last value.
-  for (VPRecipeBase &R : *cast<VPBasicBlock>(ScalarPH)) {
+  for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
     auto *ResumePhi = cast<VPPhi>(&R);
-    if (ResumePhi->getNumIncoming() == ScalarPH->getNumPredecessors())
-      continue;
     ResumePhi->addOperand(
         ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
   }
@@ -2534,7 +2532,7 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
   for (auto &R : make_early_inc_range(*VPBB)) {
     assert((IRVPBB->empty() || IRVPBB->back().isPhi() || !R.isPhi()) &&
-           "Tried to move phi recipe to end of block");
+           "Tried to move phi recipe after a non-phi recipe");
     R.moveBefore(*IRVPBB, IRVPBB->end());
   }
 
