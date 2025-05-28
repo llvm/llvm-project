@@ -743,14 +743,14 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
     std::optional<uint32_t> UInt = handleUIntLiteral();
     if (!UInt.has_value())
       return std::nullopt;
-    return (float)UInt.value();
+    return float(UInt.value());
   }
 
   if (Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
     std::optional<int32_t> Int = handleIntLiteral(Negated);
     if (!Int.has_value())
       return std::nullopt;
-    return (float)Int.value();
+    return float(Int.value());
   }
 
   if (tryConsumeExpectedToken(TokenKind::float_literal)) {
@@ -905,8 +905,7 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
   // GetIntegerValue will overwrite Val from the parsed Literal and return
   // true if it overflows as a 32-bit unsigned int. Then check that it also
   // doesn't overflow as a signed 32-bit int.
-  int64_t MaxMagnitude =
-      -static_cast<int64_t>(std::numeric_limits<int32_t>::min());
+  int64_t MaxMagnitude = -int64_t(std::numeric_limits<int32_t>::min());
   if (Literal.GetIntegerValue(Val) || MaxMagnitude < Val.getExtValue()) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
@@ -918,7 +917,7 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
   if (Negated)
     Val = -Val;
 
-  return static_cast<int32_t>(Val.getExtValue());
+  return int32_t(Val.getExtValue());
 }
 
 std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
