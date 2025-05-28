@@ -1167,7 +1167,7 @@ defm V_CVT_F16_F32           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00a>;
 defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00b>;
 
 defm V_TANH_F32              : VOP1_Real_FULL<GFX1250Gen, 0x01e>;
-defm V_TANH_F16_fake16       : VOP1_Real_FULL_t16_gfx1250<0x01f>;
+defm V_TANH_F16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x01f>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250<0x049>;
 defm V_TANH_BF16_fake16      : VOP1_Real_FULL_t16_gfx1250<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL<GFX1250Gen, 0x04b>;
