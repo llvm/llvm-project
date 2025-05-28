@@ -1,4 +1,5 @@
-//===-- Implementation header for wmemset ----------------------------------===//
+//===-- Implementation header for wmemset
+//----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +17,6 @@
 namespace LIBC_NAMESPACE_DECL {
 
 wchar_t *wmemset(wchar_t *s, wchar_t c, size_t n);
-
 
 } // namespace LIBC_NAMESPACE_DECL
 
