@@ -5642,7 +5642,7 @@ bool SelectionDAG::isADDLike(SDValue Op, bool NoWrap) const {
 
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   return Op.getNumOperands() == 2 && isa<ConstantSDNode>(Op.getOperand(1)) &&
-         (Op.getOpcode() == ISD::ADD || isADDLike(Op));
+         (Op.isAnyAdd() || isADDLike(Op));
 }
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN,
@@ -7351,10 +7351,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::OR:
   case ISD::XOR:
   case ISD::ADD:
+  case ISD::PTRADD:
   case ISD::SUB:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
+    // The equal operand types requirement is unnecessarily strong for PTRADD.
+    // However, the SelectionDAGBuilder does not generate PTRADDs with different
+    // operand types, and we'd need to re-implement GEP's non-standard wrapping
+    // logic everywhere where PTRADDs may be folded or combined to properly
+    // support them. If/when we introduce pointer types to the SDAG, we will
+    // need to relax this constraint.
+
     // (X ^|+- 0) -> X.  This commonly occurs when legalizing i64 values, so
     // it's worth handling here.
     if (N2CV && N2CV->isZero())
@@ -7717,6 +7725,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       std::swap(N1, N2);
     } else {
       switch (Opcode) {
+      case ISD::PTRADD:
       case ISD::SUB:
         // fold op(undef, arg2) -> undef, fold op(poison, arg2) ->poison.
         return N1.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
@@ -7744,6 +7753,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getConstant(0, DL, VT);
       [[fallthrough]];
     case ISD::ADD:
+    case ISD::PTRADD:
     case ISD::SUB:
     case ISD::UDIV:
     case ISD::SDIV:
@@ -8165,6 +8175,9 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
                                            const SDNodeFlags Flags) {
   assert(Offset.getValueType().isInteger());
   EVT BasePtrVT = Ptr.getValueType();
+  if (TLI->shouldPreservePtrArith(this->getMachineFunction().getFunction(),
+                                  BasePtrVT))
+    return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
   return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
 }
 
