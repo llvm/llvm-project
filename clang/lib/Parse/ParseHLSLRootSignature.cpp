@@ -747,7 +747,7 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
   }
 
   if (Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
-    std::optional<int32_t> = handleIntLiteral(Negated);
+    std::optional<int32_t> Int = handleIntLiteral(Negated);
     if (!Int.has_value())
       return std::nullopt;
     return (float)Int.value();
