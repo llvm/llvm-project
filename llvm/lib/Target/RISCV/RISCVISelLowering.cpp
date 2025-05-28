@@ -18339,6 +18339,8 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
 // (select C, (sub Y, X), Y) -> (sub Y, (select C, X, 0)).
 // (select C, (or Y, X), Y)  -> (or Y, (select C, X, 0)).
 // (select C, (xor Y, X), Y) -> (xor Y, (select C, X, 0)).
+// (select C, (rotl Y, X), Y) -> (rotl Y, (select C, X, 0)).
+// (select C, (rotr Y, X), Y) -> (rotr Y, (select C, X, 0)).
 static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
                                    SDValue TrueVal, SDValue FalseVal,
                                    bool Swapped) {
@@ -18351,6 +18353,8 @@ static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
   case ISD::SRA:
   case ISD::SRL:
   case ISD::SUB:
+  case ISD::ROTL:
+  case ISD::ROTR:
     Commutative = false;
     break;
   case ISD::ADD:
