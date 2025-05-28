@@ -12322,7 +12322,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
       case CC_Range: {
         const Value *RHS, *LHS, *MHS;
         ISD::CondCode CC;
-        if (I->Low == I->High || I->Kind == CC_And) {
+        if (I->Low == I->High) {
           // Check Cond == I->Low.
           CC = ISD::SETEQ;
           LHS = Cond;
@@ -12330,6 +12330,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
           MHS = nullptr;
         } else {
           // Check I->Low <= Cond <= I->High.
+          assert(I->Kind != CC_And && "CC_And must be handled above");
           CC = ISD::SETLE;
           LHS = I->Low;
           MHS = Cond;
