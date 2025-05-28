@@ -908,8 +908,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_STRICT_FMA:
   case TargetOpcode::G_FMAD: {
-    Known.knownNot(fcSNan);
-
     if ((InterestedClasses & fcNegative) == fcNone)
       break;
 
@@ -945,8 +943,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     if (KnownSrc.isKnownNeverPosInfinity())
       Known.knownNot(fcPosInf);
-    if (KnownSrc.isKnownNever(fcSNan))
-      Known.knownNot(fcSNan);
 
     // Any negative value besides -0 returns a nan.
     if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
@@ -969,6 +965,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FCOS:
+  case TargetOpcode::G_FTAN:
   case TargetOpcode::G_FSINCOS: {
     // Return NaN on infinite inputs.
     Register Val = MI.getOperand(1).getReg();
@@ -977,7 +974,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
                         Depth + 1);
 
-    Known.knownNot(fcSNan);
     Known.knownNot(fcInf);
 
     if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
@@ -1002,8 +998,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
                         Depth + 1);
 
     bool NeverNaN = KnownLHS.isKnownNeverNaN() || KnownRHS.isKnownNeverNaN();
-    bool NeverSNaN =
-        KnownLHS.isKnownNever(fcSNan) || KnownRHS.isKnownNever(fcSNan);
     Known = KnownLHS | KnownRHS;
 
     if (Opcode == TargetOpcode::G_FMAXNUM_IEEE ||
@@ -1016,12 +1010,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
                      Opcode == TargetOpcode::G_FMINIMUMNUM ||
                      Opcode == TargetOpcode::G_FMAXIMUMNUM))
       Known.knownNot(fcNan);
-
-    if (NeverSNaN && (Opcode == TargetOpcode::G_FMINNUM ||
-                      Opcode == TargetOpcode::G_FMAXNUM ||
-                      Opcode == TargetOpcode::G_FMINIMUMNUM ||
-                      Opcode == TargetOpcode::G_FMAXIMUMNUM))
-      Known.knownNot(fcSNan);
 
     if ((Opcode == TargetOpcode::G_FMAXNUM_IEEE ||
          Opcode == TargetOpcode::G_FMINNUM_IEEE) &&
@@ -1219,6 +1207,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     if (KnownSrc.isKnownNeverNaN()) {
       Known.knownNot(fcNan);
       Known.signBitMustBeZero();
+    } else {
+      Known.knownNot(fcSNan);
     }
 
     break;
@@ -1330,8 +1320,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Register RHS = MI.getOperand(2).getReg();
     KnownFPClass KnownLHS, KnownRHS;
 
-    Known.knownNot(fcSNan);
-
     bool WantNegative =
         (Opcode == TargetOpcode::G_FADD ||
          Opcode == TargetOpcode::G_STRICT_FADD) &&
@@ -1397,8 +1385,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
 
-    Known.knownNot(fcSNan);
-
     // X * X is always non-negative or a NaN.
     if (LHS == RHS)
       Known.knownNot(fcNegative);
@@ -1445,7 +1431,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FREM: {
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
-    Known.knownNot(fcSNan);
 
     if (LHS == RHS) {
       // TODO: Could filter out snan if we inspect the operand
@@ -1732,16 +1717,124 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     computeKnownFPClass(Src, DemandedElts, InterestedClasses, Known, Depth + 1);
     break;
   }
-  case TargetOpcode::G_FTAN:
-  case TargetOpcode::G_FACOS:
-  case TargetOpcode::G_FASIN:
-  case TargetOpcode::G_FATAN:
-  case TargetOpcode::G_FATAN2:
-  case TargetOpcode::G_FCOSH:
-  case TargetOpcode::G_FSINH:
+  case TargetOpcode::G_FATAN: {
+    Register Val = MI.getOperand(1).getReg();
+    KnownFPClass KnownSrc;
+
+    computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
+                        Depth + 1);
+
+    if (KnownSrc.isKnownAlways(fcInf))
+      Known.KnownFPClasses = fcNan;
+
+    break;
+  }
+  case TargetOpcode::G_FATAN2: {
+    Register LHS = MI.getOperand(1).getReg();
+    Register RHS = MI.getOperand(2).getReg();
+    KnownFPClass KnownLHS;
+    KnownFPClass KnownRHS;
+
+    computeKnownFPClass(LHS, DemandedElts, InterestedClasses, KnownLHS,
+                        Depth + 1);
+
+    computeKnownFPClass(RHS, DemandedElts, InterestedClasses, KnownRHS,
+                        Depth + 1);
+
+    if (!KnownRHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
+      break;
+
+    if (KnownLHS.isKnownAlways(fcZero)) {
+      // atan2(+-0, −0) -> +-pi
+      // atan2(+-0, x) -> +-pi for x < 0
+      if (KnownRHS.isKnownAlways(fcNegFinite)) {
+        Known.KnownFPClasses = fcFinite;
+        break;
+      }
+
+      // atan2(+-0, +0) -> +-0
+      // atan2(+-0, x) -> +-0 for x > 0
+      if (KnownRHS.isKnownAlways(fcPosFinite)) {
+        Known.KnownFPClasses = fcZero;
+        break;
+      }
+    }
+
+    if (KnownRHS.isKnownAlways(fcZero)) {
+      // atan2(y, +-0) -> -pi/2 for y < 0
+      if (KnownLHS.isKnownNeverZero() && KnownLHS.isKnownAlways(fcNegFinite)) {
+        Known.KnownFPClasses = fcNegFinite;
+        break;
+      }
+
+      // atan2(y, +-0) -> +pi/2 for y > 0
+      if (KnownLHS.isKnownNeverZero() && KnownLHS.isKnownAlways(fcPosFinite)) {
+        Known.KnownFPClasses = fcPosFinite;
+        break;
+      }
+    }
+
+    if (KnownLHS.isKnownAlways(fcPosFinite) && KnownLHS.isKnownNeverZero()) {
+      // atan2(+-y, -inf) -> +-pi for finite y > 0
+      if (KnownRHS.isKnownAlways(fcNegInf)) {
+        Known.KnownFPClasses = fcFinite;
+        break;
+      }
+
+      // atan2(+-y, +inf) -> +-0 for finite y > 0
+      if (KnownRHS.isKnownAlways(fcPosInf)) {
+        Known.KnownFPClasses = fcZero;
+        break;
+      }
+    }
+
+    if (KnownLHS.isKnownAlways(fcInf)) {
+      // atan2(+-inf, x) -> +-pi/2 for finite x
+      // atan2(+-inf, -inf) -> +-3pi/4
+      // atan2(+-inf, +inf) -> +-pi/4
+      Known.KnownFPClasses = fcFinite;
+      break;
+    }
+
+    break;
+  }
+  case TargetOpcode::G_FCOSH: {
+    Register Val = MI.getOperand(1).getReg();
+    KnownFPClass KnownSrc;
+
+    computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
+                        Depth + 1);
+
+    // cosh(+-inf) -> +inf
+    if (KnownSrc.isKnownAlways(fcInf))
+      Known.KnownFPClasses = fcPosInf;
+
+    break;
+  }
+  case TargetOpcode::G_FSINH: {
+    Register Val = MI.getOperand(1).getReg();
+    KnownFPClass KnownSrc;
+
+    computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
+                        Depth + 1);
+
+    // sinh(±∞) is ±∞
+    if (KnownSrc.isKnownAlways(fcInf))
+      Known.KnownFPClasses = fcInf;
+
+    break;
+  }
   case TargetOpcode::G_FTANH: {
-    Known.knownNot(fcSNan);
-    // TODO: ...
+    Register Val = MI.getOperand(1).getReg();
+    KnownFPClass KnownSrc;
+
+    computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
+                        Depth + 1);
+
+    // tanh(+-inf) is +-1
+    if (KnownSrc.isKnownAlways(fcInf))
+      Known.KnownFPClasses = fcFinite;
+
     break;
   }
   }
