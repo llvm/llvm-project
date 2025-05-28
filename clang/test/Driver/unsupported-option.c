@@ -29,8 +29,6 @@
 // UNSUP_OPT: error: unsupported option
 
 
-// RUN: not %clang -c --target=aarch64-- -mfpu=crypto-neon-fp-armv8 %s 2>&1 | \
-// RUN: FileCheck %s --check-prefix=AARCH64
-// RUN: not %clang -c -Qunused-arguments --target=aarch64-- -mfpu=crypto-neon-fp-armv8 %s 2>&1 | \
-// RUN: FileCheck %s --check-prefix=AARCH64
-// AARCH64: error: unsupported option '-mfpu=' for target 'aarch64--'
+// RUN: not %clang -c -Qunused-arguments --target=aarch64-- -mfpu=crypto-neon-fp-armv8 %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=QUNUSED_ARGUMENTS
+// QUNUSED_ARGUMENTS: error: unsupported option '-mfpu=' for target 'aarch64--'

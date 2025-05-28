@@ -5362,6 +5362,12 @@ void Driver::BuildJobs(Compilation &C) const {
     });
   }
 
+  // If the user passed -Qunused-arguments or there were errors, don't
+  // warn about any unused arguments.
+  bool ReportUnusedArguments =
+      !Diags.hasErrorOccurred() &&
+      !C.getArgs().hasArg(options::OPT_Qunused_arguments);
+
   // Claim -fdriver-only here.
   (void)C.getArgs().hasArg(options::OPT_fdriver_only);
   // Claim -### here.
@@ -5414,10 +5420,7 @@ void Driver::BuildJobs(Compilation &C) const {
             !C.getActions().empty()) {
           Diag(diag::err_drv_unsupported_opt_for_target)
               << A->getSpelling() << getTargetTriple();
-        } else if (!Diags.hasErrorOccurred() &&
-                   !C.getArgs().hasArg(options::OPT_Qunused_arguments)) {
-          // If the user passed -Qunused-arguments or there were errors, don't
-          // warn about any unused arguments.
+        } else if (ReportUnusedArguments) {
           Diag(clang::diag::warn_drv_unused_argument)
               << A->getAsString(C.getArgs());
         }
