@@ -95,7 +95,7 @@ public:
   LLVM_ABI bool inSection(StringRef Section, StringRef Prefix, StringRef Query,
                           StringRef Category = StringRef()) const;
 
-  /// Returns the file index and the line numebr <FileIdx, LineNo> corresponding
+  /// Returns the file index and the line number <FileIdx, LineNo> corresponding
   /// to the special case list entry if the special case list contains a line
   /// \code
   ///   @Prefix:<E>=@Category
