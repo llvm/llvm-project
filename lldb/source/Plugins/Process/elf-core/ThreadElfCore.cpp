@@ -561,11 +561,18 @@ ELFLinuxPrPsInfo::Populate(const lldb_private::ProcessInstanceInfo &info,
 Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
                               const lldb::PlatformSP platform_sp,
                               ThreadData &thread_data) {
+  Log *log = GetLog(LLDBLog::Thread);
   if (!platform_sp)
     return Status::FromErrorString("No platform for arch.");
   CompilerType type = platform_sp->GetSiginfoType(arch.GetTriple());
-  if (!type.IsValid())
-    return Status::FromErrorString("no siginfo_t for platform.");
+  if (!type.IsValid()) {
+    // While not having a platform would be an error, it's not necessarily
+    // guaraunteed it will support siginfo, and instead of returning an error
+    // here and failing to load the entire core we can give up and fallback on
+    // other information.
+    LLDB_LOG(log, "Platform does not support GetSiginfoType");
+    return Status();
+  }
 
   auto type_size_or_err = type.GetByteSize(nullptr);
   if (!type_size_or_err)
