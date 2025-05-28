@@ -293,3 +293,48 @@ define double @fmul_nnan_inf_op1(double %x) {
   %r = fmul nnan double %x, 0xfff0000000000000
   ret double %r
 }
+
+define float @sqrt_poison() {
+; CHECK-LABEL: @sqrt_poison(
+; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float poison)
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt(float poison)
+  ret float %sqrt
+}
+
+define <2 x float> @sqrt_poison_fixed_vec() {
+; CHECK-LABEL: @sqrt_poison_fixed_vec(
+; CHECK-NEXT:    [[SQRT:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> poison)
+; CHECK-NEXT:    ret <2 x float> [[SQRT]]
+;
+  %sqrt = call <2 x float> @llvm.sqrt(<2 x float> poison)
+  ret <2 x float> %sqrt
+}
+
+define <vscale x 2 x float> @sqrt_poison_scalable_vec() {
+; CHECK-LABEL: @sqrt_poison_scalable_vec(
+; CHECK-NEXT:    [[SQRT:%.*]] = call <vscale x 2 x float> @llvm.sqrt.nxv2f32(<vscale x 2 x float> poison)
+; CHECK-NEXT:    ret <vscale x 2 x float> [[SQRT]]
+;
+  %sqrt = call <vscale x 2 x float> @llvm.sqrt(<vscale x 2 x float> poison)
+  ret <vscale x 2 x float> %sqrt
+}
+
+define float @sqrt_nnan_nan() {
+; CHECK-LABEL: @sqrt_nnan_nan(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float 0x7FF8000000000000)
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan float @llvm.sqrt(float 0x7ff8000000000000)
+  ret float %sqrt
+}
+
+define float @sqrt_ninf_inf() {
+; CHECK-LABEL: @sqrt_ninf_inf(
+; CHECK-NEXT:    [[SQRT:%.*]] = call ninf float @llvm.sqrt.f32(float 0xFFF0000000000000)
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call ninf float @llvm.sqrt(float 0xfff0000000000000)
+  ret float %sqrt
+}
