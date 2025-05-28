@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <stack>
@@ -290,14 +289,14 @@ private:
   /// Controls whether the output should be a C++ class.
   /// If true, the generated C++ code will be encapsulated within a class,
   /// and functions from the input module will become its member functions.
-  bool emitClass;
+  const bool emitClass;
 
   /// The specified name for the generated C++ class
-  std::string className;
+  const std::string className;
 
   /// Name of the MLIR attribute to use as a field name within the generated
   /// class
-  std::string fieldNameAttribute;
+  const std::string fieldNameAttribute;
 
   /// Map from value to name of C++ variable that contain the name.
   ValueMapper valueMapper;
@@ -1189,9 +1188,8 @@ static LogicalResult emitClassFields(CppEmitter &emitter,
   os << ";\n";
 
   std::map<std::string, Value> fields;
-  os << "std::map<std::string, char*> _buffer_map {";
+  os << "\nstd::map<std::string, char*> _buffer_map {";
   if (argAttrs) {
-    bool isFirst = true;
     for (const auto [a, v] : zip(*argAttrs, functionOp.getArguments())) {
       if (auto da = dyn_cast<mlir::DictionaryAttr>(a)) {
         auto nv = da.getNamed(emitter.getfieldNameAttribute())->getValue();
@@ -1199,18 +1197,14 @@ static LogicalResult emitClassFields(CppEmitter &emitter,
         auto Ins = fields.insert({name, v});
         if (!Ins.second)
           return failure();
-        if (!isFirst) {
-          os << ",";
-        }
-        os << "{ \"" << name << "\"" << ", reinterpret_cast<char*>("
-           << emitter.getOrCreateName(v) << ") }";
-        isFirst = false;
+        os << " { \"" << name << "\"" << ", reinterpret_cast<char*>("
+           << emitter.getOrCreateName(v) << ") }, ";
       }
     }
   } else
     return failure();
 
-  os << "};";
+  os << "};\n";
   os << "char* getBufferForName(const std::string& name) const {\n";
   os.indent();
   os.indent();
@@ -1236,8 +1230,15 @@ static LogicalResult printOperation(CppEmitter &emitter,
   raw_indented_ostream &os = emitter.ostream();
   Operation *operation = functionOp.getOperation();
   if (emitter.shouldPrintClass()) {
-    if (functionOp.isExternal())
+    if (functionOp.isExternal()) {
+      // TODO: Determine the best long-term strategy for external functions.
+      // Currently, we're stopping here to prevent downstream errors.
+      os << "Warning: Cannot process external function '"
+         << functionOp.getName() << "'. "
+         << "It lacks a body, and attempting to continue would lead to errors "
+            "due to missing argument details.\n";
       return failure();
+    }
     os << "class " << emitter.getClassName() << " final {\n";
     os << "public: \n";
     os.indent();
@@ -1259,9 +1260,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   os << "(";
 
-  if (emitter.shouldPrintClass())
-    os << ") { \n";
-  else {
+  if (!emitter.shouldPrintClass()) {
     if (functionOp.isExternal()) {
       if (failed(printFunctionArgs(emitter, operation,
                                    functionOp.getArgumentTypes())))
@@ -1272,8 +1271,8 @@ static LogicalResult printOperation(CppEmitter &emitter,
     if (failed(
             printFunctionArgs(emitter, operation, functionOp.getArguments())))
       return failure();
-    os << ") {\n";
   }
+  os << ") {\n";
 
   if (failed(printFunctionBody(emitter, operation, functionOp.getBlocks())))
     return failure();
