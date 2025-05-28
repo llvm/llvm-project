@@ -117,9 +117,10 @@ const BBEmbeddingsMap &Embedder::getBBVecMap() const {
 
 const Embedding &Embedder::getBBVector(const BasicBlock &BB) const {
   auto It = BBVecMap.find(&BB);
-  if (It == BBVecMap.end())
-    computeEmbeddings(BB);
-  return It->second;
+  if (It != BBVecMap.end())
+    return It->second;
+  computeEmbeddings(BB);
+  return BBVecMap[&BB];
 }
 
 const Embedding &Embedder::getFunctionVector() const {
