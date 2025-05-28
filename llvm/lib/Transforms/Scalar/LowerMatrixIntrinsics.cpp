@@ -232,6 +232,15 @@ static bool isUniformShape(Value *V) {
   if (I->isBinaryOp())
     return true;
 
+  if (auto *II = dyn_cast<IntrinsicInst>(V))
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::abs:
+    case Intrinsic::fabs:
+      return true;
+    default:
+      return false;
+    }
+
   switch (I->getOpcode()) {
   case Instruction::FNeg:
     return true;
@@ -621,7 +630,7 @@ public:
       case Intrinsic::matrix_column_major_store:
         return true;
       default:
-        return false;
+        return isUniformShape(II);
       }
     return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
   }
@@ -1127,6 +1136,9 @@ public:
     case Intrinsic::matrix_column_major_store:
       LowerColumnMajorStore(Inst);
       break;
+    case Intrinsic::abs:
+    case Intrinsic::fabs:
+      return VisitUniformIntrinsic(cast<IntrinsicInst>(Inst));
     default:
       return false;
     }
@@ -2196,6 +2208,49 @@ public:
                                              Result.getNumVectors()),
                      Builder);
     return true;
+  }
+
+  /// Lower uniform shape intrinsics, if shape information is available.
+  bool VisitUniformIntrinsic(IntrinsicInst *Inst) {
+    auto I = ShapeMap.find(Inst);
+    if (I == ShapeMap.end())
+      return false;
+
+    IRBuilder<> Builder(Inst);
+    ShapeInfo &Shape = I->second;
+
+    MatrixTy Result;
+
+    switch (Inst->getIntrinsicID()) {
+    case Intrinsic::abs:
+    case Intrinsic::fabs: {
+      Value *Op = Inst->getOperand(0);
+
+      MatrixTy M = getMatrix(Op, Shape, Builder);
+
+      Builder.setFastMathFlags(getFastMathFlags(Inst));
+
+      for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
+        switch (Inst->getIntrinsicID()) {
+        case Intrinsic::abs:
+          Result.addVector(Builder.CreateBinaryIntrinsic(
+              Intrinsic::abs, M.getVector(I), Inst->getOperand(1)));
+          break;
+        case Intrinsic::fabs:
+          Result.addVector(Builder.CreateUnaryIntrinsic(Inst->getIntrinsicID(),
+                                                        M.getVector(I)));
+          break;
+        }
+
+      finalizeLowering(Inst,
+                       Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
+                                               Result.getNumVectors()),
+                       Builder);
+      return true;
+    }
+    default:
+      llvm_unreachable("unexpected intrinsic");
+    }
   }
 
   /// Helper to linearize a matrix expression tree into a string. Currently

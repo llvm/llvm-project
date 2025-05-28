@@ -432,3 +432,46 @@ define void @xor_2x2(ptr %lhs, ptr %rhs, ptr %out) {
   store <4 x i32> %optt, ptr %out
   ret void
 }
+
+define void @fabs_2x2f64(ptr %in, ptr %out) {
+; CHECK-LABEL: @fabs_2x2f64(
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[IN:%.*]], align 32
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[COL_LOAD]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[COL_LOAD1]])
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[OUT:%.*]], align 32
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[OUT]], i64 2
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[VEC_GEP2]], align 16
+; CHECK-NEXT:    ret void
+;
+  %load = load <4 x double>, ptr %in
+  %fabs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %load)
+  %fabst  = call <4 x double> @llvm.matrix.transpose(<4 x double> %fabs, i32 2, i32 2)
+  %fabstt = call <4 x double> @llvm.matrix.transpose(<4 x double> %fabst, i32 2, i32 2)
+  store <4 x double> %fabstt, ptr %out
+  ret void
+}
+
+define void @fabs_2x2i32(ptr %in, ptr %out) {
+; CHECK-LABEL: @fabs_2x2i32(
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i32>, ptr [[IN:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x i32>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[COL_LOAD]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[COL_LOAD1]], i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[TMP1]], i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[TMP2]], i1 true)
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[VEC_GEP2]], align 8
+; CHECK-NEXT:    ret void
+;
+  %load = load <4 x i32>, ptr %in
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %load, i1 false)
+  %abst  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %abs, i32 2, i32 2)
+  %abstt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %abst, i32 2, i32 2)
+  %absabstt = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %abstt, i1 true)
+  store <4 x i32> %absabstt, ptr %out
+  ret void
+}
