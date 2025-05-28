@@ -119,7 +119,7 @@ private:
 #define STRUCT_VERSION_RANGE                                                   \
   struct VersionRange {                                                        \
     int Min = 1;                                                               \
-    int Max = INT_MAX;                                                         \
+    int Max = 0x7fffffff;                                                      \
   }
 
 STRUCT_VERSION_RANGE;
