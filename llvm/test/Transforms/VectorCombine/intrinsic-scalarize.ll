@@ -96,6 +96,62 @@ define <4 x i32> @non_trivially_vectorizable(i32 %x, i32 %y) {
   ret <4 x i32> %v
 }
 
+define <4 x float> @fabs_fixed(float %x) {
+; CHECK-LABEL: define <4 x float> @fabs_fixed(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> poison)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x float> [[TMP1]], float [[V_SCALAR]], i64 0
+; CHECK-NEXT:    ret <4 x float> [[V]]
+;
+  %x.insert = insertelement <4 x float> poison, float %x, i32 0
+  %v = call <4 x float> @llvm.fabs(<4 x float> %x.insert)
+  ret <4 x float> %v
+}
+
+define <vscale x 4 x float> @fabs_scalable(float %x) {
+; CHECK-LABEL: define <vscale x 4 x float> @fabs_scalable(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> poison)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <vscale x 4 x float> [[TMP1]], float [[V_SCALAR]], i64 0
+; CHECK-NEXT:    ret <vscale x 4 x float> [[V]]
+;
+  %x.insert = insertelement <vscale x 4 x float> poison, float %x, i32 0
+  %v = call <vscale x 4 x float> @llvm.fabs(<vscale x 4 x float> %x.insert)
+  ret <vscale x 4 x float> %v
+}
+
+define <4 x float> @fma_fixed(float %x, float %y, float %z) {
+; CHECK-LABEL: define <4 x float> @fma_fixed(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) {
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call float @llvm.fma.f32(float [[X]], float [[Y]], float [[Z]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> poison, <4 x float> poison, <4 x float> poison)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x float> [[TMP1]], float [[V_SCALAR]], i64 0
+; CHECK-NEXT:    ret <4 x float> [[V]]
+;
+  %x.insert = insertelement <4 x float> poison, float %x, i32 0
+  %y.insert = insertelement <4 x float> poison, float %y, i32 0
+  %z.insert = insertelement <4 x float> poison, float %z, i32 0
+  %v = call <4 x float> @llvm.fma(<4 x float> %x.insert, <4 x float> %y.insert, <4 x float> %z.insert)
+  ret <4 x float> %v
+}
+
+define <vscale x 4 x float> @fma_scalable(float %x, float %y, float %z) {
+; CHECK-LABEL: define <vscale x 4 x float> @fma_scalable(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) {
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call float @llvm.fma.f32(float [[X]], float [[Y]], float [[Z]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> poison, <vscale x 4 x float> poison)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <vscale x 4 x float> [[TMP1]], float [[V_SCALAR]], i64 0
+; CHECK-NEXT:    ret <vscale x 4 x float> [[V]]
+;
+  %x.insert = insertelement <vscale x 4 x float> poison, float %x, i32 0
+  %y.insert = insertelement <vscale x 4 x float> poison, float %y, i32 0
+  %z.insert = insertelement <vscale x 4 x float> poison, float %z, i32 0
+  %v = call <vscale x 4 x float> @llvm.fma(<vscale x 4 x float> %x.insert, <vscale x 4 x float> %y.insert, <vscale x 4 x float> %z.insert)
+  ret <vscale x 4 x float> %v
+}
+
 ; TODO: We should be able to scalarize this if we preserve the scalar argument.
 define <4 x float> @scalar_argument(float %x) {
 ; CHECK-LABEL: define <4 x float> @scalar_argument(
