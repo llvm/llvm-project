@@ -1216,6 +1216,44 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFast
 }
 
 //===----------------------------------------------------------------------===//
+// Scaling ExtFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_ScalingExtFOp :
+    Arith_Op<"scaling_extf",
+      [Pure, 
+       SameInputOutputTensorDims, 
+       DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
+       DeclareOpInterfaceMethods<ArithFastMathInterface>, 
+       DeclareOpInterfaceMethods<CastOpInterface>]>,
+    Arguments<(ins FloatLike:$in,
+                   FloatLike:$scale,
+                   OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
+                   OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+    Results<(outs FloatLike:$out)> {
+  let summary = "cast from floating-point to larger floating-point using provided scales";
+  let description = [{
+    Implements micro-scaling floating point ExtF op. It expects both scales and input operand to be of same shape. 
+    Scale operand is usually expected to be of type f8E8M0 but that is not strictly necessary. 
+    Scale is usually calculated per block. 
+    It is assumed that Scale operand is broadcasted appropariately to make it of same shape as Input operand so that `arith.scaling_extf` an elementwise op.
+    ```
+    resultTy = get_type(result) 
+    scaleTy  = get_type(scale)
+    inputTy = get_type(input)
+    scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
+    scale.bcast = broadcast_to_same_shape_as(result)
+    scale.extf = arith.extf(sale.bcast) : f8E8M0 to resultTy
+    input.extf = arith.extf(input) : inputTy to resultTy
+    result = arith.mulf(scale.extf, input.extf)
+    ```
+    It propagates NaN values. Therefore if either scale or input operand element value is a NaN then output element value will also be a NaN.
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat = [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:` type($in) `,` type($scale) `to` type($out)}];
+}
+
+//===----------------------------------------------------------------------===//
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
@@ -1278,6 +1316,49 @@ def Arith_TruncFOp :
   let assemblyFormat = [{ $in ($roundingmode^)?
                           (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($in) `to` type($out) }];
+}
+
+//===----------------------------------------------------------------------===//
+// Scaling TruncFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_ScalingTruncFOp :
+    Arith_Op<"scaling_truncf",
+      [Pure, 
+       SameInputOutputTensorDims, 
+       DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
+       DeclareOpInterfaceMethods<ArithFastMathInterface>, 
+       DeclareOpInterfaceMethods<CastOpInterface>]>,
+    Arguments<(ins FloatLike:$in,
+                   FloatLike:$scale,
+                   OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
+                   OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+    Results<(outs FloatLike:$out)> {
+  let summary = "cast from floating-point to narrower floating-point with scales";
+  let description = [{
+    This operation implements micro-scaling (OCP MXFP) quantization of input using provided scale values.
+    This quantization usually happens over a block of values. All values in that block share same scale value for quantization purposes. 
+    Therefore original input of shape `<dim1 x dim2 ... dimN>` can be thought of as of shape `<dim1 x dim2 x ... (dimN / blockSize) x blockSize>`, 
+    assuming quantization axis is the last axis. 
+    Original scales values therefore would be of shape `<dim1 x dim2 x ... x dimN-1 x (dimN/blockSize)>`. 
+    `arith.scaling_truncf` operation is an elementwise operation. Therefore, before calling into `arith.scaling_truncf`, if `blockSize != 1` then 
+    scales must be broadcasted appropariately to make it of same shape as the input operand.
+    Internally arith.scaling_truncf does the following:
+    ```
+    scaleETy = get_type(scale)
+    inputETy = get_type(input)
+    resultETy = get_type(result)
+    scale.bcast = broadcast_to_same_shape_as(input)
+    scale.exponent = arith.truncf(scale.bcst) : scaleETy to f8E8M0
+    scale.extf = arith.extf(scale.exponent)  : f8E8M0 to inputETy
+    result = arith.divf(input, scale.extf)
+    result.cast = arith.truncf(result, resultETy)
+    ```
+    OCP MXFP spec flushes denorm input value before quantization. NaNs are propagated. 
+
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat = [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:` type($in) `,` type($scale) `to` type($out)}];
 }
 
 //===----------------------------------------------------------------------===//
