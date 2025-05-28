@@ -2971,7 +2971,8 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   if (VD->hasAttr<OMPIteratorAttr>()) {
     if (auto *GV = dyn_cast<llvm::GlobalVariable>(V)) {
       llvm::LLVMContext &Ctx = GV->getContext();
-      llvm::MDNode *MD = llvm::MDNode::get(Ctx, llvm::MDString::get(Ctx, "omp.iterator"));
+      llvm::MDNode *MD =
+          llvm::MDNode::get(Ctx, llvm::MDString::get(Ctx, "omp.iterator"));
       GV->setMetadata("omp.iterator", MD);
     }
   }
