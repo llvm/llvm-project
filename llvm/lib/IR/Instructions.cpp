@@ -48,6 +48,7 @@
 #include <cassert>
 #include <cstdint>
 #include <optional>
+#include <set>
 #include <vector>
 
 using namespace llvm;
@@ -237,6 +238,40 @@ bool PHINode::hasConstantOrUndefValue() const {
     }
   }
   return true;
+}
+
+/// If the specified PHI node (possibly via other PHI nodes) merges together the
+/// same or identical (i.e. Instruction::isIdenticalTo() returns true) values,
+/// return one of the values, otherwise return null.
+Value *PHINode::hasIdenticalValue() {
+  std::vector<PHINode *> Worklist;
+  std::set<PHINode *> Seen;
+  Value *Result = nullptr;
+  Worklist.push_back(this);
+  while (!Worklist.empty()) {
+    PHINode *PN = Worklist.back();
+    Worklist.pop_back();
+    if (!Seen.insert(PN).second)
+      continue;
+    for (Value *V : PN->incoming_values()) {
+      if (auto *PN = dyn_cast<PHINode>(V)) {
+        Worklist.push_back(PN);
+        continue;
+      }
+      if (!Result) {
+        Result = V;
+        continue;
+      }
+      if (V == Result)
+        continue;
+      if (auto *I = dyn_cast<Instruction>(V))
+        if (auto *ResultI = dyn_cast<Instruction>(Result))
+          if (I->isIdenticalTo(ResultI))
+            continue;
+      return nullptr;
+    }
+  }
+  return Result;
 }
 
 //===----------------------------------------------------------------------===//

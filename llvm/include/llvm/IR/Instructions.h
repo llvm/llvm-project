@@ -2822,6 +2822,11 @@ public:
   /// non-undef value.
   bool hasConstantOrUndefValue() const;
 
+  /// If the specified PHI node (possibly via other PHI nodes) merges together
+  /// the same or identical (i.e. Instruction::isIdenticalTo() returns true)
+  /// values, return one of the values, otherwise return null.
+  Value *hasIdenticalValue();
+
   /// If the PHI node is complete which means all of its parent's predecessors
   /// have incoming value in this PHI, return true, otherwise return false.
   bool isComplete() const {

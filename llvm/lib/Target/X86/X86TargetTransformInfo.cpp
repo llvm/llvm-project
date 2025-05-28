@@ -7167,7 +7167,14 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
   }
   if (ShiftAmountOpNum == -1)
     return false;
-  auto *ShiftAmount = &I->getOperandUse(ShiftAmountOpNum);
+  auto *ShiftAmountUse = &I->getOperandUse(ShiftAmountOpNum);
+
+  Value *ShiftAmount = ShiftAmountUse->get();
+  if (auto *PN = dyn_cast<PHINode>(ShiftAmount)) {
+    ShiftAmount = PN->hasIdenticalValue();
+    if (!ShiftAmount)
+      return false;
+  }
 
   // A uniform shift amount in a vector shift or funnel shift may be much
   // cheaper than a generic variable vector shift, so make that pattern visible
@@ -7175,7 +7182,7 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
   auto *Shuf = dyn_cast<ShuffleVectorInst>(ShiftAmount);
   if (Shuf && getSplatIndex(Shuf->getShuffleMask()) >= 0 &&
       isVectorShiftByScalarCheap(I->getType())) {
-    Ops.push_back(ShiftAmount);
+    Ops.push_back(ShiftAmountUse);
     return true;
   }
 
@@ -7186,7 +7193,7 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
   // instruction's immediate operand.
   if (auto *CI = dyn_cast<CastInst>(ShiftAmount)) {
     if (isa<ConstantExpr>(CI->getOperand(0))) {
-      Ops.push_back(ShiftAmount);
+      Ops.push_back(ShiftAmountUse);
       return true;
     }
   }
