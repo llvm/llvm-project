@@ -65,7 +65,8 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
 // the SelectionDAG.
 static cl::opt<bool> UseSelectionDAGPTRADD(
     "amdgpu-use-sdag-ptradd", cl::Hidden,
-    cl::desc("Generate ISD::PTRADD nodes in the SelectionDAG ISel"),
+    cl::desc("Generate ISD::PTRADD nodes for 64-bit pointer arithmetic in the "
+             "SelectionDAG ISel"),
     cl::init(false));
 
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
@@ -10466,7 +10467,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
 bool SITargetLowering::shouldPreservePtrArith(const Function &F,
                                               EVT PtrVT) const {
-  return UseSelectionDAGPTRADD;
+  return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
 }
 
 // The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:

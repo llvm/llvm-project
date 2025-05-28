@@ -1390,25 +1390,6 @@ def : GCNPat<
   (S_ADD_U64_PSEUDO $src0, $src1)>;
 }
 
-def : GCNPat<
-  (DivergentBinFrag<ptradd> i32:$src0, i32:$src1),
-  (V_ADD_U32_e64 $src0, $src1, 0)> {
-  let SubtargetPredicate = HasAddNoCarryInsts;
-}
-
-def : GCNPat<
-  (DivergentBinFrag<ptradd> i32:$src0, i32:$src1),
-  (V_ADD_CO_U32_e64 $src0, $src1)> {
-  let SubtargetPredicate = NotHasAddNoCarryInsts;
-}
-
-// Whether we select S_ADD_I32 or S_ADD_U32 does not make much of a
-// difference. Most notably, S_ADD_I32 instructions can be transformed
-// to S_ADDK_I32, so we select that.
-def : GCNPat<
-  (UniformBinFrag<ptradd> i32:$src0, i32:$src1),
-  (S_ADD_I32 $src0, $src1)>;
-
 /********** ============================================ **********/
 /********** Extraction, Insertion, Building and Casting  **********/
 /********** ============================================ **********/

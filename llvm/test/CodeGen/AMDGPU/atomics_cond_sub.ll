@@ -179,7 +179,7 @@ define amdgpu_kernel void @ds_cond_sub_no_rtn_u32(ptr addrspace(3) %addr, i32 %i
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_add_co_i32 s0, s0, -16
+; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, -16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v0, s0
 ; GFX12-GISEL-NEXT:    ds_cond_sub_rtn_u32 v0, v0, v1
@@ -205,7 +205,7 @@ define amdgpu_kernel void @ds_cond_sub_no_rtn_u32_forced(ptr addrspace(3) %addr,
 ; GFX12-GISEL:       ; %bb.0: ; %entry
 ; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_add_co_i32 s0, s0, -16
+; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, -16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v0, s0
 ; GFX12-GISEL-NEXT:    ds_cond_sub_u32 v0, v1
