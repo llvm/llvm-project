@@ -860,8 +860,6 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
     return false;
 
   const SCEV *MemsetSizeSCEV = SE->getSCEV(MSI->getLength());
-  if (!PointerStrideSCEV || !MemsetSizeSCEV)
-    return false;
 
   bool IsNegStride = false;
   const bool IsConstantSize = isa<ConstantInt>(MSI->getLength());

@@ -20,6 +20,7 @@ define i32 @peel_last_iter_of_outer_lcssa_phi_with_constant_after_unrolling_inne
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_PEEL_BEGIN:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT_PEEL_BEGIN]]:
 ; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i16 [ [[IV_NEXT]], %[[INNER_LATCH]] ]
+; CHECK-NEXT:    [[DOTLCSSA_LCSSA:%.*]] = phi i32 [ 1, %[[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_PEEL:.*]]
 ; CHECK:       [[OUTER_HEADER_PEEL]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i16 [[IV_NEXT_LCSSA]], 999
