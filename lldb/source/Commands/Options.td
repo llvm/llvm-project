@@ -1136,7 +1136,8 @@ let Command = "thread jump" in {
   def thread_jump_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
     Required, Desc<"Specifies the line number to jump to.">;
   def thread_jump_by : Option<"by", "b">, Group<2>, Arg<"Offset">, Required,
-    Desc<"Jumps by a relative line offset from the current line.">;
+    Desc<"Jumps by a relative line offset from the current line,"
+    "can be a positive or negative offset">;
   def thread_jump_address : Option<"address", "a">, Group<3>,
     Arg<"AddressOrExpression">, Required, Desc<"Jumps to a specific address.">;
   def thread_jump_force : Option<"force", "r">, Groups<[1,2,3]>,
