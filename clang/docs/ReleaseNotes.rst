@@ -226,6 +226,9 @@ C Language Changes
 - Added the existing ``-Wduplicate-decl-specifier`` diagnostic, which is on by
   default, to ``-Wc++-compat`` because duplicated declaration specifiers are
   not valid in C++.
+- The ``[[clang::assume()]]`` attribute is now correctly recognized in C. The
+  ``__attribute__((assume()))`` form has always been supported, so the fix is
+  specific to the attribute syntax used.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -851,6 +854,10 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implementation of modal 8-bit floating point intrinsics in accordance with
+  the Arm C Language Extensions (ACLE)
+  `as specified here <https://github.com/ARM-software/acle/blob/main/main/acle.md#modal-8-bit-floating-point-extensions>`_
+  is now available.
 - Support has been added for the following processors (command-line identifiers in parentheses):
   - Arm Cortex-A320 (``cortex-a320``)
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
