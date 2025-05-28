@@ -471,15 +471,14 @@ public:
 
   /// Look up the specified global in the module symbol table.
   /// If it does not exist, invoke a callback to create a declaration of the
-  /// global and return it. The global is constantexpr casted to the expected
-  /// type if necessary.
-  Constant *
+  /// global and return it.
+  GlobalVariable *
   getOrInsertGlobal(StringRef Name, Type *Ty,
                     function_ref<GlobalVariable *()> CreateGlobalCallback);
 
   /// Look up the specified global in the module symbol table. If required, this
   /// overload constructs the global variable using its constructor's defaults.
-  Constant *getOrInsertGlobal(StringRef Name, Type *Ty);
+  GlobalVariable *getOrInsertGlobal(StringRef Name, Type *Ty);
 
 /// @}
 /// @name Global Alias Accessors
