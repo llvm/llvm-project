@@ -378,14 +378,14 @@ changes can happen in the following situations:
 * Adding new enumerator to an enumeration (can be ABI-breaking in C++).
 * Removing an explicitly deprecated API after a suitably long deprecation
   period.
-* Uses of implementation details, such names or comments that say something is
-  "private", "reserved", "internal", etc.
+* Uses of implementation details, such as names or comments that say something
+  is "private", "reserved", "internal", etc.
 
 The library has version macros (``CINDEX_VERSION_MAJOR``,
 ``CINDEX_VERSION_MINOR``, and ``CINDEX_VERSION``) which can be used to test for
 specific library versions at compile time. The ``CINDEX_VERSION_MAJOR`` macro
 is only incremented if there are major source- or ABI-breaking changes. Except
-for removing an explicitly deprecate API, the changes listed above are not
+for removing an explicitly deprecated API, the changes listed above are not
 considered major source- or ABI-breaking changes. Historically, the value this
 macro expands to has not changed, but may be incremented in the future should
 the need arise. The ``CINDEX_VERSION_MINOR`` macro is incremented as new APIs
