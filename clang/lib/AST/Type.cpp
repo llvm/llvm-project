@@ -4877,6 +4877,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<PipeType>(T)->getElementType());
   case Type::HLSLAttributedResource:
     return Cache::get(cast<HLSLAttributedResourceType>(T)->getWrappedType());
+  case Type::HLSLInlineSpirv:
+    return CachedProperties(Linkage::External, false);
   }
 
   llvm_unreachable("unhandled type class");
@@ -4975,6 +4977,17 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
                                       ->getContainedType()
                                       ->getCanonicalTypeInternal());
+  case Type::HLSLInlineSpirv:
+    return LinkageInfo::external();
+    {
+      const auto *ST = cast<HLSLInlineSpirvType>(T);
+      LinkageInfo LV = LinkageInfo::external();
+      for (auto &Operand : ST->getOperands()) {
+        if (Operand.isConstant() || Operand.isType())
+          LV.merge(computeTypeLinkageInfo(Operand.getResultType()));
+      }
+      return LV;
+    }
   }
 
   llvm_unreachable("unhandled type class");
@@ -5165,6 +5178,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::DependentBitInt:
   case Type::ArrayParameter:
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     return false;
   }
   llvm_unreachable("bad type kind!");
