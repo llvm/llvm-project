@@ -4383,6 +4383,7 @@ template <> struct DenseMapInfo<DebugVariable> {
 class DebugVariableAggregate : public DebugVariable {
 public:
   DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
+  DebugVariableAggregate(const DbgVariableRecord *DVR);
   DebugVariableAggregate(const DebugVariable &V)
       : DebugVariable(V.getVariable(), std::nullopt, V.getInlinedAt()) {}
 };
