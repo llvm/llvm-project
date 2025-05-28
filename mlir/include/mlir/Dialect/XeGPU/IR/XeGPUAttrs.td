@@ -295,6 +295,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
     }
 
     LayoutAttr dropSgLayoutAndData() {
+      // avoid every field of the attribute is nullptr, which may lead to segment fault
       if (!getInstData() && !getLaneLayout())
         return nullptr;
       return LayoutAttr::get(getContext(), nullptr, nullptr, getInstData(),
@@ -302,6 +303,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
     }
 
     LayoutAttr dropInstData() {
+      // avoid every field of the attribute is nullptr, which may lead to segment fault
       if (!getSgLayout() && !getLaneLayout())
         return nullptr;
       return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), nullptr,

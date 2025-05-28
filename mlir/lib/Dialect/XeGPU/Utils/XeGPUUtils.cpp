@@ -93,17 +93,18 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
-std::string xegpu::getLayoutName(OpOperand &opr) {
+std::string xegpu::getLayoutName(const OpOperand &operand) {
   const StringRef prefix("layout_operand_");
-  return llvm::formatv("{0}{1}", prefix, opr.getOperandNumber()).str();
+  unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
+  return llvm::formatv("{0}{1}", prefix, idx).str();
 }
 
-std::string xegpu::getLayoutName(OpResult res) {
+std::string xegpu::getLayoutName(const OpResult result) {
   const StringRef prefix = "layout_result_";
-  return llvm::formatv("{0}{1}", prefix, res.getResultNumber()).str();
+  return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
 
-xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
+xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
 
@@ -135,7 +136,7 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(Value value) {
   return nullptr;
 }
 
-xegpu::LayoutAttr xegpu::getLayoutAttr(OpOperand &opr) {
+xegpu::LayoutAttr xegpu::getLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))
@@ -143,30 +144,24 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(OpOperand &opr) {
   return getLayoutAttr(opr.get());
 }
 
-void xegpu::setLayoutAttr(OpOperand &opr, LayoutAttr layout) {
-  auto owner = opr.getOwner();
-  std::string name = xegpu::getLayoutName(opr);
+template <typename T, typename>
+void xegpu::setLayoutAttr(const T &operandOrResult, const LayoutAttr layout) {
+  Operation *owner = operandOrResult.getOwner();
+  std::string name = xegpu::getLayoutName(operandOrResult);
   if (layout && !owner->hasAttrOfType<LayoutAttr>(name))
     owner->setAttr(name, layout);
 }
 
-void xegpu::setLayoutAttr(OpResult result, LayoutAttr layout) {
-  Operation *owner = result.getOwner();
-  std::string name = xegpu::getLayoutName(result);
-  if (layout && !owner->hasAttr(name))
-    owner->setAttr(name, layout);
-}
-
-void xegpu::setLayoutAttrs(Operation *mod,
+void xegpu::setLayoutAttrs(Operation *op,
                            function_ref<LayoutAttr(Value)> getLayoutImpl) {
-  mod->walk([&](Operation *op) {
-    for (OpResult result : op->getOpResults()) {
-      auto layout = getLayoutImpl(result);
-      setLayoutAttr(result, layout);
-    }
-    for (OpOperand &opr : op->getOpOperands()) {
+  op->walk([&](Operation *nestOp) {
+    for (OpOperand &opr : nestOp->getOpOperands()) {
       auto layout = getLayoutImpl(opr.get());
       setLayoutAttr(opr, layout);
+    }
+    for (OpResult result : nestOp->getOpResults()) {
+      auto layout = getLayoutImpl(result);
+      setLayoutAttr(result, layout);
     }
   });
 }
@@ -228,16 +223,16 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
     Operation *op, TypeConverter converter) {
   MLIRContext *context = op->getContext();
 
-  auto materializeCast = [&](OpBuilder &builder, Type type, ValueRange inputs,
-                             Location loc) -> Value {
+  auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
+                            Location loc) -> Value {
     return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
         .getResult(0);
   };
 
   { // convert VectorType to RankedTensorType for SCF Structural ops
     TypeConverter converter;
-    converter.addConversion([&](Type type) -> Type { return type; });
-    converter.addConversion([&](VectorType type) -> Type {
+    converter.addConversion([](Type type) -> Type { return type; });
+    converter.addConversion([](VectorType type) -> Type {
       return RankedTensorType::get(type.getShape(), type.getElementType());
     });
     converter.addSourceMaterialization(materializeCast);
@@ -255,7 +250,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
   { // propagate the layout attribute to RankedTensorType by checking
     // BuiltInUnrealizedCastOps
     // for VectorType to RankedTensorType cast.
-    op->walk([&](UnrealizedConversionCastOp castOp) {
+    op->walk([](UnrealizedConversionCastOp castOp) {
       if (castOp.getNumOperands() != 1 || castOp.getNumResults() != 1)
         return WalkResult::skip();
 
@@ -293,7 +288,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
     });
 
     // using yieldOp as anchor to update the result type of its ParentOp
-    op->walk([&](scf::YieldOp yieldOp) {
+    op->walk([](scf::YieldOp yieldOp) {
       Operation *parentOp = yieldOp->getParentOp();
       for (OpResult r : parentOp->getOpResults()) {
         unsigned idx = r.getResultNumber();
@@ -355,14 +350,12 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
 
     mlir::ConversionTarget target(*context);
     target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
-        [&](UnrealizedConversionCastOp op) {
-          auto isTensorTy = [&](Type type) {
+        [](UnrealizedConversionCastOp op) {
+          auto isTensorTy = [](Type type) {
             return isa<RankedTensorType>(type);
           };
-          if (llvm::any_of(op->getOperandTypes(), isTensorTy) ||
-              llvm::any_of(op->getResultTypes(), isTensorTy))
-            return false;
-          return true;
+          return llvm::none_of(op->getOperandTypes(), isTensorTy) &&
+                 llvm::none_of(op->getResultTypes(), isTensorTy);
         });
     mlir::RewritePatternSet patterns(context);
     patterns.insert<UnrealizedConversionCastOpPattern>(context);

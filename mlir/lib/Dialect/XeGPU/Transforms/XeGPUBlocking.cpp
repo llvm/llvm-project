@@ -43,33 +43,44 @@ static void
 resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   ValueRange inputs = castOp.getInputs();
   ValueRange outputs = castOp.getOutputs();
-
-  if (inputs.size() == 1 && outputs.size() == 1) {
-    castOp->replaceAllUsesWith(inputs);
+  if (inputs.empty() || outputs.empty()) {
+    LDBG("erase unrealized conversion cast op has no inputs/outputs.");
     castOp->erase();
+    return;
   }
 
   VectorType inputTy = dyn_cast<VectorType>(inputs[0].getType());
   VectorType outputTy = dyn_cast<VectorType>(outputs[0].getType());
-  if (inputTy && outputTy) {
-    OpBuilder builder(castOp);
-    // unpack
-    if (inputs.size() > 1 && outputs.size() == 1) {
-      ArrayRef<int64_t> shape = outputTy.getShape();
-      Value result = xegpu::createVectorWithShapeFromValues(
-          builder, castOp.getLoc(), inputs, shape);
-      castOp->replaceAllUsesWith(ValueRange(result));
-      castOp->erase();
-    }
+  if (!inputTy || !outputTy) {
+    LDBG("skip unrealized conversion cast op has non-vector inputs/outputs.");
+    return;
+  }
 
-    // pack
-    if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
-      ArrayRef<int64_t> tileShape = outputTy.getShape();
-      SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
-          builder, castOp.getLoc(), inputs[0], tileShape);
-      castOp->replaceAllUsesWith(results);
-      castOp->erase();
-    }
+  // We only interest in the case where all inputs and outputs have the
+  // identical types
+  if (llvm::any_of(castOp->getOperandTypes(),
+                   [&](Type t) { return t != inputTy; }) ||
+      llvm::any_of(castOp->getResultTypes(),
+                   [&](Type t) { return t != outputTy; })) {
+    LDBG("skip unrealized conversion cast op not emulating pack/unpack.");
+    return;
+  }
+
+  OpBuilder builder(castOp);
+  if (inputs.size() > 1 && outputs.size() == 1) {
+    // the castOp is emulating an unpack op
+    ArrayRef<int64_t> shape = outputTy.getShape();
+    Value result = xegpu::createVectorWithShapeFromValues(
+        builder, castOp.getLoc(), inputs, shape);
+    castOp->replaceAllUsesWith(ValueRange(result));
+    castOp->erase();
+  } else if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
+    // the castOp is emulating a pack op
+    ArrayRef<int64_t> tileShape = outputTy.getShape();
+    SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
+        builder, castOp.getLoc(), inputs[0], tileShape);
+    castOp->replaceAllUsesWith(results);
+    castOp->erase();
   }
 }
 
@@ -80,16 +91,14 @@ public:
   void runOnOperation() override;
 
 private:
-  // Get the tile shape for a given value. If the value has a layout
-  // attribute and it is an SG layout, return the inst_data as the tile shape
-  // if inst_data is available; otherwise, return the original shape of the
-  // value. If the value does not have an SG layout, return std::nullopt.
+  // Get the tile shape for a given OpOperand or OpResult by examining the
+  // corresponding layout attribute. If layout is not present or is not a
+  // subgroup level layout, it returns std::nullopt.
+  template <typename T,
+            typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
+                                        std::is_same_v<T, OpResult>>>
   std::optional<SmallVector<int64_t>>
-  getTileShape(TypedValue<ShapedType> value) const;
-
-  std::optional<SmallVector<int64_t>> getTileShape(OpOperand &operand) const;
-
-  std::optional<SmallVector<int64_t>> getTileShape(OpResult result) const;
+  getTileShape(const T &operandOrResult) const;
 
   // Get the tile shape for a given operation.
   std::optional<SmallVector<int64_t>> getTileShape(Operation *op) const;
@@ -101,43 +110,24 @@ private:
 };
 } // namespace
 
+template <typename T, typename>
 std::optional<SmallVector<int64_t>>
-XeGPUBlockingPass::getTileShape(TypedValue<ShapedType> value) const {
-  assert(value && "value must be non-null");
-  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(value);
-  if (layout && layout.isSgLayout()) {
-    if (auto inst_data = layout.getInstData())
-      return llvm::to_vector_of<int64_t>(inst_data.asArrayRef());
-    return llvm::to_vector(value.getType().getShape());
-  }
-  return std::nullopt;
-}
+XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
+  Value value;
+  if constexpr (std::is_same_v<T, OpOperand>)
+    value = operandOrResult.get();
+  else
+    value = (Value)operandOrResult;
 
-std::optional<SmallVector<int64_t>>
-XeGPUBlockingPass::getTileShape(OpOperand &operand) const {
-  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operand);
+  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operandOrResult);
   if (layout && layout.isSgLayout()) {
     if (auto inst_data = layout.getInstData())
       return llvm::to_vector_of<int64_t>(inst_data.asArrayRef());
 
-    if (auto type = dyn_cast<ShapedType>(operand.get().getType()))
+    if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
   }
-  LDBG("failed to getTileShape for operand: " << operand.get());
-  return std::nullopt;
-}
-
-std::optional<SmallVector<int64_t>>
-XeGPUBlockingPass::getTileShape(OpResult result) const {
-  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
-  if (layout && layout.isSgLayout()) {
-    if (auto inst_data = layout.getInstData())
-      return llvm::to_vector_of<int64_t>(inst_data.asArrayRef());
-
-    if (auto type = dyn_cast<ShapedType>(result.getType()))
-      return llvm::to_vector(type.getShape());
-  }
-  LDBG("failed to getTileShape for result: " << result);
+  LDBG("failed to getTileShape for: " << value);
   return std::nullopt;
 }
 
@@ -182,59 +172,51 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 }
 
 bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
-  if (isa<LoopLikeOpInterface>(op))
+  // skip the op if any of its operands or results has workgroup level layouts
+  bool hasWgLayoutOperands =
+      llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
+        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(opr);
+        return layout && layout.isWgLayout();
+      });
+  bool hasWgLayoutResults =
+      llvm::any_of(op->getOpResults(), [](OpResult result) {
+        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
+        return layout && layout.isWgLayout();
+      });
+  if (hasWgLayoutOperands || hasWgLayoutResults)
     return false;
 
-  auto isUnrollable = [&](Value value,
-                          ArrayRef<int64_t> tileShape) -> std::optional<bool> {
+  auto isUnrollable = [](Value value, ArrayRef<int64_t> tileShape) {
     Type valTy = value.getType();
-    if (auto tdesc = dyn_cast<xegpu::TensorDescType>(valTy)) {
-      xegpu::LayoutAttr layout = tdesc.getLayoutAttr();
-      if (!layout)
-        return std::nullopt;
-      if (layout.isWgLayout())
-        return false;
-      if (layout.getInstData())
-        return true;
+    if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(valTy)) {
+      xegpu::LayoutAttr layout = tdescTy.getLayoutAttr();
+      return layout && layout.getInstData();
     }
-
     auto shapedType = dyn_cast<ShapedType>(valTy);
-    if (shapedType && !llvm::equal(tileShape, shapedType.getShape()))
-      return true;
-
-    return std::nullopt;
+    return shapedType && !llvm::equal(tileShape, shapedType.getShape());
   };
 
-  for (OpOperand &opr : op->getOpOperands()) {
-    std::optional<SmallVector<int64_t>> tileShape = getTileShape(opr);
-    if (!tileShape)
-      continue;
-
-    std::optional<bool> unrollable = isUnrollable(opr.get(), *tileShape);
-    if (unrollable.has_value())
-      return unrollable.value();
-  }
-
-  for (OpResult result : op->getOpResults()) {
-    std::optional<SmallVector<int64_t>> tileShape = getTileShape(result);
-    if (!tileShape)
-      continue;
-
-    std::optional<bool> unrollable = isUnrollable(result, *tileShape);
-    if (unrollable.has_value())
-      return unrollable.value();
-  }
-  return false;
+  bool hasUnrollableOperands =
+      llvm::any_of(op->getOpOperands(), [&](OpOperand &opr) {
+        std::optional<SmallVector<int64_t>> tileShape = getTileShape(opr);
+        return tileShape.has_value() && isUnrollable(opr.get(), *tileShape);
+      });
+  bool hasUnrollableResults =
+      llvm::any_of(op->getOpResults(), [&](OpResult result) {
+        std::optional<SmallVector<int64_t>> tileShape = getTileShape(result);
+        return tileShape.has_value() && isUnrollable(result, *tileShape);
+      });
+  return hasUnrollableOperands || hasUnrollableResults;
 }
 
 void XeGPUBlockingPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
-  Operation *mod = getOperation();
+  Operation *op = getOperation();
 
   // Preserve the LayoutAttr for each operand to the owner's DictionaryAttr.
   // This ensures that the LayoutAttr remains accessible even if the defining
   // operation is replaced.
-  xegpu::setLayoutAttrs(mod, [&](Value v) { return xegpu::getLayoutAttr(v); });
+  xegpu::setLayoutAttrs(op, [](Value v) { return xegpu::getLayoutAttr(v); });
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
                                  xegpu::LayoutAttr layout) {
@@ -250,7 +232,7 @@ void XeGPUBlockingPass::runOnOperation() {
 
   // Perform type conversion for SCF control folow ops
   TypeConverter converter;
-  converter.addConversion([&](Type type) -> Type { return type; });
+  converter.addConversion([](Type type) -> Type { return type; });
   converter.addConversion(
       [&](RankedTensorType type,
           SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
@@ -292,12 +274,11 @@ void XeGPUBlockingPass::runOnOperation() {
         return success();
       });
 
-  xegpu::doSCFStructuralTypeConversionWithTensorType(mod, converter);
+  xegpu::doSCFStructuralTypeConversionWithTensorType(op, converter);
 
   xegpu::UnrollOptions options;
-  options.setFilterConstraint([&](Operation *op) -> LogicalResult {
-    return needsUnroll(op) ? success() : failure();
-  });
+  options.setFilterConstraint(
+      [&](Operation *op) -> LogicalResult { return success(needsUnroll(op)); });
 
   options.setNativeShapeFn([&](Operation *op) { return getTileShape(op); });
 
@@ -326,9 +307,9 @@ void XeGPUBlockingPass::runOnOperation() {
   populateXeGPUUnrollPatterns(patterns, options);
   vector::populateVectorUnrollPatterns(patterns, vectorOptions);
 
-  (void)applyPatternsGreedily(mod, std::move(patterns));
+  (void)applyPatternsGreedily(op, std::move(patterns));
 
-  mod->walk([&](Operation *op) {
+  op->walk([](Operation *op) {
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
 
