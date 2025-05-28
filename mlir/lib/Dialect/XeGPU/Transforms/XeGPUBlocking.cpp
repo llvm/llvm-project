@@ -18,6 +18,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace xegpu {
@@ -43,29 +44,22 @@ static void
 resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   ValueRange inputs = castOp.getInputs();
   ValueRange outputs = castOp.getOutputs();
-  if (inputs.empty() || outputs.empty()) {
-    LDBG("erase unrealized conversion cast op has no inputs/outputs.");
-    castOp->erase();
-    return;
-  }
 
-  VectorType inputTy = dyn_cast<VectorType>(inputs[0].getType());
-  VectorType outputTy = dyn_cast<VectorType>(outputs[0].getType());
-  if (!inputTy || !outputTy) {
-    LDBG("skip unrealized conversion cast op has non-vector inputs/outputs.");
-    return;
-  }
+  auto hasIdenticalVectorTypes = [](ValueRange values) {
+    auto types = values.getTypes();
+    return llvm::all_of(types, [&](Type type) {
+      return isa<VectorType>(type) && type == types.front();
+    });
+  };
 
   // We only interest in the case where all inputs and outputs have the
-  // identical types
-  if (llvm::any_of(castOp->getOperandTypes(),
-                   [&](Type t) { return t != inputTy; }) ||
-      llvm::any_of(castOp->getResultTypes(),
-                   [&](Type t) { return t != outputTy; })) {
+  // identical VectorTypes
+  if (!hasIdenticalVectorTypes(inputs) || !hasIdenticalVectorTypes(outputs)) {
     LDBG("skip unrealized conversion cast op not emulating pack/unpack.");
     return;
   }
 
+  VectorType outputTy = dyn_cast<VectorType>(outputs[0].getType());
   OpBuilder builder(castOp);
   if (inputs.size() > 1 && outputs.size() == 1) {
     // the castOp is emulating an unpack op
@@ -183,8 +177,10 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
         xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
         return layout && layout.isWgLayout();
       });
-  if (hasWgLayoutOperands || hasWgLayoutResults)
+  if (hasWgLayoutOperands || hasWgLayoutResults) {
+    LDBG("skip unrolling for op with workgroup level layout: " << *op);
     return false;
+  }
 
   auto isUnrollable = [](Value value, ArrayRef<int64_t> tileShape) {
     Type valTy = value.getType();
