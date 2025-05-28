@@ -386,7 +386,7 @@ void nontag_param_test(struct { int i; } herp) {
 
 // Same kind of test, but demonstrating that these still aren't compatible.
 void nontag_both_in_params(struct { int i; } Arg1, struct { int i; } Arg2) {
-  _Static_assert(0 == _Generic(typeof(Arg1), typeof(Arg2) : 1, default : 0));
+  _Static_assert(0 == _Generic(__typeof__(Arg1), __typeof__(Arg2) : 1, default : 0)); // both-warning {{passing a type argument as the first operand to '_Generic' is a C2y extension}}
 }
 
 struct InnerAnonStruct {
