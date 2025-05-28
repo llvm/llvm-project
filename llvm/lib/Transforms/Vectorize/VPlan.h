@@ -898,6 +898,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
+    ComputeAnyOfResult,
     ComputeFindLastIVResult,
     ComputeReductionResult,
     // Extracts the last lane from its operand if it is a vector, or the last
