@@ -402,3 +402,34 @@ define dso_local void @fsd_trunc(ptr %a, double %b) nounwind noinline optnone {
   store float %1, ptr %a, align 4
   ret void
 }
+
+define dso_local void @store_zero(ptr %a) {
+; RV32IFD-LABEL: store_zero:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    fcvt.d.w fa5, zero
+; RV32IFD-NEXT:    fsd fa5, 0(a0)
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: store_zero:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    sd zero, 0(a0)
+; RV64IFD-NEXT:    ret
+;
+; RV32IZFINXZDINX-LABEL: store_zero:
+; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    sw zero, 0(a0)
+; RV32IZFINXZDINX-NEXT:    sw zero, 4(a0)
+; RV32IZFINXZDINX-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: store_zero:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    sd zero, 0(a0)
+; RV64IZFINXZDINX-NEXT:    ret
+;
+; RV32IZFINXZDINXZILSD-LABEL: store_zero:
+; RV32IZFINXZDINXZILSD:       # %bb.0:
+; RV32IZFINXZDINXZILSD-NEXT:    sd zero, 0(a0)
+; RV32IZFINXZDINXZILSD-NEXT:    ret
+  store double 0.0, ptr %a
+  ret void
+}
