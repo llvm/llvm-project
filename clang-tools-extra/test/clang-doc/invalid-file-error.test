@@ -1,0 +1,4 @@
+// RUN: not clang-doc %S/Inputs/basic-project/src/Circle.cpp -output=/root/docs 2>&1 | FileCheck %s
+
+// CHECK: clang-doc error: Failed to create directory
+

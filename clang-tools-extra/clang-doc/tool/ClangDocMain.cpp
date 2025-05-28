@@ -43,7 +43,6 @@
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
-static llvm::ExitOnError ExitOnErr;
 
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
@@ -118,6 +117,8 @@ static llvm::cl::opt<OutputFormatTy> FormatEnum(
                      clEnumValN(OutputFormatTy::mustache, "mustache",
                                 "Documentation in mustache HTML format")),
     llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
+
+static llvm::ExitOnError ExitOnErr;
 
 static std::string getFormatString() {
   switch (FormatEnum) {
@@ -387,8 +388,13 @@ Example usage for a project using a compile commands database:
   sortUsrToInfo(USRToInfo);
 
   // Ensure the root output directory exists.
-  ExitOnErr(
-      llvm::errorCodeToError(llvm::sys::fs::create_directories(OutDirectory)));
+  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
+      Err != std::error_code()) {
+    ExitOnErr(llvm::createStringError(
+        llvm::inconvertibleErrorCode(), "Failed to create directory '%s': %s",
+        OutDirectory.c_str(), Err.message().c_str()));
+  }
+
 
   // Run the generator.
   llvm::outs() << "Generating docs...\n";
