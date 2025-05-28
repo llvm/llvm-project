@@ -22,6 +22,7 @@
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfSummaryBuilder.h"
 #include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProfReader.h"
@@ -3312,6 +3313,18 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 
   auto Reader = std::move(ReaderOrErr.get());
   memprof::AllMemProfData Data = Reader->getAllMemProfData();
+
+  // For v4 and above the summary is serialized in the indexed profile, and can
+  // be accessed from the reader. Earlier versions build the summary below.
+  // The summary is emitted as YAML comments at the start of the output.
+  if (auto *MemProfSum = Reader->getMemProfSummary()) {
+    MemProfSum->printSummaryYaml(OS);
+  } else {
+    memprof::MemProfSummaryBuilder MemProfSumBuilder;
+    for (auto &Pair : Data.HeapProfileRecords)
+      MemProfSumBuilder.addRecord(Pair.Record);
+    MemProfSumBuilder.getSummary()->printSummaryYaml(OS);
+  }
   // Construct yaml::Output with the maximum column width of 80 so that each
   // Frame fits in one line.
   yaml::Output Yout(OS, nullptr, 80);

@@ -24,6 +24,7 @@
 
 namespace llvm {
 namespace memprof {
+class MemProfSummary;
 struct IndexedMemProfData {
   // A map to hold memprof data per function. The lower 64 bits obtained from
   // the md5 hash of the function name is used to index into the map.
@@ -89,7 +90,7 @@ private:
 Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
-    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData);
-
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
+    memprof::MemProfSummary *MemProfSum);
 } // namespace llvm
 #endif
