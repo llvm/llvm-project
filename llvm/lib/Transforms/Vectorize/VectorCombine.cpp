@@ -4041,8 +4041,7 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   // Ensure all elements of the new mask are equal. If the difference between
   // the incoming mask elements is the same, the two must be constant offsets
   // of one another.
-  if (NewMask.empty() ||
-      !std::equal(NewMask.begin() + 1u, NewMask.end(), NewMask.begin()))
+  if (NewMask.empty() || !all_equal(NewMask))
     return false;
 
   // Create new mask using difference of the two incoming masks.
@@ -4066,8 +4065,7 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
     return false;
 
   // Create new shuffles and narrowed phi.
-  auto Builder = IRBuilder(&I);
-  Builder.SetInsertPoint(Shuf);
+  auto Builder = IRBuilder(Shuf);
   Builder.SetCurrentDebugLocation(Shuf->getDebugLoc());
   auto *PoisonVal = PoisonValue::get(InputVT);
   auto *NewShuf0 = Builder.CreateShuffleVector(Op, PoisonVal, NewMask);
