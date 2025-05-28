@@ -717,9 +717,6 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
     if (!SE.isKnownPositive(Step))
       return std::nullopt;
 
-    const ConstantRange SignedIVRange = SE.getSignedRange(AR);
-    const ConstantRange UnsignedIVRange = SE.getUnsignedRange(AR);
-    unsigned NumBits = Ty->getIntegerBitWidth();
     // Keep the minimum value of the recurrence type as the sentinel value.
     // The maximum acceptable range for the increasing induction variable,
     // called the valid range, will be defined as
@@ -727,22 +724,25 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
     // where <sentinel value> is [Signed|Unsigned]Min(<recurrence type>)
     // TODO: This range restriction can be lifted by adding an additional
     // virtual OR reduction.
-    const APInt SignedSentinel = APInt::getSignedMinValue(NumBits);
-    const APInt UnsignedSentinel = APInt::getMinValue(NumBits);
-    const ConstantRange ValidSignedRange =
-        ConstantRange::getNonEmpty(SignedSentinel + 1, SignedSentinel);
-    const ConstantRange ValidUnsignedRange =
-        ConstantRange::getNonEmpty(UnsignedSentinel + 1, UnsignedSentinel);
-    LLVM_DEBUG(dbgs() << "LV: FindLastIV valid signed range is "
-                      << ValidSignedRange << ", valid unsigned range is "
-                      << ValidUnsignedRange << ", " << *AR
-                      << " signed range is " << SignedIVRange
-                      << ", and unsigned range is " << UnsignedIVRange << "\n");
-    // Ensure the induction variable does not wrap around by verifying that its
-    // range is fully contained within the valid range.
-    if (ValidSignedRange.contains(SignedIVRange))
+    auto CheckRange = [&](bool IsSigned) {
+      const ConstantRange IVRange =
+          IsSigned ? SE.getSignedRange(AR) : SE.getUnsignedRange(AR);
+      unsigned NumBits = Ty->getIntegerBitWidth();
+      const APInt Sentinel = IsSigned ? APInt::getSignedMinValue(NumBits)
+                                      : APInt::getMinValue(NumBits);
+      const ConstantRange ValidRange =
+          ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
+      LLVM_DEBUG(dbgs() << "LV: FindLastIV valid range is " << ValidRange
+                        << ", and the range of " << *AR << " is " << IVRange
+                        << "\n");
+
+      // Ensure the induction variable does not wrap around by verifying that
+      // its range is fully contained within the valid range.
+      return ValidRange.contains(IVRange);
+    };
+    if (CheckRange(true))
       return true;
-    if (ValidUnsignedRange.contains(UnsignedIVRange))
+    if (CheckRange(false))
       return false;
     return std::nullopt;
   };
