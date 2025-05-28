@@ -14,7 +14,7 @@ end subroutine local_assoc
 
 ! CHECK: %[[C8:.*]] = arith.constant 8 : index
 
-! CHECK: fir.do_loop {{.*}} unordered {
+! CHECK: fir.do_concurrent.loop {{.*}} {
 ! CHECK:   %[[LOCAL_ALLOC:.*]] = fir.alloca !fir.array<8xf32> {bindc_name = "a", pinned, uniq_name = "{{.*}}local_assocEa"}
 ! CHECK:   %[[LOCAL_SHAPE:.*]] = fir.shape %[[C8]] :
 ! CHECK:   %[[LOCAL_DECL:.*]]:2 = hlfir.declare %[[LOCAL_ALLOC]](%[[LOCAL_SHAPE]])

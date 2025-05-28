@@ -276,36 +276,23 @@ struct TypeBuilderImpl {
     } else {
       fir::emitFatalError(loc, "symbol must have a type");
     }
+
+    auto shapeExpr =
+        Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
+
+    if (shapeExpr && !shapeExpr->empty()) {
+      // Statically ranked array.
+      fir::SequenceType::Shape shape;
+      translateShape(shape, std::move(*shapeExpr));
+      ty = fir::SequenceType::get(shape, ty);
+    } else if (!shapeExpr) {
+      // Assumed-rank.
+      ty = fir::SequenceType::get(fir::SequenceType::Shape{}, ty);
+    }
+
     bool isPolymorphic = (Fortran::semantics::IsPolymorphic(symbol) ||
                           Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
                          !Fortran::semantics::IsAssumedType(symbol);
-    if (const auto *assocDetails =
-            ultimate.detailsIf<Fortran::semantics::AssocEntityDetails>()) {
-      const auto &selector = assocDetails->expr();
-
-      if (selector && selector->Rank() > 0) {
-        auto shapeExpr = Fortran::evaluate::GetShape(
-            converter.getFoldingContext(), selector);
-
-        fir::SequenceType::Shape shape;
-        // If there is no shapExpr, this is an assumed-rank, and the empty shape
-        // will build the desired fir.array<*:T> type.
-        if (shapeExpr)
-          translateShape(shape, std::move(*shapeExpr));
-        ty = fir::SequenceType::get(shape, ty);
-      }
-    }
-
-    if (ultimate.IsObjectArray()) {
-      auto shapeExpr =
-          Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
-      fir::SequenceType::Shape shape;
-      // If there is no shapExpr, this is an assumed-rank, and the empty shape
-      // will build the desired fir.array<*:T> type.
-      if (shapeExpr)
-        translateShape(shape, std::move(*shapeExpr));
-      ty = fir::SequenceType::get(shape, ty);
-    }
     if (Fortran::semantics::IsPointer(symbol))
       return fir::wrapInClassOrBoxType(fir::PointerType::get(ty),
                                        isPolymorphic);
