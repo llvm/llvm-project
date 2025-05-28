@@ -108,7 +108,7 @@ struct test_one_policy
         // testing bool
         EXPECT_TRUE(is_true_equal == actual, "result for equal for random-access iterator, bool");
 
-//add C++14 equal symantics tests
+//add C++14 equal semantics tests
 //add more cases for inCopy size less than in
 #if CPP14_ENABLED
         auto actualr14 = std::equal(in.cbegin(), in.cend(), inCopy.cbegin(), inCopy.cend());
