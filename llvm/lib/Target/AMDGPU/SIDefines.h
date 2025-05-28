@@ -101,6 +101,8 @@ enum : uint64_t {
 
   VOPD3 = 1 << 30,
 
+  IsConvolve = UINT64_C(1) << 31,
+
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
   EXP_CNT = UINT64_C(1) << 33,

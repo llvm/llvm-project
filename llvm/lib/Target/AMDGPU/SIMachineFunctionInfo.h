@@ -546,6 +546,8 @@ private:
   // scheduler stage.
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
+  bool HasWMMAorConvolve = false;
+
   MCPhysReg getNextUserSGPR() const;
 
   MCPhysReg getNextSystemSGPR() const;
@@ -1255,6 +1257,14 @@ public:
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 
   AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
+
+  // This affects the minimum number of VGPRs per wave or per wavegroup.
+  bool hasWMMAorConvolve() const {
+    return HasWMMAorConvolve;
+  }
+  bool setHasWMMAorConvolve() {
+    return HasWMMAorConvolve = true;
+  }
 };
 
 } // end namespace llvm

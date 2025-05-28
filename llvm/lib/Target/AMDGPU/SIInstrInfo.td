@@ -2775,6 +2775,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsSingle = 0;
   field bit IsWMMA = 0;
   field bit IsSWMMAC = 0;
+  field bit IsConvolve = 0;
 
   field bit HasFP8SrcByteSel = 0;
   field bit HasFP8DstByteSel = 0;

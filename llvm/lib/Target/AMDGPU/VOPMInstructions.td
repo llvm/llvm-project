@@ -272,6 +272,7 @@ class Conv_Profile<list<ValueType> ArgTy, int Shape, int Filter, int Iterations>
   int PrimTy = Shape;
   int FilterTy = Filter;
   int IterCnt = Iterations;
+  let IsConvolve = 1;
 }
 
 multiclass Conv_Profile_Reg<int AccReg, int WeightsReg, int TensorReg, string OutputBaseTy, string AccInBaseTy, string WeightsTensorBaseTy, int Shape, int Filter, int Iterations = 0> {
@@ -583,6 +584,7 @@ class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolowe
   let Uses = [EXEC];
   let IsWMMA = P.IsWMMA;
   let IsSWMMAC = P.IsSWMMAC;
+  let IsConvolve = P.IsConvolve;
 }
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
