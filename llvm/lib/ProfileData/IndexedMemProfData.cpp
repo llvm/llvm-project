@@ -15,6 +15,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfRadixTree.h"
+#include "llvm/ProfileData/MemProfSummary.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
@@ -220,7 +221,8 @@ static Error writeMemProfRadixTreeBased(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion Version, bool MemProfFullSchema,
     std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData =
-        nullptr) {
+        nullptr,
+    memprof::MemProfSummary *MemProfSum = nullptr) {
   assert((Version == memprof::Version3 || Version == memprof::Version4) &&
          "Unsupported version for radix tree format");
 
@@ -229,8 +231,11 @@ static Error writeMemProfRadixTreeBased(
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof record payload offset.
   OS.write(0ULL); // Reserve space for the memprof record table offset.
-  if (Version >= memprof::Version4)
+  if (Version >= memprof::Version4) {
     OS.write(0ULL); // Reserve space for the data access profile offset.
+
+    MemProfSum->write(OS);
+  }
 
   auto Schema = memprof::getHotColdSchema();
   if (MemProfFullSchema)
@@ -297,17 +302,19 @@ static Error writeMemProfV3(ProfOStream &OS,
 static Error writeMemProfV4(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     bool MemProfFullSchema,
-    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData) {
-  return writeMemProfRadixTreeBased(OS, MemProfData, memprof::Version4,
-                                    MemProfFullSchema,
-                                    std::move(DataAccessProfileData));
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
+    memprof::MemProfSummary *MemProfSum) {
+  return writeMemProfRadixTreeBased(
+      OS, MemProfData, memprof::Version4, MemProfFullSchema,
+      std::move(DataAccessProfileData), MemProfSum);
 }
 
 // Write out the MemProf data in a requested version.
 Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
-    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData) {
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
+    memprof::MemProfSummary *MemProfSum) {
   switch (MemProfVersionRequested) {
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
@@ -315,7 +322,7 @@ Error writeMemProf(
     return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
   case memprof::Version4:
     return writeMemProfV4(OS, MemProfData, MemProfFullSchema,
-                          std::move(DataAccessProfileData));
+                          std::move(DataAccessProfileData), MemProfSum);
   }
 
   return make_error<InstrProfError>(
@@ -395,9 +402,11 @@ Error IndexedMemProfReader::deserializeRadixTreeBased(
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
   uint64_t DataAccessProfOffset = 0;
-  if (Version == memprof::Version4)
+  if (Version >= memprof::Version4) {
     DataAccessProfOffset =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+    MemProfSum = memprof::MemProfSummary::deserialize(Ptr);
+  }
 
   // Read the schema.
   auto SchemaOr = memprof::readMemProfSchema(Ptr);
