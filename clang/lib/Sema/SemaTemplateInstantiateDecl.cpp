@@ -648,21 +648,30 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
   EnterExpressionEvaluationContext Unevaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
-  if (!ResultX.isUsable())
-    return;
-  ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
-  if (!ResultY.isUsable())
-    return;
-  ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
-  if (!ResultZ.isUsable())
-    return;
+  Expr *XExpr = nullptr;
+  Expr *YExpr = nullptr;
+  Expr *ZExpr = nullptr;
 
-  Expr *XExpr = ResultX.getAs<Expr>();
-  Expr *YExpr = ResultY.getAs<Expr>();
-  Expr *ZExpr = ResultZ.getAs<Expr>();
+  if (Attr.getMaxNumWorkGroupsX()) {
+    ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
+    if (ResultX.isUsable())
+      XExpr = ResultX.getAs<Expr>();
+  }
 
-  S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
+  if (Attr.getMaxNumWorkGroupsY()) {
+    ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
+    if (ResultY.isUsable())
+      YExpr = ResultY.getAs<Expr>();
+  }
+
+  if (Attr.getMaxNumWorkGroupsZ()) {
+    ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
+    if (ResultZ.isUsable())
+      ZExpr = ResultZ.getAs<Expr>();
+  }
+
+  if (XExpr)
+    S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
 }
 
 // This doesn't take any template parameters, but we have a custom action that
