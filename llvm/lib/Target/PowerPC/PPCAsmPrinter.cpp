@@ -2813,46 +2813,17 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // associated profiling counters.
   if (TM.getFunctionSections() &&
       Csect->getName().starts_with("__llvm_prf_data.")) {
-    // Unraveling the initializer to find the related counters variable. The
-    // initializer is a structure whose third member is a subtract expression
-    // between the counters label and the label for the start of this structure.
-    // Use the subtract expression to get the GlobalValue for the counters
-    // global.
-    assert(GV->hasInitializer() &&
-           "profiling data symbol must have an initializer");
-    assert(isa<ConstantStruct>(GV->getInitializer()) &&
-           "expect the initializer for a profiling data symbol to be a struct");
-    const ConstantStruct *Initializer =
-        cast<ConstantStruct>(GV->getInitializer());
+    MDNode *MD = GV->getMetadata(LLVMContext::MD_pgo_associated);
 
-    // The initializer structure is: { i64, i64, i32, ptr, ptr, i32, [4 x i16] }
-    // and the reference to the global variable for the counters is in the
-    // first i32 member.
-    const Constant *Member = Initializer->getAggregateElement(2);
-    assert(Member && "profiling data symbol has more then 3 elements");
+    assert(MD &&
+           "profiling data symbol must have an associated counter symbol");
 
-    // Want to decompose a constant expression of the form:
-    // sub (ptrtoint (ptr @__profc_sym), ptrtoint (ptr @__profd_sym))
-    // to get the GlobalVariable for the '@__profc_sym` symbol.
-    assert(isa<ConstantExpr>(Member) &&
-           "expected member initializer is a constant expression.");
-    const ConstantExpr *CExpr = cast<ConstantExpr>(Member);
-    assert(CExpr->getOpcode() == Instruction::Sub &&
-           "expected member intializer is a sub expression.");
+    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
+    const GlobalVariable *ProfCGV = cast<GlobalVariable>(VAM->getValue());
 
-    Value *V1 = CExpr->getOperand(0);
-    assert(V1 && isa<ConstantExpr>(V1) &&
-           "expected sub expression operand to be constant expr.");
-    ConstantExpr *PointerToIntExpr = cast<ConstantExpr>(V1);
-    assert(PointerToIntExpr->isCast() && "unexpected operand type.");
-
-    Value *PointerToIntOperand = PointerToIntExpr->getOperand(0);
-    assert(isa<GlobalVariable>(PointerToIntOperand) &&
-           "expected global variable of profc symbol");
-
-    const GlobalVariable *ProfCGV = cast<GlobalVariable>(PointerToIntOperand);
     // Map the global variable to its CSECT.
     SectionKind ProfCKind = getObjFileLowering().getKindForGlobal(GV, TM);
+
     MCSectionXCOFF *ProfCCsect = cast<MCSectionXCOFF>(
         getObjFileLowering().SectionForGlobal(ProfCGV, ProfCKind, TM));
 
