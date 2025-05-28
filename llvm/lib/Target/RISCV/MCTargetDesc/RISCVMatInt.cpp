@@ -100,7 +100,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
         // noted in RISCVOptWInstrs, this helps reduce test differences vs
         // RV32 without being a pessimization.
         int64_t LuiRes = SignExtend64<32>(Hi20 << 12);
-        if (LuiRes + Lo12 != SignExtend64<32>(LuiRes + Lo12))
+        if (!isInt<32>(LuiRes + Lo12))
           AddiOpc = RISCV::ADDIW;
       }
       Res.emplace_back(AddiOpc, Lo12);
