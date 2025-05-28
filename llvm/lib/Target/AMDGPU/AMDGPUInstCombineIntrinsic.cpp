@@ -283,7 +283,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
             break;
           }
           auto *Tr = dyn_cast<FPTruncInst>(*Ext->user_begin());
-          if (!Tr || !Tr->getType()->getScalarType()->isHalfTy()) {
+          if (!Tr || !Tr->getType()->isHalfTy()) {
             AllHalfExtracts = false;
             break;
           }
@@ -293,15 +293,13 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
 
         if (AllHalfExtracts && !Extracts.empty()) {
           auto *VecTy = cast<VectorType>(II.getType());
-          unsigned NElts = VecTy->getElementCount().getKnownMinValue();
           Type *HalfVecTy =
-              VectorType::get(Type::getHalfTy(II.getContext()), NElts, false);
+              VecTy->getWithNewType(Type::getHalfTy(II.getContext()));
 
           // Obtain the original image sample intrinsic's signature
           // and replace its return type with the half-vector for D16 folding
           SmallVector<Type *, 8> SigTys;
-          if (!Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys))
-            return nullptr;
+          Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys);
           SigTys[0] = HalfVecTy;
 
           Module *M = II.getModule();
@@ -311,9 +309,8 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
           II.mutateType(HalfVecTy);
           II.setCalledFunction(HalfDecl);
 
-          IRBuilder<> Builder(&II);
-          for (auto [lane, Ext] : enumerate(Extracts)) {
-            FPTruncInst *Tr = Truncs[lane];
+          IRBuilder<> Builder(II.getContext());
+          for (auto [Ext, Tr] : zip(Extracts, Truncs)) {
             Value *Idx = Ext->getIndexOperand();
 
             Builder.SetInsertPoint(Tr);
@@ -324,9 +321,9 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
             Tr->replaceAllUsesWith(HalfExtract);
           }
 
-          for (auto *T : Truncs)
+          for (FPTruncInst *T : Truncs)
             IC.eraseInstFromFunction(*T);
-          for (auto *E : Extracts)
+          for (ExtractElementInst *E : Extracts)
             IC.eraseInstFromFunction(*E);
 
           return &II;
