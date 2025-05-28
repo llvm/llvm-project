@@ -1,0 +1,15 @@
+RUN: llvm-remarkutil diff %p/Inputs/1-loc-2-args.yaml %p/Inputs/1-loc-2-args-2.yaml --parser=yaml | FileCheck %s 
+
+; CHECK-LABEL: File A: {{.*}}/Inputs/1-loc-2-args.yaml
+; CHECK: File B: {{.*}}/Inputs/1-loc-2-args-2.yaml
+; CHECK: path/to/anno.c:func0  Ln: 1 Col: 2
+; CHECK: --- Has the same header ---
+; CHECK: Name: RemarkName
+; CHECK: FunctionName: func0
+; CHECK: PassName: Pass
+; CHECK: Only at A >>>>
+; CHECK: String: 1
+; CHECK: =====
+; CHECK: Only at B <<<<
+; CHECK: String: 2
+; CHECK: =====
