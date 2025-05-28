@@ -1065,6 +1065,9 @@ OpenMP Support
   open parenthesis. (#GH139665)
 - An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
   an argument larger than what can fit within a 64-bit integer.
+- Fixed mapping of arrays of structs containing nested structs with user defined
+  mappers, by using compiler-generated default mappers for the outer structs for
+  such maps.
 
 Improvements
 ^^^^^^^^^^^^
