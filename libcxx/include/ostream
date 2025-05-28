@@ -198,10 +198,8 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 #    include <concepts>
 #    include <cstdio>
 #    include <cstdlib>
-#    include <format>
 #    include <iosfwd>
 #    include <iterator>
-#    include <print>
 #    include <stdexcept>
 #    include <type_traits>
 #  endif
