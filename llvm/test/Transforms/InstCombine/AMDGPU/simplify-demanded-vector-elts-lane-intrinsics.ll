@@ -25,6 +25,42 @@ define i16 @extract_elt0_v1i16_readfirstlane(<1 x i16> %src) {
   ret i16 %elt
 }
 
+define half @extract_elt0_v2f16_readlane_imm_0(<2 x half> %src) {
+; CHECK-LABEL: define half @extract_elt0_v2f16_readlane_imm_0(
+; CHECK-SAME: <2 x half> [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x half> [[SRC]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.amdgcn.readlane.f16(half [[TMP1]], i32 0)
+; CHECK-NEXT:    ret half [[TMP2]]
+;
+  %x = call <2 x half> @llvm.amdgcn.readlane.v2f16(<2 x half> %src, i32 0)
+  %elt = extractelement <2 x half> %x, i32 0
+  ret half %elt
+}
+
+define half @extract_elt0_v2f16_readlane_imm_1(<2 x half> %src) {
+; CHECK-LABEL: define half @extract_elt0_v2f16_readlane_imm_1(
+; CHECK-SAME: <2 x half> [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x half> [[SRC]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call half @llvm.amdgcn.readlane.f16(half [[TMP1]], i32 1)
+; CHECK-NEXT:    ret half [[TMP2]]
+;
+  %x = call <2 x half> @llvm.amdgcn.readlane.v2f16(<2 x half> %src, i32 1)
+  %elt = extractelement <2 x half> %x, i32 1
+  ret half %elt
+}
+
+define half @extract_elt0_v2f16_readlane(<2 x half> %src, i32 %idx) {
+; CHECK-LABEL: define half @extract_elt0_v2f16_readlane(
+; CHECK-SAME: <2 x half> [[SRC:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X:%.*]] = call <2 x half> @llvm.amdgcn.readlane.v2f16(<2 x half> [[SRC]], i32 [[IDX]])
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x half> [[X]], i32 [[IDX]]
+; CHECK-NEXT:    ret half [[ELT]]
+;
+  %x = call <2 x half> @llvm.amdgcn.readlane.v2f16(<2 x half> %src, i32 %idx)
+  %elt = extractelement <2 x half> %x, i32 %idx
+  ret half %elt
+}
+
 define i16 @extract_elt1_v2i16_readfirstlane(<2 x i16> %src) {
 ; CHECK-LABEL: define i16 @extract_elt1_v2i16_readfirstlane(
 ; CHECK-SAME: <2 x i16> [[SRC:%.*]]) #[[ATTR0]] {

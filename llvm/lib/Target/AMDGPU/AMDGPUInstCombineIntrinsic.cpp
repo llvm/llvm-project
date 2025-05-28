@@ -1837,7 +1837,12 @@ Value *GCNTTIImpl::simplifyAMDGCNLaneIntrinsicDemanded(
     Value *Extract = IC.Builder.CreateExtractElement(Src, FirstElt);
 
     // TODO: Preserve callsite attributes?
-    CallInst *NewCall = IC.Builder.CreateCall(Remangled, {Extract}, OpBundles);
+    SmallVector<Value *> Args{Extract};
+    if (II.arg_size() > 1) {
+      for (int I = 1; I < II.arg_size(); ++I)
+        Args.push_back(II.getArgOperand(1));
+    }
+    CallInst *NewCall = IC.Builder.CreateCall(Remangled, Args, OpBundles);
 
     return IC.Builder.CreateInsertElement(PoisonValue::get(II.getType()),
                                           NewCall, FirstElt);
@@ -1872,6 +1877,7 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
         SimplifyAndSetOp) const {
   switch (II.getIntrinsicID()) {
   case Intrinsic::amdgcn_readfirstlane:
+  case Intrinsic::amdgcn_readlane:
     SimplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
     return simplifyAMDGCNLaneIntrinsicDemanded(IC, II, DemandedElts, UndefElts);
   case Intrinsic::amdgcn_raw_buffer_load:
