@@ -3146,10 +3146,9 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
         GV->getName() != "llvm.amdgcn.module.lds" &&
         !AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV))) {
       const Function &Fn = MF.getFunction();
-      DiagnosticInfoUnsupported BadLDSDecl(
-        Fn, "local memory global used by non-kernel function", MI.getDebugLoc(),
-        DS_Warning);
-      Fn.getContext().diagnose(BadLDSDecl);
+      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+          Fn, "local memory global used by non-kernel function",
+          MI.getDebugLoc(), DS_Warning));
 
       // We currently don't have a way to correctly allocate LDS objects that
       // aren't directly associated with a kernel. We do force inlining of
@@ -7507,11 +7506,9 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
   // accordingly
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
-    DiagnosticInfoUnsupported NoTrap(B.getMF().getFunction(),
-                                     "debugtrap handler not supported",
-                                     MI.getDebugLoc(), DS_Warning);
-    LLVMContext &Ctx = B.getMF().getFunction().getContext();
-    Ctx.diagnose(NoTrap);
+    Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "debugtrap handler not supported", MI.getDebugLoc(), DS_Warning));
   } else {
     // Insert debug-trap instruction
     B.buildInstr(AMDGPU::S_TRAP)
@@ -7539,10 +7536,9 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
   Register TDescr = MI.getOperand(7).getReg();
 
   if (!ST.hasGFX10_AEncoding()) {
-    DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
-                                        "intrinsic not supported on subtarget",
-                                        MI.getDebugLoc());
-    B.getMF().getFunction().getContext().diagnose(BadIntrin);
+    Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "intrinsic not supported on subtarget", MI.getDebugLoc()));
     return false;
   }
 
@@ -7692,10 +7688,9 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
   Register TDescr = MI.getOperand(10).getReg();
 
   if (!ST.hasBVHDualAndBVH8Insts()) {
-    DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
-                                        "intrinsic not supported on subtarget",
-                                        MI.getDebugLoc());
-    B.getMF().getFunction().getContext().diagnose(BadIntrin);
+    Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "intrinsic not supported on subtarget", MI.getDebugLoc()));
     return false;
   }
 

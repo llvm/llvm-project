@@ -21,11 +21,6 @@
 namespace llvm {
 namespace memprof {
 
-/// Return the allocation type for a given set of memory profile values.
-LLVM_ABI AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
-                                     uint64_t AllocCount,
-                                     uint64_t TotalLifetime);
-
 /// Build callstack metadata from the provided list of call stack ids. Returns
 /// the resulting metadata node.
 LLVM_ABI MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
