@@ -66,10 +66,10 @@ SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask, StringRef Prefix,
                                          StringRef Category) const {
   for (const auto &S : llvm::reverse(SanitizerSections)) {
     if (S.Mask & Mask) {
-      unsigned lineNum =
+      unsigned LineNum =
           SpecialCaseList::inSectionBlame(S.Entries, Prefix, Query, Category);
-      if (lineNum > 0)
-        return lineNum;
+      if (LineNum > 0)
+        return {S.FileIdx, lineNum};
     }
   }
   return NotFound;
