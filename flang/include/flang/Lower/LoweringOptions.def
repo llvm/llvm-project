@@ -74,5 +74,9 @@ ENUM_LOWERINGOPT(SkipExternalRttiDefinition, unsigned, 1, 0)
 /// If false, lower to the complex dialect of MLIR.
 /// On by default.
 ENUM_LOWERINGOPT(ComplexDivisionToRuntime, unsigned, 1, 1)
+
+/// Enable coarrays feature.
+ENUM_LOWERINGOPT(CoarrayFeature, unsigned, 1, 0)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT
