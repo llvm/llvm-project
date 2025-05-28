@@ -16,6 +16,7 @@
 #include <text_encoding>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 text_encoding text_encoding::environment() {
   auto __make_locale = [](const char* __name) {
@@ -33,4 +34,5 @@ text_encoding text_encoding::environment() {
   return __make_locale("");
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

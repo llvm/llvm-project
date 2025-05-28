@@ -484,7 +484,7 @@ public:
 #  endif
   }
 
-  [[nodiscard]] static text_encoding environment();
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI static text_encoding environment();
 
   template <id __i>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
