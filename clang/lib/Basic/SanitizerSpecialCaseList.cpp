@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Basic/SanitizerSpecialCaseList.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 
@@ -63,11 +64,10 @@ unsigned SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask,
                                                   StringRef Prefix,
                                                   StringRef Query,
                                                   StringRef Category) const {
-  for (auto it = SanitizerSections.crbegin(); it != SanitizerSections.crend();
-       ++it) {
-    if (it->Mask & Mask) {
+  for (const auto &S : llvm::reverse(SanitizerSections)) {
+    if (S.Mask & Mask) {
       unsigned lineNum =
-          SpecialCaseList::inSectionBlame(it->Entries, Prefix, Query, Category);
+          SpecialCaseList::inSectionBlame(S.Entries, Prefix, Query, Category);
       if (lineNum > 0)
         return lineNum;
     }

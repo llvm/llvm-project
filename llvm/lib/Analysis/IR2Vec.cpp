@@ -13,7 +13,6 @@
 
 #include "llvm/Analysis/IR2Vec.h"
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"

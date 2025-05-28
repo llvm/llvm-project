@@ -71,10 +71,10 @@ TEST_F(SpecialCaseListTest, Basic) {
   EXPECT_FALSE(SCL->inSection("", "fun", "hello"));
   EXPECT_FALSE(SCL->inSection("", "src", "hello", "category"));
 
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "hello"), Pair(1u, 3u));
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "bye"), Pair(1u, 4u));
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "hi", "category"), Pair(1u, 5u));
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "zzzz", "category"), Pair(1u, 6u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "hello"), Pair(0u, 3u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "bye"), Pair(0u, 4u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "hi", "category"), Pair(0u, 5u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "zzzz", "category"), Pair(0u, 6u));
   EXPECT_THAT(SCL->inSectionBlame("", "src", "hi"), Pair(0u, 0u));
   EXPECT_THAT(SCL->inSectionBlame("", "fun", "hello"), Pair(0u, 0u));
   EXPECT_THAT(SCL->inSectionBlame("", "src", "hello", "category"),
@@ -309,7 +309,25 @@ TEST_F(SpecialCaseListTest, Version2) {
   EXPECT_FALSE(SCL->inSection("sect3", "fun", "bar"));
 }
 
-TEST_F(SpecialCaseListTest, Version3) {
+TEST_F(SpecialCaseListTest, LinesInSection) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:foo\n"
+                                                             "fun:bar\n"
+                                                             "fun:foo\n");
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "fun", "foo"), Pair(0u, 3u));
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "fun", "bar"), Pair(0u, 2u));
+}
+
+TEST_F(SpecialCaseListTest, LinesCrossSection) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:foo\n"
+                                                             "fun:bar\n"
+                                                             "fun:foo\n"
+                                                             "[sect1]\n"
+                                                             "fun:bar\n");
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "fun", "foo"), Pair(0u, 3u));
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "fun", "bar"), Pair(0u, 5u));
+}
+
+TEST_F(SpecialCaseListTest, Blame) {
   std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("[sect1]\n"
                                                              "src:foo*\n"
                                                              "[sect1]\n"
@@ -325,11 +343,11 @@ TEST_F(SpecialCaseListTest, Version3) {
   EXPECT_TRUE(SCL->inSection("sect2", "src", "def"));
   EXPECT_TRUE(SCL->inSection("sect1", "src", "def"));
 
-  EXPECT_THAT(SCL->inSectionBlame("sect1", "src", "fooz"), Pair(1u, 2u));
-  EXPECT_THAT(SCL->inSectionBlame("sect1", "src", "barz"), Pair(1u, 4u));
-  EXPECT_THAT(SCL->inSectionBlame("sect1", "src", "def"), Pair(1u, 5u));
-  EXPECT_THAT(SCL->inSectionBlame("sect2", "src", "def"), Pair(1u, 8u));
-  EXPECT_THAT(SCL->inSectionBlame("sect2", "src", "dez"), Pair(1u, 8u));
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "src", "fooz"), Pair(0u, 2u));
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "src", "barz"), Pair(0u, 4u));
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "src", "def"), Pair(0u, 5u));
+  EXPECT_THAT(SCL->inSectionBlame("sect2", "src", "def"), Pair(0u, 8u));
+  EXPECT_THAT(SCL->inSectionBlame("sect2", "src", "dez"), Pair(0u, 8u));
 }
 
 TEST_F(SpecialCaseListTest, FileIdx) {
@@ -343,13 +361,13 @@ TEST_F(SpecialCaseListTest, FileIdx) {
                                           "src:car\n"
                                           "src:def*"));
   auto SCL = SpecialCaseList::createOrDie(Files, *vfs::getRealFileSystem());
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "bar"), Pair(1u, 1u));
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "fooaaaaaa"), Pair(1u, 2u));
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "ban", "init"), Pair(1u, 3u));
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "baz"), Pair(2u, 1u));
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "car"), Pair(2u, 2u));
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "aaaadef"), Pair(1u, 5u));
-  EXPECT_THAT(SCL->inSectionBlame("", "src", "defaaaaa"), Pair(2u, 3u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "bar"), Pair(0u, 1u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "fooaaaaaa"), Pair(0u, 2u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "ban", "init"), Pair(0u, 3u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "baz"), Pair(1u, 1u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "car"), Pair(1u, 2u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "aaaadef"), Pair(0u, 5u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "defaaaaa"), Pair(1u, 3u));
   for (auto &Path : Files)
     sys::fs::remove(Path);
 }
