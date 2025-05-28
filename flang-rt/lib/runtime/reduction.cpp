@@ -386,8 +386,8 @@ std::int64_t RTDEF(Count)(
       x, source, line, dim, CountAccumulator{x}, "COUNT");
 }
 
-void RTDEF(CountDim)(Descriptor &result, const Descriptor &x,
-    int dim, int kind, const char *source, int line) {
+void RTDEF(CountDim)(Descriptor &result, const Descriptor &x, int dim, int kind,
+    const char *source, int line) {
   Terminator terminator{source, line};
   ApplyIntegerKind<CountDimension, void>(
       kind, terminator, result, x, dim, terminator);

@@ -470,8 +470,8 @@ void RTDECL(AnyDim)(Descriptor &result, const Descriptor &, int dim,
     const char *source, int line);
 std::int64_t RTDECL(Count)(
     const Descriptor &, const char *source, int line, int dim = 0);
-void RTDECL(CountDim)(Descriptor &result, const Descriptor &,
-    int dim, int kind, const char *source, int line);
+void RTDECL(CountDim)(Descriptor &result, const Descriptor &, int dim, int kind,
+    const char *source, int line);
 bool RTDECL(Parity)(
     const Descriptor &, const char *source, int line, int dim = 0);
 void RTDECL(ParityDim)(Descriptor &result, const Descriptor &, int dim,
