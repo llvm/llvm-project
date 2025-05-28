@@ -251,7 +251,9 @@ C2y Feature Support
   a conforming extension in earlier C language modes, but not in C++ language
   modes (``std::extent`` and ``std::size`` already provide the same
   functionality but with more granularity). The feature can be tested via
-  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``.
+  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``. This also
+  adds the ``<stdcountof.h>`` header file which exposes the ``countof`` macro
+  which expands to ``_Countof``.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
