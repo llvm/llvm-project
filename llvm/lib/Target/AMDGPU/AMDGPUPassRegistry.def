@@ -103,4 +103,5 @@ MACHINE_FUNCTION_PASS("si-load-store-opt", SILoadStoreOptimizerPass())
 MACHINE_FUNCTION_PASS("si-peephole-sdwa", SIPeepholeSDWAPass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
 MACHINE_FUNCTION_PASS("amdgpu-ssa-spiller", AMDGPUSSASpillerPass())
+MACHINE_FUNCTION_PASS("amdgpu-rebuild-ssa", AMDGPURebuildSSAPass())
 #undef MACHINE_FUNCTION_PASS
