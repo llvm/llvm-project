@@ -173,7 +173,6 @@ define void @test_captured_before_loop_address_only(i32 %len) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[LATCH]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[C_INC:%.*]] = add i32 [[C_INC2]], 1
-; CHECK-NEXT:    store i32 [[C_INC]], ptr [[COUNT]], align 4
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[C_INC1]] = phi i32 [ [[C_INC]], [[IF]] ], [ [[C_INC2]], [[LOOP]] ]
@@ -181,6 +180,8 @@ define void @test_captured_before_loop_address_only(i32 %len) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[LEN:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[C_INC1_LCSSA:%.*]] = phi i32 [ [[C_INC1]], [[LATCH]] ]
+; CHECK-NEXT:    store i32 [[C_INC1_LCSSA]], ptr [[COUNT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
