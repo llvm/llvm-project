@@ -13,6 +13,7 @@
 #ifndef LLVM_OBJECT_SYMBOLICFILE_H
 #define LLVM_OBJECT_SYMBOLICFILE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
@@ -142,7 +143,7 @@ public:
 
 using basic_symbol_iterator = content_iterator<BasicSymbolRef>;
 
-class SymbolicFile : public Binary {
+class LLVM_ABI SymbolicFile : public Binary {
 public:
   SymbolicFile(unsigned int Type, MemoryBufferRef Source);
   ~SymbolicFile() override;

@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECT_RELOCATIONRESOLVER_H
 #define LLVM_OBJECT_RELOCATIONRESOLVER_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <utility>
 
@@ -29,10 +30,10 @@ using RelocationResolver = uint64_t (*)(uint64_t Type, uint64_t Offset,
                                         uint64_t S, uint64_t LocData,
                                         int64_t Addend);
 
-std::pair<SupportsRelocation, RelocationResolver>
+LLVM_ABI std::pair<SupportsRelocation, RelocationResolver>
 getRelocationResolver(const ObjectFile &Obj);
 
-uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
+LLVM_ABI uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
                            uint64_t S, uint64_t LocData);
 
 } // end namespace object

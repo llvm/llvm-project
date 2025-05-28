@@ -23,6 +23,7 @@
 #ifndef LLVM_OBJECT_IRSYMTAB_H
 #define LLVM_OBJECT_IRSYMTAB_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -162,7 +163,7 @@ struct Header {
 
 /// Fills in Symtab and StrtabBuilder with a valid symbol and string table for
 /// Mods.
-Error build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
+LLVM_ABI Error build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
             StringTableBuilder &StrtabBuilder, BumpPtrAllocator &Alloc);
 
 /// This represents a symbol that has been read from a storage::Symbol and
@@ -373,7 +374,7 @@ struct FileContents {
 };
 
 /// Reads the contents of a bitcode file, creating its irsymtab if necessary.
-Expected<FileContents> readBitcode(const BitcodeFileContents &BFC);
+LLVM_ABI Expected<FileContents> readBitcode(const BitcodeFileContents &BFC);
 
 } // end namespace irsymtab
 } // end namespace llvm

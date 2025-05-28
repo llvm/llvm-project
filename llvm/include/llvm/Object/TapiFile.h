@@ -13,6 +13,7 @@
 #ifndef LLVM_OBJECT_TAPIFILE_H
 #define LLVM_OBJECT_TAPIFILE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
@@ -28,7 +29,7 @@ class raw_ostream;
 
 namespace object {
 
-class TapiFile : public SymbolicFile {
+class LLVM_ABI TapiFile : public SymbolicFile {
 public:
   TapiFile(MemoryBufferRef Source, const MachO::InterfaceFile &Interface,
            MachO::Architecture Arch);

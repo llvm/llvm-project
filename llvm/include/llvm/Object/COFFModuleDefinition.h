@@ -18,6 +18,7 @@
 #ifndef LLVM_OBJECT_COFFMODULEDEFINITION_H
 #define LLVM_OBJECT_COFFMODULEDEFINITION_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 
@@ -39,7 +40,7 @@ struct COFFModuleDefinition {
   uint32_t MinorOSVersion = 0;
 };
 
-Expected<COFFModuleDefinition>
+LLVM_ABI Expected<COFFModuleDefinition>
 parseCOFFModuleDefinition(MemoryBufferRef MB, COFF::MachineTypes Machine,
                           bool MingwDef = false, bool AddUnderscores = true);
 

@@ -13,6 +13,7 @@
 #ifndef LLVM_OBJECT_OBJECTFILE_H
 #define LLVM_OBJECT_OBJECTFILE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
@@ -126,7 +127,7 @@ public:
   /// Whether this section is a debug section.
   bool isDebugSection() const;
 
-  bool containsSymbol(SymbolRef S) const;
+  LLVM_ABI bool containsSymbol(SymbolRef S) const;
 
   relocation_iterator relocation_begin() const;
   relocation_iterator relocation_end() const;
@@ -161,7 +162,7 @@ inline bool operator==(const SectionedAddress &LHS,
          std::tie(RHS.SectionIndex, RHS.Address);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const SectionedAddress &Addr);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SectionedAddress &Addr);
 
 /// This is a value type class that represents a single symbol in the list of
 /// symbols in the object file.
@@ -226,7 +227,7 @@ public:
 /// This class is the base class for all object file types. Concrete instances
 /// of this object are created by createObjectFile, which figures out which type
 /// to create.
-class ObjectFile : public SymbolicFile {
+class LLVM_ABI ObjectFile : public SymbolicFile {
   virtual void anchor();
 
 protected:

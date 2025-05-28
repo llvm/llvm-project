@@ -9,6 +9,7 @@
 #ifndef LLVM_OBJCOPY_CONFIGMANAGER_H
 #define LLVM_OBJCOPY_CONFIGMANAGER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ELF/ELFConfig.h"
@@ -20,7 +21,7 @@
 namespace llvm {
 namespace objcopy {
 
-struct ConfigManager : public MultiFormatConfig {
+struct LLVM_ABI ConfigManager : public MultiFormatConfig {
   virtual ~ConfigManager() {}
 
   const CommonConfig &getCommonConfig() const override { return Common; }

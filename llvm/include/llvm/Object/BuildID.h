@@ -15,6 +15,7 @@
 #ifndef LLVM_DEBUGINFO_OBJECT_BUILDID_H
 #define LLVM_DEBUGINFO_OBJECT_BUILDID_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -30,13 +31,13 @@ typedef ArrayRef<uint8_t> BuildIDRef;
 class ObjectFile;
 
 /// Parses a build ID from a hex string.
-BuildID parseBuildID(StringRef Str);
+LLVM_ABI BuildID parseBuildID(StringRef Str);
 
 /// Returns the build ID, if any, contained in the given object file.
-BuildIDRef getBuildID(const ObjectFile *Obj);
+LLVM_ABI BuildIDRef getBuildID(const ObjectFile *Obj);
 
 /// BuildIDFetcher searches local cache directories for debug info.
-class BuildIDFetcher {
+class LLVM_ABI BuildIDFetcher {
 public:
   BuildIDFetcher(std::vector<std::string> DebugFileDirectories)
       : DebugFileDirectories(std::move(DebugFileDirectories)) {}

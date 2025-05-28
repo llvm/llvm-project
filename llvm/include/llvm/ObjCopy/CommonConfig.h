@@ -9,6 +9,7 @@
 #ifndef LLVM_OBJCOPY_COMMONCONFIG_H
 #define LLVM_OBJCOPY_COMMONCONFIG_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
@@ -104,7 +105,7 @@ class NameOrPattern {
 public:
   // ErrorCallback is used to handle recoverable errors. An Error returned
   // by the callback aborts the parsing and is then returned by this function.
-  static Expected<NameOrPattern>
+  LLVM_ABI static Expected<NameOrPattern>
   create(StringRef Pattern, MatchStyle MS,
          llvm::function_ref<Error(Error)> ErrorCallback);
 

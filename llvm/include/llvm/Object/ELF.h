@@ -71,9 +71,9 @@ struct VersionEntry {
   bool IsVerDef;
 };
 
-StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
-uint32_t getELFRelativeRelocationType(uint32_t Machine);
-StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
+LLVM_ABI StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
+LLVM_ABI uint32_t getELFRelativeRelocationType(uint32_t Machine);
+LLVM_ABI StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
 
 // Subclasses of ELFFile may need this for template instantiation
 inline std::pair<unsigned char, unsigned char>

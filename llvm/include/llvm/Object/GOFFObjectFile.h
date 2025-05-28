@@ -14,6 +14,7 @@
 #ifndef LLVM_OBJECT_GOFFOBJECTFILE_H
 #define LLVM_OBJECT_GOFFOBJECTFILE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/BinaryFormat/GOFF.h"
@@ -28,7 +29,7 @@ namespace llvm {
 
 namespace object {
 
-class GOFFObjectFile : public ObjectFile {
+class LLVM_ABI GOFFObjectFile : public ObjectFile {
   friend class GOFFSymbolRef;
 
   IndexedMap<const uint8_t *> EsdPtrs; // Indexed by EsdId.
