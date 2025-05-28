@@ -45,10 +45,10 @@ bool NoSanitizeList::containsFunction(SanitizerMask Mask,
 bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
                                   StringRef Category) const {
   auto NoSan = SSCL->inSectionBlame(Mask, "src", FileName, Category);
-  if (NoSan == NotFound)
+  if (NoSan == llvm::SpecialCaseList::NotFound)
     return false;
   auto San = SSCL->inSectionBlame(Mask, "src", FileName, "sanitize");
-  return San == NotFound || NoSan > San;
+  return San == llvm::SpecialCaseList::NotFound || NoSan > San;
 }
 
 bool NoSanitizeList::containsMainFile(SanitizerMask Mask, StringRef FileName,

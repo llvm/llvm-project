@@ -69,7 +69,7 @@ SanitizerSpecialCaseList::inSectionBlame(SanitizerMask Mask, StringRef Prefix,
       unsigned LineNum =
           SpecialCaseList::inSectionBlame(S.Entries, Prefix, Query, Category);
       if (LineNum > 0)
-        return {S.FileIdx, lineNum};
+        return {S.FileIdx, LineNum};
     }
   }
   return NotFound;
