@@ -57,6 +57,9 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit VOPD3 = 0;
 
+  // This bit indicates that this is one of CONVOLVE instructions.
+  field bit IsConvolve = 0;
+
   // High bits - other information.
   field bit VM_CNT = 0;
   field bit EXP_CNT = 0;

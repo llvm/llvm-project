@@ -55,6 +55,8 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
     return GOCS(".has_indirect_call");
   case RIK_NumVGPRRankSum:
     return GOCS(".num_vgpr_rank_sum");
+  case RIK_HasWMMAorConvolve:
+    return GOCS(".has_wmma_or_convolve");
   }
   llvm_unreachable("Unexpected ResourceInfoKind.");
 }
@@ -303,6 +305,9 @@ void MCResourceInfo::gatherResourceInfo(
     assignResourceInfoExpr(FRI.HasIndirectCall,
                            ResourceInfoKind::RIK_HasIndirectCall,
                            AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees, OutContext);
+    assignResourceInfoExpr(FRI.HasWMMAorConvolve,
+                           ResourceInfoKind::RIK_HasWMMAorConvolve,
+                           AMDGPUMCExpr::AGVK_Or, MF, FRI.Callees, OutContext);
   } else {
     SetToLocal(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC);
     SetToLocal(FRI.UsesFlatScratch, ResourceInfoKind::RIK_UsesFlatScratch);
@@ -310,6 +315,8 @@ void MCResourceInfo::gatherResourceInfo(
                ResourceInfoKind::RIK_HasDynSizedStack);
     SetToLocal(FRI.HasRecursion, ResourceInfoKind::RIK_HasRecursion);
     SetToLocal(FRI.HasIndirectCall, ResourceInfoKind::RIK_HasIndirectCall);
+    SetToLocal(FRI.HasWMMAorConvolve,
+               ResourceInfoKind::RIK_HasWMMAorConvolve);
   }
 
   const MCExpr *RankSumExpr = MCConstantExpr::create(0, OutContext);

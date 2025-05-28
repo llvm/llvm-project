@@ -116,6 +116,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
                              AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT));
 
   Info.NumNamedBarrier = MFI->getNumNamedBarriers();
+  Info.HasWMMAorConvolve = MFI->hasWMMAorConvolve();
 
   // Even if FLAT_SCRATCH is implicitly used, it has no effect if flat
   // instructions aren't used to access the scratch buffer. Inline assembly may

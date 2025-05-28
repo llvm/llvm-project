@@ -43,6 +43,7 @@ public:
     bool HasDynamicallySizedStack = false;
     bool HasRecursion = false;
     bool HasIndirectCall = false;
+    bool HasWMMAorConvolve = false;
     SmallVector<const Function *, 16> Callees;
     SmallVector<MachineInstr *, 8> WavegroupRankCalls;
   };

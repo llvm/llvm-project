@@ -1178,10 +1178,16 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, CreateExpr(1ul),
                                CreateExpr(STM.getMinNumSGPRs(MaxWaves))},
                               Ctx);
-  ProgInfo.NumVGPRsForWavesPerEU =
-      AMDGPUMCExpr::createMax({ProgInfo.NumVGPR, CreateExpr(1ul),
-                               CreateExpr(STM.getMinNumVGPRs(MaxVGPRAllocs))},
-                              Ctx);
+
+  SmallVector<const MCExpr *> MaxExprArgs = {
+      ProgInfo.NumVGPR, CreateExpr(1ul),
+      CreateExpr(STM.getMinNumVGPRs(MaxVGPRAllocs))};
+
+  if (AMDGPU::isGFX13Plus(STM))
+    MaxExprArgs.push_back(MCBinaryExpr::createMul(
+        CreateExpr(32u), GetSymRefExpr(RIK::RIK_HasWMMAorConvolve), Ctx));
+
+  ProgInfo.NumVGPRsForWavesPerEU = AMDGPUMCExpr::createMax(MaxExprArgs, Ctx);
 
   if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
       STM.hasSGPRInitBug()) {

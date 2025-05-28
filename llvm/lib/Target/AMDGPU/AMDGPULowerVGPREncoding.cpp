@@ -642,6 +642,22 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(
     MachineBasicBlock::instr_iterator &MII) {
   MachineInstr &MI = *MII;
+  if (MI.isBundle()) {
+    for (auto &BundledMI :
+         make_range(std::next(MI.getIterator()), MI.getParent()->instr_end())) {
+      if (!BundledMI.isBundledWithPred())
+        break;
+      if (SIInstrInfo::isWMMA(BundledMI) || SIInstrInfo::isSWMMAC(BundledMI) ||
+          SIInstrInfo::isConvolve(BundledMI)) {
+        MFI->setHasWMMAorConvolve();
+        break;
+      }
+    }
+  } else if (SIInstrInfo::isWMMA(MI) || SIInstrInfo::isSWMMAC(MI) ||
+             SIInstrInfo::isConvolve(MI)) {
+    MFI->setHasWMMAorConvolve();
+  }
+
   unsigned Opc = MI.getOpcode();
   if (Opc == AMDGPU::V_LOAD_IDX || Opc == AMDGPU::V_STORE_IDX) {
     lowerIDX(MII);

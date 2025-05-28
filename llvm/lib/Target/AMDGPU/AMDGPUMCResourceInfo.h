@@ -38,7 +38,8 @@ public:
     RIK_HasDynSizedStack,
     RIK_HasRecursion,
     RIK_HasIndirectCall,
-    RIK_NumVGPRRankSum
+    RIK_NumVGPRRankSum,
+    RIK_HasWMMAorConvolve
   };
 
 private:
