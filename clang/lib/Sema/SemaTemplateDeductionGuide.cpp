@@ -1102,7 +1102,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // We might be already within a pack expansion, but rewriting template
   // parameters is independent of that. (We may or may not expand new packs
   // when rewriting. So clear the state)
-  Sema::ArgPackSubstIndexRAII _(SemaRef, std::nullopt);
+  Sema::ArgPackSubstIndexRAII PackSubstReset(SemaRef, std::nullopt);
 
   for (unsigned AliasTemplateParamIdx : DeducedAliasTemplateParams) {
     auto *TP =
