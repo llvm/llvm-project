@@ -1397,3 +1397,52 @@ entry:
   store double %d, ptr %b
   ret i32 0
 }
+
+define tailcc void @f15(double %d, <vscale x 4 x i32> %vs, [9 x i64]) {
+; CHECK-LABEL: f15:
+; CHECK:       .seh_proc f15
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .seh_allocz 1
+; CHECK-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_zreg z8, 0
+; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .seh_allocz 1
+; CHECK-NEXT:    .seh_endprologue
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    stp d0, d0, [sp, #8]
+; CHECK-NEXT:    .seh_startepilogue
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    .seh_allocz 1
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg x28, 0
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_zreg z8, 0
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    .seh_allocz 1
+; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    .seh_stackalloc 80
+; CHECK-NEXT:    .seh_endepilogue
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .seh_endfunclet
+; CHECK-NEXT:    .seh_endproc
+  %a = alloca double
+  %b = alloca <vscale x 16 x i8>
+  tail call void asm sideeffect "", "~{d8},~{x28}"() #1
+  store double %d, ptr %a
+  store double %d, ptr %b
+  ret void
+}

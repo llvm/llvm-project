@@ -2171,34 +2171,34 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   StackOffset SVECalleeSavesSize = {}, SVELocalsSize = SVEStackSize;
-  MachineBasicBlock::iterator CalleeSavesBegin = MBBI, CalleeSavesEnd = MBBI;
+  MachineBasicBlock::iterator CalleeSavesEnd = MBBI;
+
+  StackOffset CFAOffset =
+      StackOffset::getFixed((int64_t)MFI.getStackSize() - NumBytes);
 
   // Process the SVE callee-saves to determine what space needs to be
   // allocated.
   if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
     LLVM_DEBUG(dbgs() << "SVECalleeSavedStackSize = " << CalleeSavedSize
                       << "\n");
+    SVECalleeSavesSize = StackOffset::getScalable(CalleeSavedSize);
+    SVELocalsSize = SVEStackSize - SVECalleeSavesSize;
     // Find callee save instructions in frame.
-    CalleeSavesBegin = MBBI;
+    // Note: With FPAfterSVECalleeSaves the callee saves have already been
+    // allocated.
     if (!FPAfterSVECalleeSaves) {
+      MachineBasicBlock::iterator CalleeSavesBegin = MBBI;
       assert(IsSVECalleeSave(CalleeSavesBegin) && "Unexpected instruction");
       while (IsSVECalleeSave(MBBI) && MBBI != MBB.getFirstTerminator())
         ++MBBI;
+      CalleeSavesEnd = MBBI;
+
+      StackOffset LocalsSize = SVELocalsSize + StackOffset::getFixed(NumBytes);
+      // Allocate space for the callee saves (if any).
+      allocateStackSpace(MBB, CalleeSavesBegin, 0, SVECalleeSavesSize, false,
+                         nullptr, EmitAsyncCFI && !HasFP, CFAOffset,
+                         MFI.hasVarSizedObjects() || LocalsSize);
     }
-    CalleeSavesEnd = MBBI;
-
-    SVECalleeSavesSize = StackOffset::getScalable(CalleeSavedSize);
-    SVELocalsSize = SVEStackSize - SVECalleeSavesSize;
-  }
-
-  // Allocate space for the callee saves (if any).
-  StackOffset CFAOffset =
-      StackOffset::getFixed((int64_t)MFI.getStackSize() - NumBytes);
-  StackOffset LocalsSize = SVELocalsSize + StackOffset::getFixed(NumBytes);
-  if (!FPAfterSVECalleeSaves) {
-    allocateStackSpace(MBB, CalleeSavesBegin, 0, SVECalleeSavesSize, false,
-                       nullptr, EmitAsyncCFI && !HasFP, CFAOffset,
-                       MFI.hasVarSizedObjects() || LocalsSize);
   }
   CFAOffset += SVECalleeSavesSize;
 
@@ -2379,7 +2379,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // Assume we can't combine the last pop with the sp restore.
   bool CombineAfterCSRBump = false;
   if (FPAfterSVECalleeSaves) {
-    AfterCSRPopSize = FixedObject;
+    AfterCSRPopSize += FixedObject;
   } else if (!CombineSPBump && PrologueSaveSize != 0) {
     MachineBasicBlock::iterator Pop = std::prev(MBB.getFirstTerminator());
     while (Pop->getOpcode() == TargetOpcode::CFI_INSTRUCTION ||
@@ -2693,7 +2693,7 @@ AArch64FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
   if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
     if (FPAfterSVECalleeSaves &&
         -ObjectOffset <= (int64_t)AFI->getSVECalleeSavedStackSize())
-      return StackOffset::get(0, ObjectOffset);
+      return StackOffset::getScalable(ObjectOffset);
     return StackOffset::get(-((int64_t)AFI->getCalleeSavedStackSize()),
                             ObjectOffset);
   }
