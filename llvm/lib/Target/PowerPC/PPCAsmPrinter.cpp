@@ -61,6 +61,7 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -254,7 +255,7 @@ private:
       GOAliasMap;
 
   // The __profd_* symbol for the profiling instrumentation data and the
-  // corresponding __profc_* counters it refernces.
+  // corresponding __profc_* counters it references.
   struct ProfilingSubSection {
     MCSectionXCOFF *ProfD;
     MCSectionXCOFF *ProfC;
@@ -2984,15 +2985,26 @@ void PPCAIXAsmPrinter::emitSplitSectionPGORefs() {
   MCSymbol *NamesSym = nullptr;
   MCSymbol *VNDSSym = nullptr;
 
-  if (OutContext.hasXCOFFSection(
-          "__llvm_prf_names",
-          XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD)))
-    NamesSym = OutContext.getOrCreateSymbol("__llvm_prf_names[RO]");
+  auto profSectionName = [](InstrProfSectKind IPSK) -> std::string {
+    return getInstrProfSectionName(IPSK, Triple::XCOFF,
+                                   /* AddSegmentInfo */ false);
+  };
 
   if (OutContext.hasXCOFFSection(
-          "__llvm_prf_vnds",
-          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
-    VNDSSym = OutContext.getOrCreateSymbol("__llvm_prf_vnds[RW]");
+          profSectionName(IPSK_name),
+          XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD))) {
+    std::string SymName = profSectionName(IPSK_name);
+    SymName += "[RO]";
+    NamesSym = OutContext.getOrCreateSymbol(SymName);
+  }
+
+  if (OutContext.hasXCOFFSection(
+          profSectionName(IPSK_vnodes),
+          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD))) {
+    std::string SymName = profSectionName(IPSK_vnodes);
+    SymName += "[RW]";
+    VNDSSym = OutContext.getOrCreateSymbol(SymName);
+  }
 
   for (auto SubSections : ProfGenSubSections) {
     MCSectionXCOFF *ProfDCsect = SubSections.ProfD;
@@ -3010,13 +3022,13 @@ void PPCAIXAsmPrinter::emitSplitSectionPGORefs() {
 
     // Rename the subsection for the counters
     OutStreamer->emitXCOFFRenameDirective(ProfCCsect->getQualNameSymbol(),
-                                          "__llvm_prf_cnts");
+                                          profSectionName(IPSK_cnts));
     OutStreamer->addBlankLine();
 
     // Rename the subsection for the data.
     OutStreamer->switchSection(ProfDCsect);
     OutStreamer->emitXCOFFRenameDirective(ProfDCsect->getQualNameSymbol(),
-                                          "__llvm_prf_data");
+                                          profSectionName(IPSK_data));
     OutStreamer->addBlankLine();
   }
 }

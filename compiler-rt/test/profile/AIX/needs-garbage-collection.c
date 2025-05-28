@@ -10,7 +10,6 @@
 // CHECK-DAG: baz
 // CHECK-DAG: get_message
 
-
 //--- main.c
 const char* get_message(void) {
         return "Hello World!";
@@ -40,7 +39,6 @@ int foo(const char *ptr, unsigned long size) {
 double bar(void) {
         return not_def_two();
 }
-
 
 const char* baz() {
         return get_message();
