@@ -334,7 +334,7 @@ LLVM_C_ABI extern void LLVMRemarkParserDispose(LLVMRemarkParserRef Parser);
  *
  * \since REMARKS_API_VERSION=0
  */
-LLVM_C_ABI extern uint32_t LLVMRemarkVersion(void);
+extern uint32_t LLVMRemarkVersion(void);
 
 /**
  * @} // endgoup LLVMCREMARKS
