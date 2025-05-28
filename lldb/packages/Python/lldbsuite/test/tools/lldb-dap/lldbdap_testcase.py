@@ -1,8 +1,12 @@
 import os
 import time
-from typing import Dict, Optional
-from typing_extensions import Unpack
+from typing import Dict, Optional, TYPE_CHECKING
 import uuid
+
+if TYPE_CHECKING:
+    # FIXME: Add mypy and typing_extensions to the requirements.txt once all
+    # build bots support the library.
+    from typing_extensions import Unpack
 
 from dap_server import (
     DebugAdapterServer,
@@ -399,7 +403,7 @@ class DAPTestCaseBase(TestBase):
         disconnectAutomatically=True,
         sourceInitFile=False,
         expectFailure=False,
-        **kwargs: Unpack[AttachArguments],
+        **kwargs: "Unpack[AttachArguments]",
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
@@ -432,7 +436,7 @@ class DAPTestCaseBase(TestBase):
         sourceInitFile=False,
         disconnectAutomatically=True,
         expectFailure=False,
-        **kwargs: Unpack[LaunchArguments],
+        **kwargs: "Unpack[LaunchArguments]",
     ):
         """Sending launch request to dap"""
 
@@ -464,7 +468,7 @@ class DAPTestCaseBase(TestBase):
         /,
         *,
         adapter_env: Optional[Dict[str, str]] = None,
-        **kwargs: Unpack[LaunchArguments],
+        **kwargs: "Unpack[LaunchArguments]",
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and launch the process.

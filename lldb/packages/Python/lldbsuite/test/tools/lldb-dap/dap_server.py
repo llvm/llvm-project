@@ -27,8 +27,13 @@ from typing import (
     TypeVar,
     Generic,
     cast,
+    TYPE_CHECKING,
 )
-from typing_extensions import Unpack
+
+if TYPE_CHECKING:
+    # FIXME: Add mypy and typing_extensions to the requirements.txt once all
+    # build bots support the library.
+    from typing_extensions import Unpack
 
 ## DAP type references
 
@@ -740,10 +745,9 @@ class DebugCommunication(object):
                     print("error: didn't get a valid response")
                 mode = "invalid"
 
-    def request_attach(self, **kwargs: Unpack[AttachArguments]):
+    def request_attach(self, **kwargs: "Unpack[AttachArguments]"):
         # Remove any default (empty) values.
         attach_args = cast(AttachArguments, {k: v for k, v in kwargs.items() if v})
-        attach_args.setdefault("disableASLR", True)
         attach_args.setdefault("initCommands", [])
         attach_args["initCommands"] = [
             *self.init_commands,
@@ -932,7 +936,7 @@ class DebugCommunication(object):
                 self.initialize_body = response["body"]
         return response
 
-    def request_launch(self, **kwargs: Unpack[LaunchArguments]):
+    def request_launch(self, **kwargs: "Unpack[LaunchArguments]"):
         # Remove any default (empty) values.
         launch_args = cast(LaunchArguments, {k: v for k, v in kwargs.items() if v})
         launch_args.setdefault("initCommands", [])
