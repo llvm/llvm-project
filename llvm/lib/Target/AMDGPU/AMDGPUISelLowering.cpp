@@ -4167,7 +4167,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
 
   // For C >= 32
   // (sra i64:x, C) -> build_pair (sra hi_32(x), C - 32), (sra hi_32(x), 31)
-  if (32 <= RHSVal) {
+  if (RHSVal >= 32) {
     SDValue Hi = getHiHalf64(N->getOperand(0), DAG);
     Hi = DAG.getFreeze(Hi);
     SDValue HiShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
