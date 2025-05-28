@@ -7848,10 +7848,13 @@ static void AddMethodTemplateCandidateImmediately(
           /*PartialOrdering=*/false, ObjectType, ObjectClassification,
           CandidateSet.getKind() ==
               clang::OverloadCandidateSet::CSK_AddressOfOverloadSet,
-          [&](ArrayRef<QualType> ParamTypes, bool SkipUserDefinedConversions) {
+          [&](ArrayRef<QualType> ParamTypes,
+              bool OnlyInitializeNonUserDefinedConversions) {
             return S.CheckNonDependentConversions(
                 MethodTmpl, ParamTypes, Args, CandidateSet, Conversions,
-                SuppressUserConversions, SkipUserDefinedConversions,
+                Sema::CheckNonDependentConversionsFlag(
+                    SuppressUserConversions,
+                    OnlyInitializeNonUserDefinedConversions),
                 ActingContext, ObjectType, ObjectClassification, PO);
           });
       Result != TemplateDeductionResult::Success) {
@@ -7964,11 +7967,14 @@ static void AddTemplateOverloadCandidateImmediately(
           /*ObjectClassification=*/Expr::Classification(),
           CandidateSet.getKind() ==
               OverloadCandidateSet::CSK_AddressOfOverloadSet,
-          [&](ArrayRef<QualType> ParamTypes, bool SkipUserDefinedConversions) {
+          [&](ArrayRef<QualType> ParamTypes,
+              bool OnlyInitializeNonUserDefinedConversions) {
             return S.CheckNonDependentConversions(
                 FunctionTemplate, ParamTypes, Args, CandidateSet, Conversions,
-                SuppressUserConversions, SkipUserDefinedConversions, nullptr,
-                QualType(), {}, PO);
+                Sema::CheckNonDependentConversionsFlag(
+                    SuppressUserConversions,
+                    OnlyInitializeNonUserDefinedConversions),
+                nullptr, QualType(), {}, PO);
           });
       Result != TemplateDeductionResult::Success) {
     OverloadCandidate &Candidate =
@@ -8042,10 +8048,10 @@ void Sema::AddTemplateOverloadCandidate(
 bool Sema::CheckNonDependentConversions(
     FunctionTemplateDecl *FunctionTemplate, ArrayRef<QualType> ParamTypes,
     ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
-    ConversionSequenceList &Conversions, bool SuppressUserConversions,
-    bool SkipUserDefinedConversions, CXXRecordDecl *ActingContext,
-    QualType ObjectType, Expr::Classification ObjectClassification,
-    OverloadCandidateParamOrder PO) {
+    ConversionSequenceList &Conversions,
+    CheckNonDependentConversionsFlag UserConversionFlag,
+    CXXRecordDecl *ActingContext, QualType ObjectType,
+    Expr::Classification ObjectClassification, OverloadCandidateParamOrder PO) {
   // FIXME: The cases in which we allow explicit conversions for constructor
   // arguments never consider calling a constructor template. It's not clear
   // that is correct.
@@ -8144,16 +8150,14 @@ bool Sema::CheckNonDependentConversions(
       }
       if (Conversions[ConvIdx].isInitialized())
         continue;
-      if (SkipUserDefinedConversions &&
+      if (UserConversionFlag.OnlyInitializeNonUserDefinedConversions &&
           MaybeInvolveUserDefinedConversion(ParamType, Args[I]->getType()))
         continue;
-      Conversions[ConvIdx]
-        = TryCopyInitialization(*this, Args[I], ParamType,
-                                SuppressUserConversions,
-                                /*InOverloadResolution=*/true,
-                                /*AllowObjCWritebackConversion=*/
-                                  getLangOpts().ObjCAutoRefCount,
-                                AllowExplicit);
+      Conversions[ConvIdx] = TryCopyInitialization(
+          *this, Args[I], ParamType, UserConversionFlag.SuppressUserConversions,
+          /*InOverloadResolution=*/true,
+          /*AllowObjCWritebackConversion=*/
+          getLangOpts().ObjCAutoRefCount, AllowExplicit);
       if (Conversions[ConvIdx].isBad())
         return true;
     }

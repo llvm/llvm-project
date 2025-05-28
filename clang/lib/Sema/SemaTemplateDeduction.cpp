@@ -3926,7 +3926,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     Owner = FunctionTemplate->getLexicalDeclContext();
   FunctionDecl *FD = FunctionTemplate->getTemplatedDecl();
 
-  if (CheckNonDependent(/*SkipUserDefinedConversions=*/true))
+  if (CheckNonDependent(/*OnlyInitializeNonUserDefinedConversions=*/true))
     return TemplateDeductionResult::NonDependentConversionFailure;
 
   // C++20 [temp.deduct.general]p5: [CWG2369]
@@ -3959,7 +3959,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   P with a type that was non-dependent before substitution of any
   //   explicitly-specified template arguments, if the corresponding argument
   //   A cannot be implicitly converted to P, deduction fails.
-  if (CheckNonDependent(/*SkipUserDefinedConversions=*/false))
+  if (CheckNonDependent(/*OnlyInitializeNonUserDefinedConversions=*/false))
     return TemplateDeductionResult::NonDependentConversionFailure;
 
   MultiLevelTemplateArgumentList SubstArgs(
@@ -4679,9 +4679,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     Result = FinishTemplateArgumentDeduction(
         FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
         &OriginalCallArgs, PartialOverloading, PartialOrdering,
-        [&, CallingCtx](bool NonInstOnly) {
+        [&, CallingCtx](bool OnlyInitializeNonUserDefinedConversions) {
           ContextRAII SavedContext(*this, CallingCtx);
-          return CheckNonDependent(ParamTypesForArgChecking, NonInstOnly);
+          return CheckNonDependent(ParamTypesForArgChecking,
+                                   OnlyInitializeNonUserDefinedConversions);
         });
   });
   return Result;

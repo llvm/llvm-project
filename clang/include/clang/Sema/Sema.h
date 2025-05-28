@@ -10499,15 +10499,35 @@ public:
       OverloadCandidateParamOrder PO = {},
       bool AggregateCandidateDeduction = false);
 
+  struct CheckNonDependentConversionsFlag {
+    /// Do not consider any user-defined conversions when constructing the
+    /// initializing sequence.
+    bool SuppressUserConversions;
+
+    /// Before constructing the initializing sequence, we check whether the
+    /// parameter type and argument type contain any user defined conversions.
+    /// If so, do not initialize them. This effectively bypasses some undesired
+    /// instantiation before checking constaints, which might otherwise result
+    /// in non-SFINAE errors e.g. recursive constraints.
+    bool OnlyInitializeNonUserDefinedConversions;
+
+    CheckNonDependentConversionsFlag(
+        bool SuppressUserConversions,
+        bool OnlyInitializeNonUserDefinedConversions)
+        : SuppressUserConversions(SuppressUserConversions),
+          OnlyInitializeNonUserDefinedConversions(
+              OnlyInitializeNonUserDefinedConversions) {}
+  };
+
   /// Check that implicit conversion sequences can be formed for each argument
   /// whose corresponding parameter has a non-dependent type, per DR1391's
   /// [temp.deduct.call]p10.
   bool CheckNonDependentConversions(
       FunctionTemplateDecl *FunctionTemplate, ArrayRef<QualType> ParamTypes,
       ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
-      ConversionSequenceList &Conversions, bool SuppressUserConversions,
-      bool SkipUserDefinedConversions, CXXRecordDecl *ActingContext = nullptr,
-      QualType ObjectType = QualType(),
+      ConversionSequenceList &Conversions,
+      CheckNonDependentConversionsFlag UserConversionFlag,
+      CXXRecordDecl *ActingContext = nullptr, QualType ObjectType = QualType(),
       Expr::Classification ObjectClassification = {},
       OverloadCandidateParamOrder PO = {});
 
@@ -12549,9 +12569,10 @@ public:
   /// \param OriginalCallArgs If non-NULL, the original call arguments against
   /// which the deduced argument types should be compared.
   /// \param CheckNonDependent Callback before substituting into the declaration
-  /// with the deduced template arguments. \param SkipUserDefinedConversion is
-  /// used as a workaround for some breakages introduced by CWG2369, where
-  /// non-user-defined conversions are checked before constraints.
+  /// with the deduced template arguments.
+  /// \param OnlyInitializeNonUserDefinedConversions is used as a workaround for
+  /// some breakages introduced by CWG2369, where non-user-defined conversions
+  /// are checked first before the constraints.
   TemplateDeductionResult FinishTemplateArgumentDeduction(
       FunctionTemplateDecl *FunctionTemplate,
       SmallVectorImpl<DeducedTemplateArgument> &Deduced,
@@ -12560,7 +12581,9 @@ public:
       SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
       bool PartialOverloading, bool PartialOrdering,
       llvm::function_ref<bool(bool)> CheckNonDependent =
-          [](bool /*SkipUserDefinedConversion*/) { return false; });
+          [](bool /*OnlyInitializeNonUserDefinedConversions*/) {
+            return false;
+          });
 
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
