@@ -1087,6 +1087,7 @@ public:
     NoCand,
     Only1,
     PhysReg,
+    LivenessReduce,
     RegExcess,
     RegCritical,
     Stall,
@@ -1221,6 +1222,7 @@ private:
 };
 
 // Utility functions used by heuristics in tryCandidate().
+unsigned computeRemLatency(SchedBoundary &CurrZone);
 bool tryLess(int TryVal, int CandVal,
              GenericSchedulerBase::SchedCandidate &TryCand,
              GenericSchedulerBase::SchedCandidate &Cand,
