@@ -376,7 +376,12 @@ _Static_assert(0 == _Generic(nontag, struct     {int i;}:1, default:0));
 // at the translation unit level).
 void nontag_func_test(void) {
   struct { int i; } test;
-  _Static_assert(0 == _Generic(test , struct { int i; } : 1, default : 0));
+  _Static_assert(0 == _Generic(test, struct { int i; } : 1, default : 0));
+}
+
+// Same kind of test, but this time for a declaration in the parameter list.
+void nontag_param_test(struct { int i; } herp) {
+  _Static_assert(0 == _Generic(herp, struct { int i; } : 1, default : 0));
 }
 
 struct InnerAnonStruct {
