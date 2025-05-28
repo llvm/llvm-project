@@ -236,6 +236,11 @@ public:
     return isFreeToInvert(V, WillInvertAllUses, Unused);
   }
 
+  /// If `Not` is true, returns true if V is a negative power of 2 or zero.
+  /// If `Not` is false, returns true if V is a Mask or zero.
+  bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
+                    unsigned Depth = 0);
+
   /// Given i1 V, can every user of V be freely adapted if V is changed to !V ?
   /// InstCombine's freelyInvertAllUsersOf() must be kept in sync with this fn.
   /// NOTE: for Instructions only!

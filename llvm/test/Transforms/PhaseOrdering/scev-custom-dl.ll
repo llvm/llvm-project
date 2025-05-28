@@ -141,14 +141,14 @@ define i32 @test_loop_idiom_recogize(i32 %x, i32 %y, ptr %lam, ptr %alp) nounwin
 ; CHECK-NEXT:  Classifying expressions for: @test_loop_idiom_recogize
 ; CHECK-NEXT:    %indvar = phi i32 [ 0, %bb1.thread ], [ %indvar.next, %bb1 ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,256) S: [0,256) Exits: 255 LoopDispositions: { %bb1: Computable }
-; CHECK-NEXT:    %i.0.reg2mem.0 = sub nuw nsw i32 255, %indvar
-; CHECK-NEXT:    --> {255,+,-1}<nsw><%bb1> U: [0,256) S: [0,256) Exits: 0 LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    %i.0.reg2mem.0 = xor i32 %indvar, 255
+; CHECK-NEXT:    --> %i.0.reg2mem.0 U: [0,-2147483648) S: [0,-2147483648) Exits: 0 LoopDispositions: { %bb1: Variant }
 ; CHECK-NEXT:    %0 = getelementptr i32, ptr %alp, i32 %i.0.reg2mem.0
-; CHECK-NEXT:    --> {(1020 + %alp),+,-4}<nw><%bb1> U: full-set S: full-set Exits: %alp LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> ((4 * %i.0.reg2mem.0) + %alp) U: full-set S: full-set Exits: %alp LoopDispositions: { %bb1: Variant }
 ; CHECK-NEXT:    %1 = load i32, ptr %0, align 4
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Variant }
 ; CHECK-NEXT:    %2 = getelementptr i32, ptr %lam, i32 %i.0.reg2mem.0
-; CHECK-NEXT:    --> {(1020 + %lam),+,-4}<nw><%bb1> U: full-set S: full-set Exits: %lam LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> ((4 * %i.0.reg2mem.0) + %lam) U: full-set S: full-set Exits: %lam LoopDispositions: { %bb1: Variant }
 ; CHECK-NEXT:    %indvar.next = add nuw nsw i32 %indvar, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb1> U: [1,257) S: [1,257) Exits: 256 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp10 = mul i32 %x, 255

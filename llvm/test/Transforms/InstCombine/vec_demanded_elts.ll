@@ -218,7 +218,7 @@ define <3 x i8> @shuf_add(<3 x i8> %x) {
 
 define <3 x i8> @shuf_sub(<3 x i8> %x) {
 ; CHECK-LABEL: @shuf_sub(
-; CHECK-NEXT:    [[BO:%.*]] = sub nuw <3 x i8> <i8 1, i8 poison, i8 3>, [[X:%.*]]
+; CHECK-NEXT:    [[BO:%.*]] = xor <3 x i8> [[X:%.*]], <i8 1, i8 poison, i8 3>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i8> [[BO]], <3 x i8> poison, <3 x i32> <i32 0, i32 poison, i32 2>
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;

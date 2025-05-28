@@ -2789,6 +2789,12 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
+  // Canonicalize (sub nuw Mask, X) -> (xor Mask, X)
+  if (I.hasNoUnsignedWrap() &&
+      isMaskOrZero(Op0, /*Not=*/false,
+                   getSimplifyQuery().getWithInstruction(&I)))
+    return BinaryOperator::CreateXor(Op0, Op1);
+
   return TryToNarrowDeduceFlags();
 }
 

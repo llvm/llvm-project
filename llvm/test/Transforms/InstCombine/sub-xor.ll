@@ -166,7 +166,7 @@ define i32 @xor_dominating_cond(i32 %x) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X:%.*]], 256
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[A:%.*]] = sub nuw nsw i32 255, [[X]]
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X]], 255
 ; CHECK-NEXT:    ret i32 [[A]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 [[X]]
