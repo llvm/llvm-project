@@ -9,6 +9,8 @@
 #ifndef LLVM_OBJCOPY_ELF_ELFOBJCOPY_H
 #define LLVM_OBJCOPY_ELF_ELFOBJCOPY_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Error;
 class MemoryBuffer;

@@ -176,8 +176,8 @@ public:
 // Explicit extern template declarations.
 struct XCOFFSectionHeader32;
 struct XCOFFSectionHeader64;
-extern template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
-extern template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
+extern template struct LLVM_TEMPLATE_ABI XCOFFSectionHeader<XCOFFSectionHeader32>;
+extern template struct LLVM_TEMPLATE_ABI XCOFFSectionHeader<XCOFFSectionHeader64>;
 
 struct XCOFFSectionHeader32 : XCOFFSectionHeader<XCOFFSectionHeader32> {
   char Name[XCOFF::NameSize];
@@ -318,8 +318,8 @@ typedef ExceptionSectionEntry<support::ubig32_t> ExceptionSectionEntry32;
 typedef ExceptionSectionEntry<support::ubig64_t> ExceptionSectionEntry64;
 
 // Explicit extern template declarations.
-extern template struct ExceptionSectionEntry<support::ubig32_t>;
-extern template struct ExceptionSectionEntry<support::ubig64_t>;
+extern template struct LLVM_TEMPLATE_ABI ExceptionSectionEntry<support::ubig32_t>;
+extern template struct LLVM_TEMPLATE_ABI ExceptionSectionEntry<support::ubig64_t>;
 
 struct XCOFFStringTable {
   uint32_t Size;
@@ -521,8 +521,8 @@ public:
   uint8_t getRelocatedLength() const;
 };
 
-extern template struct XCOFFRelocation<llvm::support::ubig32_t>;
-extern template struct XCOFFRelocation<llvm::support::ubig64_t>;
+extern template struct LLVM_TEMPLATE_ABI XCOFFRelocation<llvm::support::ubig32_t>;
+extern template struct LLVM_TEMPLATE_ABI XCOFFRelocation<llvm::support::ubig64_t>;
 
 struct XCOFFRelocation32 : XCOFFRelocation<llvm::support::ubig32_t> {};
 struct XCOFFRelocation64 : XCOFFRelocation<llvm::support::ubig64_t> {};

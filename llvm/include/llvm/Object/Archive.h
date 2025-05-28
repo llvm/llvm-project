@@ -75,7 +75,7 @@ public:
 };
 
 template <typename T>
-class CommonArchiveMemberHeader : public AbstractArchiveMemberHeader {
+class LLVM_ABI CommonArchiveMemberHeader : public AbstractArchiveMemberHeader {
 public:
   CommonArchiveMemberHeader(const Archive *Parent, const T *RawHeaderPtr)
       : AbstractArchiveMemberHeader(Parent), ArMemHdr(RawHeaderPtr){};
@@ -331,6 +331,10 @@ public:
 
   Archive(MemoryBufferRef Source, Error &Err);
   static Expected<std::unique_ptr<Archive>> create(MemoryBufferRef Source);
+
+  // Explicitly non-copyable.
+  Archive(Archive const&) = delete;
+  Archive& operator=(Archive const&) = delete;
 
   /// Size field is 10 decimal digits long
   static const uint64_t MaxMemberSize = 9999999999;
