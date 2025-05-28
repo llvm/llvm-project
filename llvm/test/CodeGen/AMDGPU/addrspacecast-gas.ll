@@ -41,7 +41,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ; GFX1250-GISEL-NEXT:    s_and_b32 s1, 1, s1
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-GISEL-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s1
-; GFX1250-GISEL-NEXT:    v_dual_cndmask_b32 v1, 0, v1 :: v_dual_cndmask_b32 v0, 0, v0
+; GFX1250-GISEL-NEXT:    v_dual_cndmask_b32 v0, 0, v0 :: v_dual_cndmask_b32 v1, 0, v1
 ; GFX1250-GISEL-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    s_endpgm
