@@ -878,7 +878,7 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   assert(Literal.isIntegerLiteral() &&
          "NumSpelling can only consist of digits");
 
-  llvm::APSInt Val = llvm::APSInt(32, /*IsUnsigned=*/true);
+  llvm::APSInt Val(32, /*IsUnsigned=*/true);
   if (Literal.GetIntegerValue(Val)) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
@@ -901,7 +901,7 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
   assert(Literal.isIntegerLiteral() &&
          "NumSpelling can only consist of digits");
 
-  llvm::APSInt Val = llvm::APSInt(32, /*IsUnsigned=*/true);
+  llvm::APSInt Val(32, /*IsUnsigned=*/true);
   // GetIntegerValue will overwrite Val from the parsed Literal and return
   // true if it overflows as a 32-bit unsigned int. Then check that it also
   // doesn't overflow as a signed 32-bit int.
@@ -937,9 +937,8 @@ std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
   auto DXCSemantics = llvm::APFloat::Semantics::S_IEEEdouble;
   auto DXCRoundingMode = llvm::RoundingMode::NearestTiesToEven;
 
-  llvm::APFloat Val =
-      llvm::APFloat(llvm::APFloat::EnumToSemantics(DXCSemantics));
-  llvm::APFloat::opStatus Status = Literal.GetFloatValue(Val, DXCRoundingMode);
+  llvm::APFloat Val(llvm::APFloat::EnumToSemantics(DXCSemantics));
+  llvm::APFloat::opStatus Status(Literal.GetFloatValue(Val, DXCRoundingMode));
 
   // Note: we do not error when opStatus::opInexact by itself as this just
   // denotes that rounding occured but not that it is invalid
