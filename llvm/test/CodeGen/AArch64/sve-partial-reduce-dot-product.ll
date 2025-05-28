@@ -202,10 +202,10 @@ define <vscale x 4 x i64> @udot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING-SVE:       // %bb.0: // %entry
 ; CHECK-NEWLOWERING-SVE-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEWLOWERING-SVE-NEXT:    udot z4.s, z2.b, z3.b
-; CHECK-NEWLOWERING-SVE-NEXT:    uunpkhi z2.d, z4.s
-; CHECK-NEWLOWERING-SVE-NEXT:    uunpklo z3.d, z4.s
-; CHECK-NEWLOWERING-SVE-NEXT:    add z2.d, z3.d, z2.d
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpklo z2.d, z4.s
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpkhi z3.d, z4.s
 ; CHECK-NEWLOWERING-SVE-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEWLOWERING-SVE-NEXT:    add z0.d, z0.d, z3.d
 ; CHECK-NEWLOWERING-SVE-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-SVE2-LABEL: udot_8to64:
@@ -247,10 +247,10 @@ define <vscale x 4 x i64> @sdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING-SVE:       // %bb.0: // %entry
 ; CHECK-NEWLOWERING-SVE-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEWLOWERING-SVE-NEXT:    sdot z4.s, z2.b, z3.b
-; CHECK-NEWLOWERING-SVE-NEXT:    sunpkhi z2.d, z4.s
-; CHECK-NEWLOWERING-SVE-NEXT:    sunpklo z3.d, z4.s
-; CHECK-NEWLOWERING-SVE-NEXT:    add z2.d, z3.d, z2.d
+; CHECK-NEWLOWERING-SVE-NEXT:    sunpklo z2.d, z4.s
+; CHECK-NEWLOWERING-SVE-NEXT:    sunpkhi z3.d, z4.s
 ; CHECK-NEWLOWERING-SVE-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEWLOWERING-SVE-NEXT:    add z0.d, z0.d, z3.d
 ; CHECK-NEWLOWERING-SVE-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-SVE2-LABEL: sdot_8to64:
