@@ -7568,7 +7568,8 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
            "start value");
     MainResumeValue = Cmp->getOperand(0);
   } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-                 RdxDesc.getRecurrenceKind())) {
+                 RdxDesc.getRecurrenceKind()) &&
+             RdxDesc.getSentinelValue()) {
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
     bool IsExpectedPattern =
@@ -9625,7 +9626,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // Adjust the start value for FindLastIV recurrences to use the sentinel
       // value after generating the ResumePhi recipe, which uses the original
       // start value.
-      PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
+      if (auto *Sentinel = RdxDesc.getSentinelValue())
+        PhiR->setOperand(0, Plan->getOrAddLiveIn(Sentinel));
     }
   }
   for (VPRecipeBase *R : ToDelete)
@@ -10114,7 +10116,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         IRBuilder<> Builder(PBB, PBB->getFirstNonPHIIt());
         ResumeV =
             Builder.CreateICmpNE(ResumeV, RdxDesc.getRecurrenceStartValue());
-      } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+      } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
+                 RdxDesc.getSentinelValue()) {
         ToFrozen[RdxDesc.getRecurrenceStartValue()] =
             cast<PHINode>(ResumeV)->getIncomingValueForBlock(
                 EPI.MainLoopIterationCountCheck);

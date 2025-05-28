@@ -1247,15 +1247,17 @@ Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
   assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
              Desc.getRecurrenceKind()) &&
          "Unexpected reduction kind");
-  Value *Sentinel = Desc.getSentinelValue();
-  Value *MaxRdx = Src->getType()->isVectorTy()
+  Value *Result = Src->getType()->isVectorTy()
                       ? Builder.CreateIntMaxReduce(Src, true)
                       : Src;
   // Correct the final reduction result back to the start value if the maximum
   // reduction is sentinel value.
-  Value *Cmp =
-      Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
-  return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
+  if (Value *Sentinel = Desc.getSentinelValue()) {
+    Value *Cmp =
+        Builder.CreateCmp(CmpInst::ICMP_NE, Result, Sentinel, "rdx.select.cmp");
+    Result = Builder.CreateSelect(Cmp, Result, Start, "rdx.select");
+  }
+  return Result;
 }
 
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,

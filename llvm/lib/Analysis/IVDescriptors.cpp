@@ -288,6 +288,8 @@ bool RecurrenceDescriptor::AddReductionVar(
   // The first instruction in the use-def chain of the Phi node that requires
   // exact floating point operations.
   Instruction *ExactFPMathInst = nullptr;
+  // Record the sentinel value on demand.
+  Value *SentinelValue = nullptr;
 
   // A value in the reduction can be used:
   //  - By the reduction:
@@ -376,6 +378,10 @@ bool RecurrenceDescriptor::AddReductionVar(
       ExactFPMathInst = ExactFPMathInst == nullptr
                             ? ReduxDesc.getExactFPMathInst()
                             : ExactFPMathInst;
+      if (auto *Sentinel = ReduxDesc.getSentinelValue()) {
+        assert(!SentinelValue && "Sentinel value can only be assigned once");
+        SentinelValue = Sentinel;
+      }
       if (!ReduxDesc.isRecurrence())
         return false;
       // FIXME: FMF is allowed on phi, but propagation is not handled correctly.
@@ -596,7 +602,8 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Save the description of this reduction variable.
   RecurrenceDescriptor RD(RdxStart, ExitInstruction, IntermediateStore, Kind,
                           FMF, ExactFPMathInst, RecurrenceType, IsSigned,
-                          IsOrdered, CastInsts, MinWidthCastToRecurrenceType);
+                          IsOrdered, CastInsts, MinWidthCastToRecurrenceType,
+                          SentinelValue);
   RedDes = RD;
 
   return true;
@@ -700,18 +707,18 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
                                      m_Value(NonRdxPhi)))))
     return InstDesc(false, I);
 
-  auto IsIncreasingLoopInduction = [&](Value *V) {
+  auto IsIncreasingLoopInduction = [&](Value *V) -> std::pair<bool, Value *> {
     Type *Ty = V->getType();
     if (!SE.isSCEVable(Ty))
-      return false;
+      return {false, nullptr};
 
     auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(V));
     if (!AR || AR->getLoop() != TheLoop)
-      return false;
+      return {false, nullptr};
 
     const SCEV *Step = AR->getStepRecurrence(SE);
     if (!SE.isKnownPositive(Step))
-      return false;
+      return {false, nullptr};
 
     const ConstantRange IVRange = SE.getSignedRange(AR);
     unsigned NumBits = Ty->getIntegerBitWidth();
@@ -730,17 +737,32 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
                       << IVRange << "\n");
     // Ensure the induction variable does not wrap around by verifying that its
     // range is fully contained within the valid range.
-    return ValidRange.contains(IVRange);
+    if (!ValidRange.contains(IVRange))
+      return {false, nullptr};
+
+    // No sentinel is needed if it can be proven that the start value of
+    // reduction is strictly less than the start value of increasing induction
+    // variable.
+    if (auto *ConstIVStart = dyn_cast<SCEVConstant>(AR->getStart())) {
+      Value *RdxStart =
+          OrigPhi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
+      if (auto *ConstRdxStart = dyn_cast<ConstantInt>(RdxStart))
+        if (ConstRdxStart->getValue().slt(ConstIVStart->getAPInt()))
+          return {true, nullptr};
+    }
+
+    return {true, ConstantInt::get(Ty, Sentinel)};
   };
 
   // We are looking for selects of the form:
   //   select(cmp(), phi, increasing_loop_induction) or
   //   select(cmp(), increasing_loop_induction, phi)
   // TODO: Support for monotonically decreasing induction variable
-  if (!IsIncreasingLoopInduction(NonRdxPhi))
+  auto [IsRecurrence, Sentinel] = IsIncreasingLoopInduction(NonRdxPhi);
+  if (!IsRecurrence)
     return InstDesc(false, I);
 
-  return InstDesc(I, RecurKind::FindLastIV);
+  return InstDesc(I, RecurKind::FindLastIV, Sentinel);
 }
 
 RecurrenceDescriptor::InstDesc

@@ -82,11 +82,12 @@ public:
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy)
+                       unsigned MinWidthCastToRecurTy, Value *Sentinel)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
-        MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
+        MinWidthCastToRecurrenceType(MinWidthCastToRecurTy),
+        SentinelValue(Sentinel) {
     CastInsts.insert_range(CI);
   }
 
@@ -97,9 +98,10 @@ public:
         : IsRecurrence(IsRecur), PatternLastInst(I),
           RecKind(RecurKind::None), ExactFPMathInst(ExactFP) {}
 
-    InstDesc(Instruction *I, RecurKind K, Instruction *ExactFP = nullptr)
+    InstDesc(Instruction *I, RecurKind K, Value *Sentinel = nullptr,
+             Instruction *ExactFP = nullptr)
         : IsRecurrence(true), PatternLastInst(I), RecKind(K),
-          ExactFPMathInst(ExactFP) {}
+          ExactFPMathInst(ExactFP), SentinelValue(Sentinel) {}
 
     bool isRecurrence() const { return IsRecurrence; }
 
@@ -111,6 +113,8 @@ public:
 
     Instruction *getPatternInst() const { return PatternLastInst; }
 
+    Value *getSentinelValue() const { return SentinelValue; }
+
   private:
     // Is this instruction a recurrence candidate.
     bool IsRecurrence;
@@ -121,6 +125,9 @@ public:
     RecurKind RecKind;
     // Recurrence does not allow floating-point reassociation.
     Instruction *ExactFPMathInst;
+    // The value is used to replace the start value if required by the
+    // recurrence.
+    Value *SentinelValue = nullptr;
   };
 
   /// Returns a struct describing if the instruction 'I' can be a recurrence
@@ -271,9 +278,7 @@ public:
   /// value.
   Value *getSentinelValue() const {
     assert(isFindLastIVRecurrenceKind(Kind) && "Unexpected recurrence kind");
-    Type *Ty = StartValue->getType();
-    return ConstantInt::get(Ty,
-                            APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+    return SentinelValue;
   }
 
   /// Returns a reference to the instructions used for type-promoting the
@@ -332,6 +337,8 @@ private:
   SmallPtrSet<Instruction *, 8> CastInsts;
   // The minimum width used by the recurrence.
   unsigned MinWidthCastToRecurrenceType;
+  /// The value used to represent the starting value.
+  Value *SentinelValue = nullptr;
 };
 
 /// A struct for saving information about induction variables.
