@@ -461,12 +461,11 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     if (!CurGEP->collectOffset(DL, BW, LocalVarsOffsets, ConstOffset))
       return nullptr;
 
-    // Merge any variable-index contributions into the accumulated VarOffsets
-    // map.
-    // Only a single pointer variable is allowed in the entire GEP chain.
-    // If VarOffsets already holds a different pointer, abort.
+    // Merge index contributions from this GEP into VarOffsets.
+    // Only one dynamic index is allowed in the entire GEP chain.
+    // Abort if a different index variable is encountered.
     for (auto &[Var, Offset] : LocalVarsOffsets) {
-      // If VarOffsets already records a different pointer, abort.
+      // If VarOffsets already records a different variable index, abort.
       if (!VarOffsets.empty() && !VarOffsets.contains(Var))
         return nullptr;
 
