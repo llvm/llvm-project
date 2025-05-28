@@ -1823,8 +1823,8 @@ defm ULessThan :  SpecConstantOpOperandsOperand<176, [], []>;
 defm SLessThan :  SpecConstantOpOperandsOperand<177, [], []>;
 defm UGreaterThan :  SpecConstantOpOperandsOperand<172, [], []>;
 defm SGreaterThan :  SpecConstantOpOperandsOperand<173, [], []>;
-defm ULessThanEqual :  SpecConstantOpOperandsOperand<176, [], []>;
-defm SLessThanEqual :  SpecConstantOpOperandsOperand<178, [], []>;
+defm ULessThanEqual :  SpecConstantOpOperandsOperand<178, [], []>;
+defm SLessThanEqual :  SpecConstantOpOperandsOperand<179, [], []>;
 defm UGreaterThanEqual :  SpecConstantOpOperandsOperand<174, [], []>;
 defm SGreaterThanEqual :  SpecConstantOpOperandsOperand<175, [], []>;
 // Memory
