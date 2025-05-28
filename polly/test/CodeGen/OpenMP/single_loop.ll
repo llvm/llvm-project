@@ -86,7 +86,7 @@
 ; IR-STRIDE4:   call void @GOMP_parallel_loop_runtime_start(ptr @single_parallel_loop_polly_subfn, ptr %polly.par.userContext, i32 0, i64 0, i64 1024, i64 4)
 ; IR-STRIDE4:  add nsw i64 %polly.indvar, 3
 ; IR-STRIDE4:  %polly.indvar_next = add nsw i64 %polly.indvar, 4
-; IR-STRIDE4   %polly.adjust_ub = sub i64 %polly.par.UBAdjusted, 4
+; IR-STRIDE4:  %polly.adjust_ub = sub i64 %polly.par.UBAdjusted, 4
 
 ; LIBOMP-IR-STATIC-CHUNKED: %struct.ident_t = type { i32, i32, i32, i32, ptr }
 
