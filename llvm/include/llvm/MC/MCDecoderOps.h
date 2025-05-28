@@ -21,7 +21,7 @@ enum DecoderOps {
   OPC_FilterValueOrFail,    // OPC_FilterValueOrFail(uleb128 Val)
   OPC_CheckField,           // OPC_CheckField(uleb128 Start, uint8_t Len,
                             //                uleb128 Val, nts_t NumToSkip)
-  OPC_CheckFieldOrFail,     // OPC_ChecFieldOrFail(uleb128 Start, uint8_t Len,
+  OPC_CheckFieldOrFail,     // OPC_CheckFieldOrFail(uleb128 Start, uint8_t Len,
                             //                uleb128 Val)
   OPC_CheckPredicate,       // OPC_CheckPredicate(uleb128 PIdx, nts_t NumToSkip)
   OPC_CheckPredicateOrFail, // OPC_CheckPredicateOrFail(uleb128 PIdx)
