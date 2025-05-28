@@ -62,7 +62,8 @@ LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
 /// `BufferizableOpInterface`. The buffer types of tensor block arguments are
 /// computed with `BufferizableOpIntercace::getBufferType`.
 LogicalResult bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
-                                      const BufferizationOptions &options);
+                                      const BufferizationOptions &options,
+                                      BufferizationState &state);
 
 } // namespace bufferization
 } // namespace mlir

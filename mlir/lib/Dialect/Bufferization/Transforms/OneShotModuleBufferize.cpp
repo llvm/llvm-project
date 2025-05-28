@@ -584,7 +584,7 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
     if (options.noAnalysisFuncFilter.empty()) {
-      if (failed(insertTensorCopies(moduleOp, options, statistics)))
+      if (failed(insertTensorCopies(moduleOp, options, state, statistics)))
         return failure();
     } else {
       // FuncOps whose names are specified in options.noAnalysisFuncFilter will
@@ -600,7 +600,8 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
       };
       OneShotBufferizationOptions updatedOptions(options);
       updatedOptions.opFilter.denyOperation(analysisFilterFn);
-      if (failed(insertTensorCopies(moduleOp, updatedOptions, statistics)))
+      if (failed(
+              insertTensorCopies(moduleOp, updatedOptions, state, statistics)))
         return failure();
     }
   }
