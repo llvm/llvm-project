@@ -201,6 +201,7 @@ struct MissingFeatures {
   static bool writebacks() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool stackBase() { return false; }
+  static bool deferredDecls() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
