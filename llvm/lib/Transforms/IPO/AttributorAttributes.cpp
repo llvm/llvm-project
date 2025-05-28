@@ -191,6 +191,7 @@ PIPE_OPERATOR(AAInterFnReachability)
 PIPE_OPERATOR(AAPointerInfo)
 PIPE_OPERATOR(AAAssumptionInfo)
 PIPE_OPERATOR(AAUnderlyingObjects)
+PIPE_OPERATOR(AAInvariantLoadPointer)
 PIPE_OPERATOR(AAAddressSpace)
 PIPE_OPERATOR(AAAllocationInfo)
 PIPE_OPERATOR(AAIndirectCallInfo)
@@ -12534,6 +12535,248 @@ private:
 };
 } // namespace
 
+/// --------------------- Invariant Load Pointer -------------------------------
+namespace {
+
+struct AAInvariantLoadPointerImpl
+    : public StateWrapper<BitIntegerState<uint8_t, 7>, AAInvariantLoadPointer,
+                          uint8_t> {
+  // load invariance is implied by, but not equivalent to IS_NOALIAS |
+  // IS_READONLY, as load invariance is also implied by all underlying objects
+  // being load invariant.
+  //
+  // IS_INVARIANT is set to indicate that the contents of the pointer are
+  // *known* to be invariant.
+  enum {
+    IS_INVARIANT = 1 << 0,
+    IS_NOALIAS = 1 << 1,
+    IS_READONLY = 1 << 2,
+  };
+  static_assert(getBestState() == (IS_INVARIANT | IS_NOALIAS | IS_READONLY),
+                "Unexpected best state!");
+
+  using Base = StateWrapper<BitIntegerState<uint8_t, 7>, AAInvariantLoadPointer,
+                            uint8_t>;
+
+  // the BitIntegerState is optimistic about noalias and readonly, but
+  // pessimistic about invariance
+  AAInvariantLoadPointerImpl(const IRPosition &IRP, Attributor &A)
+      : Base(IRP, IS_NOALIAS | IS_READONLY) {}
+
+  void initialize(Attributor &A) final {
+    // conservatively assume that the pointer's contents are not invariant,
+    // until proven otherwise.
+    removeAssumedBits(IS_INVARIANT);
+  }
+
+  bool isKnownInvariant() const final {
+    return isKnown(IS_INVARIANT) || isKnown(IS_NOALIAS | IS_READONLY);
+  }
+
+  bool isAssumedInvariant() const final {
+    return isAssumed(IS_INVARIANT) || isAssumed(IS_NOALIAS | IS_READONLY);
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    if (isKnownInvariant())
+      return ChangeStatus::UNCHANGED;
+
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    Changed |= updateNoAlias(A);
+    Changed |= updateReadOnly(A);
+
+    bool UsedAssumedInformation = false;
+    const auto IsInvariantLoadIfPointer = [&](const Value &V) {
+      if (!V.getType()->isPointerTy())
+        return true;
+      const auto *IsInvariantLoadPointer =
+          A.getOrCreateAAFor<AAInvariantLoadPointer>(IRPosition::value(V), this,
+                                                     DepClassTy::REQUIRED);
+      if (IsInvariantLoadPointer->isKnownInvariant())
+        return true;
+      if (!IsInvariantLoadPointer->isAssumedInvariant())
+        return false;
+
+      UsedAssumedInformation = true;
+      return true;
+    };
+
+    const auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
+        getIRPosition(), this, DepClassTy::REQUIRED);
+
+    if (!AUO->forallUnderlyingObjects(IsInvariantLoadIfPointer)) {
+      removeAssumedBits(IS_INVARIANT);
+      return ChangeStatus::CHANGED;
+    }
+
+    if (!UsedAssumedInformation) {
+      // pointer is known (not assumed) to be invariant
+      addKnownBits(IS_INVARIANT);
+      return ChangeStatus::CHANGED;
+    }
+
+    return Changed;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (!isKnownInvariant())
+      return ChangeStatus::UNCHANGED;
+
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    Value *Ptr = &getAssociatedValue();
+    const auto TagInvariantLoads = [&](const Use &U, bool &) {
+      if (U.get() != Ptr)
+        return true;
+      auto *I = dyn_cast<Instruction>(U.getUser());
+      if (!I)
+        return true;
+
+      // Ensure that we are only changing uses from the corresponding callgraph
+      // SSC in the case that the AA isn't run on the entire module
+      if (!A.isRunOn(I->getFunction()))
+        return true;
+
+      if (I->hasMetadata(LLVMContext::MD_invariant_load))
+        return true;
+
+      if (auto *LI = dyn_cast<LoadInst>(I)) {
+        if (LI->isVolatile() || LI->isAtomic())
+          return true;
+
+        LI->setMetadata(LLVMContext::MD_invariant_load,
+                        MDNode::get(LI->getContext(), {}));
+        Changed = ChangeStatus::CHANGED;
+      }
+      return true;
+    };
+
+    (void)A.checkForAllUses(TagInvariantLoads, *this, *Ptr);
+    return Changed;
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr(Attributor *) const override {
+    std::string Str;
+    raw_string_ostream OS(Str);
+    OS << "load invariant pointer: " << isKnown() << '\n';
+    return Str;
+  }
+
+  /// See AbstractAttribute::trackStatistics().
+  void trackStatistics() const override {}
+
+protected:
+  ChangeStatus updateNoAlias(Attributor &A) {
+    if (isKnown(IS_NOALIAS) || !isAssumed(IS_NOALIAS))
+      return ChangeStatus::UNCHANGED;
+
+    const auto *ANoAlias = A.getOrCreateAAFor<AANoAlias>(getIRPosition(), this,
+                                                         DepClassTy::REQUIRED);
+    if (!ANoAlias)
+      return tryInferNoAlias(A);
+
+    if (!ANoAlias->isAssumedNoAlias()) {
+      removeAssumedBits(IS_NOALIAS);
+      return ChangeStatus::CHANGED;
+    }
+    if (ANoAlias->isKnownNoAlias())
+      addKnownBits(IS_NOALIAS);
+
+    return ChangeStatus::UNCHANGED;
+  }
+
+  /// Fallback method if updateNoAlias fails to infer noalias information from
+  /// AANoAlias.
+  virtual ChangeStatus tryInferNoAlias(Attributor &A) {
+    return ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus updateReadOnly(Attributor &A) {
+    if (isKnown(IS_READONLY) || !isAssumed(IS_READONLY))
+      return ChangeStatus::UNCHANGED;
+
+    // AAMemoryBehavior may crash if value is global
+    if (!getAssociatedFunction())
+      return tryInferReadOnly(A);
+
+    const auto *AMemoryBehavior = A.getOrCreateAAFor<AAMemoryBehavior>(
+        getIRPosition(), this, DepClassTy::REQUIRED);
+    if (!AMemoryBehavior)
+      return tryInferReadOnly(A);
+
+    if (!AMemoryBehavior->isAssumedReadOnly()) {
+      removeAssumedBits(IS_READONLY);
+      return ChangeStatus::CHANGED;
+    }
+    if (AMemoryBehavior->isKnownReadOnly())
+      addKnownBits(IS_READONLY);
+
+    return ChangeStatus::UNCHANGED;
+  }
+
+  /// Fallback method if updateReadOnly fails to infer readonly information from
+  /// AAMemoryBehavior.
+  virtual ChangeStatus tryInferReadOnly(Attributor &A) {
+    return ChangeStatus::UNCHANGED;
+  }
+};
+
+struct AAInvariantLoadPointerFloating final : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerFloating(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+};
+
+struct AAInvariantLoadPointerReturned final : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerReturned(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+};
+
+struct AAInvariantLoadPointerCallSiteReturned final
+    : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+};
+
+struct AAInvariantLoadPointerArgument final : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerArgument(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+
+protected:
+  ChangeStatus tryInferNoAlias(Attributor &A) override {
+    const auto *Arg = getAssociatedArgument();
+    if (Arg->hasNoAliasAttr()) {
+      addKnownBits(IS_NOALIAS);
+      return ChangeStatus::UNCHANGED;
+    }
+
+    // noalias information is not provided, and cannot be inferred from
+    // AANoAlias
+    removeAssumedBits(IS_NOALIAS);
+    return ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus tryInferReadOnly(Attributor &A) override {
+    const auto *Arg = getAssociatedArgument();
+    if (Arg->onlyReadsMemory()) {
+      addKnownBits(IS_READONLY);
+      return ChangeStatus::UNCHANGED;
+    }
+
+    // readonly information is not provided, and cannot be inferred from
+    // AAMemoryBehavior
+    removeAssumedBits(IS_READONLY);
+    return ChangeStatus::CHANGED;
+  }
+};
+
+struct AAInvariantLoadPointerCallSiteArgument final
+    : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+};
+} // namespace
+
 /// ------------------------ Address Space  ------------------------------------
 namespace {
 
@@ -13031,6 +13274,7 @@ const char AAInterFnReachability::ID = 0;
 const char AAPointerInfo::ID = 0;
 const char AAAssumptionInfo::ID = 0;
 const char AAUnderlyingObjects::ID = 0;
+const char AAInvariantLoadPointer::ID = 0;
 const char AAAddressSpace::ID = 0;
 const char AAAllocationInfo::ID = 0;
 const char AAIndirectCallInfo::ID = 0;
@@ -13165,6 +13409,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialValues)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUndef)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFPClass)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPointerInfo)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAInvariantLoadPointer)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAddressSpace)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAllocationInfo)
 
