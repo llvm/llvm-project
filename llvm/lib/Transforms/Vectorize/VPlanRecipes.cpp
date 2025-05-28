@@ -1981,13 +1981,13 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
+  if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
     Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
 
   // Now do the actual transformations, and start with fetching the step value.
   Value *Step = State.get(getStepValue(), VPLane(0));
 
-  assert((isa<PHINode>(EntryVal) || isa<TruncInst>(EntryVal)) &&
+  assert((isa<PHINode, TruncInst>(EntryVal)) &&
          "Expected either an induction phi-node or a truncate of it!");
 
   // Construct the initial value of the vector IV in the vector loop preheader

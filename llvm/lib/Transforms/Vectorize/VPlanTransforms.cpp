@@ -1846,7 +1846,7 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
-    if (VPBB->getNumSuccessors() != 2 ||
+    if (VPBB->getNumSuccessors() != 2 || VPBB == Plan.getEntry() ||
         !match(&VPBB->back(), m_BranchOnCond(m_True())))
       continue;
 
