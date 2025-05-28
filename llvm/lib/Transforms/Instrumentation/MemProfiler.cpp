@@ -35,6 +35,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/ProfileData/MemProfSummary.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -738,19 +739,6 @@ static uint64_t computeStackId(GlobalValue::GUID Function, uint32_t LineOffset,
 
 static uint64_t computeStackId(const memprof::Frame &Frame) {
   return computeStackId(Frame.Function, Frame.LineOffset, Frame.Column);
-}
-
-// Helper to generate a single hash id for a given callstack, used for emitting
-// matching statistics and useful for uniquing such statistics across modules.
-static uint64_t computeFullStackId(ArrayRef<Frame> CallStack) {
-  llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
-      HashBuilder;
-  for (auto &F : CallStack)
-    HashBuilder.add(F.Function, F.LineOffset, F.Column);
-  llvm::BLAKE3Result<8> Hash = HashBuilder.final();
-  uint64_t Id;
-  std::memcpy(&Id, Hash.data(), sizeof(Hash));
-  return Id;
 }
 
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
