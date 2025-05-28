@@ -384,6 +384,11 @@ void nontag_param_test(struct { int i; } herp) {
   _Static_assert(0 == _Generic(herp, struct { int i; } : 1, default : 0));
 }
 
+// Same kind of test, but demonstrating that these still aren't compatible.
+void nontag_both_in_params(struct { int i; } Arg1, struct { int i; } Arg2) {
+  _Static_assert(0 == _Generic(typeof(Arg1), typeof(Arg2) : 1, default : 0));
+}
+
 struct InnerAnonStruct {
   struct {
     int i;
