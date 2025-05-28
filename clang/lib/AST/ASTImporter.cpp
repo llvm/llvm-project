@@ -1125,7 +1125,7 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id: \
     return Importer.getToContext().SingletonId;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id: \
     return Importer.getToContext().Id##Ty;

@@ -1,4 +1,4 @@
-//===-- AArch64SVEACLETypes.def - Metadata about SVE types ------*- C++ -*-===//
+//===-- AArch64ACLETypes.def - Metadata about SVE types ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -56,6 +56,10 @@
 //
 //  - IsBF true for vector of brain float elements.
 //===----------------------------------------------------------------------===//
+
+#ifndef SVE_TYPE
+#define SVE_TYPE(Name, Id, SingletonId)
+#endif
 
 #ifndef SVE_SCALAR_TYPE
 #define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits) \

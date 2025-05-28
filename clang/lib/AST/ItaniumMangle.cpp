@@ -3488,7 +3488,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     type_name = #MangledName;                                                  \
     Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case BuiltinType::Id:                                                        \
     mangleVendorType(#Name);                                                   \
