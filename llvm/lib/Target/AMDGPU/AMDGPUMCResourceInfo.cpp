@@ -147,8 +147,7 @@ void MCResourceInfo::assignResourceInfoExpr(
       // Avoid constructing recursive definitions by detecting whether `Sym` is
       // found transitively within any of its `CalleeValSym`.
       if (!CalleeValSym->isVariable() ||
-          !CalleeValSym->getVariableValue(/*isUsed=*/false)
-               ->isSymbolUsedInExpression(Sym)) {
+          !CalleeValSym->getVariableValue()->isSymbolUsedInExpression(Sym)) {
         LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                           << CalleeValSym->getName() << " as callee\n");
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
@@ -279,8 +278,7 @@ void MCResourceInfo::gatherResourceInfo(
         // Avoid constructing recursive definitions by detecting whether `Sym`
         // is found transitively within any of its `CalleeValSym`.
         if (!CalleeValSym->isVariable() ||
-            !CalleeValSym->getVariableValue(/*isUsed=*/false)
-                 ->isSymbolUsedInExpression(Sym)) {
+            !CalleeValSym->getVariableValue()->isSymbolUsedInExpression(Sym)) {
           LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
                             << CalleeValSym->getName() << " as callee\n");
           ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
@@ -366,7 +364,7 @@ void MCResourceInfo::gatherResourceInfo(
     // expr.
     MCSymbol *Sym =
         getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext, IsLocal);
-    const MCExpr *MaxExpr = Sym->getVariableValue(false);
+    const MCExpr *MaxExpr = Sym->getVariableValue();
     MaxExpr = AMDGPUMCExpr::createMax({MaxExpr, LocalConstExpr}, OutContext);
     Sym->setVariableValue(MaxExpr);
 #endif /* LLPC_BUILD_NPI */

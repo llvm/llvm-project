@@ -13,7 +13,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -40,6 +40,10 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT:  IR %red.next.lcssa = phi float [ %red.next, %loop ] (extra operand: vp<[[RED_EX]]> from middle.block)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RED_RES]]>, ir<0.000000e+00>
@@ -48,10 +52,6 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:  IR %red.next.lcssa = phi float [ %red.next, %loop ] (extra operand: vp<[[RED_EX]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -81,7 +81,7 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -108,6 +108,9 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RED_RES]]>, ir<0.000000e+00>
@@ -117,9 +120,6 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT:    IR   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %red = phi float [ %red.next, %loop ], [ 0.000000e+00, %entry ]
 ; CHECK:         IR   %exitcond = icmp eq i64 %iv.next, %n
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -150,7 +150,7 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -181,6 +181,10 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT:   IR %muladd.lcssa = phi float [ %muladd, %loop ] (extra operand: vp<[[RED_EX]]> from middle.block)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RED_RES]]>, ir<0.000000e+00>
@@ -190,10 +194,6 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; CHECK-NEXT:    IR   %sum.07 = phi float [ 0.000000e+00, %entry ], [ %muladd, %loop ] (extra operand: vp<[[RED_RESUME]]> from scalar.ph)
 ; CHECK:         IR   %exitcond.not = icmp eq i64 %iv.next, %n
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>
-; CHECK-NEXT:   IR %muladd.lcssa = phi float [ %muladd, %loop ] (extra operand: vp<[[RED_EX]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT:}
 
@@ -243,13 +243,13 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<{{.+}}>, ir<0>
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<[[RDX_RES]]>, ir<%start>
-;
 ; CHECK:      ir-bb<exit>:
 ; CHECK-NEXT:   IR   %cond.lcssa = phi i64 [ %cond, %loop ] (extra operand: vp<[[EXT]]> from middle.block)
 ; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<{{.+}}>, ir<0>
+; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<[[RDX_RES]]>, ir<%start>
 ;
 entry:
   br label %loop

@@ -37115,10 +37115,9 @@ define inreg <48 x i16> @bitcast_v12f64_to_v48i16_scalar(<12 x double> inreg %a,
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v19, v34, 16, v0
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v21, v32, 16, v2
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v22, v31, 16, v3
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v27
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v23, v30, 16, v4
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v24
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, v26
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, v26 :: v_dual_mov_b32 v3, v27
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, v28
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB49_4:
@@ -37277,10 +37276,9 @@ define inreg <48 x i16> @bitcast_v12f64_to_v48i16_scalar(<12 x double> inreg %a,
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v19, v34, 16, v0
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v21, v32, 16, v2
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v22, v31, 16, v3
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v3, v27
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v23, v30, 16, v4
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v24
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, v26
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, v26 :: v_dual_mov_b32 v3, v27
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v4, v28
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-NEXT:  .LBB49_4:
@@ -42049,10 +42047,9 @@ define inreg <48 x half> @bitcast_v12f64_to_v48f16_scalar(<12 x double> inreg %a
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v19, v34, 16, v0
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v21, v32, 16, v2
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v22, v31, 16, v3
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v27
 ; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v23, v30, 16, v4
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v24
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, v26
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v2, v26 :: v_dual_mov_b32 v3, v27
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, v28
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB53_4:
@@ -42211,10 +42208,9 @@ define inreg <48 x half> @bitcast_v12f64_to_v48f16_scalar(<12 x double> inreg %a
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v19, v34, 16, v0
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v21, v32, 16, v2
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v22, v31, 16, v3
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v3, v27
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v23, v30, 16, v4
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v24
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, v26
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, v26 :: v_dual_mov_b32 v3, v27
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v4, v28
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-FAKE16-NEXT:  .LBB53_4:
@@ -47938,7 +47934,7 @@ define inreg <48 x half> @bitcast_v48i16_to_v48f16_scalar(<48 x i16> inreg %a, i
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v16, 0xffff, v16
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v34, 0xffff, v15
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v35, 0xffff, v14
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v5, v29 :: v_dual_and_b32 v4, 0xffff, v5
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v4, 0xffff, v5
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v11, v36, 16, v11
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v14, v33, 16, v17
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v15, v32, 16, v16
@@ -47950,7 +47946,7 @@ define inreg <48 x half> @bitcast_v48i16_to_v48f16_scalar(<48 x i16> inreg %a, i
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v23, v23, 16, v4
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, v24 :: v_dual_mov_b32 v1, v25
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, v26
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v4, v28
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v4, v28 :: v_dual_mov_b32 v5, v29
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX13-TRUE16-LABEL: bitcast_v48i16_to_v48f16_scalar:
@@ -50688,7 +50684,7 @@ define inreg <48 x i16> @bitcast_v48f16_to_v48i16_scalar(<48 x half> inreg %a, i
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v16, 0xffff, v16
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v34, 0xffff, v15
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v35, 0xffff, v14
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v5, v29 :: v_dual_and_b32 v4, 0xffff, v5
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v4, 0xffff, v5
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v11, v36, 16, v11
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v14, v33, 16, v17
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v15, v32, 16, v16
@@ -50700,7 +50696,7 @@ define inreg <48 x i16> @bitcast_v48f16_to_v48i16_scalar(<48 x half> inreg %a, i
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v23, v23, 16, v4
 ; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, v24 :: v_dual_mov_b32 v1, v25
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v2, v26
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v4, v28
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v4, v28 :: v_dual_mov_b32 v5, v29
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX13-TRUE16-LABEL: bitcast_v48f16_to_v48i16_scalar:

@@ -6095,14 +6095,18 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         // seen value here, to avoid expanding a constant expression multiple
         // times.
         auto It = Args.find(BB);
+        BasicBlock *EdgeBB = ConstExprEdgeBBs.lookup({BB, CurBB});
         if (It != Args.end()) {
-          PN->addIncoming(It->second, BB);
+          // If this predecessor was also replaced with a constexpr basic
+          // block, it must be de-duplicated.
+          if (!EdgeBB) {
+            PN->addIncoming(It->second, BB);
+          }
           continue;
         }
 
         // If there already is a block for this edge (from a different phi),
         // use it.
-        BasicBlock *EdgeBB = ConstExprEdgeBBs.lookup({BB, CurBB});
         if (!EdgeBB) {
           // Otherwise, use a temporary block (that we will discard if it
           // turns out to be unnecessary).
