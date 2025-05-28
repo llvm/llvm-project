@@ -701,6 +701,24 @@ let Class = HLSLAttributedResourceType in {
   }]>;
 }
 
+let Class = HLSLInlineSpirvType in {
+  def : Property<"opcode", UInt32> {
+    let Read = [{ node->getOpcode() }];
+  }
+  def : Property<"size", UInt32> {
+    let Read = [{ node->getSize() }];
+  }
+  def : Property<"alignment", UInt32> {
+    let Read = [{ node->getAlignment() }];
+  }
+  def : Property<"operands", Array<HLSLSpirvOperand>> {
+    let Read = [{ node->getOperands() }];
+  }
+  def : Creator<[{
+    return ctx.getHLSLInlineSpirvType(opcode, size, alignment, operands);
+  }]>;
+}
+
 let Class = DependentAddressSpaceType in {
   def : Property<"pointeeType", QualType> {
     let Read = [{ node->getPointeeType() }];

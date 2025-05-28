@@ -125,21 +125,32 @@ protected:
     // Returns zero if no match is found.
     LLVM_ABI unsigned match(StringRef Query) const;
 
-    StringMap<std::pair<GlobPattern, unsigned>> Globs;
+    struct Glob {
+      std::string Name;
+      unsigned LineNo;
+      GlobPattern Pattern;
+      // neither copyable nor movable because GlobPattern contains
+      // Glob::StringRef that points to Glob::Name.
+      Glob(Glob &&) = delete;
+      Glob() = default;
+    };
+
+    std::vector<std::unique_ptr<Matcher::Glob>> Globs;
     std::vector<std::pair<std::unique_ptr<Regex>, unsigned>> RegExes;
   };
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
   struct Section {
-    Section(std::unique_ptr<Matcher> M) : SectionMatcher(std::move(M)){};
-    Section() : Section(std::make_unique<Matcher>()) {}
+    Section(std::unique_ptr<Matcher> M) : SectionMatcher(std::move(M)) {};
+    Section() : Section(std::make_unique<Matcher>()) {};
 
     std::unique_ptr<Matcher> SectionMatcher;
     SectionEntries Entries;
+    std::string SectionStr;
   };
 
-  StringMap<Section> Sections;
+  std::vector<Section> Sections;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr, unsigned LineNo,
                                           bool UseGlobs = true);
@@ -154,6 +165,6 @@ protected:
                                    StringRef Category) const;
 };
 
-}  // namespace llvm
+} // namespace llvm
 
 #endif // LLVM_SUPPORT_SPECIALCASELIST_H

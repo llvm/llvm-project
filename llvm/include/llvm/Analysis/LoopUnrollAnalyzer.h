@@ -83,12 +83,12 @@ private:
 
   bool simplifyInstWithSCEV(Instruction *I);
 
-  bool visitInstruction(Instruction &I);
-  bool visitBinaryOperator(BinaryOperator &I);
-  bool visitLoad(LoadInst &I);
-  bool visitCastInst(CastInst &I);
-  bool visitCmpInst(CmpInst &I);
-  bool visitPHINode(PHINode &PN);
+  LLVM_ABI bool visitInstruction(Instruction &I);
+  LLVM_ABI bool visitBinaryOperator(BinaryOperator &I);
+  LLVM_ABI bool visitLoad(LoadInst &I);
+  LLVM_ABI bool visitCastInst(CastInst &I);
+  LLVM_ABI bool visitCmpInst(CmpInst &I);
+  LLVM_ABI bool visitPHINode(PHINode &PN);
 };
 }
 #endif

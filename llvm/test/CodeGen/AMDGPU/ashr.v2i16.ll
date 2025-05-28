@@ -21,21 +21,20 @@ define amdgpu_kernel void @s_ashr_v2i16(ptr addrspace(1) %out, i32, <2 x i16> %l
 ;
 ; VI-LABEL: s_ashr_v2i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s6, s[4:5], 0x30
+; VI-NEXT:    s_load_dword s6, s[4:5], 0x38
+; VI-NEXT:    s_load_dword s7, s[4:5], 0x30
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_load_dword s4, s[4:5], 0x38
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_ashr_i32 s5, s6, 16
-; VI-NEXT:    s_sext_i32_i16 s6, s6
-; VI-NEXT:    s_ashr_i32 s7, s4, 16
-; VI-NEXT:    s_sext_i32_i16 s4, s4
-; VI-NEXT:    s_ashr_i32 s5, s5, s7
-; VI-NEXT:    s_ashr_i32 s4, s6, s4
-; VI-NEXT:    s_lshl_b32 s5, s5, 16
-; VI-NEXT:    s_and_b32 s4, s4, 0xffff
-; VI-NEXT:    s_or_b32 s4, s4, s5
+; VI-NEXT:    s_lshr_b32 s4, s6, 16
+; VI-NEXT:    s_ashr_i32 s5, s7, 16
+; VI-NEXT:    s_ashr_i32 s4, s5, s4
+; VI-NEXT:    s_sext_i32_i16 s5, s7
+; VI-NEXT:    s_ashr_i32 s5, s5, s6
+; VI-NEXT:    s_lshl_b32 s4, s4, 16
+; VI-NEXT:    s_and_b32 s5, s5, 0xffff
+; VI-NEXT:    s_or_b32 s4, s5, s4
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm

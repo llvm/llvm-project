@@ -161,10 +161,12 @@ struct OneShotBufferizePass
       return signalPassFailure();
     }
 
+    BufferizationState state;
     BufferizationStatistics statistics;
     ModuleOp moduleOp = getOperation();
     if (opt.bufferizeFunctionBoundaries) {
-      if (failed(runOneShotModuleBufferize(moduleOp, opt, &statistics))) {
+      if (failed(
+              runOneShotModuleBufferize(moduleOp, opt, state, &statistics))) {
         signalPassFailure();
         return;
       }
@@ -175,7 +177,7 @@ struct OneShotBufferizePass
                   "'bufferize-function-boundaries'");
         return signalPassFailure();
       }
-      if (failed(runOneShotBufferize(moduleOp, opt, &statistics))) {
+      if (failed(runOneShotBufferize(moduleOp, opt, state, &statistics))) {
         signalPassFailure();
         return;
       }
@@ -275,6 +277,7 @@ private:
 
 LogicalResult bufferization::bufferizeOp(Operation *op,
                                          const BufferizationOptions &options,
+                                         BufferizationState &bufferizationState,
                                          BufferizationStatistics *statistics) {
   if (options.copyBeforeWrite) {
     AnalysisState state(options);
@@ -331,7 +334,8 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
                << "//===-------------------------------------------===//\n"
                << "IR after bufferizing: " << nextOp->getName() << "\n");
     rewriter.setInsertionPoint(nextOp);
-    if (failed(bufferizableOp.bufferize(rewriter, options))) {
+    if (failed(
+            bufferizableOp.bufferize(rewriter, options, bufferizationState))) {
       LLVM_DEBUG(llvm::dbgs()
                  << "failed to bufferize\n"
                  << "//===-------------------------------------------===//\n");

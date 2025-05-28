@@ -21,7 +21,7 @@ class TestStepOverWatchpoint(TestBase):
     @add_test_categories(["basic_process"])
     @expectedFailureAll(
         macos_version=["<", "14.4"],
-        archs=["aarch64", "arm"],
+        archs=["aarch64", "arm$"],
         bugnumber="<rdar://problem/106868647>",
     )
     def test_step_over_read_watchpoint(self):
@@ -64,7 +64,7 @@ class TestStepOverWatchpoint(TestBase):
     @add_test_categories(["basic_process"])
     @expectedFailureAll(
         macos_version=["<", "14.4"],
-        archs=["aarch64", "arm"],
+        archs=["aarch64", "arm$"],
         bugnumber="<rdar://problem/106868647>",
     )
     def test_step_over_write_watchpoint(self):

@@ -73,6 +73,8 @@ enum NodeType : unsigned {
 
   SMSTART,
   SMSTOP,
+  COND_SMSTART,
+  COND_SMSTOP,
   RESTORE_ZA,
   RESTORE_ZT,
   SAVE_ZT,
@@ -360,7 +362,6 @@ enum NodeType : unsigned {
   CTLZ_MERGE_PASSTHRU,
   CTPOP_MERGE_PASSTHRU,
   DUP_MERGE_PASSTHRU,
-  INDEX_VECTOR,
 
   // Cast between vectors of the same element type but differ in length.
   REINTERPRET_CAST,
@@ -377,11 +378,6 @@ enum NodeType : unsigned {
   LDFF1S_MERGE_ZERO,
   LD1RQ_MERGE_ZERO,
   LD1RO_MERGE_ZERO,
-
-  // Structured loads.
-  SVE_LD2_MERGE_ZERO,
-  SVE_LD3_MERGE_ZERO,
-  SVE_LD4_MERGE_ZERO,
 
   // Unsigned gather loads.
   GLD1_MERGE_ZERO,
@@ -1183,6 +1179,7 @@ private:
   SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_HISTOGRAM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerGET_ACTIVE_LANE_MASK(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;

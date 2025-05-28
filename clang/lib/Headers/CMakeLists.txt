@@ -91,6 +91,7 @@ set(hlsl_subdir_files
   hlsl/hlsl_intrinsic_helpers.h
   hlsl/hlsl_intrinsics.h
   hlsl/hlsl_detail.h
+  hlsl/hlsl_spirv.h
   )
 set(hlsl_files
   ${hlsl_h}
@@ -127,6 +128,7 @@ set(riscv_files
   riscv_crypto.h
   riscv_ntlh.h
   sifive_vector.h
+  andes_vector.h
   )
 
 set(systemz_files

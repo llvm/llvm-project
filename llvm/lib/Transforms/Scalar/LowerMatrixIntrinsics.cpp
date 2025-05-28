@@ -2446,10 +2446,10 @@ public:
         return;
       } else {
         Ops.append(I->value_op_begin(), I->value_op_end());
-        write(std::string(I->getOpcodeName()));
+        write(I->getOpcodeName());
       }
 
-      write(std::string("("));
+      write("(");
 
       unsigned NumOpsToBreak = 1;
       if (match(Expr, m_Intrinsic<Intrinsic::matrix_column_major_load>()))
