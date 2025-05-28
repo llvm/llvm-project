@@ -174,9 +174,9 @@ define <1 x i16> @test_select_f16_i16(half %i105, half %in, <1 x i16> %x, <1 x i
 ; CHECK-LABEL: test_select_f16_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    csetm w8, vs
-; CHECK-NEXT:    dup v0.4h, w8
+; CHECK-NEXT:    fcmeq s0, s0, s0
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    ret
   %i179 = fcmp uno half %i105, zeroinitializer
