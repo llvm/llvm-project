@@ -2371,12 +2371,10 @@ define <2 x i1> @test_signed_v2f64_v2i1(<2 x double> %f) {
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    fcvtzs w9, d0
 ; CHECK-SD-NEXT:    fcvtzs w8, d1
-; CHECK-SD-NEXT:    and w9, w9, w9, asr #31
-; CHECK-SD-NEXT:    and w8, w8, w8, asr #31
-; CHECK-SD-NEXT:    cmn w8, #1
-; CHECK-SD-NEXT:    csinv w8, w8, wzr, gt
-; CHECK-SD-NEXT:    cmn w9, #1
-; CHECK-SD-NEXT:    csinv w9, w9, wzr, gt
+; CHECK-SD-NEXT:    ands w8, w8, w8, asr #31
+; CHECK-SD-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-SD-NEXT:    ands w9, w9, w9, asr #31
+; CHECK-SD-NEXT:    csinv w9, w9, wzr, ge
 ; CHECK-SD-NEXT:    fmov s0, w9
 ; CHECK-SD-NEXT:    mov v0.s[1], w8
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
