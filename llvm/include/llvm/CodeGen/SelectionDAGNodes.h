@@ -213,6 +213,7 @@ public:
   inline bool isTargetOpcode() const;
   inline bool isMachineOpcode() const;
   inline bool isUndef() const;
+  inline bool isAnyAdd() const;
   inline unsigned getMachineOpcode() const;
   inline const DebugLoc &getDebugLoc() const;
   inline void dump() const;
@@ -695,6 +696,11 @@ public:
   /// Returns true if the node type is UNDEF or POISON.
   bool isUndef() const {
     return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
+  }
+
+  /// Returns true if the node type is ADD or PTRADD.
+  bool isAnyAdd() const {
+    return NodeType == ISD::ADD || NodeType == ISD::PTRADD;
   }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
@@ -1269,6 +1275,8 @@ inline unsigned SDValue::getMachineOpcode() const {
 inline bool SDValue::isUndef() const {
   return Node->isUndef();
 }
+
+inline bool SDValue::isAnyAdd() const { return Node->isAnyAdd(); }
 
 inline bool SDValue::use_empty() const {
   return !Node->hasAnyUseOfValue(ResNo);

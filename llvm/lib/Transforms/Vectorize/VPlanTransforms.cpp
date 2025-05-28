@@ -27,8 +27,8 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
@@ -939,12 +939,12 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
   }
 }
 
-/// Try to fold \p R using TargetFolder to a constant. Will succeed and return a
-/// non-nullptr Value for a handled \p Opcode if all \p Operands are constant.
-static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
-                                ArrayRef<VPValue *> Operands,
-                                const DataLayout &DL,
-                                VPTypeAnalysis &TypeInfo) {
+/// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
+/// non-nullptr Value for a handled \p Opcode if corresponding \p Operands are
+/// foldable live-ins.
+static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
+                               ArrayRef<VPValue *> Operands,
+                               const DataLayout &DL, VPTypeAnalysis &TypeInfo) {
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
     if (!Op->isLiveIn() || !Op->getLiveInIRValue())
@@ -952,7 +952,7 @@ static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
     Ops.push_back(Op->getLiveInIRValue());
   }
 
-  TargetFolder Folder(DL);
+  InstSimplifyFolder Folder(DL);
   if (Instruction::isBinaryOp(Opcode))
     return Folder.FoldBinOp(static_cast<Instruction::BinaryOps>(Opcode), Ops[0],
                             Ops[1]);
@@ -994,15 +994,16 @@ static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
 
-  // Constant folding.
+  // Simplification of live-in IR values for SingleDef recipes using
+  // InstSimplifyFolder.
   if (TypeSwitch<VPRecipeBase *, bool>(&R)
           .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
                 VPReplicateRecipe>([&](auto *I) {
             VPlan *Plan = R.getParent()->getPlan();
             const DataLayout &DL =
                 Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
-            Value *V = tryToConstantFold(*I, I->getOpcode(), I->operands(), DL,
-                                         TypeInfo);
+            Value *V = tryToFoldLiveIns(*I, I->getOpcode(), I->operands(), DL,
+                                        TypeInfo);
             if (V)
               I->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
             return V;

@@ -8300,10 +8300,10 @@ define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %o
 ; GFX11-SDAG-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, 0x41000000
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    v_add_f32_e32 v3, 0x41800000, v1
 ; GFX11-SDAG-NEXT:    v_add_f32_e32 v2, 0.5, v1
+; GFX11-SDAG-NEXT:    v_add_f32_e32 v3, 0x41800000, v1
 ; GFX11-SDAG-NEXT:    v_add_f32_e32 v1, 0x41000000, v1
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_med3_f32 v2, v2, s2, 0x41800000
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1]
 ; GFX11-SDAG-NEXT:    global_store_b32 v[0:1], v3, off dlc

@@ -61,6 +61,7 @@ let usesCustomInserter = 1 in {
 }
 
 // Nodes to allocate a save buffer for SME.
+// Needed for __arm_agnostic("sme_za_state").
 def AArch64SMESaveSize : SDNode<"AArch64ISD::GET_SME_SAVE_SIZE", SDTypeProfile<1, 0,
                                [SDTCisInt<0>]>, [SDNPHasChain]>;
 let usesCustomInserter = 1, Defs = [X0] in {

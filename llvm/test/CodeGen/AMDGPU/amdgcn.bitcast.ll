@@ -3255,12 +3255,11 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v6, v1, v4
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v1, v4
 ; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v6 :: v_dual_cndmask_b32 v0, v0, v5
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v1, v4
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_add_nc_u32_e32 v5, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc_lo
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_cndmask_b32 v0, v0, v5
 ; GFX11-NEXT:  .LBB28_4:
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:    v_or_b32_e32 v5, s7, v3
