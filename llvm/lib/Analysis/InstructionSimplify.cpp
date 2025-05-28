@@ -6306,6 +6306,11 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     if (computeKnownFPSignBit(Op0, /*Depth=*/0, Q) == false)
       return Op0;
     break;
+  case Intrinsic::sqrt:
+    if (Value *V = simplifyFPOp(Op0, Call->getFastMathFlags(), Q, fp::ebIgnore,
+                                RoundingMode::NearestTiesToEven))
+      return V;
+    break;
   case Intrinsic::bswap:
     // bswap(bswap(x)) -> x
     if (match(Op0, m_BSwap(m_Value(X))))
