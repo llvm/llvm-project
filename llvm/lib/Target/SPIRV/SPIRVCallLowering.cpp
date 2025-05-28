@@ -279,6 +279,8 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   const auto value = attribute.getValueAsString();
   if (value == "compute")
     return SPIRV::ExecutionModel::GLCompute;
+  if (value == "pixel")
+    return SPIRV::ExecutionModel::Fragment;
 
   report_fatal_error("This HLSL entry point is not supported by this backend.");
 }
@@ -439,10 +441,21 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
+    SPIRV::ExecutionModel::ExecutionModel ExecutionModel =
+        getExecutionModel(*ST, F);
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
-                   .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
+                   .addImm(static_cast<uint32_t>(ExecutionModel))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
+
+    if (ExecutionModel == SPIRV::ExecutionModel::Fragment) {
+      // SPIR-V common validation: Fragment requires OriginUpperLeft or
+      // OriginLowerLeft VUID-StandaloneSpirv-OriginLowerLeft-04653: Fragment
+      // must declare OriginUpperLeft.
+      MIRBuilder.buildInstr(SPIRV::OpExecutionMode)
+          .addUse(FuncVReg)
+          .addImm(static_cast<uint32_t>(SPIRV::ExecutionMode::OriginUpperLeft));
+    }
   } else if (F.getLinkage() != GlobalValue::InternalLinkage &&
              F.getLinkage() != GlobalValue::PrivateLinkage) {
     SPIRV::LinkageType::LinkageType LnkTy =
