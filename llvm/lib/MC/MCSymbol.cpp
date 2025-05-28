@@ -45,7 +45,6 @@ void *MCSymbol::operator new(size_t s, const MCSymbolTableEntry *Name,
 }
 
 void MCSymbol::setVariableValue(const MCExpr *Value) {
-  assert(!IsUsed && "Cannot set a variable that has already been used.");
   assert(Value && "Invalid variable value!");
   assert((SymbolContents == SymContentsUnset ||
           SymbolContents == SymContentsVariable) &&
