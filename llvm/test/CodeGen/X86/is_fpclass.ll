@@ -2901,6 +2901,157 @@ define i1 @not_issubnormal_or_zero_or_qnan_f(float %x) {
   ret i1 %class
 }
 
+define i1 @not_ispositive_normal_or_subnormal_f(float %x) {
+; X86-LABEL: not_ispositive_normal_or_subnormal_f:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sets %cl
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    andl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-NEXT:    addl $-8388608, %edx # imm = 0xFF800000
+; X86-NEXT:    cmpl $2130706432, %edx # imm = 0x7F000000
+; X86-NEXT:    setae %dl
+; X86-NEXT:    orb %cl, %dl
+; X86-NEXT:    decl %eax
+; X86-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X86-NEXT:    setae %al
+; X86-NEXT:    andb %dl, %al
+; X86-NEXT:    retl
+;
+; X64-GENERIC-LABEL: not_ispositive_normal_or_subnormal_f:
+; X64-GENERIC:       # %bb.0:
+; X64-GENERIC-NEXT:    movd %xmm0, %eax
+; X64-GENERIC-NEXT:    testl %eax, %eax
+; X64-GENERIC-NEXT:    sets %cl
+; X64-GENERIC-NEXT:    movl %eax, %edx
+; X64-GENERIC-NEXT:    andl $2147483647, %edx # imm = 0x7FFFFFFF
+; X64-GENERIC-NEXT:    addl $-8388608, %edx # imm = 0xFF800000
+; X64-GENERIC-NEXT:    cmpl $2130706432, %edx # imm = 0x7F000000
+; X64-GENERIC-NEXT:    setae %dl
+; X64-GENERIC-NEXT:    orb %cl, %dl
+; X64-GENERIC-NEXT:    decl %eax
+; X64-GENERIC-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-GENERIC-NEXT:    setae %al
+; X64-GENERIC-NEXT:    andb %dl, %al
+; X64-GENERIC-NEXT:    retq
+;
+; X64-NDD-LABEL: not_ispositive_normal_or_subnormal_f:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    movd %xmm0, %eax
+; X64-NDD-NEXT:    testl %eax, %eax
+; X64-NDD-NEXT:    sets %cl
+; X64-NDD-NEXT:    andl $2147483647, %eax, %edx # imm = 0x7FFFFFFF
+; X64-NDD-NEXT:    addl $-8388608, %edx # imm = 0xFF800000
+; X64-NDD-NEXT:    cmpl $2130706432, %edx # imm = 0x7F000000
+; X64-NDD-NEXT:    setae %dl
+; X64-NDD-NEXT:    orb %dl, %cl
+; X64-NDD-NEXT:    decl %eax
+; X64-NDD-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-NDD-NEXT:    setae %al
+; X64-NDD-NEXT:    andb %cl, %al
+; X64-NDD-NEXT:    retq
+  %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 639)  ; ~(0x100|0x80) = ~"posnormal|possubnormal"
+  ret i1 %class
+}
+
+define i1 @not_isnegative_normal_or_subnormal_f(float %x) {
+; X86-LABEL: not_isnegative_normal_or_subnormal_f:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X86-NEXT:    leal -8388608(%ecx), %edx
+; X86-NEXT:    cmpl $2130706432, %edx # imm = 0x7F000000
+; X86-NEXT:    setae %dl
+; X86-NEXT:    decl %ecx
+; X86-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
+; X86-NEXT:    setae %cl
+; X86-NEXT:    andb %dl, %cl
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    setns %al
+; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    retl
+;
+; X64-GENERIC-LABEL: not_isnegative_normal_or_subnormal_f:
+; X64-GENERIC:       # %bb.0:
+; X64-GENERIC-NEXT:    movd %xmm0, %eax
+; X64-GENERIC-NEXT:    movl %eax, %ecx
+; X64-GENERIC-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X64-GENERIC-NEXT:    leal -8388608(%rcx), %edx
+; X64-GENERIC-NEXT:    cmpl $2130706432, %edx # imm = 0x7F000000
+; X64-GENERIC-NEXT:    setae %dl
+; X64-GENERIC-NEXT:    decl %ecx
+; X64-GENERIC-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
+; X64-GENERIC-NEXT:    setae %cl
+; X64-GENERIC-NEXT:    andb %dl, %cl
+; X64-GENERIC-NEXT:    testl %eax, %eax
+; X64-GENERIC-NEXT:    setns %al
+; X64-GENERIC-NEXT:    orb %cl, %al
+; X64-GENERIC-NEXT:    retq
+;
+; X64-NDD-LABEL: not_isnegative_normal_or_subnormal_f:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    movd %xmm0, %eax
+; X64-NDD-NEXT:    andl $2147483647, %eax, %ecx # imm = 0x7FFFFFFF
+; X64-NDD-NEXT:    addl $-8388608, %ecx, %edx # imm = 0xFF800000
+; X64-NDD-NEXT:    cmpl $2130706432, %edx # imm = 0x7F000000
+; X64-NDD-NEXT:    setae %dl
+; X64-NDD-NEXT:    decl %ecx
+; X64-NDD-NEXT:    cmpl $8388607, %ecx # imm = 0x7FFFFF
+; X64-NDD-NEXT:    setae %cl
+; X64-NDD-NEXT:    andb %dl, %cl
+; X64-NDD-NEXT:    testl %eax, %eax
+; X64-NDD-NEXT:    setns %al
+; X64-NDD-NEXT:    orb %cl, %al
+; X64-NDD-NEXT:    retq
+  %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 999)  ; ~(0x10|0x8) = ~"negsubnormal|negnormal"
+  ret i1 %class
+}
+
+define i1 @not_isnormal_or_subnormal_f(float %x) {
+; X86-LABEL: not_isnormal_or_subnormal_f:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal -8388608(%eax), %ecx
+; X86-NEXT:    cmpl $2130706432, %ecx # imm = 0x7F000000
+; X86-NEXT:    setae %cl
+; X86-NEXT:    decl %eax
+; X86-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X86-NEXT:    setae %al
+; X86-NEXT:    andb %cl, %al
+; X86-NEXT:    retl
+;
+; X64-GENERIC-LABEL: not_isnormal_or_subnormal_f:
+; X64-GENERIC:       # %bb.0:
+; X64-GENERIC-NEXT:    movd %xmm0, %eax
+; X64-GENERIC-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-GENERIC-NEXT:    leal -8388608(%rax), %ecx
+; X64-GENERIC-NEXT:    cmpl $2130706432, %ecx # imm = 0x7F000000
+; X64-GENERIC-NEXT:    setae %cl
+; X64-GENERIC-NEXT:    decl %eax
+; X64-GENERIC-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-GENERIC-NEXT:    setae %al
+; X64-GENERIC-NEXT:    andb %cl, %al
+; X64-GENERIC-NEXT:    retq
+;
+; X64-NDD-LABEL: not_isnormal_or_subnormal_f:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    movd %xmm0, %eax
+; X64-NDD-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
+; X64-NDD-NEXT:    addl $-8388608, %eax, %ecx # imm = 0xFF800000
+; X64-NDD-NEXT:    cmpl $2130706432, %ecx # imm = 0x7F000000
+; X64-NDD-NEXT:    setae %cl
+; X64-NDD-NEXT:    decl %eax
+; X64-NDD-NEXT:    cmpl $8388607, %eax # imm = 0x7FFFFF
+; X64-NDD-NEXT:    setae %al
+; X64-NDD-NEXT:    andb %cl, %al
+; X64-NDD-NEXT:    retq
+  %class = tail call i1 @llvm.is.fpclass.f32(float %x, i32 615)  ; ~(0x110|0x88) = ~"normal|subnormal"
+  ret i1 %class
+}
+
 declare i1 @llvm.is.fpclass.f32(float, i32)
 declare i1 @llvm.is.fpclass.f64(double, i32)
 declare <1 x i1> @llvm.is.fpclass.v1f32(<1 x float>, i32)
