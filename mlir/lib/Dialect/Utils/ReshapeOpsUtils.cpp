@@ -62,16 +62,23 @@ struct ReassociationIndexRange {
   /// Collects indices that do not overlap between this and another range.
   ReassociationIndices
   getNonOverlappingIndicesWith(ReassociationIndexRange &rhs) const {
+    if (rightIdx < rhs.leftIdx) {
+      // The intervals do not overlap - concatenate the indices from both.
+      auto jointFullIndices = getFullIndices();
+      jointFullIndices.append(rhs.getFullIndices());
+      return jointFullIndices;
+    }
     ReassociationIndices result;
-    result.reserve(size() + rhs.size() / 2); // Attempt to amortize
-    for (int64_t idx = this->leftIdx; idx <= this->rightIdx; ++idx) {
-      if (idx < rhs.leftIdx || idx > rhs.rightIdx)
-        result.push_back(idx);
-    }
-    for (int64_t rhsIndex = rhs.leftIdx; rhsIndex <= rhs.rightIdx; ++rhsIndex) {
-      if (rhsIndex < leftIdx || rhsIndex > rightIdx)
-        result.push_back(rhsIndex);
-    }
+    // Handle the chunk left of the overlapping range.
+    int64_t leftStart = std::min(leftIdx, rhs.leftIdx);
+    int64_t leftEnd = std::max(leftIdx, rhs.leftIdx);
+    llvm::append_range(result, llvm::seq(leftStart, leftEnd));
+    // Handle the chunk right of the overlapping range. Symmetrically, we should
+    // skip the edge of the overlap AND include the rightmost index.
+    int64_t rightStart = std::min(rightIdx, rhs.rightIdx) + 1;
+    int64_t rightEnd = std::max(rightIdx, rhs.rightIdx);
+    if (rightStart < rightEnd)
+      llvm::append_range(result, llvm::seq_inclusive(rightStart, rightEnd));
     return result;
   }
 
