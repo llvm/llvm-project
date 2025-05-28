@@ -711,22 +711,23 @@ StringRef dxil::getResourceNameFromBindingCall(CallInst *CI) {
   Value *Op = nullptr;
   switch (CI->getCalledFunction()->getIntrinsicID()) {
   default:
-    return "";
+    llvm_unreachable("unexpected handle creation intrinsic");
   case Intrinsic::dx_resource_handlefrombinding:
   case Intrinsic::dx_resource_handlefromimplicitbinding:
     Op = CI->getArgOperand(5);
     break;
   }
-  StringRef Name;
-  if (auto *GV = dyn_cast<llvm::GlobalVariable>(Op)) {
-    auto *CA = dyn_cast<ConstantDataArray>(GV->getInitializer());
-    if (CA && CA->isString()) {
-      Name = CA->getAsString();
-      // strip trailing 0
-      if (Name.ends_with('\0'))
-        Name = Name.drop_back(1);
-    }
-  }
+
+  auto *GV = dyn_cast<llvm::GlobalVariable>(Op);
+  if (!GV)
+    return "";
+
+  auto *CA = dyn_cast<ConstantDataArray>(GV->getInitializer());
+  assert(CA && CA->isString() && "expected constant string");
+  StringRef Name = CA->getAsString();
+  // strip trailing 0
+  if (Name.ends_with('\0'))
+    Name = Name.drop_back(1);
   return Name;
 }
 
