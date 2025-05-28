@@ -38,3 +38,31 @@ TEST(LlvmLibcWMemcmpTest, LhsAfterRhsLexically) {
   const wchar_t *rhs = L"ab";
   EXPECT_GT(LIBC_NAMESPACE::wmemcmp(lhs, rhs, 2), 0);
 }
+
+TEST(LlvmLibcWMemcmpTest, CompareToEmpty) {
+  // lhs is nonempty, should result in a value greater than 0.
+  const wchar_t *lhs = L"az";
+  const wchar_t *rhs = L"";
+  EXPECT_GT(LIBC_NAMESPACE::wmemcmp(lhs, rhs, 2), 0);
+}
+
+TEST(LlvmLibcWMemcmpTest, LhsAfterRhsLexicallyLong) {
+  // b after a, should result in a value greater than 0.
+  const wchar_t *lhs = L"aaaaaaaaaaaaab";
+  const wchar_t *rhs = L"aaaaaaaaaaaaaa";
+  EXPECT_GT(LIBC_NAMESPACE::wmemcmp(lhs, rhs, 15), 0);
+}
+
+TEST(LlvmLibcWMemcmpTest, RhsAfterLhsLexicallyLong) {
+  // b after a, should result in a value less than 0.
+  const wchar_t *lhs = L"aaaaaaaaaaaaaa";
+  const wchar_t *rhs = L"aaaaaaaaaaaaab";
+  EXPECT_LT(LIBC_NAMESPACE::wmemcmp(lhs, rhs, 15), 0);
+}
+
+TEST(LlvmLibcWMemcmpTest, LhsRhsAreTheSameLong) {
+  // Comparing strings of equal value should result in 0.
+  const wchar_t *lhs = L"aaaaaaaaaaaaaa";
+  const wchar_t *rhs = L"aaaaaaaaaaaaaa";
+  EXPECT_EQ(LIBC_NAMESPACE::wmemcmp(lhs, rhs, 15), 0);
+}

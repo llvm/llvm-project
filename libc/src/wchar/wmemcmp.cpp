@@ -17,9 +17,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, wmemcmp,
                    (const wchar_t *s1, const wchar_t *s2, size_t n)) {
-  for (size_t i = 0; i < n; ++s1, ++s2, ++i) {
-    if (*s1 != *s2)
-      return (int)(*s1 - *s2);
+  for (size_t i = 0; i < n; ++i) {
+    if (s1[i] != s2[i])
+      return (int)(s1[i] - s2[i]);
   }
   // If it reaches the end, all n values must be the same.
   return 0;
