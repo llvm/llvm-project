@@ -3651,7 +3651,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
               m_Select(m_Value(Cond0), m_APInt(Op0Eq), m_APInt(Op0Ne))) &&
         match(I.getOperand(1),
               m_Select(m_Value(Cond1), m_APInt(Op1Eq), m_APInt(Op1Ne)))) {
-      CmpPredicate Pred0, Pred1;
 
       auto LHSDecompose =
           decomposeBitTest(Cond0, /*LookThruTrunc=*/true,
@@ -3661,9 +3660,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                            /*AllowNonZeroC=*/false, /*DecomposeAnd=*/true);
 
       if (LHSDecompose && RHSDecompose && LHSDecompose->X == RHSDecompose->X &&
-          (ICmpInst::isEquality(LHSDecompose->Pred)) &&
           RHSDecompose->Mask.isPowerOf2() && LHSDecompose->Mask.isPowerOf2() &&
           LHSDecompose->Mask != RHSDecompose->Mask) {
+        assert(ICmpInst::isEquality(LHSDecompose->Pred));
         if (LHSDecompose->Pred == ICmpInst::ICMP_NE)
           std::swap(Op0Eq, Op0Ne);
         if (RHSDecompose->Pred == ICmpInst::ICMP_NE)
