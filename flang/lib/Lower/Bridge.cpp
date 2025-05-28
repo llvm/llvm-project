@@ -2029,6 +2029,7 @@ private:
   void handleLocalitySpecs(const IncrementLoopInfo &info) {
     Fortran::semantics::SemanticsContext &semanticsContext =
         bridge.getSemanticsContext();
+    // TODO Extract `DataSharingProcessor` from omp to a more general location.
     Fortran::lower::omp::DataSharingProcessor dsp(
         *this, semanticsContext, getEval(),
         /*useDelayedPrivatization=*/true, localSymbols);
