@@ -307,7 +307,25 @@ TEST_F(SpecialCaseListTest, Version2) {
   EXPECT_FALSE(SCL->inSection("sect3", "fun", "bar"));
 }
 
-TEST_F(SpecialCaseListTest, Version3) {
+TEST_F(SpecialCaseListTest, LinesInSection) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:foo\n"
+                                                             "fun:bar\n"
+                                                             "fun:foo\n");
+  EXPECT_EQ(3u, SCL->inSectionBlame("sect1", "fun", "foo"));
+  EXPECT_EQ(2u, SCL->inSectionBlame("sect1", "fun", "bar"));
+}
+
+TEST_F(SpecialCaseListTest, LinesCrossSection) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:foo\n"
+                                                             "fun:bar\n"
+                                                             "fun:foo\n"
+                                                             "[sect1]\n"
+                                                             "fun:bar\n");
+  EXPECT_EQ(3u, SCL->inSectionBlame("sect1", "fun", "foo"));
+  EXPECT_EQ(5u, SCL->inSectionBlame("sect1", "fun", "bar"));
+}
+
+TEST_F(SpecialCaseListTest, Blame) {
   std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("[sect1]\n"
                                                              "src:foo*\n"
                                                              "[sect1]\n"
