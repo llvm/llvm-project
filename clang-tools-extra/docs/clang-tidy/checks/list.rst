@@ -87,6 +87,7 @@ Clang-Tidy Checks
    :doc:`bugprone-capturing-this-in-member-variable <bugprone/capturing-this-in-member-variable>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
    :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
+   :doc:`bugprone-conflicting-global-accesses <bugprone/conflicting-global-accesses>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
@@ -173,9 +174,11 @@ Clang-Tidy Checks
    :doc:`cert-env33-c <cert/env33-c>`,
    :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`cert-err34-c <cert/err34-c>`,
+   :doc:`cert-exp30-c <cert/exp30-c>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
+   :doc:`cert-exp50-cpp <cert/exp50-cpp>`,
    :doc:`cert-flp30-c <cert/flp30-c>`,
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`,
    :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
