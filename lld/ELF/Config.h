@@ -29,6 +29,7 @@
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/TarWriter.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -138,6 +139,11 @@ enum class GcsPolicy { Implicit, Never, Always };
 
 // For some options that resemble -z bti-report={none,warning,error}
 enum class ReportPolicy { None, Warning, Error };
+
+struct AArch64PauthAbiCoreInfo {
+  uint64_t aarch64PauthAbiPlatform;
+  uint64_t aarch64PauthAbiVersion;
+};
 
 struct SymbolVersion {
   llvm::StringRef name;
@@ -695,7 +701,7 @@ struct Ctx : CommonLinkerContext {
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
-  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+  std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
 };
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
