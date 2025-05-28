@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <float.h>
-
 #include "clang/Parse/ParseHLSLRootSignature.h"
 
 #include "clang/Lex/LiteralSupport.h"
@@ -969,7 +967,8 @@ std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
     Val = -Val;
 
   double DoubleVal = Val.convertToDouble();
-  if (FLT_MAX < DoubleVal || DoubleVal < -FLT_MAX) {
+  double FloatMax = double(std::numeric_limits<float>::max());
+  if (FloatMax < DoubleVal || DoubleVal < -FloatMax) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
