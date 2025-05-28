@@ -273,7 +273,7 @@ define void @constraint_m_with_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI5_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -419,7 +419,7 @@ define void @constraint_m_with_extern_weak_global_3() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(ewg)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; RV64I-MEDIUM-NEXT:    lui a1, 2
-; RV64I-MEDIUM-NEXT:    addiw a1, a1, -192
+; RV64I-MEDIUM-NEXT:    addi a1, a1, -192
 ; RV64I-MEDIUM-NEXT:    add a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    #APP
 ; RV64I-MEDIUM-NEXT:    sw zero, 0(a0)
@@ -432,7 +432,7 @@ define void @constraint_m_with_extern_weak_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI8_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -1435,7 +1435,7 @@ define void @constraint_o_with_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI21_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi15)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -1581,7 +1581,7 @@ define void @constraint_o_with_extern_weak_global_3() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(ewg)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi18)(a0)
 ; RV64I-MEDIUM-NEXT:    lui a1, 2
-; RV64I-MEDIUM-NEXT:    addiw a1, a1, -192
+; RV64I-MEDIUM-NEXT:    addi a1, a1, -192
 ; RV64I-MEDIUM-NEXT:    add a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    #APP
 ; RV64I-MEDIUM-NEXT:    sw zero, 0(a0)
@@ -1594,7 +1594,7 @@ define void @constraint_o_with_extern_weak_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI24_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi18)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -2500,7 +2500,7 @@ define void @constraint_A_with_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI35_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi27)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)
@@ -2655,7 +2655,7 @@ define void @constraint_A_with_extern_weak_global_3() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %got_pcrel_hi(ewg)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi30)(a0)
 ; RV64I-MEDIUM-NEXT:    lui a1, 2
-; RV64I-MEDIUM-NEXT:    addiw a1, a1, -192
+; RV64I-MEDIUM-NEXT:    addi a1, a1, -192
 ; RV64I-MEDIUM-NEXT:    add a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    #APP
 ; RV64I-MEDIUM-NEXT:    sw zero, 0(a0)
@@ -2668,7 +2668,7 @@ define void @constraint_A_with_extern_weak_global_3() nounwind {
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI38_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi30)(a0)
 ; RV64I-LARGE-NEXT:    lui a1, 2
-; RV64I-LARGE-NEXT:    addiw a1, a1, -192
+; RV64I-LARGE-NEXT:    addi a1, a1, -192
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    #APP
 ; RV64I-LARGE-NEXT:    sw zero, 0(a0)

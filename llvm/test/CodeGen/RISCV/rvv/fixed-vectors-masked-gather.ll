@@ -1128,7 +1128,7 @@ define <2 x i64> @mgather_v2i16_zextload_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, <2 
 ; RV64ZVE32F-NEXT:    vmv.x.s a0, v8
 ; RV64ZVE32F-NEXT:    lui a1, 16
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 1
-; RV64ZVE32F-NEXT:    addiw a1, a1, -1
+; RV64ZVE32F-NEXT:    addi a1, a1, -1
 ; RV64ZVE32F-NEXT:    vmv.x.s a2, v8
 ; RV64ZVE32F-NEXT:    and a0, a0, a1
 ; RV64ZVE32F-NEXT:    and a1, a2, a1
