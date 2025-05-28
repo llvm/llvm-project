@@ -75,5 +75,19 @@ Expected<FilterMatcher> FilterMatcher::createRE(StringRef Arg,
   return std::move(FM);
 }
 
+Expected<std::optional<FilterMatcher>> FilterMatcher::createExactOrRE(const llvm::cl::opt<std::string> &ExactArg,
+  const llvm::cl::opt<std::string> &REArg) {
+  if (!ExactArg.empty() && !REArg.empty())
+    return createStringError(make_error_code(std::errc::invalid_argument), "conflicting arguments: --" + ExactArg.ArgStr + " and --" + REArg.ArgStr);
+
+  if (!ExactArg.empty())
+    return createExact(ExactArg);
+
+  if (!REArg.empty())
+    return createRE(REArg);
+
+  return std::nullopt;
+}
+
 } // namespace remarks
 } // namespace llvm
