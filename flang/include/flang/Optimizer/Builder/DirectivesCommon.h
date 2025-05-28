@@ -160,7 +160,8 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
     if (info.isPresent) {
       llvm::SmallVector<mlir::Type> resTypes = {idxTy, idxTy};
       mlir::Operation::result_range ifRes =
-          builder.genIfOp(loc, resTypes, info.isPresent, /*withElseRegion=*/true)
+          builder
+              .genIfOp(loc, resTypes, info.isPresent, /*withElseRegion=*/true)
               .genThen([&]() {
                 mlir::Value boxChar =
                     fir::isa_ref_type(info.addr.getType())
@@ -171,13 +172,15 @@ genBoundsOpFromBoxChar(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Type refType = builder.getRefType(boxCharType.getEleTy());
                 auto unboxed = builder.create<fir::UnboxCharOp>(
                     loc, refType, lenType, boxChar);
-                mlir::SmallVector<mlir::Value> results = {unboxed.getResult(1), one };
+                mlir::SmallVector<mlir::Value> results = {unboxed.getResult(1),
+                                                          one};
                 builder.create<fir::ResultOp>(loc, results);
               })
-          .genElse([&]() {
-            mlir::SmallVector<mlir::Value> results = {zero, zero };
-            builder.create<fir::ResultOp>(loc, results); })
-          .getResults();
+              .genElse([&]() {
+                mlir::SmallVector<mlir::Value> results = {zero, zero};
+                builder.create<fir::ResultOp>(loc, results);
+              })
+              .getResults();
       return {ifRes[0], ifRes[1]};
     }
     // We have already established that info.addr.getType() is a boxchar
