@@ -1578,7 +1578,8 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
         });
 
     // Any forOp result that is not already yielded by the warpOp
-    // region is also considered escaping.
+    // region is also considered escaping and must be returned by the
+    // original warpOp.
     for (OpResult forResult : forOp.getResults()) {
       // Check if this forResult is already yielded by the yield op.
       if (llvm::is_contained(yield->getOperands(), forResult)) {
