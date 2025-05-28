@@ -42,12 +42,6 @@
 // OGCG-DAG: %struct.CycleMiddle = type { ptr }
 // OGCG-DAG: %struct.CycleEnd = type { ptr }
 
-struct IncompleteS *p;
-
-// CIR:      cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
-// LLVM-DAG: @p = dso_local global ptr null
-// OGCG-DAG: @p = global ptr null, align 8
-
 struct CompleteS {
   int a;
   char b;
@@ -56,6 +50,12 @@ struct CompleteS {
 // CIR:       cir.global external @cs = #cir.zero : !rec_CompleteS
 // LLVM-DAG:  @cs = dso_local global %struct.CompleteS zeroinitializer
 // OGCG-DAG:  @cs = global %struct.CompleteS zeroinitializer, align 4
+
+struct IncompleteS *p;
+
+// CIR:      cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
+// LLVM-DAG: @p = dso_local global ptr null
+// OGCG-DAG: @p = global ptr null, align 8
 
 struct InnerS {
   int a;
