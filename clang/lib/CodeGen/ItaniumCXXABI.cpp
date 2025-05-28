@@ -2061,6 +2061,10 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
     if (!VTable->isDSOLocal())
       CGVT.GenerateRelativeVTableAlias(VTable, VTable->getName());
   }
+
+  // Emit symbol for debugger only if requested debug info.
+  if (CGDebugInfo *DI = CGM.getModuleDebugInfo())
+    DI->emitVTableSymbol(VTable, RD);
 }
 
 bool ItaniumCXXABI::isVirtualOffsetNeededForVTableField(
@@ -2166,10 +2170,7 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   // Use pointer to global alignment for the vtable. Otherwise we would align
   // them based on the size of the initializer which doesn't make sense as only
   // single values are read.
-  LangAS AS = CGM.GetGlobalVarAddressSpace(nullptr);
-  unsigned PAlign = CGM.getItaniumVTableContext().isRelativeLayout()
-                        ? 32
-                        : CGM.getTarget().getPointerAlign(AS);
+  unsigned PAlign = CGM.getVtableGlobalVarAlignment();
 
   VTable = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, VTableType, llvm::GlobalValue::ExternalLinkage,
