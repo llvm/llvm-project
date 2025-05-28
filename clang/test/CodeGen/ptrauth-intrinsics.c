@@ -55,6 +55,18 @@ void test_auth_and_resign() {
   fnptr = __builtin_ptrauth_auth_and_resign(fnptr, 0, ptr_discriminator, 3, 15);
 }
 
+// CHECK-LABEL: define {{.*}}void @test_auth_load_relative_and_sign()
+void test_auth_load_relative_and_sign() {
+  // CHECK:      [[PTR:%.*]] = load ptr, ptr @fnptr,
+  // CHECK-NEXT: [[DISC0:%.*]] = load ptr, ptr @ptr_discriminator,
+  // CHECK-NEXT: [[T0:%.*]] = ptrtoint ptr [[PTR]] to i64
+  // CHECK-NEXT: [[DISC:%.*]] = ptrtoint ptr [[DISC0]] to i64
+  // CHECK-NEXT: [[T1:%.*]] = call i64 @llvm.ptrauth.resign.load.relative(i64 [[T0]], i32 0, i64 [[DISC]], i32 3, i64 15, i64  16)
+  // CHECK-NEXT: [[RESULT:%.*]] = inttoptr  i64 [[T1]] to ptr
+  // CHECK-NEXT: store ptr [[RESULT]], ptr @fnptr,
+  fnptr = __builtin_ptrauth_auth_load_relative_and_sign(fnptr, 0, ptr_discriminator, 3, 15, 16L);
+}
+
 // CHECK-LABEL: define {{.*}}void @test_blend_discriminator()
 void test_blend_discriminator() {
   // CHECK:      [[PTR:%.*]] = load ptr, ptr @fnptr,
