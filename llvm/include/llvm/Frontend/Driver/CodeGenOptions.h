@@ -13,6 +13,8 @@
 #ifndef LLVM_FRONTEND_DRIVER_CODEGENOPTIONS_H
 #define LLVM_FRONTEND_DRIVER_CODEGENOPTIONS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Triple;
 class TargetLibraryInfoImpl;
