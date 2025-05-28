@@ -24,6 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -7738,9 +7739,14 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
 
   for (Use *U : reverse(OpsToSink)) {
     auto *UI = cast<Instruction>(U->get());
-    if (isa<PHINode>(UI))
-      continue;
-    if (UI->getParent() == TargetBB) {
+    if (auto *PN = dyn_cast<PHINode>(UI)) {
+      auto *I0 = dyn_cast<Instruction>(PN->hasIdenticalValue());
+      if (!I0)
+        continue;
+      if (I0->getParent() == TargetBB &&
+          InstOrdering[I0] < InstOrdering[InsertPoint])
+        InsertPoint = I0;
+    } else if (UI->getParent() == TargetBB) {
       if (InstOrdering[UI] < InstOrdering[InsertPoint])
         InsertPoint = UI;
       continue;
@@ -7752,7 +7758,11 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
   DenseMap<Instruction *, Instruction *> NewInstructions;
   for (Use *U : ToReplace) {
     auto *UI = cast<Instruction>(U->get());
-    Instruction *NI = UI->clone();
+    Instruction *NI;
+    if (auto *PN = dyn_cast<PHINode>(UI))
+      NI = cast<Instruction>(PN->hasIdenticalValue())->clone();
+    else
+      NI = UI->clone();
 
     if (IsHugeFunc) {
       // Now we clone an instruction, its operands' defs may sink to this BB

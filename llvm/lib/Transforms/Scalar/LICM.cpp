@@ -467,9 +467,9 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
                          MSSAU, &SafetyInfo, Flags, ORE);
   Flags.setIsSink(false);
   if (Preheader)
-    Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI,
-                           TTI, L, MSSAU, SE, &SafetyInfo, Flags, ORE,
-                           LoopNestMode, LicmAllowSpeculation);
+    Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI, L,
+                           MSSAU, SE, &SafetyInfo, Flags, ORE, LoopNestMode,
+                           LicmAllowSpeculation);
 
   // Now that all loop invariants have been removed from the loop, promote any
   // memory references to scalars that we can.
@@ -873,9 +873,9 @@ public:
 ///
 bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                        DominatorTree *DT, AssumptionCache *AC,
-                       TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
-                       Loop *CurLoop, MemorySSAUpdater &MSSAU,
-                       ScalarEvolution *SE, ICFLoopSafetyInfo *SafetyInfo,
+                       TargetLibraryInfo *TLI, Loop *CurLoop,
+                       MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+                       ICFLoopSafetyInfo *SafetyInfo,
                        SinkAndHoistLICMFlags &Flags,
                        OptimizationRemarkEmitter *ORE, bool LoopNestMode,
                        bool AllowSpeculation) {
@@ -911,12 +911,11 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       // TODO: It may be safe to hoist if we are hoisting to a conditional block
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
-      if (TTI->isProfitableToHoist(&I) &&
-          CurLoop->hasLoopInvariantOperands(&I) &&
+      if (CurLoop->hasLoopInvariantOperands(&I) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, MSSAU, true, Flags, ORE) &&
-          isSafeToExecuteUnconditionally(I, DT, TLI, CurLoop, SafetyInfo, ORE,
-                                         Preheader->getTerminator(), AC,
-                                         AllowSpeculation)) {
+          isSafeToExecuteUnconditionally(
+              I, DT, TLI, CurLoop, SafetyInfo, ORE,
+              Preheader->getTerminator(), AC, AllowSpeculation)) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
         HoistedInstructions.push_back(&I);
@@ -2865,19 +2864,22 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   auto *NewBO = BinaryOperator::Create(
       Opcode, LV, Inv, BO->getName() + ".reass", BO->getIterator());
 
-  // Copy NUW for ADDs if both instructions have it.
-  if (Opcode == Instruction::Add && BO->hasNoUnsignedWrap() &&
-      BO0->hasNoUnsignedWrap()) {
-    // If `Inv` was not constant-folded, a new Instruction has been created.
-    if (auto *I = dyn_cast<Instruction>(Inv))
-      I->setHasNoUnsignedWrap(true);
-    NewBO->setHasNoUnsignedWrap(true);
-  } else if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
+  if (Opcode == Instruction::FAdd || Opcode == Instruction::FMul) {
     // Intersect FMF flags for FADD and FMUL.
     FastMathFlags Intersect = BO->getFastMathFlags() & BO0->getFastMathFlags();
     if (auto *I = dyn_cast<Instruction>(Inv))
       I->setFastMathFlags(Intersect);
     NewBO->setFastMathFlags(Intersect);
+  } else {
+    OverflowTracking Flags;
+    Flags.AllKnownNonNegative = false;
+    Flags.AllKnownNonZero = false;
+    Flags.mergeFlags(*BO);
+    Flags.mergeFlags(*BO0);
+    // If `Inv` was not constant-folded, a new Instruction has been created.
+    if (auto *I = dyn_cast<Instruction>(Inv))
+      Flags.applyFlags(*I);
+    Flags.applyFlags(*NewBO);
   }
 
   BO->replaceAllUsesWith(NewBO);

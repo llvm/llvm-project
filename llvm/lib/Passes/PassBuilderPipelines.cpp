@@ -1288,6 +1288,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // and argument promotion.
   MPM.addPass(DeadArgumentEliminationPass());
 
+  if (Phase == ThinOrFullLTOPhase::ThinLTOPostLink)
+    MPM.addPass(SimplifyTypeTestsPass());
+
   if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
     MPM.addPass(CoroCleanupPass());
 
@@ -1463,8 +1466,6 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // preserved during prelinking for link-time inlining decisions.
   if (!LTOPreLink)
     MPM.addPass(EliminateAvailableExternallyPass());
-
-  MPM.addPass(SimplifyTypeTestsPass());
 
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
