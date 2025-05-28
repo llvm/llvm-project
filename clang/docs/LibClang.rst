@@ -373,13 +373,15 @@ implementation of the facilities by Clang may change behavior as bugs are
 fixed, features get implemented, etc.
 
 The library should be ABI and API stable over time, but ABI- and API-breaking
-changes can happen in the following situations:
+changes can happen in the following (non-exhaustive) situations:
 
 * Adding new enumerator to an enumeration (can be ABI-breaking in C++).
 * Removing an explicitly deprecated API after a suitably long deprecation
   period.
 * Using implementation details, such as names or comments that say something
   is "private", "reserved", "internal", etc.
+* Bug fixes or changes to Clang's internal implementation, or (rarely), bug
+  fixes to libclang itself.
 
 The library has version macros (``CINDEX_VERSION_MAJOR``,
 ``CINDEX_VERSION_MINOR``, and ``CINDEX_VERSION``) which can be used to test for
