@@ -930,7 +930,14 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
 
   const LLT i1Ty = LLT::scalar(1);
   // Build the compare.
-  if (!CB.CmpMHS) {
+  if (CB.EmitAnd) {
+    const LLT Ty = getLLTForType(*CB.CmpRHS->getType(), *DL);
+    Register CondLHS = getOrCreateVReg(*CB.CmpLHS);
+    Register C = getOrCreateVReg(*CB.CmpRHS);
+    Register And = MIB.buildAnd(Ty, CondLHS, C).getReg(0);
+    auto Zero = MIB.buildConstant(Ty, 0);
+    Cond = MIB.buildICmp(CmpInst::ICMP_EQ, i1Ty, And, Zero).getReg(0);
+  } else if (!CB.CmpMHS) {
     const auto *CI = dyn_cast<ConstantInt>(CB.CmpRHS);
     // For conditional branch lowering, we might try to do something silly like
     // emit an G_ICMP to compare an existing G_ICMP i1 result with true. If so,

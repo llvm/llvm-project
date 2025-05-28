@@ -29,19 +29,22 @@ define i32 @switch_with_matching_dests_0_and_pow2_3_cases(i8 %v) {
 ;
 ; GISEL-LABEL: switch_with_matching_dests_0_and_pow2_3_cases:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    mov w8, #100 ; =0x64
-; GISEL-NEXT:    and w9, w0, #0xff
+; GISEL-NEXT:    mov w8, w0
+; GISEL-NEXT:    mov w9, #100 ; =0x64
+; GISEL-NEXT:    mov w10, #223 ; =0xdf
 ; GISEL-NEXT:    mov w0, #20 ; =0x14
 ; GISEL-NEXT:  LBB0_1: ; %loop.header
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    tbnz wzr, #0, LBB0_4
+; GISEL-NEXT:    tst w8, w10
+; GISEL-NEXT:    b.eq LBB0_4
 ; GISEL-NEXT:  ; %bb.2: ; %loop.header
 ; GISEL-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; GISEL-NEXT:    cmp w9, #124
+; GISEL-NEXT:    and w11, w8, #0xff
+; GISEL-NEXT:    cmp w11, #124
 ; GISEL-NEXT:    b.eq LBB0_5
 ; GISEL-NEXT:  ; %bb.3: ; %loop.latch
 ; GISEL-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; GISEL-NEXT:    subs w8, w8, #1
+; GISEL-NEXT:    subs w9, w9, #1
 ; GISEL-NEXT:    b.ne LBB0_1
 ; GISEL-NEXT:  LBB0_4: ; %common.ret
 ; GISEL-NEXT:    ret
@@ -102,13 +105,15 @@ define i32 @switch_with_matching_dests_0_and_pow2_3_cases_swapped(i8 %v) {
 ; GISEL-LABEL: switch_with_matching_dests_0_and_pow2_3_cases_swapped:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    mov w8, #100 ; =0x64
-; GISEL-NEXT:    and w9, w0, #0xff
+; GISEL-NEXT:    mov w9, #223 ; =0xdf
 ; GISEL-NEXT:  LBB1_1: ; %loop.header
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    tbnz wzr, #0, LBB1_5
+; GISEL-NEXT:    tst w0, w9
+; GISEL-NEXT:    b.eq LBB1_5
 ; GISEL-NEXT:  ; %bb.2: ; %loop.header
 ; GISEL-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; GISEL-NEXT:    cmp w9, #124
+; GISEL-NEXT:    and w10, w0, #0xff
+; GISEL-NEXT:    cmp w10, #124
 ; GISEL-NEXT:    b.eq LBB1_6
 ; GISEL-NEXT:  ; %bb.3: ; %loop.latch
 ; GISEL-NEXT:    ; in Loop: Header=BB1_1 Depth=1
@@ -184,26 +189,28 @@ define i32 @switch_with_matching_dests_0_and_pow2_3_cases_with_phi(i8 %v, i1 %c)
 ;
 ; GISEL-LABEL: switch_with_matching_dests_0_and_pow2_3_cases_with_phi:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    mov w8, w0
-; GISEL-NEXT:    mov w0, wzr
+; GISEL-NEXT:    mov w8, wzr
 ; GISEL-NEXT:    tbz w1, #0, LBB2_6
 ; GISEL-NEXT:  ; %bb.1: ; %loop.header.preheader
-; GISEL-NEXT:    mov w9, #100 ; =0x64
-; GISEL-NEXT:    and w8, w8, #0xff
+; GISEL-NEXT:    mov w8, #100 ; =0x64
+; GISEL-NEXT:    mov w9, #223 ; =0xdf
 ; GISEL-NEXT:  LBB2_2: ; %loop.header
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    tbnz wzr, #0, LBB2_7
+; GISEL-NEXT:    tst w0, w9
+; GISEL-NEXT:    b.eq LBB2_7
 ; GISEL-NEXT:  ; %bb.3: ; %loop.header
 ; GISEL-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GISEL-NEXT:    cmp w8, #124
+; GISEL-NEXT:    and w10, w0, #0xff
+; GISEL-NEXT:    cmp w10, #124
 ; GISEL-NEXT:    b.eq LBB2_8
 ; GISEL-NEXT:  ; %bb.4: ; %loop.latch
 ; GISEL-NEXT:    ; in Loop: Header=BB2_2 Depth=1
-; GISEL-NEXT:    subs w9, w9, #1
+; GISEL-NEXT:    subs w8, w8, #1
 ; GISEL-NEXT:    b.ne LBB2_2
 ; GISEL-NEXT:  ; %bb.5:
-; GISEL-NEXT:    mov w0, #10 ; =0xa
+; GISEL-NEXT:    mov w8, #10 ; =0xa
 ; GISEL-NEXT:  LBB2_6: ; %common.ret
+; GISEL-NEXT:    mov w0, w8
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  LBB2_7:
 ; GISEL-NEXT:    mov w0, #20 ; =0x14
@@ -359,10 +366,11 @@ define i32 @switch_in_loop_with_matching_dests_0_and_pow2_3_cases(ptr %start) {
 ; GISEL-NEXT:    add x8, x0, #1
 ; GISEL-NEXT:  LBB4_1: ; %loop
 ; GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    tbnz wzr, #0, LBB4_4
+; GISEL-NEXT:    ldrb w9, [x8], #1
+; GISEL-NEXT:    tst w9, #0xffffffdf
+; GISEL-NEXT:    b.eq LBB4_4
 ; GISEL-NEXT:  ; %bb.2: ; %loop
 ; GISEL-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; GISEL-NEXT:    ldrb w9, [x8], #1
 ; GISEL-NEXT:    cmp w9, #124
 ; GISEL-NEXT:    b.ne LBB4_1
 ; GISEL-NEXT:  ; %bb.3: ; %e2.loopexit
@@ -554,7 +562,7 @@ define void @test_successor_with_loop_phi(ptr %A, ptr %B) {
 ; GISEL-NEXT:    ldr w8, [x0]
 ; GISEL-NEXT:    str wzr, [x0]
 ; GISEL-NEXT:    mov x0, x1
-; GISEL-NEXT:    cmn w8, #5
+; GISEL-NEXT:    tst w8, #0xfffffffb
 ; GISEL-NEXT:    b.eq LBB7_1
 ; GISEL-NEXT:  ; %bb.2: ; %exit
 ; GISEL-NEXT:    ret
@@ -830,7 +838,9 @@ define void @merge_with_stores(ptr %A, i16 %v) {
 ;
 ; GISEL-LABEL: merge_with_stores:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    tbnz wzr, #0, LBB11_3
+; GISEL-NEXT:    mov w8, #65533 ; =0xfffd
+; GISEL-NEXT:    tst w1, w8
+; GISEL-NEXT:    b.eq LBB11_3
 ; GISEL-NEXT:  ; %bb.1: ; %entry
 ; GISEL-NEXT:    mov w8, #-10 ; =0xfffffff6
 ; GISEL-NEXT:    add w8, w8, w1, uxth
