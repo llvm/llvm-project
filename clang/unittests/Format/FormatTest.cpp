@@ -23813,9 +23813,6 @@ TEST_F(FormatTest, FormatsLambdas) {
                "          }};\n"
                "}",
                LLVMWithBeforeLambdaBody);
-
-  // Make sure we don't put the lambda on a new line when it would be indented
-  // more than where it would be otherwise.
   verifyFormat("if ([]()\n"
                "    {\n"
                "      return true;\n"
