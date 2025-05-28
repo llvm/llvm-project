@@ -23,7 +23,9 @@ static void
 CreateUnsatisfiedConstraintRecord(const ASTContext &C,
                                   const UnsatisfiedConstraintRecord &Detail,
                                   UnsatisfiedConstraintRecord *TrailingObject) {
-  if (auto *E = dyn_cast<Expr *>(Detail))
+  if (Detail.isNull())
+    new (TrailingObject) UnsatisfiedConstraintRecord(nullptr);
+  else if (const auto *E = llvm::dyn_cast<const Expr *>(Detail))
     new (TrailingObject) UnsatisfiedConstraintRecord(E);
   else {
     auto &SubstitutionDiagnostic =
@@ -73,9 +75,10 @@ ASTConstraintSatisfaction *ASTConstraintSatisfaction::Rebuild(
   return new (Mem) ASTConstraintSatisfaction(C, Satisfaction);
 }
 
-void ConstraintSatisfaction::Profile(
-    llvm::FoldingSetNodeID &ID, const ASTContext &C,
-    const NamedDecl *ConstraintOwner, ArrayRef<TemplateArgument> TemplateArgs) {
+void ConstraintSatisfaction::Profile(llvm::FoldingSetNodeID &ID,
+                                     const ASTContext &C,
+                                     const NamedDecl *ConstraintOwner,
+                                     ArrayRef<TemplateArgument> TemplateArgs) {
   ID.AddPointer(ConstraintOwner);
   ID.AddInteger(TemplateArgs.size());
   for (auto &Arg : TemplateArgs)
