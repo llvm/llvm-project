@@ -4146,13 +4146,17 @@ void EmitAttributeSpellingList(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "ATTR_NAME(\"" << AttrName << "\")\n";
   }
   OS << "\n";
+  OS << "#undef ATTR_NAME" << "\n";
+  OS << "\n";
 
-  OS << "#ifndef ATTR_SCOPE_SCOPE" << "\n";
-  OS << "#define ATTR_SCOPE_SCOPE(SCOPE_NAME) SCOPE_NAME" << "\n";
+  OS << "#ifndef ATTR_SCOPE_NAME" << "\n";
+  OS << "#define ATTR_SCOPE_NAME(SCOPE_NAME) SCOPE_NAME" << "\n";
   OS << "#endif" << "\n" << "\n";
   for (const auto &AttrScopeName : AttrScopeSpellingList) {
-    OS << "ATTR_SCOPE_SCOPE(\"" << AttrScopeName << "\")\n";
+    OS << "ATTR_SCOPE_NAME(\"" << AttrScopeName << "\")\n";
   }
+  OS << "\n";
+  OS << "#undef ATTR_SCOPE_NAME" << "\n";
   OS << "\n";
 }
 

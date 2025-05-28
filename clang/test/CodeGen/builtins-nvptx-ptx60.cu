@@ -35,7 +35,7 @@ __device__ void nvvm_sync(unsigned mask, int i, float f, int a, int b,
   // CHECK: call void @llvm.nvvm.barrier.cta.sync.all(i32
   // expected-error@+1 {{'__nvvm_barrier_sync' needs target feature ptx60}}
   __nvvm_barrier_sync(mask);
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync(i32
+  // CHECK: call void @llvm.nvvm.barrier.cta.sync.count(i32
   // expected-error@+1 {{'__nvvm_barrier_sync_cnt' needs target feature ptx60}}
   __nvvm_barrier_sync_cnt(mask, i);
 

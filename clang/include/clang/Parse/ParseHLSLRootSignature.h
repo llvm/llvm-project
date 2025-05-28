@@ -77,6 +77,7 @@ private:
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
   std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
   parseDescriptorTableClause();
+  std::optional<llvm::hlsl::rootsig::StaticSampler> parseStaticSampler();
 
   /// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
   /// order and only exactly once. The following methods define a
@@ -89,6 +90,15 @@ private:
   };
   std::optional<ParsedConstantParams> parseRootConstantParams();
 
+  struct ParsedRootDescriptorParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::hlsl::rootsig::RootDescriptorFlags> Flags;
+  };
+  std::optional<ParsedRootDescriptorParams>
+  parseRootDescriptorParams(RootSignatureToken::Kind RegType);
+
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> NumDescriptors;
@@ -99,12 +109,19 @@ private:
   std::optional<ParsedClauseParams>
   parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
 
+  struct ParsedStaticSamplerParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+  };
+  std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
+
   // Common parsing methods
   std::optional<uint32_t> parseUIntParam();
   std::optional<llvm::hlsl::rootsig::Register> parseRegister();
 
   /// Parsing methods of various enums
   std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
+  std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
+  parseRootDescriptorFlags();
   std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
   parseDescriptorRangeFlags();
 

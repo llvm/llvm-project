@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProf.h"
@@ -217,7 +218,9 @@ static Error writeMemProfV2(ProfOStream &OS,
 
 static Error writeMemProfRadixTreeBased(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
-    memprof::IndexedVersion Version, bool MemProfFullSchema) {
+    memprof::IndexedVersion Version, bool MemProfFullSchema,
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData =
+        nullptr) {
   assert((Version == memprof::Version3 || Version == memprof::Version4) &&
          "Unsupported version for radix tree format");
 
@@ -226,6 +229,8 @@ static Error writeMemProfRadixTreeBased(
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof record payload offset.
   OS.write(0ULL); // Reserve space for the memprof record table offset.
+  if (Version >= memprof::Version4)
+    OS.write(0ULL); // Reserve space for the data access profile offset.
 
   auto Schema = memprof::getHotColdSchema();
   if (MemProfFullSchema)
@@ -252,17 +257,29 @@ static Error writeMemProfRadixTreeBased(
   uint64_t RecordTableOffset = writeMemProfRecords(
       OS, MemProfData.Records, &Schema, Version, &MemProfCallStackIndexes);
 
+  uint64_t DataAccessProfOffset = 0;
+  if (DataAccessProfileData != nullptr) {
+    assert(Version >= memprof::Version4 &&
+           "Data access profiles are added starting from v4");
+    DataAccessProfOffset = OS.tell();
+    if (Error E = DataAccessProfileData->serialize(OS))
+      return E;
+  }
+
   // Verify that the computation for the number of elements in the call stack
   // array works.
   assert(CallStackPayloadOffset +
              NumElements * sizeof(memprof::LinearFrameId) ==
          RecordPayloadOffset);
 
-  uint64_t Header[] = {
+  SmallVector<uint64_t, 4> Header = {
       CallStackPayloadOffset,
       RecordPayloadOffset,
       RecordTableOffset,
   };
+  if (Version >= memprof::Version4)
+    Header.push_back(DataAccessProfOffset);
+
   OS.patch({{HeaderUpdatePos, Header}});
 
   return Error::success();
@@ -277,24 +294,28 @@ static Error writeMemProfV3(ProfOStream &OS,
 }
 
 // Write out MemProf Version4
-static Error writeMemProfV4(ProfOStream &OS,
-                            memprof::IndexedMemProfData &MemProfData,
-                            bool MemProfFullSchema) {
+static Error writeMemProfV4(
+    ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
+    bool MemProfFullSchema,
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData) {
   return writeMemProfRadixTreeBased(OS, MemProfData, memprof::Version4,
-                                    MemProfFullSchema);
+                                    MemProfFullSchema,
+                                    std::move(DataAccessProfileData));
 }
 
 // Write out the MemProf data in a requested version.
-Error writeMemProf(ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
-                   memprof::IndexedVersion MemProfVersionRequested,
-                   bool MemProfFullSchema) {
+Error writeMemProf(
+    ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
+    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData) {
   switch (MemProfVersionRequested) {
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
   case memprof::Version3:
     return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
   case memprof::Version4:
-    return writeMemProfV4(OS, MemProfData, MemProfFullSchema);
+    return writeMemProfV4(OS, MemProfData, MemProfFullSchema,
+                          std::move(DataAccessProfileData));
   }
 
   return make_error<InstrProfError>(
@@ -358,7 +379,10 @@ Error IndexedMemProfReader::deserializeV2(const unsigned char *Start,
 }
 
 Error IndexedMemProfReader::deserializeRadixTreeBased(
-    const unsigned char *Start, const unsigned char *Ptr) {
+    const unsigned char *Start, const unsigned char *Ptr,
+    memprof::IndexedVersion Version) {
+  assert((Version == memprof::Version3 || Version == memprof::Version4) &&
+         "Unsupported version for radix tree format");
   // The offset in the stream right before invoking
   // CallStackTableGenerator.Emit.
   const uint64_t CallStackPayloadOffset =
@@ -369,6 +393,11 @@ Error IndexedMemProfReader::deserializeRadixTreeBased(
   // The value returned from RecordTableGenerator.Emit.
   const uint64_t RecordTableOffset =
       support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+
+  uint64_t DataAccessProfOffset = 0;
+  if (Version == memprof::Version4)
+    DataAccessProfOffset =
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
   // Read the schema.
   auto SchemaOr = memprof::readMemProfSchema(Ptr);
@@ -390,6 +419,15 @@ Error IndexedMemProfReader::deserializeRadixTreeBased(
       /*Buckets=*/Start + RecordTableOffset,
       /*Payload=*/Start + RecordPayloadOffset,
       /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
+
+  assert((!DataAccessProfOffset || DataAccessProfOffset > RecordTableOffset) &&
+         "Data access profile is either empty or after the record table");
+  if (DataAccessProfOffset > RecordTableOffset) {
+    DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+    const unsigned char *DAPPtr = Start + DataAccessProfOffset;
+    if (Error E = DataAccessProfileData->deserialize(DAPPtr))
+      return E;
+  }
 
   return Error::success();
 }
@@ -424,7 +462,7 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   case memprof::Version3:
   case memprof::Version4:
     // V3 and V4 share the same high-level structure (radix tree, linear IDs).
-    if (Error E = deserializeRadixTreeBased(Start, Ptr))
+    if (Error E = deserializeRadixTreeBased(Start, Ptr, Version))
       return E;
     break;
   }

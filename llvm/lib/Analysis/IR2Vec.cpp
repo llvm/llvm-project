@@ -13,7 +13,6 @@
 
 #include "llvm/Analysis/IR2Vec.h"
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -73,10 +72,8 @@ Expected<std::unique_ptr<Embedder>> Embedder::create(IR2VecKind Mode,
   switch (Mode) {
   case IR2VecKind::Symbolic:
     return std::make_unique<SymbolicEmbedder>(F, Vocabulary, Dimension);
-  default:
-    return make_error<StringError>("Unknown IR2VecKind",
-                                   errc::invalid_argument);
   }
+  return make_error<StringError>("Unknown IR2VecKind", errc::invalid_argument);
 }
 
 void Embedder::addVectors(Embedding &Dst, const Embedding &Src) {
@@ -217,6 +214,7 @@ Error IR2VecVocabAnalysis::readVocabulary() {
 
   unsigned Dim = Vocabulary.begin()->second.size();
   assert(Dim > 0 && "Dimension of vocabulary is zero");
+  (void)Dim;
   assert(std::all_of(Vocabulary.begin(), Vocabulary.end(),
                      [Dim](const std::pair<StringRef, Embedding> &Entry) {
                        return Entry.second.size() == Dim;

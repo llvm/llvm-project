@@ -138,6 +138,7 @@ Changes to the LoongArch Backend
 --------------------------------
 
 * Changing the default code model from `small` to `medium` for 64-bit.
+* Added inline asm support for the `q` constraint.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -278,6 +279,7 @@ Changes to LLDB
   supporting reverse execution, such as [rr](https://rr-project.org).
   When using reverse execution, `process continue --forward` returns to the
   forward execution.
+* LLDB now supports RISC-V 32-bit ELF core files.
 
 ### Changes to lldb-dap
 

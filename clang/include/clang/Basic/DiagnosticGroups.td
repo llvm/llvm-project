@@ -234,7 +234,8 @@ def DeprecatedCopyWithDtor : DiagGroup<"deprecated-copy-with-dtor", [DeprecatedC
 def DeprecatedLiteralOperator : DiagGroup<"deprecated-literal-operator">;
 // For compatibility with GCC.
 def : DiagGroup<"deprecated-copy-dtor", [DeprecatedCopyWithDtor]>;
-def DeprecatedDeclarations : DiagGroup<"deprecated-declarations">;
+def DeprecatedSwitchCase : DiagGroup<"deprecated-switch-case">;
+def DeprecatedDeclarations : DiagGroup<"deprecated-declarations", [DeprecatedSwitchCase]>;
 def DeprecatedRedundantConstexprStaticDef : DiagGroup<"deprecated-redundant-constexpr-static-def">;
 def UnavailableDeclarations : DiagGroup<"unavailable-declarations">;
 def UnguardedAvailabilityNew : DiagGroup<"unguarded-availability-new">;
