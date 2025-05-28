@@ -439,8 +439,8 @@ struct ScalingTruncFOpConverter
     // flush denorms, check if exponent part of input operand is zero or not.
     Type f8E8M0Ty = cloneToShapedType(inputTy, b.getF8E8M0Type());
     Type i8Ty = cloneToShapedType(inputTy, b.getI8Type());
-    Value inputExponent = b.create<arith::TruncFOp>(inputOperand, f8E8M0Ty);
-    Value inputExponentU8 = b.create<arith::BitcastOp>(inputExponent, i8Ty);
+    Value inputExponent = b.create<arith::TruncFOp>(f8E8M0Ty, inputOperand);
+    Value inputExponentU8 = b.create<arith::BitcastOp>(i8Ty, inputExponent);
     Value cI8Zero = createConst(op.getLoc(), i8Ty, 0x00, rewriter);
     Value cmpCond = b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, cI8Zero,
                                             inputExponentU8);
