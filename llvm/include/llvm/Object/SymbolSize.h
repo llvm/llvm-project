@@ -10,8 +10,8 @@
 #ifndef LLVM_OBJECT_SYMBOLSIZE_H
 #define LLVM_OBJECT_SYMBOLSIZE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace object {
@@ -27,7 +27,6 @@ LLVM_ABI int compareAddress(const SymEntry *A, const SymEntry *B);
 
 LLVM_ABI std::vector<std::pair<SymbolRef, uint64_t>>
 computeSymbolSizes(const ObjectFile &O);
-
 }
 } // namespace llvm
 

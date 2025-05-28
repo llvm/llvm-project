@@ -23,7 +23,6 @@
 #ifndef LLVM_OBJECT_IRSYMTAB_H
 #define LLVM_OBJECT_IRSYMTAB_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -31,6 +30,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
@@ -164,7 +164,8 @@ struct Header {
 /// Fills in Symtab and StrtabBuilder with a valid symbol and string table for
 /// Mods.
 LLVM_ABI Error build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
-            StringTableBuilder &StrtabBuilder, BumpPtrAllocator &Alloc);
+                     StringTableBuilder &StrtabBuilder,
+                     BumpPtrAllocator &Alloc);
 
 /// This represents a symbol that has been read from a storage::Symbol and
 /// possibly a storage::Uncommon.

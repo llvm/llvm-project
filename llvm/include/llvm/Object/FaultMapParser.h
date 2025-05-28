@@ -155,11 +155,11 @@ public:
   }
 };
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
-                        const FaultMapParser::FunctionFaultInfoAccessor &);
+LLVM_ABI raw_ostream &
+operator<<(raw_ostream &OS, const FaultMapParser::FunctionFaultInfoAccessor &);
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
-                        const FaultMapParser::FunctionInfoAccessor &);
+                                 const FaultMapParser::FunctionInfoAccessor &);
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const FaultMapParser &);
 

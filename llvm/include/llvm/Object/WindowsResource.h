@@ -28,13 +28,13 @@
 #ifndef LLVM_OBJECT_WINDOWSRESOURCE_H
 #define LLVM_OBJECT_WINDOWSRESOURCE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -155,9 +155,10 @@ class WindowsResourceParser {
 public:
   class TreeNode;
   LLVM_ABI WindowsResourceParser(bool MinGW = false);
-  LLVM_ABI Error parse(WindowsResource *WR, std::vector<std::string> &Duplicates);
+  LLVM_ABI Error parse(WindowsResource *WR,
+                       std::vector<std::string> &Duplicates);
   LLVM_ABI Error parse(ResourceSectionRef &RSR, StringRef Filename,
-              std::vector<std::string> &Duplicates);
+                       std::vector<std::string> &Duplicates);
   LLVM_ABI void cleanUpManifests(std::vector<std::string> &Duplicates);
   LLVM_ABI void printTree(raw_ostream &OS) const;
   const TreeNode &getTree() const { return Root; }

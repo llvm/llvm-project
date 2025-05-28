@@ -64,7 +64,8 @@ public:
 ///
 /// For errors that don't require their own specific sub-error (most errors)
 /// this class can be used to describe the error via a string message.
-class LLVM_ABI GenericBinaryError : public ErrorInfo<GenericBinaryError, BinaryError> {
+class LLVM_ABI GenericBinaryError
+    : public ErrorInfo<GenericBinaryError, BinaryError> {
 public:
   static char ID;
   GenericBinaryError(const Twine &Msg);

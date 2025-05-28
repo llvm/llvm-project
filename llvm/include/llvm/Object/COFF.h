@@ -13,7 +13,6 @@
 #ifndef LLVM_OBJECT_COFF_H
 #define LLVM_OBJECT_COFF_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/Binary.h"
@@ -21,6 +20,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1244,7 +1244,8 @@ public:
 
   LLVM_ABI imported_symbol_iterator lookup_table_begin() const;
   LLVM_ABI imported_symbol_iterator lookup_table_end() const;
-  LLVM_ABI iterator_range<imported_symbol_iterator> lookup_table_symbols() const;
+  LLVM_ABI iterator_range<imported_symbol_iterator>
+  lookup_table_symbols() const;
 
   LLVM_ABI Error getName(StringRef &Result) const;
   LLVM_ABI Error getImportLookupTableRVA(uint32_t &Result) const;
@@ -1274,8 +1275,8 @@ public:
   LLVM_ABI iterator_range<imported_symbol_iterator> imported_symbols() const;
 
   LLVM_ABI Error getName(StringRef &Result) const;
-  LLVM_ABI Error getDelayImportTable(
-      const delay_import_directory_table_entry *&Result) const;
+  LLVM_ABI Error
+  getDelayImportTable(const delay_import_directory_table_entry *&Result) const;
   LLVM_ABI Error getImportAddress(int AddrIndex, uint64_t &Result) const;
 
 private:
@@ -1428,7 +1429,8 @@ public:
   LLVM_ABI Expected<const coff_resource_dir_entry &>
   getTableEntry(const coff_resource_dir_table &Table, uint32_t Index);
 
-  LLVM_ABI Expected<StringRef> getContents(const coff_resource_data_entry &Entry);
+  LLVM_ABI Expected<StringRef>
+  getContents(const coff_resource_data_entry &Entry);
 
 private:
   BinaryByteStream BBS;

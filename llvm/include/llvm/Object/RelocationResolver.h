@@ -33,8 +33,9 @@ using RelocationResolver = uint64_t (*)(uint64_t Type, uint64_t Offset,
 LLVM_ABI std::pair<SupportsRelocation, RelocationResolver>
 getRelocationResolver(const ObjectFile &Obj);
 
-LLVM_ABI uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
-                           uint64_t S, uint64_t LocData);
+LLVM_ABI uint64_t resolveRelocation(RelocationResolver Resolver,
+                                    const RelocationRef &R, uint64_t S,
+                                    uint64_t LocData);
 
 } // end namespace object
 } // end namespace llvm

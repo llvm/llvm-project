@@ -14,7 +14,6 @@
 #ifndef LLVM_OBJECT_MACHO_H
 #define LLVM_OBJECT_MACHO_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,6 +25,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -73,7 +73,8 @@ using dice_iterator = content_iterator<DiceRef>;
 ///      if (Err) { report error ...
 class ExportEntry {
 public:
-  LLVM_ABI ExportEntry(Error *Err, const MachOObjectFile *O, ArrayRef<uint8_t> Trie);
+  LLVM_ABI ExportEntry(Error *Err, const MachOObjectFile *O,
+                       ArrayRef<uint8_t> Trie);
 
   LLVM_ABI StringRef name() const;
   LLVM_ABI uint64_t flags() const;
@@ -136,8 +137,9 @@ public:
 
   // Used to check a Mach-O Bind or Rebase entry for errors when iterating.
   LLVM_ABI const char *checkSegAndOffsets(int32_t SegIndex, uint64_t SegOffset,
-                                 uint8_t PointerSize, uint64_t Count = 1,
-                                 uint64_t Skip = 0);
+                                          uint8_t PointerSize,
+                                          uint64_t Count = 1,
+                                          uint64_t Skip = 0);
   // Used with valid SegIndex/SegOffset values from checked entries.
   LLVM_ABI StringRef segmentName(int32_t SegIndex);
   LLVM_ABI StringRef sectionName(int32_t SegIndex, uint64_t SegOffset);
@@ -169,7 +171,7 @@ private:
 class MachORebaseEntry {
 public:
   LLVM_ABI MachORebaseEntry(Error *Err, const MachOObjectFile *O,
-                   ArrayRef<uint8_t> opcodes, bool is64Bit);
+                            ArrayRef<uint8_t> opcodes, bool is64Bit);
 
   LLVM_ABI int32_t segmentIndex() const;
   LLVM_ABI uint64_t segmentOffset() const;
@@ -215,7 +217,8 @@ public:
   enum class Kind { Regular, Lazy, Weak };
 
   LLVM_ABI MachOBindEntry(Error *Err, const MachOObjectFile *O,
-                 ArrayRef<uint8_t> Opcodes, bool is64Bit, MachOBindEntry::Kind);
+                          ArrayRef<uint8_t> Opcodes, bool is64Bit,
+                          MachOBindEntry::Kind);
 
   LLVM_ABI int32_t segmentIndex() const;
   LLVM_ABI uint64_t segmentOffset() const;
@@ -380,7 +383,8 @@ class MachOChainedFixupEntry : public MachOAbstractFixupEntry {
 public:
   enum class FixupKind { Bind, Rebase };
 
-  LLVM_ABI MachOChainedFixupEntry(Error *Err, const MachOObjectFile *O, bool Parse);
+  LLVM_ABI MachOChainedFixupEntry(Error *Err, const MachOObjectFile *O,
+                                  bool Parse);
 
   LLVM_ABI bool operator==(const MachOChainedFixupEntry &) const;
 

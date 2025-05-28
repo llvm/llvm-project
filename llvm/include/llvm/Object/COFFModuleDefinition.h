@@ -18,9 +18,9 @@
 #ifndef LLVM_OBJECT_COFFMODULEDEFINITION_H
 #define LLVM_OBJECT_COFFMODULEDEFINITION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace object {

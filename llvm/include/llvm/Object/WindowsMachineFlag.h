@@ -13,8 +13,8 @@
 #ifndef LLVM_OBJECT_WINDOWSMACHINEFLAG_H
 #define LLVM_OBJECT_WINDOWSMACHINEFLAG_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {

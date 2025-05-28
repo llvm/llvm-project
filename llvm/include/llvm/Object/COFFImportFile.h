@@ -16,12 +16,12 @@
 #ifndef LLVM_OBJECT_COFFIMPORTFILE_H
 #define LLVM_OBJECT_COFFIMPORTFILE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -137,9 +137,9 @@ struct COFFShortExport {
 /// the exports relevant to the target platform. For non-hybrid targets,
 /// the NativeExports parameter should not be used.
 LLVM_ABI Error writeImportLibrary(StringRef ImportName, StringRef Path,
-                         ArrayRef<COFFShortExport> Exports,
-                         COFF::MachineTypes Machine, bool MinGW,
-                         ArrayRef<COFFShortExport> NativeExports = {});
+                                  ArrayRef<COFFShortExport> Exports,
+                                  COFF::MachineTypes Machine, bool MinGW,
+                                  ArrayRef<COFFShortExport> NativeExports = {});
 
 } // namespace object
 } // namespace llvm

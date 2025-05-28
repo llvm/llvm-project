@@ -13,11 +13,11 @@
 #ifndef LLVM_OBJECT_MACHOUNIVERSAL_H
 #define LLVM_OBJECT_MACHOUNIVERSAL_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -165,7 +165,6 @@ public:
   Expected<std::unique_ptr<Archive>>
   getArchiveForArch(StringRef ArchName) const;
 };
-
 }
 }
 

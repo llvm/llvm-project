@@ -16,7 +16,6 @@
 #ifndef LLVM_OBJECT_WASM_H
 #define LLVM_OBJECT_WASM_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -24,6 +23,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
@@ -354,9 +354,11 @@ public:
   };
 
   // Sections that may or may not be present, but cannot be predecessors
-  LLVM_ABI static int DisallowedPredecessors[WASM_NUM_SEC_ORDERS][WASM_NUM_SEC_ORDERS];
+  LLVM_ABI static int DisallowedPredecessors[WASM_NUM_SEC_ORDERS]
+                                            [WASM_NUM_SEC_ORDERS];
 
-  LLVM_ABI bool isValidSectionOrder(unsigned ID, StringRef CustomSectionName = "");
+  LLVM_ABI bool isValidSectionOrder(unsigned ID,
+                                    StringRef CustomSectionName = "");
 
 private:
   bool Seen[WASM_NUM_SEC_ORDERS] = {}; // Sections that have been seen already

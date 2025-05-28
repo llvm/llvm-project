@@ -17,12 +17,12 @@
 #ifndef LLVM_OBJECT_OFFLOADBUNDLE_H
 #define LLVM_OBJECT_OFFLOADBUNDLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -188,8 +188,8 @@ LLVM_ABI Error extractOffloadBundleFatBinary(
 
 /// Extract code object memory from the given \p Source object file at \p Offset
 /// and of \p Size, and copy into \p OutputFileName.
-LLVM_ABI Error extractCodeObject(const ObjectFile &Source, int64_t Offset, int64_t Size,
-                        StringRef OutputFileName);
+LLVM_ABI Error extractCodeObject(const ObjectFile &Source, int64_t Offset,
+                                 int64_t Size, StringRef OutputFileName);
 
 /// Extracts an Offload Bundle Entry given by URI
 LLVM_ABI Error extractOffloadBundleByURI(StringRef URIstr);

@@ -17,11 +17,11 @@
 #ifndef LLVM_OBJECT_OFFLOADBINARY_H
 #define LLVM_OBJECT_OFFLOADBINARY_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
@@ -78,7 +78,8 @@ public:
   };
 
   /// Attempt to parse the offloading binary stored in \p Data.
-  LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>> create(MemoryBufferRef);
+  LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>>
+      create(MemoryBufferRef);
 
   /// Serialize the contents of \p File to a binary buffer to be read later.
   LLVM_ABI static SmallString<0> write(const OffloadingImage &);
@@ -188,7 +189,7 @@ public:
 /// Extracts embedded device offloading code from a memory \p Buffer to a list
 /// of \p Binaries.
 LLVM_ABI Error extractOffloadBinaries(MemoryBufferRef Buffer,
-                             SmallVectorImpl<OffloadFile> &Binaries);
+                                      SmallVectorImpl<OffloadFile> &Binaries);
 
 /// Convert a string \p Name to an image kind.
 LLVM_ABI ImageKind getImageKind(StringRef Name);
@@ -212,7 +213,7 @@ LLVM_ABI StringRef getOffloadKindName(OffloadKind Name);
 /// bind with either on or off. This is used to link mutually compatible
 /// architectures together. Returns false in the case of an exact match.
 LLVM_ABI bool areTargetsCompatible(const OffloadFile::TargetID &LHS,
-                          const OffloadFile::TargetID &RHS);
+                                   const OffloadFile::TargetID &RHS);
 
 } // namespace object
 

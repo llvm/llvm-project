@@ -9,7 +9,6 @@
 #ifndef LLVM_OBJCOPY_COMMONCONFIG_H
 #define LLVM_OBJCOPY_COMMONCONFIG_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
@@ -17,6 +16,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/MemoryBuffer.h"

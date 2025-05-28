@@ -9,13 +9,13 @@
 #ifndef LLVM_OBJECT_MINIDUMP_H
 #define LLVM_OBJECT_MINIDUMP_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/fallible_iterator.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -27,7 +27,8 @@ public:
   /// Construct a new MinidumpFile object from the given memory buffer. Returns
   /// an error if this file cannot be identified as a minidump file, or if its
   /// contents are badly corrupted (i.e. we cannot read the stream directory).
-  LLVM_ABI static Expected<std::unique_ptr<MinidumpFile>> create(MemoryBufferRef Source);
+  LLVM_ABI static Expected<std::unique_ptr<MinidumpFile>>
+  create(MemoryBufferRef Source);
 
   static bool classof(const Binary *B) { return B->isMinidump(); }
 
@@ -272,7 +273,8 @@ public:
   /// content from the Memory64List stream. An error is returned if the file
   /// does not contain a Memory64List stream, or if the descriptor data is
   /// unreadable.
-  LLVM_ABI iterator_range<FallibleMemory64Iterator> getMemory64List(Error &Err) const;
+  LLVM_ABI iterator_range<FallibleMemory64Iterator>
+  getMemory64List(Error &Err) const;
 
   /// Returns the list of descriptors embedded in the MemoryInfoList stream. The
   /// descriptors provide properties (e.g. permissions) of interesting regions
@@ -281,7 +283,8 @@ public:
   /// contain the number of memory descriptors declared in the stream header.
   /// The consistency of the MemoryInfoList entries themselves is not checked
   /// in any way.
-  LLVM_ABI Expected<iterator_range<MemoryInfoIterator>> getMemoryInfoList() const;
+  LLVM_ABI Expected<iterator_range<MemoryInfoIterator>>
+  getMemoryInfoList() const;
 
 private:
   static Error createError(StringRef Str) {

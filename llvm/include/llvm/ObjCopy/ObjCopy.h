@@ -28,14 +28,14 @@ class MultiFormatConfig;
 /// Writes a result in a file specified by \p Config.OutputFilename.
 /// \returns any Error encountered whilst performing the operation.
 LLVM_ABI Error executeObjcopyOnArchive(const MultiFormatConfig &Config,
-                              const object::Archive &Ar);
+                                       const object::Archive &Ar);
 
 /// Applies the transformations described by \p Config to \p In and writes
 /// the result into \p Out. This function does the dispatch based on the
 /// format of the input binary (COFF, ELF, MachO or wasm).
 /// \returns any Error encountered whilst performing the operation.
 LLVM_ABI Error executeObjcopyOnBinary(const MultiFormatConfig &Config,
-                             object::Binary &In, raw_ostream &Out);
+                                      object::Binary &In, raw_ostream &Out);
 
 } // end namespace objcopy
 } // end namespace llvm

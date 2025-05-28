@@ -9,9 +9,9 @@
 #ifndef LLVM_OBJECT_DECOMPRESSOR_H
 #define LLVM_OBJECT_DECOMPRESSOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 
@@ -27,7 +27,7 @@ public:
   /// @param IsLE        Flag determines if Data is in little endian form.
   /// @param Is64Bit     Flag determines if object is 64 bit.
   LLVM_ABI static Expected<Decompressor> create(StringRef Name, StringRef Data,
-                                       bool IsLE, bool Is64Bit);
+                                                bool IsLE, bool Is64Bit);
 
   /// Resize the buffer and uncompress section data into it.
   /// @param Out         Destination buffer.

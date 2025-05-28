@@ -15,12 +15,12 @@
 #ifndef LLVM_OBJECT_MODULESYMBOLTABLE_H
 #define LLVM_OBJECT_MODULESYMBOLTABLE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <string>
 #include <utility>

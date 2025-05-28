@@ -9,14 +9,14 @@
 #ifndef LLVM_OBJCOPY_CONFIGMANAGER_H
 #define LLVM_OBJCOPY_CONFIGMANAGER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ELF/ELFConfig.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MultiFormatConfig.h"
-#include "llvm/ObjCopy/wasm/WasmConfig.h"
 #include "llvm/ObjCopy/XCOFF/XCOFFConfig.h"
+#include "llvm/ObjCopy/wasm/WasmConfig.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace objcopy {

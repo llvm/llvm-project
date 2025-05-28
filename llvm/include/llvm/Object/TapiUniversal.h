@@ -13,9 +13,9 @@
 #ifndef LLVM_OBJECT_TAPIUNIVERSAL_H
 #define LLVM_OBJECT_TAPIUNIVERSAL_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TextAPI/Architecture.h"

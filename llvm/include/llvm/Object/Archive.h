@@ -13,12 +13,12 @@
 #ifndef LLVM_OBJECT_ARCHIVE_H
 #define LLVM_OBJECT_ARCHIVE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/fallible_iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -63,7 +63,8 @@ public:
   virtual Expected<bool> isThin() const = 0;
 
   LLVM_ABI Expected<sys::fs::perms> getAccessMode() const;
-  LLVM_ABI Expected<sys::TimePoint<std::chrono::seconds>> getLastModified() const;
+  LLVM_ABI Expected<sys::TimePoint<std::chrono::seconds>>
+  getLastModified() const;
   LLVM_ABI Expected<unsigned> getUID() const;
   LLVM_ABI Expected<unsigned> getGID() const;
 
@@ -100,7 +101,8 @@ struct UnixArMemHdrType {
   char Terminator[2];
 };
 
-class LLVM_ABI ArchiveMemberHeader : public CommonArchiveMemberHeader<UnixArMemHdrType> {
+class LLVM_ABI ArchiveMemberHeader
+    : public CommonArchiveMemberHeader<UnixArMemHdrType> {
 public:
   ArchiveMemberHeader(const Archive *Parent, const char *RawHeaderPtr,
                       uint64_t Size, Error *Err);
@@ -333,8 +335,8 @@ public:
   static Expected<std::unique_ptr<Archive>> create(MemoryBufferRef Source);
 
   // Explicitly non-copyable.
-  Archive(Archive const&) = delete;
-  Archive& operator=(Archive const&) = delete;
+  Archive(Archive const &) = delete;
+  Archive &operator=(Archive const &) = delete;
 
   /// Size field is 10 decimal digits long
   static const uint64_t MaxMemberSize = 9999999999;
