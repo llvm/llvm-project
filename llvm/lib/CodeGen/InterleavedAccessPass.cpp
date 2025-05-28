@@ -571,6 +571,36 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   return true;
 }
 
+static bool isInterleaveIntrinsic(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_interleave3:
+  case Intrinsic::vector_interleave4:
+  case Intrinsic::vector_interleave5:
+  case Intrinsic::vector_interleave6:
+  case Intrinsic::vector_interleave7:
+  case Intrinsic::vector_interleave8:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isDeinterleaveIntrinsic(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::vector_deinterleave2:
+  case Intrinsic::vector_deinterleave3:
+  case Intrinsic::vector_deinterleave4:
+  case Intrinsic::vector_deinterleave5:
+  case Intrinsic::vector_deinterleave6:
+  case Intrinsic::vector_deinterleave7:
+  case Intrinsic::vector_deinterleave8:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static unsigned getIntrinsicFactor(const IntrinsicInst *II) {
   switch (II->getIntrinsicID()) {
   case Intrinsic::vector_deinterleave2:
@@ -635,13 +665,7 @@ static void interleaveLeafValues(MutableArrayRef<Value *> SubLeaves) {
 static bool
 getVectorInterleaveFactor(IntrinsicInst *II, SmallVectorImpl<Value *> &Operands,
                           SmallVectorImpl<Instruction *> &DeadInsts) {
-  assert(II->getIntrinsicID() == Intrinsic::vector_interleave2 ||
-         II->getIntrinsicID() == Intrinsic::vector_interleave3 ||
-         II->getIntrinsicID() == Intrinsic::vector_interleave4 ||
-         II->getIntrinsicID() == Intrinsic::vector_interleave5 ||
-         II->getIntrinsicID() == Intrinsic::vector_interleave6 ||
-         II->getIntrinsicID() == Intrinsic::vector_interleave7 ||
-         II->getIntrinsicID() == Intrinsic::vector_interleave8);
+  assert(isInterleaveIntrinsic(II->getIntrinsicID()));
 
   // Visit with BFS
   SmallVector<IntrinsicInst *, 8> Queue;
@@ -689,13 +713,7 @@ static bool
 getVectorDeinterleaveFactor(IntrinsicInst *II,
                             SmallVectorImpl<Value *> &Results,
                             SmallVectorImpl<Instruction *> &DeadInsts) {
-  assert(II->getIntrinsicID() == Intrinsic::vector_deinterleave2 ||
-         II->getIntrinsicID() == Intrinsic::vector_deinterleave3 ||
-         II->getIntrinsicID() == Intrinsic::vector_deinterleave4 ||
-         II->getIntrinsicID() == Intrinsic::vector_deinterleave5 ||
-         II->getIntrinsicID() == Intrinsic::vector_deinterleave6 ||
-         II->getIntrinsicID() == Intrinsic::vector_deinterleave7 ||
-         II->getIntrinsicID() == Intrinsic::vector_deinterleave8);
+  assert(isDeinterleaveIntrinsic(II->getIntrinsicID()));
   using namespace PatternMatch;
   if (!II->hasNUses(getIntrinsicFactor(II)))
     return false;
@@ -924,30 +942,10 @@ bool InterleavedAccessImpl::runOnFunction(Function &F) {
       Changed |= lowerInterleavedStore(&I, DeadInsts);
 
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-      // At present, we only have intrinsics to represent (de)interleaving
-      // with a factor of 2,3,5 and 7.
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::vector_deinterleave2:
-      case Intrinsic::vector_deinterleave3:
-      case Intrinsic::vector_deinterleave4:
-      case Intrinsic::vector_deinterleave5:
-      case Intrinsic::vector_deinterleave6:
-      case Intrinsic::vector_deinterleave7:
-      case Intrinsic::vector_deinterleave8:
+      if (isDeinterleaveIntrinsic(II->getIntrinsicID()))
         Changed |= lowerDeinterleaveIntrinsic(II, DeadInsts);
-        break;
-      case Intrinsic::vector_interleave2:
-      case Intrinsic::vector_interleave3:
-      case Intrinsic::vector_interleave4:
-      case Intrinsic::vector_interleave5:
-      case Intrinsic::vector_interleave6:
-      case Intrinsic::vector_interleave7:
-      case Intrinsic::vector_interleave8:
+      else if (isInterleaveIntrinsic(II->getIntrinsicID()))
         Changed |= lowerInterleaveIntrinsic(II, DeadInsts);
-        break;
-      default:
-        break;
-      }
     }
   }
 
