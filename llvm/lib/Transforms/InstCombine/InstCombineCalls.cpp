@@ -1399,9 +1399,8 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
 
 /// If all arguments of the intrinsic are unary shuffles with the same mask,
 /// try to shuffle after the intrinsic.
-static Instruction *
-foldShuffledIntrinsicOperands(IntrinsicInst *II,
-                              InstCombiner::BuilderTy &Builder) {
+Instruction *
+InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
   // TODO: This should be extended to handle other intrinsics like fshl, ctpop,
   //       etc. Use llvm::isTriviallyVectorizable() and related to determine
   //       which intrinsics are safe to shuffle?
@@ -1419,9 +1418,11 @@ foldShuffledIntrinsicOperands(IntrinsicInst *II,
   }
 
   Value *X;
+  Constant *C;
   ArrayRef<int> Mask;
-  if (!match(II->getArgOperand(0),
-             m_Shuffle(m_Value(X), m_Undef(), m_Mask(Mask))))
+  auto *NonConstArg = find_if_not(II->args(), IsaPred<Constant>);
+  if (!NonConstArg ||
+      !match(NonConstArg, m_Shuffle(m_Value(X), m_Undef(), m_Mask(Mask))))
     return nullptr;
 
   // At least 1 operand must have 1 use because we are creating 2 instructions.
@@ -1429,15 +1430,21 @@ foldShuffledIntrinsicOperands(IntrinsicInst *II,
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
-  SmallVector<Value *, 4> NewArgs(II->arg_size());
-  NewArgs[0] = X;
+  SmallVector<Value *, 4> NewArgs;
   Type *SrcTy = X->getType();
-  for (unsigned i = 1, e = II->arg_size(); i != e; ++i) {
-    if (!match(II->getArgOperand(i),
-               m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))) ||
-        X->getType() != SrcTy)
+  for (Value *Arg : II->args()) {
+    if (match(Arg, m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))) &&
+        X->getType() == SrcTy)
+      NewArgs.push_back(X);
+    else if (match(Arg, m_ImmConstant(C))) {
+      // If it's a constant, try find the constant that would be shuffled to C.
+      if (Constant *ShuffledC =
+              unshuffleConstant(Mask, C, cast<VectorType>(SrcTy)))
+        NewArgs.push_back(ShuffledC);
+      else
+        return nullptr;
+    } else
       return nullptr;
-    NewArgs[i] = X;
   }
 
   // intrinsic (shuf X, M), (shuf Y, M), ... --> shuf (intrinsic X, Y, ...), M
@@ -3849,7 +3856,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (Instruction *R = FoldOpIntoSelect(*II, Sel))
           return R;
 
-  if (Instruction *Shuf = foldShuffledIntrinsicOperands(II, Builder))
+  if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
 
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
