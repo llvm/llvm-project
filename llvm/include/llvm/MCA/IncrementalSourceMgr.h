@@ -48,6 +48,10 @@ class LLVM_ABI IncrementalSourceMgr : public SourceMgr {
 public:
   IncrementalSourceMgr() = default;
 
+  // Explicitly non-copyable.
+  IncrementalSourceMgr& operator=(const IncrementalSourceMgr&) = delete;
+  IncrementalSourceMgr(const IncrementalSourceMgr&) = delete;
+
   void clear();
 
   /// Set a callback that is invoked when a mca::Instruction is

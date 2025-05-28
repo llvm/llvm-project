@@ -15,6 +15,8 @@
 #ifndef LLVM_MCA_HARDWAREUNITS_HARDWAREUNIT_H
 #define LLVM_MCA_HARDWAREUNITS_HARDWAREUNIT_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 namespace mca {
 

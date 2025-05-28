@@ -428,6 +428,10 @@ public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
 
+  // Explicitly non-copyable.
+  MCAsmInfo(MCAsmInfo const&) = delete;
+  MCAsmInfo& operator=(MCAsmInfo const&) = delete;
+
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
 
