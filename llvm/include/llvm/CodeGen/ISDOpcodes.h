@@ -1511,6 +1511,11 @@ enum NodeType {
   // Outputs: [rv], output chain, glue
   PATCHPOINT,
 
+  // PTRADD represents pointer arithmetic semantics, for targets that opt in
+  // using shouldPreservePtrArith().
+  // ptr = PTRADD ptr, offset
+  PTRADD,
+
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"
