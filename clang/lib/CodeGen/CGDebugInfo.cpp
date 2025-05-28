@@ -2529,9 +2529,7 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
     return;
 
   ASTContext &Context = CGM.getContext();
-  SmallString<64> Buffer;
   StringRef SymbolName = "_vtable$";
-  const DeclContext *DC = static_cast<const DeclContext *>(RD);
   SourceLocation Loc;
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
 
@@ -2542,7 +2540,7 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
 
   // The created non-member should be mark as 'artificial'. It will be
   // placed inside the scope of the C++ class/structure.
-  llvm::DIScope *DContext = getContextDescriptor(cast<Decl>(DC), TheCU);
+  llvm::DIScope *DContext = getContextDescriptor(RD, TheCU);
   auto *Ctxt = cast<llvm::DICompositeType>(DContext);
   llvm::DIFile *Unit = getOrCreateFile(Loc);
   llvm::DIType *VTy = getOrCreateType(VoidPtr, Unit);
