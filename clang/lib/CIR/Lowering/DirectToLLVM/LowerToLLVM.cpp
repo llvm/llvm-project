@@ -1891,6 +1891,11 @@ mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
       elementTypeIfVector(op.getIndices().getType()));
   uint64_t numElements =
       mlir::cast<cir::VectorType>(op.getVec().getType()).getSize();
+
+  if (!llvm::isPowerOf2_64(numElements))
+    return op.emitError() << "unsupported VecShuffleDynamic for VectorType "
+                             "with size not power of 2";
+
   mlir::Value maskValue = rewriter.create<mlir::LLVM::ConstantOp>(
       loc, llvmIndexType,
       mlir::IntegerAttr::get(llvmIndexType, numElements - 1));

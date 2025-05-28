@@ -2160,7 +2160,8 @@ def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
     vector from the indices indicated by the elements of the second vector.
 
     ```mlir
-    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s32i>, %indices : !cir.vector<4 x !s32i>
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s32i>, %indices
+        : !cir.vector<4 x !s32i>
     ```
   }];
 
