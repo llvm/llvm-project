@@ -164,6 +164,7 @@ public:
   clang::Qualifiers &getQuals() { return quals; }
 
   LValueBaseInfo getBaseInfo() const { return baseInfo; }
+  void setBaseInfo(LValueBaseInfo info) { baseInfo = info; }
 
   static LValue makeAddr(Address address, clang::QualType t,
                          LValueBaseInfo baseInfo) {
