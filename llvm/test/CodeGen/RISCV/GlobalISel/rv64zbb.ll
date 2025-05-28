@@ -1127,7 +1127,7 @@ define signext i32 @bswap_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    lui a3, 16
 ; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    srliw a2, a0, 8
-; RV64I-NEXT:    addiw a3, a3, -256
+; RV64I-NEXT:    addi a3, a3, -256
 ; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    and a2, a2, a3
 ; RV64I-NEXT:    slliw a0, a0, 8

@@ -500,7 +500,6 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; RV64ZBB-NEXT:    and a0, a0, a2
 ; RV64ZBB-NEXT:    lui a2, 209715
 ; RV64ZBB-NEXT:    addi a2, a2, 819
-; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    or a0, a1, a0
 ; RV64ZBB-NEXT:    srli a1, a0, 2
 ; RV64ZBB-NEXT:    and a0, a0, a2
