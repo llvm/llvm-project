@@ -281,4 +281,30 @@ StringLiteral *FormatMatchesAttr::getFormatString() const {
   return cast<StringLiteral>(getExpectedFormat());
 }
 
+bool clang::isValidPointerAttrType(QualType T, bool RefOkay) {
+  if (T->isDependentType())
+    return true;
+  if (RefOkay) {
+    if (T->isReferenceType())
+      return true;
+  } else {
+    T = T.getNonReferenceType();
+  }
+
+  // The nonnull attribute, and other similar attributes, can be applied to a
+  // transparent union that contains a pointer type.
+  if (const RecordType *UT = T->getAsUnionType()) {
+    if (UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
+      RecordDecl *UD = UT->getDecl();
+      for (const auto *I : UD->fields()) {
+        QualType QT = I->getType();
+        if (QT->isAnyPointerType() || QT->isBlockPointerType())
+          return true;
+      }
+    }
+  }
+
+  return T->isAnyPointerType() || T->isBlockPointerType();
+}
+
 #include "clang/AST/AttrImpl.inc"

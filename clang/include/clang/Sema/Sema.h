@@ -5262,13 +5262,6 @@ public:
                                       StringRef &Str,
                                       SourceLocation *ArgLocation = nullptr);
 
-  /// Determine if type T is a valid subject for a nonnull and similar
-  /// attributes. Dependent types are considered valid so they can be checked
-  /// during instantiation time. By default, we look through references (the
-  /// behavior used by nonnull), but if the second parameter is true, then we
-  /// treat a reference type as valid.
-  bool isValidPointerAttrType(QualType T, bool RefOkay = false);
-
   /// AddAssumeAlignedAttr - Adds an assume_aligned attribute to a particular
   /// declaration.
   void AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
