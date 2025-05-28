@@ -70,6 +70,42 @@ using LVElementRequest = std::vector<LVElementGetFunction>;
 // lldb/source/Plugins/SymbolFile/DWARF/DWARFASTParserClang.cpp.
 constexpr unsigned int DWARF_CHAR_BIT = 8u;
 
+/// A source language supported by any of the debug info representations.
+struct LVSourceLanguage {
+  static constexpr unsigned TagDwarf = 0x00;
+  static constexpr unsigned TagCodeView = 0x01;
+
+  enum TaggedLanguage : uint32_t {
+    Invalid = -1U,
+  // DWARF
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
+  DW_LANG_##NAME = (TagDwarf << 16) | ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  // CodeView
+#define CV_LANGUAGE(NAME, ID) CV_LANG_##NAME = (TagCodeView << 16) | ID,
+#include "llvm/DebugInfo/CodeView/CodeViewLanguages.def"
+  };
+
+  LVSourceLanguage() = default;
+  LVSourceLanguage(llvm::dwarf::SourceLanguage SL)
+      : Language(static_cast<TaggedLanguage>((TagDwarf << 16) | SL)) {}
+  LVSourceLanguage(llvm::codeview::SourceLanguage SL)
+      : Language(static_cast<TaggedLanguage>((TagCodeView << 16) | SL)) {}
+  bool operator==(const LVSourceLanguage &SL) const {
+    return get() == SL.get();
+  }
+  bool operator==(const LVSourceLanguage::TaggedLanguage &TL) const {
+    return get() == TL;
+  }
+
+  bool isValid() const { return Language != Invalid; }
+  TaggedLanguage get() const { return Language; }
+  StringRef getName() const;
+
+private:
+  TaggedLanguage Language = Invalid;
+};
+
 class LVElement : public LVObject {
   enum class Property {
     IsLine,   // A logical line.
@@ -219,6 +255,9 @@ public:
 
   virtual StringRef getProducer() const { return StringRef(); }
   virtual void setProducer(StringRef ProducerName) {}
+
+  virtual LVSourceLanguage getSourceLanguage() const { return {}; }
+  virtual void setSourceLanguage(LVSourceLanguage SL) {}
 
   virtual bool isCompileUnit() const { return false; }
   virtual bool isRoot() const { return false; }
