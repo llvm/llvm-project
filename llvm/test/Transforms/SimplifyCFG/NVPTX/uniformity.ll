@@ -11,24 +11,22 @@ define ptx_kernel void @test_01(ptr %ptr) {
 ; CHECK-NEXT:    [[ID:%.*]] = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[ID]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[TRUE2_CRITEDGE:%.*]], label [[FALSE1:%.*]]
+; CHECK:       true1:
+; CHECK-NEXT:    store volatile i64 0, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; CHECK-NEXT:    br i1 [[C]], label [[TRUE2:%.*]], label [[FALSE2:%.*]]
 ; CHECK:       false1:
-; CHECK-NEXT:    store volatile i64 1, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    store volatile i64 0, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 3, ptr [[PTR]], align 8
-; CHECK-NEXT:    br label [[JOIN2:%.*]]
-; CHECK:       true2.critedge:
-; CHECK-NEXT:    store volatile i64 0, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 -1, ptr [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[PTR]], align 8
+; CHECK-NEXT:    br label [[TRUE2_CRITEDGE]]
+; CHECK:       true2:
 ; CHECK-NEXT:    store volatile i64 2, ptr [[PTR]], align 8
+; CHECK-NEXT:    br label [[JOIN2:%.*]]
+; CHECK:       false2:
+; CHECK-NEXT:    store volatile i64 3, ptr [[PTR]], align 8
 ; CHECK-NEXT:    br label [[JOIN2]]
 ; CHECK:       join2:
 ; CHECK-NEXT:    ret void
@@ -69,14 +67,17 @@ define ptx_kernel void @test_02(ptr %ptr) {
 ; CHECK-NEXT:    [[ID:%.*]] = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[ID]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[TRUE2_CRITEDGE:%.*]], label [[FALSE1:%.*]]
+; CHECK:       true1:
+; CHECK-NEXT:    store volatile i64 0, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    br i1 [[C]], label [[TRUE2:%.*]], label [[FALSE2:%.*]]
 ; CHECK:       false1:
-; CHECK-NEXT:    store volatile i64 1, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    store volatile i64 0, ptr [[PTR]], align 8
-; CHECK-NEXT:    store volatile i64 3, ptr [[PTR]], align 8
-; CHECK-NEXT:    br label [[JOIN2:%.*]]
-; CHECK:       true2.critedge:
-; CHECK-NEXT:    store volatile i64 0, ptr [[PTR]], align 8
+; CHECK-NEXT:    store volatile i64 1, ptr [[PTR]], align 8
+; CHECK-NEXT:    br label [[TRUE2_CRITEDGE]]
+; CHECK:       true2:
 ; CHECK-NEXT:    store volatile i64 2, ptr [[PTR]], align 8
+; CHECK-NEXT:    br label [[JOIN2:%.*]]
+; CHECK:       false2:
+; CHECK-NEXT:    store volatile i64 3, ptr [[PTR]], align 8
 ; CHECK-NEXT:    br label [[JOIN2]]
 ; CHECK:       join2:
 ; CHECK-NEXT:    ret void
