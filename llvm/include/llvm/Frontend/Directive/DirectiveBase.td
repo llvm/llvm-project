@@ -51,6 +51,20 @@ class DirectiveLanguage {
   string flangClauseBaseClass = "";
 }
 
+// Base class for versioned entities.
+class Versioned<int min = 1, int max = 0x7FFFFFFF> {
+  // Mininum version number where this object is valid.
+  int minVersion = min;
+
+  // Maximum version number where this object is valid.
+  int maxVersion = max;
+}
+
+class Spelling<string s, int min = 1, int max = 0x7FFFFFFF>
+    : Versioned<min, max> {
+  string spelling = s;
+}
+
 // Some clauses take an argument from a predefined list of allowed keyword
 // values. For example, assume a clause "someclause" with an argument from
 // the list "foo", "bar", "baz". In the user source code this would look
@@ -81,12 +95,9 @@ class EnumVal<string n, int v, bit uv> {
 }
 
 // Information about a specific clause.
-class Clause<string c> {
-  // Name of the clause.
-  string name = c;
-
-  // Define aliases used in the parser.
-  list<string> aliases = [];
+class Clause<list<Spelling> ss> {
+  // Spellings of the clause.
+  list<Spelling> spellings = ss;
 
   // Optional class holding value of the clause in clang AST.
   string clangClass = "";
@@ -134,15 +145,9 @@ class Clause<string c> {
 }
 
 // Hold information about clause validity by version.
-class VersionedClause<Clause c, int min = 1, int max = 0x7FFFFFFF> {
-  // Actual clause.
+class VersionedClause<Clause c, int min = 1, int max = 0x7FFFFFFF>
+    : Versioned<min, max> {
   Clause clause = c;
-
-  // Mininum version number where this clause is valid.
-  int minVersion = min;
-
-  // Maximum version number where this clause is valid.
-  int maxVersion = max;
 }
 
 // Kinds of directive associations.
@@ -190,15 +195,15 @@ class SourceLanguage<string n> {
   string name = n;  // Name of the enum value in enum class Association.
 }
 
-// The C languages also implies C++ until there is a reason to add C++
+// The C language also implies C++ until there is a reason to add C++
 // separately.
 def L_C : SourceLanguage<"C"> {}
 def L_Fortran : SourceLanguage<"Fortran"> {}
 
 // Information about a specific directive.
-class Directive<string d> {
-  // Name of the directive. Can be composite directive sepearted by whitespace.
-  string name = d;
+class Directive<list<Spelling> ss> {
+  // Spellings of the directive.
+  list<Spelling> spellings = ss;
 
   // Clauses cannot appear twice in the three allowed lists below. Also, since
   // required implies allowed, the same clause cannot appear in both the
