@@ -80,11 +80,16 @@ protected:
 
   // Utility maps - these are used to store the vector representations of
   // instructions, basic blocks and functions.
-  Embedding FuncVector;
-  BBEmbeddingsMap BBVecMap;
-  InstEmbeddingsMap InstVecMap;
+  mutable Embedding FuncVector;
+  mutable BBEmbeddingsMap BBVecMap;
+  mutable InstEmbeddingsMap InstVecMap;
 
   Embedder(const Function &F, const Vocab &Vocabulary, unsigned Dimension);
+
+  /// Helper function to compute embeddings. It generates embeddings for all
+  /// the instructions and basic blocks in the function F. Logic of computing
+  /// the embeddings is specific to the kind of embeddings being computed.
+  virtual void computeEmbeddings() const = 0;
 
   /// Lookup vocabulary for a given Key. If the key is not found, it returns a
   /// zero vector.
@@ -100,25 +105,24 @@ protected:
 public:
   virtual ~Embedder() = default;
 
-  /// Top level function to compute embeddings. It generates embeddings for all
-  /// the instructions and basic blocks in the function F. Logic of computing
-  /// the embeddings is specific to the kind of embeddings being computed.
-  virtual void computeEmbeddings() = 0;
-
   /// Factory method to create an Embedder object.
   static Expected<std::unique_ptr<Embedder>> create(IR2VecKind Mode,
                                                     const Function &F,
                                                     const Vocab &Vocabulary,
                                                     unsigned Dimension);
 
-  /// Returns a map containing instructions and the corresponding embeddings.
-  const InstEmbeddingsMap &getInstVecMap() const { return InstVecMap; }
+  /// Returns a map containing instructions and the corresponding embeddings for
+  /// the function F if it has been computed. If not, it computes the embeddings
+  /// for the function and returns the map.
+  const InstEmbeddingsMap &getInstVecMap() const;
 
-  /// Returns a map containing basic block and the corresponding embeddings.
-  const BBEmbeddingsMap &getBBVecMap() const { return BBVecMap; }
+  /// Returns a map containing basic block and the corresponding embeddings for
+  /// the function F if it has been computed. If not, it computes the embeddings
+  /// for the function and returns the map.
+  const BBEmbeddingsMap &getBBVecMap() const;
 
-  /// Returns the embedding for the current function.
-  const Embedding &getFunctionVector() const { return FuncVector; }
+  /// Computes and returns the embedding for the current function.
+  const Embedding &getFunctionVector() const;
 };
 
 /// Class for computing the Symbolic embeddings of IR2Vec.
@@ -127,7 +131,7 @@ public:
 class SymbolicEmbedder : public Embedder {
 private:
   /// Utility function to compute the embedding for a given basic block.
-  Embedding computeBB2Vec(const BasicBlock &BB);
+  Embedding computeBB2Vec(const BasicBlock &BB) const;
 
   /// Utility function to compute the embedding for a given type.
   Embedding getTypeEmbedding(const Type *Ty) const;
@@ -135,13 +139,14 @@ private:
   /// Utility function to compute the embedding for a given operand.
   Embedding getOperandEmbedding(const Value *Op) const;
 
+  void computeEmbeddings() const override;
+
 public:
   SymbolicEmbedder(const Function &F, const Vocab &Vocabulary,
                    unsigned Dimension)
       : Embedder(F, Vocabulary, Dimension) {
     FuncVector = Embedding(Dimension, 0);
   }
-  void computeEmbeddings() override;
 };
 
 } // namespace ir2vec
