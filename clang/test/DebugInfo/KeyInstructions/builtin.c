@@ -9,6 +9,7 @@ typedef float m2x2 __attribute__((matrix_type(2, 2)));
 m2x2 mat;
 float f4[4];
 float f8[8];
+int v = 3;
 
 void fun() {
 // CHECK: %a = alloca ptr, align 8
@@ -58,6 +59,11 @@ void fun() {
 
 // CHECK: call void @llvm.memset{{.*}}, !dbg [[G14R1:!.*]]
     __builtin___memset_chk(f4, 0, sizeof(float), -1);
+
+// CHECK: %3 = load i32, ptr @v{{.*}}, !dbg [[G15R3:!.*]]
+// CHECK-NEXT: %4 = trunc i32 %3 to i8, !dbg [[G15R2:!.*]]
+// CHECK-NEXT: call void @llvm.memset{{.*}}, !dbg [[G15R1:!.*]]
+    __builtin_memset(f4, v, sizeof(float) * 4);
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
@@ -77,3 +83,6 @@ void fun() {
 // CHECK: [[G12R1]] = !DILocation({{.*}}, atomGroup: 12, atomRank: 1)
 // CHECK: [[G13R1]] = !DILocation({{.*}}, atomGroup: 13, atomRank: 1)
 // CHECK: [[G14R1]] = !DILocation({{.*}}, atomGroup: 14, atomRank: 1)
+// CHECK: [[G15R3]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 3)
+// CHECK: [[G15R2]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 2)
+// CHECK: [[G15R1]] = !DILocation({{.*}}, atomGroup: 15, atomRank: 1)
