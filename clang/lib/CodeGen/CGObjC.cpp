@@ -1967,7 +1967,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     const ObjCInterfaceType *InterfaceTy =
         ObjPtrTy ? ObjPtrTy->getInterfaceType() : nullptr;
     if (InterfaceTy) {
-      SanitizerScope SanScope(this);
+      SanitizerScope SanScope(this, {SanitizerKind::SO_ObjCCast});
       auto &C = CGM.getContext();
       assert(InterfaceTy->getDecl() && "No decl for ObjC interface type");
       Selector IsKindOfClassSel = GetUnarySelector("isKindOfClass", C);

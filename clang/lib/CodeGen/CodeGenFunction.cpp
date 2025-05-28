@@ -1632,7 +1632,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
         CGM.getCodeGenOpts().StrictReturn ||
         !CGM.MayDropFunctionReturn(FD->getASTContext(), FD->getReturnType());
     if (SanOpts.has(SanitizerKind::Return)) {
-      SanitizerScope SanScope(this);
+      SanitizerScope SanScope(this, {SanitizerKind::SO_Return});
       llvm::Value *IsFalse = Builder.getFalse();
       EmitCheck(std::make_pair(IsFalse, SanitizerKind::SO_Return),
                 SanitizerHandler::MissingReturn,
@@ -2537,7 +2537,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
           //   expression [...] each time it is evaluated it shall have a value
           //   greater than zero.
           if (SanOpts.has(SanitizerKind::VLABound)) {
-            SanitizerScope SanScope(this);
+            SanitizerScope SanScope(this, {SanitizerKind::SO_VLABound});
             llvm::Value *Zero = llvm::Constant::getNullValue(size->getType());
             clang::QualType SEType = sizeExpr->getType();
             llvm::Value *CheckCondition =
@@ -2752,14 +2752,20 @@ Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,
 
 CodeGenFunction::CGCapturedStmtInfo::~CGCapturedStmtInfo() { }
 
-CodeGenFunction::SanitizerScope::SanitizerScope(CodeGenFunction *CGF)
+CodeGenFunction::SanitizerScope::SanitizerScope(
+    CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals)
     : CGF(CGF) {
   assert(!CGF->IsSanitizerScope);
   CGF->IsSanitizerScope = true;
+
+  this->ApplyTrapDI =
+      new ApplyDebugLocation(*CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals));
 }
 
 CodeGenFunction::SanitizerScope::~SanitizerScope() {
   CGF->IsSanitizerScope = false;
+
+  delete ((ApplyDebugLocation *)this->ApplyTrapDI);
 }
 
 void CodeGenFunction::InsertHelper(llvm::Instruction *I,
@@ -3192,7 +3198,7 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
   Assumption->removeFromParent();
 
   {
-    SanitizerScope SanScope(this);
+    SanitizerScope SanScope(this, {SanitizerKind::SO_Alignment});
 
     if (!OffsetValue)
       OffsetValue = Builder.getInt1(false); // no offset.

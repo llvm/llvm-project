@@ -596,9 +596,11 @@ public:
   /// RAII object to set/unset CodeGenFunction::IsSanitizerScope.
   class SanitizerScope {
     CodeGenFunction *CGF;
+    void *ApplyTrapDI;
 
   public:
-    SanitizerScope(CodeGenFunction *CGF);
+    SanitizerScope(CodeGenFunction *CGF,
+                   ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals);
     ~SanitizerScope();
   };
 
@@ -3390,10 +3392,11 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
-  /// Returns debug info, with additional annotation if enabled by
-  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[CheckKindOrdinal].
-  llvm::DILocation *
-  SanitizerAnnotateDebugInfo(SanitizerKind::SanitizerOrdinal CheckKindOrdinal);
+  /// Returns debug info, with additional annotation if
+  /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
+  /// any of the ordinals.
+  llvm::DILocation *SanitizerAnnotateDebugInfo(
+      ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
