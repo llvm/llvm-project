@@ -19,6 +19,9 @@
 #include <map>
 
 namespace llvm {
+
+class OptimizationRemarkEmitter;
+
 namespace memprof {
 
 /// Build callstack metadata from the provided list of call stack ids. Returns
@@ -80,6 +83,10 @@ private:
   // The allocation's leaf stack id.
   uint64_t AllocStackId = 0;
 
+  // If the client provides a remarks emitter object, we will emit remarks on
+  // allocations for which we apply non-context sensitive allocation hints.
+  OptimizationRemarkEmitter *ORE;
+
   void deleteTrieNode(CallStackTrieNode *Node) {
     if (!Node)
       return;
@@ -106,7 +113,7 @@ private:
                      uint64_t &ColdBytes);
 
 public:
-  CallStackTrie() = default;
+  CallStackTrie(OptimizationRemarkEmitter *ORE = nullptr) : ORE(ORE) {}
   ~CallStackTrie() { deleteTrieNode(Alloc); }
 
   bool empty() const { return Alloc == nullptr; }
