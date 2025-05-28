@@ -863,7 +863,7 @@ protected:
 
     if (valobj_sp) {
       AddressType addr_type;
-      addr = valobj_sp->GetAddressOf(false, &addr_type);
+      std::tie(addr_type, addr) = valobj_sp->GetAddressOf(false);
       if (addr_type == eAddressTypeLoad) {
         // We're in business.
         // Find out the size of this variable.

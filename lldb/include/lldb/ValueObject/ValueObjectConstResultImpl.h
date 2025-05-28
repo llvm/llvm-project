@@ -58,8 +58,8 @@ public:
     m_live_address_type = address_type;
   }
 
-  virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
-                                    AddressType *address_type = nullptr);
+  virtual std::pair<AddressType, lldb::addr_t>
+  GetAddressOf(bool scalar_is_load_address = true);
 
   virtual size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                                 uint32_t item_count = 1);
