@@ -380,13 +380,13 @@ void RTDEF(AnyDim)(Descriptor &result, const Descriptor &x, int dim,
       result, x, dim, terminator, "ANY");
 }
 
-RT_API_ATTRS std::int64_t RTDEF(Count)(
+std::int64_t RTDEF(Count)(
     const Descriptor &x, const char *source, int line, int dim) {
   return GetTotalLogicalReduction(
       x, source, line, dim, CountAccumulator{x}, "COUNT");
 }
 
-RT_API_ATTRS void RTDEF(CountDim)(Descriptor &result, const Descriptor &x,
+void RTDEF(CountDim)(Descriptor &result, const Descriptor &x,
     int dim, int kind, const char *source, int line) {
   Terminator terminator{source, line};
   ApplyIntegerKind<CountDimension, void>(
