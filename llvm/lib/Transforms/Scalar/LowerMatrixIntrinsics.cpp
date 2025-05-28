@@ -34,6 +34,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MatrixBuilder.h"
@@ -623,7 +624,8 @@ public:
       default:
         return false;
       }
-    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
+    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V) ||
+           isa<ExtractElementInst>(V);
   }
 
   /// Propagate the shape information of instructions to their users.
@@ -1337,6 +1339,28 @@ public:
     return Builder.CreateAdd(Sum, Mul);
   }
 
+  bool VisitExtractElt(ExtractElementInst *Inst, uint64_t Index) {
+    Value *Op0 = Inst->getOperand(0);
+    auto *VTy = cast<VectorType>(Op0->getType());
+
+    if (VTy->getElementCount().getKnownMinValue() < Index) {
+      Inst->replaceAllUsesWith(PoisonValue::get(VTy->getElementType()));
+      Inst->eraseFromParent();
+      return true;
+    }
+
+    auto *I = Inst2ColumnMatrix.find(Op0);
+    if (I == Inst2ColumnMatrix.end())
+      return false;
+
+    const MatrixTy &M = I->second;
+
+    IRBuilder<> Builder(Inst);
+    Inst->setOperand(0, M.getVector(Index / M.getStride()));
+    Inst->setOperand(1, Builder.getInt32(Index % M.getStride()));
+    return true;
+  }
+
   /// Cache \p Matrix as result of \p Inst and update the uses of \p Inst. For
   /// users with shape information, there's nothing to do: they will use the
   /// cached value when they are lowered. For other users, \p Matrix is
@@ -1351,11 +1375,18 @@ public:
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
-      if (!ShapeMap.contains(U.getUser())) {
-        if (!Flattened)
-          Flattened = Matrix.embedInVector(Builder);
-        U.set(Flattened);
-      }
+      if (ShapeMap.contains(U.getUser()))
+        continue;
+
+      Value *Op1;
+      uint64_t Index;
+      if (match(U.getUser(), m_ExtractElt(m_Value(Op1), m_ConstantInt(Index))))
+        if (VisitExtractElt(cast<ExtractElementInst>(U.getUser()), Index))
+          continue;
+
+      if (!Flattened)
+        Flattened = Matrix.embedInVector(Builder);
+      U.set(Flattened);
     }
   }
 
