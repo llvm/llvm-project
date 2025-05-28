@@ -430,8 +430,8 @@ static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
     if (ImplicitAsUnknown && R->getValueAsBit("isImplicit")) {
       OS << "    .Case(\"" << Name << "\", {" << DefaultName << ", All})\n";
     } else {
-      OS << "    .Case(\"" << Name << "\", {"
-         << getIdentifierName(R, Prefix) << ", All})\n";
+      OS << "    .Case(\"" << Name << "\", {" << getIdentifierName(R, Prefix)
+         << ", All})\n";
     }
   }
   OS << "    .Default({" << DefaultName << ", All});\n";
