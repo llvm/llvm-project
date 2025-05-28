@@ -1,5 +1,15 @@
 // RUN: mlir-opt -split-input-file -transform-interpreter -cse %s | FileCheck %s
 
+///----------------------------------------------------------------------------------------
+/// ATM, all tests in this file require masking. As the support for masking is
+/// limited to depthwise convs, only that variant of convolutions is tested
+/// ATM.
+///
+/// TODO1: Add more types of convolutions (transform.structured.vectorize
+/// usually doesn't require masking when vector sizes are not specified)
+/// TODO2: Add support for masking non-depthwise convs.
+///----------------------------------------------------------------------------------------
+
 func.func @depthwise_conv1d_nwc_wc_1x8x3xi8_tensor(%input: tensor<1x8x?xi8>,
                                                    %filter: tensor<1x?xi8>,
                                                    %output: tensor<1x8x?xi8>) -> (tensor<1x8x?xi8>) {
