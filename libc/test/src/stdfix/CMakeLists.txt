@@ -43,6 +43,23 @@ foreach(suffix IN ITEMS uhr ur ulr uhk uk)
   )
 endforeach()
 
+foreach(suffix IN ITEMS r)
+  add_libc_test(
+    divi${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      DiviFxTest.h
+    SRCS
+      divi${suffix}_test.cpp
+    COMPILE_OPTIONS
+      ${libc_opt_high_flag}
+    DEPENDS
+      libc.src.stdfix.divi${suffix}
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
+
 foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
   add_libc_test(
     round${suffix}_test
