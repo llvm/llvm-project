@@ -14,10 +14,10 @@
 #ifndef LLVM_FUZZMUTATE_OPERATIONS_H
 #define LLVM_FUZZMUTATE_OPERATIONS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/FuzzMutate/OpDescriptor.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -25,11 +25,15 @@ namespace llvm {
 /// @{
 LLVM_ABI void describeFuzzerIntOps(std::vector<fuzzerop::OpDescriptor> &Ops);
 LLVM_ABI void describeFuzzerFloatOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-LLVM_ABI void describeFuzzerControlFlowOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-LLVM_ABI void describeFuzzerPointerOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-LLVM_ABI void describeFuzzerAggregateOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_ABI void
+describeFuzzerControlFlowOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_ABI void
+describeFuzzerPointerOps(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_ABI void
+describeFuzzerAggregateOps(std::vector<fuzzerop::OpDescriptor> &Ops);
 LLVM_ABI void describeFuzzerVectorOps(std::vector<fuzzerop::OpDescriptor> &Ops);
-LLVM_ABI void describeFuzzerUnaryOperations(std::vector<fuzzerop::OpDescriptor> &Ops);
+LLVM_ABI void
+describeFuzzerUnaryOperations(std::vector<fuzzerop::OpDescriptor> &Ops);
 LLVM_ABI void describeFuzzerOtherOps(std::vector<fuzzerop::OpDescriptor> &Ops);
 /// @}
 
@@ -39,9 +43,11 @@ namespace fuzzerop {
 /// @{
 LLVM_ABI OpDescriptor selectDescriptor(unsigned Weight);
 LLVM_ABI OpDescriptor fnegDescriptor(unsigned Weight);
-LLVM_ABI OpDescriptor binOpDescriptor(unsigned Weight, Instruction::BinaryOps Op);
-LLVM_ABI OpDescriptor cmpOpDescriptor(unsigned Weight, Instruction::OtherOps CmpOp,
-                             CmpInst::Predicate Pred);
+LLVM_ABI OpDescriptor binOpDescriptor(unsigned Weight,
+                                      Instruction::BinaryOps Op);
+LLVM_ABI OpDescriptor cmpOpDescriptor(unsigned Weight,
+                                      Instruction::OtherOps CmpOp,
+                                      CmpInst::Predicate Pred);
 LLVM_ABI OpDescriptor splitBlockDescriptor(unsigned Weight);
 LLVM_ABI OpDescriptor gepDescriptor(unsigned Weight);
 LLVM_ABI OpDescriptor extractValueDescriptor(unsigned Weight);

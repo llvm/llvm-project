@@ -13,8 +13,8 @@
 #ifndef LLVM_FILECHECK_FILECHECK_H
 #define LLVM_FILECHECK_FILECHECK_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include <bitset>
@@ -168,9 +168,10 @@ struct FileCheckDiag {
   /// A note to replace the one normally indicated by MatchTy, or the empty
   /// string if none.
   std::string Note;
-  LLVM_ABI FileCheckDiag(const SourceMgr &SM, const Check::FileCheckType &CheckTy,
-                SMLoc CheckLoc, MatchType MatchTy, SMRange InputRange,
-                StringRef Note = "");
+  LLVM_ABI FileCheckDiag(const SourceMgr &SM,
+                         const Check::FileCheckType &CheckTy, SMLoc CheckLoc,
+                         MatchType MatchTy, SMRange InputRange,
+                         StringRef Note = "");
 };
 
 class FileCheckPatternContext;
@@ -202,7 +203,7 @@ public:
   /// Canonicalizes whitespaces in the file. Line endings are replaced with
   /// UNIX-style '\n'.
   LLVM_ABI StringRef CanonicalizeFile(MemoryBuffer &MB,
-                             SmallVectorImpl<char> &OutputBuffer);
+                                      SmallVectorImpl<char> &OutputBuffer);
 
   /// Checks the input to FileCheck provided in the \p Buffer against the
   /// expected strings read from the check file and record diagnostics emitted
@@ -210,7 +211,7 @@ public:
   ///
   /// \returns false if the input fails to satisfy the checks.
   LLVM_ABI bool checkInput(SourceMgr &SM, StringRef Buffer,
-                  std::vector<FileCheckDiag> *Diags = nullptr);
+                           std::vector<FileCheckDiag> *Diags = nullptr);
 };
 
 } // namespace llvm

@@ -82,10 +82,11 @@ LLVM_ABI StructType *getEntryTy(Module &M);
 /// \param Data Extra data storage associated with the entry.
 /// \param SectionName The section this entry will be placed at.
 /// \param AuxAddr An extra pointer if needed.
-LLVM_ABI void emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
-                         StringRef Name, uint64_t Size, uint32_t Flags,
-                         uint64_t Data, Constant *AuxAddr = nullptr,
-                         StringRef SectionName = "llvm_offload_entries");
+LLVM_ABI void
+emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
+                    StringRef Name, uint64_t Size, uint32_t Flags,
+                    uint64_t Data, Constant *AuxAddr = nullptr,
+                    StringRef SectionName = "llvm_offload_entries");
 
 /// Create a constant struct initializer used to register this global at
 /// runtime.
@@ -111,7 +112,7 @@ namespace amdgpu {
 /// information using the target-id, while we use the ELF header to determine
 /// these features.
 LLVM_ABI bool isImageCompatibleWithEnv(StringRef ImageArch, uint32_t ImageFlags,
-                              StringRef EnvTargetID);
+                                       StringRef EnvTargetID);
 
 /// Struct for holding metadata related to AMDGPU kernels, for more information
 /// about the metadata and its meaning see:
@@ -150,15 +151,16 @@ struct AMDGPUKernelMetaData {
 
 /// Reads AMDGPU specific metadata from the ELF file and propagates the
 /// KernelInfoMap.
-LLVM_ABI Error getAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
-                                 StringMap<AMDGPUKernelMetaData> &KernelInfoMap,
-                                 uint16_t &ELFABIVersion);
+LLVM_ABI Error getAMDGPUMetaDataFromImage(
+    MemoryBufferRef MemBuffer, StringMap<AMDGPUKernelMetaData> &KernelInfoMap,
+    uint16_t &ELFABIVersion);
 } // namespace amdgpu
 
 namespace intel {
 /// Containerizes an offloading binary into the ELF binary format expected by
 /// the Intel runtime offload plugin.
-LLVM_ABI Error containerizeOpenMPSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary);
+LLVM_ABI Error
+containerizeOpenMPSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary);
 } // namespace intel
 } // namespace offloading
 } // namespace llvm

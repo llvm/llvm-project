@@ -18,8 +18,8 @@
 #ifndef LLVM_FUZZMUTATE_IRMUTATOR_H
 #define LLVM_FUZZMUTATE_IRMUTATOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/FuzzMutate/OpDescriptor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
@@ -208,7 +208,7 @@ public:
 /// \param Size Size of the 'Data' in bytes
 /// \return New module or nullptr in case of error
 LLVM_ABI std::unique_ptr<Module> parseModule(const uint8_t *Data, size_t Size,
-                                    LLVMContext &Context);
+                                             LLVMContext &Context);
 
 /// Fuzzer friendly interface for the llvm bitcode printer.
 ///
@@ -222,8 +222,8 @@ LLVM_ABI size_t writeModule(const Module &M, uint8_t *Dest, size_t MaxSize);
 /// Try to parse module and verify it. May output verification errors to the
 /// errs().
 /// \return New module or nullptr in case of error.
-LLVM_ABI std::unique_ptr<Module> parseAndVerify(const uint8_t *Data, size_t Size,
-                                       LLVMContext &Context);
+LLVM_ABI std::unique_ptr<Module>
+parseAndVerify(const uint8_t *Data, size_t Size, LLVMContext &Context);
 
 } // namespace llvm
 

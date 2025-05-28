@@ -14,8 +14,8 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/raw_ostream.h"
 #include <variant>
@@ -154,7 +154,8 @@ struct DescriptorTableClause {
   }
 };
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const DescriptorTableClause &Clause);
 
 struct StaticSampler {
   Register Reg;

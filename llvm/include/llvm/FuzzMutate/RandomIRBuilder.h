@@ -13,9 +13,9 @@
 #ifndef LLVM_FUZZMUTATE_RANDOMIRBUILDER_H
 #define LLVM_FUZZMUTATE_RANDOMIRBUILDER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <random>
 
 namespace llvm {
@@ -50,7 +50,8 @@ struct RandomIRBuilder {
 
   /// Create a stack memory at the head of the function, store \c Init to the
   /// memory if provided.
-  LLVM_ABI AllocaInst *createStackMemory(Function *F, Type *Ty, Value *Init = nullptr);
+  LLVM_ABI AllocaInst *createStackMemory(Function *F, Type *Ty,
+                                         Value *Init = nullptr);
   /// Find or create a global variable. It will be initialized by random
   /// constants that satisfies \c Pred. It will also report whether this global
   /// variable found or created.
@@ -68,19 +69,22 @@ struct RandomIRBuilder {
   /// Find a "source" for some operation, which will be used in one of the
   /// operation's operands. This either selects an instruction in \c Insts or
   /// returns some new arbitrary Value.
-  LLVM_ABI Value *findOrCreateSource(BasicBlock &BB, ArrayRef<Instruction *> Insts);
+  LLVM_ABI Value *findOrCreateSource(BasicBlock &BB,
+                                     ArrayRef<Instruction *> Insts);
   /// Find a "source" for some operation, which will be used in one of the
   /// operation's operands. This either selects an instruction in \c Insts that
   /// matches \c Pred, or returns some new Value that matches \c Pred. The
   /// values in \c Srcs should be source operands that have already been
   /// selected.
-  LLVM_ABI Value *findOrCreateSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
-                            ArrayRef<Value *> Srcs, fuzzerop::SourcePred Pred,
-                            bool allowConstant = true);
+  LLVM_ABI Value *findOrCreateSource(BasicBlock &BB,
+                                     ArrayRef<Instruction *> Insts,
+                                     ArrayRef<Value *> Srcs,
+                                     fuzzerop::SourcePred Pred,
+                                     bool allowConstant = true);
   /// Create some Value suitable as a source for some operation.
   LLVM_ABI Value *newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
-                   ArrayRef<Value *> Srcs, fuzzerop::SourcePred Pred,
-                   bool allowConstant = true);
+                            ArrayRef<Value *> Srcs, fuzzerop::SourcePred Pred,
+                            bool allowConstant = true);
 
   enum SinkType {
     /// TODO: Also consider pointers in function argument.
@@ -93,10 +97,11 @@ struct RandomIRBuilder {
   };
   /// Find a viable user for \c V in \c Insts, which should all be contained in
   /// \c BB. This may also create some new instruction in \c BB and use that.
-  LLVM_ABI Instruction *connectToSink(BasicBlock &BB, ArrayRef<Instruction *> Insts,
-                             Value *V);
+  LLVM_ABI Instruction *connectToSink(BasicBlock &BB,
+                                      ArrayRef<Instruction *> Insts, Value *V);
   /// Create a user for \c V in \c BB.
-  LLVM_ABI Instruction *newSink(BasicBlock &BB, ArrayRef<Instruction *> Insts, Value *V);
+  LLVM_ABI Instruction *newSink(BasicBlock &BB, ArrayRef<Instruction *> Insts,
+                                Value *V);
   LLVM_ABI Value *findPointer(BasicBlock &BB, ArrayRef<Instruction *> Insts);
   /// Return a uniformly choosen type from \c AllowedTypes
   LLVM_ABI Type *randomType();

@@ -49,7 +49,7 @@ enum class VectorLibrary {
 };
 
 LLVM_ABI TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
-                                  VectorLibrary Veclib);
+                                           VectorLibrary Veclib);
 
 } // end namespace llvm::driver
 

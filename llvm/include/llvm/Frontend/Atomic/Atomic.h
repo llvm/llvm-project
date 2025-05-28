@@ -9,9 +9,9 @@
 #ifndef LLVM_FRONTEND_ATOMIC_ATOMIC_H
 #define LLVM_FRONTEND_ATOMIC_ATOMIC_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AtomicInfo {
@@ -59,10 +59,10 @@ public:
   LLVM_ABI bool shouldCastToInt(Type *ValTy, bool CmpXchg);
 
   LLVM_ABI Value *EmitAtomicLoadOp(AtomicOrdering AO, bool IsVolatile,
-                          bool CmpXchg = false);
+                                   bool CmpXchg = false);
 
   LLVM_ABI CallInst *EmitAtomicLibcall(StringRef fnName, Type *ResultType,
-                              ArrayRef<Value *> Args);
+                                       ArrayRef<Value *> Args);
 
   Value *getAtomicSizeValue() const {
     LLVMContext &ctx = getLLVMContext();
@@ -97,7 +97,8 @@ public:
                             AtomicOrdering Success, AtomicOrdering Failure,
                             bool IsVolatile, bool IsWeak);
 
-  LLVM_ABI std::pair<LoadInst *, AllocaInst *> EmitAtomicLoadLibcall(AtomicOrdering AO);
+  LLVM_ABI std::pair<LoadInst *, AllocaInst *>
+  EmitAtomicLoadLibcall(AtomicOrdering AO);
 
   LLVM_ABI void EmitAtomicStoreLibcall(AtomicOrdering AO, Value *Source);
 };

@@ -14,7 +14,6 @@
 #ifndef LLVM_FUZZMUTATE_OPDESCRIPTOR_H
 #define LLVM_FUZZMUTATE_OPDESCRIPTOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
@@ -22,6 +21,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {

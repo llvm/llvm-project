@@ -13,8 +13,8 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMP_H
 #define LLVM_FRONTEND_OPENMP_OMP_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -56,7 +56,8 @@ LLVM_ABI std::string prettifyFunctionName(StringRef FunctionName);
 
 /// Deconstruct an OpenMP kernel name into the parent function name and the line
 /// number.
-LLVM_ABI std::string deconstructOpenMPKernelName(StringRef KernelName, unsigned &LineNo);
+LLVM_ABI std::string deconstructOpenMPKernelName(StringRef KernelName,
+                                                 unsigned &LineNo);
 
 } // namespace llvm::omp
 
