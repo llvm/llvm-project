@@ -1552,6 +1552,49 @@ void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
   MBB.erase(II);
 }
 
+/// lowerDMRPRestore - Generate the code to restore the DMR register.
+void PPCRegisterInfo::lowerDMRPRestore(MachineBasicBlock::iterator II,
+                                      unsigned FrameIndex) const {
+  MachineInstr &MI = *II; // <DestReg> = RESTORE_WACC <offset>
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
+  Register DestReg = MI.getOperand(0).getReg();
+
+  Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg2 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg3 = MF.getRegInfo().createVirtualRegister(RC);
+
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg0),
+                    FrameIndex, IsLittleEndian ? 96 : 0);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg1),
+                    FrameIndex, IsLittleEndian ? 64 : 32);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg2),
+                    FrameIndex, IsLittleEndian ? 32 : 64);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg3),
+                    FrameIndex, IsLittleEndian ? 0 : 96);
+
+  // Kill virtual registers (killedRegState::Killed).
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512_HI),
+          TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_hi))
+      .addReg(VSRpReg2, RegState::Kill)
+      .addReg(VSRpReg3, RegState::Kill);
+
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512),
+          TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_lo))
+      .addReg(VSRpReg0, RegState::Kill)
+      .addReg(VSRpReg1, RegState::Kill);
+
+  // Discard the pseudo instruction.
+  MBB.erase(II);
+}
+
 /// lowerDMRRestore - Generate the code to restore the DMR register.
 void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
                                       unsigned FrameIndex) const {
@@ -1757,6 +1800,14 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return true;
   case PPC::RESTORE_WACC:
     lowerWACCRestore(II, FrameIndex);
+    return true;
+  case PPC::SPILL_DMRP:
+    break;
+    lowerDMRPSpilling(II, FrameIndex);
+    return true;
+  case PPC::RESTORE_DMRP:
+    break;
+    lowerDMRPRestore(II, FrameIndex);
     return true;
   case PPC::SPILL_DMR:
     lowerDMRSpilling(II, FrameIndex);
