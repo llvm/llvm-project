@@ -1756,10 +1756,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // declaration has no name, they're not equivalent. However, the paragraph
   // after the bulleted list goes on to talk about compatibility of anonymous
   // structure and union members, so this prohibition only applies to top-level
-  // declarations, not members.
+  // declarations; if either declaration is not a member, they cannot be
+  // compatible.
   if (Context.LangOpts.C23 && (!D1->getIdentifier() || !D2->getIdentifier()) &&
-      (D1->getDeclContext()->isTranslationUnit() ||
-       D2->getDeclContext()->isTranslationUnit()))
+      (!D1->getDeclContext()->isRecord() || !D2->getDeclContext()->isRecord()))
     return false;
 
   // Otherwise, check the names for equivalence.

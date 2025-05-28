@@ -372,6 +372,13 @@ _Static_assert(0 == _Generic(nontag, struct tag {int i;}:1, default:0)); // c17-
 // That means these two structures are not actually compatible; see GH141724.
 _Static_assert(0 == _Generic(nontag, struct     {int i;}:1, default:0));
 
+// Also test the behavior within a function (so the declaration context is not
+// at the translation unit level).
+void nontag_func_test(void) {
+  struct { int i; } test;
+  _Static_assert(0 == _Generic(test , struct { int i; } : 1, default : 0));
+}
+
 struct InnerAnonStruct {
   struct {
     int i;
@@ -379,7 +386,6 @@ struct InnerAnonStruct {
 } inner_anon_tagged;
 
 _Static_assert(0 == _Generic(inner_anon_tagged.untagged, struct { int i; } : 1, default : 0));
-
 
 // Test the same thing with enumerations (test for unions is omitted because
 // unions and structures are both RecordDecl objects, whereas EnumDecl is not).
