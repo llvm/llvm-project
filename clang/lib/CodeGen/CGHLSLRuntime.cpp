@@ -608,22 +608,18 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
   // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
     auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
+    SmallVector<Value *> Args{Space, RegSlot, RangeSize, Index, NonUniform};
     if (Name)
-      initializeBuffer(CGM, GV, IntrinsicID,
-                       {Space, RegSlot, RangeSize, Index, NonUniform, Name});
-    else
-      initializeBuffer(CGM, GV, IntrinsicID,
-                       {Space, RegSlot, RangeSize, Index, NonUniform});
+      Args.push_back(Name);
+    initializeBuffer(CGM, GV, IntrinsicID, Args);
   } else {
     // buffer with implicit binding
     auto *OrderID =
         llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
+    SmallVector<Value *> Args{OrderID, Space, RangeSize, Index, NonUniform};
     if (Name)
-      initializeBuffer(CGM, GV, IntrinsicID,
-                       {OrderID, Space, RangeSize, Index, NonUniform, Name});
-    else
-      initializeBuffer(CGM, GV, IntrinsicID,
-                       {OrderID, Space, RangeSize, Index, NonUniform});
+      Args.push_back(Name);
+    initializeBuffer(CGM, GV, IntrinsicID, Args);
   }
 }
 

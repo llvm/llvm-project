@@ -302,16 +302,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     auto [IntrinsicID, HasNameArg] =
         CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
-    if (HasNameArg) {
-      Value *NameOp = EmitScalarExpr(E->getArg(5));
-      return Builder.CreateIntrinsic(HandleTy, IntrinsicID,
-                                     ArrayRef<Value *>{SpaceOp, RegisterOp,
-                                                       RangeOp, IndexOp,
-                                                       NonUniform, NameOp});
-    }
-    return Builder.CreateIntrinsic(
-        HandleTy, IntrinsicID,
-        ArrayRef<Value *>{SpaceOp, RegisterOp, RangeOp, IndexOp, NonUniform});
+    SmallVector<Value *> Args{SpaceOp, RegisterOp, RangeOp, IndexOp,
+                              NonUniform};
+    if (HasNameArg)
+      Args.push_back(EmitScalarExpr(E->getArg(5)));
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
@@ -326,16 +321,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     auto [IntrinsicID, HasNameArg] =
         CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
-    if (HasNameArg) {
-      Value *NameOp = EmitScalarExpr(E->getArg(5));
-      return Builder.CreateIntrinsic(HandleTy, IntrinsicID,
-                                     ArrayRef<Value *>{OrderID, SpaceOp,
-                                                       RangeOp, IndexOp,
-                                                       NonUniform, NameOp});
-    }
-    return Builder.CreateIntrinsic(
-        HandleTy, IntrinsicID,
-        ArrayRef<Value *>{OrderID, SpaceOp, RangeOp, IndexOp, NonUniform});
+    SmallVector<Value *> Args{OrderID, SpaceOp, RangeOp, IndexOp, NonUniform};
+    if (HasNameArg)
+      Args.push_back(EmitScalarExpr(E->getArg(5)));
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

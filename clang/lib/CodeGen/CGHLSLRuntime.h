@@ -125,7 +125,12 @@ public:
   // End of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
 
+  // Returns ID of the intrinsic that initializes resource handle from binding
+  // and a bool value indicating whether the last argument of the intrinsic is
+  // the resource name (not all targets need that).
   std::pair<llvm::Intrinsic::ID, bool> getCreateHandleFromBindingIntrinsic();
+
+  // Same as above but for implicit binding.
   std::pair<llvm::Intrinsic::ID, bool>
   getCreateHandleFromImplicitBindingIntrinsic();
 
