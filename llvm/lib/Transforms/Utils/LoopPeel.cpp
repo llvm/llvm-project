@@ -18,6 +18,7 @@
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -45,6 +46,7 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
+using namespace llvm::SCEVPatternMatch;
 
 #define DEBUG_TYPE "loop-peel"
 
@@ -328,10 +330,6 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
 
 bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
   const SCEV *BTC = SE.getBackedgeTakenCount(&L);
-  Value *Inc;
-  CmpPredicate Pred;
-  BasicBlock *Succ1;
-  BasicBlock *Succ2;
   // The loop must execute at least 2 iterations to guarantee that peeled
   // iteration executes.
   // TODO: Add checks during codegen.
@@ -345,14 +343,20 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
   // * the exit condition must be a NE/EQ compare of an induction with step
   // of 1 and must only be used by the exiting branch.
   BasicBlock *Latch = L.getLoopLatch();
+  Value *Inc;
+  Value *Bound;
+  CmpPredicate Pred;
+  BasicBlock *Succ1;
+  BasicBlock *Succ2;
   return Latch && Latch == L.getExitingBlock() &&
          match(Latch->getTerminator(),
-               m_Br(m_OneUse(m_ICmp(Pred, m_Value(Inc), m_Value())),
+               m_Br(m_OneUse(m_ICmp(Pred, m_Value(Inc), m_Value(Bound))),
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
-         isa<SCEVAddRecExpr>(SE.getSCEV(Inc)) &&
-         cast<SCEVAddRecExpr>(SE.getSCEV(Inc))->getStepRecurrence(SE)->isOne();
+         SE.isLoopInvariant(SE.getSCEV(Bound), &L) &&
+         match(SE.getSCEV(Inc),
+               m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
 }
 
 /// Returns true if the last iteration can be peeled off and the condition (Pred

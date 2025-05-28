@@ -2876,9 +2876,7 @@ Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
 
   // Do a lookup to see if we have already formed one of these.
   auto &Slot =
-      *Ty->getContext()
-           .pImpl->CDSConstants.insert(std::make_pair(Elements, nullptr))
-           .first;
+      *Ty->getContext().pImpl->CDSConstants.try_emplace(Elements).first;
 
   // The bucket can point to a linked list of different CDS's that have the same
   // body but different types.  For example, 0,0,0,1 could be a 4 element array

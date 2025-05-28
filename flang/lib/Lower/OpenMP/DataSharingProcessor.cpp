@@ -62,7 +62,7 @@ void DataSharingProcessor::processStep1(
 
   privatize(clauseOps);
 
-  insertBarrier();
+  insertBarrier(clauseOps);
 }
 
 void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
@@ -231,9 +231,18 @@ bool DataSharingProcessor::needBarrier() {
   return false;
 }
 
-void DataSharingProcessor::insertBarrier() {
-  if (needBarrier())
+void DataSharingProcessor::insertBarrier(
+    mlir::omp::PrivateClauseOps *clauseOps) {
+  if (!needBarrier())
+    return;
+
+  if (useDelayedPrivatization) {
+    if (clauseOps)
+      clauseOps->privateNeedsBarrier =
+          mlir::UnitAttr::get(&converter.getMLIRContext());
+  } else {
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
+  }
 }
 
 void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {

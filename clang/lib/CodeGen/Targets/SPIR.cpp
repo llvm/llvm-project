@@ -377,14 +377,99 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getOpenCLType(CodeGenModule &CGM,
   return nullptr;
 }
 
+// Gets a spirv.IntegralConstant or spirv.Literal. If IntegralType is present,
+// returns an IntegralConstant, otherwise returns a Literal.
+static llvm::Type *getInlineSpirvConstant(CodeGenModule &CGM,
+                                          llvm::Type *IntegralType,
+                                          llvm::APInt Value) {
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+
+  // Convert the APInt value to an array of uint32_t words
+  llvm::SmallVector<uint32_t> Words;
+
+  while (Value.ugt(0)) {
+    uint32_t Word = Value.trunc(32).getZExtValue();
+    Value.lshrInPlace(32);
+
+    Words.push_back(Word);
+  }
+  if (Words.size() == 0)
+    Words.push_back(0);
+
+  if (IntegralType)
+    return llvm::TargetExtType::get(Ctx, "spirv.IntegralConstant",
+                                    {IntegralType}, Words);
+  return llvm::TargetExtType::get(Ctx, "spirv.Literal", {}, Words);
+}
+
+static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
+                                      const HLSLInlineSpirvType *SpirvType) {
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+
+  llvm::SmallVector<llvm::Type *> Operands;
+
+  for (auto &Operand : SpirvType->getOperands()) {
+    using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+    llvm::Type *Result = nullptr;
+    switch (Operand.getKind()) {
+    case SpirvOperandKind::ConstantId: {
+      llvm::Type *IntegralType =
+          CGM.getTypes().ConvertType(Operand.getResultType());
+      llvm::APInt Value = Operand.getValue();
+
+      Result = getInlineSpirvConstant(CGM, IntegralType, Value);
+      break;
+    }
+    case SpirvOperandKind::Literal: {
+      llvm::APInt Value = Operand.getValue();
+      Result = getInlineSpirvConstant(CGM, nullptr, Value);
+      break;
+    }
+    case SpirvOperandKind::TypeId: {
+      QualType TypeOperand = Operand.getResultType();
+      if (auto *RT = TypeOperand->getAs<RecordType>()) {
+        auto *RD = RT->getDecl();
+        assert(RD->isCompleteDefinition() &&
+               "Type completion should have been required in Sema");
+
+        const FieldDecl *HandleField = RD->findFirstNamedDataMember();
+        if (HandleField) {
+          QualType ResourceType = HandleField->getType();
+          if (ResourceType->getAs<HLSLAttributedResourceType>()) {
+            TypeOperand = ResourceType;
+          }
+        }
+      }
+      Result = CGM.getTypes().ConvertType(TypeOperand);
+      break;
+    }
+    default:
+      llvm_unreachable("HLSLInlineSpirvType had invalid operand!");
+      break;
+    }
+
+    assert(Result);
+    Operands.push_back(Result);
+  }
+
+  return llvm::TargetExtType::get(Ctx, "spirv.Type", Operands,
+                                  {SpirvType->getOpcode(), SpirvType->getSize(),
+                                   SpirvType->getAlignment()});
+}
+
 llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     CodeGenModule &CGM, const Type *Ty,
     const SmallVector<int32_t> *Packoffsets) const {
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+
+  if (auto *SpirvType = dyn_cast<HLSLInlineSpirvType>(Ty))
+    return getInlineSpirvType(CGM, SpirvType);
+
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)
     return nullptr;
 
-  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
   const HLSLAttributedResourceType::Attributes &ResAttrs = ResType->getAttrs();
   switch (ResAttrs.ResourceClass) {
   case llvm::dxil::ResourceClass::UAV:

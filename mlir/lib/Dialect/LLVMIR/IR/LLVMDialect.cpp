@@ -4043,6 +4043,21 @@ LogicalResult LLVM::masked_scatter::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// InlineAsmOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult InlineAsmOp::verify() {
+  if (!getTailCallKindAttr())
+    return success();
+
+  if (getTailCallKindAttr().getTailCallKind() == TailCallKind::MustTail)
+    return emitOpError(
+        "tail call kind 'musttail' is not supported by this operation");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 

@@ -1121,7 +1121,7 @@ let RecomputePerFunction = 1 in {
   // SelectionDAG's behaviour.
   // FIXME: One day there will probably be a nicer way to check for this, but
   // today is not that day.
-  def OptimizedGISelOrOtherSelector : Predicate<"!MF->getFunction().hasOptNone() || MF->getProperties().hasProperty(MachineFunctionProperties::Property::FailedISel) || !MF->getProperties().hasProperty(MachineFunctionProperties::Property::Legalized)">;
+  def OptimizedGISelOrOtherSelector : Predicate<"!MF->getFunction().hasOptNone() || MF->getProperties().hasFailedISel() || !MF->getProperties().hasLegalized()">;
 }
 
 include "AArch64InstrFormats.td"

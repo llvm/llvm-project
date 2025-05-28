@@ -16,6 +16,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
@@ -320,6 +321,11 @@ void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
   llvm::append_range(BinaryIds, BIs);
 }
 
+void InstrProfWriter::addDataAccessProfData(
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfDataIn) {
+  DataAccessProfileData = std::move(DataAccessProfDataIn);
+}
+
 void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
   assert(Trace.FunctionNameRefs.size() <= MaxTemporalProfTraceLength);
   assert(!Trace.FunctionNameRefs.empty());
@@ -605,8 +611,11 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
-    if (auto E = writeMemProf(OS, MemProfData, MemProfVersionRequested,
-                              MemProfFullSchema))
+
+    if (auto E =
+            writeMemProf(OS, MemProfData, MemProfVersionRequested,
+                         MemProfFullSchema, std::move(DataAccessProfileData)))
+
       return E;
   }
 

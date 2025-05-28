@@ -389,10 +389,9 @@ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
   return SanArgs;
 }
 
-const XRayArgs& ToolChain::getXRayArgs() const {
-  if (!XRayArguments)
-    XRayArguments.reset(new XRayArgs(*this, Args));
-  return *XRayArguments;
+const XRayArgs ToolChain::getXRayArgs(const llvm::opt::ArgList &JobArgs) const {
+  XRayArgs XRayArguments(*this, JobArgs);
+  return XRayArguments;
 }
 
 namespace {
@@ -933,6 +932,15 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   const llvm::Triple &T = getTriple();
   if (auto Path = getPathForTriple(T))
     return *Path;
+
+  if (T.isOSAIX() && T.getEnvironment() == Triple::UnknownEnvironment) {
+    // Strip unknown environment from the triple.
+    const llvm::Triple AIXTriple(
+        llvm::Triple(T.getArchName(), T.getVendorName(),
+                     llvm::Triple::getOSTypeName(T.getOS())));
+    if (auto Path = getPathForTriple(AIXTriple))
+      return *Path;
+  }
 
   if (T.isOSzOS() &&
       (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {

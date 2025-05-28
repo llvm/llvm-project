@@ -174,7 +174,7 @@ llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {
   nvvm.barrier
   // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %[[barId]])
   nvvm.barrier id = %barID
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned(i32 %[[barId]], i32 %[[numThreads]])
+  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %[[barId]], i32 %[[numThreads]])
   nvvm.barrier id = %barID number_of_threads = %numberOfThreads
   llvm.return
 }

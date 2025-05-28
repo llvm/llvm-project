@@ -201,9 +201,8 @@ void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
     emitIntValue(AbsValue, Size);
     return;
   }
-  DF->getFixups().push_back(
-      MCFixup::create(DF->getContents().size(), Value,
-                      MCFixup::getKindForSize(Size, false), Loc));
+  DF->getFixups().push_back(MCFixup::create(
+      DF->getContents().size(), Value, MCFixup::getDataKindForSize(Size), Loc));
   DF->appendContents(Size, 0);
 }
 
@@ -279,8 +278,8 @@ void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
 }
 
 void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
-                                         const MCSymbol *Symbol) {
-  report_fatal_error("This file format doesn't support weak aliases.");
+                                         const MCSymbol *Target) {
+  reportFatalUsageError("this file format doesn't support weak aliases");
 }
 
 void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
@@ -754,7 +753,7 @@ void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {
   MCAssembler &Asm = getAssembler();
-  Asm.getWriter().addFileName(Asm, Filename);
+  Asm.getWriter().addFileName(Filename);
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename,
@@ -762,7 +761,7 @@ void MCObjectStreamer::emitFileDirective(StringRef Filename,
                                          StringRef TimeStamp,
                                          StringRef Description) {
   MCObjectWriter &W = getAssembler().getWriter();
-  W.addFileName(getAssembler(), Filename);
+  W.addFileName(Filename);
   if (CompilerVersion.size())
     W.setCompilerVersion(CompilerVersion);
   // TODO: add TimeStamp and Description to .file symbol table entry

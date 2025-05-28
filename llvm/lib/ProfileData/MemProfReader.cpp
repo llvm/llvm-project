@@ -37,6 +37,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
@@ -822,6 +823,34 @@ void YAMLMemProfReader::parse(StringRef YAMLData) {
 
     MemProfData.Records.try_emplace(GUID, std::move(IndexedRecord));
   }
+
+  if (Doc.YamlifiedDataAccessProfiles.isEmpty())
+    return;
+
+  auto ToSymHandleRef =
+      [](const memprof::SymbolHandle &Handle) -> memprof::SymbolHandleRef {
+    if (std::holds_alternative<std::string>(Handle))
+      return StringRef(std::get<std::string>(Handle));
+    return std::get<uint64_t>(Handle);
+  };
+
+  auto DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  for (const auto &Record : Doc.YamlifiedDataAccessProfiles.Records)
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            ToSymHandleRef(Record.SymHandle), Record.AccessCount,
+            Record.Locations))
+      reportFatalInternalError(std::move(E));
+
+  for (const uint64_t Hash : Doc.YamlifiedDataAccessProfiles.KnownColdStrHashes)
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Hash))
+      reportFatalInternalError(std::move(E));
+
+  for (const std::string &Sym :
+       Doc.YamlifiedDataAccessProfiles.KnownColdSymbols)
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Sym))
+      reportFatalInternalError(std::move(E));
+
+  setDataAccessProfileData(std::move(DataAccessProfileData));
 }
 } // namespace memprof
 } // namespace llvm

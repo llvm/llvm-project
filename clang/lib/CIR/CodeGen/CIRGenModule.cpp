@@ -366,6 +366,39 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       CIRGenModule::createGlobalOp(*this, loc, mangledName, ty,
                                    /*insertPoint=*/entry.getOperation());
 
+  // Handle things which are present even on external declarations.
+  if (d) {
+    if (langOpts.OpenMP && !langOpts.OpenMPSimd)
+      errorNYI(d->getSourceRange(), "OpenMP target global variable");
+
+    gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
+    assert(!cir::MissingFeatures::opGlobalConstant());
+    assert(!cir::MissingFeatures::opGlobalLinkage());
+
+    if (d->getTLSKind())
+      errorNYI(d->getSourceRange(), "thread local global variable");
+
+    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+    assert(!cir::MissingFeatures::opGlobalPartition());
+    assert(!cir::MissingFeatures::setDSOLocal());
+
+    // If required by the ABI, treat declarations of static data members with
+    // inline initializers as definitions.
+    if (astContext.isMSStaticDataMemberInlineDefinition(d))
+      errorNYI(d->getSourceRange(), "MS static data member inline definition");
+
+    assert(!cir::MissingFeatures::opGlobalSection());
+    assert(!cir::MissingFeatures::opGlobalVisibility());
+
+    // Handle XCore specific ABI requirements.
+    if (getTriple().getArch() == llvm::Triple::xcore)
+      errorNYI(d->getSourceRange(), "XCore specific ABI requirements");
+
+    // We need to check for external const declarations with initializers here,
+    // but the 'isPublic()' part of the check uses the CIRGlobalValueInterface.
+    assert(!cir::MissingFeatures::opGlobalCIRGlobalValueInterface());
+  }
+
   return gv;
 }
 
@@ -775,7 +808,8 @@ CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd, bool isConstant) {
 
 static cir::GlobalOp generateStringLiteral(mlir::Location loc,
                                            mlir::TypedAttr c, CIRGenModule &cgm,
-                                           StringRef globalName) {
+                                           StringRef globalName,
+                                           CharUnits alignment) {
   assert(!cir::MissingFeatures::addressSpace());
 
   // Create a global variable for this string
@@ -784,7 +818,7 @@ static cir::GlobalOp generateStringLiteral(mlir::Location loc,
       CIRGenModule::createGlobalOp(cgm, loc, globalName, c.getType());
 
   // Set up extra information and add to the module
-  assert(!cir::MissingFeatures::opGlobalAlignment());
+  gv.setAlignmentAttr(cgm.getSize(alignment));
   assert(!cir::MissingFeatures::opGlobalLinkage());
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
@@ -821,6 +855,9 @@ std::string CIRGenModule::getUniqueGlobalName(const std::string &baseName) {
 /// Return a pointer to a constant array for the given string literal.
 cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
                                                       StringRef name) {
+  CharUnits alignment =
+      astContext.getAlignOfGlobalVarInChars(s->getType(), /*VD=*/nullptr);
+
   mlir::Attribute c = getConstantArrayFromStringLiteral(s);
 
   if (getLangOpts().WritableStrings) {
@@ -842,8 +879,8 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
   std::string uniqueName = getUniqueGlobalName(name.str());
   mlir::Location loc = getLoc(s->getSourceRange());
   auto typedC = llvm::cast<mlir::TypedAttr>(c);
-  assert(!cir::MissingFeatures::opGlobalAlignment());
-  cir::GlobalOp gv = generateStringLiteral(loc, typedC, *this, uniqueName);
+  cir::GlobalOp gv =
+      generateStringLiteral(loc, typedC, *this, uniqueName, alignment);
   assert(!cir::MissingFeatures::opGlobalDSOLocal());
 
   assert(!cir::MissingFeatures::sanitizers());
@@ -918,7 +955,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
 void CIRGenModule::setInitializer(cir::GlobalOp &op, mlir::Attribute value) {
   // Recompute visibility when updating initializer.
   op.setInitialValueAttr(value);
-  assert(!cir::MissingFeatures::opGlobalSetVisitibility());
+  assert(!cir::MissingFeatures::opGlobalVisibility());
 }
 
 cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,

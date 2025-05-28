@@ -503,6 +503,7 @@ gentbl_cc_library(
         "include/clang/Basic/AttrList.inc": ["-gen-clang-attr-list"],
         "include/clang/Basic/AttrParsedAttrList.inc": ["-gen-clang-attr-parsed-attr-list"],
         "include/clang/Basic/AttrSubMatchRulesList.inc": ["-gen-clang-attr-subject-match-rule-list"],
+        "include/clang/Basic/AttributeSpellingList.inc": ["-gen-attribute-spelling-list"],
         "include/clang/Basic/RegularKeywordAttrInfo.inc": ["-gen-clang-regular-keyword-attr-info"],
         "include/clang/Basic/CXX11AttributeInfo.inc": ["-gen-cxx11-attribute-info"],
     },
