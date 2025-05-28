@@ -22,6 +22,7 @@
 #include <__fwd/pair.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/readable_traits.h>
+#include <__tuple/tuple_element.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/detected_or.h>
@@ -466,6 +467,18 @@ using __has_exactly_bidirectional_iterator_category _LIBCPP_NODEBUG =
 template <class _InputIterator>
 using __iter_value_type _LIBCPP_NODEBUG = typename iterator_traits<_InputIterator>::value_type;
 
+#if _LIBCPP_STD_VER >= 23
+template <class _InputIterator>
+using __iter_key_type _LIBCPP_NODEBUG = remove_const_t<tuple_element_t<0, __iter_value_type<_InputIterator>>>;
+
+template <class _InputIterator>
+using __iter_mapped_type _LIBCPP_NODEBUG = tuple_element_t<1, __iter_value_type<_InputIterator>>;
+
+template <class _InputIterator>
+using __iter_to_alloc_type _LIBCPP_NODEBUG =
+    pair<const tuple_element_t<0, __iter_value_type<_InputIterator>>,
+         tuple_element_t<1, __iter_value_type<_InputIterator>>>;
+#else
 template <class _InputIterator>
 using __iter_key_type _LIBCPP_NODEBUG =
     __remove_const_t<typename iterator_traits<_InputIterator>::value_type::first_type>;
@@ -477,6 +490,7 @@ template <class _InputIterator>
 using __iter_to_alloc_type _LIBCPP_NODEBUG =
     pair<const typename iterator_traits<_InputIterator>::value_type::first_type,
          typename iterator_traits<_InputIterator>::value_type::second_type>;
+#endif // _LIBCPP_STD_VER >= 23
 
 template <class _Iter>
 using __iterator_category_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::iterator_category;
