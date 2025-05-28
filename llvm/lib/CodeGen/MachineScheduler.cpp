@@ -967,6 +967,12 @@ void ScheduleDAGMI::releaseSucc(SUnit *SU, SDep *SuccEdge) {
 
 /// releaseSuccessors - Call releaseSucc on each of SU's successors.
 void ScheduleDAGMI::releaseSuccessors(SUnit *SU) {
+  // Reset the next successor, For example, we want to cluster A B C.
+  // After A is picked, we will set B as next cluster succ, but if we pick
+  // D instead of B after A, then we need to reset the next cluster succ because
+  // we have decided to not pick the cluster candidate B during pickNode().
+  // Leaving B as the NextClusterSucc just make things messy.
+  NextClusterSucc = nullptr;
   for (SDep &Succ : SU->Succs)
     releaseSucc(SU, &Succ);
 }
@@ -1004,6 +1010,7 @@ void ScheduleDAGMI::releasePred(SUnit *SU, SDep *PredEdge) {
 
 /// releasePredecessors - Call releasePred on each of SU's predecessors.
 void ScheduleDAGMI::releasePredecessors(SUnit *SU) {
+  NextClusterPred = nullptr;
   for (SDep &Pred : SU->Preds)
     releasePred(SU, &Pred);
 }
