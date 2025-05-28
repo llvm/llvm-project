@@ -760,7 +760,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   if (Instruction::isBinaryOp(getOpcode())) {
-
     Type *ResTy = Ctx.Types.inferScalarType(this);
     if (!vputils::onlyFirstLaneUsed(this))
       ResTy = toVectorTy(ResTy, VF);
@@ -2534,12 +2533,14 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
       "Any-of reduction not implemented in VPlan-based cost model currently.");
 
   // Note that TTI should model the cost of moving result to the scalar register
-  // and the BinOp cost in the getReductionCost().
+  // and the BinOp cost in the getMinMaxReductionCost().
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
     return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
   }
 
+  // Note that TTI should model the cost of moving result to the scalar register
+  // and the BinOp cost in the getArithmeticReductionCost().
   return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, OptionalFMF,
                                             Ctx.CostKind);
 }
