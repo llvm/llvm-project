@@ -3197,8 +3197,8 @@ define amdgpu_kernel void @constant_sextload_v16i32_to_v16i64(ptr addrspace(1) %
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v28, v[0:3], s[16:17] offset:112
 ; GFX12-NEXT:    global_store_b128 v28, v[4:7], s[16:17] offset:96
-; GFX12-NEXT:    v_dual_mov_b32 v1, s19 :: v_dual_mov_b32 v0, s0
-; GFX12-NEXT:    v_dual_mov_b32 v3, s18 :: v_dual_mov_b32 v2, s1
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s18
+; GFX12-NEXT:    v_dual_mov_b32 v1, s19 :: v_dual_mov_b32 v2, s1
 ; GFX12-NEXT:    s_clause 0x5
 ; GFX12-NEXT:    global_store_b128 v28, v[8:11], s[16:17] offset:80
 ; GFX12-NEXT:    global_store_b128 v28, v[12:15], s[16:17] offset:64
@@ -4401,9 +4401,9 @@ define amdgpu_kernel void @constant_sextload_v32i32_to_v32i64(ptr addrspace(1) %
 ; GFX12-NEXT:    global_store_b128 v24, v[4:7], s[36:37] offset:224
 ; GFX12-NEXT:    global_store_b128 v24, v[8:11], s[36:37] offset:208
 ; GFX12-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:192
+; GFX12-NEXT:    v_dual_mov_b32 v0, s22 :: v_dual_mov_b32 v3, s57
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    v_dual_mov_b32 v1, s24 :: v_dual_mov_b32 v0, s22
-; GFX12-NEXT:    v_dual_mov_b32 v3, s57 :: v_dual_mov_b32 v2, s23
+; GFX12-NEXT:    v_dual_mov_b32 v1, s24 :: v_dual_mov_b32 v2, s23
 ; GFX12-NEXT:    v_mov_b32_e32 v5, s56
 ; GFX12-NEXT:    s_ashr_i32 s51, s17, 31
 ; GFX12-NEXT:    s_ashr_i32 s52, s16, 31
@@ -4433,8 +4433,8 @@ define amdgpu_kernel void @constant_sextload_v32i32_to_v32i64(ptr addrspace(1) %
 ; GFX12-NEXT:    global_store_b128 v24, v[12:15], s[36:37] offset:128
 ; GFX12-NEXT:    global_store_b128 v24, v[16:19], s[36:37] offset:112
 ; GFX12-NEXT:    global_store_b128 v24, v[20:23], s[36:37] offset:96
-; GFX12-NEXT:    v_dual_mov_b32 v1, s46 :: v_dual_mov_b32 v0, s10
-; GFX12-NEXT:    v_dual_mov_b32 v3, s45 :: v_dual_mov_b32 v2, s11
+; GFX12-NEXT:    v_dual_mov_b32 v0, s10 :: v_dual_mov_b32 v3, s45
+; GFX12-NEXT:    v_dual_mov_b32 v1, s46 :: v_dual_mov_b32 v2, s11
 ; GFX12-NEXT:    v_mov_b32_e32 v5, s44
 ; GFX12-NEXT:    s_ashr_i32 s39, s5, 31
 ; GFX12-NEXT:    s_ashr_i32 s40, s4, 31

@@ -416,6 +416,11 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           expected to survive bufferization, `success` should be returned
           (together with `allow-unknown-ops` enabled).
 
+          If the bufferized operation has symbol semantics (i.e., it defines a
+          symbol or a symbol table), the implementation is expected to update
+          the cached symbol tables -- within the bufferization state -- to keep
+          them in a consistent state.
+
           Note: If this op supports unstructured control flow in its regions,
           then this function should also bufferize all block signatures that
           belong to this op. Branch ops (that branch to a block) are typically
