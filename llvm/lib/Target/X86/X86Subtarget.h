@@ -155,6 +155,8 @@ public:
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
 
+  bool useAA() const override;
+
 private:
   /// Initialize the full set of dependencies so we can use an initializer
   /// list for X86Subtarget.

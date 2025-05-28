@@ -161,13 +161,13 @@ define void @t(ptr nocapture %in, ptr nocapture %out, ptr nocapture %rk, i32 %r)
 ; ATOM-NEXT:    shrl $16, %r9d
 ; ATOM-NEXT:    xorl 20(%rcx,%rdx), %eax
 ; ATOM-NEXT:    shrl $24, %edi
+; ATOM-NEXT:    movb %r9b, 1(%rsi)
 ; ATOM-NEXT:    movl %eax, %ecx
 ; ATOM-NEXT:    shrl $16, %eax
 ; ATOM-NEXT:    movb %dil, (%rsi)
-; ATOM-NEXT:    movb %r9b, 1(%rsi)
 ; ATOM-NEXT:    shrl $24, %ecx
-; ATOM-NEXT:    movb %cl, 4(%rsi)
 ; ATOM-NEXT:    movb %al, 5(%rsi)
+; ATOM-NEXT:    movb %cl, 4(%rsi)
 ; ATOM-NEXT:    popq %rbx
 ; ATOM-NEXT:    popq %r14
 ; ATOM-NEXT:    popq %r15

@@ -18,10 +18,8 @@ define void @foo1(i32 %count, ptr noalias nocapture %q, ptr noalias nocapture %p
 ; BWON-NEXT:    .p2align 4
 ; BWON-NEXT:  LBB0_1: ## %a4
 ; BWON-NEXT:    ## =>This Inner Loop Header: Depth=1
-; BWON-NEXT:    movzbl (%rsi), %eax
-; BWON-NEXT:    movb %al, (%rdx)
-; BWON-NEXT:    movzbl 1(%rsi), %eax
-; BWON-NEXT:    movb %al, 1(%rdx)
+; BWON-NEXT:    movzwl (%rsi), %eax
+; BWON-NEXT:    movw %ax, (%rdx)
 ; BWON-NEXT:    addq $8, %rdx
 ; BWON-NEXT:    decl %edi
 ; BWON-NEXT:    jne LBB0_1
@@ -35,10 +33,8 @@ define void @foo1(i32 %count, ptr noalias nocapture %q, ptr noalias nocapture %p
 ; BWOFF-NEXT:    .p2align 4
 ; BWOFF-NEXT:  LBB0_1: ## %a4
 ; BWOFF-NEXT:    ## =>This Inner Loop Header: Depth=1
-; BWOFF-NEXT:    movb (%rsi), %al
-; BWOFF-NEXT:    movb %al, (%rdx)
-; BWOFF-NEXT:    movb 1(%rsi), %al
-; BWOFF-NEXT:    movb %al, 1(%rdx)
+; BWOFF-NEXT:    movw (%rsi), %ax
+; BWOFF-NEXT:    movw %ax, (%rdx)
 ; BWOFF-NEXT:    addq $8, %rdx
 ; BWOFF-NEXT:    decl %edi
 ; BWOFF-NEXT:    jne LBB0_1
@@ -81,10 +77,8 @@ define void @foo2(i32 %count, ptr noalias nocapture %q, ptr noalias nocapture %p
 ; BWON-NEXT:    .p2align 4
 ; BWON-NEXT:  LBB1_1: ## %a4
 ; BWON-NEXT:    ## =>This Inner Loop Header: Depth=1
-; BWON-NEXT:    movzwl (%rsi), %eax
-; BWON-NEXT:    movw %ax, (%rdx)
-; BWON-NEXT:    movzwl 2(%rsi), %eax
-; BWON-NEXT:    movw %ax, 2(%rdx)
+; BWON-NEXT:    movl (%rsi), %eax
+; BWON-NEXT:    movl %eax, (%rdx)
 ; BWON-NEXT:    addq $16, %rdx
 ; BWON-NEXT:    decl %edi
 ; BWON-NEXT:    jne LBB1_1
@@ -98,10 +92,8 @@ define void @foo2(i32 %count, ptr noalias nocapture %q, ptr noalias nocapture %p
 ; BWOFF-NEXT:    .p2align 4
 ; BWOFF-NEXT:  LBB1_1: ## %a4
 ; BWOFF-NEXT:    ## =>This Inner Loop Header: Depth=1
-; BWOFF-NEXT:    movw (%rsi), %ax
-; BWOFF-NEXT:    movw %ax, (%rdx)
-; BWOFF-NEXT:    movw 2(%rsi), %ax
-; BWOFF-NEXT:    movw %ax, 2(%rdx)
+; BWOFF-NEXT:    movl (%rsi), %eax
+; BWOFF-NEXT:    movl %eax, (%rdx)
 ; BWOFF-NEXT:    addq $16, %rdx
 ; BWOFF-NEXT:    decl %edi
 ; BWOFF-NEXT:    jne LBB1_1

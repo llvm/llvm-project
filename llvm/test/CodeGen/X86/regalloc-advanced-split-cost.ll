@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686 -regalloc=greedy --debug-only=regalloc 2>&1 | FileCheck %s
+; RUN: llc < %s -x86-use-aa=false -mtriple=i686 -regalloc=greedy --debug-only=regalloc 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 
@@ -15,14 +15,14 @@
 
 ; Make sure the split behaves as expected
 ; CHECK: RS_Split Cascade 1
-; CHECK-NOT: $eax	static = 
+; CHECK-NOT: $eax	static =
 ; CHECK: $eax	no positive bundles
 ; CHECK-NEXT: $ecx	no positive bundles
 ; CHECK-NEXT: $edx	no positive bundles
-; CHECK-NEXT: $esi	static = 
+; CHECK-NEXT: $esi	static =
 ; CHECK-NEXT: $edi	no positive bundles
 ; CHECK-NEXT: $ebx	no positive bundles
-; CHECK-NEXT: $ebp	static = 
+; CHECK-NEXT: $ebp	static =
 ; CHECK: Split for $ebp
 
 ; Function Attrs: nounwind

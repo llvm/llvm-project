@@ -29,9 +29,8 @@ define dso_local i64 @foo(ptr %azx) #0 {
 ; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movabsq $-321002333478651, %rax # imm = 0xFFFEDC0CD1F0E105
 ; CHECK-NEXT:    notq %rax
-; CHECK-NEXT:    andq %rax, (%rdi)
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    andq (%rdi), %rax
+; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %azx.addr = alloca ptr, align 8

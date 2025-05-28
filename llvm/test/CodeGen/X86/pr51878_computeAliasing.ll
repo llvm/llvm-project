@@ -20,7 +20,8 @@ define i16 @main() {
 ; CHECK-NEXT:    movw $2, bar
 ; CHECK-NEXT:    movw $4, aliasFoo
 ; CHECK-NEXT:    movzwl foo, %eax
-; CHECK-NEXT:    addw bar, %ax
+; CHECK-NEXT:    addl $2, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retl
 entry:
   store i16 1, ptr @foo

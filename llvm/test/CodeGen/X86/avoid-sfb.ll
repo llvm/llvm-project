@@ -418,18 +418,18 @@ define void @test_multiple_blocks(ptr nocapture noalias %s1, ptr nocapture %s2) 
 ; CHECK-NEXT:    movl $0, 36(%rdi)
 ; CHECK-NEXT:    movups 16(%rdi), %xmm0
 ; CHECK-NEXT:    movups %xmm0, 16(%rsi)
-; CHECK-NEXT:    movl 32(%rdi), %eax
-; CHECK-NEXT:    movl %eax, 32(%rsi)
-; CHECK-NEXT:    movl 36(%rdi), %eax
-; CHECK-NEXT:    movl %eax, 36(%rsi)
-; CHECK-NEXT:    movq 40(%rdi), %rax
-; CHECK-NEXT:    movq %rax, 40(%rsi)
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    movl %eax, (%rsi)
 ; CHECK-NEXT:    movl 4(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, 4(%rsi)
 ; CHECK-NEXT:    movq 8(%rdi), %rax
 ; CHECK-NEXT:    movq %rax, 8(%rsi)
+; CHECK-NEXT:    movl 32(%rdi), %eax
+; CHECK-NEXT:    movl %eax, 32(%rsi)
+; CHECK-NEXT:    movl 36(%rdi), %eax
+; CHECK-NEXT:    movl %eax, 36(%rsi)
+; CHECK-NEXT:    movq 40(%rdi), %rax
+; CHECK-NEXT:    movq %rax, 40(%rsi)
 ; CHECK-NEXT:    retq
 ;
 ; DISABLED-LABEL: test_multiple_blocks:
@@ -438,33 +438,11 @@ define void @test_multiple_blocks(ptr nocapture noalias %s1, ptr nocapture %s2) 
 ; DISABLED-NEXT:    movl $0, 36(%rdi)
 ; DISABLED-NEXT:    movups 16(%rdi), %xmm0
 ; DISABLED-NEXT:    movups %xmm0, 16(%rsi)
-; DISABLED-NEXT:    movups 32(%rdi), %xmm0
-; DISABLED-NEXT:    movups %xmm0, 32(%rsi)
 ; DISABLED-NEXT:    movups (%rdi), %xmm0
 ; DISABLED-NEXT:    movups %xmm0, (%rsi)
+; DISABLED-NEXT:    movups 32(%rdi), %xmm0
+; DISABLED-NEXT:    movups %xmm0, 32(%rsi)
 ; DISABLED-NEXT:    retq
-;
-; AVX-LABEL: test_multiple_blocks:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    movl $0, 4(%rdi)
-; AVX-NEXT:    movl $0, 36(%rdi)
-; AVX-NEXT:    vmovups 16(%rdi), %xmm0
-; AVX-NEXT:    vmovups %xmm0, 16(%rsi)
-; AVX-NEXT:    movl 32(%rdi), %eax
-; AVX-NEXT:    movl %eax, 32(%rsi)
-; AVX-NEXT:    movl 36(%rdi), %eax
-; AVX-NEXT:    movl %eax, 36(%rsi)
-; AVX-NEXT:    movq 40(%rdi), %rax
-; AVX-NEXT:    movq %rax, 40(%rsi)
-; AVX-NEXT:    movl (%rdi), %eax
-; AVX-NEXT:    movl %eax, (%rsi)
-; AVX-NEXT:    movl 4(%rdi), %eax
-; AVX-NEXT:    movl %eax, 4(%rsi)
-; AVX-NEXT:    vmovups 8(%rdi), %xmm0
-; AVX-NEXT:    vmovups %xmm0, 8(%rsi)
-; AVX-NEXT:    movq 24(%rdi), %rax
-; AVX-NEXT:    movq %rax, 24(%rsi)
-; AVX-NEXT:    retq
 entry:
   %b = getelementptr inbounds %struct.S4, ptr %s1, i64 0, i32 1
   store i32 0, ptr %b, align 4
@@ -547,62 +525,26 @@ if.end:                                           ; preds = %if.then, %entry
 
 ; Function Attrs: nounwind uwtable
 define void @test_stack(ptr noalias nocapture sret(%struct.S6) %agg.result, ptr byval(%struct.S6) nocapture readnone align 8 %s1, ptr byval(%struct.S6) nocapture align 8 %s2, i32 %x) local_unnamed_addr #0 {
-; CHECK-LABEL: test_stack:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    movups %xmm0, (%rdi)
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    movq %rcx, 16(%rdi)
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; CHECK-NEXT:    movl %ecx, 24(%rdi)
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; CHECK-NEXT:    movl %ecx, 28(%rdi)
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    retq
-;
-; DISABLED-LABEL: test_stack:
-; DISABLED:       # %bb.0: # %entry
-; DISABLED-NEXT:    movq %rdi, %rax
-; DISABLED-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
-; DISABLED-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
-; DISABLED-NEXT:    movups %xmm0, (%rdi)
-; DISABLED-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
-; DISABLED-NEXT:    movups %xmm0, 16(%rdi)
-; DISABLED-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
-; DISABLED-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; DISABLED-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; DISABLED-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; DISABLED-NEXT:    retq
+; SSE-LABEL: test_stack:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    movups %xmm0, (%rdi)
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    movups %xmm1, 16(%rdi)
+; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_stack:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    vmovups {{[0-9]+}}(%rsp), %xmm0
-; AVX-NEXT:    vmovups %xmm0, (%rdi)
-; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; AVX-NEXT:    movq %rcx, 16(%rdi)
-; AVX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; AVX-NEXT:    movl %ecx, 24(%rdi)
-; AVX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; AVX-NEXT:    movl %ecx, 28(%rdi)
-; AVX-NEXT:    vmovups {{[0-9]+}}(%rsp), %xmm0
-; AVX-NEXT:    vmovups %xmm0, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; AVX-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; AVX-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; AVX-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
+; AVX-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0
+; AVX-NEXT:    vmovups %ymm0, (%rdi)
+; AVX-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
+; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 entry:
   %s6.sroa.3.0..sroa_idx4 = getelementptr inbounds %struct.S6, ptr %s2, i64 0, i32 3

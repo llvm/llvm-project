@@ -67,12 +67,12 @@ define void @cleanup_result(ptr %0) #1 {
 ; DEBUG: A @ dot.c:32
 ; STRIPPED-NOT: A @ dot.c:32
 ; BOTH:  Offset: [SP-4], Type: Spill, Align: 8, Size: 4
+; BOTH:  Offset: [SP-8], Type: Variable, Align: 4, Size: 4
+; DEBUG: i @ dot.c:55
+; STRIPPED-NOT: i @ dot.c:55
 ; BOTH:  Offset: [SP-12], Type: Variable, Align: 8, Size: 4
 ; DEBUG: AB @ dot.c:38
 ; STRIPPED-NOT: AB @ dot.c:38
-; BOTH:  Offset: [SP-16], Type: Variable, Align: 4, Size: 4
-; DEBUG: i @ dot.c:55
-; STRIPPED-NOT: i @ dot.c:55
 ; BOTH:  Offset: [SP-20], Type: Variable, Align: 8, Size: 4
 ; DEBUG: B @ dot.c:32
 ; STRIPPED-NOT: B @ dot.c:32

@@ -13,11 +13,10 @@ define  void @g() local_unnamed_addr #0 {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq d(%rip), %rax
-; CHECK-NEXT:    movl 4(%rax), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    incl b(%rip)
 ; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    addl 4(%rax), %ecx
 ; CHECK-NEXT:    movl %ecx, a(%rip)
 ; CHECK-NEXT:    retq
 entry:

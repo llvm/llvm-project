@@ -42,11 +42,11 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ATOM-NEXT:    movl (%esp), %eax
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; ATOM-NEXT:    incl (%esp)
 ; ATOM-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; ATOM-NEXT:    psubw %xmm0, %xmm1
 ; ATOM-NEXT:    movq %xmm1, (%ecx,%eax,8)
-; ATOM-NEXT:    incl (%esp)
 ; ATOM-NEXT:    cmpl $3, (%esp)
 ; ATOM-NEXT:    jle .LBB0_2
 ; ATOM-NEXT:  .LBB0_3: # %afterfor

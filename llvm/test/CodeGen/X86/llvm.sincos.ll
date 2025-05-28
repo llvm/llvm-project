@@ -8,54 +8,45 @@ define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    subl $52, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    subl $36, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset %esi, -12
 ; CHECK-NEXT:    .cfi_offset %edi, -8
-; CHECK-NEXT:    movl 84(%esp), %esi
-; CHECK-NEXT:    flds 76(%esp)
-; CHECK-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; CHECK-NEXT:    flds 64(%esp)
-; CHECK-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; CHECK-NEXT:    flds 72(%esp)
-; CHECK-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; CHECK-NEXT:    flds 68(%esp)
-; CHECK-NEXT:    movl 80(%esp), %edi
-; CHECK-NEXT:    leal 40(%esp), %eax
-; CHECK-NEXT:    movl %eax, 8(%esp)
-; CHECK-NEXT:    leal 4(%edi), %eax
-; CHECK-NEXT:    movl %eax, 4(%esp)
-; CHECK-NEXT:    fstps (%esp)
-; CHECK-NEXT:    calll sincosf
-; CHECK-NEXT:    leal 44(%esp), %eax
-; CHECK-NEXT:    movl %eax, 8(%esp)
-; CHECK-NEXT:    leal 8(%edi), %eax
-; CHECK-NEXT:    movl %eax, 4(%esp)
-; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; CHECK-NEXT:    fstps (%esp)
-; CHECK-NEXT:    calll sincosf
-; CHECK-NEXT:    leal 36(%esp), %eax
-; CHECK-NEXT:    movl %eax, 8(%esp)
-; CHECK-NEXT:    movl %edi, 4(%esp)
-; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; CHECK-NEXT:    fstps (%esp)
-; CHECK-NEXT:    calll sincosf
-; CHECK-NEXT:    leal 48(%esp), %eax
-; CHECK-NEXT:    movl %eax, 8(%esp)
-; CHECK-NEXT:    addl $12, %edi
-; CHECK-NEXT:    movl %edi, 4(%esp)
-; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; CHECK-NEXT:    fstps (%esp)
-; CHECK-NEXT:    calll sincosf
-; CHECK-NEXT:    flds 36(%esp)
-; CHECK-NEXT:    flds 40(%esp)
-; CHECK-NEXT:    flds 44(%esp)
 ; CHECK-NEXT:    flds 48(%esp)
-; CHECK-NEXT:    fstps 12(%esi)
-; CHECK-NEXT:    fstps 8(%esi)
-; CHECK-NEXT:    fstps 4(%esi)
-; CHECK-NEXT:    fstps (%esi)
-; CHECK-NEXT:    addl $52, %esp
+; CHECK-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; CHECK-NEXT:    flds 60(%esp)
+; CHECK-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; CHECK-NEXT:    flds 52(%esp)
+; CHECK-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; CHECK-NEXT:    flds 56(%esp)
+; CHECK-NEXT:    movl 64(%esp), %esi
+; CHECK-NEXT:    movl 68(%esp), %edi
+; CHECK-NEXT:    leal 8(%edi), %eax
+; CHECK-NEXT:    movl %eax, 8(%esp)
+; CHECK-NEXT:    leal 8(%esi), %eax
+; CHECK-NEXT:    movl %eax, 4(%esp)
+; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    calll sincosf
+; CHECK-NEXT:    leal 4(%edi), %eax
+; CHECK-NEXT:    movl %eax, 8(%esp)
+; CHECK-NEXT:    leal 4(%esi), %eax
+; CHECK-NEXT:    movl %eax, 4(%esp)
+; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    calll sincosf
+; CHECK-NEXT:    leal 12(%edi), %eax
+; CHECK-NEXT:    movl %eax, 8(%esp)
+; CHECK-NEXT:    leal 12(%esi), %eax
+; CHECK-NEXT:    movl %eax, 4(%esp)
+; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    calll sincosf
+; CHECK-NEXT:    movl %edi, 8(%esp)
+; CHECK-NEXT:    movl %esi, 4(%esp)
+; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; CHECK-NEXT:    fstps (%esp)
+; CHECK-NEXT:    calll sincosf
+; CHECK-NEXT:    addl $36, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -77,32 +68,27 @@ define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalia
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    subl $52, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    subl $36, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset %esi, -12
 ; CHECK-NEXT:    .cfi_offset %edi, -8
-; CHECK-NEXT:    movl 84(%esp), %esi
-; CHECK-NEXT:    fldl 72(%esp)
+; CHECK-NEXT:    fldl 48(%esp)
 ; CHECK-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
-; CHECK-NEXT:    fldl 64(%esp)
-; CHECK-NEXT:    movl 80(%esp), %edi
-; CHECK-NEXT:    leal 24(%esp), %eax
+; CHECK-NEXT:    fldl 56(%esp)
+; CHECK-NEXT:    movl 64(%esp), %esi
+; CHECK-NEXT:    movl 68(%esp), %edi
+; CHECK-NEXT:    leal 8(%edi), %eax
 ; CHECK-NEXT:    movl %eax, 12(%esp)
-; CHECK-NEXT:    movl %edi, 8(%esp)
+; CHECK-NEXT:    leal 8(%esi), %eax
+; CHECK-NEXT:    movl %eax, 8(%esp)
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    calll sincos
-; CHECK-NEXT:    leal 32(%esp), %eax
-; CHECK-NEXT:    movl %eax, 12(%esp)
-; CHECK-NEXT:    addl $8, %edi
-; CHECK-NEXT:    movl %edi, 8(%esp)
+; CHECK-NEXT:    movl %edi, 12(%esp)
+; CHECK-NEXT:    movl %esi, 8(%esp)
 ; CHECK-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    calll sincos
-; CHECK-NEXT:    fldl 24(%esp)
-; CHECK-NEXT:    fldl 32(%esp)
-; CHECK-NEXT:    fstpl 8(%esi)
-; CHECK-NEXT:    fstpl (%esi)
-; CHECK-NEXT:    addl $52, %esp
+; CHECK-NEXT:    addl $36, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -132,19 +118,16 @@ define void @can_fold_with_call_in_chain(float %x, ptr noalias %a, ptr noalias %
 ; CHECK-NEXT:    .cfi_offset %edi, -8
 ; CHECK-NEXT:    flds 32(%esp)
 ; CHECK-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; CHECK-NEXT:    movl 36(%esp), %edi
-; CHECK-NEXT:    movl 40(%esp), %esi
-; CHECK-NEXT:    movl %esi, 4(%esp)
-; CHECK-NEXT:    movl %edi, (%esp)
-; CHECK-NEXT:    calll foo@PLT
-; CHECK-NEXT:    leal 16(%esp), %eax
-; CHECK-NEXT:    movl %eax, 8(%esp)
+; CHECK-NEXT:    movl 36(%esp), %esi
+; CHECK-NEXT:    movl 40(%esp), %edi
 ; CHECK-NEXT:    movl %edi, 4(%esp)
+; CHECK-NEXT:    movl %esi, (%esp)
+; CHECK-NEXT:    calll foo@PLT
+; CHECK-NEXT:    movl %edi, 8(%esp)
+; CHECK-NEXT:    movl %esi, 4(%esp)
 ; CHECK-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
 ; CHECK-NEXT:    fstps (%esp)
 ; CHECK-NEXT:    calll sincosf
-; CHECK-NEXT:    flds 16(%esp)
-; CHECK-NEXT:    fstps (%esi)
 ; CHECK-NEXT:    addl $20, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    popl %esi
