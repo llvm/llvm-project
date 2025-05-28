@@ -767,6 +767,77 @@ def SPIRV_GLTanhOp : SPIRV_GLUnaryArithmeticOp<"Tanh", 21, SPIRV_Float16or32> {
 
 // -----
 
+def SPIRV_GLAsinhOp : SPIRV_GLUnaryArithmeticOp<"Asinh", 22, SPIRV_Float16or32> {
+  let summary = "Arc hyperbolic sine of operand in radians.";
+
+  let description = [{
+    Arc hyperbolic sine; result is the inverse of sinh.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Asinh %0 : f32
+    %3 = spirv.GL.Asinh %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLAcoshOp : SPIRV_GLUnaryArithmeticOp<"Acosh", 23, SPIRV_Float16or32> {
+  let summary = "Arc hyperbolic cosine of operand in radians.";
+
+  let description = [{
+    Arc hyperbolic cosine; result is the non-negative inverse of cosh. The resulting
+    value is NaN if x < 1.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Acosh %0 : f32
+    %3 = spirv.GL.Acosh %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32> {
+  let summary = "Arc hyperbolic tangent of operand in radians.";
+
+  let description = [{
+    Arc hyperbolic tangent; result is the inverse of tanh. The resulting value
+    is NaN if abs x ≥ 1.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Atanh %0 : f32
+    %3 = spirv.GL.Atanh %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_GLFClampOp : SPIRV_GLTernaryArithmeticOp<"FClamp", 43, SPIRV_Float> {
   let summary = "Clamp x between min and max values.";
 
