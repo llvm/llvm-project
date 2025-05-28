@@ -249,8 +249,6 @@ std::optional<int>
 macho::PriorityBuilder::getSymbolOrCStringPriority(const StringRef key,
                                                    InputFile *f) {
 
-  for (auto &[name, entry] : priorities)
-    llvm::errs() << name << ", " << entry.anyObjectFile << "\n";
   auto it = priorities.find(key);
   if (it == priorities.end())
     return std::nullopt;
@@ -346,7 +344,6 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
         line = possibleHash;
     }
     symbolOrCStrHash = line.trim();
-    llvm::errs() << symbolOrCStrHash << "\n";
 
     if (!symbolOrCStrHash.empty()) {
       SymbolPriorityEntry &entry = priorities[symbolOrCStrHash];
@@ -420,7 +417,6 @@ std::vector<StringPiecePair> macho::PriorityBuilder::buildCStringPriorities(
       if (!piece.live)
         continue;
 
-      llvm::errs() << "buildCStringPriorities:" << piece.hash << "\n";
       std::optional<int> priority = getSymbolOrCStringPriority(
           std::to_string(piece.hash), isec->getFile());
       if (!priority)
