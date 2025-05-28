@@ -464,11 +464,6 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     CurPtr = CurGEP->getPointerOperand();
   }
 
-  // Only one dynamic index is allowed in the entire GEP chain.
-  // Abort if a different index variable is encountered.
-  if (VarOffsets.size() > 1)
-    return nullptr;
-
   assert(CurPtr == Alloca && "GEP not based on alloca");
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
