@@ -419,10 +419,9 @@ Value *createAnyOfReduction(IRBuilderBase &B, Value *Src, Value *InitVal,
                             PHINode *OrigPhi);
 
 /// Create a reduction of the given vector \p Src for a reduction of the
-/// kind RecurKind::IFindLastIV or RecurKind::FFindLastIV. The reduction
-/// operation is described by \p Desc.
+/// kind RecurKind::FindLastIV.
 Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src, Value *Start,
-                                 const RecurrenceDescriptor &Desc);
+                                 Value *Sentinel);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// kind \p RdxKind.
