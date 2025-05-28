@@ -265,6 +265,42 @@ define double @t17(i32 %x) {
   ret double %sel
 }
 
+define double @t17_commuted1(i32 %x) {
+; CHECK-LABEL: @t17_commuted1(
+; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 2)
+; CHECK-NEXT:    [[SEL:%.*]] = uitofp nneg i32 [[SEL1]] to double
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = icmp slt i32 %x, 3
+  %cst = sitofp i32 %x to double
+  %sel = select i1 %cmp, double 2.0, double %cst
+  ret double %sel
+}
+
+define double @t17_commuted2(i32 %x) {
+; CHECK-LABEL: @t17_commuted2(
+; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 2)
+; CHECK-NEXT:    [[SEL:%.*]] = sitofp i32 [[SEL1]] to double
+; CHECK-NEXT:    ret double [[SEL]]
+;
+  %cmp = icmp sgt i32 %x, 2
+  %cst = sitofp i32 %x to double
+  %sel = select i1 %cmp, double 2.0, double %cst
+  ret double %sel
+}
+
+define double @t17_commuted3(i32 %x) {
+; CHECK-LABEL: @t17_commuted3(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.smin.i32(i32 [[X1:%.*]], i32 2)
+; CHECK-NEXT:    [[CST:%.*]] = sitofp i32 [[X]] to double
+; CHECK-NEXT:    ret double [[CST]]
+;
+  %cmp = icmp slt i32 %x, 3
+  %cst = sitofp i32 %x to double
+  %sel = select i1 %cmp, double %cst, double 2.0
+  ret double %sel
+}
+
 define float @fneg_fmax(float %x, float %y) {
 ; CHECK-LABEL: @fneg_fmax(
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan olt float [[X:%.*]], [[Y:%.*]]
