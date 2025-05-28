@@ -11915,6 +11915,18 @@ bool llvm::isBoolSGPR(SDValue V) {
   case ISD::SMULO:
   case ISD::UMULO:
     return V.getResNo() == 1;
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntrinsicID = V.getConstantOperandVal(0);
+    switch (IntrinsicID) {
+    case Intrinsic::amdgcn_is_shared:
+    case Intrinsic::amdgcn_is_private:
+      return true;
+    default:
+      return false;
+    }
+
+    return false;
+  }
   }
   return false;
 }
