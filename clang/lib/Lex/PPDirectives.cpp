@@ -373,6 +373,8 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   // Macro names with reserved identifiers are accepted if built-in or passed
   // through the command line (the later may be present if -dD was used to
   // generate the preprocessed file).
+  // NB: isInPredefinedFile() is relatively expensive, so keep it at the end
+  // of the condition.
   if (!SourceMgr.isInSystemHeader(MacroNameLoc) &&
       !SourceMgr.isInPredefinedFile(MacroNameLoc)) {
     MacroDiag D = MD_NoWarn;
