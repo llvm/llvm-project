@@ -1140,10 +1140,6 @@ class CFGUnawareDstSafetyAnalysis : public DstSafetyAnalysis,
   using DstSafetyAnalysis::BC;
   BinaryFunction &BF;
 
-  DstState createUnsafeState() const {
-    return DstState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
-  }
-
 public:
   CFGUnawareDstSafetyAnalysis(BinaryFunction &BF,
                               MCPlusBuilder::AllocatorIdTy AllocId,
