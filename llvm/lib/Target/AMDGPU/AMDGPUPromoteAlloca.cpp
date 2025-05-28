@@ -456,32 +456,19 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   // That lets us emit a single buffer_load directly into a VGPR, without ever
   // allocating scratch memory for the intermediate pointer.
   Value *CurPtr = GEP;
-  SmallMapVector<Value *, APInt, 4> LocalVarsOffsets;
   while (auto *CurGEP = dyn_cast<GetElementPtrInst>(CurPtr)) {
-    if (!CurGEP->collectOffset(DL, BW, LocalVarsOffsets, ConstOffset))
+    if (!CurGEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
       return nullptr;
 
-    // Merge index contributions from this GEP into VarOffsets.
-    // Only one dynamic index is allowed in the entire GEP chain.
-    // Abort if a different index variable is encountered.
-    for (auto &[Var, Offset] : LocalVarsOffsets) {
-      // If VarOffsets already records a different variable index, abort.
-      if (!VarOffsets.empty() && !VarOffsets.contains(Var))
-        return nullptr;
-
-      // Try to insert VarEntry.first with its offset; if that pointer is
-      // already in VarOffsets, add the new offset to the existing one.
-      auto [Existing, Inserted] = VarOffsets.try_emplace(Var, Offset);
-      if (!Inserted)
-        Existing->second += Offset;
-    }
-
-    LocalVarsOffsets.clear();
-    // Move to the next outer pointer
+    // Move to the next outer pointer.
     CurPtr = CurGEP->getPointerOperand();
   }
 
-  // Only proceed if this GEP stems from the same alloca.
+  // Only one dynamic index is allowed in the entire GEP chain.
+  // Abort if a different index variable is encountered.
+  if (VarOffsets.size() > 1)
+    return nullptr;
+
   assert(CurPtr == Alloca && "GEP not based on alloca");
 
   unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
