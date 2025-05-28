@@ -744,12 +744,16 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
     if (!UInt.has_value())
       return std::nullopt;
     return (float)UInt.value();
-  } else if (tryConsumeExpectedToken(TokenKind::int_literal)) {
+  }
+
+  if (Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
     std::optional<int32_t> = handleIntLiteral(Negated);
     if (!Int.has_value())
       return std::nullopt;
     return (float)Int.value();
-  } else if (tryConsumeExpectedToken(TokenKind::float_literal)) {
+  }
+
+  if (tryConsumeExpectedToken(TokenKind::float_literal)) {
     std::optional<float> Float = handleFloatLiteral(Negated);
     if (!Float.has_value())
       return std::nullopt;
