@@ -33,34 +33,55 @@ qc.e.bgeui s0, 20, undef
 
 
 # ASM: qc.bnei t2, 11, same_section
-# OBJ: qc.bnei t2, 0xb, 0x1e <same_section>
+# OBJ: qc.bnei t2, 0xb, 0x28 <same_section>
 # OBJ-NOT: R_RISCV
 qc.bnei t2, 11, same_section
 
 # ASM: qc.e.bgeui s1, 21, same_section
-# OBJ: qc.e.bgeui s1, 0x15, 0x1e <same_section>
+# OBJ: qc.e.bgeui s1, 0x15, 0x28 <same_section>
 # OBJ-NOT: R_RISCV
 qc.e.bgeui s1, 21, same_section
 
 
-# ASM: qc.bnei t3, 12, other_section
-# OBJ: qc.bnei t3, 0xc, 0x14 <this_section+0x14>
+# ASM: qc.bnei t2, 12, same_section_extern
+# OBJ: qc.bnei t2, 0xc, 0x14 <this_section+0x14>
+# OBJ-NEXT: R_RISCV_BRANCH same_section_extern{{$}}
+# OBJ-NOT: R_RISCV
+qc.bnei t2, 12, same_section_extern
+
+# ASM: qc.e.bgeui s1, 22, same_section_extern
+# OBJ: qc.e.bgeui s1, 0x16, 0x18 <this_section+0x18>
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM193 same_section_extern{{$}}
+# OBJ-NOT: R_RISCV
+qc.e.bgeui s1, 22, same_section_extern
+
+
+# ASM: qc.bnei t3, 13, other_section
+# OBJ: qc.bnei t3, 0xd, 0x1e <this_section+0x1e>
 # OBJ-NEXT: R_RISCV_BRANCH other_section{{$}}
 # OBJ-NOT: R_RISCV
-qc.bnei t3, 12, other_section
+qc.bnei t3, 13, other_section
 
-# ASM: qc.e.bgeui s2, 22, other_section
-# OBJ: qc.e.bgeui s2, 0x16, 0x18 <this_section+0x18>
+# ASM: qc.e.bgeui s2, 23, other_section
+# OBJ: qc.e.bgeui s2, 0x17, 0x22 <this_section+0x22>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM193 other_section{{$}}
 # OBJ-NOT: R_RISCV
-qc.e.bgeui s2, 22, other_section
+qc.e.bgeui s2, 23, other_section
 
 
 # ASM-LABEL: same_section:
 # OBJ-LABEL: <same_section>:
 same_section:
   nop
+
+# ASM-LABEL: same_section_extern:
+# OBJ-LABEL: <same_section_extern>:
+  .global same_section_extern
+same_section_extern:
+  nop
+
 
 .section .text.second, "ax", @progbits
 

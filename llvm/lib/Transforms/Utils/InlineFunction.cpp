@@ -1313,7 +1313,9 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         // nocapture only guarantees that no copies outlive the function, not
         // that the value cannot be locally captured.
         if (!RequiresNoCaptureBefore ||
-            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false, I, &DT))
+            !capturesAnything(PointerMayBeCapturedBefore(
+                A, /*ReturnCaptures=*/false, I, &DT, /*IncludeI=*/false,
+                CaptureComponents::Provenance)))
           NoAliases.push_back(NewScopes[A]);
       }
 

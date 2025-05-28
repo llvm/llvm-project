@@ -27,17 +27,18 @@ class RISCVAsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
   uint8_t OSABI;
   bool Is64Bit;
-  bool ForceRelocs = false;
   const MCTargetOptions &TargetOptions;
+  // Temporary symbol used to check whether a PC-relative fixup is resolved.
+  MCSymbol *PCRelTemp = nullptr;
 
-  StringMap<MCSymbolELF *> VendorSymbols;
+  bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
+
+  StringMap<MCSymbol *> VendorSymbols;
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options);
   ~RISCVAsmBackend() override = default;
-
-  void setForceRelocs() { ForceRelocs = true; }
 
   // Return Size with extra Nop Bytes for alignment directive in code section.
   bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
@@ -47,36 +48,26 @@ public:
   bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                      MCAlignFragment &AF) override;
 
-  bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                           const MCFragment *DF, const MCValue &Target,
-                           const MCSubtargetInfo *STI, uint64_t &Value,
-                           bool RecordReloc) override;
+  bool evaluateTargetFixup(const MCFixup &Fixup, const MCValue &Target,
+                           uint64_t &Value) override;
 
-  bool evaluateVendorFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                           const MCFragment *DF, const MCValue &Target,
-                           const MCSubtargetInfo *STI, uint64_t &Value,
-                           bool RecordReloc);
+  std::optional<StringRef>
+  getVendorIdentifierForFixup(unsigned TargetFixupKind) const;
 
-  StringRef getVendorSymbolNameForRelocation(unsigned TargetFixupKind) const;
+  bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
+                uint64_t &FixedValue, bool IsResolved) override;
 
-  bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
-                               const MCFixup &Fixup, const MCValue &Target,
-                               uint64_t &FixedValue) const override;
+  void addVendorReloc(const MCFragment &, const MCFixup &,
+                      StringRef VendorSymbol);
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
-
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                    const MCFixup &, const MCValue &, uint64_t,
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &, uint64_t,
                                     bool) const override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
@@ -89,11 +80,11 @@ public:
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
 
-  bool relaxDwarfLineAddr(const MCAssembler &Asm, MCDwarfLineAddrFragment &DF,
+  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
                           bool &WasRelaxed) const override;
-  bool relaxDwarfCFA(const MCAssembler &Asm, MCDwarfCallFrameFragment &DF,
+  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
                      bool &WasRelaxed) const override;
-  std::pair<bool, bool> relaxLEB128(const MCAssembler &Asm, MCLEBFragment &LF,
+  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
                                     int64_t &Value) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,

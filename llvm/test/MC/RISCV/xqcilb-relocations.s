@@ -34,25 +34,39 @@ qc.e.jal undef
 
 
 # ASM: qc.e.j same_section
-# OBJ: qc.e.j 0x24
+# OBJ: qc.e.j 0x30
 # OBJ-NOT: R_RISCV
 qc.e.j same_section
 
 # ASM: qc.e.jal same_section
-# OBJ: qc.e.jal 0x24
+# OBJ: qc.e.jal 0x30
 # OBJ-NOT: R_RISCV
 qc.e.jal same_section
 
+# ASM: qc.e.j same_section_extern
+# OBJ: qc.e.j 0x18
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 same_section_extern{{$}}
+# OBJ-NOT: R_RISCV
+qc.e.j same_section_extern
+
+# ASM: qc.e.jal same_section_extern
+# OBJ: qc.e.jal 0x1e
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM195 same_section_extern{{$}}
+# OBJ-NOT: R_RISCV
+qc.e.jal same_section_extern
+
 
 # ASM: qc.e.j other_section
-# OBJ: qc.e.j 0x18
+# OBJ: qc.e.j 0x24
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM195 other_section{{$}}
 # OBJ-NOT: R_RISCV
 qc.e.j other_section
 
 # ASM: qc.e.jal other_section
-# OBJ: qc.e.jal 0x1e
+# OBJ: qc.e.jal 0x2a
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM195 other_section{{$}}
 # OBJ-NOT: R_RISCV
@@ -62,6 +76,12 @@ qc.e.jal other_section
 # ASM-LABEL: same_section:
 # OBJ-LABEL: <same_section>:
 same_section:
+  nop
+
+# ASM-LABEL: same_section_extern:
+# OBJ-LABEL: <same_section_extern>:
+  .global same_section_extern
+same_section_extern:
   nop
 
 .section .text.other, "ax", @progbits
