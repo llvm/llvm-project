@@ -73,6 +73,8 @@ using ATanOpLowering = ConvertFMFMathToLLVMPattern<math::AtanOp, LLVM::ATanOp>;
 using ATan2OpLowering =
     ConvertFMFMathToLLVMPattern<math::Atan2Op, LLVM::ATan2Op>;
 // A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
+// TODO: Result and operand types match for `absi` as opposed to `ct*z`, so it
+// may be better to separate the patterns.
 template <typename MathOp, typename LLVMOp>
 struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
   using ConvertOpToLLVMPattern<MathOp>::ConvertOpToLLVMPattern;
@@ -81,26 +83,25 @@ struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
   LogicalResult
   matchAndRewrite(MathOp op, typename MathOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *this->getTypeConverter();
     auto operandType = adaptor.getOperand().getType();
-
-    if (!operandType || !LLVM::isCompatibleType(operandType))
+    auto llvmOperandType = typeConverter.convertType(operandType);
+    if (!llvmOperandType)
       return failure();
 
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
-    const auto &typeConverter = *this->getTypeConverter();
     auto llvmResultType = typeConverter.convertType(resultType);
     if (!llvmResultType)
       return failure();
 
-    if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    if (!isa<LLVM::LLVMArrayType>(llvmOperandType)) {
       rewriter.replaceOpWithNewOp<LLVMOp>(op, llvmResultType,
                                           adaptor.getOperand(), false);
       return success();
     }
 
-    auto vectorType = dyn_cast<VectorType>(llvmResultType);
-    if (!vectorType)
+    if (!isa<VectorType>(llvmResultType))
       return failure();
 
     return LLVM::detail::handleMultidimensionalVectors(
