@@ -816,7 +816,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   /// Try to avoid chasing pointees, esp. structure pointees which may
   /// unnecessary bring in a lot of types.
   if (CheckPointer && !SeenPointer) {
-    SeenPointer = Tag == dwarf::DW_TAG_pointer_type;
+    SeenPointer = Tag == dwarf::DW_TAG_pointer_type && !DTy->getAnnotations();
   }
 
   if (CheckPointer && SeenPointer) {
@@ -916,7 +916,8 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
           if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
             DTy = dyn_cast<DIDerivedType>(BaseTy);
           } else {
-            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type) {
+            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type &&
+                !DTy->getAnnotations()) {
               SeenPointer = true;
               if (IsForwardDeclCandidate(BaseTy))
                 break;
