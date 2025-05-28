@@ -902,18 +902,23 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
 
+    bool Is64Bit = Subtarget->is64Bit();
+    bool HasZdinx = Subtarget->hasStdExtZdinx();
+
     bool NegZeroF64 = APF.isNegZero() && VT == MVT::f64;
     SDValue Imm;
     // For +0.0 or f64 -0.0 we need to start from X0. For all others, we will
     // create an integer immediate.
-    if (APF.isPosZero() || NegZeroF64)
-      Imm = CurDAG->getRegister(RISCV::X0, XLenVT);
-    else
+    if (APF.isPosZero() || NegZeroF64) {
+      if (VT == MVT::f64 && HasZdinx && !Is64Bit)
+        Imm = CurDAG->getRegister(RISCV::X0_Pair, MVT::f64);
+      else
+        Imm = CurDAG->getRegister(RISCV::X0, XLenVT);
+    } else {
       Imm = selectImm(CurDAG, DL, XLenVT, APF.bitcastToAPInt().getSExtValue(),
                       *Subtarget);
+    }
 
-    bool HasZdinx = Subtarget->hasStdExtZdinx();
-    bool Is64Bit = Subtarget->is64Bit();
     unsigned Opc;
     switch (VT.SimpleTy) {
     default:
@@ -932,10 +937,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // For RV32, we can't move from a GPR, we need to convert instead. This
       // should only happen for +0.0 and -0.0.
       assert((Subtarget->is64Bit() || APF.isZero()) && "Unexpected constant");
-      if (Is64Bit)
-        Opc = HasZdinx ? RISCV::COPY : RISCV::FMV_D_X;
+      if (HasZdinx)
+        Opc = RISCV::COPY;
       else
-        Opc = HasZdinx ? RISCV::FCVT_D_W_IN32X : RISCV::FCVT_D_W;
+        Opc = Is64Bit ? RISCV::FMV_D_X : RISCV::FCVT_D_W;
       break;
     }
 
