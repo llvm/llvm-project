@@ -8,7 +8,7 @@ define i64 @load(ptr %a) nounwind {
 ; CHECK-LABEL: load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld a2, 80(a0)
-; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    ld zero, 0(a0)
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    ret
