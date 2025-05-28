@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_SYS_IOCTL_IOCTL_H
 
 #include "src/__support/macros/config.h"
-#include <sys/ioctl.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

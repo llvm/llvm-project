@@ -8,7 +8,6 @@ add_libc_unittest(
     ioctl_test.cpp
   DEPENDS
     libc.include.sys_ioctl
-    libc.include.sys_filio
     libc.src.sys.ioctl.ioctl
     libc.src.errno.errno
 )

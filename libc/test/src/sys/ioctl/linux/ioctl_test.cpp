@@ -9,7 +9,6 @@
 #include "src/errno/libc_errno.h"
 #include "src/sys/ioctl/ioctl.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include <sys/filio.h>
 #include <sys/ioctl.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
