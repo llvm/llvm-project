@@ -420,9 +420,12 @@ static RecordDecl *getRecordDeclForType(const QualType &T) {
 static TypeInfo getTypeInfoForType(const QualType &T,
                                    const PrintingPolicy &Policy) {
   const TagDecl *TD = getTagDeclForType(T);
-  if (!TD)
-    return TypeInfo(Reference(SymbolID(), T.getAsString(Policy)));
-
+  if (!TD) {
+    TypeInfo TI = TypeInfo(Reference(SymbolID(), T.getAsString(Policy)));
+    TI.IsBuiltIn = T->isBuiltinType();
+    TI.IsTemplate = T->isTemplateTypeParmType();
+    return TI;
+  }
   InfoType IT;
   if (isa<EnumDecl>(TD)) {
     IT = InfoType::IT_enum;
@@ -431,8 +434,12 @@ static TypeInfo getTypeInfoForType(const QualType &T,
   } else {
     IT = InfoType::IT_default;
   }
-  return TypeInfo(Reference(getUSRForDecl(TD), TD->getNameAsString(), IT,
-                            T.getAsString(Policy), getInfoRelativePath(TD)));
+  Reference R = Reference(getUSRForDecl(TD), TD->getNameAsString(), IT,
+                          T.getAsString(Policy), getInfoRelativePath(TD));
+  TypeInfo TI = TypeInfo(R);
+  TI.IsBuiltIn = T->isBuiltinType();
+  TI.IsTemplate = T->isTemplateTypeParmType();
+  return TI;
 }
 
 static bool isPublic(const clang::AccessSpecifier AS,
