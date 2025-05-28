@@ -28,6 +28,7 @@ namespace clang {
 
 class ConceptDecl;
 class TemplateDecl;
+class ConceptReference;
 class Expr;
 class NamedDecl;
 struct PrintingPolicy;
@@ -35,6 +36,7 @@ struct PrintingPolicy;
 /// The result of a constraint satisfaction check, containing the necessary
 /// information to diagnose an unsatisfied constraint.
 class ConstraintSatisfaction : public llvm::FoldingSetNode {
+private:
   // The template-like entity that 'owns' the constraint checked here (can be a
   // constrained entity or a concept).
   const NamedDecl *ConstraintOwner = nullptr;
@@ -49,7 +51,7 @@ public:
       : ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs) {}
 
   using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
-  using Detail = llvm::PointerUnion<Expr *, SubstitutionDiagnostic *>;
+  using Detail = llvm::PointerUnion<const Expr *, SubstitutionDiagnostic *>;
 
   bool IsSatisfied = false;
   bool ContainsErrors = false;
@@ -80,7 +82,7 @@ public:
 /// substituted into them, or a diagnostic if substitution resulted in
 /// an invalid expression.
 using UnsatisfiedConstraintRecord =
-    llvm::PointerUnion<Expr *, std::pair<SourceLocation, StringRef> *>;
+    llvm::PointerUnion<const Expr *, std::pair<SourceLocation, StringRef> *>;
 
 /// \brief The result of a constraint satisfaction check, containing the
 /// necessary information to diagnose an unsatisfied constraint.

@@ -4797,13 +4797,11 @@ void Sema::diagnoseMissingTemplateArguments(const CXXScopeSpec &SS,
   diagnoseMissingTemplateArguments(Name, Loc);
 }
 
-ExprResult
-Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
-                             SourceLocation TemplateKWLoc,
-                             const DeclarationNameInfo &ConceptNameInfo,
-                             NamedDecl *FoundDecl,
-                             ConceptDecl *NamedConcept,
-                             const TemplateArgumentListInfo *TemplateArgs) {
+ExprResult Sema::CheckConceptTemplateId(
+    const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+    const DeclarationNameInfo &ConceptNameInfo, NamedDecl *FoundDecl,
+    ConceptDecl *NamedConcept, const TemplateArgumentListInfo *TemplateArgs,
+    bool DoCheckConstraintSatisfaction) {
   assert(NamedConcept && "A concept template id without a template?");
 
   if (NamedConcept->isInvalidDecl())
@@ -4829,24 +4827,35 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
           *TemplateArgs, CTAI.CanonicalConverted);
   MultiLevelTemplateArgumentList MLTAL(NamedConcept, CTAI.CanonicalConverted,
                                        /*Final=*/false);
+      auto *CL = ConceptReference::Create(
+      Context,
+      SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
+      TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
+      ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs));
+
+  bool Error = false;
+  if (!AreArgsDependent && DoCheckConstraintSatisfaction) {
+
   LocalInstantiationScope Scope(*this);
 
   EnterExpressionEvaluationContext EECtx{
       *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
-  if (!AreArgsDependent &&
-      CheckConstraintSatisfaction(
+    ContextRAII CurContext(*this, CSD->getDeclContext(),
+                         /*NewThisContext=*/false);
+
+    Error = CheckConstraintSatisfaction(
           NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
           MLTAL,
           SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
                       TemplateArgs->getRAngleLoc()),
-          Satisfaction))
-    return ExprError();
-  auto *CL = ConceptReference::Create(
-      Context,
-      SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
-      TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
-      ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs));
+        Satisfaction, CL);
+  }
+
+  if (!DoCheckConstraintSatisfaction)
+    Satisfaction.IsSatisfied = false;
+  Satisfaction.ContainsErrors = Error;
+
   return ConceptSpecializationExpr::Create(
       Context, CL, CSD, AreArgsDependent ? nullptr : &Satisfaction);
 }
@@ -6092,7 +6101,8 @@ bool Sema::CheckTemplateArgumentList(
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
-    if (EnsureTemplateArgumentListConstraints(
+    if (!isa<ConceptDecl>(Template) &&
+        EnsureTemplateArgumentListConstraints(
             Template, MLTAL,
             SourceRange(TemplateLoc, TemplateArgs.getRAngleLoc()))) {
       if (ConstraintsNotSatisfied)
