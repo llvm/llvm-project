@@ -37,7 +37,7 @@ void call_no_prototype(void (*f)()) { f(); }
 void call_prototype(void (*f)(void)) { f(); }
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECK: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})
 // CHECK: [[DBG5]] = distinct !DISubprogram(name: "call_no_prototype", scope: [[META6:![0-9]+]], file: [[META6]], line: 17, type: [[META7:![0-9]+]], scopeLine: 17, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12:![0-9]+]])
 // CHECK: [[META6]] = !DIFile(filename: "{{.*}}ubsan-function-debuginfo.c", directory: {{.*}})
 // CHECK: [[META7]] = !DISubroutineType(types: [[META8:![0-9]+]])

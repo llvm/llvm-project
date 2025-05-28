@@ -50,7 +50,7 @@ void testshortmul(void) {
 // CHECKS: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression())
 // CHECKS: [[META1]] = distinct !DIGlobalVariable(name: "sj", scope: [[META2:![0-9]+]], file: [[META7:![0-9]+]], line: 12, type: [[META8:![0-9]+]], isLocal: false, isDefinition: true)
 // CHECKS: [[META2]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META3:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// CHECKS: [[META3]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECKS: [[META3]] = !DIFile(filename: "<stdin>", directory: {{.*}})
 // CHECKS: [[META4]] = !{[[META5:![0-9]+]], [[META0]], [[META9:![0-9]+]]}
 // CHECKS: [[META5]] = !DIGlobalVariableExpression(var: [[META6:![0-9]+]], expr: !DIExpression())
 // CHECKS: [[META6]] = distinct !DIGlobalVariable(name: "si", scope: [[META2]], file: [[META7]], line: 12, type: [[META8]], isLocal: false, isDefinition: true)
@@ -76,7 +76,7 @@ void testshortmul(void) {
 // CHECKU: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression())
 // CHECKU: [[META1]] = distinct !DIGlobalVariable(name: "sj", scope: [[META2:![0-9]+]], file: [[META7:![0-9]+]], line: 12, type: [[META8:![0-9]+]], isLocal: false, isDefinition: true)
 // CHECKU: [[META2]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META3:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// CHECKU: [[META3]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECKU: [[META3]] = !DIFile(filename: "<stdin>", directory: {{.*}})
 // CHECKU: [[META4]] = !{[[META5:![0-9]+]], [[META0]], [[META9:![0-9]+]]}
 // CHECKU: [[META5]] = !DIGlobalVariableExpression(var: [[META6:![0-9]+]], expr: !DIExpression())
 // CHECKU: [[META6]] = distinct !DIGlobalVariable(name: "si", scope: [[META2]], file: [[META7]], line: 12, type: [[META8]], isLocal: false, isDefinition: true)
