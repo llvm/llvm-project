@@ -279,6 +279,7 @@ Changes to LLDB
   supporting reverse execution, such as [rr](https://rr-project.org).
   When using reverse execution, `process continue --forward` returns to the
   forward execution.
+* LLDB now supports RISC-V 32-bit ELF core files.
 
 ### Changes to lldb-dap
 
