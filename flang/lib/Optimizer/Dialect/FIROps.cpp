@@ -4490,7 +4490,8 @@ llvm::LogicalResult fir::BoxOffsetOp::verify() {
     boxCharType = mlir::dyn_cast_or_null<fir::BoxCharType>(
         fir::dyn_cast_ptrEleTy(getBoxRef().getType()));
     if (!boxCharType)
-      return emitOpError("box_ref operand must have !fir.ref<!fir.box<T>> or !fir.ref<!fir.boxchar<k>> type");
+      return emitOpError("box_ref operand must have !fir.ref<!fir.box<T>> or "
+                         "!fir.ref<!fir.boxchar<k>> type");
     isBoxChar = true;
   }
   if (getField() != fir::BoxFieldAttr::base_addr &&

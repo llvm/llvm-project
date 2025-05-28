@@ -3939,11 +3939,11 @@ struct BoxOffsetOpConversion : public fir::FIROpConversion<fir::BoxOffsetOp> {
     mlir::Type llvmBoxTy;
     int fieldId;
     if (auto boxType = mlir::dyn_cast_or_null<fir::BaseBoxType>(boxRefType)) {
-      llvmBoxTy =
-          lowerTy().convertBoxTypeAsStruct(mlir::cast<fir::BaseBoxType>(boxType));
+      llvmBoxTy = lowerTy().convertBoxTypeAsStruct(
+          mlir::cast<fir::BaseBoxType>(boxType));
       fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
-                        ? getTypeDescFieldId(boxType)
-                        : kAddrPosInBox;
+                    ? getTypeDescFieldId(boxType)
+                    : kAddrPosInBox;
     } else {
       auto boxCharType = mlir::cast<fir::BoxCharType>(boxRefType);
       llvmBoxTy = lowerTy().convertType(boxCharType);
