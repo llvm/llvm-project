@@ -9520,8 +9520,13 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
     } else {
-      FinalReductionResult = Builder.createNaryOp(
-          VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
+      VPIRFlags Flags = RecurrenceDescriptor::isFloatingPointRecurrenceKind(
+                            RdxDesc.getRecurrenceKind())
+                            ? VPIRFlags(RdxDesc.getFastMathFlags())
+                            : VPIRFlags();
+      FinalReductionResult =
+          Builder.createNaryOp(VPInstruction::ComputeReductionResult,
+                               {PhiR, NewExitingVPV}, Flags, ExitDL);
     }
     // Update all users outside the vector region.
     OrigExitingVPV->replaceUsesWithIf(
