@@ -2379,7 +2379,7 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   PreVectorPH->swapSuccessors();
 
   // We just connected a new block to the scalar preheader. Update all
-  // ResumePhis by adding an incoming value for it, replicating the last value.
+  // VPPhis by adding an incoming value for it, replicating the last value.
   for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
     auto *ResumePhi = cast<VPPhi>(&R);
     ResumePhi->addOperand(
