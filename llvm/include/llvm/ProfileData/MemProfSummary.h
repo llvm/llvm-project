@@ -37,7 +37,7 @@ private:
   /// reordered, and new summary fields are added after existing summary fields,
   /// the MemProf indexed profile version does not need to be bumped to
   /// accommodate new summary fields.
-  static const unsigned NumSummaryFields = 6;
+  static constexpr unsigned NumSummaryFields = 6;
 
   const uint64_t NumContexts, NumColdContexts, NumHotContexts;
   const uint64_t MaxColdTotalSize, MaxWarmTotalSize, MaxHotTotalSize;
@@ -50,7 +50,7 @@ public:
         NumHotContexts(NumHotContexts), MaxColdTotalSize(MaxColdTotalSize),
         MaxWarmTotalSize(MaxWarmTotalSize), MaxHotTotalSize(MaxHotTotalSize) {}
 
-  static unsigned getNumSummaryFields() { return NumSummaryFields; }
+  static constexpr unsigned getNumSummaryFields() { return NumSummaryFields; }
   uint64_t getNumContexts() const { return NumContexts; }
   uint64_t getNumColdContexts() const { return NumColdContexts; }
   uint64_t getNumHotContexts() const { return NumHotContexts; }

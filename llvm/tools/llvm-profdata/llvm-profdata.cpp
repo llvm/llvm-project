@@ -3317,8 +3317,7 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   // For v4 and above the summary is serialized in the indexed profile, and can
   // be accessed from the reader. Earlier versions build the summary below.
   // The summary is emitted as YAML comments at the start of the output.
-  auto *MemProfSum = Reader->getMemProfSummary();
-  if (MemProfSum) {
+  if (auto *MemProfSum = Reader->getMemProfSummary()) {
     MemProfSum->printSummaryYaml(OS);
   } else {
     memprof::MemProfSummaryBuilder MemProfSumBuilder;

@@ -122,27 +122,17 @@ MemProfSummary::deserialize(const unsigned char *&Ptr) {
   // expected by the code.
   assert(NumSummaryFields >= MemProfSummary::getNumSummaryFields());
 
-  auto NumFieldsReadAndSaved =
-      std::min(NumSummaryFields, MemProfSummary::getNumSummaryFields());
-  (void)NumFieldsReadAndSaved;
-  auto StartPos = Ptr;
-  (void)StartPos;
-
   auto MemProfSum = std::make_unique<MemProfSummary>(
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr),
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr),
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr),
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr),
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr),
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr));
-  // Sanity check that the number of fields specified in summary was kept in
-  // sync with the fields being read and saved.
-  assert((Ptr - StartPos) / 8 == NumFieldsReadAndSaved);
+      support::endian::read<uint64_t, llvm::endianness::little>(Ptr),
+      support::endian::read<uint64_t, llvm::endianness::little>(Ptr + 8),
+      support::endian::read<uint64_t, llvm::endianness::little>(Ptr + 16),
+      support::endian::read<uint64_t, llvm::endianness::little>(Ptr + 24),
+      support::endian::read<uint64_t, llvm::endianness::little>(Ptr + 32),
+      support::endian::read<uint64_t, llvm::endianness::little>(Ptr + 40));
 
-  // Enable forwards compatibility by reading and discarding any additional
-  // fields in the profile's summary.
-  while (NumSummaryFields-- > MemProfSummary::getNumSummaryFields())
-    (void)support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  // Enable forwards compatibility by skipping past any additional fields in the
+  // profile's summary.
+  Ptr += NumSummaryFields * sizeof(uint64_t);
 
   return MemProfSum;
 }

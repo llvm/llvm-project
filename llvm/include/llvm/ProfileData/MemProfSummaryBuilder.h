@@ -21,7 +21,11 @@ namespace memprof {
 
 class MemProfSummaryBuilder {
 private:
+  // The set of full context IDs that we've recorded so far. This is needed to
+  // dedup the MIBs, which are duplicated between functions containing inline
+  // instances of the same allocations.
   DenseSet<uint64_t> Contexts;
+
   void addRecord(uint64_t, const PortableMemInfoBlock &);
 
 protected:
