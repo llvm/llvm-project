@@ -81,7 +81,7 @@ void func(struct S s) {
   // is an elaborated type specifier followed by the association's value and
   // it should work the same as in C.
   (void)_Generic(s, struct S : 1);
-  (void)_Generic(s, struct T : 1);
+  (void)_Generic(s, struct T : 1); // expected-error {{controlling expression type 'struct S' not compatible with any generic association type}}
 
   // The rest of these cases test that we still produce a reasonable diagnostic
   // when referencing an unknown type or trying to define a type in other ways.
