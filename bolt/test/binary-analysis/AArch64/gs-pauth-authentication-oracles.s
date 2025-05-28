@@ -464,10 +464,6 @@ good_address_arith_multi_bb:
         ret
         .size good_address_arith_multi_bb, .-good_address_arith_multi_bb
 
-// FIXME: Most *_nocfg test cases contain paciasp+autiasp instructions even if
-//        LR is not spilled - this is a workaround for RET instructions being
-//        reported as non-protected, because LR state is reset at every label.
-
         .globl  good_ret_nocfg
         .type   good_ret_nocfg,@function
 good_ret_nocfg:
@@ -514,14 +510,12 @@ good_branch_nocfg:
         .type   good_load_other_reg_nocfg,@function
 good_load_other_reg_nocfg:
 // CHECK-NOT: good_load_other_reg_nocfg
-        paciasp
         adr     x2, 1f
         br      x2
 1:
         autia   x0, x1
         ldr     x2, [x0]
 
-        autiasp
         ret
         .size good_load_other_reg_nocfg, .-good_load_other_reg_nocfg
 
@@ -529,14 +523,12 @@ good_load_other_reg_nocfg:
         .type   good_load_same_reg_nocfg,@function
 good_load_same_reg_nocfg:
 // CHECK-NOT: good_load_same_reg_nocfg
-        paciasp
         adr     x2, 1f
         br      x2
 1:
         autia   x0, x1
         ldr     x0, [x0]
 
-        autiasp
         ret
         .size good_load_same_reg_nocfg, .-good_load_same_reg_nocfg
 
@@ -548,13 +540,11 @@ bad_unchecked_nocfg:
 // CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_unchecked_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
 // CHECK-NEXT:  The 0 instructions that leak the affected registers are:
-        paciasp
         adr     x2, 1f
         br      x2
 1:
         autia   x0, x1
 
-        autiasp
         ret
         .size bad_unchecked_nocfg, .-bad_unchecked_nocfg
 
@@ -588,7 +578,6 @@ bad_unknown_usage_read_nocfg:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
 // CHECK-NEXT:  The 1 instructions that leak the affected registers are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mul     x3, x0, x1
-        paciasp
         adr     x2, 1f
         br      x2
 1:
@@ -596,7 +585,6 @@ bad_unknown_usage_read_nocfg:
         mul     x3, x0, x1
         ldr     x2, [x0]
 
-        autiasp
         ret
         .size bad_unknown_usage_read_nocfg, .-bad_unknown_usage_read_nocfg
 
@@ -607,7 +595,6 @@ bad_unknown_usage_subreg_read_nocfg:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
 // CHECK-NEXT:  The 1 instructions that leak the affected registers are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mul     w3, w0, w1
-        paciasp
         adr     x2, 1f
         br      x2
 1:
@@ -615,7 +602,6 @@ bad_unknown_usage_subreg_read_nocfg:
         mul     w3, w0, w1
         ldr     x2, [x0]
 
-        autiasp
         ret
         .size bad_unknown_usage_subreg_read_nocfg, .-bad_unknown_usage_subreg_read_nocfg
 
@@ -626,7 +612,6 @@ bad_unknown_usage_update_nocfg:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
 // CHECK-NEXT:  The 1 instructions that leak the affected registers are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      movk    x0, #0x2a, lsl #16
-        paciasp
         adr     x2, 1f
         br      x2
 1:
@@ -634,7 +619,6 @@ bad_unknown_usage_update_nocfg:
         movk    x0, #42, lsl #16  // does not overwrite x0 completely
         ldr     x2, [x0]
 
-        autiasp
         ret
         .size bad_unknown_usage_update_nocfg, .-bad_unknown_usage_update_nocfg
 
@@ -642,14 +626,12 @@ bad_unknown_usage_update_nocfg:
         .type   good_unknown_overwrite_nocfg,@function
 good_unknown_overwrite_nocfg:
 // CHECK-NOT: good_unknown_overwrite_nocfg
-        paciasp
         adr     x2, 1f
         br      x2
 1:
         autia   x0, x1
         mul     x0, x1, x2
 
-        autiasp
         ret
         .size good_unknown_overwrite_nocfg, .-good_unknown_overwrite_nocfg
 
@@ -657,7 +639,6 @@ good_unknown_overwrite_nocfg:
         .type   good_address_arith_nocfg,@function
 good_address_arith_nocfg:
 // CHECK-NOT: good_address_arith_nocfg
-        paciasp
         adr     x2, 1f
         br      x2
 1:
@@ -671,7 +652,6 @@ good_address_arith_nocfg:
         mov     x1, #0
         mov     x2, #0
 
-        autiasp
         ret
         .size good_address_arith_nocfg, .-good_address_arith_nocfg
 
