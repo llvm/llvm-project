@@ -84,8 +84,10 @@ public:
   unsigned getBound() const { return GR->getBound(); }
   bool canDirectlyComparePointers() const;
   void setEnv(SPIRVEnvType E) {
-    assert(E != Unknown && "Unknown environment is not allowed");
-    assert(Env == Unknown && "Environment is already set");
+    if (E == Unknown)
+      report_fatal_error("Unknown environment is not allowed.");
+    if (Env != Unknown)
+      report_fatal_error("Environment is already set.");
 
     Env = E;
   }
