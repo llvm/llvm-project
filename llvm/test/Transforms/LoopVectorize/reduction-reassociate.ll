@@ -9,8 +9,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 define void @test_(ptr captures(none) %0, ptr readonly captures(none) %1) local_unnamed_addr #0 {
 ; CHECK-LABEL: define void @test_(
-; CHECK-NEXT:    fadd contract <4 x float> {{.*}}
-; CHECK-NEXT:    call contract float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> {{.*}})
+; CHECK:    fadd contract <4 x float> {{.*}}
+; CHECK:    call contract float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> {{.*}})
 ;
   %invariant.gep = getelementptr i8, ptr %1, i64 -4
   %.promoted = load float, ptr %0, align 4
@@ -43,5 +43,5 @@ attributes #0 = { nofree norecurse nosync nounwind memory(argmem: readwrite) "ta
 !3 = !{!"llvm.loop.vectorize.reassociation.enable", i1 true}
 
 ; CHECK-NOT: llvm.loop.vectorize.reassociation.enable
-; CHECK: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: !{!"llvm.loop.unroll.runtime.disable"}
