@@ -44,13 +44,11 @@ bool NoSanitizeList::containsFunction(SanitizerMask Mask,
 
 bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
                                   StringRef Category) const {
-  unsigned NoSanLine = SSCL->inSectionBlame(Mask, "src", FileName, Category);
-  if (NoSanLine == 0)
+  auto NoSan = SSCL->inSectionBlame(Mask, "src", FileName, Category);
+  if (NoSan == llvm::SpecialCaseList::NotFound)
     return false;
-  unsigned SanLine = SSCL->inSectionBlame(Mask, "src", FileName, "sanitize");
-  // If we have two cases such as `src:a.cpp=sanitize` and `src:a.cpp`, the
-  // current entry override the previous entry.
-  return !SanLine || NoSanLine > SanLine;
+  auto San = SSCL->inSectionBlame(Mask, "src", FileName, "sanitize");
+  return San == llvm::SpecialCaseList::NotFound || NoSan > San;
 }
 
 bool NoSanitizeList::containsMainFile(SanitizerMask Mask, StringRef FileName,
