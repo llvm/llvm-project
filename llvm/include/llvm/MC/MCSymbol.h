@@ -301,7 +301,7 @@ public:
   }
 
   /// Get the expression of the variable symbol.
-  const MCExpr *getVariableValue(bool SetUsed = true) const {
+  const MCExpr *getVariableValue() const {
     assert(isVariable() && "Invalid accessor!");
     return Value;
   }
