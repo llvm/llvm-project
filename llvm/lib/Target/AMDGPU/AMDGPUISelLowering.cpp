@@ -4173,7 +4173,7 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
     SDValue HiShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
                                   DAG.getConstant(31, SL, MVT::i32));
     SDValue LoShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
-				  DAG.getConstant(RHSVal - 32, SL, MVT::i32));
+                                  DAG.getConstant(RHSVal - 32, SL, MVT::i32));
 
     SDValue BuildVec = DAG.getBuildVector(MVT::v2i32, SL, {LoShift, HiShift});
     return DAG.getNode(ISD::BITCAST, SL, MVT::i64, BuildVec);
