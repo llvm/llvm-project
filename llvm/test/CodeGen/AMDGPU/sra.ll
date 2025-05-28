@@ -788,6 +788,63 @@ define amdgpu_kernel void @v_ashr_32_i64(ptr addrspace(1) %out, ptr addrspace(1)
   ret void
 }
 
+define amdgpu_kernel void @s_ashr_33_i64(ptr addrspace(1) %out, [8 x i32], i64 %a, [8 x i32], i64 %b) {
+; SI-LABEL: s_ashr_33_i64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x1d
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_ashr_i32 s6, s7, 31
+; SI-NEXT:    s_ashr_i32 s7, s7, 1
+; SI-NEXT:    s_add_u32 s4, s7, s4
+; SI-NEXT:    s_addc_u32 s5, s6, s5
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    v_mov_b32_e32 v1, s5
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_ashr_33_i64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x4c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x74
+; VI-NEXT:    s_mov_b32 s3, 0xf000
+; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_ashr_i32 s6, s7, 31
+; VI-NEXT:    s_ashr_i32 s7, s7, 1
+; VI-NEXT:    s_add_u32 s4, s7, s4
+; VI-NEXT:    s_addc_u32 s5, s6, s5
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; VI-NEXT:    s_endpgm
+;
+; EG-LABEL: s_ashr_33_i64:
+; EG:       ; %bb.0:
+; EG-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
+; EG-NEXT:    CF_END
+; EG-NEXT:    PAD
+; EG-NEXT:    ALU clause starting at 4:
+; EG-NEXT:     ASHR T0.W, KC0[5].X, 1,
+; EG-NEXT:     ASHR * T1.W, KC0[5].X, literal.x,
+; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
+; EG-NEXT:     ADD_INT T1.W, PS, KC0[7].Z,
+; EG-NEXT:     ADDC_UINT * T2.W, PV.W, KC0[7].Y,
+; EG-NEXT:     ADD_INT * T0.Y, PV.W, PS,
+; EG-NEXT:     ADD_INT T0.X, T0.W, KC0[7].Y,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+  %result = ashr i64 %a, 33
+  %add = add i64 %result, %b
+  store i64 %add, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_kernel void @v_ashr_33_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: v_ashr_33_i64:
 ; SI:       ; %bb.0:
@@ -851,6 +908,63 @@ define amdgpu_kernel void @v_ashr_33_i64(ptr addrspace(1) %out, ptr addrspace(1)
   %a = load i64, ptr addrspace(1) %gep.in
   %result = ashr i64 %a, 33
   store i64 %result, ptr addrspace(1) %gep.out
+  ret void
+}
+
+define amdgpu_kernel void @s_ashr_62_i64(ptr addrspace(1) %out, [8 x i32], i64 %a, [8 x i32], i64 %b) {
+; SI-LABEL: s_ashr_62_i64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x1d
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_ashr_i32 s6, s7, 31
+; SI-NEXT:    s_ashr_i32 s7, s7, 30
+; SI-NEXT:    s_add_u32 s4, s7, s4
+; SI-NEXT:    s_addc_u32 s5, s6, s5
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    v_mov_b32_e32 v1, s5
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_ashr_62_i64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x4c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x74
+; VI-NEXT:    s_mov_b32 s3, 0xf000
+; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_ashr_i32 s6, s7, 31
+; VI-NEXT:    s_ashr_i32 s7, s7, 30
+; VI-NEXT:    s_add_u32 s4, s7, s4
+; VI-NEXT:    s_addc_u32 s5, s6, s5
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; VI-NEXT:    s_endpgm
+;
+; EG-LABEL: s_ashr_62_i64:
+; EG:       ; %bb.0:
+; EG-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
+; EG-NEXT:    CF_END
+; EG-NEXT:    PAD
+; EG-NEXT:    ALU clause starting at 4:
+; EG-NEXT:     ASHR T0.W, KC0[5].X, literal.x,
+; EG-NEXT:     ASHR * T1.W, KC0[5].X, literal.y,
+; EG-NEXT:    30(4.203895e-44), 31(4.344025e-44)
+; EG-NEXT:     ADD_INT T1.W, PS, KC0[7].Z,
+; EG-NEXT:     ADDC_UINT * T2.W, PV.W, KC0[7].Y,
+; EG-NEXT:     ADD_INT * T0.Y, PV.W, PS,
+; EG-NEXT:     ADD_INT T0.X, T0.W, KC0[7].Y,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+  %result = ashr i64 %a, 62
+  %add = add i64 %result, %b
+  store i64 %add, ptr addrspace(1) %out
   ret void
 }
 
