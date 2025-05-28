@@ -263,16 +263,6 @@ protocol::Source CreateSource(const lldb::SBFileSpec &file);
 ///     definition outlined by Microsoft.
 protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target);
 
-/// Create a "Source" object for a given source path.
-///
-/// \param[in] source_path
-///     The path to the source to use when creating the "Source" object.
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-protocol::Source CreateSource(llvm::StringRef source_path);
-
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
 /// This function will fill in the following keys in the returned

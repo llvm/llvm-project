@@ -10,6 +10,7 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDebugger.h"
@@ -584,14 +585,6 @@ protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target) {
   return CreateAssemblySource(target, address);
 }
 
-protocol::Source CreateSource(llvm::StringRef source_path) {
-  protocol::Source source;
-  llvm::StringRef name = llvm::sys::path::filename(source_path);
-  source.name = name;
-  source.path = source_path;
-  return source;
-}
-
 // "StackFrame": {
 //   "type": "object",
 //   "description": "A Stackframe contains the source location.",
@@ -684,7 +677,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
   auto target = frame.GetThread().GetProcess().GetTarget();
   auto source = CreateSource(frame.GetPCAddress(), target);
-  if (!source.IsAssemblySource()) {
+  if (!IsAssemblySource(source)) {
     // This is a normal source with a valid line entry.
     auto line_entry = frame.GetLineEntry();
     object.try_emplace("line", line_entry.GetLine());

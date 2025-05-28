@@ -9,6 +9,7 @@
 #include "Breakpoint.h"
 #include "DAP.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBLineEntry.h"
@@ -65,7 +66,7 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
     breakpoint.instructionReference = formatted_addr;
 
     auto source = CreateSource(bp_addr, m_dap.target);
-    if (!source.IsAssemblySource()) {
+    if (!IsAssemblySource(source)) {
       auto line_entry = bp_addr.GetLineEntry();
       const auto line = line_entry.GetLine();
       if (line != LLDB_INVALID_LINE_NUMBER)

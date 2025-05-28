@@ -12,6 +12,7 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
+#include "Protocol/ProtocolUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBInstruction.h"
@@ -145,7 +146,7 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   // If the line number is 0 then the entry represents a compiler generated
   // location.
-  if (!source.IsAssemblySource() && line_entry.IsValid() &&
+  if (!IsAssemblySource(source) && line_entry.IsValid() &&
       line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
       line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0) {
 
