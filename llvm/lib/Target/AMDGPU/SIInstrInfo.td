@@ -2973,6 +2973,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsSingle = 0;
   field bit IsWMMA = 0;
   field bit IsSWMMAC = 0;
+#ifdef LLPC_BUILD_NPI
+  field bit IsConvolve = 0;
+#endif /* LLPC_BUILD_NPI */
 
   field bit HasFP8SrcByteSel = 0;
   field bit HasFP8DstByteSel = 0;

@@ -47,6 +47,9 @@ public:
     bool HasDynamicallySizedStack = false;
     bool HasRecursion = false;
     bool HasIndirectCall = false;
+#if LLPC_BUILD_NPI
+    bool HasWMMAorConvolve = false;
+#endif /* LLPC_BUILD_NPI */
     SmallVector<const Function *, 16> Callees;
 #if LLPC_BUILD_NPI
     SmallVector<MachineInstr *, 8> WavegroupRankCalls;

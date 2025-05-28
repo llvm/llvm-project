@@ -104,6 +104,8 @@ enum : uint64_t {
 #if LLPC_BUILD_NPI
   VOPD3 = 1 << 30,
 
+  IsConvolve = UINT64_C(1) << 31,
+
 #endif /* LLPC_BUILD_NPI */
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,

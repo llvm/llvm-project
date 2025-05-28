@@ -115,6 +115,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
 
 #if LLPC_BUILD_NPI
   Info.NumNamedBarrier = MFI->getNumNamedBarriers();
+  Info.HasWMMAorConvolve = MFI->hasWMMAorConvolve();
 
 #endif /* LLPC_BUILD_NPI */
   // Even if FLAT_SCRATCH is implicitly used, it has no effect if flat

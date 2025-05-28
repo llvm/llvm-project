@@ -41,7 +41,8 @@ public:
     RIK_HasRecursion,
 #if LLPC_BUILD_NPI
     RIK_HasIndirectCall,
-    RIK_NumVGPRRankSum
+    RIK_NumVGPRRankSum,
+    RIK_HasWMMAorConvolve
 #else /* LLPC_BUILD_NPI */
     RIK_HasIndirectCall
 #endif /* LLPC_BUILD_NPI */

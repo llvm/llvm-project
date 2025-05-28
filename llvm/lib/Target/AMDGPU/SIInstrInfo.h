@@ -899,6 +899,12 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsWMMA;
   }
 
+#if LLPC_BUILD_NPI
+  static bool isConvolve(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsConvolve;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   static bool isMFMAorWMMA(const MachineInstr &MI) {
     return isMFMA(MI) || isWMMA(MI) || isSWMMAC(MI);
   }

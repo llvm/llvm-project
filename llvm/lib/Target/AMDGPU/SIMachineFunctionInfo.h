@@ -564,6 +564,10 @@ private:
   // scheduler stage.
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
+#if LLPC_BUILD_NPI
+  bool HasWMMAorConvolve = false;
+
+#endif /* LLPC_BUILD_NPI */
   MCPhysReg getNextUserSGPR() const;
 
   MCPhysReg getNextSystemSGPR() const;
@@ -1280,6 +1284,14 @@ public:
 #if LLPC_BUILD_NPI
 
   AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
+
+  // This affects the minimum number of VGPRs per wave or per wavegroup.
+  bool hasWMMAorConvolve() const {
+    return HasWMMAorConvolve;
+  }
+  bool setHasWMMAorConvolve() {
+    return HasWMMAorConvolve = true;
+  }
 #endif /* LLPC_BUILD_NPI */
 };
 

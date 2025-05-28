@@ -58,6 +58,9 @@ class InstSI <dag outs, dag ins, string asm = "",
 #ifdef LLPC_BUILD_NPI
   field bit VOPD3 = 0;
 
+  // This bit indicates that this is one of CONVOLVE instructions.
+  field bit IsConvolve = 0;
+
 #endif /* LLPC_BUILD_NPI */
   // High bits - other information.
   field bit VM_CNT = 0;
