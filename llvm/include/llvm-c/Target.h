@@ -40,34 +40,34 @@ typedef struct LLVMOpaqueTargetLibraryInfotData *LLVMTargetLibraryInfoRef;
 
 /* Declare all of the target-initialization functions that are available. */
 #define LLVM_TARGET(TargetName) \
-  void LLVMInitialize##TargetName##TargetInfo(void);
+  LLVM_C_ABI void LLVMInitialize##TargetName##TargetInfo(void);
 #include "llvm/Config/Targets.def"
 #undef LLVM_TARGET  /* Explicit undef to make SWIG happier */
 
-#define LLVM_TARGET(TargetName) void LLVMInitialize##TargetName##Target(void);
+#define LLVM_TARGET(TargetName) LLVM_C_ABI void LLVMInitialize##TargetName##Target(void);
 #include "llvm/Config/Targets.def"
 #undef LLVM_TARGET  /* Explicit undef to make SWIG happier */
 
 #define LLVM_TARGET(TargetName) \
-  void LLVMInitialize##TargetName##TargetMC(void);
+  LLVM_C_ABI void LLVMInitialize##TargetName##TargetMC(void);
 #include "llvm/Config/Targets.def"
 #undef LLVM_TARGET  /* Explicit undef to make SWIG happier */
 
 /* Declare all of the available assembly printer initialization functions. */
 #define LLVM_ASM_PRINTER(TargetName) \
-  void LLVMInitialize##TargetName##AsmPrinter(void);
+  LLVM_C_ABI void LLVMInitialize##TargetName##AsmPrinter(void);
 #include "llvm/Config/AsmPrinters.def"
 #undef LLVM_ASM_PRINTER  /* Explicit undef to make SWIG happier */
 
 /* Declare all of the available assembly parser initialization functions. */
 #define LLVM_ASM_PARSER(TargetName) \
-  void LLVMInitialize##TargetName##AsmParser(void);
+  LLVM_C_ABI void LLVMInitialize##TargetName##AsmParser(void);
 #include "llvm/Config/AsmParsers.def"
 #undef LLVM_ASM_PARSER  /* Explicit undef to make SWIG happier */
 
 /* Declare all of the available disassembler initialization functions. */
 #define LLVM_DISASSEMBLER(TargetName) \
-  void LLVMInitialize##TargetName##Disassembler(void);
+  LLVM_C_ABI void LLVMInitialize##TargetName##Disassembler(void);
 #include "llvm/Config/Disassemblers.def"
 #undef LLVM_DISASSEMBLER  /* Explicit undef to make SWIG happier */
 
