@@ -179,6 +179,11 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex",
     The parameter `elementType` gives the type of the real and imaginary part of
     the complex number. `elementType` must be either a CIR integer type or a CIR
     floating-point type.
+
+    ```mlir
+    !cir.complex<!s32i>
+    !cir.complex<!cir.float>
+    ```
   }];
 
   let parameters = (ins CIR_AnyIntOrFloatType:$elementType);
