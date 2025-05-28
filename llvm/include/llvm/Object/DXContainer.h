@@ -258,6 +258,9 @@ public:
   llvm::Expected<RootParameterView>
   getParameter(const dxbc::RTS0::v1::RootParameterHeader &Header) const {
     size_t DataSize;
+    size_t EndOfSectionByte = getNumStaticSamplers() == 0
+                                  ? PartData.size()
+                                  : getStaticSamplersOffset();
 
     if (!dxbc::isValidParameterType(Header.ParameterType))
       return parseFailed("invalid parameter type");
@@ -275,6 +278,9 @@ public:
         DataSize = sizeof(dxbc::RTS0::v2::RootDescriptor);
       break;
     case dxbc::RootParameterType::DescriptorTable:
+      if (Header.ParameterOffset + sizeof(uint32_t) > EndOfSectionByte)
+        return parseFailed("Reading structure out of file bounds");
+
       uint32_t NumRanges =
           support::endian::read<uint32_t, llvm::endianness::little>(
               PartData.begin() + Header.ParameterOffset);
@@ -288,9 +294,7 @@ public:
       DataSize += 2 * sizeof(uint32_t);
       break;
     }
-    size_t EndOfSectionByte = getNumStaticSamplers() == 0
-                                  ? PartData.size()
-                                  : getStaticSamplersOffset();
+
 
     if (Header.ParameterOffset + DataSize > EndOfSectionByte)
       return parseFailed("Reading structure out of file bounds");
