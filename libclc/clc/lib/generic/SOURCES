@@ -147,3 +147,5 @@ relational/clc_signbit.cl
 shared/clc_clamp.cl
 shared/clc_max.cl
 shared/clc_min.cl
+shared/clc_vload.cl
+shared/clc_vstore.cl
