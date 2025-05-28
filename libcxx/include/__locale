@@ -113,7 +113,7 @@ public:
       if (__name[0] == '*')
         return std::text_encoding();
     }
-    return std::text_encoding(__name);
+    return std::text_encoding(std::__get_locale_encoding(__name.c_str()));
   }
 #  endif // _LIBCPP_STD_VER >= 26
 
