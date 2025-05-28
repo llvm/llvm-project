@@ -9215,7 +9215,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       auto *Trunc =
           new VPWidenCastRecipe(Instruction::Trunc, NewExitingVPV, RdxTy);
       auto *Extnd =
-          RdxDesc.isSigned()
+          RdxDesc.isResultSigned()
               ? new VPWidenCastRecipe(Instruction::SExt, Trunc, PhiTy)
               : new VPWidenCastRecipe(Instruction::ZExt, Trunc, PhiTy);
 

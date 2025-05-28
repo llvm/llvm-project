@@ -80,12 +80,13 @@ public:
 
   RecurrenceDescriptor(Value *Start, Instruction *Exit, StoreInst *Store,
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
-                       Type *RT, bool Signed, bool Ordered,
-                       SmallPtrSetImpl<Instruction *> &CI,
+                       Type *RT, bool IsResultSigned, bool IsReduxSigned,
+                       bool Ordered, SmallPtrSetImpl<Instruction *> &CI,
                        unsigned MinWidthCastToRecurTy)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
-        IsSigned(Signed), IsOrdered(Ordered),
+        IsResultSigned(IsResultSigned), IsReduxSigned(IsReduxSigned),
+        IsOrdered(Ordered),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert_range(CI);
   }
@@ -97,11 +98,13 @@ public:
         : IsRecurrence(IsRecur), PatternLastInst(I),
           RecKind(RecurKind::None), ExactFPMathInst(ExactFP) {}
 
-    InstDesc(Instruction *I, RecurKind K, Instruction *ExactFP = nullptr)
-        : IsRecurrence(true), PatternLastInst(I), RecKind(K),
-          ExactFPMathInst(ExactFP) {}
+    InstDesc(Instruction *I, RecurKind K, bool IsSigned = false)
+        : IsRecurrence(true), IsSigned(IsSigned), PatternLastInst(I),
+          RecKind(K) {}
 
     bool isRecurrence() const { return IsRecurrence; }
+
+    bool isSigned() const { return IsSigned; }
 
     bool needsExactFPMath() const { return ExactFPMathInst != nullptr; }
 
@@ -114,13 +117,15 @@ public:
   private:
     // Is this instruction a recurrence candidate.
     bool IsRecurrence;
+    // Is this recurrence a signed variant.
+    bool IsSigned = false;
     // The last instruction in a min/max pattern (select of the select(icmp())
     // pattern), or the current recurrence instruction otherwise.
     Instruction *PatternLastInst;
     // If this is a min/max pattern.
     RecurKind RecKind;
     // Recurrence does not allow floating-point reassociation.
-    Instruction *ExactFPMathInst;
+    Instruction *ExactFPMathInst = nullptr;
   };
 
   /// Returns a struct describing if the instruction 'I' can be a recurrence
@@ -272,8 +277,9 @@ public:
   Value *getSentinelValue() const {
     assert(isFindLastIVRecurrenceKind(Kind) && "Unexpected recurrence kind");
     Type *Ty = StartValue->getType();
-    return ConstantInt::get(Ty,
-                            APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+    unsigned BW = Ty->getIntegerBitWidth();
+    return ConstantInt::get(Ty, isReduxSigned() ? APInt::getSignedMinValue(BW)
+                                                : APInt::getMinValue(BW));
   }
 
   /// Returns a reference to the instructions used for type-promoting the
@@ -285,8 +291,11 @@ public:
     return MinWidthCastToRecurrenceType;
   }
 
-  /// Returns true if all source operands of the recurrence are SExtInsts.
-  bool isSigned() const { return IsSigned; }
+  /// Returns true if the reduction result is signed.
+  bool isResultSigned() const { return IsResultSigned; }
+
+  /// Returns true if the reduction redux is signed.
+  bool isReduxSigned() const { return IsReduxSigned; }
 
   /// Expose an ordered FP reduction to the instance users.
   bool isOrdered() const { return IsOrdered; }
@@ -322,8 +331,10 @@ private:
   Instruction *ExactFPMathInst = nullptr;
   // The type of the recurrence.
   Type *RecurrenceType = nullptr;
-  // True if all source operands of the recurrence are SExtInsts.
-  bool IsSigned = false;
+  // True if reduction result is signed.
+  bool IsResultSigned = false;
+  // True if reduction redux is signed.
+  bool IsReduxSigned = false;
   // True if this recurrence can be treated as an in-order reduction.
   // Currently only a non-reassociative FAdd can be considered in-order,
   // if it is also the only FAdd in the PHI's use chain.
