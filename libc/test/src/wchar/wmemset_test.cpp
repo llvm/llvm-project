@@ -13,16 +13,16 @@
 
 TEST(LlvmLibcWMemsetTest, SmallStringBoundCheck) {
   wchar_t str[5];
-  for (int i = 0; i < 5; i++) 
+  for (int i = 0; i < 5; i++)
     str[i] = 'A';
 
   wchar_t *output = LIBC_NAMESPACE::wmemset(str + 1, 'B', 3);
 
   EXPECT_EQ(output, str + 1);
 
-  
-  // EXPECT_TRUE being used since there isn't currently support for printing wide chars
-  // in the future, it would be preferred to switch these to EXPECT_EQ
+  // EXPECT_TRUE being used since there isn't currently support for printing
+  // wide chars in the future, it would be preferred to switch these to
+  // EXPECT_EQ
   EXPECT_TRUE(str[0] == (wchar_t)'A');
   EXPECT_TRUE(str[1] == (wchar_t)'B');
   EXPECT_TRUE(str[2] == (wchar_t)'B');
@@ -33,7 +33,7 @@ TEST(LlvmLibcWMemsetTest, SmallStringBoundCheck) {
 TEST(LlvmLibcWMemsetTest, LargeStringBoundCheck) {
   constexpr int str_size = 1000;
   wchar_t str[str_size];
-  for (int i = 0; i < str_size; i++) 
+  for (int i = 0; i < str_size; i++)
     str[i] = 'A';
 
   wchar_t *output = LIBC_NAMESPACE::wmemset(str + 1, 'B', str_size - 2);
@@ -41,7 +41,7 @@ TEST(LlvmLibcWMemsetTest, LargeStringBoundCheck) {
   EXPECT_EQ(output, str + 1);
 
   EXPECT_TRUE(str[0] == (wchar_t)'A');
-  for (int i = 1; i < str_size - 1; i++) 
+  for (int i = 1; i < str_size - 1; i++)
     EXPECT_TRUE(str[i] == (wchar_t)'B');
 
   EXPECT_TRUE(str[str_size - 1] == (wchar_t)'A');
@@ -52,7 +52,7 @@ TEST(LlvmLibcWMemsetTest, WCharSizeSmallString) {
   wchar_t str[5];
   const wchar_t target = WCHAR_MAX;
 
-  for (int i = 0; i < 5; i++) 
+  for (int i = 0; i < 5; i++)
     str[i] = 'A';
 
   wchar_t *output = LIBC_NAMESPACE::wmemset(str + 1, target, 3);
@@ -73,7 +73,7 @@ TEST(LlvmLibcWMemsetTest, WCharSizeLargeString) {
 
   const wchar_t target = WCHAR_MAX;
 
-  for (int i = 0; i < str_size; i++) 
+  for (int i = 0; i < str_size; i++)
     str[i] = 'A';
 
   wchar_t *output = LIBC_NAMESPACE::wmemset(str + 1, target, str_size - 2);
@@ -81,7 +81,7 @@ TEST(LlvmLibcWMemsetTest, WCharSizeLargeString) {
   EXPECT_EQ(output, str + 1);
 
   EXPECT_TRUE(str[0] == (wchar_t)'A');
-  for (int i = 1; i < str_size - 1; i++) 
+  for (int i = 1; i < str_size - 1; i++)
     EXPECT_TRUE(str[i] == target);
 
   EXPECT_TRUE(str[str_size - 1] == (wchar_t)'A');
