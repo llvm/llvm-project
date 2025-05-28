@@ -105,9 +105,8 @@ define i64 @v_xor_i64_known_i32_from_range_use_out_of_block(i64 %x) {
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:  ; %bb.1: ; %inc
 ; CHECK-NEXT:    v_not_b32_e32 v2, v4
-; CHECK-NEXT:    v_not_b32_e32 v3, 0
 ; CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v2
-; CHECK-NEXT:    v_addc_co_u32_e32 v3, vcc, v1, v3, vcc
+; CHECK-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v1, vcc
 ; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
