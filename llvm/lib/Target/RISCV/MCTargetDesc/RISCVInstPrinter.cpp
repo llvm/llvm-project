@@ -227,6 +227,20 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   RISCVVType::printVType(Imm, O);
 }
 
+void RISCVInstPrinter::printXSfmmVType(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  assert(RISCVVType::isValidXSfmmVType(Imm));
+  unsigned SEW = RISCVVType::getSEW(Imm);
+  O << "e" << SEW;
+  bool AltFmt = RISCVVType::isAltFmt(Imm);
+  if (AltFmt)
+    O << "alt";
+  unsigned Widen = RISCVVType::getXSfmmWiden(Imm);
+  O << ", w" << Widen;
+}
+
 // Print a Zcmp RList. If we are printing architectural register names rather
 // than ABI register names, we need to print "{x1, x8-x9, x18-x27}" for all
 // registers. Otherwise, we print "{ra, s0-s11}".

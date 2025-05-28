@@ -640,8 +640,7 @@ define <32 x float> @PR47534(<8 x float> %tmp) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [7,25,26,27,7,29,30,31,7,25,26,27,7,29,30,31]
-; CHECK-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [7,17,18,19,7,21,22,23,0,25,26,27,0,29,30,31]
 ; CHECK-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm1
 ; CHECK-NEXT:    ret{{[l|q]}}
   %tmp1 = shufflevector <8 x float> %tmp, <8 x float> undef, <32 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>

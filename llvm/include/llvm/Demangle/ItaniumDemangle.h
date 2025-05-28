@@ -19,9 +19,9 @@
 #include "DemangleConfig.h"
 #include "StringViewExtras.h"
 #include "Utility.h"
-#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
