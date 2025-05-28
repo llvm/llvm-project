@@ -111,6 +111,8 @@ public:
   /// Handling globals
   /// -------
 
+  mlir::Operation *lastGlobalOp = nullptr;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
 
   /// If the specified mangled name is not in the module, create and return an
@@ -193,6 +195,8 @@ public:
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
+
+  void emitTentativeDefinition(const VarDecl *d);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 

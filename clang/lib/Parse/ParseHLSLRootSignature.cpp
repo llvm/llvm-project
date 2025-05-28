@@ -10,8 +10,6 @@
 
 #include "clang/Lex/LiteralSupport.h"
 
-#include "llvm/Support/raw_ostream.h"
-
 using namespace llvm::hlsl::rootsig;
 
 namespace clang {
@@ -54,6 +52,13 @@ bool RootSignatureParser::parse() {
       if (!Descriptor.has_value())
         return true;
       Elements.push_back(*Descriptor);
+    }
+
+    if (tryConsumeExpectedToken(TokenKind::kw_StaticSampler)) {
+      auto Sampler = parseStaticSampler();
+      if (!Sampler.has_value())
+        return true;
+      Elements.push_back(*Sampler);
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
@@ -348,6 +353,37 @@ RootSignatureParser::parseDescriptorTableClause() {
   return Clause;
 }
 
+std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
+  assert(CurToken.TokKind == TokenKind::kw_StaticSampler &&
+         "Expects to only be invoked starting at given keyword");
+
+  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.TokKind))
+    return std::nullopt;
+
+  StaticSampler Sampler;
+
+  auto Params = parseStaticSamplerParams();
+  if (!Params.has_value())
+    return std::nullopt;
+
+  // Check mandatory parameters were provided
+  if (!Params->Reg.has_value()) {
+    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+        << TokenKind::sReg;
+    return std::nullopt;
+  }
+
+  Sampler.Reg = Params->Reg.value();
+
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_StaticSampler))
+    return std::nullopt;
+
+  return Sampler;
+}
+
 // Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
 // order and only exactly once. The following methods will parse through as
 // many arguments as possible reporting an error if a duplicate is seen.
@@ -601,6 +637,30 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       Params.Flags = Flags;
     }
 
+  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+  return Params;
+}
+
+std::optional<RootSignatureParser::ParsedStaticSamplerParams>
+RootSignatureParser::parseStaticSamplerParams() {
+  assert(CurToken.TokKind == TokenKind::pu_l_paren &&
+         "Expects to only be invoked starting at given token");
+
+  ParsedStaticSamplerParams Params;
+  do {
+    // `s` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::sReg)) {
+      if (Params.Reg.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+      auto Reg = parseRegister();
+      if (!Reg.has_value())
+        return std::nullopt;
+      Params.Reg = Reg;
+    }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return Params;

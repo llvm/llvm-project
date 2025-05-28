@@ -812,23 +812,25 @@ static void genDeclareDataOperandOperationsWithModifier(
 }
 
 template <typename EntryOp, typename ExitOp>
-static void genDataExitOperations(fir::FirOpBuilder &builder,
-                                  llvm::SmallVector<mlir::Value> operands,
-                                  bool structured) {
+static void
+genDataExitOperations(fir::FirOpBuilder &builder,
+                      llvm::SmallVector<mlir::Value> operands, bool structured,
+                      std::optional<mlir::Location> exitLoc = std::nullopt) {
   for (mlir::Value operand : operands) {
     auto entryOp = mlir::dyn_cast_or_null<EntryOp>(operand.getDefiningOp());
     assert(entryOp && "data entry op expected");
+    mlir::Location opLoc = exitLoc ? *exitLoc : entryOp.getLoc();
     if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
                   std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
       builder.create<ExitOp>(
-          entryOp.getLoc(), entryOp.getAccVar(), entryOp.getVar(),
-          entryOp.getVarType(), entryOp.getBounds(), entryOp.getAsyncOperands(),
+          opLoc, entryOp.getAccVar(), entryOp.getVar(), entryOp.getVarType(),
+          entryOp.getBounds(), entryOp.getAsyncOperands(),
           entryOp.getAsyncOperandsDeviceTypeAttr(), entryOp.getAsyncOnlyAttr(),
           entryOp.getDataClause(), structured, entryOp.getImplicit(),
           builder.getStringAttr(*entryOp.getName()));
     else
       builder.create<ExitOp>(
-          entryOp.getLoc(), entryOp.getAccVar(), entryOp.getBounds(),
+          opLoc, entryOp.getAccVar(), entryOp.getBounds(),
           entryOp.getAsyncOperands(), entryOp.getAsyncOperandsDeviceTypeAttr(),
           entryOp.getAsyncOnlyAttr(), entryOp.getDataClause(), structured,
           entryOp.getImplicit(), builder.getStringAttr(*entryOp.getName()));
@@ -2976,6 +2978,7 @@ static Op createComputeOp(
 
 static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
                          mlir::Location currentLocation,
+                         mlir::Location endLocation,
                          Fortran::lower::pft::Evaluation &eval,
                          Fortran::semantics::SemanticsContext &semanticsContext,
                          Fortran::lower::StatementContext &stmtCtx,
@@ -3170,19 +3173,19 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
 
   // Create the exit operations after the region.
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-      builder, copyEntryOperands, /*structured=*/true);
+      builder, copyEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
-      builder, copyinEntryOperands, /*structured=*/true);
+      builder, copyinEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-      builder, copyoutEntryOperands, /*structured=*/true);
+      builder, copyoutEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::AttachOp, mlir::acc::DetachOp>(
-      builder, attachEntryOperands, /*structured=*/true);
+      builder, attachEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-      builder, createEntryOperands, /*structured=*/true);
+      builder, createEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::NoCreateOp, mlir::acc::DeleteOp>(
-      builder, nocreateEntryOperands, /*structured=*/true);
+      builder, nocreateEntryOperands, /*structured=*/true, endLocation);
   genDataExitOperations<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
-      builder, presentEntryOperands, /*structured=*/true);
+      builder, presentEntryOperands, /*structured=*/true, endLocation);
 
   builder.restoreInsertionPoint(insPt);
 }
@@ -3259,7 +3262,9 @@ genACC(Fortran::lower::AbstractConverter &converter,
       std::get<Fortran::parser::AccBlockDirective>(beginBlockDirective.t);
   const auto &accClauseList =
       std::get<Fortran::parser::AccClauseList>(beginBlockDirective.t);
-
+  const auto &endBlockDirective =
+      std::get<Fortran::parser::AccEndBlockDirective>(blockConstruct.t);
+  mlir::Location endLocation = converter.genLocation(endBlockDirective.source);
   mlir::Location currentLocation = converter.genLocation(blockDirective.source);
   Fortran::lower::StatementContext stmtCtx;
 
@@ -3268,8 +3273,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
                                            semanticsContext, stmtCtx,
                                            accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_data) {
-    genACCDataOp(converter, currentLocation, eval, semanticsContext, stmtCtx,
-                 accClauseList);
+    genACCDataOp(converter, currentLocation, endLocation, eval,
+                 semanticsContext, stmtCtx, accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_serial) {
     createComputeOp<mlir::acc::SerialOp>(converter, currentLocation, eval,
                                          semanticsContext, stmtCtx,

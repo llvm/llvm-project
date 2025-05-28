@@ -1578,6 +1578,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Custom);
     setPartialReduceMLAAction(MVT::nxv8i32, MVT::nxv32i8, Custom);
     setPartialReduceMLAAction(MVT::nxv16i32, MVT::nxv64i8, Custom);
+
+    if (Subtarget.useRVVForFixedLengthVectors()) {
+      for (MVT VT : MVT::integer_fixedlen_vector_valuetypes()) {
+        if (VT.getVectorElementType() != MVT::i32 ||
+            !useRVVForFixedLengthVectorVT(VT))
+          continue;
+        ElementCount EC = VT.getVectorElementCount();
+        MVT ArgVT = MVT::getVectorVT(MVT::i8, EC.multiplyCoefficientBy(4));
+        setPartialReduceMLAAction(VT, ArgVT, Custom);
+      }
+    }
   }
 
   // Function alignments.
@@ -8389,12 +8400,26 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
          VT.getVectorElementType() == MVT::i32);
   SDValue A = Op.getOperand(1);
   SDValue B = Op.getOperand(2);
-  assert(A.getSimpleValueType() == B.getSimpleValueType() &&
-         A.getSimpleValueType().getVectorElementType() == MVT::i8);
+  MVT ArgVT = A.getSimpleValueType();
+  assert(ArgVT == B.getSimpleValueType() &&
+         ArgVT.getVectorElementType() == MVT::i8);
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    Accum = convertToScalableVector(ContainerVT, Accum, DAG, Subtarget);
+    MVT ArgContainerVT = getContainerForFixedLengthVector(ArgVT);
+    A = convertToScalableVector(ArgContainerVT, A, DAG, Subtarget);
+    B = convertToScalableVector(ArgContainerVT, B, DAG, Subtarget);
+  }
+
   bool IsSigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
   unsigned Opc = IsSigned ? RISCVISD::VQDOT_VL : RISCVISD::VQDOTU_VL;
-  auto [Mask, VL] = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
-  return DAG.getNode(Opc, DL, VT, {A, B, Accum, Mask, VL});
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Res = DAG.getNode(Opc, DL, ContainerVT, {A, B, Accum, Mask, VL});
+  if (VT.isFixedLengthVector())
+    Res = convertFromScalableVector(VT, Res, DAG, Subtarget);
+  return Res;
 }
 
 static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,

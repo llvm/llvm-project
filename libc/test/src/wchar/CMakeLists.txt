@@ -44,3 +44,13 @@ add_libc_test(
     libc.hdr.types.wchar_t
     libc.src.wchar.wmemset
 )
+
+add_libc_test(
+  wcschr_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcschr_test.cpp
+  DEPENDS
+    libc.src.wchar.wcschr
+)
