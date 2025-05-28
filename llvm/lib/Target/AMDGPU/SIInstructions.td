@@ -1380,9 +1380,15 @@ def : GCNPat <
 // PTRADD Patterns
 //===----------------------------------------------------------------------===//
 
+// GlobalISel shouldn't generate 64-bit addition pseudos.
+let GISelShouldIgnore = 1 in {
 def : GCNPat<
   (DivergentBinFrag<ptradd> i64:$src0, i64:$src1),
   (V_ADD_U64_PSEUDO $src0, $src1)>;
+def : GCNPat<
+  (UniformBinFrag<ptradd> i64:$src0, i64:$src1),
+  (S_ADD_U64_PSEUDO $src0, $src1)>;
+}
 
 def : GCNPat<
   (DivergentBinFrag<ptradd> i32:$src0, i32:$src1),
@@ -1395,10 +1401,6 @@ def : GCNPat<
   (V_ADD_CO_U32_e64 $src0, $src1)> {
   let SubtargetPredicate = NotHasAddNoCarryInsts;
 }
-
-def : GCNPat<
-  (UniformBinFrag<ptradd> i64:$src0, i64:$src1),
-  (S_ADD_U64_PSEUDO $src0, $src1)>;
 
 // Whether we select S_ADD_I32 or S_ADD_U32 does not make much of a
 // difference. Most notably, S_ADD_I32 instructions can be transformed
