@@ -943,7 +943,7 @@ FunctionPass *llvm::createAMDGPUSSASpillerLegacyPass() {
   return new AMDGPUSSASpillerLegacy();
 }
 
-llvm::PassPluginLibraryInfo getMyNewMachineFunctionPassPluginInfo() {
+llvm::PassPluginLibraryInfo getAMDGPUSSASpillerPassPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "AMDGPUSSASpiller",
           LLVM_VERSION_STRING, [](PassBuilder &PB) {
             PB.registerPipelineParsingCallback(
@@ -961,5 +961,5 @@ llvm::PassPluginLibraryInfo getMyNewMachineFunctionPassPluginInfo() {
 // Expose the pass to LLVM’s pass manager infrastructure
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
-  return getMyNewMachineFunctionPassPluginInfo();
+  return getAMDGPUSSASpillerPassPluginInfo();
 }

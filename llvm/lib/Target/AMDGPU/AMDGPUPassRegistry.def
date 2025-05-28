@@ -142,6 +142,7 @@ MACHINE_FUNCTION_PASS("si-pre-allocate-wwm-regs", SIPreAllocateWWMRegsPass())
 MACHINE_FUNCTION_PASS("si-pre-emit-peephole", SIPreEmitPeepholePass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
 MACHINE_FUNCTION_PASS("amdgpu-ssa-spiller", AMDGPUSSASpillerPass())
+MACHINE_FUNCTION_PASS("amdgpu-rebuild-ssa", AMDGPURebuildSSAPass())
 #undef MACHINE_FUNCTION_PASS
 
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
