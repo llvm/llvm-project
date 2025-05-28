@@ -48,12 +48,16 @@ class DuplicateDefinition : public ErrorInfo<DuplicateDefinition> {
 public:
   static char ID;
 
-  DuplicateDefinition(std::string SymbolName);
+  DuplicateDefinition(std::string SymbolName,
+                      std::optional<std::string> Context = {});
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
   const std::string &getSymbolName() const;
+  const std::optional<std::string> &getContext() const;
+
 private:
   std::string SymbolName;
+  std::optional<std::string> Context;
 };
 
 class JITSymbolNotFound : public ErrorInfo<JITSymbolNotFound> {
