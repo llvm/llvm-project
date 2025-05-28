@@ -671,7 +671,7 @@ define <vscale x 4 x i32> @not_udot(<vscale x 4 x i32> %acc, <vscale x 8 x i8> %
 ; CHECK-NEWLOWERING-SVE2-NEXT:    and z2.h, z2.h, #0xff
 ; CHECK-NEWLOWERING-SVE2-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEWLOWERING-SVE2-NEXT:    umlalb z0.h, z1.b, z2.b
-; CHECK-NEWLOWERING-SVE2-NEXT:    umlalt z0.h, z1.b, z2.b
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalt z0.s, z1.h, z2.h
 ; CHECK-NEWLOWERING-SVE2-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-SME-LABEL: not_udot:
@@ -679,7 +679,7 @@ define <vscale x 4 x i32> @not_udot(<vscale x 4 x i32> %acc, <vscale x 8 x i8> %
 ; CHECK-NEWLOWERING-SME-NEXT:    and z2.h, z2.h, #0xff
 ; CHECK-NEWLOWERING-SME-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEWLOWERING-SME-NEXT:    umlalb z0.h, z1.b, z2.b
-; CHECK-NEWLOWERING-SME-NEXT:    umlalt z0.h, z1.b, z2.b
+; CHECK-NEWLOWERING-SME-NEXT:    umlalt z0.s, z1.h, z2.h
 ; CHECK-NEWLOWERING-SME-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
@@ -721,7 +721,7 @@ define <vscale x 2 x i64> @not_udot_wide(<vscale x 2 x i64> %acc, <vscale x 4 x 
 ; CHECK-NEWLOWERING-SVE2-NEXT:    and z2.s, z2.s, #0xffff
 ; CHECK-NEWLOWERING-SVE2-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-NEWLOWERING-SVE2-NEXT:    umlalb z0.h, z1.b, z2.b
-; CHECK-NEWLOWERING-SVE2-NEXT:    umlalt z0.h, z1.b, z2.b
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalt z0.d, z1.s, z2.s
 ; CHECK-NEWLOWERING-SVE2-NEXT:    ret
 ;
 ; CHECK-NEWLOWERING-SME-LABEL: not_udot_wide:
@@ -729,7 +729,7 @@ define <vscale x 2 x i64> @not_udot_wide(<vscale x 2 x i64> %acc, <vscale x 4 x 
 ; CHECK-NEWLOWERING-SME-NEXT:    and z2.s, z2.s, #0xffff
 ; CHECK-NEWLOWERING-SME-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-NEWLOWERING-SME-NEXT:    umlalb z0.h, z1.b, z2.b
-; CHECK-NEWLOWERING-SME-NEXT:    umlalt z0.h, z1.b, z2.b
+; CHECK-NEWLOWERING-SME-NEXT:    umlalt z0.d, z1.s, z2.s
 ; CHECK-NEWLOWERING-SME-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 4 x i16> %a to <vscale x 4 x i64>

@@ -97,8 +97,8 @@ define <vscale x 4 x i32> @signed_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <vsc
 ;
 ; CHECK-NEWLOWERING-SVE2-LABEL: signed_wide_add_nxv8i16:
 ; CHECK-NEWLOWERING-SVE2:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-SVE2-NEXT:    saddwb z0.d, z0.d, z1.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    saddwt z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    saddwb z0.s, z0.s, z1.h
+; CHECK-NEWLOWERING-SVE2-NEXT:    saddwt z0.s, z0.s, z1.h
 ; CHECK-NEWLOWERING-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 8 x i16> %input to <vscale x 8 x i32>
@@ -131,8 +131,8 @@ define <vscale x 4 x i32> @unsigned_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <v
 ;
 ; CHECK-NEWLOWERING-SVE2-LABEL: unsigned_wide_add_nxv8i16:
 ; CHECK-NEWLOWERING-SVE2:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwb z0.d, z0.d, z1.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwt z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwb z0.s, z0.s, z1.h
+; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwt z0.s, z0.s, z1.h
 ; CHECK-NEWLOWERING-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 8 x i16> %input to <vscale x 8 x i32>
@@ -165,8 +165,8 @@ define <vscale x 8 x i16> @signed_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <vsc
 ;
 ; CHECK-NEWLOWERING-SVE2-LABEL: signed_wide_add_nxv16i8:
 ; CHECK-NEWLOWERING-SVE2:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-SVE2-NEXT:    saddwb z0.d, z0.d, z1.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    saddwt z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    saddwb z0.h, z0.h, z1.b
+; CHECK-NEWLOWERING-SVE2-NEXT:    saddwt z0.h, z0.h, z1.b
 ; CHECK-NEWLOWERING-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 16 x i8> %input to <vscale x 16 x i16>
@@ -199,8 +199,8 @@ define <vscale x 8 x i16> @unsigned_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <v
 ;
 ; CHECK-NEWLOWERING-SVE2-LABEL: unsigned_wide_add_nxv16i8:
 ; CHECK-NEWLOWERING-SVE2:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwb z0.d, z0.d, z1.s
-; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwt z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwb z0.h, z0.h, z1.b
+; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwt z0.h, z0.h, z1.b
 ; CHECK-NEWLOWERING-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 16 x i8> %input to <vscale x 16 x i16>
