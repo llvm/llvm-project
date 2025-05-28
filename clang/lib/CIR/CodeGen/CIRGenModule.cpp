@@ -1066,7 +1066,7 @@ void CIRGenModule::emitTentativeDefinition(const VarDecl *d) {
   // If we already have a definition, not declaration, with the same mangled
   // name, emitting of declaration is not required (and would actually overwrite
   // the emitted definition).
-  if (gv && !cast<cir::GlobalOp>(gv).isDeclaration())
+  if (gv && !mlir::cast<cir::GlobalOp>(gv).isDeclaration())
     return;
 
   assert(!cir::MissingFeatures::deferredDecls());
