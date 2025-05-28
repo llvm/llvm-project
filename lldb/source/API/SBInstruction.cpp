@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBInstruction.h"
-
 #include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBAddress.h"

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBPlatform.h"
-
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
