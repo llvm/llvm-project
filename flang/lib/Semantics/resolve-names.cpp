@@ -1766,15 +1766,9 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   // just following the natural flow, the map clauses gets processed before
   // the type has been fully processed.
   BeginDeclTypeSpec();
-  if (auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)}) {
-    mapperName->symbol =
-        &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
-  } else {
-    const parser::CharBlock defaultName{"default", 7};
-    MakeSymbol(
-        defaultName, Attrs{}, MiscDetails{MiscDetails::Kind::ConstructName});
-  }
-
+  auto &mapperName{std::get<std::string>(spec.t)};
+  MakeSymbol(parser::CharBlock(mapperName), Attrs{},
+      MiscDetails{MiscDetails::Kind::ConstructName});
   PushScope(Scope::Kind::OtherConstruct, nullptr);
   Walk(std::get<parser::TypeSpec>(spec.t));
   auto &varName{std::get<parser::Name>(spec.t)};

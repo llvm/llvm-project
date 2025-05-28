@@ -8,9 +8,9 @@
 define void @main() local_unnamed_addr #1 {
 entry:
   ; CHECK: [[CB:%.*]] = tail call target({{.*}}) @llvm.dx.resource.handlefrombinding
-  %h = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 12, 0, 4, 8)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+  %h = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 12, 0, 4, 8)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
   store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 12, 0, 4, 8)) %h, ptr @CB.cb, align 4
-  %_ZL3Out_h.i.i = tail call target("dx.RawBuffer", %struct.Scalars, 1, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+  %_ZL3Out_h.i.i = tail call target("dx.RawBuffer", %struct.Scalars, 1, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
   ; CHECK-NOT: load target({{.*}}), ptr @CB.cb
   %cb = load target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 12, 0, 4, 8)), ptr @CB.cb, align 4
   ; CHECK: call { float, float, float, float } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target({{.*}}) [[CB]], i32 0)

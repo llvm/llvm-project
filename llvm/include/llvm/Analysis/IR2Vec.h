@@ -111,18 +111,13 @@ public:
                                                     const Vocab &Vocabulary,
                                                     unsigned Dimension);
 
-  /// Returns a map containing instructions and the corresponding vector
-  /// representations for a given module corresponding to the IR2Vec
-  /// algorithm.
+  /// Returns a map containing instructions and the corresponding embeddings.
   const InstEmbeddingsMap &getInstVecMap() const { return InstVecMap; }
 
-  /// Returns a map containing basic block and the corresponding vector
-  /// representations for a given module corresponding to the IR2Vec
-  /// algorithm.
+  /// Returns a map containing basic block and the corresponding embeddings.
   const BBEmbeddingsMap &getBBVecMap() const { return BBVecMap; }
 
-  /// Returns the vector representation for a given function corresponding to
-  /// the IR2Vec algorithm.
+  /// Returns the embedding for the current function.
   const Embedding &getFunctionVector() const { return FuncVector; }
 };
 
@@ -131,15 +126,13 @@ public:
 /// representations obtained from the Vocabulary.
 class SymbolicEmbedder : public Embedder {
 private:
-  /// Utility function to compute the vector representation for a given basic
-  /// block.
+  /// Utility function to compute the embedding for a given basic block.
   Embedding computeBB2Vec(const BasicBlock &BB);
 
-  /// Utility function to compute the vector representation for a given type.
+  /// Utility function to compute the embedding for a given type.
   Embedding getTypeEmbedding(const Type *Ty) const;
 
-  /// Utility function to compute the vector representation for a given
-  /// operand.
+  /// Utility function to compute the embedding for a given operand.
   Embedding getOperandEmbedding(const Value *Op) const;
 
 public:
