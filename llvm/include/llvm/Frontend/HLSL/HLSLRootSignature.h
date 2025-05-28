@@ -27,7 +27,10 @@ class Metadata;
 namespace hlsl {
 namespace rootsig {
 
-// Definition of the various enumerations and flags
+// Definition of the various enumerations and flags. The definitions of all
+// values here correspond to their description in the d3d12.h header and are
+// carried over from their values in DXC. For reference:
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/
 
 enum class RootFlags : uint32_t {
   None = 0,
@@ -76,6 +79,8 @@ enum class ShaderVisibility {
   Mesh = 7,
 };
 
+// D3D12_FILTER enumeration:
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter
 enum class Filter {
   MinMagMipPoint = 0,
   MinMagPointMipLinear = 0x1,
