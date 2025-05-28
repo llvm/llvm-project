@@ -24,6 +24,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <string>
 
@@ -413,6 +414,34 @@ enum SteppingGranularity : unsigned {
 bool fromJSON(const llvm::json::Value &, SteppingGranularity &,
               llvm::json::Path);
 llvm::json::Value toJSON(const SteppingGranularity &);
+
+/// A `StepInTarget` can be used in the `stepIn` request and determines into
+/// which single target the `stepIn` request should step.
+struct StepInTarget {
+  /// Unique identifier for a step-in target.
+  uint64_t id = std::numeric_limits<uint64_t>::max();
+
+  /// The name of the step-in target (shown in the UI).
+  std::string label;
+
+  /// The line of the step-in target.
+  std::optional<uint64_t> line;
+
+  /// Start position of the range covered by the step in target. It is measured
+  /// in UTF-16 code units and the client capability `columnsStartAt1`
+  /// determines whether it is 0- or 1-based.
+  std::optional<uint64_t> column;
+
+  /// The end line of the range covered by the step-in target.
+  std::optional<uint64_t> endLine;
+
+  /// End position of the range covered by the step in target. It is measured in
+  /// UTF-16 code units and the client capability `columnsStartAt1` determines
+  /// whether it is 0- or 1-based.
+  std::optional<uint64_t> endColumn;
+};
+bool fromJSON(const llvm::json::Value &, StepInTarget &, llvm::json::Path);
+llvm::json::Value toJSON(const StepInTarget &);
 
 /// Provides formatting information for a value.
 struct ValueFormat {
